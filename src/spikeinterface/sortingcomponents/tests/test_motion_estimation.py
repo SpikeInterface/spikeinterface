@@ -13,8 +13,9 @@ from spikeinterface.sortingcomponents.motion_estimation import (
     compute_global_displacement,
 )
 
-from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
-from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
+from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
+
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 
 repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
@@ -45,7 +46,7 @@ def setup_module():
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3, return_output=False)
     pipeline_nodes = [
         extract_dense_waveforms,
-        LocalizeCenterOfMass(recording, parents=[extract_dense_waveforms], local_radius_um=60.0),
+        LocalizeCenterOfMass(recording, parents=[extract_dense_waveforms], radius_um=60.0),
     ]
     peaks, peak_locations = detect_peaks(
         recording,
@@ -182,7 +183,7 @@ def test_estimate_motion():
             assert motion.shape[1] > 1
 
         # Test saving to disk
-        corrected_rec = CorrectMotionRecording(
+        corrected_rec = InterpolateMotionRecording(
             recording, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate"
         )
         corrected_rec.save()

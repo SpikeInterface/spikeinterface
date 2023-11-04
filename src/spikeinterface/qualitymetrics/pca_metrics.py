@@ -1,6 +1,5 @@
 """Cluster quality metrics computed from principal components."""
 
-from cmath import nan
 from copy import deepcopy
 
 import numpy as np
@@ -16,7 +15,6 @@ try:
 except:
     pass
 
-import spikeinterface as si
 from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
 from ..core.job_tools import tqdm_joblib
 from ..core.template_tools import get_template_extremum_channel
@@ -64,7 +62,7 @@ def get_quality_pca_metric_list():
 
 
 def calculate_pc_metrics(
-    pca, metric_names=None, sparsity=None, qm_params=None, seed=None, n_jobs=1, progress_bar=False
+    pca, metric_names=None, sparsity=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
 ):
     """Calculate principal component derived metrics.
 
@@ -72,15 +70,17 @@ def calculate_pc_metrics(
     ----------
     pca : WaveformPrincipalComponent
         Waveform object with principal components computed.
-    metric_names : list of str, optional
+    metric_names : list of str, default: None
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
-    sparsity: ChannelSparsity or None
+    sparsity: ChannelSparsity or None, default: None
         The sparsity object. This is used also to identify neighbor
-        units and speed up computations. If None (default) all channels and all units are used
+        units and speed up computations. If None all channels and all units are used
         for each unit.
     qm_params : dict or None
         Dictionary with parameters for each PC metric function.
+    unit_ids : list of int or None
+        List of unit ids to compute metrics for.
     seed : int, default: None
         Random seed value.
     n_jobs : int
@@ -102,7 +102,8 @@ def calculate_pc_metrics(
     we = pca.waveform_extractor
     extremum_channels = get_template_extremum_channel(we)
 
-    unit_ids = we.unit_ids
+    if unit_ids is None:
+        unit_ids = we.unit_ids
     channel_ids = we.channel_ids
 
     # create output dict of dict  pc_metrics['metric_name'][unit_id]
@@ -117,8 +118,8 @@ def calculate_pc_metrics(
 
     # Compute nspikes and firing rate outside of main loop for speed
     if any([n in metric_names for n in ["nn_isolation", "nn_noise_overlap"]]):
-        n_spikes_all_units = compute_num_spikes(we)
-        fr_all_units = compute_firing_rates(we)
+        n_spikes_all_units = compute_num_spikes(we, unit_ids=unit_ids)
+        fr_all_units = compute_firing_rates(we, unit_ids=unit_ids)
     else:
         n_spikes_all_units = None
         fr_all_units = None
@@ -149,8 +150,8 @@ def calculate_pc_metrics(
             neighbor_unit_ids = unit_ids
         neighbor_channel_indices = we.channel_ids_to_indices(neighbor_channel_ids)
 
-        labels = all_labels[np.in1d(all_labels, neighbor_unit_ids)]
-        pcs = all_pcs[np.in1d(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        labels = all_labels[np.isin(all_labels, neighbor_unit_ids)]
+        pcs = all_pcs[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
         func_args = (
@@ -390,11 +391,11 @@ def nearest_neighbors_isolation(
         Recomputed if None.
     max_spikes : int, default: 1000
         Max number of spikes to use per unit.
-    min_spikes : int, optional, default: 10
+    min_spikes : int, default: 10
         Min number of spikes a unit must have to go through with metric computation.
         Units with spikes < min_spikes gets numpy.NaN as the quality metric,
         and are ignored when selecting other units' neighbors.
-    min_fr : float, optional, default: 0.0
+    min_fr : float, default: 0.0
         Min firing rate a unit must have to go through with metric computation.
         Units with firing rate < min_fr gets numpy.NaN as the quality metric,
         and are ignored when selecting other units' neighbors.
@@ -404,7 +405,7 @@ def nearest_neighbors_isolation(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: str, default: 'neg'
+    peak_sign: "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
         is not sparse already.
     min_spatial_overlap : float, default: 100
@@ -463,15 +464,14 @@ def nearest_neighbors_isolation(
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has fewer spikes than ",
-            f"specified by `min_spikes` ({min_spikes}); ",
-            f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has fewer spikes than specified by `min_spikes` "
+            f"({min_spikes}); returning NaN as the quality metric..."
         )
         return np.nan, np.nan
     elif fr_all_units[this_unit_id] < min_fr:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has a firing rate ",
-            f"below the specified `min_fr` ({min_fr}Hz); " f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has a firing rate below the specified `min_fr` "
+            f"({min_fr} Hz); returning NaN as the quality metric..."
         )
         return np.nan, np.nan
     else:
@@ -504,7 +504,7 @@ def nearest_neighbors_isolation(
         other_units_ids = [
             unit_id
             for unit_id in other_units_ids
-            if np.sum(np.in1d(sparsity.unit_id_to_channel_indices[unit_id], closest_chans_target_unit))
+            if np.sum(np.isin(sparsity.unit_id_to_channel_indices[unit_id], closest_chans_target_unit))
             >= (n_channels_target_unit * min_spatial_overlap)
         ]
 
@@ -534,10 +534,10 @@ def nearest_neighbors_isolation(
                 if waveform_extractor.is_sparse():
                     # in this case, waveforms are sparse so we need to do some smart indexing
                     waveforms_target_unit_sampled = waveforms_target_unit_sampled[
-                        :, :, np.in1d(closest_chans_target_unit, common_channel_idxs)
+                        :, :, np.isin(closest_chans_target_unit, common_channel_idxs)
                     ]
                     waveforms_other_unit_sampled = waveforms_other_unit_sampled[
-                        :, :, np.in1d(closest_chans_other_unit, common_channel_idxs)
+                        :, :, np.isin(closest_chans_other_unit, common_channel_idxs)
                     ]
                 else:
                     waveforms_target_unit_sampled = waveforms_target_unit_sampled[:, :, common_channel_idxs]
@@ -597,10 +597,10 @@ def nearest_neighbors_noise_overlap(
         Recomputed if None.
     max_spikes : int, default: 1000
         The max number of spikes to use per cluster.
-    min_spikes : int, optional, default: 10
+    min_spikes : int, default: 10
         Min number of spikes a unit must have to go through with metric computation.
         Units with spikes < min_spikes gets numpy.NaN as the quality metric.
-    min_fr : float, optional, default: 0.0
+    min_fr : float, default: 0.0
         Min firing rate a unit must have to go through with metric computation.
         Units with firing rate < min_fr gets numpy.NaN as the quality metric.
     n_neighbors : int, default: 5
@@ -609,7 +609,7 @@ def nearest_neighbors_noise_overlap(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: str, default: 'neg'
+    peak_sign: "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
         is not sparse already.
     seed : int, default: 0
@@ -649,15 +649,14 @@ def nearest_neighbors_noise_overlap(
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has fewer spikes than ",
-            f"specified by `min_spikes` ({min_spikes}); ",
-            f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has fewer spikes than specified by `min_spikes` "
+            f"({min_spikes}); returning NaN as the quality metric..."
         )
         return np.nan
     elif fr_all_units[this_unit_id] < min_fr:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has a firing rate ",
-            f"below the specified `min_fr` ({min_fr}Hz); " f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has a firing rate below the specified `min_fr` "
+            f"({min_fr} Hz); returning NaN as the quality metric...",
         )
         return np.nan
     else:
@@ -735,6 +734,7 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     """Calculates the simplified silhouette score for each cluster. The value ranges
     from -1 (bad clustering) to 1 (good clustering). The simplified silhoutte score
     utilizes the centroids for distance calculations rather than pairwise calculations.
+
     Parameters
     ----------
     all_pcs : 2d array
@@ -743,12 +743,14 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
         The cluster labels for all spikes. Must have length of number of spikes.
     this_unit_id : int
         The ID for the unit to calculate this metric for.
+
     Returns
     -------
     unit_silhouette_score : float
         Simplified Silhouette Score for this unit
+
     References
-    ------------
+    ----------
     Based on simplified silhouette score suggested by [Hruschka]_
     """
 
@@ -781,6 +783,7 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
     """Calculates the silhouette score which is a marker of cluster quality ranging from
     -1 (bad clustering) to 1 (good clustering). Distances are all calculated as pairwise
     comparisons of all data points.
+
     Parameters
     ----------
     all_pcs : 2d array
@@ -789,12 +792,14 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
         The cluster labels for all spikes. Must have length of number of spikes.
     this_unit_id : int
         The ID for the unit to calculate this metric for.
+
     Returns
     -------
     unit_silhouette_score : float
         Silhouette Score for this unit
+
     References
-    ------------
+    ----------
     Based on [Rousseeuw]_
     """
 
@@ -966,6 +971,6 @@ def pca_metrics_one_unit(
                 unit_silhouette_score = silhouette_score(pcs_flat, labels, unit_id)
             except:
                 unit_silhouette_score = np.nan
-            pc_metrics["silhouette_full"] = unit_silhouette_socre
+            pc_metrics["silhouette_full"] = unit_silhouette_score
 
     return pc_metrics

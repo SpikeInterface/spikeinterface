@@ -18,7 +18,7 @@ class FilterOpenCLRecording(BasePreprocessor):
     """
     Simple implementation of FilterRecording in OpenCL.
 
-    Only filter_mode='sos' is supported.
+    Only filter_mode="sos" is supported.
 
     Author : Samuel Garcia
     This kernel is ported from "tridesclous"
@@ -29,9 +29,9 @@ class FilterOpenCLRecording(BasePreprocessor):
         The recording extractor to be re-referenced
 
     N: order
-    filter_mode: 'sos' only
+    filter_mode: "sos" only
 
-    ftypestr: 'butter' / 'cheby1' / ... all possible of scipy.signal.iirdesign
+    ftypestr: "butter" / "cheby1" / ... all possible of scipy.signal.iirdesign
 
     margin: margin in second on border to avoid border effect
 
@@ -50,9 +50,9 @@ class FilterOpenCLRecording(BasePreprocessor):
         margin_ms=5.0,
     ):
         assert HAVE_PYOPENCL, "You need to install pyopencl (and GPU driver!!)"
-
-        assert btype in ("bandpass", "lowpass", "highpass", "bandstop")
-        assert filter_mode in ("sos",)
+        btype_modes = ("bandpass", "lowpass", "highpass", "bandstop")
+        assert btype in btype_modes, f"'btype' must be in {btype_modes}"
+        assert filter_mode in ("sos",), "'filter_mode' must be 'sos'"
 
         # coefficient
         sf = recording.get_sampling_frequency()
@@ -96,8 +96,8 @@ class FilterOpenCLRecordingSegment(BasePreprocessorSegment):
         self.margin = margin
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        assert start_frame is not None, "FilterOpenCLRecording work with fixed chunk_size"
-        assert end_frame is not None, "FilterOpenCLRecording work with fixed chunk_size"
+        assert start_frame is not None, "FilterOpenCLRecording only works with fixed chunk_size"
+        assert end_frame is not None, "FilterOpenCLRecording only works with fixed chunk_size"
 
         chunk_size = end_frame - start_frame
         if chunk_size != self.executor.chunk_size:
@@ -157,7 +157,7 @@ class OpenCLFilterExecutor:
 
         if traces.shape[0] != self.full_size:
             if self.full_size is not None:
-                print(f"Warning : chunk_size have change {self.chunk_size} {traces.shape[0]}, need recompile CL!!!")
+                print(f"Warning : chunk_size has changed {self.chunk_size} {traces.shape[0]}, need to recompile CL!!!")
             self.create_buffers_and_compile()
 
         event = pyopencl.enqueue_copy(self.queue, self.input_cl, traces)

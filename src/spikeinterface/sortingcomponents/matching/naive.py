@@ -1,10 +1,8 @@
 """Sorting components: template matching."""
 
 import numpy as np
-from spikeinterface.core import WaveformExtractor
+from spikeinterface.core import WaveformExtractor, get_template_channel_sparsity, get_template_extremum_channel
 from spikeinterface.core import get_noise_levels, get_channel_distances, get_chunk_with_margin, get_random_data_chunks
-from spikeinterface.postprocessing import get_template_channel_sparsity, get_template_extremum_channel
-
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
 spike_dtype = [
@@ -35,7 +33,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         "exclude_sweep_ms": 0.1,
         "detect_threshold": 5,
         "noise_levels": None,
-        "local_radius_um": 100,
+        "radius_um": 100,
         "random_chunk_kwargs": {},
     }
 
@@ -44,7 +42,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d = cls.default_params.copy()
         d.update(kwargs)
 
-        assert d["waveform_extractor"] is not None
+        assert d["waveform_extractor"] is not None, "'waveform_extractor' must be supplied"
 
         we = d["waveform_extractor"]
 
@@ -54,7 +52,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
         channel_distance = get_channel_distances(recording)
-        d["neighbours_mask"] = channel_distance < d["local_radius_um"]
+        d["neighbours_mask"] = channel_distance < d["radius_um"]
 
         d["nbefore"] = we.nbefore
         d["nafter"] = we.nafter

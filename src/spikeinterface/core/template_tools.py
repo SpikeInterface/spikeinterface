@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 import warnings
 
@@ -5,7 +6,9 @@ from .sparsity import compute_sparsity, _sparsity_doc
 from .recording_tools import get_channel_distances, get_noise_levels
 
 
-def get_template_amplitudes(waveform_extractor, peak_sign: str = "neg", mode: str = "extremum"):
+def get_template_amplitudes(
+    waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum"
+):
     """
     Get amplitude per channel for each unit.
 
@@ -13,19 +16,19 @@ def get_template_amplitudes(waveform_extractor, peak_sign: str = "neg", mode: st
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
-    mode: str
-        'extremum':  max or min
-        'at_index': take value at spike index
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute best channels
+    mode: "extremum" | "at_index", default: "extremum"
+        "extremum":  max or min
+        "at_index": take value at spike index
 
     Returns
     -------
     peak_values: dict
         Dictionary with unit ids as keys and template amplitudes as values
     """
-    assert peak_sign in ("both", "neg", "pos")
-    assert mode in ("extremum", "at_index")
+    assert peak_sign in ("both", "neg", "pos"), "'peak_sign' must be 'both', 'neg', or 'pos'"
+    assert mode in ("extremum", "at_index"), "'mode' must be 'extremum' or 'at_index'"
     unit_ids = waveform_extractor.sorting.unit_ids
 
     before = waveform_extractor.nbefore
@@ -57,7 +60,10 @@ def get_template_amplitudes(waveform_extractor, peak_sign: str = "neg", mode: st
 
 
 def get_template_extremum_channel(
-    waveform_extractor, peak_sign: str = "neg", mode: str = "extremum", outputs: str = "id"
+    waveform_extractor,
+    peak_sign: "neg" | "pos" | "both" = "neg",
+    mode: "extremum" | "at_index" = "extremum",
+    outputs: "id" | "index" = "id",
 ):
     """
     Compute the channel with the extremum peak for each unit.
@@ -66,19 +72,19 @@ def get_template_extremum_channel(
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
-    mode: str
-        'extremum':  max or min
-        'at_index': take value at spike index
-    outputs: str
-        * 'id': channel id
-        * 'index': channel index
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute best channels
+    mode: "extremum" | "at_index", default: "extremum"
+        "extremum":  max or min
+        "at_index": take value at spike index
+    outputs: "id" | "index", default: "id"
+        * "id": channel id
+        * "index": channel index
 
     Returns
     -------
     extremum_channels: dict
-        Dictionary with unit ids as keys and extremum channels (id or index based on 'outputs')
+        Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
     assert peak_sign in ("both", "neg", "pos")
@@ -121,13 +127,13 @@ def get_template_channel_sparsity(
             The waveform extractor
     {}
         outputs: str
-            * 'id': channel id
-            * 'index': channel index
+            * "id": channel id
+            * "index": channel index
 
         Returns
         -------
         sparsity: dict
-            Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
+            Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on "outputs")
             as values
     """
     from spikeinterface.core.sparsity import compute_sparsity
@@ -159,7 +165,7 @@ def get_template_channel_sparsity(
 get_template_channel_sparsity.__doc__ = get_template_channel_sparsity.__doc__.format(_sparsity_doc)
 
 
-def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str = "neg"):
+def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg"):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
@@ -169,8 +175,8 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str 
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute best channels
 
     Returns
     -------
@@ -203,7 +209,9 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str 
     return shifts
 
 
-def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", mode: str = "at_index"):
+def get_template_extremum_amplitude(
+    waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "at_index"
+):
     """
     Computes amplitudes on the best channel.
 
@@ -211,20 +219,20 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", 
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
-    mode: str
+    peak_sign:  "neg" | "pos" | "both"
+        Sign of the template to compute best channels
+    mode: "extremum" | "at_index", default: "at_index"
         Where the amplitude is computed
-        'extremum':  max or min
-        'at_index': take value at spike index
+        "extremum":  max or min
+        "at_index": take value at spike index
 
     Returns
     -------
     amplitudes: dict
         Dictionary with unit ids as keys and amplitudes as values
     """
-    assert peak_sign in ("both", "neg", "pos")
-    assert mode in ("extremum", "at_index")
+    assert peak_sign in ("both", "neg", "pos"), "'peak_sign' must be  'neg' or 'pos' or 'both'"
+    assert mode in ("extremum", "at_index"), "'mode' must be 'extremum' or 'at_index'"
     unit_ids = waveform_extractor.sorting.unit_ids
 
     before = waveform_extractor.nbefore

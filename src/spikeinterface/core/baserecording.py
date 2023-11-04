@@ -1,18 +1,22 @@
-from typing import Iterable, List, Union
-from pathlib import Path
 import warnings
+from pathlib import Path
+from typing import Iterable, List, Union
+from warnings import warn
 
 import numpy as np
-
-from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
+from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, write_probeinterface
 
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
-from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
+from .core_tools import (
+    check_json,
+    convert_bytes_to_str,
+    convert_seconds_to_str,
+    write_binary_recording,
+    write_memory_recording,
+    write_traces_to_zarr,
+)
 from .job_tools import split_job_kwargs
-from .core_tools import convert_bytes_to_str, convert_seconds_to_str
-
-from warnings import warn
 
 
 class BaseRecording(BaseRecordingSnippets):
@@ -25,12 +29,12 @@ class BaseRecording(BaseRecordingSnippets):
     _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
     _main_features = []  # recording do not handle features
 
+    _skip_properties = ["noise_level_raw", "noise_level_scaled"]
+
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
-
-        self.is_dumpable = True
 
         self._recording_segments: List[BaseRecordingSegment] = []
 
@@ -132,9 +136,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
+        segment_index : int or None, default: None
             The segment index to retrieve the number of samples for.
-            For multi-segment objects, it is required, by default None
+            For multi-segment objects, it is required, default: None
             With single segment recording returns the number of samples in the segment
 
         Returns
@@ -167,9 +171,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
+        segment_index : int or None, default: None
             The sample index to retrieve the duration for.
-            For multi-segment objects, it is required, by default None
+            For multi-segment objects, it is required, default: None
             With single segment recording returns the duration of the single segment
 
         Returns
@@ -200,9 +204,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
+        segment_index : int or None, default: None
             The index of the segment for which the memory size should be calculated.
-            For multi-segment objects, it is required, by default None
+            For multi-segment objects, it is required, default: None
             With single segment recording returns the memory size of the single segment
 
         Returns
@@ -245,22 +249,22 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : Union[int, None], optional
-            The segment index to get traces from. If recording is multi-segment, it is required, by default None
-        start_frame : Union[int, None], optional
-            The start frame. If None, 0 is used, by default None
-        end_frame : Union[int, None], optional
-            The end frame. If None, the number of samples in the segment is used, by default None
-        channel_ids : Union[Iterable, None], optional
-            The channel ids. If None, all channels are used, by default None
-        order : Union[str, None], optional
-            The order of the traces ("C" | "F"). If None, traces are returned as they are, by default None
-        return_scaled : bool, optional
+        segment_index : Union[int, None], default: None
+            The segment index to get traces from. If recording is multi-segment, it is required, default: None
+        start_frame : Union[int, None], default: None
+            The start frame. If None, 0 is used, default: None
+        end_frame : Union[int, None], default: None
+            The end frame. If None, the number of samples in the segment is used, default: None
+        channel_ids : Union[Iterable, None], default: None
+            The channel ids. If None, all channels are used, default: None
+        order : Union[str, None], default: None
+            The order of the traces ("C" | "F"). If None, traces are returned as they are, default: None
+        return_scaled : bool, default: None
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-            traces are scaled to uV, by default False
-        cast_unsigned : bool, optional
+            traces are scaled to uV, default: False
+        cast_unsigned : bool, default: None
             If True and the traces are unsigned, they are cast to integer and centered
-            (an offset of (2**nbits) is subtracted), by default False
+            (an offset of (2**nbits) is subtracted), default: False
 
         Returns
         -------
@@ -301,7 +305,8 @@ class BaseRecording(BaseRecordingSnippets):
 
             if not self.has_scaled():
                 raise ValueError(
-                    "This recording do not support return_scaled=True (need gain_to_uV and offset_" "to_uV properties)"
+                    "This recording does not support return_scaled=True (need gain_to_uV and offset_"
+                    "to_uV properties)"
                 )
             else:
                 gains = self.get_property("gain_to_uV")
@@ -321,6 +326,32 @@ class BaseRecording(BaseRecordingSnippets):
         """
         return self.has_scaled()
 
+    def get_time_info(self, segment_index=None) -> dict:
+        """
+        Retrieves the timing attributes for a given segment index. As with
+        other recorders this method only needs a segment index in the case
+        of multi-segment recordings.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following key-value pairs:
+
+            - "sampling_frequency": The sampling frequency of the RecordingSegment.
+            - "t_start": The start time of the RecordingSegment.
+            - "time_vector": The time vector of the RecordingSegment.
+
+        Notes
+        -----
+        The keys are always present, but the values may be None.
+        """
+
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        time_kwargs = rs.get_times_kwargs()
+
+        return time_kwargs
+
     def get_times(self, segment_index=None):
         """Get time vector for a recording segment.
 
@@ -331,8 +362,8 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
-            The segment index (required for multi-segment), by default None
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
 
         Returns
         -------
@@ -349,8 +380,8 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
-            The segment index (required for multi-segment), by default None
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
 
         Returns
         -------
@@ -369,10 +400,10 @@ class BaseRecording(BaseRecordingSnippets):
         ----------
         times : 1d np.array
             The time vector
-        segment_index : int, optional
-            The segment index (required for multi-segment), by default None
-        with_warning : bool, optional
-            If True, a warning is printed, by default True
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+        with_warning : bool, default: True
+            If True, a warning is printed
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
@@ -386,14 +417,27 @@ class BaseRecording(BaseRecordingSnippets):
         if with_warning:
             warn(
                 "Setting times with Recording.set_times() is not recommended because "
-                "times are not always propagated to across preprocessing"
-                "Use use this carefully!"
+                "times are not always propagated across preprocessing"
+                "Use this carefully!"
             )
+
+    def sample_index_to_time(self, sample_ind, segment_index=None):
+        """
+        Transform sample index into time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        return rs.sample_index_to_time(sample_ind)
+
+    def time_to_sample_index(self, time_s, segment_index=None):
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        return rs.time_to_sample_index(time_s)
 
     def _save(self, format="binary", **save_kwargs):
         """
         This function replaces the old CacheRecordingExtractor, but enables more engines
-        for caching a results. At the moment only 'binary' with memmap is supported.
+        for caching a results. At the moment only "binary" with memmap is supported.
         We plan to add other engines, such as zarr and NWB.
         """
 
@@ -419,10 +463,12 @@ class BaseRecording(BaseRecordingSnippets):
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
 
+            # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
+            # See the __init__ of `BinaryFolderRecording`
             binary_rec = BinaryRecordingExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),
-                num_chan=self.get_num_channels(),
+                num_channels=self.get_num_channels(),
                 dtype=dtype,
                 t_starts=t_starts,
                 channel_ids=self.get_channel_ids(),
@@ -547,7 +593,7 @@ class BaseRecording(BaseRecordingSnippets):
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceRecording
 
-        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
+        new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 
@@ -618,6 +664,11 @@ class BaseRecording(BaseRecordingSnippets):
         # good job you pass all crucible
         return True
 
+    def astype(self, dtype):
+        from ..preprocessing.astype import astype
+
+        return astype(self, dtype=dtype)
+
 
 class BaseRecordingSegment(BaseSegment):
     """
@@ -652,10 +703,27 @@ class BaseRecordingSegment(BaseSegment):
                 time_vector += self.t_start
             return time_vector
 
-    def get_times_kwargs(self):
-        # useful for other internal RecordingSegment
-        d = dict(sampling_frequency=self.sampling_frequency, t_start=self.t_start, time_vector=self.time_vector)
-        return d
+    def get_times_kwargs(self) -> dict:
+        """
+        Retrieves the timing attributes characterizing a RecordingSegment
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following key-value pairs:
+
+            - "sampling_frequency": The sampling frequency of the RecordingSegment.
+            - "t_start": The start time of the RecordingSegment.
+            - "time_vector": The time vector of the RecordingSegment.
+
+        Notes
+        -----
+        The keys are always present, but the values may be None.
+        """
+        time_kwargs = dict(
+            sampling_frequency=self.sampling_frequency, t_start=self.t_start, time_vector=self.time_vector
+        )
+        return time_kwargs
 
     def sample_index_to_time(self, sample_ind):
         """
@@ -702,16 +770,15 @@ class BaseRecordingSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
-        channel_indices: (Union[List, None], optional)
-            Indices of channels to return, or all channels if None. Defaults to None.
-        order: (Order, optional)
+        start_frame: Union[int, None], default: None
+            start sample index, or zero if None
+        end_frame: Union[int, None], default: None
+            end_sample, or number of samples if None
+        channel_indices: Union[List, None], default: None
+            Indices of channels to return, or all channels if None
+        order: list or None, default: None
             The memory order of the returned array.
-            Use Order.C for C order, Order.F for Fortran order, or Order.K to keep the order of the underlying data.
-            Defaults to Order.K.
+            Use Order.C for C order, Order.F for Fortran order, or Order.K to keep the order of the underlying data
 
         Returns
         -------

@@ -64,11 +64,10 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         pc_file_sparse = pc.extension_folder / "all_pc_sparse.npy"
         pc_sparse.run_for_all_spikes(pc_file_sparse, chunk_size=10000, n_jobs=1)
         all_pc_sparse = np.load(pc_file_sparse)
-        all_spikes = we_copy.sorting.get_all_spike_trains(outputs="unit_id")
-        _, spike_labels = all_spikes[0]
-        for unit_id, sparse_channel_ids in sparsity.unit_id_to_channel_ids.items():
-            # check dimensions
-            pc_unit = all_pc_sparse[spike_labels == unit_id]
+        all_spikes_seg0 = we_copy.sorting.to_spike_vector(concatenated=False)[0]
+        for unit_index, unit_id in enumerate(we.unit_ids):
+            sparse_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
+            pc_unit = all_pc_sparse[all_spikes_seg0["unit_index"] == unit_index]
             assert np.allclose(pc_unit[:, :, len(sparse_channel_ids) :], 0)
 
     def test_sparse(self):
@@ -87,14 +86,18 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
                 pc.set_params(n_components=5, mode=mode, sparsity=sparsity)
                 pc.run()
                 for i, unit_id in enumerate(unit_ids):
-                    proj = pc.get_projections(unit_id)
-                    assert proj.shape[1:] == (5, 4)
+                    proj_sparse = pc.get_projections(unit_id, sparse=True)
+                    assert proj_sparse.shape[1:] == (5, len(sparsity.unit_id_to_channel_ids[unit_id]))
+                    proj_dense = pc.get_projections(unit_id, sparse=False)
+                    assert proj_dense.shape[1:] == (5, num_channels)
 
                 # test project_new
                 unit_id = 3
                 new_wfs = we.get_waveforms(unit_id)
-                new_proj = pc.project_new(new_wfs, unit_id=unit_id)
-                assert new_proj.shape == (new_wfs.shape[0], 5, 4)
+                new_proj_sparse = pc.project_new(new_wfs, unit_id=unit_id, sparse=True)
+                assert new_proj_sparse.shape == (new_wfs.shape[0], 5, len(sparsity.unit_id_to_channel_ids[unit_id]))
+                new_proj_dense = pc.project_new(new_wfs, unit_id=unit_id, sparse=False)
+                assert new_proj_dense.shape == (new_wfs.shape[0], 5, num_channels)
 
                 if DEBUG:
                     import matplotlib.pyplot as plt
@@ -201,5 +204,5 @@ if __name__ == "__main__":
     # test.test_extension()
     # test.test_shapes()
     # test.test_compute_for_all_spikes()
-    # test.test_sparse()
-    test.test_project_new()
+    test.test_sparse()
+    # test.test_project_new()

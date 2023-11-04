@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
@@ -13,9 +15,9 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     folder_path: str
         The folder path to the tdt folder.
-    stream_id: str, optional
+    stream_id: str or None, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name: str or None, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
@@ -35,7 +37,7 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
             all_annotations=all_annotations,
             **neo_kwargs,
         )
-        self._kwargs.update(dict(folder_path=str(folder_path)))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):

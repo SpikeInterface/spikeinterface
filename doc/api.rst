@@ -19,6 +19,8 @@ spikeinterface.core
     .. autofunction:: extract_waveforms
     .. autofunction:: load_waveforms
     .. autofunction:: compute_sparsity
+    .. autoclass:: ChannelSparsity
+        :members:
     .. autoclass:: BinaryRecordingExtractor
     .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
@@ -48,10 +50,6 @@ spikeinterface.core
     .. autofunction:: get_template_extremum_channel
     .. autofunction:: get_template_extremum_channel_peak_shift
     .. autofunction:: get_template_extremum_amplitude
-
-..
-    .. autofunction:: read_binary
-    .. autofunction:: read_zarr
     .. autofunction:: append_recordings
     .. autofunction:: concatenate_recordings
     .. autofunction:: split_recording
@@ -59,6 +57,8 @@ spikeinterface.core
     .. autofunction:: append_sortings
     .. autofunction:: split_sorting
     .. autofunction:: select_segment_sorting
+    .. autofunction:: read_binary
+    .. autofunction:: read_zarr
 
 Low-level
 ~~~~~~~~~
@@ -67,7 +67,6 @@ Low-level
     :noindex:
 
     .. autoclass:: BaseWaveformExtractorExtension
-    .. autoclass:: ChannelSparsity
     .. autoclass:: ChunkRecordingExecutor
 
 spikeinterface.extractors
@@ -83,6 +82,7 @@ NEO-based
     .. autofunction:: read_alphaomega_event
     .. autofunction:: read_axona
     .. autofunction:: read_biocam
+    .. autofunction:: read_binary
     .. autofunction:: read_blackrock
     .. autofunction:: read_ced
     .. autofunction:: read_intan
@@ -91,16 +91,21 @@ NEO-based
     .. autofunction:: read_mcsraw
     .. autofunction:: read_neuralynx
     .. autofunction:: read_neuralynx_sorting
+    .. autofunction:: read_neuroexplorer
     .. autofunction:: read_neuroscope
     .. autofunction:: read_nix
     .. autofunction:: read_openephys
     .. autofunction:: read_openephys_event
     .. autofunction:: read_plexon
     .. autofunction:: read_plexon_sorting
+    .. autofunction:: read_plexon2
+    .. autofunction:: read_plexon2_sorting
     .. autofunction:: read_spike2
     .. autofunction:: read_spikegadgets
     .. autofunction:: read_spikeglx
     .. autofunction:: read_tdt
+    .. autofunction:: read_zarr
+
 
 Non-NEO-based
 ~~~~~~~~~~~~~
@@ -141,13 +146,18 @@ spikeinterface.preprocessing
 
 .. automodule:: spikeinterface.preprocessing
 
+    .. autofunction:: astype
+    .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
     .. autofunction:: blank_staturation
     .. autofunction:: center
     .. autofunction:: clip
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
+    .. autofunction:: correct_motion
+    .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
+    .. autofunction:: directional_derivative
     .. autofunction:: filter
     .. autofunction:: gaussian_bandpass_filter
     .. autofunction:: highpass_filter
@@ -158,7 +168,10 @@ spikeinterface.preprocessing
     .. autofunction:: phase_shift
     .. autofunction:: rectify
     .. autofunction:: remove_artifacts
+    .. autofunction:: resample
     .. autofunction:: scale
+    .. autofunction:: silence_periods
+    .. autofunction:: unsigned_to_signed
     .. autofunction:: whiten
     .. autofunction:: zero_channel_pad
     .. autofunction:: zscore
@@ -204,8 +217,10 @@ spikeinterface.sorters
     .. autofunction:: print_sorter_versions
     .. autofunction:: get_sorter_description
     .. autofunction:: run_sorter
+    .. autofunction:: run_sorter_jobs
     .. autofunction:: run_sorters
     .. autofunction:: run_sorter_by_property
+    .. autofunction:: read_sorter_folder
 
 Low level
 ~~~~~~~~~
@@ -261,13 +276,14 @@ spikeinterface.widgets
     .. autofunction:: plot_amplitudes
     .. autofunction:: plot_autocorrelograms
     .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_motion
     .. autofunction:: plot_quality_metrics
     .. autofunction:: plot_sorting_summary
     .. autofunction:: plot_spike_locations
     .. autofunction:: plot_spikes_on_traces
     .. autofunction:: plot_template_metrics
     .. autofunction:: plot_template_similarity
-    .. autofunction:: plot_timeseries
+    .. autofunction:: plot_traces
     .. autofunction:: plot_unit_depths
     .. autofunction:: plot_unit_locations
     .. autofunction:: plot_unit_summary
@@ -287,7 +303,6 @@ These widgets are only available with the "matplotlib" backend
     .. autofunction:: plot_rasters
     .. autofunction:: plot_probe_map
     .. autofunction:: plot_isi_distribution
-    .. autofunction:: plot_drift_over_time
     .. autofunction:: plot_peak_activity_map
     .. autofunction:: plot_principal_component
     .. autofunction:: plot_unit_probe_map
@@ -341,9 +356,9 @@ Peak Detection
 
 Motion Correction
 ~~~~~~~~~~~~~~~~~
-.. automodule:: spikeinterface.sortingcomponents.motion_correction
+.. automodule:: spikeinterface.sortingcomponents.motion_interpolation
 
-    .. autoclass:: CorrectMotionRecording
+    .. autoclass:: InterpolateMotionRecording
 
 Clustering
 ~~~~~~~~~~

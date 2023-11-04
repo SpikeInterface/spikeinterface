@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import pickle
+import warnings
 
 import numpy as np
 
@@ -24,22 +25,22 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
     ----------
     sorting_list: list
         List of sorting extractor objects to be compared
-    name_list: list
-        List of spike sorter names. If not given, sorters are named as 'sorter0', 'sorter1', 'sorter2', etc.
-    delta_time: float
-        Number of ms to consider coincident spikes (default 0.4 ms)
-    match_score: float
-        Minimum agreement score to match units (default 0.5)
-    chance_score: float
-        Minimum agreement score to for a possible match (default 0.1)
-    n_jobs: int
+    name_list: list, default: None
+        List of spike sorter names. If not given, sorters are named as "sorter0", "sorter1", "sorter2", etc.
+    delta_time: float, default: 0.4
+        Number of ms to consider coincident spikes
+    match_score: float, default: 0.5
+        Minimum agreement score to match units
+    chance_score: float, default: 0.1
+        Minimum agreement score to for a possible match
+    n_jobs: int, default: -1
        Number of cores to use in parallel. Uses all available if -1
-    spiketrain_mode: str
+    spiketrain_mode: "union" | "intersection", default: "union"
         Mode to extract agreement spike trains:
-            - 'union': spike trains are the union between the spike trains of the best matching two sorters
-            - 'intersection': spike trains are the intersection between the spike trains of the
+            - "union": spike trains are the union between the spike trains of the best matching two sorters
+            - "intersection": spike trains are the intersection between the spike trains of the
                best matching two sorters
-    verbose: bool
+    verbose: bool, default: False
         if True, output is verbose
 
     Returns
@@ -155,15 +156,15 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     def get_agreement_sorting(self, minimum_agreement_count=1, minimum_agreement_count_only=False):
         """
-        Returns AgreementSortingExtractor with units with a 'minimum_matching' agreement.
+        Returns AgreementSortingExtractor with units with a "minimum_matching" agreement.
 
         Parameters
         ----------
         minimum_agreement_count: int
             Minimum number of matches among sorters to include a unit.
         minimum_agreement_count_only: bool
-            If True, only units with agreement == 'minimum_matching' are included.
-            If False, units with an agreement >= 'minimum_matching' are included
+            If True, only units with agreement == "minimum_matching" are included.
+            If False, units with an agreement >= "minimum_matching" are included
 
         Returns
         -------
@@ -180,8 +181,17 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         return sorting
 
     def save_to_folder(self, save_folder):
+        warnings.warn(
+            "save_to_folder() is deprecated. "
+            "You should save and load the multi sorting comparison object using pickle."
+            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb')))))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         for sorting in self.object_list:
-            assert sorting.check_if_dumpable(), "MultiSortingComparison.save_to_folder() need dumpable sortings"
+            assert sorting.check_serializablility(
+                "json"
+            ), "MultiSortingComparison.save_to_folder() need json serializable sortings"
 
         save_folder = Path(save_folder)
         save_folder.mkdir(parents=True, exist_ok=True)
@@ -197,19 +207,26 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             json.dump(kwargs, f)
         sortings = {}
         for name, sorting in zip(self.name_list, self.object_list):
-            sortings[name] = sorting.to_dict()
+            sortings[name] = sorting.to_dict(recursive=True, relative_to=save_folder)
         with (save_folder / "sortings.json").open("w") as f:
             json.dump(sortings, f)
 
     @staticmethod
     def load_from_folder(folder_path):
+        warnings.warn(
+            "load_from_folder() is deprecated. "
+            "You should save and load the multi sorting comparison object using pickle."
+            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb')))))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         folder_path = Path(folder_path)
         with (folder_path / "kwargs.json").open() as f:
             kwargs = json.load(f)
         with (folder_path / "sortings.json").open() as f:
             dict_sortings = json.load(f)
         name_list = list(dict_sortings.keys())
-        sorting_list = [load_extractor(v) for v in dict_sortings.values()]
+        sorting_list = [load_extractor(v, base_folder=folder_path) for v in dict_sortings.values()]
         mcmp = MultiSortingComparison(sorting_list=sorting_list, name_list=list(name_list), do_matching=False, **kwargs)
         filename = str(folder_path / "multicomparison.gpickle")
         with open(filename, "rb") as f:
@@ -226,7 +243,6 @@ class AgreementSortingExtractor(BaseSorting):
         self, sampling_frequency, multisortingcomparison, min_agreement_count=1, min_agreement_count_only=False
     ):
         self._msc = multisortingcomparison
-        self.is_dumpable = False
 
         if min_agreement_count_only:
             unit_ids = list(
@@ -243,6 +259,9 @@ class AgreementSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
+        self._serializablility["json"] = False
+        self._serializablility["pickle"] = True
+
         if len(unit_ids) > 0:
             for k in ("agreement_number", "avg_agreement", "unit_ids"):
                 values = [self._msc._new_units[unit_id][k] for unit_id in unit_ids]
@@ -251,6 +270,13 @@ class AgreementSortingExtractor(BaseSorting):
         for segment_index in range(multisortingcomparison._num_segments):
             sorting_segment = AgreementSortingSegment(multisortingcomparison._spiketrains[segment_index])
             self.add_sorting_segment(sorting_segment)
+
+        self._kwargs = dict(
+            sampling_frequency=sampling_frequency,
+            multisortingcomparison=multisortingcomparison,
+            min_agreement_count=min_agreement_count,
+            min_agreement_count_only=min_agreement_count_only,
+        )
 
 
 class AgreementSortingSegment(BaseSortingSegment):
@@ -283,13 +309,13 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
     ----------
     waveform_list: list
         List of waveform extractor objects to be compared
-    name_list: list
-        List of session names. If not given, sorters are named as 'sess0', 'sess1', 'sess2', etc.
-    match_score: float
-        Minimum agreement score to match units (default 0.5)
-    chance_score: float
-        Minimum agreement score to for a possible match (default 0.1)
-    verbose: bool
+    name_list: list, default: None
+        List of session names. If not given, sorters are named as "sess0", "sess1", "sess2", etc.
+    match_score: float, default: 0.8
+        Minimum agreement score to match units
+    chance_score: float, default: 0.3
+        Minimum agreement score to for a possible match
+    verbose: bool, default: False
         if True, output is verbose
 
     Returns

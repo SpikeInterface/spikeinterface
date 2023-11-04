@@ -49,7 +49,7 @@ class ZarrRecordingExtractor(BaseRecording):
                 root_path = Path(root_path)
             else:
                 root_path_init = str(root_path)
-            root_path_kwarg = str(root_path.absolute())
+            root_path_kwarg = str(Path(root_path).absolute())
         else:
             root_path_init = root_path
             root_path_kwarg = root_path_init
@@ -169,7 +169,7 @@ def get_default_zarr_compressor(clevel=5):
 
     Parameters
     ----------
-    clevel : int, optional
+    clevel : int, default: 5
         Compression level (higher -> more compressed).
         Minimum 1, maximum 9. By default 5
 

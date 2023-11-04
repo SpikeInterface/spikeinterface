@@ -20,7 +20,7 @@ For now, we have methods for:
  * peak localization
  * peak selection
  * motion estimation
- * motion correction
+ * motion interpolation
  * clustering
  * template matching
 
@@ -47,11 +47,12 @@ follows:
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
     peaks = detect_peaks(
-        recording, method='by_channel',
+        recording=recording,
+        method='by_channel',
         peak_sign='neg',
         detect_threshold=5,
         exclude_sweep_ms=0.2,
-        local_radius_um=100,
+        radius_um=100,
         noise_levels=None,
         random_chunk_kwargs={},
         outputs='numpy_compact',
@@ -94,8 +95,8 @@ follows:
 
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
-    peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
-                                    local_radius_um=70., ms_before=0.3, ms_after=0.6,
+    peak_locations = localize_peaks(recording=recording, peaks=peaks, method='center_of_mass',
+                                    radius_um=70., ms_before=0.3, ms_after=0.6,
                                     **job_kwargs)
 
 
@@ -122,7 +123,7 @@ For instance, the 'monopolar_triangulation' method will have:
 
 .. note::
 
-   By convention in SpikeInterface, when a probe is described in 2d
+   By convention in SpikeInterface, when a probe is described in 3d
      * **'x'** is the width of the probe
      * **'y'** is the depth
      * **'z'** is orthogonal to the probe plane
@@ -144,11 +145,11 @@ can be *hidden* by this process.
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-    many_peaks = detect_peaks(...)
+    many_peaks = detect_peaks(...) # as in above example
 
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
 
-    some_peaks = select_peaks(many_peaks, method='uniform', n_peaks=10000)
+    some_peaks = select_peaks(peaks=many_peaks, method='uniform', n_peaks=10000)
 
 Implemented methods are the following:
 
@@ -183,15 +184,15 @@ Here is an example with non-rigid motion estimation:
 .. code-block:: python
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-    peaks = detect_peaks(recording, ...)
+    peaks = detect_peaks(recording=recording, ...) # as in above example
 
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-    peak_locations = localize_peaks(recording, peaks, ...)
+    peak_locations = localize_peaks(recording=recording, peaks=peaks, ...) # as above
 
 
     from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
     motion, temporal_bins, spatial_bins,
-                extra_check = estimate_motion(recording, peaks, peak_locations=peak_locations,
+                extra_check = estimate_motion(recording=recording, peaks=peaks, peak_locations=peak_locations,
                                               direction='y', bin_duration_s=10., bin_um=10., margin_um=0.,
                                               method='decentralized_registration',
                                               rigid=False, win_shape='gaussian', win_step_um=50., win_sigma_um=150.,
@@ -200,30 +201,30 @@ Here is an example with non-rigid motion estimation:
 In this example, because it is a non-rigid estimation, :code:`motion` is a 2d array (num_time_bins, num_spatial_bins).
 
 
-Motion correction
------------------
+Motion interpolation
+--------------------
 
-The estimated motion can be used to correct the motion, in other words, for drift correction.
+The estimated motion can be used to interpolate traces, in other words, for drift correction.
 One possible way is to make an interpolation sample-by-sample to compensate for the motion.
-The :py:class:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording` is a preprocessing step doing
-this. This preprocessing is *lazy*, so that interpolation is done on-the-fly. However, the class needs the
+The :py:class:`~spikeinterface.sortingcomponents.motion_interpolation.InterpolateMotionRecording` is a preprocessing
+step doing this. This preprocessing is *lazy*, so that interpolation is done on-the-fly. However, the class needs the
 "motion vector" as input, which requires a relatively long computation (peak detection, localization and motion
 estimation).
 
-Here is a short example that depends on the output of "Motion estimation":
+Here is a short example that depends on the output of "Motion interpolation":
 
 
 .. code-block:: python
 
-  from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+  from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 
-  recording_corrected = CorrectMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins
-                                              spatial_interpolation_method='kriging,
-                                              border_mode='remove_channels')
+  recording_corrected = InterpolateMotionRecording(recording=recording_with_drift, motion=motion, temporal_bins=temporal_bins, spatial_bins=spatial_bins
+                                                   spatial_interpolation_method='kriging,
+                                                   border_mode='remove_channels')
 
 **Notes**:
   * :code:`spatial_interpolation_method` "kriging" or "iwd" do not play a big role.
-  * :code:`border_mode` is a very important parameter. It controls how to deal with the border because motion causes units on the
+  * :code:`border_mode` is a very important parameter. It controls dealing with the border because motion causes units on the
     border to not be present throughout the entire recording. We highly recommend the :code:`border_mode='remove_channels'`
     because this removes channels on the border that will be impacted by drift. Of course the larger the motion is
     the more channels are removed.
@@ -255,10 +256,10 @@ Different methods may need different inputs (for instance some of them require p
 .. code-block:: python
 
   from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-  peaks = detect_peaks(recording, ...)
+  peaks = detect_peaks(recording, ...) # as in above example
 
   from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-  labels, peak_labels = find_cluster_from_peaks(recording, peaks, method="sliding_hdbscan")
+  labels, peak_labels = find_cluster_from_peaks(recording=recording, peaks=peaks, method="sliding_hdbscan")
 
 
 * **labels** : contains all possible labels
@@ -273,14 +274,17 @@ Template matching is the final step used in many sorters (Kilosort, SpyKING-Circ
 In this step, from a given catalogue (or dictionary) of templates (or atoms), the algorithms try to *explain* the
 traces as a linear sum of a template plus a residual noise.
 
-At the moment, there are four methods implemented:
+At the moment, there are five methods implemented:
 
   * 'naive': a very naive implemenation used as a reference for benchmarks
   * 'tridesclous': the algorithm for template matching implemented in Tridesclous
   * 'circus': the algorithm for template matching implemented in SpyKING-Circus
-  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal macthing
+  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal matching
     pursuit)
+  * 'wobble' : an algorithm loosely based on YASS that scales template amplitudes and shifts them in time
+    to match detected spikes
 
-Very preliminary benchmarks suggest that:
- * 'circus-omp' is the most accurate, but a bit slow.
- * 'tridesclous' is the fastest and has very decent accuracy
+Preliminary benchmarks suggest that:
+ * 'circus-omp' is very accurate, but a bit slow.
+ * 'tridesclous' is the fastest with decent accuracy
+ * 'wobble' is much faster and a bit more accurate than 'circus-omp'

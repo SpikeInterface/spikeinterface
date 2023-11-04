@@ -50,7 +50,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         "peak_shift_ms": 0.2,
         "detect_threshold": 5,
         "noise_levels": None,
-        "local_radius_um": 100,
+        "radius_um": 100,
         "num_closest": 5,
         "sample_shift": 3,
         "ms_before": 0.8,
@@ -61,12 +61,15 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
-        assert HAVE_NUMBA, "TridesclousPeeler need numba to be installed"
+        assert HAVE_NUMBA, "TridesclousPeeler needs numba to be installed"
 
         d = cls.default_params.copy()
         d.update(kwargs)
 
-        assert isinstance(d["waveform_extractor"], WaveformExtractor)
+        assert isinstance(d["waveform_extractor"], WaveformExtractor), (
+            f"The waveform_extractor supplied is of type {type(d['waveform_extractor'])} "
+            f"and must be a WaveformExtractor"
+        )
 
         we = d["waveform_extractor"]
         unit_ids = we.unit_ids
@@ -103,7 +106,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
         channel_distance = get_channel_distances(recording)
-        d["neighbours_mask"] = channel_distance < d["local_radius_um"]
+        d["neighbours_mask"] = channel_distance < d["radius_um"]
 
         sparsity = compute_sparsity(we, method="snr", peak_sign=d["peak_sign"], threshold=d["detect_threshold"])
         template_sparsity_inds = sparsity.unit_id_to_channel_indices
@@ -154,7 +157,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
         # distance channel from unit
         distances = scipy.spatial.distance.cdist(channel_locations, unit_locations, metric="euclidean")
-        near_cluster_mask = distances < d["local_radius_um"]
+        near_cluster_mask = distances < d["radius_um"]
 
         # nearby cluster for each channel
         possible_clusters_by_channel = []

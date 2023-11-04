@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
@@ -15,11 +17,11 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         The file path to the smr or smrx file.
-    stream_id: str, optional
+    stream_id: str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
+    block_index: int, default: None
         If there are several blocks, specify the block index you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
@@ -34,7 +36,7 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(file_path=str(file_path)))
+        self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
         self.extra_requirements.append("neo[ced]")
 
     @classmethod

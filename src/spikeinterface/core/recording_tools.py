@@ -23,16 +23,19 @@ def get_random_data_chunks(
     ----------
     recording: BaseRecording
         The recording to get random chunks from
-    return_scaled: bool
+    return_scaled: bool, default: False
         If True, returned chunks are scaled to uV
-    num_chunks_per_segment: int
+    num_chunks_per_segment: int, default: 20
         Number of chunks per segment
-    chunk_size: int
+    chunk_size: int, default: 10000
         Size of a chunk in number of frames
-    concatenated: bool (default True)
-        If True chunk are concatenated along time axis.
-    seed: int
+    concatenated: bool, default: True
+        If True chunk are concatenated along time axis
+    seed: int, default: 0
         Random seed
+    margin_frames: int, default: 0
+        Margin in number of frames to avoid edge effects
+
     Returns
     -------
     chunk_list: np.array
@@ -79,27 +82,6 @@ def get_random_data_chunks(
         return chunk_list
 
 
-def get_noise_levels(
-    recording: "BaseRecording", return_scaled: bool = True, method: Literal["mad", "std"] = "mad", **random_chunk_kwargs
-):
-    """
-    Estimate signal std for each channel using median absolute deviation (MAD) and std.
-
-    Internally it samples some chunk across segment.
-    And then, it use MAD estimator (more robust than STD)
-
-    """
-    random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
-
-    if method == "mad":
-        med = np.median(random_chunks, axis=0, keepdims=True)
-        # hard-coded so that core doesn't depend on scipy
-        noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-    elif method == "std":
-        noise_levels = np.std(random_chunks, axis=0)
-    return noise_levels
-
-
 def get_channel_distances(recording):
     """
     Distance between channel pairs
@@ -119,7 +101,7 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
         The recording extractor to get closest channels
     channel_ids: list
         List of channels ids to compute there near neighborhood
-    num_channels: int, optional
+    num_channels: int, default: None
         Maximum number of neighborhood channels to return
 
     Returns
@@ -145,6 +127,61 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
         dists.append(distances[order][1 : num_channels + 1])
 
     return np.array(closest_channels_inds), np.array(dists)
+
+
+def get_noise_levels(
+    recording: "BaseRecording",
+    return_scaled: bool = True,
+    method: Literal["mad", "std"] = "mad",
+    force_recompute: bool = False,
+    **random_chunk_kwargs,
+):
+    """
+    Estimate noise for each channel using MAD methods.
+    You can use standard deviation with `method="std"`
+
+    Internally it samples some chunk across segment.
+    And then, it use MAD estimator (more robust than STD)
+
+    Parameters
+    ----------
+
+    recording: BaseRecording
+        The recording extractor to get noise levels
+    return_scaled: bool
+        If True, returned noise levels are scaled to uV
+    method: "mad" | "std", default: "mad"
+        The method to use to estimate noise levels
+    force_recompute: bool
+        If True, noise levels are recomputed even if they are already stored in the recording extractor
+    random_chunk_kwargs: dict
+        Kwargs for get_random_data_chunks
+
+    Returns
+    -------
+    noise_levels: array
+        Noise levels for each channel
+    """
+
+    if return_scaled:
+        key = "noise_level_scaled"
+    else:
+        key = "noise_level_raw"
+
+    if key in recording.get_property_keys() and not force_recompute:
+        noise_levels = recording.get_property(key=key)
+    else:
+        random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
+
+        if method == "mad":
+            med = np.median(random_chunks, axis=0, keepdims=True)
+            # hard-coded so that core doesn't depend on scipy
+            noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
+        elif method == "std":
+            noise_levels = np.std(random_chunks, axis=0)
+        recording.set_property(key, noise_levels)
+
+    return noise_levels
 
 
 def get_chunk_with_margin(
@@ -175,6 +212,7 @@ def get_chunk_with_margin(
     if not (add_zeros or add_reflect_padding):
         if window_on_margin and not add_zeros:
             raise ValueError("window_on_margin requires add_zeros=True")
+
         if start_frame is None:
             left_margin = 0
             start_frame = 0
@@ -190,6 +228,7 @@ def get_chunk_with_margin(
             right_margin = length - end_frame
         else:
             right_margin = margin
+
         traces_chunk = rec_segment.get_traces(
             start_frame - left_margin,
             end_frame + right_margin,
@@ -198,8 +237,11 @@ def get_chunk_with_margin(
 
     else:
         # either add_zeros or reflect_padding
-        assert start_frame is not None
-        assert end_frame is not None
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = length
+
         chunk_size = end_frame - start_frame
         full_size = chunk_size + 2 * margin
 
@@ -263,7 +305,7 @@ def get_chunk_with_margin(
     return traces_chunk, left_margin, right_margin
 
 
-def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
+def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), flip=False):
     """
     Order channels by depth, by first ordering the x-axis, and then the y-axis.
 
@@ -273,10 +315,13 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
         The input recording
     channel_ids : list/array or None
         If given, a subset of channels to order locations for
-    dimensions : str or tuple
+    dimensions : str, tuple, or list, default: ('x', 'y')
         If str, it needs to be 'x', 'y', 'z'.
-        If tuple, it sorts the locations in two dimensions using lexsort.
-        This approach is recommended since there is less ambiguity, by default ('x', 'y')
+        If tuple or list, it sorts the locations in two dimensions using lexsort.
+        This approach is recommended since there is less ambiguity
+    flip: bool, default: False
+        If flip is False then the order is bottom first (starting from tip of the probe).
+        If flip is True then the order is upper first.
 
     Returns
     -------
@@ -295,13 +340,15 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
         assert dim < ndim, "Invalid dimensions!"
         order_f = np.argsort(locations[:, dim], kind="stable")
     else:
-        assert isinstance(dimensions, tuple), "dimensions can be a str or a tuple"
+        assert isinstance(dimensions, (tuple, list)), "dimensions can be str, tuple, or list"
         locations_to_sort = ()
         for dim in dimensions:
             dim = ["x", "y", "z"].index(dim)
             assert dim < ndim, "Invalid dimensions!"
             locations_to_sort += (locations[:, dim],)
         order_f = np.lexsort(locations_to_sort)
+    if flip:
+        order_f = order_f[::-1]
     order_r = np.argsort(order_f, kind="stable")
 
     return order_f, order_r

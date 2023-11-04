@@ -1,21 +1,11 @@
-import json
 from pathlib import Path
 
 import numpy as np
 
-from probeinterface import read_prb, write_prb
+import probeinterface
 
 from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
-
-try:
-    import hybridizer.io as sbio
-    import hybridizer.probes as sbprb
-    import yaml
-
-    HAVE_SBEX = True
-except ImportError:
-    HAVE_SBEX = False
 
 
 class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
@@ -33,9 +23,6 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     """
 
     extractor_name = "SHYBRIDRecording"
-    has_default_locations = True
-    installed = HAVE_SBEX  # check at class level if installed or not
-    is_writable = True
     mode = "folder"
     installation_mesg = (
         "To use the SHYBRID extractors, install SHYBRID and pyyaml: " "\n\n pip install shybrid pyyaml\n\n"
@@ -43,8 +30,17 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     name = "shybrid"
 
     def __init__(self, file_path):
+        try:
+            import hybridizer.io as sbio
+            import hybridizer.probes as sbprb
+            import yaml
+
+            HAVE_SBEX = True
+        except ImportError:
+            HAVE_SBEX = False
+
         # load params file related to the given shybrid recording
-        assert self.installed, self.installation_mesg
+        assert HAVE_SBEX, self.installation_mesg
         assert Path(file_path).suffix in [".yml", ".yaml"], "The 'file_path' should be a yaml file!"
         params = sbio.get_params(file_path)["data"]
         file_path = Path(file_path)
@@ -67,34 +63,43 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
             self,
             file_paths=bin_file,
             sampling_frequency=float(params["fs"]),
-            num_chan=nb_channels,
+            num_channels=nb_channels,
             dtype=params["dtype"],
             time_axis=time_axis,
         )
 
         # load probe file
-        probegroup = read_prb(params["probe"])
+        probegroup = probeinterface.read_prb(params["probe"])
         self.set_probegroup(probegroup, in_place=True)
         self._kwargs = {"file_path": str(Path(file_path).absolute())}
         self.extra_requirements.extend(["hybridizer", "pyyaml"])
 
     @staticmethod
-    def write_recording(recording, save_path, initial_sorting_fn, dtype="float32", verbose=True, **job_kwargs):
+    def write_recording(recording, save_path, initial_sorting_fn, dtype="float32", **job_kwargs):
         """Convert and save the recording extractor to SHYBRID format.
 
         Parameters
         ----------
         recording: RecordingExtractor
-            The recording extractor to be converted and saved.
+            The recording extractor to be converted and saved
         save_path: str
-            Full path to desired target folder.
+            Full path to desired target folder
         initial_sorting_fn: str
             Full path to the initial sorting csv file (can also be generated
-            using write_sorting static method from the SHYBRIDSortingExtractor).
-        dtype: dtype
-            Type of the saved data. Default float32.
+            using write_sorting static method from the SHYBRIDSortingExtractor)
+        dtype: dtype, default: float32
+            Type of the saved data
         **write_binary_kwargs: keyword arguments for write_to_binary_dat_format() function
         """
+        try:
+            import hybridizer.io as sbio
+            import hybridizer.probes as sbprb
+            import yaml
+
+            HAVE_SBEX = True
+        except ImportError:
+            HAVE_SBEX = False
+
         assert HAVE_SBEX, SHYBRIDRecordingExtractor.installation_mesg
         assert recording.get_num_segments() == 1, "SHYBRID can only write single segment recordings"
         save_path = Path(save_path)
@@ -109,12 +114,12 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
         # write recording
         recording_fn = (save_path / recording_name).absolute()
-        write_binary_recording(recording, file_paths=recording_fn, dtype=dtype, verbose=verbose, **job_kwargs)
+        write_binary_recording(recording, file_paths=recording_fn, dtype=dtype, **job_kwargs)
 
         # write probe file
         probe_fn = (save_path / probe_name).absolute()
         probegroup = recording.get_probegroup()
-        write_prb(probe_fn, probegroup, total_nb_channels=recording.get_num_channels())
+        probeinterface.write_prb(probe_fn, probegroup, total_nb_channels=recording.get_num_channels())
 
         # create parameters file
         parameters = dict(
@@ -147,13 +152,19 @@ class SHYBRIDSortingExtractor(BaseSorting):
     """
 
     extractor_name = "SHYBRIDSorting"
-    installed = HAVE_SBEX
-    is_writable = True
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
     name = "shybrid"
 
     def __init__(self, file_path, sampling_frequency, delimiter=","):
-        assert self.installed, self.installation_mesg
+        try:
+            import hybridizer.io as sbio
+            import hybridizer.probes as sbprb
+
+            HAVE_SBEX = True
+        except ImportError:
+            HAVE_SBEX = False
+
+        assert HAVE_SBEX, self.installation_mesg
         assert Path(file_path).suffix == ".csv", "The 'file_path' should be a csv file!"
 
         if Path(file_path).is_file():
@@ -185,6 +196,14 @@ class SHYBRIDSortingExtractor(BaseSorting):
         save_path : str
             Full path to the desired target folder.
         """
+        try:
+            import hybridizer.io as sbio
+            import hybridizer.probes as sbprb
+
+            HAVE_SBEX = True
+        except ImportError:
+            HAVE_SBEX = False
+
         assert HAVE_SBEX, SHYBRIDSortingExtractor.installation_mesg
         assert sorting.get_num_segments() == 1, "SHYBRID can only write single segment sortings"
         save_path = Path(save_path)

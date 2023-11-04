@@ -23,15 +23,15 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
         The parent recording
     bad_channel_ids : list or 1d np.array
         Channel ids of the bad channels to interpolate.
-    sigma_um : float
+    sigma_um : float or None, default: None
         Distance between sequential channels in um. If None, will use
-        the most common distance between y-axis channels, by default None
-    p : float
+        the most common distance between y-axis channels
+    p : float, default: 1.3
         Exponent of the Gaussian kernel. Determines rate of decay
-        for distance weightings, by default 1.3
-    weights : np.array
+        for distance weightings
+    weights : np.array or None, default: None
         The weights to give to bad_channel_ids at interpolation.
-        If None, weights are automatically computed, by default None
+        If None, weights are automatically computed
 
     Returns
     -------
@@ -49,7 +49,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
         self.bad_channel_ids = bad_channel_ids
         self._bad_channel_idxs = recording.ids_to_indices(self.bad_channel_ids)
-        self._good_channel_idxs = ~np.in1d(np.arange(recording.get_num_channels()), self._bad_channel_idxs)
+        self._good_channel_idxs = ~np.isin(np.arange(recording.get_num_channels()), self._bad_channel_idxs)
         self._bad_channel_idxs.setflags(write=False)
 
         if sigma_um is None:

@@ -137,8 +137,8 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
 def compute_correlograms(
     waveform_or_sorting_extractor,
     load_if_exists=False,
-    window_ms: float = 100.0,
-    bin_ms: float = 5.0,
+    window_ms: float = 50.0,
+    bin_ms: float = 1.0,
     method: str = "auto",
 ):
     """Compute auto and cross correlograms.
@@ -146,15 +146,15 @@ def compute_correlograms(
     Parameters
     ----------
     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-        If WaveformExtractor, the correlograms are saved as WaveformExtensions.
+        If WaveformExtractor, the correlograms are saved as WaveformExtensions
     load_if_exists : bool, default: False
-        Whether to load precomputed crosscorrelograms, if they already exist.
-    window_ms : float, optional
-        The window in ms, by default 100.0.
-    bin_ms : float, optional
-        The bin size in ms, by default 5.0.
-    method : str, optional
-        "auto" | "numpy" | "numba". If _auto" and numba is installed, numba is used, by default "auto"
+        Whether to load precomputed crosscorrelograms, if they already exist
+    window_ms : float, default: 100.0
+        The window in ms
+    bin_ms : float, default: 5
+        The bin size in ms
+    method : "auto" | "numpy" | "numba", default: "auto"
+         If "auto" and numba is installed, numba is used, otherwise numpy is used
 
     Returns
     -------
@@ -216,7 +216,7 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
     """
     num_seg = sorting.get_num_segments()
     num_units = len(sorting.unit_ids)
-    spikes = sorting.get_all_spike_trains(outputs="unit_index")
+    spikes = sorting.to_spike_vector(concatenated=False)
 
     num_half_bins = int(window_size // bin_size)
     num_bins = int(2 * num_half_bins)
@@ -224,7 +224,8 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
     correlograms = np.zeros((num_units, num_units, num_bins), dtype="int64")
 
     for seg_index in range(num_seg):
-        spike_times, spike_labels = spikes[seg_index]
+        spike_times = spikes[seg_index]["sample_index"]
+        spike_labels = spikes[seg_index]["unit_index"]
 
         c0 = correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size)
 
@@ -305,11 +306,13 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
 
     num_bins = 2 * int(window_size / bin_size)
     num_units = len(sorting.unit_ids)
-    spikes = sorting.get_all_spike_trains(outputs="unit_index")
+    spikes = sorting.to_spike_vector(concatenated=False)
     correlograms = np.zeros((num_units, num_units, num_bins), dtype=np.int64)
 
     for seg_index in range(sorting.get_num_segments()):
-        spike_times, spike_labels = spikes[seg_index]
+        spike_times = spikes[seg_index]["sample_index"]
+        spike_labels = spikes[seg_index]["unit_index"]
+
         _compute_correlograms_numba(
             correlograms, spike_times.astype(np.int64), spike_labels.astype(np.int32), window_size, bin_size
         )

@@ -108,7 +108,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         self.set_property("template", np.array(templates))
         self.set_property("template_frames_cut_before", np.array(templates_frames_cut_before))
 
-        self._kwargs = {"file_path": str(file_path), "keep_good_only": keep_good_only}
+        self._kwargs = {"file_path": str(Path(file_path).absolute()), "keep_good_only": keep_good_only}
 
         # TODO features
         # ~ for uc, unit in enumerate(units):
@@ -191,13 +191,13 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         if noise_std_by_channel is None:
             noise_std_by_channel = np.ones((1, n_channels))
 
-        dict_to_save = {'Units': units,
-                        'MultiElectrode': multi_electrode,
-                        'noiseStd': noise_std_by_channel,
+        dict_to_save = {"Units": units,
+                        "MultiElectrode": multi_electrode,
+                        "noiseStd": noise_std_by_channel,
                         "samplingRate": sorting._sampling_frequency}
 
         # Save Units and MultiElectrode to .mat file:
-        MATSortingExtractor.write_dict_to_mat(save_path, dict_to_save, version='7.3')
+        MATSortingExtractor.write_dict_to_mat(save_path, dict_to_save, version="7.3")
     """
 
 

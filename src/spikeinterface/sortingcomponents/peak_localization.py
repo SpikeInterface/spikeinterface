@@ -2,10 +2,12 @@
 import numpy as np
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
-from .peak_pipeline import (
+
+from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     find_parent_of_type,
     PeakRetriever,
+    SpikeRetriever,
     PipelineNode,
     WaveformsNode,
     ExtractDenseWaveforms,
@@ -24,6 +26,57 @@ from ..postprocessing.unit_localization import (
 )
 
 from .tools import get_prototype_spike
+
+
+def _run_localization_from_peak_source(
+    recording, peak_source, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs
+):
+    # use by localize_peaks() and compute_spike_locations()
+    assert (
+        method in possible_localization_methods
+    ), f"Method {method} is not supported. Choose from {possible_localization_methods}"
+
+    method_kwargs, job_kwargs = split_job_kwargs(kwargs)
+
+    if method == "center_of_mass":
+        extract_dense_waveforms = ExtractDenseWaveforms(
+            recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
+        )
+        pipeline_nodes = [
+            peak_source,
+            extract_dense_waveforms,
+            LocalizeCenterOfMass(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs),
+        ]
+    elif method == "monopolar_triangulation":
+        extract_dense_waveforms = ExtractDenseWaveforms(
+            recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
+        )
+        pipeline_nodes = [
+            peak_source,
+            extract_dense_waveforms,
+            LocalizeMonopolarTriangulation(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs),
+        ]
+    elif method == "peak_channel":
+        pipeline_nodes = [peak_source, LocalizePeakChannel(recording, parents=[peak_source], **method_kwargs)]
+    elif method == "grid_convolution":
+        if "prototype" not in method_kwargs:
+            assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
+            method_kwargs["prototype"] = get_prototype_spike(
+                recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
+            )
+        extract_dense_waveforms = ExtractDenseWaveforms(
+            recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
+        )
+        pipeline_nodes = [
+            peak_source,
+            extract_dense_waveforms,
+            LocalizeGridConvolution(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs),
+        ]
+
+    job_name = f"localize peaks using {method}"
+    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
+
+    return peak_locations
 
 
 def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs):
@@ -49,66 +102,24 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
     -------
     peak_locations: ndarray
         Array with estimated location for each spike.
-        The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
+        The dtype depends on the method. ("x", "y") or ("x", "y", "z", "alpha").
     """
-    assert (
-        method in possible_localization_methods
-    ), f"Method {method} is not supported. Choose from {possible_localization_methods}"
-
-    method_kwargs, job_kwargs = split_job_kwargs(kwargs)
-
     peak_retriever = PeakRetriever(recording, peaks)
-    if method == "center_of_mass":
-        extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-        pipeline_nodes = [
-            peak_retriever,
-            extract_dense_waveforms,
-            LocalizeCenterOfMass(recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs),
-        ]
-    elif method == "monopolar_triangulation":
-        extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-        pipeline_nodes = [
-            peak_retriever,
-            extract_dense_waveforms,
-            LocalizeMonopolarTriangulation(
-                recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs
-            ),
-        ]
-    elif method == "peak_channel":
-        pipeline_nodes = [peak_retriever, LocalizePeakChannel(recording, parents=[peak_retriever], **method_kwargs)]
-    elif method == "grid_convolution":
-        if "prototype" not in method_kwargs:
-            method_kwargs["prototype"] = get_prototype_spike(
-                recording, peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
-            )
-        extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-        pipeline_nodes = [
-            peak_retriever,
-            extract_dense_waveforms,
-            LocalizeGridConvolution(recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs),
-        ]
-
-    job_name = f"localize peaks using {method}"
-    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
-
+    peak_locations = _run_localization_from_peak_source(
+        recording, peak_retriever, method=method, ms_before=ms_before, ms_after=ms_after, **kwargs
+    )
     return peak_locations
 
 
 class LocalizeBase(PipelineNode):
-    def __init__(self, recording, return_output=True, parents=None, local_radius_um=75.0):
+    def __init__(self, recording, return_output=True, parents=None, radius_um=75.0):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
-        self.local_radius_um = local_radius_um
+        self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < local_radius_um
-        self._kwargs["local_radius_um"] = local_radius_um
+        self.neighbours_mask = self.channel_distance < radius_um
+        self._kwargs["radius_um"] = radius_um
 
     def get_dtype(self):
         return self._dtype
@@ -152,18 +163,14 @@ class LocalizeCenterOfMass(LocalizeBase):
     need_waveforms = True
     name = "center_of_mass"
     params_doc = """
-    local_radius_um: float
+    radius_um: float
         Radius in um for channel sparsity.
-    feature: str ['ptp', 'mean', 'energy', 'peak_voltage']
-        Feature to consider for computation. Default is 'ptp'
+    feature: "ptp" | "mean" | "energy" | "peak_voltage", default: "ptp"
+        Feature to consider for computation
     """
 
-    def __init__(
-        self, recording, return_output=True, parents=["extract_waveforms"], local_radius_um=75.0, feature="ptp"
-    ):
-        LocalizeBase.__init__(
-            self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um
-        )
+    def __init__(self, recording, return_output=True, parents=["extract_waveforms"], radius_um=75.0, feature="ptp"):
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, radius_um=radius_um)
         self._dtype = np.dtype(dtype_localize_by_method["center_of_mass"])
 
         assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
@@ -216,16 +223,16 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     need_waveforms = False
     name = "monopolar_triangulation"
     params_doc = """
-    local_radius_um: float
+    radius_um: float
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
-    enforce_decrease : bool (default True)
+    enforce_decrease : bool, default: True
         Enforce spatial decreasingness for PTP vectors
-    feature: string in ['ptp', 'energy', 'peak_voltage']
+    feature: "ptp", "energy", "peak_voltage", default: "ptp"
         The available features to consider for estimating the position via
         monopolar triangulation are peak-to-peak amplitudes (ptp, default),
-        energy ('energy', as L2 norm) or voltages at the center of the waveform
+        energy ("energy", as L2 norm) or voltages at the center of the waveform
         (peak_voltage)
     """
 
@@ -234,15 +241,13 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         recording,
         return_output=True,
         parents=["extract_waveforms"],
-        local_radius_um=75.0,
+        radius_um=75.0,
         max_distance_um=150.0,
         optimizer="minimize_with_log_penality",
         enforce_decrease=True,
         feature="ptp",
     ):
-        LocalizeBase.__init__(
-            self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um
-        )
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, radius_um=radius_um)
 
         assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
         self.max_distance_um = max_distance_um
@@ -309,7 +314,7 @@ class LocalizeGridConvolution(PipelineNode):
     need_waveforms = True
     name = "grid_convolution"
     params_doc = """
-    local_radius_um: float
+    radius_um: float
         Radius in um for channel sparsity.
     upsampling_um: float
         Upsampling resolution for the grid of templates
@@ -321,9 +326,11 @@ class LocalizeGridConvolution(PipelineNode):
         The margin for the grid of fake templates
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float (default 10)
+    percentile: float, default: 5
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
+    sparsity_threshold: float, default: 0.01
+        The sparsity threshold (in [0-1]) below which weights should be considered as 0
     """
 
     def __init__(
@@ -331,22 +338,25 @@ class LocalizeGridConvolution(PipelineNode):
         recording,
         return_output=True,
         parents=["extract_waveforms"],
-        local_radius_um=50.0,
-        upsampling_um=5,
-        sigma_um=np.linspace(10, 50.0, 5),
+        radius_um=40.0,
+        upsampling_um=5.0,
+        sigma_um=np.linspace(5.0, 25.0, 5),
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=10,
+        percentile=5.0,
+        sparsity_threshold=0.01,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
-        self.local_radius_um = local_radius_um
+        self.radius_um = radius_um
         self.sigma_um = sigma_um
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
         self.percentile = 100 - percentile
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
+        self.sparsity_threshold = sparsity_threshold
+        assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
         contact_locations = recording.get_channel_locations()
         # Find waveform extractor in the parents
@@ -365,17 +375,19 @@ class LocalizeGridConvolution(PipelineNode):
             self.prototype = prototype
         self.prototype = self.prototype[:, np.newaxis]
 
-        self.template_positions, self.weights, self.neighbours_mask = get_grid_convolution_templates_and_weights(
-            contact_locations, self.local_radius_um, self.upsampling_um, self.sigma_um, self.margin_um
+        self.template_positions, self.weights, self.nearest_template_mask = get_grid_convolution_templates_and_weights(
+            contact_locations, self.radius_um, self.upsampling_um, self.sigma_um, self.margin_um
         )
+
+        self.weights_sparsity_mask = self.weights > self.sparsity_threshold
 
         self._dtype = np.dtype(dtype_localize_by_method["grid_convolution"])
         self._kwargs.update(
             dict(
-                local_radius_um=self.local_radius_um,
+                radius_um=self.radius_um,
                 prototype=self.prototype,
                 template_positions=self.template_positions,
-                neighbours_mask=self.neighbours_mask,
+                nearest_template_mask=self.nearest_template_mask,
                 weights=self.weights,
                 nbefore=self.nbefore,
                 percentile=self.percentile,
@@ -391,29 +403,37 @@ class LocalizeGridConvolution(PipelineNode):
 
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
+            num_spikes = len(idx)
             if "amplitude" in peaks.dtype.names:
                 amplitudes = peaks["amplitude"][idx]
             else:
                 amplitudes = waveforms[idx, self.nbefore, main_chan]
 
-            intersect = self.neighbours_mask[:, main_chan] == True
-            global_products = (waveforms[idx] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
-            nb_templates = len(self.template_positions)
-            found_positions = np.zeros((len(idx), 2), dtype=np.float32)
-            scalar_products = np.zeros((len(idx), nb_templates), dtype=np.float32)
+            nearest_templates = self.nearest_template_mask[main_chan, :]
+            num_templates = np.sum(nearest_templates)
+            channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
+            # print(np.sum(nearest_templates), channel_mask.shape, self.weights.shape, np.sum(channel_mask))
 
-            for count, weights in enumerate(self.weights):
-                dot_products = np.dot(global_products, weights[:, intersect])
-                dot_products = np.maximum(0, dot_products)
+            global_products = (
+                waveforms[idx, :, :][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
+            ).sum(axis=1)
 
-                if self.percentile < 100:
-                    thresholds = np.percentile(dot_products, self.percentile, axis=1)
-                    dot_products[dot_products < thresholds[:, np.newaxis]] = 0
+            dot_products = np.zeros((self.weights.shape[0], num_spikes, num_templates), dtype=np.float32)
+            for count in range(self.weights.shape[0]):
+                w = self.weights[count, :, :][channel_mask, :][:, nearest_templates]
+                dot_products[count, :, :] = np.dot(global_products, w)
+            dot_products = np.maximum(0, dot_products)
+            if self.percentile < 100:
+                thresholds = np.percentile(dot_products, self.percentile, axis=(0, 2))
+                dot_products[dot_products < thresholds[np.newaxis, :, np.newaxis]] = 0
 
-                scalar_products[:, intersect] += dot_products
-                found_positions += np.dot(dot_products, self.template_positions[intersect])
-
+            scalar_products = np.zeros((num_spikes, num_templates), dtype=np.float32)
+            found_positions = np.zeros((num_spikes, 2), dtype=np.float32)
+            for count in range(self.weights.shape[0]):
+                scalar_products += dot_products[count, :, :]
+                found_positions += np.dot(dot_products[count, :, :], self.template_positions[nearest_templates, :])
             found_positions /= scalar_products.sum(1)[:, np.newaxis]
+
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
 

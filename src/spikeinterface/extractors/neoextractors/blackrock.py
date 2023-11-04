@@ -1,5 +1,7 @@
 from pathlib import Path
 from packaging import version
+from typing import Optional
+
 import neo
 
 from spikeinterface.core.core_tools import define_function_from_class
@@ -17,9 +19,9 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         The file path to load the recordings from.
-    stream_id: str, optional
+    stream_id: str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
@@ -54,7 +56,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
             use_names_as_ids=use_names_as_ids,
             **neo_kwargs,
         )
-        self._kwargs.update({"file_path": str(file_path)})
+        self._kwargs.update({"file_path": str(Path(file_path).absolute())})
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
@@ -68,25 +70,48 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
 
     Based on :py:class:`neo.rawio.BlackrockRawIO`
 
+
     Parameters
     ----------
     file_path: str
-        The file path to load the recordings from.
-    sampling_frequency: float, None by default.
+        The file path to load the recordings from
+    sampling_frequency: float, default: None
         The sampling frequency for the sorting extractor. When the signal data is available (.ncs) those files will be
         used to extract the frequency automatically. Otherwise, the sampling frequency needs to be specified for
-        this extractor to be initialized.
+        this extractor to be initialized
+    stream_id: str, default: None
+        Used to extract information about the sampling frequency and t_start from the analog signal if provided.
+    stream_name: str, default: None
+        Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     """
 
     mode = "file"
     NeoRawIOClass = "BlackrockRawIO"
-    handle_spike_frame_directly = False
+    neo_returns_frames = False
     name = "blackrock"
 
-    def __init__(self, file_path, sampling_frequency=None):
+    def __init__(
+        self,
+        file_path,
+        sampling_frequency: Optional[float] = None,
+        stream_id: Optional[str] = None,
+        stream_name: Optional[str] = None,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
-        self._kwargs.update({"file_path": str(file_path)})
+        NeoBaseSortingExtractor.__init__(
+            self,
+            sampling_frequency=sampling_frequency,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            **neo_kwargs,
+        )
+
+        self._kwargs = {
+            "file_path": str(Path(file_path).absolute()),
+            "sampling_frequency": sampling_frequency,
+            "stream_id": stream_id,
+            "stream_name": stream_name,
+        }
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

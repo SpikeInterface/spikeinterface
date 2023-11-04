@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.98.0.dev0"
+version = "0.100.0.dev0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -18,13 +18,14 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
+
 dependencies = [
     "numpy",
-    "neo>=0.11.1",
+    "neo>=0.12.0",
     "joblib",
     "threadpoolctl",
     "tqdm",
-    "probeinterface>=0.2.16",
+    "probeinterface>=0.2.19",
 ]
 
 [build-system]
@@ -62,11 +63,12 @@ extractors = [
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
-    "hdf5storage", # hdf5storage and scipy for cellexplorer
     "scipy",
     # ONE-api and ibllib for streaming IBL
     "ONE-api>=1.19.1",
     "ibllib>=2.21.0",
+    "pymatreader>=0.0.32", # For cell explorer matlab files
+    "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
@@ -90,7 +92,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
-    "cuda-python; sys_platform != 'darwin'",
+    "cuda-python; platform_system != 'Darwin'",
     "numba",
 ]
 
@@ -98,8 +100,14 @@ widgets = [
     "matplotlib",
     "ipympl",
     "ipywidgets",
-    "sortingview>=0.11.0",
-    "figurl-jupyter"
+    "sortingview>=0.11.15",
+]
+
+qualitymetrics = [
+    "scikit-learn",
+    "scipy",
+    "pandas",
+    "numba",
 ]
 
 test_core = [
@@ -118,9 +126,8 @@ test = [
     "huggingface_hub",
 
     # tridesclous
-    "numpy<1.24",
     "numba",
-    "hdbscan",
+    "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
     # for sortingview backend
     "sortingview",
@@ -130,7 +137,7 @@ test = [
     "datalad==0.16.2",
 
     ## install tridesclous for testing ##
-    "tridesclous>=1.6.6.1",
+    "tridesclous>=1.6.8",
 
     ## sliding_nn
     "pymde",
@@ -141,9 +148,26 @@ test = [
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
-
 ]
 
+docs = [
+    "Sphinx==5.1.1",
+    "sphinx_rtd_theme==1.0.0",
+    "sphinx-gallery",
+    "numpydoc",
+    "ipython",
+
+    # for notebooks in the gallery
+    "MEArec",   # Use as an example
+    "datalad==0.16.2",  # Download mearec data, not sure if needed as is installed with conda as well because of git-annex
+    "pandas", # in the modules gallery comparison tutorial
+    "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
+    "numba", # For many postprocessing functions
+    # for release we need pypi, so this needs to be commented
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
+
+]
 
 [tool.pytest.ini_options]
 markers = [
@@ -161,6 +185,7 @@ markers = [
     "widgets",
     "sortingcomponents",
     "streaming_extractors: extractors that require streaming such as ross and fsspec",
+    "ros3_test"
 ]
 filterwarnings =[
     'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',

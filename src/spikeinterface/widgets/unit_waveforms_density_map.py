@@ -1,6 +1,6 @@
 import numpy as np
 
-from .base import BaseWidget
+from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
 from ..core import ChannelSparsity, get_template_extremum_channel
@@ -14,26 +14,24 @@ class UnitWaveformDensityMapWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The waveformextractor for calculating waveforms
-    channel_ids : list
-        The channel ids to display, default None
-    unit_ids : list
-        List of unit ids, default None
-    sparsity : ChannelSparsity or None
-        Optional ChannelSparsity to apply, default None
+    channel_ids : list or None, default: None
+        The channel ids to display
+    unit_ids : list or None, default: None
+        List of unit ids
+    sparsity : ChannelSparsity or None, default: None
+        Optional ChannelSparsity to apply
         If WaveformExtractor is already sparse, the argument is ignored
-    use_max_channel : bool
-        Use only the max channel, default False
-    peak_sign : str (neg/pos/both)
-        Used to detect max channel only when use_max_channel=True, default 'neg'
-    unit_colors : None or dict
+    use_max_channel : bool, default: False
+        Use only the max channel
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        Used to detect max channel only when use_max_channel=True
+    unit_colors : None or dict, default: None
         A dict key is unit_id and value is any color format handled by matplotlib.
-        If None, then the get_unit_colors() is internally used, default None
-    same_axis : bool
+        If None, then the get_unit_colors() is internally used
+    same_axis : bool, default: False
         If True then all density are plot on the same axis and then channels is the union
-        all channel per units, default False
+        all channel per units
     """
-
-    possible_backends = {}
 
     def __init__(
         self,
@@ -105,7 +103,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             if same_axis and not np.array_equal(chan_inds, shared_chan_inds):
                 # add more channels if necessary
                 wfs_ = np.zeros((wfs.shape[0], wfs.shape[1], shared_chan_inds.size), dtype=float)
-                mask = np.in1d(shared_chan_inds, chan_inds)
+                mask = np.isin(shared_chan_inds, chan_inds)
                 wfs_[:, :, mask] = wfs
                 wfs_[:, :, ~mask] = np.nan
                 wfs = wfs_
@@ -156,3 +154,72 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
+
+        dp = to_attr(data_plot)
+
+        if backend_kwargs["axes"] is not None or backend_kwargs["ax"] is not None:
+            self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+        else:
+            if dp.same_axis:
+                num_axes = 1
+            else:
+                num_axes = len(dp.unit_ids)
+            backend_kwargs["ncols"] = 1
+            backend_kwargs["num_axes"] = num_axes
+            self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+        if dp.same_axis:
+            ax = self.ax
+            hist2d = dp.all_hist2d
+            im = ax.imshow(
+                hist2d.T,
+                interpolation="nearest",
+                origin="lower",
+                aspect="auto",
+                extent=(0, hist2d.shape[0], dp.bin_min, dp.bin_max),
+                cmap="hot",
+            )
+        else:
+            for unit_index, unit_id in enumerate(dp.unit_ids):
+                hist2d = dp.all_hist2d[unit_id]
+                ax = self.axes.flatten()[unit_index]
+                im = ax.imshow(
+                    hist2d.T,
+                    interpolation="nearest",
+                    origin="lower",
+                    aspect="auto",
+                    extent=(0, hist2d.shape[0], dp.bin_min, dp.bin_max),
+                    cmap="hot",
+                )
+
+        for unit_index, unit_id in enumerate(dp.unit_ids):
+            if dp.same_axis:
+                ax = self.ax
+            else:
+                ax = self.axes.flatten()[unit_index]
+            color = dp.unit_colors[unit_id]
+            ax.plot(dp.templates_flat[unit_id], color=color, lw=1)
+
+        # final cosmetics
+        for unit_index, unit_id in enumerate(dp.unit_ids):
+            if dp.same_axis:
+                ax = self.ax
+                if unit_index != 0:
+                    continue
+            else:
+                ax = self.axes.flatten()[unit_index]
+            chan_inds = dp.channel_inds[unit_id]
+            for i, chan_ind in enumerate(chan_inds):
+                if i != 0:
+                    ax.axvline(i * dp.template_width, color="w", lw=3)
+                channel_id = dp.channel_ids[chan_ind]
+                x = i * dp.template_width + dp.template_width // 2
+                y = (dp.bin_max + dp.bin_min) / 2.0
+                ax.text(x, y, f"chan_id {channel_id}", color="w", ha="center", va="center")
+
+            ax.set_xticks([])
+            ax.set_ylabel(f"unit_id {unit_id}")

@@ -29,12 +29,14 @@ from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
 from .silence_periods import SilencedPeriodsRecording, silence_periods
 from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
-from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
+from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate, train_deepinterpolation
 from .highpass_spatial_filter import HighpassSpatialFilterRecording, highpass_spatial_filter
 from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
 from .average_across_direction import AverageAcrossDirectionRecording, average_across_direction
 from .directional_derivative import DirectionalDerivativeRecording, directional_derivative
 from .depth_order import DepthOrderRecording, depth_order
+from .astype import AstypeRecording, astype
+from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
 
 
 preprocessers_full_list = [
@@ -68,6 +70,8 @@ preprocessers_full_list = [
     DepthOrderRecording,
     AverageAcrossDirectionRecording,
     DirectionalDerivativeRecording,
+    AstypeRecording,
+    UnsignedToSignedRecording,
 ]
 
 installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]

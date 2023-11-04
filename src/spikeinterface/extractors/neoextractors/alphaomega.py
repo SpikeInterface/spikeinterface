@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
@@ -13,11 +15,11 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     folder_path: str or Path-like
         The folder path to the AlphaOmega recordings.
-    lsx_files: list of strings or None, optional
+    lsx_files: list of strings or None, default: None
         A list of listings files that refers to mpx files to load.
-    stream_id: {'RAW', 'LFP', 'SPK', 'ACC', 'AI', 'UD'}, optional
+    stream_id: {"RAW", "LFP", "SPK", "ACC", "AI", "UD"}, default: "RAW"
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
@@ -32,7 +34,7 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(folder_path=str(folder_path), lsx_files=lsx_files))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), lsx_files=lsx_files))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, lsx_files=None):

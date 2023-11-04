@@ -4,18 +4,10 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 import numpy as np
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-
-try:
-    import brainbox
-    from one.api import ONE
-
-    HAVE_BRAINBOX_ONE = True
-except ModuleNotFoundError:
-    HAVE_BRAINBOX_ONE = False
 
 
 class IblStreamingRecordingExtractor(BaseRecording):
@@ -26,24 +18,24 @@ class IblStreamingRecordingExtractor(BaseRecording):
     ----------
     session : str
         The session ID to extract recordings for.
-        In ONE, this is sometimes referred to as the 'eid'.
+        In ONE, this is sometimes referred to as the "eid".
         When doing a session lookup such as
 
         >>> from one.api import ONE
         >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
-        >>> sessions = one.alyx.rest('sessions', 'list', tag='2022_Q2_IBL_et_al_RepeatedSite')
+        >>> sessions = one.alyx.rest("sessions", "list", tag="2022_Q2_IBL_et_al_RepeatedSite")
 
-        each returned value in `sessions` refers to it as the 'id'.
+        each returned value in `sessions` refers to it as the "id".
     stream_name : str
         The name of the stream to load for the session.
         These can be retrieved from calling `StreamingIblExtractor.get_stream_names(session="<your session ID>")`.
     load_sync_channels : bool, default: false
         Load or not the last channel (sync).
         If not then the probe is loaded.
-    cache_folder : str, optional
+    cache_folder : str or None, default: None
         The location to temporarily store chunks of data during streaming.
         The default uses the folder designated by ONE.alyx._par.CACHE_DIR / "cache", which is typically the designated
-        'Downloads' folder on your operating system. As long as `remove_cached` is set to True, the only files that will
+        "Downloads" folder on your operating system. As long as `remove_cached` is set to True, the only files that will
         persist in this folder are the metadata header files and the chunk of data being actively streamed and used in RAM.
     remove_cached : bool, default: True
         Whether or not to remove streamed data from the cache immediately after it is read.
@@ -56,8 +48,6 @@ class IblStreamingRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "IblStreamingRecording"
-    has_default_locations = True
-    installed = HAVE_BRAINBOX_ONE
     mode = "folder"
     installation_mesg = "To use the IblStreamingRecordingSegment, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
     name = "ibl_streaming_recording"
@@ -71,21 +61,24 @@ class IblStreamingRecordingExtractor(BaseRecording):
         ----------
         session : str
             The session ID to extract recordings for.
-            In ONE, this is sometimes referred to as the 'eid'.
+            In ONE, this is sometimes referred to as the "eid".
             When doing a session lookup such as
 
             >>> from one.api import ONE
             >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
-            >>> sessions = one.alyx.rest('sessions', 'list', tag='2022_Q2_IBL_et_al_RepeatedSite')
+            >>> sessions = one.alyx.rest("sessions", "list", tag="2022_Q2_IBL_et_al_RepeatedSite")
 
-            each returned value in `sessions` refers to it as the 'id'.
+            each returned value in `sessions` refers to it as the "id".
 
         Returns
         -------
         stream_names : list of str
             List of stream names as expected by the `stream_name` argument for the class initialization.
         """
-        assert HAVE_BRAINBOX_ONE, cls.installation_mesg
+        try:
+            from one.api import ONE
+        except ImportError:
+            raise ImportError(IblStreamingRecordingExtractor.installation_mesg)
 
         cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
         one = ONE(
@@ -119,10 +112,12 @@ class IblStreamingRecordingExtractor(BaseRecording):
         cache_folder: Optional[Union[Path, str]] = None,
         remove_cached: bool = True,
     ):
-        assert HAVE_BRAINBOX_ONE, self.installation_mesg
+        try:
+            from brainbox.io.spikeglx import Streamer
+            from one.api import ONE
+        except ImportError:
+            raise ImportError(self.installation_mesg)
 
-        from brainbox.io.spikeglx import Streamer
-        from one.api import ONE
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
         cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
@@ -170,7 +165,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
 
         # set probe
         if not load_sync_channel:
-            probe = pi.read_spikeglx(meta_file)
+            probe = probeinterface.read_spikeglx(meta_file)
 
             if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")

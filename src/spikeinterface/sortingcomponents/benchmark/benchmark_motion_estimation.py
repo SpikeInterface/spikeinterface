@@ -10,7 +10,7 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-from spikeinterface.sortingcomponents.motion_correction import correct_motion_on_peaks
+from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
@@ -337,12 +337,10 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         channel_positions = self.recording.get_channel_locations()
         probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
 
-        times = self.recording.get_times()
-
         peak_locations_corrected = correct_motion_on_peaks(
             self.selected_peaks,
             self.peak_locations,
-            times,
+            self.recording.sampling_frequency,
             self.motion,
             self.temporal_bins,
             self.spatial_bins,
@@ -476,6 +474,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         if lim is not None:
             ax.set_ylim(0, lim)
 
+        return fig
+
 
 def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colors=None):
     if axes is None:
@@ -487,7 +487,7 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
         mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
         depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
 
-        axes[0].plot(benchmark.temporal_bins, mean_error, label=benchmark.title, color=c)
+        axes[0].plot(benchmark.temporal_bins, mean_error, lw=1, label=benchmark.title, color=c)
         parts = axes[1].violinplot(mean_error, [count], showmeans=True)
         if c is not None:
             for pc in parts["bodies"]:
@@ -500,8 +500,8 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
         axes[2].plot(benchmark.spatial_bins, depth_error, label=benchmark.title, color=c)
 
     ax0 = ax = axes[0]
-    ax.set_xlabel("time (s)")
-    ax.set_ylabel("error")
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("Error [μm]")
     if show_legend:
         ax.legend()
     _simpleaxis(ax)
@@ -514,7 +514,7 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
 
     ax2 = axes[2]
     ax2.set_yticks([])
-    ax2.set_xlabel("depth (um)")
+    ax2.set_xlabel("Depth [μm]")
     # ax.set_ylabel('error')
     channel_positions = benchmark.recording.get_channel_locations()
     probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
@@ -523,8 +523,45 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
 
     _simpleaxis(ax2)
 
-    ax1.sharey(ax0)
-    ax2.sharey(ax0)
+    # ax1.sharey(ax0)
+    # ax2.sharey(ax0)
+
+
+def plot_error_map_several_benchmarks(benchmarks, axes=None, lim=15, figsize=(10, 10)):
+    if axes is None:
+        fig, axes = plt.subplots(nrows=len(benchmarks), sharex=True, sharey=True, figsize=figsize)
+    else:
+        fig = axes[0].figure
+
+    for count, benchmark in enumerate(benchmarks):
+        errors = benchmark.gt_motion - benchmark.motion
+
+        channel_positions = benchmark.recording.get_channel_locations()
+        probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
+
+        ax = axes[count]
+        im = ax.imshow(
+            np.abs(errors).T,
+            aspect="auto",
+            interpolation="nearest",
+            origin="lower",
+            extent=(
+                benchmark.temporal_bins[0],
+                benchmark.temporal_bins[-1],
+                benchmark.spatial_bins[0],
+                benchmark.spatial_bins[-1],
+            ),
+        )
+        fig.colorbar(im, ax=ax, label="error")
+        ax.set_ylabel("depth (um)")
+
+        ax.set_title(benchmark.title)
+        if lim is not None:
+            im.set_clim(0, lim)
+
+    axes[-1].set_xlabel("time (s)")
+
+    return fig
 
 
 def plot_motions_several_benchmarks(benchmarks):
@@ -547,26 +584,30 @@ def plot_motions_several_benchmarks(benchmarks):
     _simpleaxis(ax)
 
 
-def plot_speed_several_benchmarks(benchmarks, ax=None):
+def plot_speed_several_benchmarks(benchmarks, detailed=True, ax=None, colors=None):
     if ax is None:
         fig, ax = plt.subplots(figsize=(5, 5))
 
     for count, benchmark in enumerate(benchmarks):
-        bottom = 0
-        i = 0
-        patterns = ["/", "\\", "|", "*"]
-        for key, value in benchmark.run_times.items():
-            if count == 0:
-                label = key
-            else:
-                label = None
-            ax.bar(
-                [count], [value], label=label, bottom=bottom, color=f"C{count}", edgecolor="black", hatch=patterns[i]
-            )
-            bottom += value
-            i += 1
+        color = colors[count] if colors is not None else None
 
-    ax.legend()
+        if detailed:
+            bottom = 0
+            i = 0
+            patterns = ["/", "\\", "|", "*"]
+            for key, value in benchmark.run_times.items():
+                if count == 0:
+                    label = key.replace("_", " ")
+                else:
+                    label = None
+                ax.bar([count], [value], label=label, bottom=bottom, color=color, edgecolor="black", hatch=patterns[i])
+                bottom += value
+                i += 1
+        else:
+            total_run_time = np.sum([value for key, value in benchmark.run_times.items()])
+            ax.bar([count], [total_run_time], color=color, edgecolor="black")
+
+    # ax.legend()
     ax.set_ylabel("speed (s)")
     _simpleaxis(ax)
     ax.set_xticks([])

@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 from sklearn.decomposition import IncrementalPCA
 
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
+from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.postprocessing import compute_principal_components
@@ -93,7 +93,7 @@ class TemporalPCBaseNode(WaveformsNode):
         ms_before: float = 1.0,
         ms_after: float = 1.0,
         whiten: bool = True,
-        local_radius_um: float = None,
+        radius_um: float = None,
     ) -> IncrementalPCA:
         """
         Train a pca model using the data in the recording object and the parameters provided.
@@ -103,23 +103,24 @@ class TemporalPCBaseNode(WaveformsNode):
         Parameters
         ----------
         recording : BaseRecording
-            The recording object.
+            The recording object
         n_components : int
-            The number of components to use for the PCA model.
+            The number of components to use for the PCA model
         model_folder_path : str, Path
-            The path to the folder containing the pca model and the training metadata.
+            The path to the folder containing the pca model and the training metadata
         detect_peaks_params : dict
-            The parameters for peak detection.
+            The parameters for peak detection
         peak_selection_params : dict
-            The parameters for peak selection.
-        whiten : bool, optional
-            Whether to whiten the data, by default True.
-        local_radius_um : float, optional
-            The radius (in micrometers) to use for definint sparsity, by default None.
-        ms_before : float, optional
-            The number of milliseconds to include before the peak of the spike, by default 1.
-        ms_after : float, optional
-            The number of milliseconds to include after the peak of the spike, by default 1.
+            The parameters for peak selection
+        ms_before : float, default: 1
+            The number of milliseconds to include before the peak of the spike
+        ms_after : float, default: 1
+            The number of milliseconds to include after the peak of the spike
+        whiten : bool, default: True
+            Whether to whiten the data
+        radius_um : float or None, default: None
+            The radius (in micrometers) to use for definint sparsity. If None, no sparsity is used
+
 
         {}
 
@@ -148,7 +149,7 @@ class TemporalPCBaseNode(WaveformsNode):
         )
 
         # compute PCA by_channel_global (with sparsity)
-        sparsity = ChannelSparsity.from_radius(we, radius_um=local_radius_um) if local_radius_um else None
+        sparsity = ChannelSparsity.from_radius(we, radius_um=radius_um) if radius_um else None
         pc = compute_principal_components(
             we, n_components=n_components, mode="by_channel_global", sparsity=sparsity, whiten=whiten
         )
@@ -186,12 +187,12 @@ class TemporalPCAProjection(TemporalPCBaseNode):
     Parameters
     ----------
     recording : BaseRecording
-        The recording object.
+        The recording object
     parents: list
-        The parent nodes of this node. This should contain a mechanism to extract waveforms.
+        The parent nodes of this node. This should contain a mechanism to extract waveforms
     model_folder_path : str, Path
-        The path to the folder containing the pca model and the training metadata.
-    return_output: bool, optional, true by default
+        The path to the folder containing the pca model and the training metadata
+    return_output: bool, default: True
         use false to suppress the output of this node in the pipeline
 
     """
@@ -242,12 +243,12 @@ class TemporalPCADenoising(TemporalPCBaseNode):
     Parameters
     ----------
     recording : BaseRecording
-        The recording object.
+        The recording object
     parents: list
-        The parent nodes of this node. This should contain a mechanism to extract waveforms.
+        The parent nodes of this node. This should contain a mechanism to extract waveforms
     model_folder_path : str, Path
-        The path to the folder containing the pca model and the training metadata.
-    return_output: bool, optional, true by default
+        The path to the folder containing the pca model and the training metadata
+    return_output: bool, default: True
         use false to suppress the output of this node in the pipeline
 
     """

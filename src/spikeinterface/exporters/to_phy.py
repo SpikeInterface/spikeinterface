@@ -1,11 +1,20 @@
+from __future__ import annotations
 from pathlib import Path
+from typing import Literal, Optional
 
 import numpy as np
+import numpy.typing as npt
 import shutil
 import warnings
 
 import spikeinterface
-from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor, ChannelSparsity
+from spikeinterface.core import (
+    write_binary_recording,
+    BinaryRecordingExtractor,
+    WaveformExtractor,
+    BinaryFolderRecording,
+    ChannelSparsity,
+)
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.postprocessing import (
     compute_spike_amplitudes,
@@ -15,17 +24,18 @@ from spikeinterface.postprocessing import (
 
 
 def export_to_phy(
-    waveform_extractor,
-    output_folder,
-    compute_pc_features=True,
-    compute_amplitudes=True,
-    sparsity=None,
-    copy_binary=True,
-    remove_if_exists=False,
-    peak_sign="neg",
-    template_mode="median",
-    dtype=None,
-    verbose=True,
+    waveform_extractor: WaveformExtractor,
+    output_folder: str | Path,
+    compute_pc_features: bool = True,
+    compute_amplitudes: bool = True,
+    sparsity: Optional[ChannelSparsity] = None,
+    copy_binary: bool = True,
+    remove_if_exists: bool = False,
+    peak_sign: Literal["both", "neg", "pos"] = "neg",
+    template_mode: str = "median",
+    dtype: Optional[npt.DTypeLike] = None,
+    verbose: bool = True,
+    use_relative_path: bool = False,
     **job_kwargs,
 ):
     """
@@ -35,26 +45,29 @@ def export_to_phy(
     ----------
     waveform_extractor: a WaveformExtractor or None
         If WaveformExtractor is provide then the compute is faster otherwise
-    output_folder: str
+    output_folder: str | Path
         The output folder where the phy template-gui files are saved
-    compute_pc_features: bool
-        If True (default), pc features are computed
-    compute_amplitudes: bool
-        If True (default), waveforms amplitudes are computed
-    sparsity: ChannelSparsity or None
-        The sparsity object.
-    copy_binary: bool
-        If True, the recording is copied and saved in the phy 'output_folder'
-    remove_if_exists: bool
-        If True and 'output_folder' exists, it is removed and overwritten
-    peak_sign: 'neg', 'pos', 'both'
+    compute_pc_features: bool, default: True
+        If True, pc features are computed
+    compute_amplitudes: bool, default: True
+        If True, waveforms amplitudes are computed
+    sparsity: ChannelSparsity or None, default: None
+        The sparsity object
+    copy_binary: bool, default: True
+        If True, the recording is copied and saved in the phy "output_folder"
+    remove_if_exists: bool, default: False
+        If True and "output_folder" exists, it is removed and overwritten
+    peak_sign: "neg" | "pos" | "both", default: "neg"
         Used by compute_spike_amplitudes
-    template_mode: str
-        Parameter 'mode' to be given to WaveformExtractor.get_template()
-    dtype: dtype or None
+    template_mode: str, default: "median"
+        Parameter "mode" to be given to WaveformExtractor.get_template()
+    dtype: dtype or None, default: None
         Dtype to save binary data
-    verbose: bool
+    verbose: bool, default: True
         If True, output is verbose
+    use_relative_path : bool, default: False
+        If True and `copy_binary=True` saves the binary file `dat_path` in the `params.py` relative to `output_folder` (ie `dat_path=r"recording.dat"`). If `copy_binary=False`, then uses a path relative to the `output_folder`
+        If False, uses an absolute path in the `params.py` (ie `dat_path=r"path/to/the/recording.dat"`)
     {}
 
     """
@@ -65,27 +78,33 @@ def export_to_phy(
     ), "waveform_extractor must be a WaveformExtractor object"
     sorting = waveform_extractor.sorting
 
-    assert waveform_extractor.get_num_segments() == 1, "Export to phy only works with one segment"
+    assert (
+        waveform_extractor.get_num_segments() == 1
+    ), f"Export to phy only works with one segment, your extractor has {waveform_extractor.get_num_segments()} segments"
     num_chans = waveform_extractor.get_num_channels()
     fs = waveform_extractor.sampling_frequency
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     # check sparsity
-    if (num_chans > 64) and (sparsity is None or not waveform_extractor.is_sparse()):
+    if (num_chans > 64) and (sparsity is None and not waveform_extractor.is_sparse()):
         warnings.warn(
             "Exporting to Phy with many channels and without sparsity might result in a heavy and less "
             "informative visualization. You can use use a sparse WaveformExtractor or you can use the 'sparsity' "
             "argument to enforce sparsity (see compute_sparsity())"
         )
 
+    save_sparse = True
     if waveform_extractor.is_sparse():
         used_sparsity = waveform_extractor.sparsity
+        if sparsity is not None:
+            warnings.warn("If the waveform_extractor is sparse the 'sparsity' argument is ignored")
     elif sparsity is not None:
         used_sparsity = sparsity
     else:
         used_sparsity = ChannelSparsity.create_dense(waveform_extractor)
-    # convinient sparsity dict for the 3 cases to retrieve channl_inds
+        save_sparse = False
+    # convenient sparsity dict for the 3 cases to retrieve channl_inds
     sparse_dict = used_sparsity.unit_id_to_channel_indices
 
     empty_flag = False
@@ -97,7 +116,7 @@ def export_to_phy(
             empty_flag = True
     unit_ids = non_empty_units
     if empty_flag:
-        warnings.warn("Empty units have been removed when being exported to Phy")
+        warnings.warn("Empty units have been removed while exporting to Phy")
 
     if len(unit_ids) == 0:
         raise Exception("No non-empty units in the sorting result, can't save to Phy.")
@@ -121,11 +140,13 @@ def export_to_phy(
     if waveform_extractor.has_recording():
         if copy_binary:
             rec_path = output_folder / "recording.dat"
-            write_binary_recording(
-                waveform_extractor.recording, file_paths=rec_path, verbose=verbose, dtype=dtype, **job_kwargs
-            )
+            write_binary_recording(waveform_extractor.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)
         elif isinstance(waveform_extractor.recording, BinaryRecordingExtractor):
-            rec_path = waveform_extractor.recording._kwargs["file_paths"][0]
+            if isinstance(waveform_extractor.recording, BinaryFolderRecording):
+                bin_kwargs = waveform_extractor.recording._bin_kwargs
+            else:
+                bin_kwargs = waveform_extractor.recording._kwargs
+            rec_path = bin_kwargs["file_paths"][0]
             dtype = waveform_extractor.recording.get_dtype()
         else:
             rec_path = "None"
@@ -138,7 +159,15 @@ def export_to_phy(
 
     # write params.py
     with (output_folder / "params.py").open("w") as f:
-        f.write(f"dat_path = r'{str(rec_path)}'\n")
+        if use_relative_path:
+            if copy_binary:
+                f.write(f"dat_path = r'recording.dat'\n")
+            elif rec_path == "None":
+                f.write(f"dat_path = {rec_path}\n")
+            else:
+                f.write(f"dat_path = r'{str(Path(rec_path).relative_to(output_folder))}'\n")
+        else:
+            f.write(f"dat_path = r'{str(rec_path)}'\n")
         f.write(f"n_channels_dat = {num_chans}\n")
         f.write(f"dtype = '{dtype_str}'\n")
         f.write(f"offset = 0\n")
@@ -147,8 +176,9 @@ def export_to_phy(
 
     # export spike_times/spike_templates/spike_clusters
     # here spike_labels is a remapping to unit_index
-    all_spikes = sorting.get_all_spike_trains(outputs="unit_index")
-    spike_times, spike_labels = all_spikes[0]
+    all_spikes_seg0 = sorting.to_spike_vector(concatenated=False)[0]
+    spike_times = all_spikes_seg0["sample_index"]
+    spike_labels = all_spikes_seg0["unit_index"]
     np.save(str(output_folder / "spike_times.npy"), spike_times[:, np.newaxis])
     np.save(str(output_folder / "spike_templates.npy"), spike_labels[:, np.newaxis])
     np.save(str(output_folder / "spike_clusters.npy"), spike_labels[:, np.newaxis])
@@ -157,7 +187,7 @@ def export_to_phy(
     # shape (num_units, num_samples, max_num_channels)
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
     num_samples = waveform_extractor.nbefore + waveform_extractor.nafter
-    templates = np.zeros((len(unit_ids), num_samples, max_num_channels), dtype=waveform_extractor.dtype)
+    templates = np.zeros((len(unit_ids), num_samples, max_num_channels), dtype="float64")
     # here we pad template inds with -1 if len of sparse channels is unequal
     templates_ind = -np.ones((len(unit_ids), max_num_channels), dtype="int64")
     for unit_ind, unit_id in enumerate(unit_ids):
@@ -166,10 +196,15 @@ def export_to_phy(
         templates[unit_ind, :, :][:, : len(chan_inds)] = template
         templates_ind[unit_ind, : len(chan_inds)] = chan_inds
 
-    template_similarity = compute_template_similarity(waveform_extractor, method="cosine_similarity")
+    if waveform_extractor.is_extension("similarity"):
+        tmc = waveform_extractor.load_extension("similarity")
+        template_similarity = tmc.get_data()
+    else:
+        template_similarity = compute_template_similarity(waveform_extractor, method="cosine_similarity")
 
     np.save(str(output_folder / "templates.npy"), templates)
-    np.save(str(output_folder / "template_ind.npy"), templates_ind)
+    if save_sparse:
+        np.save(str(output_folder / "template_ind.npy"), templates_ind)
     np.save(str(output_folder / "similar_templates.npy"), template_similarity)
 
     channel_maps = np.arange(num_chans, dtype="int32")

@@ -95,7 +95,7 @@ class UnitsAggregationSorting(BaseSorting):
                 try:
                     property_dict[prop_name] = np.concatenate((property_dict[prop_name], values))
                 except Exception as e:
-                    print(f"Skipping property '{prop_name}' for shape inconsistency")
+                    print(f"Skipping property '{prop_name}' due to shape inconsistency")
                     del property_dict[prop_name]
                     break
         for prop_name, prop_values in property_dict.items():

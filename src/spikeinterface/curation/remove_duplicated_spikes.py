@@ -17,7 +17,7 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
         The parent sorting.
     censored_period_ms: float
         The censored period to consider 2 spikes to be duplicated (in ms).
-    method: str in ("keep_first", "keep_last", "keep_first_iterative', 'keep_last_iterative", random")
+    method: "keep_first" | "keep_last" | "keep_first_iterative" | "keep_last_iterative" | "random", default: "keep_first"
         Method used to remove the duplicated spikes.
         If method = "random", will randomly choose to remove the first or last spike.
         If method = "keep_first", for each ISI violation, will remove the second spike.
@@ -80,7 +80,7 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
         if start_frame == None:
             start_frame = 0
         if end_frame == None:
-            end_frame = spike_train[-1]
+            end_frame = spike_train[-1] if len(spike_train) > 0 else 0
 
         start = np.searchsorted(spike_train, start_frame, side="left")
         end = np.searchsorted(spike_train, end_frame, side="right")

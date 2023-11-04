@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
@@ -16,11 +18,11 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         The file path to load the recordings from.
-    stream_id: str, optional
+    stream_id: str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
+    block_index: int, default: None
         If there are several blocks, specify the block index you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
@@ -40,7 +42,7 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
             all_annotations=all_annotations,
             **neo_kwargs,
         )
-        self._kwargs.update(dict(file_path=str(file_path)))
+        self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

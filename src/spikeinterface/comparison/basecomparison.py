@@ -223,7 +223,7 @@ class BasePairComparison(BaseComparison):
     It handles the matching procedurs.
 
     Agreement scores must be computed in inherited classes by overriding the
-    '_do_agreement(self)' function
+    "_do_agreement(self)" function
     """
 
     def __init__(self, object1, object2, name1, name2, match_score=0.5, chance_score=0.1, verbose=False):
@@ -262,11 +262,11 @@ class BasePairComparison(BaseComparison):
         indexes = np.arange(scores.shape[1])
         order1 = []
         for r in range(scores.shape[0]):
-            possible = indexes[~np.in1d(indexes, order1)]
+            possible = indexes[~np.isin(indexes, order1)]
             if possible.size > 0:
                 ind = np.argmax(scores.iloc[r, possible].values)
                 order1.append(possible[ind])
-        remain = indexes[~np.in1d(indexes, order1)]
+        remain = indexes[~np.isin(indexes, order1)]
         order1.extend(remain)
         scores = scores.iloc[:, order1]
 

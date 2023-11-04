@@ -13,7 +13,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
     BinaryFolderRecording is an internal format used in spikeinterface.
     It is a BinaryRecordingExtractor + metadata contained in a folder.
 
-    It is created with the function: `recording.save(format='binary', folder='/myfolder')`
+    It is created with the function: `recording.save(format="binary", folder="/myfolder")`
 
     Parameters
     ----------
@@ -26,7 +26,6 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
     """
 
     extractor_name = "BinaryFolder"
-    has_default_locations = True
     mode = "folder"
     name = "binaryfolder"
 
@@ -48,8 +47,11 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
 
-        self._kwargs = dict(folder_path=str(folder_path.absolute()))
+        self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._bin_kwargs = d["kwargs"]
+        if "num_channels" not in self._bin_kwargs:
+            assert "num_chan" in self._bin_kwargs, "Cannot find num_channels or num_chan in binary.json"
+            self._bin_kwargs["num_channels"] = self._bin_kwargs["num_chan"]
 
     def is_binary_compatible(self):
         return True
@@ -58,7 +60,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         d = dict(
             file_paths=self._bin_kwargs["file_paths"],
             dtype=np.dtype(self._bin_kwargs["dtype"]),
-            num_channels=self._bin_kwargs["num_chan"],
+            num_channels=self._bin_kwargs["num_channels"],
             time_axis=self._bin_kwargs["time_axis"],
             file_offset=self._bin_kwargs["file_offset"],
         )

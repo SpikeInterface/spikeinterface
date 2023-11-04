@@ -1,17 +1,10 @@
 from pathlib import Path
 
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 from spikeinterface.core.core_tools import define_function_from_class
-
-try:
-    import mtscomp
-
-    HAVE_MTSCOMP = True
-except:
-    HAVE_MTSCOMP = False
 
 
 class CompressedBinaryIblExtractor(BaseRecording):
@@ -31,6 +24,9 @@ class CompressedBinaryIblExtractor(BaseRecording):
     load_sync_channel: bool, default: False
         Load or not the last channel (sync).
         If not then the probe is loaded.
+    stream_name: str, default: "ap".
+        Whether to load AP or LFP band, one
+        of "ap" or "lp".
 
     Returns
     -------
@@ -39,21 +35,25 @@ class CompressedBinaryIblExtractor(BaseRecording):
     """
 
     extractor_name = "CompressedBinaryIbl"
-    has_default_locations = True
-    installed = HAVE_MTSCOMP
     mode = "folder"
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
     name = "cbin_ibl"
 
-    def __init__(self, folder_path, load_sync_channel=False):
+    def __init__(self, folder_path, load_sync_channel=False, stream_name="ap"):
         # this work only for future neo
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
-        assert HAVE_MTSCOMP
+        try:
+            import mtscomp
+        except:
+            raise ImportError(self.installation_mesg)
         folder_path = Path(folder_path)
 
+        # check bands
+        assert stream_name in ["ap", "lp"], "stream_name must be one of: 'ap', 'lp'"
+
         # explore files
-        cbin_files = list(folder_path.glob("*.cbin"))
+        cbin_files = list(folder_path.glob(f"*.{stream_name}.cbin"))
         assert len(cbin_files) == 1
         cbin_file = cbin_files[0]
         ch_file = cbin_file.with_suffix(".ch")
@@ -89,7 +89,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
         self.set_channel_offsets(offsets)
 
         if not load_sync_channel:
-            probe = pi.read_spikeglx(meta_file)
+            probe = probeinterface.read_spikeglx(meta_file)
 
             if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")
@@ -107,7 +107,10 @@ class CompressedBinaryIblExtractor(BaseRecording):
             sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
             self.set_property("inter_sample_shift", sample_shifts)
 
-        self._kwargs = {"folder_path": str(folder_path.absolute()), "load_sync_channel": load_sync_channel}
+        self._kwargs = {
+            "folder_path": str(Path(folder_path).absolute()),
+            "load_sync_channel": load_sync_channel,
+        }
 
 
 class CBinIblRecordingSegment(BaseRecordingSegment):
@@ -124,12 +127,14 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
+        if channel_indices is None:
+            channel_indices = slice(None)
 
         traces = self._cbuffer[start_frame:end_frame]
         if not self._load_sync_channel:
             traces = traces[:, :-1]
 
-        return traces
+        return traces[:, channel_indices]
 
 
 read_cbin_ibl = define_function_from_class(source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl")

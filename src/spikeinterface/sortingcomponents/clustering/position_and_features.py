@@ -35,7 +35,7 @@ class PositionAndFeaturesClustering:
             "cluster_selection_method": "leaf",
         },
         "cleaning_kwargs": {},
-        "local_radius_um": 100,
+        "radius_um": 100,
         "max_spikes_per_unit": 200,
         "selection_method": "random",
         "ms_before": 1.5,
@@ -46,7 +46,7 @@ class PositionAndFeaturesClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-        assert HAVE_HDBSCAN, "twisted clustering need hdbscan to be installed"
+        assert HAVE_HDBSCAN, "twisted clustering needs hdbscan to be installed"
 
         if "n_jobs" in params["job_kwargs"]:
             if params["job_kwargs"]["n_jobs"] == -1:
@@ -69,9 +69,9 @@ class PositionAndFeaturesClustering:
 
         features_list = [position_method, "ptp", "energy"]
         features_params = {
-            position_method: {"local_radius_um": params["local_radius_um"]},
-            "ptp": {"all_channels": False, "local_radius_um": params["local_radius_um"]},
-            "energy": {"local_radius_um": params["local_radius_um"]},
+            position_method: {"radius_um": params["radius_um"]},
+            "ptp": {"all_channels": False, "radius_um": params["radius_um"]},
+            "energy": {"radius_um": params["radius_um"]},
         }
 
         features_data = compute_features_from_peaks(
@@ -87,21 +87,22 @@ class PositionAndFeaturesClustering:
         preprocessing = QuantileTransformer(output_distribution="uniform")
         hdbscan_data = preprocessing.fit_transform(hdbscan_data)
 
-        import sklearn
-
-        clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
-        peak_labels = clustering[0]
+        clusterer = hdbscan.HDBSCAN(**d["hdbscan_kwargs"])
+        clusterer.fit(X=hdbscan_data)
+        peak_labels = clusterer.labels_
 
         labels = np.unique(peak_labels)
-        labels = labels[labels >= 0]
+        labels = labels[labels >= 0]  #  Noisy samples are given the label -1 in hdbscan
 
         best_spikes = {}
-        nb_spikes = 0
+        num_spikes = 0
 
         all_indices = np.arange(0, peak_labels.size)
 
         max_spikes = params["max_spikes_per_unit"]
         selection_method = params["selection_method"]
+
+        import sklearn
 
         for unit_ind in labels:
             mask = peak_labels == unit_ind
@@ -112,9 +113,9 @@ class PositionAndFeaturesClustering:
                 best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:max_spikes]]
             elif selection_method == "random":
                 best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[:max_spikes]
-            nb_spikes += best_spikes[unit_ind].size
+            num_spikes += best_spikes[unit_ind].size
 
-        spikes = np.zeros(nb_spikes, dtype=peak_dtype)
+        spikes = np.zeros(num_spikes, dtype=peak_dtype)
 
         mask = np.zeros(0, dtype=np.int32)
         for unit_ind in labels:

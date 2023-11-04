@@ -113,29 +113,27 @@ class BenchmarkPeakSelection:
         if positions is not None:
             self._positions = positions
 
-        times1 = self.gt_sorting.get_all_spike_trains()[0]
+        spikes1 = self.gt_sorting.to_spike_vector(concatenated=False)[0]["sample_index"]
         times2 = self.peaks["sample_index"]
 
         print("The gt recording has {} peaks and {} have been detected".format(len(times1[0]), len(times2)))
 
-        matches = make_matching_events(times1[0], times2, int(delta * self.sampling_rate / 1000))
+        matches = make_matching_events(spikes1["sample_index"], times2, int(delta * self.sampling_rate / 1000))
         self.matches = matches
 
         self.deltas = {"labels": [], "delta": matches["delta_frame"]}
-        self.deltas["labels"] = times1[1][matches["index1"]]
+        self.deltas["labels"] = spikes1["unit_index"][matches["index1"]]
 
-        # print(len(times1[0]), len(matches['index1']))
         gt_matches = matches["index1"]
-        self.sliced_gt_sorting = NumpySorting.from_times_labels(
-            times1[0][gt_matches], times1[1][gt_matches], self.sampling_rate, unit_ids=self.gt_sorting.unit_ids
-        )
-        ratio = 100 * len(gt_matches) / len(times1[0])
+        self.sliced_gt_sorting = NumpySorting(spikes1[gt_matches], self.sampling_rate, self.gt_sorting.unit_ids)
+
+        ratio = 100 * len(gt_matches) / len(spikes1)
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
 
-        matches = make_matching_events(times2, times1[0], int(delta * self.sampling_rate / 1000))
+        matches = make_matching_events(times2, spikes1["sample_index"], int(delta * self.sampling_rate / 1000))
         self.good_matches = matches["index1"]
 
-        garbage_matches = ~np.in1d(np.arange(len(times2)), self.good_matches)
+        garbage_matches = ~np.isin(np.arange(len(times2)), self.good_matches)
         garbage_channels = self.peaks["channel_index"][garbage_matches]
         garbage_peaks = times2[garbage_matches]
         nb_garbage = len(garbage_peaks)
@@ -231,10 +229,11 @@ class BenchmarkPeakSelection:
         # scatter and collect gaussian info
         means = {}
         covs = {}
-        labels_ids = sorting.get_all_spike_trains()[0][1]
+        labels = sorting.to_spike_vector(concatenated=False)[0]["unit_index"]
 
         for unit_ind, unit_id in enumerate(sorting.unit_ids):
-            where = np.flatnonzero(labels_ids == unit_id)
+            where = np.flatnonzero(labels == unit_ind)
+
             xk = xs[where]
             yk = ys[where]
 
@@ -366,7 +365,7 @@ class BenchmarkPeakSelection:
 
             idx = self.waveforms["full_gt"].get_sampled_indices(unit_id)["spike_index"]
             all_spikes = self.waveforms["full_gt"].sorting.get_unit_spike_train(unit_id)
-            mask = np.in1d(self.gt_peaks["sample_index"], all_spikes[idx])
+            mask = np.isin(self.gt_peaks["sample_index"], all_spikes[idx])
             colors = scalarMap.to_rgba(self.gt_peaks["amplitude"][mask])
             ax.scatter(self.gt_positions["x"][mask], self.gt_positions["y"][mask], c=colors, s=1, alpha=0.5)
             x_mean, y_mean = (self.gt_positions["x"][mask].mean(), self.gt_positions["y"][mask].mean())
@@ -392,7 +391,7 @@ class BenchmarkPeakSelection:
 
             idx = self.waveforms["gt"].get_sampled_indices(unit_id)["spike_index"]
             all_spikes = self.waveforms["gt"].sorting.get_unit_spike_train(unit_id)
-            mask = np.in1d(self.sliced_gt_peaks["sample_index"], all_spikes[idx])
+            mask = np.isin(self.sliced_gt_peaks["sample_index"], all_spikes[idx])
             colors = scalarMap.to_rgba(self.sliced_gt_peaks["amplitude"][mask])
             ax.scatter(
                 self.sliced_gt_positions["x"][mask], self.sliced_gt_positions["y"][mask], c=colors, s=1, alpha=0.5
@@ -421,7 +420,7 @@ class BenchmarkPeakSelection:
 
             idx = self.waveforms["garbage"].get_sampled_indices(unit_id)["spike_index"]
             all_spikes = self.waveforms["garbage"].sorting.get_unit_spike_train(unit_id)
-            mask = np.in1d(self.garbage_peaks["sample_index"], all_spikes[idx])
+            mask = np.isin(self.garbage_peaks["sample_index"], all_spikes[idx])
             colors = scalarMap.to_rgba(self.garbage_peaks["amplitude"][mask])
             ax.scatter(self.garbage_positions["x"][mask], self.garbage_positions["y"][mask], c=colors, s=1, alpha=0.5)
             x_mean, y_mean = (self.garbage_positions["x"][mask].mean(), self.garbage_positions["y"][mask].mean())
@@ -539,11 +538,11 @@ class BenchmarkPeakSelection:
             nb_spikes += [b]
 
         centers = compute_center_of_mass(self.waveforms["gt"])
-        times, labels = self.sliced_gt_sorting.get_all_spike_trains()[0]
+        spikes_seg0 = self.sliced_gt_sorting.to_spike_vector(concatenated=False)[0]
         stds = []
         means = []
-        for found, real in zip(unit_ids2, inds_1):
-            mask = labels == found
+        for found, real in zip(inds_2, inds_1):
+            mask = spikes_seg0["unit_index"] == found
             center = np.array([self.sliced_gt_positions[mask]["x"], self.sliced_gt_positions[mask]["y"]]).mean()
             means += [np.mean(center - centers[real])]
             stds += [np.std(center - centers[real])]
@@ -613,22 +612,23 @@ class BenchmarkPeakSelection:
     def explore_garbage(self, channel_index, nb_bins=None, dt=None):
         mask = self.garbage_peaks["channel_index"] == channel_index
         times2 = self.garbage_peaks[mask]["sample_index"]
-        times1 = self.gt_sorting.get_all_spike_trains()[0]
+        spikes1 = self.gt_sorting.to_spike_vector(concatenate=False)[0]
+
         from spikeinterface.comparison.comparisontools import make_matching_events
 
         if dt is None:
             delta = self.waveforms["garbage"].nafter
         else:
             delta = dt
-        matches = make_matching_events(times2, times1[0], delta)
-        units = times1[1][matches["index2"]]
+        matches = make_matching_events(times2, spikes1["sample_index"], delta)
+        unit_inds = spikes1["unit_index"][matches["index2"]]
         dt = matches["delta_frame"]
         res = {}
         fig, ax = plt.subplots()
         if nb_bins is None:
             nb_bins = 2 * delta
         xaxis = np.linspace(-delta, delta, nb_bins)
-        for unit_id in np.unique(units):
-            mask = units == unit_id
-            res[unit_id] = dt[mask]
-            ax.hist(res[unit_id], bins=xaxis)
+        for unit_ind in np.unique(unit_inds):
+            mask = unit_inds == unit_ind
+            res[unit_ind] = dt[mask]
+            ax.hist(res[unit_ind], bins=xaxis)

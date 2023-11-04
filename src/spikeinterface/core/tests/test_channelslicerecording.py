@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface.core import ChannelSliceRecording, BinaryRecordingExtractor
 
@@ -25,7 +25,12 @@ def test_ChannelSliceRecording():
     for i in range(num_seg):
         traces = np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
         traces[:] = np.arange(3)[None, :]
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_chan,
+        dtype=dtype,
+    )
 
     # keep original ids
     rec_sliced = ChannelSliceRecording(rec, channel_ids=[0, 2])
@@ -53,7 +58,7 @@ def test_ChannelSliceRecording():
     assert np.all(traces[:, 1] == 0)
 
     # with probe and after save()
-    probe = pi.generate_linear_probe(num_elec=num_chan)
+    probe = probeinterface.generate_linear_probe(num_elec=num_chan)
     probe.set_device_channel_indices(np.arange(num_chan))
     rec_p = rec.set_probe(probe)
     rec_sliced3 = ChannelSliceRecording(rec_p, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
