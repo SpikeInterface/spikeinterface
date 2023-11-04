@@ -205,7 +205,7 @@ def get_optimized_compute_matching_matrix():
             else:
                 # No matches found, finish the outer loop (coudl be break but this is more explicit)
                 lower_search_limit_in_second_train = num_frames_spike_train2
-                
+
             # Get as many matches as possible from the first match onwards
             for index2 in range(lower_search_limit_in_second_train, num_frames_spike_train2):
                 frame2 = frames_spike_train2[index2]
