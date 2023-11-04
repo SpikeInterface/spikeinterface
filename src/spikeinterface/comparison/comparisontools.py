@@ -201,13 +201,14 @@ def get_optimized_compute_matching_matrix():
                 is_a_match = abs(frame1 - frames_spike_train2[index2]) <= delta_frames
                 if is_a_match:
                     lower_search_limit_in_second_train = index2
+                    first_match_index = index2
                     break
             else:
                 # No matches found, finish the outer loop (could be done with a `break` but this is more explicit)
-                lower_search_limit_in_second_train = num_frames_spike_train2
+                first_match_index = num_frames_spike_train2
 
             # Get as many matches as possible from the first match onwards
-            for index2 in range(lower_search_limit_in_second_train, num_frames_spike_train2):
+            for index2 in range(first_match_index, num_frames_spike_train2):
                 frame2 = frames_spike_train2[index2]
                 not_a_match = abs(frame1 - frame2) > delta_frames
                 if not_a_match:
