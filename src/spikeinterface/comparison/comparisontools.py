@@ -174,7 +174,7 @@ def get_optimized_compute_matching_matrix():
         To avoid redundant comparisons the algorithm maintains a reference, `second_train_search_start `,
         which signifies the minimal index in the second spike train that might match the upcoming spike
         in the first train.
-        
+
         The logic can be summarized as follows:
         1. Iterate through each spike in the first train
         2. For each spike, find the first match in the second train.
@@ -208,7 +208,7 @@ def get_optimized_compute_matching_matrix():
                 # Look for first match
                 is_a_match = abs(frame1 - frame2) <= delta_frames
                 if is_a_match:
-                    second_train_search_start  = index2
+                    second_train_search_start = index2
                     first_match_index = index2
                     break
             else:
