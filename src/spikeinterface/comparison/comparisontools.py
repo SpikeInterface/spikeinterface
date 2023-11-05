@@ -124,12 +124,12 @@ def get_optimized_compute_matching_matrix():
 
     @numba.jit(nopython=True, nogil=True)
     def compute_matching_matrix(
-        frames_spike_train1,
-        frames_spike_train2,
+        spike_frames_train1,
+        spike_frames_train2,
         unit_indices1,
         unit_indices2,
-        num_units_sorting1,
-        num_units_sorting2,
+        num_units_train1,
+        num_units_train2,
         delta_frames,
     ):
         """
@@ -137,32 +137,32 @@ def get_optimized_compute_matching_matrix():
 
         Given two spike trains, this function finds matching spikes based on a temporal proximity criterion
         defined by `delta_frames`. The resulting matrix indicates the number of matches between units
-        in `frames_spike_train1` and `frames_spike_train2`.
+        in `spike_frames_train1` and `spike_frames_train2`.
 
         Parameters
         ----------
-        frames_spike_train1 : ndarray
+        spike_frames_train1 : ndarray
             An array of integer frame numbers corresponding to spike times for the first train. Must be in ascending order.
-        frames_spike_train2 : ndarray
+        spike_frames_train2 : ndarray
             An array of integer frame numbers corresponding to spike times for the second train. Must be in ascending order.
         unit_indices1 : ndarray
-            An array of integers where `unit_indices1[i]` gives the unit index associated with the spike at `frames_spike_train1[i]`.
+            An array of integers where `unit_indices1[i]` gives the unit index associated with the spike at `spike_frames_train1[i]`.
         unit_indices2 : ndarray
-            An array of integers where `unit_indices2[i]` gives the unit index associated with the spike at `frames_spike_train2[i]`.
-        num_units_sorting1 : int
+            An array of integers where `unit_indices2[i]` gives the unit index associated with the spike at `spike_frames_train2[i]`.
+        num_units_train1 : int
             The total count of unique units in the first spike train.
-        num_units_sorting2 : int
+        num_units_train2 : int
             The total count of unique units in the second spike train.
         delta_frames : int
             The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
-            if `abs(frames_spike_train1[i] - frames_spike_train2[j]) <= delta_frames` then the spikes at `frames_spike_train1[i]`
-            and `frames_spike_train2[j]` are considered matching.
+            if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at `spike_frames_train1[i]`
+            and `spike_frames_train2[j]` are considered matching.
 
         Returns
         -------
         matching_matrix : ndarray
-            A 2D numpy array of shape `(num_units_sorting1, num_units_sorting2)`. Each element `[i, j]` represents
-            the count of matching spike pairs between unit `i` from `frames_spike_train1` and unit `j` from `frames_spike_train2`.
+            A 2D numpy array of shape `(num_units_train1, num_units_train2)`. Each element `[i, j]` represents
+            the count of matching spike pairs between unit `i` from `spike_frames_train1` and unit `j` from `spike_frames_train2`.
 
 
         Notes
@@ -182,29 +182,29 @@ def get_optimized_compute_matching_matrix():
         3. For each match, find as many matches as possible from the first match onwards.
 
         An important condition here is that the same spike is not matched twice. This is managed by keeping track
-        of the last matched frame for each unit pair in `previous_frame1_match` and `previous_frame2_match`
+        of the last matched frame for each unit pair in `last_match_frame1` and `last_match_frame2`
 
         For more details on the rationale behind this approach, refer to the documentation of this module and/or
         the metrics section in SpikeForest documentation.
         """
 
-        matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.uint16)
+        matching_matrix = np.zeros((num_units_train1, num_units_train2), dtype=np.uint16)
 
         # Used to avoid the same spike matching twice
-        previous_frame1_match = -np.ones_like(matching_matrix, dtype=np.int64)
-        previous_frame2_match = -np.ones_like(matching_matrix, dtype=np.int64)
+        last_match_frame1 = -np.ones_like(matching_matrix, dtype=np.int64)
+        last_match_frame2 = -np.ones_like(matching_matrix, dtype=np.int64)
 
-        num_frames_spike_train1 = len(frames_spike_train1)
-        num_frames_spike_train2 = len(frames_spike_train2)
+        num_spike_frames_train1 = len(spike_frames_train1)
+        num_spike_frames_train2 = len(spike_frames_train2)
 
         # Keeps track of which frame in the second spike train should be used as a search start for matches
         second_train_search_start  = 0
-        for index1 in range(num_frames_spike_train1):
-            frame1 = frames_spike_train1[index1]
+        for index1 in range(num_spike_frames_train1):
+            frame1 = spike_frames_train1[index1]
 
             # Look for the index of the first match for this spike in the second train
-            for index2 in range(second_train_search_start , num_frames_spike_train2):
-                frame2 = frames_spike_train2[index2]
+            for index2 in range(second_train_search_start , num_spike_frames_train2):
+                frame2 = spike_frames_train2[index2]
                 # Look for first match
                 is_a_match = abs(frame1 - frame2) <= delta_frames
                 if is_a_match:
@@ -216,8 +216,8 @@ def get_optimized_compute_matching_matrix():
                 continue
 
             # Get as many matches as possible from the first match onwards. Might include multiple units.
-            for index2 in range(first_match_index, num_frames_spike_train2):
-                frame2 = frames_spike_train2[index2]
+            for index2 in range(first_match_index, num_spike_frames_train2):
+                frame2 = spike_frames_train2[index2]
                 not_a_match = abs(frame1 - frame2) > delta_frames
                 if not_a_match:
                     # No more matches for this spike in the second train, continue to the next spike
@@ -227,9 +227,9 @@ def get_optimized_compute_matching_matrix():
                 row, column = unit_indices1[index1], unit_indices2[index2]
 
                 # The same spike cannot be matched twice see the notes in the docstring for more info on this constraint
-                if frame1 != previous_frame1_match[row, column] and frame2 != previous_frame2_match[row, column]:
-                    previous_frame1_match[row, column] = frame1
-                    previous_frame2_match[row, column] = frame2
+                if frame1 != last_match_frame1[row, column] and frame2 != last_match_frame2[row, column]:
+                    last_match_frame1[row, column] = frame1
+                    last_match_frame2[row, column] = frame2
 
                     matching_matrix[row, column] += 1
 
