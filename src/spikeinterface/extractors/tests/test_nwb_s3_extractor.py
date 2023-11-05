@@ -43,12 +43,12 @@ def test_recording_s3_nwb_ros3(tmp_path):
         assert trace_scaled.dtype == "float32"
 
     tmp_file = tmp_path / "test_ros3_recording.pkl"
-    with open(tmp_file, 'wb') as f:
+    with open(tmp_file, "wb") as f:
         pickle.dump(rec, f)
-    
-    with open(tmp_file, 'rb') as f:
+
+    with open(tmp_file, "rb") as f:
         reloaded_recording = pickle.load(f)
-    
+
     check_recordings_equal(rec, reloaded_recording)
 
 
@@ -78,16 +78,14 @@ def test_recording_s3_nwb_fsspec(tmp_path):
         trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
         assert trace_scaled.dtype == "float32"
 
-
     tmp_file = tmp_path / "test_fsspec_recording.pkl"
-    with open(tmp_file, 'wb') as f:
+    with open(tmp_file, "wb") as f:
         pickle.dump(rec, f)
-    
-    with open(tmp_file, 'rb') as f:
-        reloaded_recording = pickle.load(f)
-    
-    check_recordings_equal(rec, reloaded_recording)
 
+    with open(tmp_file, "rb") as f:
+        reloaded_recording = pickle.load(f)
+
+    check_recordings_equal(rec, reloaded_recording)
 
 
 @pytest.mark.ros3_test
@@ -113,13 +111,14 @@ def test_sorting_s3_nwb_ros3(tmp_path):
             assert np.all(spike_train >= 0)
 
     tmp_file = tmp_path / "test_ros3_sorting.pkl"
-    with open(tmp_file, 'wb') as f:
+    with open(tmp_file, "wb") as f:
         pickle.dump(sort, f)
-    
-    with open(tmp_file, 'rb') as f:
+
+    with open(tmp_file, "rb") as f:
         reloaded_sorting = pickle.load(f)
-    
+
     check_sortings_equal(reloaded_sorting, sort)
+
 
 @pytest.mark.streaming_extractors
 def test_sorting_s3_nwb_fsspec(tmp_path):
@@ -144,12 +143,12 @@ def test_sorting_s3_nwb_fsspec(tmp_path):
             assert np.all(spike_train >= 0)
 
     tmp_file = tmp_path / "test_fsspec_sorting.pkl"
-    with open(tmp_file, 'wb') as f:
+    with open(tmp_file, "wb") as f:
         pickle.dump(sort, f)
-    
-    with open(tmp_file, 'rb') as f:
+
+    with open(tmp_file, "rb") as f:
         reloaded_sorting = pickle.load(f)
-    
+
     check_sortings_equal(reloaded_sorting, sort)
 
 
