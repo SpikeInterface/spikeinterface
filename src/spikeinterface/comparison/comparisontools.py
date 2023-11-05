@@ -142,25 +142,28 @@ def get_optimized_compute_matching_matrix():
         Parameters
         ----------
         frames_spike_train1 : ndarray
-            Array of frames for the first spike train. Should be ordered in ascending order.
+            An array of integer frame numbers corresponding to spike times for the first train. Must be in ascending order.
         frames_spike_train2 : ndarray
-            Array of frames for the second spike train. Should be ordered in ascending order.
+            An array of integer frame numbers corresponding to spike times for the second train. Must be in ascending order.
         unit_indices1 : ndarray
-            Array indicating the unit indices corresponding to each spike in `frames_spike_train1`.
+            An array of integers where `unit_indices1[i]` gives the unit index associated with the spike at `frames_spike_train1[i]`.
         unit_indices2 : ndarray
-            Array indicating the unit indices corresponding to each spike in `frames_spike_train2`.
+            An array of integers where `unit_indices2[i]` gives the unit index associated with the spike at `frames_spike_train2[i]`.
         num_units_sorting1 : int
-            Total number of units in the first spike train.
+            The total count of unique units in the first spike train.
         num_units_sorting2 : int
-            Total number of units in the second spike train.
+            The total count of unique units in the second spike train.
         delta_frames : int
-            Maximum difference in frames between two spikes to consider them as a match.
+            The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
+            if `abs(frames_spike_train1[i] - frames_spike_train2[j]) <= delta_frames` then the spikes at `frames_spike_train1[i]`
+            and `frames_spike_train2[j]` are considered matching.
 
         Returns
         -------
         matching_matrix : ndarray
-            A matrix of shape (num_units_sorting1, num_units_sorting2) where each entry [i, j] represents
-            the number of matching spikes between unit i of `frames_spike_train1` and unit j of `frames_spike_train2`.
+            A 2D numpy array of shape `(num_units_sorting1, num_units_sorting2)`. Each element `[i, j]` represents
+            the count of matching spike pairs between unit `i` from `frames_spike_train1` and unit `j` from `frames_spike_train2`.
+
 
         Notes
         -----
@@ -168,10 +171,15 @@ def get_optimized_compute_matching_matrix():
         By iterating through each spike in the first train, it compares them against spikes in the second train,
         determining matches based on the two spikes frames being within `delta_frames` of each other.
 
-        To avoid redundant comparisons the algorithm maintains a reference, `lower_search_limit_in_second_train`,
+        To avoid redundant comparisons the algorithm maintains a reference, `second_train_search_start `,
         which signifies the minimal index in the second spike train that might match the upcoming spike
-        in the first train. This means that the start of the search moves forward in the second train as the
-        matches between the two trains are found decreasing the number of comparisons needed.
+        in the first train.
+        
+        The logic can be summarized as follows:
+        1. Iterate through each spike in the first train
+        2. For each spike, find the first match in the second train.
+        3. Save the index of the first match as the new `second_train_search_start `
+        3. For each match, find as many matches as possible from the first match onwards.
 
         An important condition here is that the same spike is not matched twice. This is managed by keeping track
         of the last matched frame for each unit pair in `previous_frame1_match` and `previous_frame2_match`
@@ -190,29 +198,29 @@ def get_optimized_compute_matching_matrix():
         num_frames_spike_train2 = len(frames_spike_train2)
 
         # Keeps track of which frame in the second spike train should be used as a search start for matches
-        lower_search_limit_in_second_train = 0
+        second_train_search_start  = 0
         for index1 in range(num_frames_spike_train1):
             frame1 = frames_spike_train1[index1]
 
-            # Look for the index of the first match
-            for index2 in range(lower_search_limit_in_second_train, num_frames_spike_train2):
+            # Look for the index of the first match for this spike in the second train
+            for index2 in range(second_train_search_start , num_frames_spike_train2):
                 frame2 = frames_spike_train2[index2]
                 # Look for first match
-                is_a_match = abs(frame1 - frames_spike_train2[index2]) <= delta_frames
+                is_a_match = abs(frame1 - frame2) <= delta_frames
                 if is_a_match:
-                    lower_search_limit_in_second_train = index2
+                    second_train_search_start  = index2
                     first_match_index = index2
                     break
             else:
-                # No matches found, finish the outer loop (could be done with a `break` but this is more explicit)
-                first_match_index = num_frames_spike_train2
+                # No matches found for this spike in all the second train, continue to the next frame
+                continue
 
-            # Get as many matches as possible from the first match onwards
+            # Get as many matches as possible from the first match onwards. Might include multiple units.
             for index2 in range(first_match_index, num_frames_spike_train2):
                 frame2 = frames_spike_train2[index2]
                 not_a_match = abs(frame1 - frame2) > delta_frames
                 if not_a_match:
-                    # Go to the next frame in the first train
+                    # No more matches for this spike in the second train, continue to the next spike
                     break
 
                 # Map the match to a matrix
