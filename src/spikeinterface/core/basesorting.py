@@ -447,7 +447,9 @@ class BaseSorting(BaseExtractor):
         unit_ids = self.unit_ids
 
         if from_spike_vector:
-            assert HAVE_NUMBA, "`numba` must be installed to use `precompute_spike_trains(from_spike_vector=True)`\
+            assert (
+                HAVE_NUMBA
+            ), "`numba` must be installed to use `precompute_spike_trains(from_spike_vector=True)`\
             Either install numba (pip install numba) or set `from_spike_vector=False`"
 
             spike_trains = spike_vector_to_dict(self.to_spike_vector())
