@@ -952,10 +952,7 @@ def spike_vector_to_dict(spike_vector: np.ndarray) -> dict:
         spike_vector["segment_index"].astype(np.int64),
     )
 
-    return [
-        {unit_index: np.array(spike_trains[seg][unit_index]) for unit_index in spike_trains[seg].keys()}
-        for seg in range(len(spike_trains))
-    ]
+    return spike_trains
 
 
 if HAVE_NUMBA:
@@ -965,12 +962,18 @@ if HAVE_NUMBA:
         spike_trains = []
 
         for seg in range(1 + np.max(segment_index)):
-            d = numba.typed.Dict()  # For some reason, creating an intermediate 'd' is necessary, otherwise numba fails to compile.
-            for i in range(1 + np.max(unit_index)):
-                d[i] = numba.typed.List.empty_list(numba.int64)
-
+            n_spikes = np.zeros(1 + np.max(unit_index), dtype=np.int64)
             for i in range(len(sample_index)):
-                d[unit_index[i]].append(sample_index[i])
+                n_spikes[unit_index[i]] += 1
+
+            d = numba.typed.Dict()
+            for i in range(1 + np.max(unit_index)):
+                d[i] = np.empty(n_spikes[i], dtype=np.int64)
+
+            ind = np.zeros(1 + np.max(unit_index), dtype=np.int64)
+            for i in range(len(sample_index)):
+                d[unit_index[i]][ind[unit_index[i]]] = sample_index[i]
+                ind[unit_index[i]] += 1
 
             spike_trains.append(d)
 
