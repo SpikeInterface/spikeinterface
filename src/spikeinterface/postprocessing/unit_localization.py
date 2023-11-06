@@ -69,13 +69,13 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
 
         Parameters
         ----------
-        outputs : str, optional
-            'numpy' or 'by_unit', by default 'numpy'
+        outputs : "numpy" | "by_unit", default: "numpy"
+            The output format
 
         Returns
         -------
         unit_locations : np.array or dict
-            The unit locations as a Nd array (outputs='numpy') or
+            The unit locations as a Nd array (outputs="numpy") or
             as a dict with units as key and locations as values.
         """
         if outputs == "numpy":
@@ -104,15 +104,15 @@ def compute_unit_locations(
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
-        A waveform extractor object.
+        A waveform extractor object
     load_if_exists : bool, default: False
-        Whether to load precomputed unit locations, if they already exist.
-    method: str
-        'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
-    outputs: str
-        'numpy' (default) / 'by_unit'
+        Whether to load precomputed unit locations, if they already exist
+    method: "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
+        The method to use for localization
+    outputs: "numpy" | "by_unit", default: "numpy"
+        The output format
     method_kwargs:
-        Other kwargs depending on the method.
+        Other kwargs depending on the method
 
     Returns
     -------
@@ -247,21 +247,21 @@ def compute_monopolar_triangulation(
     ----------
     waveform_extractor:WaveformExtractor
         A waveform extractor object
-    method: str  ('least_square', 'minimize_with_log_penality')
-       2 variants of the method
-    radius_um: float
+    method: "least_square" | "minimize_with_log_penality", default: "least_square"
+       The optimizer to use
+    radius_um: float, default: 75
         For channel sparsity
-    max_distance_um: float
+    max_distance_um: float, default: 1000
         to make bounddary in x, y, z and also for alpha
-    return_alpha: bool default False
+    return_alpha: bool, default: False
         Return or not the alpha value
-    enforce_decrease : bool (default False)
+    enforce_decrease : bool, default: False
         Enforce spatial decreasingness for PTP vectors
-    feature: string in ['ptp', 'energy', 'peak_voltage']
+    feature: "ptp" | "energy" | "peak_voltage", default: "ptp"
         The available features to consider for estimating the position via
-        monopolar triangulation are peak-to-peak amplitudes ('ptp', default),
-        energy ('energy', as L2 norm) or voltages at the center of the waveform
-        ('peak_voltage')
+        monopolar triangulation are peak-to-peak amplitudes ("ptp", default),
+        energy ("energy", as L2 norm) or voltages at the center of the waveform
+        ("peak_voltage")
 
     Returns
     -------
@@ -323,12 +323,12 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute best channels
     radius_um: float
         Radius to consider in order to estimate the COM
-    feature: str ['ptp', 'mean', 'energy', 'peak_voltage']
-        Feature to consider for computation. Default is 'ptp'
+    feature: "ptp" | "mean" | "energy" | "peak_voltage", default: "ptp"
+        Feature to consider for computation
 
     Returns
     -------
@@ -388,24 +388,24 @@ def compute_grid_convolution(
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
-    radius_um: float
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute best channels
+    radius_um: float, default: 40.0
         Radius to consider for the fake templates
-    upsampling_um: float
+    upsampling_um: float, default: 5
         Upsampling resolution for the grid of templates
-    sigma_um: np.array
+    sigma_um: np.array, default: np.linspace(5.0, 25.0, 5)
         Spatial decays of the fake templates
-    sigma_ms: float
+    sigma_ms: float, default: 0.25
         The temporal decay of the fake templates
-    margin_um: float
+    margin_um: float, default: 50
         The margin for the grid of fake templates
-    prototype: np.array
+    prototype: np.array or None, default: None
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float (default 10)
+    percentile: float, default: 10
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float (default 0.01)
+    sparsity_threshold: float, default: 0.01
         The sparsity threshold (in 0-1) below which weights should be considered as 0.
     Returns
     -------

@@ -26,19 +26,19 @@ class BinaryRecordingExtractor(BaseRecording):
         Number of channels
     dtype: str or dtype
         The dtype of the binary file
-    time_axis: int
-        The axis of the time dimension (default 0: F order)
-    t_starts: None or list of float
+    time_axis: int, default: 0
+        The axis of the time dimension
+    t_starts: None or list of float, default: None
         Times in seconds of the first sample for each segment
-    channel_ids: list (optional)
+    channel_ids: list, default: None
         A list of channel ids
-    file_offset: int (optional)
+    file_offset: int, default: 0
         Number of bytes in the file to offset by during memmap instantiation.
-    gain_to_uV: float or array-like (optional)
+    gain_to_uV: float or array-like, default: None
         The gain to apply to the traces
-    offset_to_uV: float or array-like
+    offset_to_uV: float or array-like, default: None
         The offset to apply to the traces
-    is_filtered: bool or None
+    is_filtered: bool or None, default: None
         If True, the recording is assumed to be filtered. If None, is_filtered is not set.
 
     Notes
@@ -140,8 +140,8 @@ class BinaryRecordingExtractor(BaseRecording):
             The recording extractor object to be saved in .dat format
         file_paths: str
             The path to the file.
-        dtype: dtype
-            Type of the saved data. Default float32.
+        dtype: dtype, default: None
+            Type of the saved data
         {}
         """
         write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)

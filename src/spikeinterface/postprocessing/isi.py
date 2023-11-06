@@ -77,15 +77,15 @@ def compute_isi_histograms(
     Parameters
     ----------
     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-        If WaveformExtractor, the ISI histograms are saved as WaveformExtensions.
+        If WaveformExtractor, the ISI histograms are saved as WaveformExtensions
     load_if_exists : bool, default: False
-        Whether to load precomputed crosscorrelograms, if they already exist.
-    window_ms : float, optional
-        The window in ms, by default 50.0.
-    bin_ms : float, optional
-        The bin size in ms, by default 1.0.
-    method : str, optional
-        "auto" | "numpy" | "numba". If "auto" and numba is installed, numba is used, by default "auto"
+        Whether to load precomputed crosscorrelograms, if they already exist
+    window_ms : float, default: 50
+        The window in ms
+    bin_ms : float, default: 1
+        The bin size in ms
+    method : "auto" | "numpy" | "numba", default: "auto"
+        . If "auto" and numba is installed, numba is used, otherwise numpy is used
 
     Returns
     -------

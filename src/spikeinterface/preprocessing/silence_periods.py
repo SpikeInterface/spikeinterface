@@ -9,7 +9,7 @@ from ..core import get_random_data_chunks, get_noise_levels
 class SilencedPeriodsRecording(BasePreprocessor):
     """
     Silence user-defined periods from recording extractor traces. By default,
-    periods are zeroed-out (mode = 'zeros'). You can also fill the periods with noise.
+    periods are zeroed-out (mode = "zeros"). You can also fill the periods with noise.
     Note that both methods assume that traces that are centered around zero.
     If this is not the case, make sure you apply a filter or center function prior to
     silencing periods.
@@ -21,12 +21,12 @@ class SilencedPeriodsRecording(BasePreprocessor):
     list_periods: list of lists/arrays
         One list per segment of tuples (start_frame, end_frame) to silence
 
-    mode: str
+    mode: "zeros" | "noise, default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
 
-        - 'zeros' (default): Artifacts are replaced by zeros.
+        - "zeros": Artifacts are replaced by zeros.
 
-        - 'noise': The periods are filled with a gaussion noise that has the
+        - "noise": The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
     **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function

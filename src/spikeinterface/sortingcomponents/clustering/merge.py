@@ -7,7 +7,6 @@ from tqdm.auto import tqdm
 import scipy.spatial
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from hdbscan import HDBSCAN
 
 import numpy as np
 import networkx as nx

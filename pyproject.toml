@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.99.0.dev0"
+version = "0.100.0.dev0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -25,7 +25,7 @@ dependencies = [
     "joblib",
     "threadpoolctl",
     "tqdm",
-    "probeinterface>=0.2.17",
+    "probeinterface>=0.2.19",
 ]
 
 [build-system]
@@ -103,6 +103,13 @@ widgets = [
     "sortingview>=0.11.15",
 ]
 
+qualitymetrics = [
+    "scikit-learn",
+    "scipy",
+    "pandas",
+    "numba",
+]
+
 test_core = [
     "pytest",
     "zarr",
@@ -178,6 +185,7 @@ markers = [
     "widgets",
     "sortingcomponents",
     "streaming_extractors: extractors that require streaming such as ross and fsspec",
+    "ros3_test"
 ]
 filterwarnings =[
     'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',

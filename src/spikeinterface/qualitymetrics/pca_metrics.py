@@ -1,6 +1,5 @@
 """Cluster quality metrics computed from principal components."""
 
-from cmath import nan
 from copy import deepcopy
 
 import numpy as np
@@ -16,7 +15,6 @@ try:
 except:
     pass
 
-import spikeinterface as si
 from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
 from ..core.job_tools import tqdm_joblib
 from ..core.template_tools import get_template_extremum_channel
@@ -72,12 +70,12 @@ def calculate_pc_metrics(
     ----------
     pca : WaveformPrincipalComponent
         Waveform object with principal components computed.
-    metric_names : list of str, optional
+    metric_names : list of str, default: None
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
-    sparsity: ChannelSparsity or None
+    sparsity: ChannelSparsity or None, default: None
         The sparsity object. This is used also to identify neighbor
-        units and speed up computations. If None (default) all channels and all units are used
+        units and speed up computations. If None all channels and all units are used
         for each unit.
     qm_params : dict or None
         Dictionary with parameters for each PC metric function.
@@ -393,11 +391,11 @@ def nearest_neighbors_isolation(
         Recomputed if None.
     max_spikes : int, default: 1000
         Max number of spikes to use per unit.
-    min_spikes : int, optional, default: 10
+    min_spikes : int, default: 10
         Min number of spikes a unit must have to go through with metric computation.
         Units with spikes < min_spikes gets numpy.NaN as the quality metric,
         and are ignored when selecting other units' neighbors.
-    min_fr : float, optional, default: 0.0
+    min_fr : float, default: 0.0
         Min firing rate a unit must have to go through with metric computation.
         Units with firing rate < min_fr gets numpy.NaN as the quality metric,
         and are ignored when selecting other units' neighbors.
@@ -407,7 +405,7 @@ def nearest_neighbors_isolation(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: str, default: 'neg'
+    peak_sign: "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
         is not sparse already.
     min_spatial_overlap : float, default: 100
@@ -599,10 +597,10 @@ def nearest_neighbors_noise_overlap(
         Recomputed if None.
     max_spikes : int, default: 1000
         The max number of spikes to use per cluster.
-    min_spikes : int, optional, default: 10
+    min_spikes : int, default: 10
         Min number of spikes a unit must have to go through with metric computation.
         Units with spikes < min_spikes gets numpy.NaN as the quality metric.
-    min_fr : float, optional, default: 0.0
+    min_fr : float, default: 0.0
         Min firing rate a unit must have to go through with metric computation.
         Units with firing rate < min_fr gets numpy.NaN as the quality metric.
     n_neighbors : int, default: 5
@@ -611,7 +609,7 @@ def nearest_neighbors_noise_overlap(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: str, default: 'neg'
+    peak_sign: "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
         is not sparse already.
     seed : int, default: 0

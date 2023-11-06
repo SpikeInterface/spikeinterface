@@ -191,13 +191,13 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         if noise_std_by_channel is None:
             noise_std_by_channel = np.ones((1, n_channels))
 
-        dict_to_save = {'Units': units,
-                        'MultiElectrode': multi_electrode,
-                        'noiseStd': noise_std_by_channel,
+        dict_to_save = {"Units": units,
+                        "MultiElectrode": multi_electrode,
+                        "noiseStd": noise_std_by_channel,
                         "samplingRate": sorting._sampling_frequency}
 
         # Save Units and MultiElectrode to .mat file:
-        MATSortingExtractor.write_dict_to_mat(save_path, dict_to_save, version='7.3')
+        MATSortingExtractor.write_dict_to_mat(save_path, dict_to_save, version="7.3")
     """
 
 

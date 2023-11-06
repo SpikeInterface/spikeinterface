@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 from typing import Any, Iterable, List, Optional, Sequence, Union
 import importlib
 import warnings
@@ -44,7 +45,7 @@ class BaseExtractor:
         # store init kwargs for nested serialisation
         self._kwargs = {}
 
-        # 'main_ids' will either be channel_ids or units_ids
+        # "main_ids" will either be channel_ids or units_ids
         # They are used for properties
         self._main_ids = np.array(main_ids)
         if len(self._main_ids) > 0:
@@ -90,7 +91,7 @@ class BaseExtractor:
           * data
           * properties
 
-        'prefer_slice' is an efficient option that tries to make a slice object
+        "prefer_slice" is an efficient option that tries to make a slice object
         when indices are consecutive.
 
         """
@@ -171,11 +172,11 @@ class BaseExtractor:
             The property name
         values : np.array
             Array of values for the property
-        ids : list/np.array, optional
-            List of subset of ids to set the values, by default None
-        missing_value : object, optional
-            In case the property is set on a subset of values ('ids' not None),
-            it specifies the how the missing values should be filled, by default None.
+        ids : list/np.array, default: None
+            List of subset of ids to set the values, default: None
+        missing_value : object, default: None
+            In case the property is set on a subset of values ("ids" not None),
+            it specifies the how the missing values should be filled.
             The missing_value has to be specified for types int and unsigned int.
         """
 
@@ -269,8 +270,8 @@ class BaseExtractor:
             If True, only the main annotations/properties are copied.
         ids: list
             List of ids to copy the metadata to. If None, all ids are copied.
-        skip_properties: list
-            List of properties to skip. Default is None.
+        skip_properties: list, default: None
+            List of properties to skip
         """
 
         if ids is None:
@@ -320,18 +321,18 @@ class BaseExtractor:
 
         Parameters
         ----------
-        include_annotations: bool
-            If True, all annotations are added to the dict, by default False
-        include_properties: bool
-            If True, all properties are added to the dict, by default False
-        relative_to: str, Path, or None
-            If not None, files and folders are serialized relative to this path, by default None
+        include_annotations: bool, default: False
+            If True, all annotations are added to the dict
+        include_properties: bool, default: False
+            If True, all properties are added to the dict
+        relative_to: str, Path, or None, default: None
+            If not None, files and folders are serialized relative to this path
             Used in waveform extractor to maintain relative paths to binary files even if the
             containing folder / diretory is moved
         folder_metadata: str, Path, or None
             Folder with numpy `npy` files containing additional information (e.g. probe in BaseRecording) and properties.
-        recursive: bool
-            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
+        recursive: bool, default: False
+            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well
 
         Returns
         -------
@@ -342,7 +343,7 @@ class BaseExtractor:
         kwargs = self._kwargs
 
         if relative_to and not recursive:
-            raise ValueError("`relative_to` is only posible when `recursive=True`")
+            raise ValueError("`relative_to` is only possible when `recursive=True`")
 
         if recursive:
             to_dict_kwargs = dict(
@@ -571,7 +572,12 @@ class BaseExtractor:
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
-    def dump_to_json(self, file_path: Union[str, Path, None] = None, relative_to=None, folder_metadata=None) -> None:
+    def dump_to_json(
+        self,
+        file_path: Union[str, Path, None] = None,
+        relative_to: Union[str, Path, bool, None] = None,
+        folder_metadata: Union[str, Path, None] = None,
+    ) -> None:
         """
         Dump recording extractor to json file.
         The extractor can be re-loaded with load_extractor(json_file)
@@ -584,7 +590,7 @@ class BaseExtractor:
             If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         folder_metadata: str, Path, or None
-            Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
+            Folder with files containing additional information (e.g. probe in BaseRecording) and properties
         """
         assert self.check_serializablility("json"), "The extractor is not json serializable"
 
@@ -610,8 +616,9 @@ class BaseExtractor:
     def dump_to_pickle(
         self,
         file_path: Union[str, Path, None] = None,
+        relative_to: Union[str, Path, bool, None] = None,
         include_properties: bool = True,
-        folder_metadata=None,
+        folder_metadata: Union[str, Path, None] = None,
     ):
         """
         Dump recording extractor to a pickle file.
@@ -621,6 +628,9 @@ class BaseExtractor:
         ----------
         file_path: str
             Path of the pickle file
+        relative_to: str, Path, True or None
+            If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
+            This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         include_properties: bool
             If True, all properties are dumped
         folder_metadata: str, Path, or None
@@ -628,12 +638,21 @@ class BaseExtractor:
         """
         assert self.check_if_pickle_serializable(), "The extractor is not serializable to file with pickle"
 
+        # Writing paths as relative_to requires recursively expanding the dict
+        if relative_to:
+            relative_to = Path(file_path).parent if relative_to is True else Path(relative_to)
+            relative_to = relative_to.resolve().absolute()
+            # if relative_to is used, the dictionaru needs recursive expansion
+            recursive = True
+        else:
+            recursive = False
+
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
             folder_metadata=folder_metadata,
-            relative_to=None,
-            recursive=False,
+            relative_to=relative_to,
+            recursive=recursive,
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
@@ -741,7 +760,7 @@ class BaseExtractor:
                     folder (use set_global_tmp_folder() to change this folder) where the object is saved.
               If folder and name are not given, the object is saved in the global temporary folder with
               a random string
-            * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
+            * dump_ext: "json" or "pkl", default "json" (if format is "folder")
             * verbose: if True output is verbose
             * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
             {}
@@ -769,7 +788,7 @@ class BaseExtractor:
         return cached
 
     # TODO rename to saveto_binary_folder
-    def save_to_folder(self, name=None, folder=None, verbose=True, **save_kwargs):
+    def save_to_folder(self, name=None, folder=None, overwrite=False, verbose=True, **save_kwargs):
         """
         Save extractor to folder.
 
@@ -781,7 +800,7 @@ class BaseExtractor:
 
         This replaces the use of the old CacheRecordingExtractor and CacheSortingExtractor.
 
-        There are 2 option for the 'folder' argument:
+        There are 2 option for the "folder" argument:
           * explicit folder: `extractor.save(folder="/path-for-saving/")`
           * explicit sub-folder, implicit base-folder : `extractor.save(name="extarctor_name")`
           * generated: `extractor.save()`
@@ -796,10 +815,12 @@ class BaseExtractor:
         ----------
         name: None str or Path
             Name of the subfolder in get_global_tmp_folder()
-            If 'name' is given, 'folder' must be None.
+            If "name" is given, "folder" must be None.
         folder: None str or Path
             Name of the folder.
-            If 'folder' is given, 'name' must be None.
+            If "folder" is given, "name" must be None.
+        overwrite: bool, default: False
+            If True, the folder is removed if it already exists
 
         Returns
         -------
@@ -820,7 +841,12 @@ class BaseExtractor:
                         print(f"Use cache_folder={folder}")
         else:
             folder = Path(folder)
-        assert not folder.exists(), f"folder {folder} already exists, choose another name"
+        if overwrite and folder.is_dir():
+            import shutil
+
+            shutil.rmtree(folder)
+
+        assert not folder.exists(), f"folder {folder} already exists, choose another name or use overwrite=True"
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
@@ -866,21 +892,22 @@ class BaseExtractor:
 
         Parameters
         ----------
-        name: str or None
+        name: str or None, default: None
             Name of the subfolder in get_global_tmp_folder()
-            If 'name' is given, 'folder' must be None.
-        folder: str, Path, or None
-            The folder used to save the zarr output. If the folder does not have a '.zarr' suffix,
+            If "name" is given, "folder" must be None.
+        folder: str, Path, or None, default: None
+            The folder used to save the zarr output. If the folder does not have a ".zarr" suffix,
             it will be automatically appended.
-        storage_options: dict or None
+        storage_options: dict or None, default: None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
-        channel_chunk_size: int or None
-            Channels per chunk. Default None (chunking in time only)
-        verbose: bool
-            If True (default), the output is verbose.
-        zarr_path: str, Path, or None
-            (Deprecated) Name of the zarr folder (.zarr).
+        channel_chunk_size: int or None, default: None
+            Channels per chunk
+        verbose: bool, default: True
+            If True, the output is verbose
+        zarr_path: str, Path, or None, default: None
+            (Deprecated) Name of the zarr folder (.zarr)
+        **save_kwargs: Keyword arguments for saving.
 
         Returns
         -------
