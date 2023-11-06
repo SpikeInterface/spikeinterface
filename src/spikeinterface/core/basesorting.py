@@ -427,7 +427,7 @@ class BaseSorting(BaseExtractor):
             spikes.append((spike_times, spike_labels))
         return spikes
 
-    def precompute_spike_trains(self, from_spike_vector: bool=True):
+    def precompute_spike_trains(self, from_spike_vector: bool = True):
         """
         Pre-computes and caches all spike trains for this sorting
 
@@ -443,10 +443,14 @@ class BaseSorting(BaseExtractor):
             spike_trains = spike_vector_to_dict(self.to_spike_vector())
 
             for segment_index in range(self.get_num_segments()):
-                self._cached_spike_trains[segment_index] = {unit_ids[unit_index]: spike_trains[segment_index][unit_index] for unit_index in range(len(unit_ids))}
+                self._cached_spike_trains[segment_index] = {
+                    unit_ids[unit_index]: spike_trains[segment_index][unit_index] for unit_index in range(len(unit_ids))
+                }
         else:
             for segment_index in range(self.get_num_segments()):
-                self._cached_spike_trains[segment_index] = {unit_id: self.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in unit_ids}
+                self._cached_spike_trains[segment_index] = {
+                    unit_id: self.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in unit_ids
+                }
 
     def to_spike_vector(self, concatenated=True, extremum_channel_inds=None, use_cache=True):
         """

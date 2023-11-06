@@ -947,9 +947,16 @@ def convert_bytes_to_str(byte_value: int) -> str:
 def spike_vector_to_dict(spike_vector: np.ndarray) -> dict:
     assert HAVE_NUMBA
 
-    spike_trains = _vector_to_dict(spike_vector["sample_index"].astype(np.int64), spike_vector["unit_index"].astype(np.int64), spike_vector["segment_index"].astype(np.int64))
-    
-    return [{unit_index: np.array(spike_trains[seg][unit_index]) for unit_index in spike_trains[seg].keys()} for seg in range(len(spike_trains))]
+    spike_trains = _vector_to_dict(
+        spike_vector["sample_index"].astype(np.int64),
+        spike_vector["unit_index"].astype(np.int64),
+        spike_vector["segment_index"].astype(np.int64),
+    )
+
+    return [
+        {unit_index: np.array(spike_trains[seg][unit_index]) for unit_index in spike_trains[seg].keys()}
+        for seg in range(len(spike_trains))
+    ]
 
 if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int64[::1]), nopython=True, nogil=True, cache=True)
