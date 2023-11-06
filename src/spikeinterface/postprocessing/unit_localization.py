@@ -379,7 +379,7 @@ def compute_grid_convolution(
     prototype=None,
     percentile=10,
     sparsity_threshold=0.01,
-    mode='2d'
+    mode="2d",
 ):
     """
     Estimate the positions of the templates from a large grid of fake templates
@@ -421,7 +421,6 @@ def compute_grid_convolution(
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
     assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
-    
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
         prototype = np.exp(-(time_axis**2) / (2 * (sigma_ms**2)))
@@ -431,7 +430,7 @@ def compute_grid_convolution(
         contact_locations, radius_um, upsampling_um, sigma_um, margin_um
     )
 
-    #print(template_positions.shape)
+    # print(template_positions.shape)
     templates = waveform_extractor.get_all_templates(mode="average")
 
     peak_channels = get_template_extremum_channel(waveform_extractor, peak_sign, outputs="index")
@@ -439,7 +438,7 @@ def compute_grid_convolution(
 
     weights_sparsity_mask = weights > sparsity_threshold
 
-    if mode == '2d':
+    if mode == "2d":
         ndim = 2
     else:
         ndim = 3
@@ -473,10 +472,10 @@ def compute_grid_convolution(
 
         unit_location[i, :] = found_positions / scalar_products.sum()
 
-        if mode == '3d':
+        if mode == "3d":
             best_template = np.argmin(np.linalg.norm(template_positions - unit_location[i, :2], axis=1))
             w = weights[:, :, best_template]
-            dot_products = np.dot(w[:, channel_mask], global_products)/np.sum(w, axis=1)
+            dot_products = np.dot(w[:, channel_mask], global_products) / np.sum(w, axis=1)
             unit_location[i, 2] = (dot_products * sigma_um).sum() / dot_products.sum()
 
     return unit_location

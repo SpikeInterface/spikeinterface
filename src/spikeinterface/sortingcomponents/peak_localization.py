@@ -346,7 +346,7 @@ class LocalizeGridConvolution(PipelineNode):
         prototype=None,
         percentile=5.0,
         sparsity_threshold=0.01,
-        mode='2d'
+        mode="2d",
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -359,7 +359,7 @@ class LocalizeGridConvolution(PipelineNode):
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
         self.sparsity_threshold = sparsity_threshold
         assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
-        assert self.mode in ['2d', '3d'], "mode should be in ['2d', '3d']"
+        assert self.mode in ["2d", "3d"], "mode should be in ['2d', '3d']"
         contact_locations = recording.get_channel_locations()
         # Find waveform extractor in the parents
         waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
@@ -404,10 +404,10 @@ class LocalizeGridConvolution(PipelineNode):
     def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
-        if self.mode == '3d':
+        if self.mode == "3d":
             ndim = 3
             import sklearn
-        elif self.mode == '2d':
+        elif self.mode == "2d":
             ndim = 2
 
         for main_chan in np.unique(peaks["channel_index"]):
@@ -441,18 +441,20 @@ class LocalizeGridConvolution(PipelineNode):
             found_positions = np.zeros((num_spikes, ndim), dtype=np.float32)
             for count in range(self.weights.shape[0]):
                 scalar_products += dot_products[count, :, :]
-                found_positions[:, :2] += np.dot(dot_products[count, :, :], self.template_positions[nearest_templates, :])
-            
+                found_positions[:, :2] += np.dot(
+                    dot_products[count, :, :], self.template_positions[nearest_templates, :]
+                )
+
             found_positions /= scalar_products.sum(1)[:, np.newaxis]
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
 
-            if self.mode == '3d':
+            if self.mode == "3d":
                 d = sklearn.metrics.pairwise_distances(self.template_positions, np.nan_to_num(found_positions[:, :2]))
                 best_templates = np.argmin(d, axis=0)
                 for i, t in enumerate(best_templates):
                     w = self.weights[:, :, t]
-                    dot_products = np.dot(w[:, channel_mask], global_products[i])/np.sum(w, axis=1)
+                    dot_products = np.dot(w[:, channel_mask], global_products[i]) / np.sum(w, axis=1)
                     found_positions[i, 2] = (dot_products * self.sigma_um).sum() / dot_products.sum()
                 peak_locations["z"][idx] = found_positions[:, 2]
 
