@@ -38,7 +38,7 @@ class RandomProjectionClustering:
             "min_cluster_size": 20,
             "allow_single_cluster": True,
             "core_dist_n_jobs": os.cpu_count(),
-            "cluster_selection_method": "leaf",
+            "cluster_selection_method": "eom",
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2, "max_spikes_per_unit": 100},
