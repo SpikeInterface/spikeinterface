@@ -1,6 +1,7 @@
 import platform
 from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
+import importlib
 
 import pytest
 import numpy as np
@@ -189,6 +190,7 @@ if __name__ == "__main__":
         # test_recursive_path_modifier()
 
 
+@pytest.mark.skipif(importlib.util.find_spec("numba") is None, reason="Testing `spike_vector_to_dict` requires Python package 'numba'.")
 def test_spike_vector_to_dict() -> None:
     sorting = NumpySorting.from_unit_dict({1: np.array([0, 51, 108]), 5: np.array([23, 87])}, 30_000)
     spike_vector = sorting.to_spike_vector()
