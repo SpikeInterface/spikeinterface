@@ -957,7 +957,9 @@ def spike_vector_to_dict(spike_vector: np.ndarray) -> dict:
         for seg in range(len(spike_trains))
     ]
 
+
 if HAVE_NUMBA:
+
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int64[::1]), nopython=True, nogil=True, cache=True)
     def _vector_to_dict(sample_index, unit_index, segment_index):
         spike_trains = numba.typed.List()
