@@ -965,7 +965,9 @@ if HAVE_NUMBA:
         spike_trains = []
 
         for seg in range(1 + np.max(segment_index)):
-            d = numba.typed.Dict()  # For some reason, creating an intermediate 'd' is necessary, otherwise numba fails to compile.
+            d = (
+                numba.typed.Dict()
+            )  # For some reason, creating an intermediate 'd' is necessary, otherwise numba fails to compile.
             for i in range(1 + np.max(unit_index)):
                 d[i] = numba.typed.List.empty_list(numba.int64)
 
