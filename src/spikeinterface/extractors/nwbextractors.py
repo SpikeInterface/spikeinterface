@@ -220,14 +220,14 @@ class NwbRecordingExtractor(BaseRecording):
 
     def __init__(
         self,
-        file_path: str | Path | None = None, # provide either this or file
+        file_path: str | Path | None = None,  # provide either this or file
         electrical_series_name: str | None = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
         *,
-        file: BinaryIO | None = None  # file-like - provide either this or file_path
+        file: BinaryIO | None = None,  # file-like - provide either this or file_path
     ):
         try:
             from pynwb import NWBHDF5IO, NWBFile
