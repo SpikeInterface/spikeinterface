@@ -5,7 +5,12 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier, spike_vector_to_dict
+from spikeinterface.core.core_tools import (
+    write_binary_recording,
+    write_memory_recording,
+    recursive_path_modifier,
+    spike_vector_to_dict,
+)
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 from spikeinterface.core.generate import NoiseGeneratorRecording
 from spikeinterface.core.numpyextractors import NumpySorting
