@@ -366,7 +366,7 @@ class BaseSorting(BaseExtractor):
     def get_non_empty_unit_ids(self):
         num_spikes_per_unit = self.count_num_spikes_per_unit()
 
-        return np.array([unit_id for unit_id in self.unit_ids if num_spikes_per_unit[unit_id] == 0])
+        return np.array([unit_id for unit_id in self.unit_ids if num_spikes_per_unit[unit_id] != 0])
 
     def get_empty_unit_ids(self):
         unit_ids = self.unit_ids
