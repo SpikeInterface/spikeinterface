@@ -557,7 +557,7 @@ class WaveformExtractor:
                 )
 
     def is_extension(self, extension_name) -> bool:
-        warn("WaveformExtractor.is_extension is deprecated! Use `has_extension` instead.")
+        warn("WaveformExtractor.is_extension is deprecated and will be removed in version 0.102.0! Use `has_extension` instead.")
         return self.has_extension(extension_name)
 
     def load_extension(self, extension_name: str):
