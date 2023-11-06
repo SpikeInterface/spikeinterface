@@ -962,14 +962,16 @@ if HAVE_NUMBA:
 
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int64[::1]), nopython=True, nogil=True, cache=True)
     def _vector_to_dict(sample_index, unit_index, segment_index):
-        spike_trains = numba.typed.List()
+        spike_trains = []
 
         for seg in range(1 + np.max(segment_index)):
-            spike_trains.append(numba.typed.Dict())
+            d = numba.typed.Dict()  # For some reason, creating an intermediate 'd' is necessary, otherwise numba fails to compile.
             for i in range(1 + np.max(unit_index)):
-                spike_trains[seg][i] = numba.typed.List.empty_list(numba.int64)
+                d[i] = numba.typed.List.empty_list(numba.int64)
 
             for i in range(len(sample_index)):
-                spike_trains[seg][unit_index[i]].append(sample_index[i])
+                d[unit_index[i]].append(sample_index[i])
+
+            spike_trains.append(d)
 
         return spike_trains
