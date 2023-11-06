@@ -1005,16 +1005,16 @@ class BaseExtractor:
         return cached
 
 
-def _make_paths_relative(d, relative, copy=True) -> dict:
+def _make_paths_relative(d, relative) -> dict:
     relative = str(Path(relative).resolve().absolute())
     func = lambda p: os.path.relpath(str(p), start=relative)
-    return recursive_path_modifier(d, func, target="path", copy=copy)
+    return recursive_path_modifier(d, func, target="path", copy=True)
 
 
-def _make_paths_absolute(d, base, copy=True):
+def _make_paths_absolute(d, base):
     base = Path(base)
     func = lambda p: str((base / p).resolve())
-    return recursive_path_modifier(d, func, target="path", copy=copy)
+    return recursive_path_modifier(d, func, target="path", copy=True)
 
 
 def _load_extractor_from_dict(dic) -> BaseExtractor:
