@@ -1,8 +1,10 @@
 from pathlib import Path
+import pickle
 
 import pytest
 import numpy as np
 import h5py
+from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
 
@@ -96,7 +98,7 @@ def test_recording_s3_nwb_remfile():
 
 
 @pytest.mark.streaming_extractors
-def test_recording_s3_nwb_remfile_file_like():
+def test_recording_s3_nwb_remfile_file_like(tmp_path):
     import remfile
 
     file_path = (
@@ -123,6 +125,13 @@ def test_recording_s3_nwb_remfile_file_like():
     if rec.has_scaled():
         trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
         assert trace_scaled.dtype == "float32"
+
+    # test pickling
+    with open(tmp_path / "rec.pkl", "wb") as f:
+        pickle.dump(rec, f)
+    with open(tmp_path / "rec.pkl", "rb") as f:
+        rec2 = pickle.load(f)
+    check_recordings_equal(rec, rec2)
 
 
 @pytest.mark.ros3_test

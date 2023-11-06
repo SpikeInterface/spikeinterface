@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Union, List, Optional, Literal, Dict
+from typing import Union, List, Optional, Literal, Dict, BinaryIO
 
 import numpy as np
 
@@ -71,8 +71,8 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
 def read_nwbfile(
     *,
     file_path: str | Path | None,
-    file,
-    stream_mode: Literal["ffspec", "ros3"] | None = None,
+    file: BinaryIO | None = None,
+    stream_mode: Literal["ffspec", "ros3", "remfile"] | None = None,
     stream_cache_path: str | Path | None = None,
 ) -> NWBFile:
     """
@@ -220,13 +220,14 @@ class NwbRecordingExtractor(BaseRecording):
 
     def __init__(
         self,
-        file_path: str | Path | None = None,
-        electrical_series_name: str = None,
-        file=None,  # file-like - provide either this or file_path
+        file_path: str | Path | None = None, # provide either this or file
+        electrical_series_name: str | None = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
+        *,
+        file: BinaryIO | None = None  # file-like - provide either this or file_path
     ):
         try:
             from pynwb import NWBHDF5IO, NWBFile
@@ -414,6 +415,7 @@ class NwbRecordingExtractor(BaseRecording):
             "samples_for_rate_estimation": samples_for_rate_estimation,
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
+            "file": file,
         }
 
 
