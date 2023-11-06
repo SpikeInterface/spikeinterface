@@ -26,7 +26,7 @@ try:
     import numba
 
     HAVE_NUMBA = True
-else:
+except:
     HAVE_NUMBA = False
 
 
