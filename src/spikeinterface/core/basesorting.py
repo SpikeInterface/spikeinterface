@@ -364,16 +364,12 @@ class BaseSorting(BaseExtractor):
         return self.select_units(non_empty_units)
 
     def get_non_empty_unit_ids(self):
-        non_empty_units = []
-        for segment_index in range(self.get_num_segments()):
-            for unit in self.get_unit_ids():
-                if len(self.get_unit_spike_train(unit, segment_index=segment_index)) > 0:
-                    non_empty_units.append(unit)
-        non_empty_units = np.unique(non_empty_units)
-        return non_empty_units
+        num_spikes_per_unit = self.count_num_spikes_per_unit()
+
+        return np.array([unit_id for unit_id in self.unit_ids if num_spikes_per_unit[unit_id] == 0])
 
     def get_empty_unit_ids(self):
-        unit_ids = self.get_unit_ids()
+        unit_ids = self.unit_ids
         empty_units = unit_ids[~np.isin(unit_ids, self.get_non_empty_unit_ids())]
         return empty_units
 
