@@ -9,6 +9,7 @@ import gc
 import mmap
 import inspect
 
+import numba
 import numpy as np
 from tqdm import tqdm
 
@@ -934,3 +935,23 @@ def convert_bytes_to_str(byte_value: int) -> str:
         byte_value /= 1024
         i += 1
     return f"{byte_value:.2f} {suffixes[i]}"
+
+
+def spike_vector_to_dict(spike_vector: np.ndarray) -> dict:
+    spike_trains = _vector_to_dict(spike_vector["sample_index"].astype(np.int64), spike_vector["unit_index"].astype(np.int64), spike_vector["segment_index"].astype(np.int64))
+    
+    return [{unit_index: np.array(spike_trains[seg][unit_index]) for unit_index in spike_trains[seg].keys()} for seg in range(len(spike_trains))]
+
+@numba.jit((numba.int64[::1], numba.int64[::1], numba.int64[::1]), nopython=True, nogil=True, cache=True)
+def _vector_to_dict(sample_index, unit_index, segment_index):
+    spike_trains = numba.typed.List()
+
+    for seg in range(1 + np.max(segment_index)):
+        spike_trains.append(numba.typed.Dict())
+        for i in range(1 + np.max(unit_index)):
+            spike_trains[seg][i] = numba.typed.List.empty_list(numba.int64)
+
+        for i in range(len(sample_index)):
+            spike_trains[seg][unit_index[i]].append(sample_index[i])
+
+    return spike_trains

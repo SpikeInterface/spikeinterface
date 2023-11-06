@@ -84,6 +84,7 @@ from .core_tools import (
     write_binary_recording,
     read_python,
     write_python,
+    spike_vector_to_dict,
 )
 from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
 from .recording_tools import (

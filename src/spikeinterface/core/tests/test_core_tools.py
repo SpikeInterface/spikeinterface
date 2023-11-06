@@ -5,9 +5,10 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
+from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier, spike_vector_to_dict
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 from spikeinterface.core.generate import NoiseGeneratorRecording
+from spikeinterface.core.numpyextractors import NumpySorting
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -186,3 +187,13 @@ if __name__ == "__main__":
         test_write_binary_recording(tmp_path)
         # test_write_memory_recording()
         # test_recursive_path_modifier()
+
+
+def test_spike_vector_to_dict() -> None:
+    sorting = NumpySorting.from_unit_dict({1: np.array([0, 51, 108]), 5: np.array([23, 87])}, 30_000)
+    spike_vector = sorting.to_spike_vector()
+    spike_trains = spike_vector_to_dict(spike_vector)[0]
+
+    assert len(spike_trains) == sorting.get_num_units()
+    for unit_index in range(sorting.get_num_units()):
+        assert np.all(spike_trains[unit_index] == sorting.get_unit_spike_train(sorting.unit_ids[unit_index]))
