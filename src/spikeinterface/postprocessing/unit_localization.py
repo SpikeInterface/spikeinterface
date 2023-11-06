@@ -373,7 +373,7 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    sigma_um=np.linspace(10.0, 50.0, 5),
+    sigma_um=np.linspace(5.0, 25.0, 5),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
@@ -579,7 +579,7 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 
 def get_grid_convolution_templates_and_weights(
-    contact_locations, radius_um=50, upsampling_um=5, sigma_um=np.linspace(10, 50.0, 5), margin_um=50
+    contact_locations, radius_um=50, upsampling_um=5, sigma_um=np.linspace(5, 25.0, 5), margin_um=50
 ):
     import sklearn.metrics
 
