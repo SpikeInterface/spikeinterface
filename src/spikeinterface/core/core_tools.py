@@ -9,7 +9,6 @@ import gc
 import mmap
 import inspect
 
-import numba
 import numpy as np
 from tqdm import tqdm
 
