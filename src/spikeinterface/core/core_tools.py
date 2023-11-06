@@ -944,7 +944,7 @@ def convert_bytes_to_str(byte_value: int) -> str:
 
 
 def spike_vector_to_dict(spike_vector: np.ndarray) -> dict:
-    assert HAVE_NUMBA
+    assert HAVE_NUMBA, "spike_vector_to_dict() requires `numba`!"
 
     spike_trains = _vector_to_dict(
         spike_vector["sample_index"].astype(np.int64),
