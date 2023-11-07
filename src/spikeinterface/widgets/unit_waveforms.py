@@ -8,6 +8,7 @@ from ..core.waveform_extractor import WaveformExtractor
 from ..core.basesorting import BaseSorting
 
 
+# TODO: add shading if plot_waveforms=False
 class UnitWaveformsWidget(BaseWidget):
     """
     Plots unit waveforms.
@@ -50,6 +51,12 @@ class UnitWaveformsWidget(BaseWidget):
         Alpha value for templates, (matplotlib backend)
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
+    templates_percentile_shading : float or None, default: 5
+        For sortingview backend, it controls the shading of the templates.
+        If None, the template standard deviation is used to shade the templates.
+        If float, it controls the percentile of the template values used to shade the templates.
+        Note that it is one-sided: if 5 is given, the 5th and 95th percentiles are used to shade
+        the templates
     same_axis : bool, default: False
         If True, waveforms and templates are displayed on the same axis (matplotlib backend)
     x_offset_units : bool, default: False
@@ -77,6 +84,7 @@ class UnitWaveformsWidget(BaseWidget):
         max_spikes_per_unit=50,
         set_title=True,
         same_axis=False,
+        templates_percentile_shading=5,
         x_offset_units=False,
         alpha_waveforms=0.5,
         alpha_templates=1,
@@ -113,7 +121,13 @@ class UnitWaveformsWidget(BaseWidget):
 
         # get templates
         templates = we.get_all_templates(unit_ids=unit_ids)
-        template_stds = we.get_all_templates(unit_ids=unit_ids, mode="std")
+        if templates_percentile_shading is None:
+            template_stds = we.get_all_templates(unit_ids=unit_ids, mode="std")
+        else:
+            template_percentile = we.get_all_templates(
+                unit_ids=unit_ids, mode="percentile", percentile=templates_percentile_shading
+            )
+            template_stds = template_percentile - templates
 
         xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
             waveform_extractor, templates, channel_locations, x_offset_units
@@ -151,6 +165,7 @@ class UnitWaveformsWidget(BaseWidget):
             wfs_by_ids=wfs_by_ids,
             set_title=set_title,
             same_axis=same_axis,
+            templates_percentile_shading=templates_percentile_shading,
             x_offset_units=x_offset_units,
             lw_waveforms=lw_waveforms,
             lw_templates=lw_templates,

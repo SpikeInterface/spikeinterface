@@ -25,14 +25,16 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         for u_i, unit in enumerate(unit_ids):
             templates_dict[unit] = {}
             templates_dict[unit]["mean"] = dp.templates[u_i].T.astype("float32")[unit_id_to_channel_indices[unit]]
-            templates_dict[unit]["std"] = dp.template_stds[u_i].T.astype("float32")[unit_id_to_channel_indices[unit]]
+            templates_dict[unit]["dispersion"] = dp.template_stds[u_i].T.astype("float32")[
+                unit_id_to_channel_indices[unit]
+            ]
 
         aw_items = [
             vv.AverageWaveformItem(
                 unit_id=u,
                 channel_ids=list(unit_id_to_channel_ids[u]),
                 waveform=t["mean"].astype("float32"),
-                waveform_std_dev=t["std"].astype("float32"),
+                waveform_std_dev=t["dispersion"].astype("float32"),
             )
             for u, t in templates_dict.items()
         ]
