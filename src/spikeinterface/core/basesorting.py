@@ -446,12 +446,7 @@ class BaseSorting(BaseExtractor):
         """
         unit_ids = self.unit_ids
 
-        if from_spike_vector:
-            assert (
-                HAVE_NUMBA
-            ), "`numba` must be installed to use `precompute_spike_trains(from_spike_vector=True)`\
-            Either install numba (pip install numba) or set `from_spike_vector=False`"
-
+        if from_spike_vector and HAVE_NUMBA:
             spike_trains = spike_vector_to_dict(self.to_spike_vector())
 
             for segment_index in range(self.get_num_segments()):
@@ -460,9 +455,8 @@ class BaseSorting(BaseExtractor):
                 }
         else:
             for segment_index in range(self.get_num_segments()):
-                self._cached_spike_trains[segment_index] = {
-                    unit_id: self.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in unit_ids
-                }
+                for unit_id in unit_ids:
+                    self.get_unit_spike_train(unit_id, segment_index=segment_index, use_cache=True)
 
     def to_spike_vector(self, concatenated=True, extremum_channel_inds=None, use_cache=True):
         """
