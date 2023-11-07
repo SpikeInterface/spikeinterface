@@ -47,6 +47,7 @@ class RandomProjectionClustering:
         "nb_projections": 10,
         "ms_before": 1,
         "ms_after": 1,
+        "ptp_threshold" : 3,
         "random_seed": 42,
         "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
@@ -132,8 +133,10 @@ class RandomProjectionClustering:
         ptp_maps = np.sum(ptp_maps.reshape(len(ptp_maps)//num_chans, num_chans, max_num_chans), axis=0)
         for main_channel in range(num_chans):
             n_peaks = np.sum(peaks['channel_index'] == main_channel)
-            ptp_maps[main_channel] /= n_peaks
-        valid_channels = np.abs(ptp_maps - mean_ptps) > 3*std_ptps
+            if n_peaks > 0:
+                ptp_maps[main_channel] /= n_peaks
+
+        valid_channels = np.abs(ptp_maps - mean_ptps) > d['ptp_threshold']*std_ptps
         
         projections = np.random.randn(num_chans, d["nb_projections"])
         projections -= projections.mean(0)
@@ -171,6 +174,7 @@ class RandomProjectionClustering:
         #         local_labels[valid_clusters] += nb_clusters
         #         peak_labels[mask] = local_labels
         #         nb_clusters += len(np.unique(local_labels[valid_clusters]))
+
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
