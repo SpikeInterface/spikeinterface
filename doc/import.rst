@@ -59,8 +59,8 @@ what is seen with packages like NumPy (:code:`np`) or Pandas (:code:`pd`). To ac
 This import statement will import all of the SpikeInterface modules as one flattened module.
 Note that importing :code:`spikeinterface.full` will take a few extra seconds, because some modules use
 just-in-time :code:`numba` compilation performed at the time of import.
-We recommend this approach for advanced users, since it requires a deeper knowledge of the API. The advantage
-being that users can access all functions using one alias.
+We recommend this approach for advanced (or lazy) users, since it requires a deeper knowledge of the API. The advantage
+being that users can access all functions using one alias without the need of memorizing all aliases.
 
 
 Importing Individual Functions
