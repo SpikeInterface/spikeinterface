@@ -392,7 +392,7 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        times = np.arange((end_frame or self.get_num_samples()) - (start_frame or 0), dtype="float64")
+        times = np.arange(end_frame - start_frame, dtype="float64")
         times /= self.sampling_frequency
         t0 = start_frame / self.sampling_frequency
         # if self.t_start is not None:
