@@ -353,7 +353,8 @@ class BaseSorting(BaseExtractor):
 
     def remove_empty_units(self):
         """
-        Removes units with empty spike trains
+        Removes units with empty spike trains.
+        For multi-segments, a unit is considered empty if it contains no spikes in all segments.
 
         Returns
         -------
