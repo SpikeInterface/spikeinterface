@@ -201,12 +201,12 @@ def get_optimized_compute_matching_matrix():
         second_train_search_start = 0
         for index1 in range(num_spike_frames_train1):
             frame1 = spike_frames_train1[index1]
-            
+
             for index2 in range(second_train_search_start, num_spike_frames_train2):
                 frame2 = spike_frames_train2[index2]
                 if frame2 < frame1 - delta_frames:
                     # no match move the left limit for the next loop
-                    second_train_search_start +=1
+                    second_train_search_start += 1
                     continue
                 elif frame2 > frame1 + delta_frames:
                     # no match stop search in train2 and continue increment in train1
@@ -215,7 +215,10 @@ def get_optimized_compute_matching_matrix():
                     # match
                     unit_index1, unit_index2 = unit_indices1[index1], unit_indices2[index2]
 
-                    if frame1 != last_match_frame1[unit_index1, unit_index2] and frame2 != last_match_frame2[unit_index1, unit_index2]:
+                    if (
+                        frame1 != last_match_frame1[unit_index1, unit_index2]
+                        and frame2 != last_match_frame2[unit_index1, unit_index2]
+                    ):
                         last_match_frame1[unit_index1, unit_index2] = frame1
                         last_match_frame2[unit_index1, unit_index2] = frame2
 
