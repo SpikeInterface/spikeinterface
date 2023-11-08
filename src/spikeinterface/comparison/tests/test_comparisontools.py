@@ -432,13 +432,21 @@ def test_do_count_score_and_perf():
 
 if __name__ == "__main__":
     test_make_match_count_matrix()
-    test_make_agreement_scores()
+    test_make_match_count_matrix_sorting_with_itself_simple()
+    test_make_match_count_matrix_sorting_with_itself_longer()
+    test_make_match_count_matrix_with_mismatched_sortings()
+    test_make_match_count_matrix_no_double_matching()
+    test_make_match_count_matrix_repeated_matching_but_no_double_counting()
+    test_make_match_count_matrix_test_proper_search_in_the_second_train()
 
-    test_make_possible_match()
-    test_make_best_match()
-    test_make_hungarian_match()
+    # test_make_agreement_scores()
 
-    test_do_score_labels()
-    test_compare_spike_trains()
-    test_do_confusion_matrix()
-    test_do_count_score_and_perf()
+
+    # test_make_possible_match()
+    # test_make_best_match()
+    # test_make_hungarian_match()
+
+    # test_do_score_labels()
+    # test_compare_spike_trains()
+    # test_do_confusion_matrix()
+    # test_do_count_score_and_perf()

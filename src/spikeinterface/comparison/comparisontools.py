@@ -201,37 +201,25 @@ def get_optimized_compute_matching_matrix():
         second_train_search_start = 0
         for index1 in range(num_spike_frames_train1):
             frame1 = spike_frames_train1[index1]
-
-            # Look for the index of the first match for this spike in the second train
+            
             for index2 in range(second_train_search_start, num_spike_frames_train2):
                 frame2 = spike_frames_train2[index2]
-                # Look for first match
-                is_a_match = abs(frame1 - frame2) <= delta_frames
-                if is_a_match:
-                    second_train_search_start = index2
-                    first_match_index = index2
+                if frame2 < frame1 - delta_frames:
+                    # no match move the left limit for the next loop
+                    second_train_search_start +=1
+                    continue
+                elif frame2 > frame1 + delta_frames:
+                    # no match stop search in train2 and continue increment in train1
                     break
-            else:
-                # No matches found for this spike in all the second train, continue to the next frame
-                continue
+                else:
+                    # match
+                    unit_index1, unit_index2 = unit_indices1[index1], unit_indices2[index2]
 
-            # Get as many matches as possible from the first match onwards. Might include multiple units.
-            for index2 in range(first_match_index, num_spike_frames_train2):
-                frame2 = spike_frames_train2[index2]
-                not_a_match = abs(frame1 - frame2) > delta_frames
-                if not_a_match:
-                    # No more matches for this spike in the second train, continue to the next spike
-                    break
+                    if frame1 != last_match_frame1[unit_index1, unit_index2] and frame2 != last_match_frame2[unit_index1, unit_index2]:
+                        last_match_frame1[unit_index1, unit_index2] = frame1
+                        last_match_frame2[unit_index1, unit_index2] = frame2
 
-                # Map the match to a matrix
-                row, column = unit_indices1[index1], unit_indices2[index2]
-
-                # The same spike cannot be matched twice see the notes in the docstring for more info on this constraint
-                if frame1 != last_match_frame1[row, column] and frame2 != last_match_frame2[row, column]:
-                    last_match_frame1[row, column] = frame1
-                    last_match_frame2[row, column] = frame2
-
-                    matching_matrix[row, column] += 1
+                        matching_matrix[unit_index1, unit_index2] += 1
 
         return matching_matrix
 
