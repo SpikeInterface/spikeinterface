@@ -38,8 +38,8 @@ to import any of the other modules you wish to use.
 
 The benefit of this approach is that it is lighter and faster than importing the whole package and allows
 you to choose which of the modules you actually want to use. If you don't plan to export the results out of
-SpikeInterface than you don't have to :code:`import spikeinterface.exporters`. Additionally the documentation
-of the package is set-up in a modular fashion, so if you have a problem with :code:`spikeinterface.curation`,
+SpikeInterface then you don't have to :code:`import spikeinterface.exporters`. Additionally the documentation
+of the package is set-up in a modular fashion, so if you have a problem with the module :code:`spikeinterface.curation`,
 you will know to go to the :code:`curation` section of this documention. The disadvantage of this approach is
 that you have more aliases to keep track of.
 
@@ -56,11 +56,11 @@ what is seen with packages like NumPy (:code:`np`) or Pandas (:code:`pd`). To ac
     import spikeinterface.full as si
 
 
-This import statement will import all of SpikeInterface modules as one flattened module.
+This import statement will import all of the SpikeInterface modules as one flattened module.
 Note that importing :code:`spikeinterface.full` will take a few extra seconds, because some modules use
 just-in-time :code:`numba` compilation performed at the time of import.
 We recommend this approach for advanced users, since it requires a deeper knowledge of the API. The advantage
-being that users with advanced API knowledge can access all functions using one alias.
+being that users can access all functions using one alias.
 
 
 Importing Individual Functions
@@ -77,5 +77,5 @@ For example:
     from spikeinterface.core import extract_waveforms
     from spikeinterface.extractors import read_binary
 
-As mentioned this approach only imports exactly what you plan on using so is the most minimalist. It does require
-knowledge of the API to know which module to pull a function from.
+As mentioned this approach only imports exactly what you plan on using so it is the most minimalist. It does require
+knowledge of the API to know which module to pull a function from. It could also lead to naming clashes if pulling functions directly from other scientific libraries.
