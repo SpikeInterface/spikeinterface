@@ -408,6 +408,17 @@ class NwbRecordingExtractor(BaseRecording):
 
         self.extra_requirements.extend(["pandas", "pynwb", "hdmf"])
         self._electrical_series = electrical_series
+
+        # set serializability bools
+        # TODO: correct spelling of self._serializablility throughout SI
+        if file is not None:
+            # not json serializable if file arg is provided
+            self._serializablility["json"] = False
+        else:
+            self._serializablility["json"] = True
+        self._serializablility["pickle"] = True
+        self._serializablility["memory"] = True
+
         self._kwargs = {
             "file_path": file_path,
             "electrical_series_name": self._electrical_series_name,
