@@ -182,7 +182,7 @@ class NwbRecordingExtractor(BaseRecording):
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
-    stream_mode: str or None, default: None
+    stream_mode: "fsspec" | "ros3" | "remfile" | None, default: None
         Specify the stream mode: "fsspec", "ros3", or "remfile"
     stream_cache_path: str or Path or None, default: None
         Local path for caching. If None it uses cwd
