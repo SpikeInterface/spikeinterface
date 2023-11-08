@@ -1222,7 +1222,7 @@ class WaveformExtractor:
                     assert 0 <= percentile <= 100, "percentile must be between 0 and 100 inclusive"
                     arr = np.percentile(wfs, percentile, axis=0)
                 else:
-                    raise ValueError("mode must in median/average/std")
+                    raise ValueError(f"'mode' must be in {_possible_template_modes}")
                 self._template_cache[mode_names[mode]][unit_ind][:, mask] = arr
 
         for mode in modes:
