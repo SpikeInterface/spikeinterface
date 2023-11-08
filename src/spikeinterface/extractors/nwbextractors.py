@@ -185,7 +185,7 @@ class NwbRecordingExtractor(BaseRecording):
     stream_mode: "fsspec" | "ros3" | "remfile" | None, default: None
         Specify the stream mode: "fsspec", "ros3", or "remfile"
     stream_cache_path: str or Path or None, default: None
-        Local path for caching. If None it uses cwd
+        Local path for caching. If None it uses the current working directory (cwd)
 
     Returns
     -------
