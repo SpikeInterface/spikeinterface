@@ -84,7 +84,7 @@ def read_nwbfile(
         The path to the NWB file. Either provide this or file.
     file : file-like object or None
         The file-like object to read from. Either provide this or file_path.
-    stream_mode : "fsspec" or "ros3" or None, default: None
+    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
     stream_cache_path : str or None, default: None
         The path to the cache storage
