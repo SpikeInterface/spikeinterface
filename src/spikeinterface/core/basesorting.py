@@ -6,7 +6,7 @@ from typing import List, Optional, Union
 import numpy as np
 
 from .base import BaseExtractor, BaseSegment
-from .core_tools import spike_vector_to_dict
+from .core_tools import spike_vector_to_spike_trains
 from .waveform_tools import has_exceeding_spikes
 
 try:
@@ -447,7 +447,7 @@ class BaseSorting(BaseExtractor):
         unit_ids = self.unit_ids
 
         if from_spike_vector and HAVE_NUMBA:
-            spike_trains = spike_vector_to_dict(self.to_spike_vector())
+            spike_trains = spike_vector_to_spike_trains(self.to_spike_vector())
 
             for segment_index in range(self.get_num_segments()):
                 self._cached_spike_trains[segment_index] = {
