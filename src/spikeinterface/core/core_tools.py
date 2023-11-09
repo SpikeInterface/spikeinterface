@@ -943,7 +943,20 @@ def convert_bytes_to_str(byte_value: int) -> str:
     return f"{byte_value:.2f} {suffixes[i]}"
 
 
-def spike_vector_to_dict(spike_vector: np.ndarray) -> dict:
+def spike_vector_to_dict(spike_vector: np.ndarray) -> list[dict]:
+    """
+    Computes all spike trains for all units/segments from a spike vector.
+
+    Parameters
+    ----------
+    spike_vector: np.ndarray
+        The spike vector to convert.
+
+    Returns
+    -------
+    spike_trains: list[dict]:
+        A list containing, for each segment, the spike trains of all units.
+    """
     assert HAVE_NUMBA, "spike_vector_to_dict() requires `numba`!"
 
     spike_trains = _vector_to_dict(
@@ -963,19 +976,19 @@ if HAVE_NUMBA:
         n_units = 1 + np.max(unit_index)
 
         for seg in range(1 + segment_index[-1]):
-            n_spikes = np.zeros(n_units, dtype=np.int64)
+            n_spikes = np.zeros(n_units, dtype=np.int32)
             for i in range(len(sample_index)):
                 n_spikes[unit_index[i]] += 1
 
-            d = numba.typed.Dict()
+            spk_trains = numba.typed.Dict()
             for i in range(n_units):
-                d[i] = np.empty(n_spikes[i], dtype=np.int64)
+                spk_trains[i] = np.empty(n_spikes[i], dtype=np.int64)
 
             ind = np.zeros(n_units, dtype=np.int64)
             for i in range(len(sample_index)):
-                d[unit_index[i]][ind[unit_index[i]]] = sample_index[i]
+                spk_trains[unit_index[i]][ind[unit_index[i]]] = sample_index[i]
                 ind[unit_index[i]] += 1
 
-            spike_trains.append(d)
+            spike_trains.append(spk_trains)
 
         return spike_trains
