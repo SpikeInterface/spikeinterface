@@ -98,7 +98,7 @@ Sub-modules have more dependencies, so you should also install:
   * matplotlib
   * numba
   * distinctipy
-  * cude-python (for non-macOS users)
+  * cuda-python (for non-macOS users)
 
 
 All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`)
