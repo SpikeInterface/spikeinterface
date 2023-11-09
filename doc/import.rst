@@ -38,10 +38,10 @@ to import any of the other modules you wish to use.
 
 The benefit of this approach is that it is lighter than importing the whole library as a flat module and allows
 you to choose which of the modules you actually want to use. It also reminds you what step of the pipeline each
-submodule is meant to be used for. If you don't plan to export the results out of SpikeInterface then you 
-don't have to :code:`import spikeinterface.exporters`. Additionally the documentation of SpikeInterface is set-up 
-in a modular fashion, so if you have a problem with the submodule  :code:`spikeinterface.curation`,you will know 
-to go to the :code:`curation` section of this documention. The disadvantage of this approach is that you have 
+submodule is meant to be used for. If you don't plan to export the results out of SpikeInterface then you
+don't have to :code:`import spikeinterface.exporters`. Additionally the documentation of SpikeInterface is set-up
+in a modular fashion, so if you have a problem with the submodule  :code:`spikeinterface.curation`,you will know
+to go to the :code:`curation` section of this documention. The disadvantage of this approach is that you have
 more aliases to keep track of.
 
 
@@ -49,8 +49,8 @@ Flat Import
 -----------
 
 A second option is to import the SpikeInterface package in :code:`full` mode. This would be similar to
-what is seen with packages like NumPy (:code:`np`) or Pandas (:code:`pd`), which offer the majority of 
-their functionality with a single alias and the option to import additional functionality separately. 
+what is seen with packages like NumPy (:code:`np`) or Pandas (:code:`pd`), which offer the majority of
+their functionality with a single alias and the option to import additional functionality separately.
 To accomplish this one does:
 
 
@@ -81,5 +81,5 @@ For example:
     from spikeinterface.extractors import read_binary
 
 As mentioned this approach only imports exactly what you plan on using so it is the most minimalist. It does require
-knowledge of the API to know which module to pull a function from. It could also lead to naming clashes if pulling 
+knowledge of the API to know which module to pull a function from. It could also lead to naming clashes if pulling
 functions directly from other scientific libraries. Type :code:`import this` for more information.
