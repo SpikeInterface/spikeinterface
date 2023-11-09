@@ -11,15 +11,15 @@ def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **met
     Parameters
     ----------
     peaks: the peaks that have been found
-    method: 'uniform', 'uniform_locations', 'smart_sampling_amplitudes', 'smart_sampling_locations',
-    'smart_sampling_locations_and_time'
+    method: "uniform", "uniform_locations", "smart_sampling_amplitudes", "smart_sampling_locations",
+    "smart_sampling_locations_and_time"
         Method to use. Options:
-            * 'uniform': a random subset is selected from all the peaks, on a per channel basis by default
-            * 'smart_sampling_amplitudes': peaks are selected via monte-carlo rejection probabilities
+            * "uniform": a random subset is selected from all the peaks, on a per channel basis by default
+            * "smart_sampling_amplitudes": peaks are selected via monte-carlo rejection probabilities
                 based on peak amplitudes, on a per channel basis
-            * 'smart_sampling_locations': peaks are selection via monte-carlo rejections probabilities
+            * "smart_sampling_locations": peaks are selection via monte-carlo rejections probabilities
                 based on peak locations, on a per area region basis-
-            * 'smart_sampling_locations_and_time': peaks are selection via monte-carlo rejections probabilities
+            * "smart_sampling_locations_and_time": peaks are selection via monte-carlo rejections probabilities
                 based on peak locations and time positions, assuming everything is independent
 
     seed: int
@@ -29,26 +29,26 @@ def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **met
 
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
-            'uniform':
-                * select_per_channel: bool
-                    If True, the selection is done on a per channel basis (False by default)
+            "uniform":
+                * select_per_channel: bool, default: False
+                    If True, the selection is done on a per channel basis
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
                     otherwise this is the total number of peaks
-            'smart_sampling_amplitudes':
+            "smart_sampling_amplitudes":
                 * noise_levels : array
                     The noise levels used while detecting the peaks
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
                     otherwise this is the total number of peaks
-                * select_per_channel: bool
-                    If True, the selection is done on a per channel basis (False by default)
-            'smart_sampling_locations':
+                * select_per_channel: bool, default: False
+                    If True, the selection is done on a per channel basis
+            "smart_sampling_locations":
                 * n_peaks: int
                     Total number of peaks to select
                 * peaks_locations: array
                     The locations of all the peaks, computed via localize_peaks
-            'smart_sampling_locations_and_time':
+            "smart_sampling_locations_and_time":
                 * n_peaks: int
                     Total number of peaks to select
                 * peaks_locations: array

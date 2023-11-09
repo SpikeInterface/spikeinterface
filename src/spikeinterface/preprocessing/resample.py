@@ -26,12 +26,12 @@ class ResampleRecording(BasePreprocessor):
         The recording extractor to be re-referenced
     resample_rate : int
         The resampling frequency
-    margin : float (default 100)
+    margin : float, default: 100.0
         Margin in ms for computations, will be used to decrease edge effects.
-    dtype : dtype or None
+    dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
-    skip_checks : bool
-        If True, checks on sampling frequencies and cutoff filter frequencies are skipped, by default False
+    skip_checks : bool, default: False
+        If True, checks on sampling frequencies and cutoff filter frequencies are skipped
 
     Returns
     -------

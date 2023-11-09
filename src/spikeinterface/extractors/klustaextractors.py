@@ -31,7 +31,7 @@ class KlustaSortingExtractor(BaseSorting):
     ----------
     file_or_folder_path : str or Path
         Path to the ALF folder.
-    exclude_cluster_groups: list or str, optional
+    exclude_cluster_groups: list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
 
     Returns

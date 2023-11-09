@@ -21,9 +21,9 @@ class SplitUnitSorting(BaseSorting):
         be the same length as the spike train (for each segment)
     new_unit_ids: int
         Unit ids of the new units to be created.
-    properties_policy: 'keep' | 'remove', default: 'keep'
-        Policy used to propagate properties. If 'keep' the properties will be passed to the new units
-         (if the units_to_merge have the same value). If 'remove' the new units will have an empty
+    properties_policy: "keep" | "remove", default: "keep"
+        Policy used to propagate properties. If "keep" the properties will be passed to the new units
+         (if the units_to_merge have the same value). If "remove" the new units will have an empty
          value for all the properties of the new unit.
     Returns
     -------

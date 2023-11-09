@@ -1,4 +1,5 @@
-from typing import List, Union
+from __future__ import annotations
+from typing import Union
 
 import numpy as np
 
@@ -87,7 +88,7 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
         self,
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        channel_indices: Union[list, None] = None,
     ) -> np.ndarray:
         parent_indices = self._parent_channel_indices[channel_indices]
         traces = self._parent_recording_segment.get_traces(start_frame, end_frame, parent_indices)
@@ -181,20 +182,18 @@ class ChannelSliceSnippetsSegment(BaseSnippetsSegment):
 
     def get_snippets(
         self,
-        indices,
-        channel_indices: Union[List, None] = None,
+        indices: list[int],
+        channel_indices: Union[list, None] = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        indexes: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
-        channel_indices: (Union[List, None], optional)
-            Indices of channels to return, or all channels if None. Defaults to None.
+        indices: list[int]
+            Indices of the snippets to return
+        channel_indices: Union[List, None], default: None
+            Indices of channels to return, or all channels if None
 
         Returns
         -------

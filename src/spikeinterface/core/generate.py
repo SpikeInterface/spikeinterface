@@ -40,19 +40,19 @@ def generate_recording(
 
     Parameters
     ----------
-    num_channels : int, default 2
+    num_channels : int, default: 2
         The number of channels in the recording.
-    sampling_frequency : float, default 30000. (in Hz)
-        The sampling frequency of the recording, by default 30000.
-    durations: List[float], default [5.0, 2.5]
-        The duration in seconds of each segment in the recording, by default [5.0, 2.5].
+    sampling_frequency : float, default: 30000. (in Hz)
+        The sampling frequency of the recording, default: 30000.
+    durations: List[float], default: [5.0, 2.5]
+        The duration in seconds of each segment in the recording, default: [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
-    set_probe: bool, default True
-    ndim : int, default 2
-        The number of dimensions of the probe, by default 2. Set to 3 to make 3 dimensional probes.
+    set_probe: bool, default: True
+    ndim : int, default: 2
+        The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probes.
     seed : Optional[int]
         A seed for the np.ramdom.default_rng function
-    mode: str ["lazy", "legacy"] Default "lazy".
+    mode: str ["lazy", "legacy"], default: "lazy".
         "legacy": generate a NumpyRecording with white noise.
                 This mode is kept for backward compatibility and will be deprecated version 0.100.0.
         "lazy": return a NoiseGeneratorRecording instance.
@@ -146,6 +146,8 @@ def generate_sorting(
         The refractory period in ms
     add_spikes_on_borders : bool, default: False
         If True, spikes will be added close to the borders of the segments.
+        This is for testing some post-processing functions when they have
+        to deal with border spikes.
     num_spikes_per_border : int, default: 3
         The number of spikes to add close to the borders of the segments.
     border_size_samples : int, default: 20
@@ -172,7 +174,7 @@ def generate_sorting(
             duration=durations[segment_index],
             refractory_period_ms=refractory_period_ms,
             firing_rates=firing_rates,
-            seed=seed,
+            seed=seed + segment_index,
         )
 
         if empty_units is not None:
@@ -342,9 +344,9 @@ def synthesize_random_firings(
     firing_rates: float or list[float]
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
-    add_shift_shuffle: bool, default False
-        Optionaly add a small shuffle on half spike to autocorrelogram
-    seed: int, optional
+    add_shift_shuffle: bool, default: False
+        Optionally add a small shuffle on half of the spikes to make the autocorrelogram less flat.
+    seed: int, default: None
         seed for the generator
 
     Returns
@@ -382,8 +384,8 @@ def synthesize_random_firings(
         spike_times = rng.integers(0, segment_size, n)
         spike_times = np.sort(spike_times)
 
+        # make less flat autocorrelogram shape by jittering half of the spikes
         if add_shift_shuffle:
-            ## make an interesting autocorrelogram shape
             # this replace the previous rand_distr2()
             some = rng.choice(spike_times.size, spike_times.size // 2, replace=False)
             x = rng.random(some.size)
@@ -391,7 +393,7 @@ def synthesize_random_firings(
             b = refractory_sample * 20
             shift = a + (b - a) * x**2
             spike_times[some] += shift
-            times0 = times0[(0 <= times0) & (times0 < N)]
+            times0 = times0[(0 <= times0) & (times0 < segment_size)]
 
         (violations,) = np.nonzero(np.diff(spike_times) < refractory_sample)
         spike_times = np.delete(spike_times, violations)
@@ -543,11 +545,11 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
     duration : float
         Length of simulated recording (in seconds).
     baseline_rate : float
-        Firing rate for 'true' spikes.
+        Firing rate for "true" spikes.
     num_violations : int
         Number of contaminating spikes.
-    violation_delta : float, optional
-        Temporal offset of contaminating spikes (in seconds), by default 1e-5.
+    violation_delta : float, default: 1e-5
+        Temporal offset of contaminating spikes (in seconds)
 
     Returns
     -------
@@ -586,11 +588,11 @@ class NoiseGeneratorRecording(BaseRecording):
         The sampling frequency of the recorder.
     durations : List[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
-    noise_level: float, default 1:
+    noise_level: float, default: 1
         Std of the white noise
-    dtype : Optional[Union[np.dtype, str]], default='float32'
+    dtype : Optional[Union[np.dtype, str]], default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
-    seed : Optional[int], default=None
+    seed : Optional[int], default: None
         The seed for np.random.default_rng.
     strategy : "tile_pregenerated" or "on_the_fly"
         The strategy of generating noise chunk:
@@ -763,8 +765,9 @@ def generate_recording_by_size(
         The size in gigabytes (GiB) of the recording.
     num_channels: int
         Number of channels.
-    seed : int, optional
-        The seed for np.random.default_rng, by default None
+    seed : int, default: None
+        The seed for np.random.default_rng
+
     Returns
     -------
     GeneratorRecording
@@ -921,7 +924,7 @@ def generate_templates(
         Cut out in ms after spike peak.
     seed: int or None
         A seed for random.
-    dtype: numpy.dtype, default "float32"
+    dtype: numpy.dtype, default: "float32"
         Templates dtype
     upsample_factor: None or int
         If not None then template are generated upsampled by this factor.
@@ -931,14 +934,14 @@ def generate_templates(
         An optional dict containing parameters per units.
         Keys are parameter names:
 
-            * 'alpha': amplitude of the action potential in a.u. (default range: (6'000-9'000))
-            * 'depolarization_ms': the depolarization interval in ms (default range: (0.09-0.14))
-            * 'repolarization_ms': the repolarization interval in ms (default range: (0.5-0.8))
-            * 'recovery_ms': the recovery interval in ms (default range: (1.0-1.5))
-            * 'positive_amplitude': the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
-            * 'smooth_ms': the gaussian smooth in ms (default range: (0.03-0.07))
-            * 'decay_power': the decay power (default range: (1.2-1.8))
-            * 'propagation_speed': mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
+            * "alpha": amplitude of the action potential in a.u. (default range: (6'000-9'000))
+            * "depolarization_ms": the depolarization interval in ms (default range: (0.09-0.14))
+            * "repolarization_ms": the repolarization interval in ms (default range: (0.5-0.8))
+            * "recovery_ms": the recovery interval in ms (default range: (1.0-1.5))
+            * "positive_amplitude": the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
+            * "smooth_ms": the gaussian smooth in ms (default range: (0.03-0.07))
+            * "decay_power": the decay power (default range: (1.2-1.8))
+            * "propagation_speed": mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
         Values contains vector with same size of num_units.
         If the key is not in dict then it is generated using unit_params_range
     unit_params_range: dict of tuple
@@ -1068,10 +1071,10 @@ class InjectTemplatesRecording(BaseRecording):
         Shape can be:
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce sampling jitter.
-    nbefore: list[int] | int | None
+    nbefore: list[int] | int | None, default: None
         Where is the center of the template for each unit?
         If None, will default to the highest peak.
-    amplitude_factor: list[float] | float | None, default None
+    amplitude_factor: list[float] | float | None, default: None
         The amplitude of each spike for each unit.
         Can be None (no scaling).
         Can be scalar all spikes have the same factor (certainly useless).
@@ -1082,7 +1085,7 @@ class InjectTemplatesRecording(BaseRecording):
     num_samples: list[int] | int | None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
-    upsample_vector: np.array or None, default None.
+    upsample_vector: np.array or None, default: None.
         When templates is 4d we can simulate a jitter.
         Optional the upsample_vector is the jitter index with a number per spike in range 0-templates.sahpe[3]
 
@@ -1376,13 +1379,13 @@ def generate_ground_truth_recording(
 
     Parameters
     ----------
-    durations: list of float, default [10.]
+    durations: list of float, default: [10.]
         Durations in seconds for all segments.
-    sampling_frequency: float, default 25000
+    sampling_frequency: float, default: 25000
         Sampling frequency.
-    num_channels: int, default 4
+    num_channels: int, default: 4
         Number of channels, not used when probe is given.
-    num_units: int, default 10.
+    num_units: int, default: 10
         Number of units,  not used when sorting is given.
     sorting: Sorting or None
         An external sorting object. If not provide, one is genrated.
@@ -1396,11 +1399,11 @@ def generate_ground_truth_recording(
         Shape can be:
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce jitter.
-    ms_before: float, default 1.5
+    ms_before: float, default: 1.5
         Cut out in ms before spike peak.
-    ms_after: float, default 3.
+    ms_after: float, default: 3
         Cut out in ms after spike peak.
-    upsample_factor: None or int, default None
+    upsample_factor: None or int, default: None
         A upsampling factor used only when templates are not provided.
     upsample_vector: np.array or None
         Optional the upsample_vector can given. This has the same shape as spike_vector
@@ -1412,7 +1415,7 @@ def generate_ground_truth_recording(
         Dict used to generated template when template not provided.
     generate_templates_kwargs: dict
         Dict used to generated template when template not provided.
-    dtype: np.dtype, default "float32"
+    dtype: np.dtype, default: "float32"
         The dtype of the recording.
     seed: int or None
         Seed for random initialization.

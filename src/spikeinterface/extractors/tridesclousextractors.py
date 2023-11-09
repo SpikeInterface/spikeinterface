@@ -11,7 +11,7 @@ class TridesclousSortingExtractor(BaseSorting):
     ----------
     folder_path : str or Path
         Path to the Tridesclous folder.
-    chan_grp : list, optional
+    chan_grp : list or None, default: None
         The channel group(s) to load.
 
     Returns

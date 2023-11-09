@@ -3,7 +3,7 @@ test for BaseRecording are done with BinaryRecordingExtractor.
 but check only for BaseRecording general methods.
 """
 import json
-import shutil
+import pickle
 from pathlib import Path
 import pytest
 import numpy as np
@@ -111,7 +111,7 @@ def test_BaseRecording():
     rec2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
     rec3 = load_extractor(d, base_folder=cache_folder)
 
-    # dump/load json
+    # dump/load json - relative to
     rec.dump_to_json(cache_folder / "test_BaseRecording_rel.json", relative_to=cache_folder)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
     rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
@@ -124,6 +124,23 @@ def test_BaseRecording():
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
     with open(cache_folder / "test_BaseRecording_rel_true.json") as json_file:
         data = json.load(json_file)
+        assert (
+            "/" not in data["kwargs"]["file_paths"][0]
+        )  # Relative to parent folder, so there shouldn't be any '/' in the path.
+
+    # dump/load pkl - relative to
+    rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel.pkl", relative_to=cache_folder)
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
+    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
+
+    # dump/load relative=True
+    rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel_true.pkl", relative_to=True)
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
+    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
+    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True)
+    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
+    with open(cache_folder / "test_BaseRecording_rel_true.pkl", "rb") as pkl_file:
+        data = pickle.load(pkl_file)
         assert (
             "/" not in data["kwargs"]["file_paths"][0]
         )  # Relative to parent folder, so there shouldn't be any '/' in the path.

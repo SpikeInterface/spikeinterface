@@ -140,8 +140,9 @@ class BaseSorter:
         if recording.check_serializablility("json"):
             recording.dump(rec_file, relative_to=output_folder)
         elif recording.check_serializablility("pickle"):
-            recording.dump(output_folder / "spikeinterface_recording.pickle")
+            recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
+            # TODO: deprecate and finally remove this after 0.100
             d = {"warning": "The recording is not serializable to json"}
             rec_file.write_text(json.dumps(d, indent=4), encoding="utf8")
 
@@ -203,7 +204,7 @@ class BaseSorter:
             else:
                 recording = load_extractor(json_file, base_folder=output_folder)
         elif pickle_file.exists():
-            recording = load_extractor(pickle_file)
+            recording = load_extractor(pickle_file, base_folder=output_folder)
 
         return recording
 

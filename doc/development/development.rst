@@ -50,7 +50,7 @@ If you want to run a specific test in a specific file, you can use the following
 
 .. code-block:: bash
 
-    pytest pytest src/spikeinterface/core/tests/test_baserecording.py::specific_test_in_this_module
+    pytest src/spikeinterface/core/tests/test_baserecording.py::specific_test_in_this_module
 
 We also mantain pytest markers to run specific tests. For example, if you want to run only the tests
 for the :code:`spikeinterface.extractors` module, you can use the following command:
@@ -77,63 +77,35 @@ The extractor tests require datalad for some of the tests. Here are instructions
 Installing Datalad
 ------------------
 
-First install the datalad-installer package using pip:
-
-.. code-block:: shell
-
-    pip install datalad-installer
-
-The following instructions depend on the operating system you are using:
-
-Linux
-^^^^^
-.. code-block:: shell
-
-    datalad-installer --sudo ok git-annex --method datalad/packages
-
-Mac OS
-^^^^^^
-.. code-block:: shell
-
-    datalad-installer --sudo ok git-annex --method brew
-
-Windows
-^^^^^^^
-
-.. code-block:: shell
-
-    datalad-installer --sudo ok git-annex --method datalad/git-annex:release
-
-
-The following steps are common to all operating systems:
-
-.. code-block:: shell
-
-    pip install datalad
-
-(Optional) Configure Git to use git-annex for large files for efficiency:
-
-.. code-block:: shell
-
-    git config --global filter.annex.process "git-annex filter-process"
+In order to get datalad for your OS please see the `datalad instruction <https://www.datalad.org>`_.
+For more information on datalad visit the `datalad handbook <https://handbook.datalad.org/en/latest/>`_.
+Note, this will also require having git-annex. The instruction links above provide information on also
+downloading git-annex for your particular OS.
 
 Stylistic conventions
 ---------------------
 
+SpikeInterface maintains a consistent coding style across the project. This helps to ensure readability and
+maintainability of the code, making it easier for contributors to collaborate. To facilitate code style
+for the developer we use the follwing tools and conventions:
 
-SpikeInterface maintains a consistent coding style across the project, leveraging the black Python code formatter.
-This helps to ensure readability and maintainability of the code, making it easier for contributors to collaborate.
 
-To install black, you can use pip, the Python package installer. Run the following command in your terminal:
+Install Black and pre-commit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We use the python formatter Black, with defaults set in the :code:`pyproject.toml`. This allows for
+easy local formatting of code.
+
+To install Black, you can use pip, the Python package installer. Run the following command in your terminal:
 
 .. code-block:: bash
 
     pip install black
 
-This will install black into your current Python environment.
+This will install Black into your current Python environment.
 
-In addition to black, we use pre-commit to manage a suite of code formatting.
-Pre-commit helps to automate the process of running these tools before every commit,
+In addition to Black, we use pre-commit to manage a suite of code formatting.
+Pre-commit helps to automate the process of running these tools (including Black) before every commit,
 ensuring that all code is checked for style.
 
 You can install pre-commit using pip as well:
@@ -151,23 +123,75 @@ navigate to your local repository in your terminal and run the following command
 
     pre-commit install
 
-Now, each time you make a commit, pre-commit will automatically run black and any other configured hooks.
+Now, each time you make a commit, pre-commit will automatically run Black and any other configured hooks.
 If the hooks make changes or if there are any issues, the commit will be stopped, and you'll be able to review and add the changes.
 
-If you want black to omit a line from formatting, you can add the following comment to the end of the line:
+If you want Black to omit a line from formatting, you can add the following comment to the end of the line:
+
+.. code-block:: python
+
+    # fmt: skip
+
+To ignore a block of code you must flank the code with two comments:
 
 .. code-block:: python
 
     # fmt: off
+    code here
+    # fmt: on
 
-As described in the `black documentation <https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#code-style>`_,
+As described in the `black documentation <https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#code-style>`_.
 
-The following are some styling conventions that we follow in SpikeInterface:
+
+Docstring Conventions
+^^^^^^^^^^^^^^^^^^^^^
+
+For docstrings, SpikeInterface generally follows the `numpy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html#numpydoc-docstring-guide>`_.
+This includes providing a one line summary of a function, and the standard NumPy sections including :code:`Parameters`, :code:`Returns`, etc. The format used
+for providing parameters, however is a little different. The project prefers the format:
+
+.. code-block:: bash
+
+    parameter_name: type, default: default_value
+
+
+This allows users to quickly understand the type of data that should be input into a function as well as whether a default is supplied. A full example would be:
+
+.. code-block:: python
+
+    def a_function(param_a, param_b=5, param_c="mean"):
+        """
+        A function for analyzing data
+
+        Parameters
+        ----------
+        param_a: dict
+            A dictionary containing the data
+        param_b: int, default: 5
+            A scaling factor to be applied to the data
+        param_c: "mean" | "median", default: "mean"
+            What to calculate on the data
+
+        Returns
+        -------
+        great_data: dict
+            A dictionary of the processed data
+        """
+
+
+Note that in this example we demonstrate two other docstring conventions followed by SpikeInterface. First, that all string arguments should be presented
+with double quotes. This is the same stylistic convention followed by Black and enforced by the pre-commit for the repo. Second, when a parameter is a
+string with a limited number of values (e.g. :code:`mean` and :code:`median`), rather than give the type a value of :code:`str`, please list the possible strings
+so that the user knows what the options are.
+
+
+Miscelleaneous Stylistic Conventions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #. Avoid using abreviations in variable names (e.g., use :code:`recording` instead of :code:`rec`). It is especially important to avoid single letter variables.
-#. Use index as singular and indices for plural following Numpy. Avoid idx or indexes. Plus, id and ids are reserved for identifiers (i.e. channel_ids)
+#. Use index as singular and indices for plural following the NumPy convention. Avoid idx or indexes. Plus, id and ids are reserved for identifiers (i.e. channel_ids)
 #. We use file_path and folder_path (instead of file_name and folder_name) for clarity.
-#. Use the `numpy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html#numpydoc-docstring-guide>`_ in all the docstrings.
+
 
 How to build the documentation
 ------------------------------
@@ -199,14 +223,14 @@ Implement a new extractor
 -------------------------
 
 SpikeInterface already supports over 30 file formats, but the acquisition system you use might not be among the
-supported formats list (***ref***). Most of the extractord rely on the `NEO <https://github.com/NeuralEnsemble/python-neo>`_
+supported formats list (***ref***). Most of the extractors rely on the `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 package to read information from files.
-Therefore, to implement a new extractor to handle the unsupported format, we recommend make a new :code:`neo.rawio.BaseRawIO` class (see `example <https://github.com/NeuralEnsemble/python-neo/blob/master/neo/rawio/examplerawio.py#L44>`_).
+Therefore, to implement a new extractor to handle the unsupported format, we recommend making a new :code:`neo.rawio.BaseRawIO` class (see `example <https://github.com/NeuralEnsemble/python-neo/blob/master/neo/rawio/examplerawio.py#L44>`_).
 Once that is done, the new class can be easily wrapped into SpikeInterface as an extension of the
 :py:class:`~spikeinterface.extractors.neoextractors.neobaseextractors.NeoBaseRecordingExtractor`
 (for :py:class:`~spikeinterface.core.BaseRecording` objects) or
 :py:class:`~spikeinterface.extractors.neoextractors.neobaseextractors.NeoBaseRecordingExtractor`
-(for py:class:`~spikeinterface.core.BaseSorting` objects) or with a few lines of
+(for :py:class:`~spikeinterface.core.BaseSorting` objects) or with a few lines of
 code (e.g., see reader for `SpikeGLX <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/spikeglx.py>`_
 or `Neuralynx <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/neuralynx.py>`_).
 
@@ -345,9 +369,9 @@ Moreover, you have to add a launcher function like `run_XXXX()`.
 
 
 When you are done you need to write a test in **tests/test_myspikesorter.py**. In order to be tested, you can
-install the required packages by changing the **.travis.yml**. Note that MATLAB based tests cannot be run at the moment,
+install the required packages by changing the **pyproject.toml**. Note that MATLAB based tests cannot be run at the moment,
 but we recommend testing the implementation locally.
 
-After this you need to add a block in doc/sorters_info.rst
+After this you need to add a block in **doc/sorters_info.rst**
 
 Finally, make a pull request to the spikesorters repo, so we can review the code and merge it to the spikesorters!

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from typing import List, Optional, Union
 
@@ -66,9 +68,9 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        segment_index : int, optional
+        segment_index : int or None, default: None
             The segment index to retrieve the number of samples for.
-            For multi-segment objects, it is required, by default None
+            For multi-segment objects, it is required
 
         Returns
         -------
@@ -157,9 +159,8 @@ class BaseSorting(BaseExtractor):
         recording : BaseRecording
             Recording with the same number of segments as current sorting.
             Assigned to self._recording.
-        check_spike_frames : bool, optional
+        check_spike_frames : bool, default: True
             If True, assert for each segment that all spikes are within the recording's range.
-            By default True.
         """
         assert np.isclose(
             self.get_sampling_frequency(), recording.get_sampling_frequency(), atol=0.1
@@ -221,8 +222,8 @@ class BaseSorting(BaseExtractor):
         This function replaces the old CachesortingExtractor, but enables more engines
         for caching a results.
 
-        Since v0.98.0 'numpy_folder' is used by defult.
-        From v0.96.0 to 0.97.0 'npz_folder' was the default.
+        Since v0.98.0 "numpy_folder" is used by defult.
+        From v0.96.0 to 0.97.0 "npz_folder" was the default.
 
         """
         if format == "numpy_folder":
@@ -268,7 +269,7 @@ class BaseSorting(BaseExtractor):
         )
         return self.count_num_spikes_per_unit()
 
-    def count_num_spikes_per_unit(self):
+    def count_num_spikes_per_unit(self) -> dict:
         """
         For each unit : get number of spikes  across segments.
 
@@ -317,8 +318,8 @@ class BaseSorting(BaseExtractor):
         ----------
         unit_ids : numpy.array or list
             List of unit ids to keep
-        renamed_unit_ids : numpy.array or list, optional
-            If given, the kept unit ids are renamed, by default None
+        renamed_unit_ids : numpy.array or list, default: None
+            If given, the kept unit ids are renamed
 
         Returns
         -------
@@ -432,23 +433,22 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        concatenated: bool
-            With concatenated=True (default) the output is one numpy "spike vector" with spikes from all segments.
+        concatenated: bool, default: True
+            With concatenated=True the output is one numpy "spike vector" with spikes from all segments.
             With concatenated=False the output is a list "spike vector" by segment.
-        extremum_channel_inds: None or dict
-            If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_index'.
+        extremum_channel_inds: None or dict, default: None
+            If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
             This can be convinient for computing spikes postion after sorter.
-
             This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
-        use_cache: bool
-            When True (default) the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
+        use_cache: bool, default: True
+            When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
             This caching only occurs when extremum_channel_inds=None.
 
         Returns
         -------
         spikes: np.array
-            Structured numpy array ('sample_index', 'unit_index', 'segment_index') with all spikes
-            Or ('sample_index', 'unit_index', 'segment_index', 'channel_index') if extremum_channel_inds
+            Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes
+            Or ("sample_index", "unit_index", "segment_index", "channel_index") if extremum_channel_inds
             is given
 
         """
@@ -597,8 +597,8 @@ class BaseSortingSegment(BaseSegment):
         Parameters
         ----------
         unit_id
-        start_frame: int, optional
-        end_frame: int, optional
+        start_frame: int, default: None
+        end_frame: int, default: None
 
         Returns
         -------
