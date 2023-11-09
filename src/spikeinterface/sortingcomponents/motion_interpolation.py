@@ -386,13 +386,18 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
                 "time_vector for InterpolateMotionRecording do not work because temporal_bins start from 0"
             )
             # times = np.asarray(self.time_vector[start_frame:end_frame])
-        else:
-            times = np.arange((end_frame or self.get_num_samples()) - (start_frame or 0), dtype="float64")
-            times /= self.sampling_frequency
-            t0 = start_frame / self.sampling_frequency
-            # if self.t_start is not None:
-            #     t0 = t0 + self.t_start
-            times += t0
+
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
+        times = np.arange(end_frame - start_frame, dtype="float64")
+        times /= self.sampling_frequency
+        t0 = start_frame / self.sampling_frequency
+        # if self.t_start is not None:
+        #     t0 = t0 + self.t_start
+        times += t0
 
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=slice(None))
 
