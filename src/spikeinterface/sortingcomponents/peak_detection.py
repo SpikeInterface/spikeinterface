@@ -10,7 +10,7 @@ from spikeinterface.core.job_tools import (
     split_job_kwargs,
     fix_job_kwargs,
 )
-from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
+from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances, get_random_data_chunks
 
 from spikeinterface.core.baserecording import BaseRecording
 from spikeinterface.core.node_pipeline import (
@@ -651,7 +651,25 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         singular = singular.T[:, :, np.newaxis]
         del templates
 
+        random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
+        random_data = cls.get_convolved_traces(random_data, temporal, spatial, singular)
+        medians = np.median(random_data, axis=1)
+        medians = medians[:, None]
+        noise_levels = np.median(np.abs(random_data - medians), axis=1) / 0.6744897501960817
+        abs_thresholds = noise_levels * detect_threshold
+
         return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular)
+
+    @classmethod
+    def get_convolved_traces(cls, traces, temporal, spatial, singular):
+        import scipy.signal
+        num_timesteps, num_channels = traces.shape
+        scalar_products = np.zeros((num_channels, num_timesteps), dtype=np.float32)
+        spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
+        scaled_filtered_data = spatially_filtered_data * singular
+        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="same")
+        scalar_products += np.sum(objective_by_rank, axis=0)
+        return scalar_products
 
     @classmethod
     def get_method_margin(cls, *args):
@@ -661,16 +679,8 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
     @classmethod
     def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular):
         assert HAVE_NUMBA, "You need to install numba"
-        import scipy.signal
-
-        num_timesteps, num_channels = traces.shape
-        scalar_products = np.zeros((num_channels, num_timesteps), dtype=np.float32)
-        spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
-        scaled_filtered_data = spatially_filtered_data * singular
-        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="same")
-        scalar_products += np.sum(objective_by_rank, axis=0)
-
-        traces = scalar_products
+        
+        traces = cls.get_convolved_traces(traces, temporal, spatial, singular)
         traces_center = traces[:, exclude_sweep_size:-exclude_sweep_size]
 
         if peak_sign in ("pos", "both"):
