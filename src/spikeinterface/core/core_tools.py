@@ -943,7 +943,7 @@ def convert_bytes_to_str(byte_value: int) -> str:
     return f"{byte_value:.2f} {suffixes[i]}"
 
 
-def spike_vector_to_dict(spike_vector: np.ndarray) -> list[dict]:
+def spike_vector_to_spike_trains(spike_vector: np.ndarray) -> list[dict]:
     """
     Computes all spike trains for all units/segments from a spike vector.
 
@@ -955,7 +955,8 @@ def spike_vector_to_dict(spike_vector: np.ndarray) -> list[dict]:
     Returns
     -------
     spike_trains: list[dict]:
-        A list containing, for each segment, the spike trains of all units.
+        A list containing, for each segment, the spike trains of all units
+        (as a dict: unit_index --> spike_train).
     """
     assert HAVE_NUMBA, "spike_vector_to_dict() requires `numba`!"
 
@@ -998,15 +999,15 @@ if HAVE_NUMBA:
             for i in range(len(sample_index)):
                 n_spikes[unit_index[i]] += 1
 
-            spk_trains = numba.typed.Dict()
+            spike_trains_seg = numba.typed.Dict()
             for i in range(n_units):
-                spk_trains[i] = np.empty(n_spikes[i], dtype=np.int64)
+                spike_trains_seg[i] = np.empty(n_spikes[i], dtype=np.int64)
 
-            ind = np.zeros(n_units, dtype=np.int64)
+            current_x = np.zeros(n_units, dtype=np.int64)
             for i in range(len(sample_index)):
-                spk_trains[unit_index[i]][ind[unit_index[i]]] = sample_index[i]
-                ind[unit_index[i]] += 1
+                spike_trains_seg[unit_index[i]][current_x[unit_index[i]]] = sample_index[i]
+                current_x[unit_index[i]] += 1
 
-            spike_trains.append(spk_trains)
+            spike_trains.append(spike_trains_seg)
 
         return spike_trains
