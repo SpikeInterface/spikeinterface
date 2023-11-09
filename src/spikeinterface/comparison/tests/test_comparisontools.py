@@ -135,6 +135,23 @@ def test_make_match_count_matrix_repeated_matching_but_no_double_counting():
     assert_array_equal(result.to_numpy(), expected_result)
 
 
+def test_make_match_count_matrix_test_proper_search_in_the_second_train():
+    "Search exhaustively in the second train, but only within the delta_frames window, do not terminate search early"
+    frames_spike_train1 = [500, 600, 800]
+    frames_spike_train2 = [0, 100, 200, 300, 500, 800]
+    unit_indices1 = [0, 0, 0]
+    unit_indices2 = [0, 0, 0, 0, 0, 0]
+    delta_frames = 20
+
+    sorting1, sorting2 = make_sorting(frames_spike_train1, unit_indices1, frames_spike_train2, unit_indices2)
+
+    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames)
+
+    expected_result = np.array([[2]])
+
+    assert_array_equal(result.to_numpy(), expected_result)
+
+
 def test_make_agreement_scores():
     delta_frames = 10
 
@@ -150,7 +167,7 @@ def test_make_agreement_scores():
         [0, 0, 5],
     )
 
-    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
+    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames)
     print(agreement_scores)
 
     ok = np.array([[2 / 3, 0], [0, 1.0]], dtype="float64")
@@ -158,7 +175,7 @@ def test_make_agreement_scores():
     assert_array_equal(agreement_scores.values, ok)
 
     # test if symetric
-    agreement_scores2 = make_agreement_scores(sorting2, sorting1, delta_frames, n_jobs=1)
+    agreement_scores2 = make_agreement_scores(sorting2, sorting1, delta_frames)
     assert_array_equal(agreement_scores, agreement_scores2.T)
 
 
@@ -178,7 +195,7 @@ def test_make_possible_match():
         [0, 0, 5],
     )
 
-    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
+    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames)
 
     possible_match_12, possible_match_21 = make_possible_match(agreement_scores, min_accuracy)
 
@@ -207,7 +224,7 @@ def test_make_best_match():
         [0, 0, 5],
     )
 
-    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
+    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames)
 
     best_match_12, best_match_21 = make_best_match(agreement_scores, min_accuracy)
 
@@ -236,7 +253,7 @@ def test_make_hungarian_match():
         [0, 0, 5],
     )
 
-    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
+    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames)
 
     hungarian_match_12, hungarian_match_21 = make_hungarian_match(agreement_scores, min_accuracy)
 
@@ -344,8 +361,8 @@ def test_do_confusion_matrix():
 
     event_counts1 = do_count_event(sorting1)
     event_counts2 = do_count_event(sorting2)
-    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1)
-    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)
+    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames)
     hungarian_match_12, hungarian_match_21 = make_hungarian_match(agreement_scores, min_accuracy)
 
     confusion = do_confusion_matrix(event_counts1, event_counts2, hungarian_match_12, match_event_count)
@@ -363,8 +380,8 @@ def test_do_confusion_matrix():
 
     event_counts1 = do_count_event(sorting1)
     event_counts2 = do_count_event(sorting2)
-    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1)
-    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)
+    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames)
     hungarian_match_12, hungarian_match_21 = make_hungarian_match(agreement_scores, min_accuracy)
 
     confusion = do_confusion_matrix(event_counts1, event_counts2, hungarian_match_12, match_event_count)
@@ -391,8 +408,8 @@ def test_do_count_score_and_perf():
 
     event_counts1 = do_count_event(sorting1)
     event_counts2 = do_count_event(sorting2)
-    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1)
-    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)
+    agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames)
     hungarian_match_12, hungarian_match_21 = make_hungarian_match(agreement_scores, min_accuracy)
 
     count_score = do_count_score(event_counts1, event_counts2, hungarian_match_12, match_event_count)
@@ -415,13 +432,20 @@ def test_do_count_score_and_perf():
 
 if __name__ == "__main__":
     test_make_match_count_matrix()
-    test_make_agreement_scores()
+    test_make_match_count_matrix_sorting_with_itself_simple()
+    test_make_match_count_matrix_sorting_with_itself_longer()
+    test_make_match_count_matrix_with_mismatched_sortings()
+    test_make_match_count_matrix_no_double_matching()
+    test_make_match_count_matrix_repeated_matching_but_no_double_counting()
+    test_make_match_count_matrix_test_proper_search_in_the_second_train()
 
-    test_make_possible_match()
-    test_make_best_match()
-    test_make_hungarian_match()
+    # test_make_agreement_scores()
 
-    test_do_score_labels()
-    test_compare_spike_trains()
-    test_do_confusion_matrix()
-    test_do_count_score_and_perf()
+    # test_make_possible_match()
+    # test_make_best_match()
+    # test_make_hungarian_match()
+
+    # test_do_score_labels()
+    # test_compare_spike_trains()
+    # test_do_confusion_matrix()
+    # test_do_count_score_and_perf()
