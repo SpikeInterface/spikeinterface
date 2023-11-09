@@ -972,6 +972,24 @@ if HAVE_NUMBA:
 
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int64[::1]), nopython=True, nogil=True, cache=True)
     def _vector_to_dict(sample_index, unit_index, segment_index):
+        """
+        Fast method to convert a spike vector into spike train for all segments and units.
+
+        Parameters
+        ----------
+        sample_index: array
+            spike_vector["sample_index"]
+        unit_index: array
+            spike_vector["unit_index"]
+        segment_index: array
+            spike_vector["segment_index"]
+
+        Returns
+        -------
+        spike_trains: list[dict]
+            A list containing, for each segment, the spike trains of all units.
+        """
+
         spike_trains = []
         n_units = 1 + np.max(unit_index)
 
