@@ -161,11 +161,11 @@ def get_optimized_compute_matching_matrix():
                     unit_index1, unit_index2 = unit_indices1[index1], unit_indices2[index2]
 
                     if (
-                        frame1 != last_match_frame1[unit_index1, unit_index2]
-                        and frame2 != last_match_frame2[unit_index1, unit_index2]
+                        index1 != last_match_frame1[unit_index1, unit_index2]
+                        and index2 != last_match_frame2[unit_index1, unit_index2]
                     ):
-                        last_match_frame1[unit_index1, unit_index2] = frame1
-                        last_match_frame2[unit_index1, unit_index2] = frame2
+                        last_match_frame1[unit_index1, unit_index2] = index1
+                        last_match_frame2[unit_index1, unit_index2] = index2
 
                         matching_matrix[unit_index1, unit_index2] += 1
 
