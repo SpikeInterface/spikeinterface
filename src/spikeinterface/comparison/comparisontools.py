@@ -176,7 +176,7 @@ def get_optimized_compute_matching_matrix():
     return compute_matching_matrix
 
 
-def make_match_count_matrix(sorting1, sorting2, delta_frames, symetric=False):
+def make_match_count_matrix(sorting1, sorting2, delta_frames, symmetric=False):
     """
     Compute a matrix representing the matches between two Sorting objects.
 
@@ -184,7 +184,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symetric=False):
     defined by `delta_frames`. The resulting matrix indicates the number of matches between units
     in `spike_frames_train1` and `spike_frames_train2` for each pair of units.
 
-    Note that this algo is not symetric and biased toward sorting1 is the ground truth.
+    Note that this algo is not symmetric and biased toward sorting1 is the ground truth.
 
     Parameters
     ----------
@@ -196,8 +196,8 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symetric=False):
         The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
         if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at `spike_frames_train1[i]`
         and `spike_frames_train2[j]` are considered matching.
-    symetric: bool, dfault False
-        If symetric, the this the algos is run two times by switching sorting1 and sorting2 the minimum of the two
+    symmetric: bool, dfault False
+        If symmetric, the this the algos is run two times by switching sorting1 and sorting2 the minimum of the two
         results is taken.
     Returns
     -------
@@ -265,7 +265,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symetric=False):
             delta_frames,
         )
 
-        if symetric:
+        if symmetric:
             matching_matrix_seg_switch = get_optimized_compute_matching_matrix()(
                 sample_frames2_sorted,
                 sample_frames1_sorted,
