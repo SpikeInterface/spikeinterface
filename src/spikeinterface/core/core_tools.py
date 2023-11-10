@@ -961,9 +961,9 @@ def spike_vector_to_spike_trains(spike_vector: np.ndarray) -> list[dict]:
     assert HAVE_NUMBA, "spike_vector_to_dict() requires `numba`!"
 
     spike_trains = _vector_to_dict(
-        spike_vector["sample_index"].astype(np.int64),
-        spike_vector["unit_index"].astype(np.int64),
-        spike_vector["segment_index"].astype(np.int64),
+        np.array(spike_vector["sample_index"]).astype(np.int64, copy=False),
+        np.array(spike_vector["unit_index"]).astype(np.int64, copy=False),
+        np.array(spike_vector["segment_index"]).astype(np.int64, copy=False),
     )
 
     return spike_trains
