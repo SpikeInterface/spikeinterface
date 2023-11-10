@@ -132,61 +132,6 @@ def get_optimized_compute_matching_matrix():
         num_units_train2,
         delta_frames,
     ):
-        """
-        Compute a matrix representing the matches between two spike trains.
-
-        Given two spike trains, this function finds matching spikes based on a temporal proximity criterion
-        defined by `delta_frames`. The resulting matrix indicates the number of matches between units
-        in `spike_frames_train1` and `spike_frames_train2`.
-
-        Parameters
-        ----------
-        spike_frames_train1 : ndarray
-            An array of integer frame numbers corresponding to spike times for the first train. Must be in ascending order.
-        spike_frames_train2 : ndarray
-            An array of integer frame numbers corresponding to spike times for the second train. Must be in ascending order.
-        unit_indices1 : ndarray
-            An array of integers where `unit_indices1[i]` gives the unit index associated with the spike at `spike_frames_train1[i]`.
-        unit_indices2 : ndarray
-            An array of integers where `unit_indices2[i]` gives the unit index associated with the spike at `spike_frames_train2[i]`.
-        num_units_train1 : int
-            The total count of unique units in the first spike train.
-        num_units_train2 : int
-            The total count of unique units in the second spike train.
-        delta_frames : int
-            The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
-            if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at `spike_frames_train1[i]`
-            and `spike_frames_train2[j]` are considered matching.
-
-        Returns
-        -------
-        matching_matrix : ndarray
-            A 2D numpy array of shape `(num_units_train1, num_units_train2)`. Each element `[i, j]` represents
-            the count of matching spike pairs between unit `i` from `spike_frames_train1` and unit `j` from `spike_frames_train2`.
-
-
-        Notes
-        -----
-        This algorithm identifies matching spikes between two ordered spike trains.
-        By iterating through each spike in the first train, it compares them against spikes in the second train,
-        determining matches based on the two spikes frames being within `delta_frames` of each other.
-
-        To avoid redundant comparisons the algorithm maintains a reference, `second_train_search_start `,
-        which signifies the minimal index in the second spike train that might match the upcoming spike
-        in the first train.
-
-        The logic can be summarized as follows:
-        1. Iterate through each spike in the first train
-        2. For each spike, find the first match in the second train.
-        3. Save the index of the first match as the new `second_train_search_start `
-        3. For each match, find as many matches as possible from the first match onwards.
-
-        An important condition here is that the same spike is not matched twice. This is managed by keeping track
-        of the last matched frame for each unit pair in `last_match_frame1` and `last_match_frame2`
-
-        For more details on the rationale behind this approach, refer to the documentation of this module and/or
-        the metrics section in SpikeForest documentation.
-        """
 
         matching_matrix = np.zeros((num_units_train1, num_units_train2), dtype=np.uint16)
 
@@ -232,7 +177,61 @@ def get_optimized_compute_matching_matrix():
     return compute_matching_matrix
 
 
-def make_match_count_matrix(sorting1, sorting2, delta_frames):
+def make_match_count_matrix(sorting1, sorting2, delta_frames, symetric=False):
+    """
+    Compute a matrix representing the matches between two Sorting objects.
+
+    Given two spike trains, this function finds matching spikes based on a temporal proximity criterion
+    defined by `delta_frames`. The resulting matrix indicates the number of matches between units
+    in `spike_frames_train1` and `spike_frames_train2` for each pair of units.
+
+    Note that this algo is not symetric and biased toward sorting1 is the ground truth.
+
+    Parameters
+    ----------
+    sorting1 : Sorting
+        An array of integer frame numbers corresponding to spike times for the first train. Must be in ascending order.
+    sorting2 : Sorting
+        An array of integer frame numbers corresponding to spike times for the second train. Must be in ascending order.
+    delta_frames : int
+        The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
+        if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at `spike_frames_train1[i]`
+        and `spike_frames_train2[j]` are considered matching.
+    symetric: bool, dfault False
+        If symetric, the this the algos is run two times by switching sorting1 and sorting2 the minimum of the two
+        results is taken.
+    Returns
+    -------
+    matching_matrix : ndarray
+        A 2D numpy array of shape `(num_units_train1, num_units_train2)`. Each element `[i, j]` represents
+        the count of matching spike pairs between unit `i` from `spike_frames_train1` and unit `j` from `spike_frames_train2`.
+
+    Notes
+    -----
+    This algorithm identifies matching spikes between two ordered spike trains.
+    By iterating through each spike in the first train, it compares them against spikes in the second train,
+    determining matches based on the two spikes frames being within `delta_frames` of each other.
+
+    To avoid redundant comparisons the algorithm maintains a reference, `second_train_search_start `,
+    which signifies the minimal index in the second spike train that might match the upcoming spike
+    in the first train.
+
+    The logic can be summarized as follows:
+    1. Iterate through each spike in the first train
+    2. For each spike, find the first match in the second train.
+    3. Save the index of the first match as the new `second_train_search_start `
+    3. For each match, find as many matches as possible from the first match onwards.
+
+    An important condition here is that the same spike is not matched twice. This is managed by keeping track
+    of the last matched frame for each unit pair in `last_match_frame1` and `last_match_frame2`
+    There are corner cases where a spike can be counted twice in the the spiketrain 2 in case of bursting situations
+    (below delta_frames) in the spiketrain 1. To ensure that the number of match do not exceed the number of spike, 
+    we applied a final clip.
+
+    For more details on the rationale behind this approach, refer to the documentation of this module and/or
+    the metrics section in SpikeForest documentation.
+    """
+
     num_units_sorting1 = sorting1.get_num_units()
     num_units_sorting2 = sorting2.get_num_units()
     matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.uint16)
@@ -257,7 +256,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames):
         unit_indices1_sorted = spike_vector1["unit_index"]
         unit_indices2_sorted = spike_vector2["unit_index"]
 
-        matching_matrix += get_optimized_compute_matching_matrix()(
+        matching_matrix_seg = get_optimized_compute_matching_matrix()(
             sample_frames1_sorted,
             sample_frames2_sorted,
             unit_indices1_sorted,
@@ -266,6 +265,28 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames):
             num_units_sorting2,
             delta_frames,
         )
+
+        if symetric:
+            matching_matrix_seg_switch = get_optimized_compute_matching_matrix()(
+                sample_frames2_sorted,
+                sample_frames1_sorted,
+                unit_indices2_sorted,
+                unit_indices1_sorted,
+                num_units_sorting2,
+                num_units_sorting1,
+                delta_frames,
+            )
+            matching_matrix_seg = np.maximum(matching_matrix_seg, matching_matrix_seg_switch.T)
+
+
+        matching_matrix += matching_matrix_seg
+
+    
+    # ensure the number of match do not exceed the number of spike in train 2
+    # this is a simple way to handle corner cases for bursting in sorting1
+    spike_count2 = np.array(list(sorting2.count_num_spikes_per_unit().values()))
+    spike_count2 = spike_count2[np.newaxis, :]
+    matching_matrix = np.clip(matching_matrix, None, spike_count2)
 
     # Build a data frame from the matching matrix
     import pandas as pd
