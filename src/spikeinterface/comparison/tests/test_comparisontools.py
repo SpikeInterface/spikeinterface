@@ -154,17 +154,17 @@ def test_make_match_count_matrix_repeated_matching_but_no_double_counting_2():
     sorting1, sorting2 = make_sorting(frames_spike_train1, unit_indices1, frames_spike_train2, unit_indices2)
 
     # this is easy because it is sorting2 centric
-    result = make_match_count_matrix(sorting2, sorting1, delta_frames=delta_frames, symetric=False)
+    result = make_match_count_matrix(sorting2, sorting1, delta_frames=delta_frames, symmetric=False)
     expected_result = np.array([[2]])
     assert_array_equal(result.to_numpy(), expected_result)
 
     # this work only because we protect by clipping
-    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, symetric=False)
+    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, symmetric=False)
     expected_result = np.array([[2]])
     assert_array_equal(result.to_numpy(), expected_result)
 
 
-def test_make_match_count_matrix_symetric():
+def test_make_match_count_matrix_symmetric():
     frames_spike_train1 = [
         100,
         102,
@@ -179,8 +179,8 @@ def test_make_match_count_matrix_symetric():
 
     sorting1, sorting2 = make_sorting(frames_spike_train1, unit_indices1, frames_spike_train2, unit_indices2)
 
-    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, symetric=True)
-    result_T = make_match_count_matrix(sorting2, sorting1, delta_frames=delta_frames, symetric=True)
+    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, symmetric=True)
+    result_T = make_match_count_matrix(sorting2, sorting1, delta_frames=delta_frames, symmetric=True)
 
     assert_array_equal(result.T, result_T)
 
@@ -224,7 +224,7 @@ def test_make_agreement_scores():
 
     assert_array_equal(agreement_scores.values, ok)
 
-    # test if symetric
+    # test if symmetric
     agreement_scores2 = make_agreement_scores(sorting2, sorting1, delta_frames)
     assert_array_equal(agreement_scores, agreement_scores2.T)
 
@@ -489,7 +489,7 @@ if __name__ == "__main__":
     # test_make_match_count_matrix_repeated_matching_but_no_double_counting()
     # test_make_match_count_matrix_repeated_matching_but_no_double_counting_2()
     # test_make_match_count_matrix_test_proper_search_in_the_second_train()
-    test_make_match_count_matrix_symetric()
+    test_make_match_count_matrix_symmetric()
 
     # test_make_agreement_scores()
 
