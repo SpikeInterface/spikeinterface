@@ -218,12 +218,12 @@ def get_optimized_dot_product_function():
     ):
         """
         Computes the dot product between two spike trains.
-        The dot product in this case is the dot product of the spikes viewed as box-care functions in
+        The dot product in this case is the dot product of the spikes viewed as box-car functions in
         the Hilbert space L2.
+
         The dot product gives a measure of the similarity between two spike trains. Each match is weighted by the
         delta_frames - abs(frame1 - frame2) where frame1 and frame2 are the frames of the matching spikes.
-        When the spike trains are identical, the dot product returns all the matches within the same spike train.
-        The sum of this dot product is the squared norm of the spike train in the Hilbert space L2.
+
         Parameters
         ----------
         spike_frames_train1 : ndarray
@@ -277,8 +277,8 @@ def get_optimized_dot_product_function():
                     # match
                     unit_index1, unit_index2 = unit_indices1[index1], unit_indices2[index2]
 
-                    match_weight = delta_frames - abs(frame1 - frame2)
-                    dot_product[unit_index1, unit_index2] += match_weight
+                    weighted_match = delta_frames - abs(frame1 - frame2)
+                    dot_product[unit_index1, unit_index2] += weighted_match
 
         return dot_product
 
@@ -298,13 +298,16 @@ def get_optimized_compute_norm_function():
     def compute_norm(sample_frames, unit_indices, num_units_sorting, delta_frames):
         norm_vector = np.zeros(num_units_sorting, dtype=np.uint32)
 
-        minimal_search = 0
         num_samples = len(sample_frames)
         for index1 in range(num_samples):
             frame1 = sample_frames[index1]
             unit_index1 = unit_indices[index1]
 
-            for index2 in range(minimal_search, num_samples):
+            # Perfect match with itself
+            # norm_vector[unit_index1] += delta_frames
+
+            # Only look ahead
+            for index2 in range(index1 + 1, num_samples):
                 frame2 = sample_frames[index2]
                 unit_index2 = unit_indices[index2]
 
@@ -312,13 +315,13 @@ def get_optimized_compute_norm_function():
                 if unit_index1 != unit_index2:
                     continue
 
-                if frame2 < frame1 - delta_frames:
-                    minimal_search += 1
-                    continue
-                elif frame2 > frame1 + delta_frames:
-                    break
+                distance = frame2 - frame1  # Only positive here because of looking ahead
+                if distance <= delta_frames:
+                    weighted_match = delta_frames - distance
+                    # Count one match front and one back
+                    norm_vector[unit_index1] += 2 * weighted_match
                 else:
-                    norm_vector[unit_index1] += delta_frames - abs(frame1 - frame2)
+                    break
 
         return norm_vector
 
@@ -379,10 +382,7 @@ def compute_distance_matrix(sorting1, sorting2, delta_frames):
             delta_frames,
         )
 
-        # Now perform the addition
-        norm_matrix = norm1[:, np.newaxis] + norm2[np.newaxis, :]
-
-        distance_matrix += norm_matrix - 2 * dot_product_matrix
+        distance_matrix += norm1[:, np.newaxis] + norm2[np.newaxis, :] - 2 * dot_product_matrix
 
     return np.sqrt(distance_matrix), dot_product_matrix
 
