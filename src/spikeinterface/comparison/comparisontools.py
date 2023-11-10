@@ -108,12 +108,59 @@ def do_count_event(sorting):
     return event_counts
 
 
-try:
-    from numba import jit
+def get_optimized_compute_dot_product():
+    """
+    This function wraps around the compute_dot_product function,
+    which uses numba for JIT compilation. It caches the compiled function
+    for improved performance on subsequent calls.
+    """
 
-    @jit(nopython=True, nogil=True)
-    def calculate_distance_matrix(sample_frames, unit_indices, num_units_sorting1, num_units_sorting2, delta_frames):
-        dot_prouct_matrix = np.zeros(
+    if hasattr(get_optimized_compute_dot_product, "_cached_function"):
+        return get_optimized_compute_dot_product._cached_function
+
+    import numba
+
+    @numba.jit(nopython=True, nogil=True)
+    def compute_dot_product(sample_frames, unit_indices, num_units_sorting1, num_units_sorting2, delta_frames):
+        """
+        Compute the dot product matrix for two spike trains.
+
+        Note that the sample frames and unit indices must be sorted by sample frames.
+        Also note that the unit_indices corresponding to the second spike train must be
+        shifted by num_units_sorting1.
+
+        This creates a matrix that can be divided in four quadrants. Clokwise from top left:
+        1. The dot product of spikes in the first spike train with themselves.
+        2. The dot product of spikes in the first spike train with spikes in the second spike train.
+        3. The dot product of spikes in the second spike train with spikes in the first spike train.
+        4. The dot product of spikes in the second spike train with themselves.
+
+        Note that the norms of of the spike trains are the diagonals of the 1 and 4 quadrants.
+        That is the only part of those quadrants that we need to calculate.
+
+        Parameters
+        ----------
+        sample_frames : ndarray
+            An array of integer frame numbers corresponding to spike times.
+        unit_indices : ndarray
+            An array of integers where unit_indices[i] gives the unit index associated with
+            the spike at sample_frames[i]. Note that the unit_indices of the second spike train
+            need to be shifted by num_units_sorting1.
+        num_units_sorting1 : int
+            The total count of unique units in the first spike train.
+        num_units_sorting2 : int
+            The total count of unique units in the second spike train.
+        delta_frames : int
+            The inclusive upper limit on the frame difference for which two spikes are considered in proximity.
+
+        Returns
+        -------
+        dot_product_matrix : ndarray
+            A 2D numpy array of shape (num_units_sorting1 + num_units_sorting2, num_units_sorting1 + num_units_sorting2).
+            Each element [i, j] represents the accumulated proximity score between unit i and unit j.
+        """
+
+        dot_product_matrix = np.zeros(
             (num_units_sorting1 + num_units_sorting2, num_units_sorting1 + num_units_sorting2),
             dtype=np.float32,
         )
@@ -122,10 +169,11 @@ try:
         num_samples = len(sample_frames)
         for index1 in range(num_samples):
             frame1 = sample_frames[index1]
-            unit_index = unit_indices[index1]
+            unit_index1 = unit_indices[index1]
 
             for index2 in range(minimal_search, num_samples):
                 frame2 = sample_frames[index2]
+
                 if frame2 < frame1 - delta_frames:
                     minimal_search += 1
                     continue
@@ -133,11 +181,60 @@ try:
                     break
                 else:
                     unit_index2 = unit_indices[index2]
-                    dot_prouct_matrix[unit_index, unit_index2] += delta_frames - abs(frame1 - frame2)
+                    dot_product_matrix[unit_index1, unit_index2] += delta_frames - abs(frame1 - frame2)
+
+        return dot_product_matrix
+
+    # Cache the compiled function
+    get_optimized_compute_dot_product._cached_function = compute_dot_product
+
+    return compute_dot_product
+
+
+def compute_distance_matrix(sorting1, sorting2, delta_frames):
+    num_units_sorting1 = sorting1.get_num_units()
+    num_units_sorting2 = sorting2.get_num_units()
+    distance_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.float32)
+
+    spike_vector1_segments = sorting1.to_spike_vector(concatenated=False)
+    spike_vector2_segments = sorting2.to_spike_vector(concatenated=False)
+
+    num_segments_sorting1 = sorting1.get_num_segments()
+    num_segments_sorting2 = sorting2.get_num_segments()
+    assert (
+        num_segments_sorting1 == num_segments_sorting2
+    ), "make_match_count_matrix : sorting1 and sorting2 must have the same segment number"
+
+    optimized_compute_dot_product = get_optimized_compute_dot_product()
+
+    for segment_index in range(num_segments_sorting1):
+        spike_vector1 = spike_vector1_segments[segment_index]
+        spike_vector2 = spike_vector2_segments[segment_index]
+
+        sample_frames1_sorted = spike_vector1["sample_index"]
+        sample_frames2_sorted = spike_vector2["sample_index"]
+
+        # Concatenate
+        sample_frames = np.concatenate((sample_frames1_sorted, sample_frames2_sorted))
+        unit_indices2 = spike_vector2["unit_index"] + num_units_sorting1
+        unit_indices = np.concatenate((spike_vector1["unit_index"], unit_indices2))
+
+        # Sort by sample frames
+        indices = sample_frames.argsort()
+        sample_frames_sorted = sample_frames[indices]
+        unit_indices_sorted = unit_indices[indices]
+
+        dot_product_matrix = optimized_compute_dot_product(
+            sample_frames_sorted,
+            unit_indices_sorted,
+            num_units_sorting1,
+            num_units_sorting2,
+            delta_frames,
+        )
 
         # Diagonal is dot product of a spike with itself, hence norm
-        within_train1_dot_product = dot_prouct_matrix[:num_units_sorting1, :num_units_sorting1]
-        within_train2_dot_product = dot_prouct_matrix[num_units_sorting1:, num_units_sorting1:]
+        within_train1_dot_product = dot_product_matrix[:num_units_sorting1, :num_units_sorting1]
+        within_train2_dot_product = dot_product_matrix[num_units_sorting1:, num_units_sorting1:]
         norm2 = np.diag(within_train2_dot_product)
         norm1 = np.diag(within_train1_dot_product)
 
@@ -149,69 +246,23 @@ try:
         norm_matrix = norm1_reshaped + norm2_reshaped
 
         # Dot product are the matches between units in train1 and train2
-        dot_product12 = dot_prouct_matrix[:num_units_sorting1, num_units_sorting1:]
-        dot_product21 = dot_prouct_matrix[num_units_sorting1:, :num_units_sorting1]
+        dot_product12 = dot_product_matrix[:num_units_sorting1, num_units_sorting1:]
+        dot_product21 = dot_product_matrix[num_units_sorting1:, :num_units_sorting1]
 
         dot_product = (dot_product12 + dot_product21.T) / 2
 
-        distance_matrix = norm_matrix - 2 * dot_product
+        distance_matrix += norm_matrix - 2 * dot_product
 
-        return distance_matrix
+    # distance_matrix = np.sqrt(distance_matrix)
+    # # Build a data frame from the matching matrix
+    # import pandas as pd
 
-    def compute_distance_matrix(sorting1, sorting2, delta_frames):
-        num_units_sorting1 = sorting1.get_num_units()
-        num_units_sorting2 = sorting2.get_num_units()
-        distance_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.float32)
+    # unit_ids_of_sorting1 = sorting1.get_unit_ids()
+    # unit_ids_of_sorting2 = sorting2.get_unit_ids()
 
-        spike_vector1_segments = sorting1.to_spike_vector(concatenated=False)
-        spike_vector2_segments = sorting2.to_spike_vector(concatenated=False)
+    # match_event_counts_df = pd.DataFrame(distance_matrix, index=unit_ids_of_sorting1, columns=unit_ids_of_sorting2)
 
-        num_segments_sorting1 = sorting1.get_num_segments()
-        num_segments_sorting2 = sorting2.get_num_segments()
-        assert (
-            num_segments_sorting1 == num_segments_sorting2
-        ), "make_match_count_matrix : sorting1 and sorting2 must have the same segment number"
-
-        for segment_index in range(num_segments_sorting1):
-            spike_vector1 = spike_vector1_segments[segment_index]
-            spike_vector2 = spike_vector2_segments[segment_index]
-
-            sample_frames1_sorted = spike_vector1["sample_index"]
-            sample_frames2_sorted = spike_vector2["sample_index"]
-
-            # Concatenate
-            sample_frames = np.concatenate((sample_frames1_sorted, sample_frames2_sorted))
-            unit_indices2 = spike_vector2["unit_index"] + num_units_sorting1
-            unit_indices = np.concatenate((spike_vector1["unit_index"], unit_indices2))
-
-            # Sort by sample frames
-            indices = sample_frames.argsort()
-            sample_frames_sorted = sample_frames[indices]
-            unit_indices_sorted = unit_indices[indices]
-
-            distance_matrix_segment = calculate_distance_matrix(
-                sample_frames_sorted,
-                unit_indices_sorted,
-                num_units_sorting1,
-                num_units_sorting2,
-                delta_frames,
-            )
-
-            distance_matrix += distance_matrix_segment
-
-        distance_matrix = np.sqrt(distance_matrix)
-        # Build a data frame from the matching matrix
-        import pandas as pd
-
-        unit_ids_of_sorting1 = sorting1.get_unit_ids()
-        unit_ids_of_sorting2 = sorting2.get_unit_ids()
-
-        match_event_counts_df = pd.DataFrame(distance_matrix, index=unit_ids_of_sorting1, columns=unit_ids_of_sorting2)
-
-        return match_event_counts_df
-
-except:
-    pass  # numba not installed
+    return distance_matrix, dot_product
 
 
 def get_optimized_compute_matching_matrix():
