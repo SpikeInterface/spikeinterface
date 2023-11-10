@@ -162,24 +162,25 @@ def get_optimized_compute_dot_product():
 
         dot_product_matrix = np.zeros(
             (num_units_sorting1 + num_units_sorting2, num_units_sorting1 + num_units_sorting2),
-            dtype=np.float32,
+            dtype=np.uint32,
         )
 
         minimal_search = 0
         num_samples = len(sample_frames)
         for index1 in range(num_samples):
             frame1 = sample_frames[index1]
-            unit_index1 = unit_indices[index1]
 
             for index2 in range(minimal_search, num_samples):
                 frame2 = sample_frames[index2]
 
+                frame2 - frame1
                 if frame2 < frame1 - delta_frames:
                     minimal_search += 1
                     continue
                 elif frame2 > frame1 + delta_frames:
                     break
                 else:
+                    unit_index1 = unit_indices[index1]
                     unit_index2 = unit_indices[index2]
                     dot_product_matrix[unit_index1, unit_index2] += delta_frames - abs(frame1 - frame2)
 
@@ -194,7 +195,7 @@ def get_optimized_compute_dot_product():
 def compute_distance_matrix(sorting1, sorting2, delta_frames):
     num_units_sorting1 = sorting1.get_num_units()
     num_units_sorting2 = sorting2.get_num_units()
-    distance_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.float32)
+    distance_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.uint32)
 
     spike_vector1_segments = sorting1.to_spike_vector(concatenated=False)
     spike_vector2_segments = sorting2.to_spike_vector(concatenated=False)
@@ -235,34 +236,21 @@ def compute_distance_matrix(sorting1, sorting2, delta_frames):
         # Diagonal is dot product of a spike with itself, hence norm
         within_train1_dot_product = dot_product_matrix[:num_units_sorting1, :num_units_sorting1]
         within_train2_dot_product = dot_product_matrix[num_units_sorting1:, num_units_sorting1:]
-        norm2 = np.diag(within_train2_dot_product)
         norm1 = np.diag(within_train1_dot_product)
-
-        # Assuming norm1 and norm2 are 1D arrays
-        norm1_reshaped = norm1.reshape((-1, 1))  # Reshape to a column vector
-        norm2_reshaped = norm2.reshape((1, -1))  # Reshape to a row vector
+        norm2 = np.diag(within_train2_dot_product)
 
         # Now perform the addition
-        norm_matrix = norm1_reshaped + norm2_reshaped
+        norm_matrix = norm1[:, np.newaxis] + norm2[np.newaxis, :]
 
         # Dot product are the matches between units in train1 and train2
         dot_product12 = dot_product_matrix[:num_units_sorting1, num_units_sorting1:]
         dot_product21 = dot_product_matrix[num_units_sorting1:, :num_units_sorting1]
 
-        dot_product = (dot_product12 + dot_product21.T) / 2
+        dot_product = (dot_product12 + dot_product21.T) // 2
 
         distance_matrix += norm_matrix - 2 * dot_product
 
-    # distance_matrix = np.sqrt(distance_matrix)
-    # # Build a data frame from the matching matrix
-    # import pandas as pd
-
-    # unit_ids_of_sorting1 = sorting1.get_unit_ids()
-    # unit_ids_of_sorting2 = sorting2.get_unit_ids()
-
-    # match_event_counts_df = pd.DataFrame(distance_matrix, index=unit_ids_of_sorting1, columns=unit_ids_of_sorting2)
-
-    return distance_matrix, dot_product
+    return np.sqrt(distance_matrix), dot_product
 
 
 def get_optimized_compute_matching_matrix():
