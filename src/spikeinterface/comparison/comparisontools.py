@@ -108,15 +108,15 @@ def do_count_event(sorting):
     return event_counts
 
 
-def get_optimized_compute_dot_product():
+def get_optimized_compute_dot_product_all():
     """
     This function wraps around the compute_dot_product function,
     which uses numba for JIT compilation. It caches the compiled function
     for improved performance on subsequent calls.
     """
 
-    if hasattr(get_optimized_compute_dot_product, "_cached_function"):
-        return get_optimized_compute_dot_product._cached_function
+    if hasattr(get_optimized_compute_dot_product_all, "_cached_function"):
+        return get_optimized_compute_dot_product_all._cached_function
 
     import numba
 
@@ -187,9 +187,145 @@ def get_optimized_compute_dot_product():
         return dot_product_matrix
 
     # Cache the compiled function
-    get_optimized_compute_dot_product._cached_function = compute_dot_product
+    get_optimized_compute_dot_product_all._cached_function = compute_dot_product
 
     return compute_dot_product
+
+
+def get_optimized_dot_product_function():
+    """
+    This function is to avoid the bare try-except pattern when importing the compute_dot_product function
+    which uses numba. I tested using the numba dispatcher programatically to avoids this
+    but the performance improvements were lost. Think you can do better? Don't forget to measure performance against
+    the current implementation!
+    TODO: unify numba decorator across all modules
+    """
+
+    if hasattr(get_optimized_dot_product_function, "_cached_function"):
+        return get_optimized_dot_product_function._cached_function
+
+    import numba
+
+    @numba.jit(nopython=True, nogil=True)
+    def compute_dot_product(
+        spike_frames_train1,
+        spike_frames_train2,
+        unit_indices1,
+        unit_indices2,
+        num_units_train1,
+        num_units_train2,
+        delta_frames,
+    ):
+        """
+        Computes the dot product between two spike trains.
+        The dot product in this case is the dot product of the spikes viewed as box-care functions in
+        the Hilbert space L2.
+        The dot product gives a measure of the similarity between two spike trains. Each match is weighted by the
+        delta_frames - abs(frame1 - frame2) where frame1 and frame2 are the frames of the matching spikes.
+        When the spike trains are identical, the dot product returns all the matches within the same spike train.
+        The sum of this dot product is the squared norm of the spike train in the Hilbert space L2.
+        Parameters
+        ----------
+        spike_frames_train1 : ndarray
+            An array of integer frame numbers corresponding to spike times for the first train. Must be in ascending order.
+        spike_frames_train2 : ndarray
+            An array of integer frame numbers corresponding to spike times for the second train. Must be in ascending order.
+        unit_indices1 : ndarray
+            An array of integers where `unit_indices1[i]` gives the unit index associated with the spike at `spike_frames_train1[i]`.
+        unit_indices2 : ndarray
+            An array of integers where `unit_indices2[i]` gives the unit index associated with the spike at `spike_frames_train2[i]`.
+        num_units_train1 : int
+            The total count of unique units in the first spike train.
+        num_units_train2 : int
+            The total count of unique units in the second spike train.
+        delta_frames : int
+            The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
+            if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at `spike_frames_train1[i]`
+            and `spike_frames_train2[j]` are considered matching.
+        Returns
+        -------
+        dot_product : ndarray
+            A 2D numpy array of shape `(num_units_train1, num_units_train2)`. Each element `[i, j]` represents
+            the dot product between unit `i` from `spike_frames_train1` and unit `j` from `spike_frames_train2`.
+        Notes
+        -----
+        This algorithm follows the same logic as the one used in `compute_matching_matrix` but instead of counting
+        the number of matches, it computes the dot product between the two spike trains by weighting each match
+        by the delta_frames - abs(frame1 - frame2) where frame1 and frame2 are the frames of the matching spikes.
+        """
+
+        dot_product = np.zeros((num_units_train1, num_units_train2), dtype=np.uint16)
+
+        num_spike_frames_train1 = len(spike_frames_train1)
+        num_spike_frames_train2 = len(spike_frames_train2)
+
+        # Keeps track of which frame in the second spike train should be used as a search start for matches
+        second_train_search_start = 0
+        for index1 in range(num_spike_frames_train1):
+            frame1 = spike_frames_train1[index1]
+
+            for index2 in range(second_train_search_start, num_spike_frames_train2):
+                frame2 = spike_frames_train2[index2]
+                if frame2 < frame1 - delta_frames:
+                    # Frame2 too early, increase the second_train_search_start
+                    second_train_search_start += 1
+                    continue
+                elif frame2 > frame1 + delta_frames:
+                    # No matches ahead, stop search in train2 and look for matches for the next spike in train1
+                    break
+                else:
+                    # match
+                    unit_index1, unit_index2 = unit_indices1[index1], unit_indices2[index2]
+
+                    match_weight = delta_frames - abs(frame1 - frame2)
+                    dot_product[unit_index1, unit_index2] += match_weight
+
+        return dot_product
+
+    # Cache the compiled function
+    get_optimized_dot_product_function._cached_function = compute_dot_product
+
+    return compute_dot_product
+
+
+def get_optimized_compute_norm_function():
+    if hasattr(get_optimized_compute_norm_function, "_cached_function"):
+        return get_optimized_compute_norm_function._cached_function
+
+    import numba
+
+    @numba.jit(nopython=True, nogil=True)
+    def compute_norm(sample_frames, unit_indices, num_units_sorting, delta_frames):
+        norm_vector = np.zeros(num_units_sorting, dtype=np.uint32)
+
+        minimal_search = 0
+        num_samples = len(sample_frames)
+        for index1 in range(num_samples):
+            frame1 = sample_frames[index1]
+            unit_index1 = unit_indices[index1]
+
+            for index2 in range(minimal_search, num_samples):
+                frame2 = sample_frames[index2]
+                unit_index2 = unit_indices[index2]
+
+                # Only compare spikes from the same unit
+                if unit_index1 != unit_index2:
+                    continue
+
+                if frame2 < frame1 - delta_frames:
+                    minimal_search += 1
+                    continue
+                elif frame2 > frame1 + delta_frames:
+                    break
+                else:
+                    norm_vector[unit_index1] += delta_frames - abs(frame1 - frame2)
+
+        return norm_vector
+
+    # Cache the compiled function
+    get_optimized_compute_norm_function._cached_function = compute_norm
+
+    return compute_norm
 
 
 def compute_distance_matrix(sorting1, sorting2, delta_frames):
@@ -206,7 +342,8 @@ def compute_distance_matrix(sorting1, sorting2, delta_frames):
         num_segments_sorting1 == num_segments_sorting2
     ), "make_match_count_matrix : sorting1 and sorting2 must have the same segment number"
 
-    optimized_compute_dot_product = get_optimized_compute_dot_product()
+    optimized_compute_dot_product = get_optimized_dot_product_function()
+    get_optimized_compute_norm = get_optimized_compute_norm_function()
 
     for segment_index in range(num_segments_sorting1):
         spike_vector1 = spike_vector1_segments[segment_index]
@@ -215,42 +352,39 @@ def compute_distance_matrix(sorting1, sorting2, delta_frames):
         sample_frames1_sorted = spike_vector1["sample_index"]
         sample_frames2_sorted = spike_vector2["sample_index"]
 
-        # Concatenate
-        sample_frames = np.concatenate((sample_frames1_sorted, sample_frames2_sorted))
-        unit_indices2 = spike_vector2["unit_index"] + num_units_sorting1
-        unit_indices = np.concatenate((spike_vector1["unit_index"], unit_indices2))
+        unit_indices1 = spike_vector1["unit_index"]
+        unit_indices2 = spike_vector2["unit_index"]
 
-        # Sort by sample frames
-        indices = sample_frames.argsort()
-        sample_frames_sorted = sample_frames[indices]
-        unit_indices_sorted = unit_indices[indices]
+        norm1 = get_optimized_compute_norm(
+            sample_frames1_sorted,
+            unit_indices1,
+            num_units_sorting1,
+            delta_frames,
+        )
+
+        norm2 = get_optimized_compute_norm(
+            sample_frames2_sorted,
+            unit_indices2,
+            num_units_sorting2,
+            delta_frames,
+        )
 
         dot_product_matrix = optimized_compute_dot_product(
-            sample_frames_sorted,
-            unit_indices_sorted,
+            sample_frames1_sorted,
+            sample_frames2_sorted,
+            unit_indices1,
+            unit_indices2,
             num_units_sorting1,
             num_units_sorting2,
             delta_frames,
         )
 
-        # Diagonal is dot product of a spike with itself, hence norm
-        within_train1_dot_product = dot_product_matrix[:num_units_sorting1, :num_units_sorting1]
-        within_train2_dot_product = dot_product_matrix[num_units_sorting1:, num_units_sorting1:]
-        norm1 = np.diag(within_train1_dot_product)
-        norm2 = np.diag(within_train2_dot_product)
-
         # Now perform the addition
         norm_matrix = norm1[:, np.newaxis] + norm2[np.newaxis, :]
 
-        # Dot product are the matches between units in train1 and train2
-        dot_product12 = dot_product_matrix[:num_units_sorting1, num_units_sorting1:]
-        dot_product21 = dot_product_matrix[num_units_sorting1:, :num_units_sorting1]
+        distance_matrix += norm_matrix - 2 * dot_product_matrix
 
-        dot_product = (dot_product12 + dot_product21.T) // 2
-
-        distance_matrix += norm_matrix - 2 * dot_product
-
-    return np.sqrt(distance_matrix), dot_product
+    return np.sqrt(distance_matrix), dot_product_matrix
 
 
 def get_optimized_compute_matching_matrix():
