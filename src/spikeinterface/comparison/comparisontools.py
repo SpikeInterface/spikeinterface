@@ -36,6 +36,29 @@ def count_matching_events(times1, times2, delta=10):
     return len(inds2) + 1
 
 
+def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, event_counts2  unit2_ids,
+    """
+    Computes matching spikes between one spike train and a list of others.
+
+    Parameters
+    ----------
+    times1: array
+        Spike train 1 frames
+    all_times2: list of array
+        List of spike trains from sorting 2
+
+    Returns
+    -------
+    matching_events_count: list
+        List of counts of matching events
+    """
+    matching_event_counts = np.zeros(len(all_times2), dtype="int64")
+    for i2, times2 in enumerate(all_times2):
+        num_matches = count_matching_events(times1, times2, delta=delta_frames)
+        matching_event_counts[i2] = num_matches
+    return matching_event_counts
+
+
 def compute_agreement_score(num_matches, num1, num2):
     """
     Computes agreement score.
@@ -85,27 +108,186 @@ def do_count_event(sorting):
     return event_counts
 
 
-def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, event_counts2  unit2_ids,
+def get_optimized_dot_product():
     """
-    Computes matching spikes between one spike train and a list of others.
-
-    Parameters
-    ----------
-    times1: array
-        Spike train 1 frames
-    all_times2: list of array
-        List of spike trains from sorting 2
-
-    Returns
-    -------
-    matching_events_count: list
-        List of counts of matching events
+    This function is to avoid the bare try-except pattern when importing the compute_dot_product function
+    which uses numba. I tested using the numba dispatcher programatically to avoids this
+    but the performance improvements were lost. Think you can do better? Don't forget to measure performance against
+    the current implementation!
+    TODO: unify numba decorator across all modules
     """
-    matching_event_counts = np.zeros(len(all_times2), dtype="int64")
-    for i2, times2 in enumerate(all_times2):
-        num_matches = count_matching_events(times1, times2, delta=delta_frames)
-        matching_event_counts[i2] = num_matches
-    return matching_event_counts
+
+    if hasattr(get_optimized_dot_product, "_cached_function"):
+        return get_optimized_dot_product._cached_function
+
+    import numba
+
+    @numba.jit(nopython=True, nogil=True)
+    def compute_dot_product(
+        spike_frames_train1,
+        spike_frames_train2,
+        unit_indices1,
+        unit_indices2,
+        num_units_train1,
+        num_units_train2,
+        delta_frames,
+    ):
+        """
+        Computes the dot product between two spike trains.
+
+        The dot product in this case is the dot product of the spikes viewed as box-care functions in
+        the Hilbert space L2.
+
+        The dot product gives a measure of the similarity between two spike trains. Each match is weighted by the
+        delta_frames - abs(frame1 - frame2) where frame1 and frame2 are the frames of the matching spikes.
+
+        When the spike trains are identical, the dot product returns all the matches within the same spike train.
+        The sum of this dot product is the squared norm of the spike train in the Hilbert space L2.
+
+
+        Parameters
+        ----------
+        spike_frames_train1 : ndarray
+            An array of integer frame numbers corresponding to spike times for the first train. Must be in ascending order.
+        spike_frames_train2 : ndarray
+            An array of integer frame numbers corresponding to spike times for the second train. Must be in ascending order.
+        unit_indices1 : ndarray
+            An array of integers where `unit_indices1[i]` gives the unit index associated with the spike at `spike_frames_train1[i]`.
+        unit_indices2 : ndarray
+            An array of integers where `unit_indices2[i]` gives the unit index associated with the spike at `spike_frames_train2[i]`.
+        num_units_train1 : int
+            The total count of unique units in the first spike train.
+        num_units_train2 : int
+            The total count of unique units in the second spike train.
+        delta_frames : int
+            The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
+            if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at `spike_frames_train1[i]`
+            and `spike_frames_train2[j]` are considered matching.
+
+        Returns
+        -------
+        dot_product : ndarray
+            A 2D numpy array of shape `(num_units_train1, num_units_train2)`. Each element `[i, j]` represents
+            the dot product between unit `i` from `spike_frames_train1` and unit `j` from `spike_frames_train2`.
+
+
+        Notes
+        -----
+        This algorithm follows the same logic as the one used in `compute_matching_matrix` but instead of counting
+        the number of matches, it computes the dot product between the two spike trains by weighting each match
+        by the delta_frames - abs(frame1 - frame2) where frame1 and frame2 are the frames of the matching spikes.
+
+        """
+
+        dot_product = np.zeros((num_units_train1, num_units_train2), dtype=np.uint16)
+
+        num_spike_frames_train1 = len(spike_frames_train1)
+        num_spike_frames_train2 = len(spike_frames_train2)
+
+        # Keeps track of which frame in the second spike train should be used as a search start for matches
+        second_train_search_start = 0
+        for index1 in range(num_spike_frames_train1):
+            frame1 = spike_frames_train1[index1]
+
+            for index2 in range(second_train_search_start, num_spike_frames_train2):
+                frame2 = spike_frames_train2[index2]
+                if frame2 < frame1 - delta_frames:
+                    # Frame2 too early, increase the second_train_search_start
+                    second_train_search_start += 1
+                    continue
+                elif frame2 > frame1 + delta_frames:
+                    # No matches ahead, stop search in train2 and look for matches for the next spike in train1
+                    break
+                else:
+                    # match
+                    unit_index1, unit_index2 = unit_indices1[index1], unit_indices2[index2]
+
+                    dot_product[unit_index1, unit_index2] += delta_frames - abs(frame1 - frame2)
+
+        return dot_product
+
+    # Cache the compiled function
+    get_optimized_dot_product._cached_function = compute_dot_product
+
+    return compute_dot_product
+
+
+def compute_distance_matrix(sorting1, sorting2, delta_frames):
+    num_units_sorting1 = sorting1.get_num_units()
+    num_units_sorting2 = sorting2.get_num_units()
+    distance_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.uint16)
+
+    spike_vector1_segments = sorting1.to_spike_vector(concatenated=False)
+    spike_vector2_segments = sorting2.to_spike_vector(concatenated=False)
+
+    num_segments_sorting1 = sorting1.get_num_segments()
+    num_segments_sorting2 = sorting2.get_num_segments()
+    assert (
+        num_segments_sorting1 == num_segments_sorting2
+    ), "make_match_count_matrix : sorting1 and sorting2 must have the same segment number"
+
+    # Segments should be matched one by one
+    dot_product_function = get_optimized_dot_product()
+
+    for segment_index in range(num_segments_sorting1):
+        spike_vector1 = spike_vector1_segments[segment_index]
+        spike_vector2 = spike_vector2_segments[segment_index]
+
+        sample_frames1_sorted = spike_vector1["sample_index"]
+        sample_frames2_sorted = spike_vector2["sample_index"]
+
+        unit_indices1_sorted = spike_vector1["unit_index"]
+        unit_indices2_sorted = spike_vector2["unit_index"]
+
+        dot_product = dot_product_function(
+            sample_frames1_sorted,
+            sample_frames2_sorted,
+            unit_indices1_sorted,
+            unit_indices2_sorted,
+            num_units_sorting1,
+            num_units_sorting2,
+            delta_frames,
+        )
+
+        norm_spike_vector1 = dot_product_function(
+            sample_frames1_sorted,
+            sample_frames1_sorted,
+            unit_indices1_sorted,
+            unit_indices1_sorted,
+            num_units_sorting1,
+            num_units_sorting1,
+            delta_frames,
+        )
+
+        norm_spike_vector2 = dot_product_function(
+            sample_frames2_sorted,
+            sample_frames2_sorted,
+            unit_indices2_sorted,
+            unit_indices2_sorted,
+            num_units_sorting2,
+            num_units_sorting2,
+            delta_frames,
+        )
+
+        norm_spike_vector1_diag = np.diag(norm_spike_vector1)
+        norm_spike_vector2_diag = np.diag(norm_spike_vector2)
+
+        segment_distance = (
+            norm_spike_vector1_diag[:, np.newaxis] + norm_spike_vector2_diag[np.newaxis, :] - 2 * dot_product
+        )
+
+        distance_matrix += segment_distance
+
+    distance_matrix = np.sqrt(distance_matrix)
+
+    # Build a data frame from the matching matrix
+    import pandas as pd
+
+    unit_ids_of_sorting1 = sorting1.get_unit_ids()
+    unit_ids_of_sorting2 = sorting2.get_unit_ids()
+    match_event_counts_df = pd.DataFrame(distance_matrix, index=unit_ids_of_sorting1, columns=unit_ids_of_sorting2)
+
+    return match_event_counts_df
 
 
 def get_optimized_compute_matching_matrix():
