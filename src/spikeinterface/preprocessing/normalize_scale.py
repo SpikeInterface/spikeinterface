@@ -20,6 +20,10 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices]
+
+        if np.issubdtype(self._dtype, np.integer):
+            scaled_traces = scaled_traces.round()
+
         return scaled_traces.astype(self._dtype)
 
 
