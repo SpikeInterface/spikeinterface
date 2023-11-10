@@ -15,16 +15,16 @@ class CrossCorrelogramsWidget(BaseWidget):
     ----------
     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
         The object to compute/get crosscorrelograms from
-    unit_ids  list
-        List of unit ids, default None
-    window_ms : float
-        Window for CCGs in ms, default 100.0 ms
-    bin_ms : float
-        Bin size in ms, default 1.0 ms
-    hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed, default False
-    unit_colors: dict or None
-        If given, a dictionary with unit ids as keys and colors as values, default None
+    unit_ids  list or None, default: None
+        List of unit ids
+    window_ms : float, default: 100.0
+        Window for CCGs in ms
+    bin_ms : float, default: 1.0
+        Bin size in ms
+    hide_unit_selector : bool, default: False
+        For sortingview backend, if True the unit selector is not displayed
+    unit_colors: dict or None, default: None
+        If given, a dictionary with unit ids as keys and colors as values
     """
 
     def __init__(

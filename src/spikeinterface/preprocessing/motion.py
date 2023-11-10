@@ -200,14 +200,14 @@ def correct_motion(
     ----------
     recording: RecordingExtractor
         The recording extractor to be transformed
-    preset: str
-        The preset name. Default "nonrigid_accurate".
-    folder: Path str or None
-        If not None then intermediate motion info are saved into a folder. Default None
-    output_motion_info: bool
+    preset: str, default: "nonrigid_accurate"
+        The preset name
+    folder: Path str or None, default: None
+        If not None then intermediate motion info are saved into a folder
+    output_motion_info: bool, default: False
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
-        This dictionary is the same when reloaded from the folder. Default False
+        This dictionary is the same when reloaded from the folder
     detect_kwargs: dict
         Optional parameters to overwrite the ones in the preset for "detect" step.
     select_kwargs: dict

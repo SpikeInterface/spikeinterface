@@ -11,24 +11,24 @@ class MotionWidget(BaseWidget):
     ----------
     motion_info: dict
         The motion info return by correct_motion() or load back with load_motion_info()
-    recording : RecordingExtractor, optional
-        The recording extractor object (only used to get "real" times), default None
-    sampling_frequency : float, optional
-        The sampling frequency (needed if recording is None), default None
-    depth_lim : tuple
-        The min and max depth to display, default None (min and max of the recording)
-    motion_lim : tuple
-        The min and max motion to display, default None (min and max of the motion)
-    color_amplitude : bool
-        If True, the color of the scatter points is the amplitude of the peaks, default False
-    scatter_decimate : int
-        If > 1, the scatter points are decimated, default None
-    amplitude_cmap : str
-        The colormap to use for the amplitude, default 'inferno'
-    amplitude_clim : tuple
-        The min and max amplitude to display, default None (min and max of the amplitudes)
-    amplitude_alpha : float
-        The alpha of the scatter points, default 0.5
+    recording : RecordingExtractor, default: None
+        The recording extractor object (only used to get "real" times)
+    sampling_frequency : float, default: None
+        The sampling frequency (needed if recording is None)
+    depth_lim : tuple or None, default: None
+        The min and max depth to display, if None (min and max of the recording)
+    motion_lim : tuple or None, default: None
+        The min and max motion to display, if None (min and max of the motion)
+    color_amplitude : bool, default: False
+        If True, the color of the scatter points is the amplitude of the peaks
+    scatter_decimate : int, default: None
+        If > 1, the scatter points are decimated
+    amplitude_cmap : str, default: "inferno"
+        The colormap to use for the amplitude
+    amplitude_clim : tuple or None, default: None
+        The min and max amplitude to display, if None (min and max of the amplitudes)
+    amplitude_alpha : float, default: 1
+        The alpha of the scatter points
     """
 
     def __init__(

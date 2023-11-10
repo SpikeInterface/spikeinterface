@@ -13,7 +13,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
     BinaryFolderRecording is an internal format used in spikeinterface.
     It is a BinaryRecordingExtractor + metadata contained in a folder.
 
-    It is created with the function: `recording.save(format='binary', folder='/myfolder')`
+    It is created with the function: `recording.save(format="binary", folder="/myfolder")`
 
     Parameters
     ----------

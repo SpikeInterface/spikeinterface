@@ -109,7 +109,7 @@ def find_duplicated_spikes(
         The spike train on which to look for duplicated spikes.
     censored_period: int
         The censored period for duplicates (in sample time).
-    method: "keep_first" |"keep_last" | "keep_first_iterative' | 'keep_last_iterative" |random"
+    method: "keep_first" |"keep_last" | "keep_first_iterative" | "keep_last_iterative" |random", default: "random"
         Method used to remove the duplicated spikes.
     seed: int | None
         The seed to use if method="random".

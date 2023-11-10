@@ -22,9 +22,9 @@ class UnitProbeMapWidget(BaseWidget):
         List of unit ids.
     channel_ids: list
         The channel ids to display
-    animated: True/False
-        animation for amplitude on time
-    with_channel_ids: bool False default
+    animated: bool, default: False
+        Animation for amplitude on time
+    with_channel_ids: bool, default: False
         add channel ids text on the probe
     """
 

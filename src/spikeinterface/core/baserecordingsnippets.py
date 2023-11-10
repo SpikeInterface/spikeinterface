@@ -72,7 +72,23 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_probe(self, probe, group_mode="by_probe", in_place=False):
         """
-        Wrapper on top on set_probes when there one unique probe.
+        Attach a list of Probe object to a recording.
+
+        Parameters
+        ----------
+        probe_or_probegroup: Probe, list of Probe, or ProbeGroup
+            The probe(s) to be attached to the recording
+        group_mode: "by_probe" | "by_shank", default: "by_probe
+            "by_probe" or "by_shank". Adds grouping property to the recording based on the probes ("by_probe")
+            or  shanks ("by_shanks")
+        in_place: bool
+            False by default.
+            Useful internally when extractor do self.set_probegroup(probe)
+
+        Returns
+        -------
+        sub_recording: BaseRecording
+            A view of the recording (ChannelSlice or clone or itself)
         """
         assert isinstance(probe, Probe), "must give Probe"
         probegroup = ProbeGroup()
@@ -84,7 +100,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
         """
-        Attach a Probe to a recording.
+        Attach a list of Probe objects to a recording.
         For this Probe.device_channel_indices is used to link contacts to recording channels.
         If some contacts of the Probe are not connected (device_channel_indices=-1)
         then the recording is "sliced" and only connected channel are kept.
@@ -96,9 +112,9 @@ class BaseRecordingSnippets(BaseExtractor):
         ----------
         probe_or_probegroup: Probe, list of Probe, or ProbeGroup
             The probe(s) to be attached to the recording
-        group_mode: str
-            'by_probe' or 'by_shank'. Adds grouping property to the recording based on the probes ('by_probe')
-            or  shanks ('by_shanks')
+        group_mode: "by_probe" | "by_shank", default: "by_probe"
+            "by_probe" or "by_shank". Adds grouping property to the recording based on the probes ("by_probe")
+            or  shanks ("by_shank")
         in_place: bool
             False by default.
             Useful internally when extractor do self.set_probegroup(probe)
@@ -253,18 +269,18 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def create_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}, axes="xy"):
         """
-        Creates a 'dummy' probe based on locations.
+        Creates a "dummy" probe based on locations.
 
         Parameters
         ----------
         locations : np.array
             Array with channel locations (num_channels, ndim) [ndim can be 2 or 3]
-        shape : str, optional
-            Electrode shapes, by default "circle"
-        shape_params : dict, optional
-            Shape parameters, by default {"radius": 1}
-        axes : str, optional
-            If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
+        shape : str, default: "circle"
+            Electrode shapes
+        shape_params : dict, default: {"radius": 1}
+            Shape parameters
+        axes : str, default: "xy"
+            If ndim is 3, indicates the axes that define the plane of the electrodes
 
         Returns
         -------
@@ -287,18 +303,18 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}, axes="xy"):
         """
-        Sets a 'dummy' probe based on locations.
+        Sets a "dummy" probe based on locations.
 
         Parameters
         ----------
         locations : np.array
             Array with channel locations (num_channels, ndim) [ndim can be 2 or 3]
-        shape : str, optional
-            Electrode shapes, by default "circle"
-        shape_params : dict, optional
-            Shape parameters, by default {"radius": 1}
-        axes : str, optional
-            If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
+        shape : str, default: default: "circle"
+            Electrode shapes
+        shape_params : dict, default: {"radius": 1}
+            Shape parameters
+        axes : "xy" | "yz" | "xz", default: "xy"
+            If ndim is 3, indicates the axes that define the plane of the electrodes
         """
         probe = self.create_dummy_probe_from_locations(locations, shape=shape, shape_params=shape_params, axes=axes)
         self.set_probe(probe, in_place=True)
@@ -386,8 +402,8 @@ class BaseRecordingSnippets(BaseExtractor):
 
         Parameters
         ----------
-        axes : str, optional
-            The axes to keep, by default "xy"
+        axes : "xy" | "yz" |"xz", default: "xy"
+            The axes to keep
 
         Returns
         -------
@@ -412,8 +428,8 @@ class BaseRecordingSnippets(BaseExtractor):
         ----------
         channel_ids : np.array or list
             The list of channels to keep
-        renamed_channel_ids : np.array or list, optional
-            A list of renamed channels, by default None
+        renamed_channel_ids : np.array or list, default: None
+            A list of renamed channels
 
         Returns
         -------
@@ -459,7 +475,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def select_segments(self, segment_indices):
         """
-        Return a new object with the segments specified by 'segment_indices'.
+        Return a new object with the segments specified by "segment_indices".
 
         Parameters
         ----------
@@ -475,14 +491,14 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def split_by(self, property="group", outputs="dict"):
         """
-        Splits object based on a certain property (e.g. 'group')
+        Splits object based on a certain property (e.g. "group")
 
         Parameters
         ----------
-        property : str, optional
-            The property to use to split the object, by default 'group'
-        outputs : str, optional
-            'dict' or 'list', by default 'dict'
+        property : str, default: "group"
+            The property to use to split the object, default: "group"
+        outputs : "dict" | "list", default: "dict"
+            Whether to return a dict or a list
 
         Returns
         -------

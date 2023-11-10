@@ -18,11 +18,11 @@ class WhitenRecording(BasePreprocessor):
     dtype: None or dtype, default: None
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
-    mode: 'global' / 'local', default: 'global'
-        'global' use the entire covariance matrix to compute the W matrix
-        'local' use local covariance (by radius) to compute the W matrix
+    mode: "global" | "local", default: "global"
+        "global" use the entire covariance matrix to compute the W matrix
+        "local" use local covariance (by radius) to compute the W matrix
     radius_um: None or float, default: None
-        Used for mode = 'local' to get the neighborhood
+        Used for mode = "local" to get the neighborhood
     apply_mean: bool, default: False
         Substract or not the mean matrix M before the dot product with W.
     int_scale : None or float, default: None
@@ -33,7 +33,7 @@ class WhitenRecording(BasePreprocessor):
         Small epsilon to regularize SVD.
         If None, eps is defaulted to 1e-8. If the data is float type and scaled down to very small values,
         then the eps is automatically set to a small fraction (1e-3) of the median of the squared data.
-    W : 2d np.array, default: None
+    W : 2d np.array or None, default: None
         Pre-computed whitening matrix
     M : 1d np.array or None, default: None
         Pre-computed means.
@@ -138,16 +138,16 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
     mode : str
         The mode to compute the whitening matrix.
 
-        * 'global': compute SVD using all channels
-        * 'local': compute SVD on local neighborhood (controlled by `radius_um`)
+        * "global": compute SVD using all channels
+        * "local": compute SVD on local neighborhood (controlled by `radius_um`)
 
     random_chunk_kwargs : dict
         Keyword arguments for  get_random_data_chunks()
     apply_mean : bool
         If True, the mean is removed prior to computing the covariance
-    radius_um : float, default: None
-        Used for mode = 'local' to get the neighborhood
-    eps : float, default: None
+    radius_um : float or None, default: None
+        Used for mode = "local" to get the neighborhood
+    eps : float or None, default: None
         Small epsilon to regularize SVD. If None, the default is set to 1e-8, but if the data is float type and scaled
         down to very small values, eps is automatically set to a small fraction (1e-3) of the median of the squared data.
 

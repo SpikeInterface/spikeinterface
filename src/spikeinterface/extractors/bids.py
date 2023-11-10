@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 
 import neo
-from probeinterface import read_BIDS_probe
+import probeinterface
 
 from .nwbextractors import read_nwb
 from .neoextractors import read_nix
@@ -60,7 +60,7 @@ def read_bids(folder_path):
 
 
 def _read_probe_group(folder, bids_name, recording_channel_ids):
-    probegroup = read_BIDS_probe(folder)
+    probegroup = probeinterface.read_BIDS_probe(folder)
 
     # make maps between : channel_id and contact_id using _channels.tsv
     import pandas as pd

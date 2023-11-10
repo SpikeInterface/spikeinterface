@@ -42,8 +42,8 @@ class WobbleParameters:
 
     Notes
     -----
-    'Peaks' refer to relative maxima in the convolution of the templates with the voltage trace
-    (or residual) and 'spikes' refer to putative extracellular action potentials (EAPs). Peaks are considered spikes
+    "Peaks" refer to relative maxima in the convolution of the templates with the voltage trace
+    (or residual) and "spikes" refer to putative extracellular action potentials (EAPs). Peaks are considered spikes
      if their amplitude clears the threshold parameter.
 
     """
@@ -107,8 +107,8 @@ class TemplateMetadata:
 
     Notes
     -----
-    A 'unit' refers to a putative neuron which may have one or more 'templates' of its spike waveform.
-    Each 'template' may have many upsampled 'jittered_templates' depending on the 'jitter_factor'.
+    A "unit" refers to a putative neuron which may have one or more "templates" of its spike waveform.
+    Each "template" may have many upsampled "jittered_templates" depending on the "jitter_factor".
     """
 
     num_samples: int
@@ -275,21 +275,21 @@ class TemplateData:
 class WobbleMatch(BaseTemplateMatchingEngine):
     """Template matching method from the Paninski lab.
 
-    Templates are jittered or 'wobbled' in time and amplitude to capture variability in spike amplitude and
+    Templates are jittered or "wobbled" in time and amplitude to capture variability in spike amplitude and
     super-resolution jitter in spike timing.
 
     Algorithm
     ---------
     At initialization:
-        1. Compute channel sparsity to determine which units are 'visible' to each other
+        1. Compute channel sparsity to determine which units are "visible" to each other
         2. Compress Templates using Singular Value Decomposition into rank approx_rank
         3. Upsample the temporal component of compressed templates and re-index to obtain many super-resolution-jittered
             temporal components for each template
         3. Convolve each pair of jittered compressed templates together (subject to channel sparsity)
     For each chunk of traces:
-        1. Compute the 'objective function' to be minimized by convolving each true template with the traces
+        1. Compute the "objective function" to be minimized by convolving each true template with the traces
         2. Normalize the objective relative to the magnitude of each true template
-        3. Detect spikes by indexing peaks in the objective corresponding to 'matches' between the spike and a template
+        3. Detect spikes by indexing peaks in the objective corresponding to "matches" between the spike and a template
         4. Determine which super-resolution-jittered template best matches each spike and scale the amplitude to match
         5. Subtract scaled pairwise convolved jittered templates from the objective(s) to account for the effect of
             removing detected spikes from the traces
@@ -299,11 +299,11 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     Notes
     -----
     For consistency, throughout this module
-    - a 'unit' refers to a putative neuron which may have one or more 'templates' of its spike waveform
-    - Each 'template' may have many upsampled 'jittered_templates' depending on the 'jitter_factor'
-    - 'peaks' refer to relative maxima in the convolution of the templates with the voltage trace
-    - 'spikes' refer to putative extracellular action potentials (EAPs)
-    - 'peaks' are considered spikes if their amplitude clears the threshold parameter
+    - a "unit" refers to a putative neuron which may have one or more "templates" of its spike waveform
+    - Each "template" may have many upsampled "jittered_templates" depending on the "jitter_factor"
+    - "peaks" refer to relative maxima in the convolution of the templates with the voltage trace
+    - "spikes" refer to putative extracellular action potentials (EAPs)
+    - "peaks" are considered spikes if their amplitude clears the threshold parameter
     """
 
     default_params = {
@@ -512,7 +512,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         scalings : ndarray (num_spikes,)
             Amplitude scaling used for each spike.
         distance_metric : ndarray (num_spikes)
-            A metric that describes how good of a 'fit' each spike is to its corresponding template
+            A metric that describes how good of a "fit" each spike is to its corresponding template
 
         Notes
         -----

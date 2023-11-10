@@ -1,6 +1,6 @@
 from .method_list import *
 
-from spikeinterface.core.job_tools import fix_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
 
 
 def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={}, extra_outputs=False, **job_kwargs):
@@ -15,11 +15,12 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
     peaks: WaveformExtractor
         The waveform extractor
     method: str
-        Which method to use ('stupid' | 'XXXX')
-    method_kwargs: dict, optional
+        Which method to use ("stupid" | "XXXX")
+    method_kwargs: dict, default: dict()
         Keyword arguments for the chosen method
-    extra_outputs: bool
+    extra_outputs: bool, default: False
         If True then debug is also return
+    {}
 
     Returns
     -------
@@ -44,3 +45,6 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
         raise NotImplementedError
 
     return labels, peak_labels
+
+
+find_cluster_from_peaks.__doc__ = find_cluster_from_peaks.__doc__.format(_shared_job_kwargs_doc)

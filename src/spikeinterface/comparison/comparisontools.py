@@ -3,7 +3,6 @@ Some functions internally use by SortingComparison.
 """
 
 import numpy as np
-from joblib import Parallel, delayed
 
 
 def count_matching_events(times1, times2, delta=10):
@@ -109,53 +108,176 @@ def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, ev
     return matching_event_counts
 
 
-def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
+def get_optimized_compute_matching_matrix():
     """
-    Make the match_event_count matrix.
-    Basically it counts the matching events for all given pairs of spike trains from
-    sorting1 and sorting2.
-
-    Parameters
-    ----------
-    sorting1: SortingExtractor
-        The first sorting extractor
-    sorting2: SortingExtractor
-        The second sorting extractor
-    delta_frames: int
-        Number of frames to consider spikes coincident
-    n_jobs: int
-        Number of jobs to run in parallel
-
-    Returns
-    -------
-    match_event_count: array (int64)
-        Matrix of match count spike
+    This function is to avoid the bare try-except pattern when importing the compute_matching_matrix function
+    which uses numba. I tested using the numba dispatcher programatically to avoids this
+    but the performance improvements were lost. Think you can do better? Don't forget to measure performance against
+    the current implementation!
+    TODO: unify numba decorator across all modules
     """
+
+    if hasattr(get_optimized_compute_matching_matrix, "_cached_function"):
+        return get_optimized_compute_matching_matrix._cached_function
+
+    import numba
+
+    @numba.jit(nopython=True, nogil=True)
+    def compute_matching_matrix(
+        spike_frames_train1,
+        spike_frames_train2,
+        unit_indices1,
+        unit_indices2,
+        num_units_train1,
+        num_units_train2,
+        delta_frames,
+    ):
+        """
+        Compute a matrix representing the matches between two spike trains.
+
+        Given two spike trains, this function finds matching spikes based on a temporal proximity criterion
+        defined by `delta_frames`. The resulting matrix indicates the number of matches between units
+        in `spike_frames_train1` and `spike_frames_train2`.
+
+        Parameters
+        ----------
+        spike_frames_train1 : ndarray
+            An array of integer frame numbers corresponding to spike times for the first train. Must be in ascending order.
+        spike_frames_train2 : ndarray
+            An array of integer frame numbers corresponding to spike times for the second train. Must be in ascending order.
+        unit_indices1 : ndarray
+            An array of integers where `unit_indices1[i]` gives the unit index associated with the spike at `spike_frames_train1[i]`.
+        unit_indices2 : ndarray
+            An array of integers where `unit_indices2[i]` gives the unit index associated with the spike at `spike_frames_train2[i]`.
+        num_units_train1 : int
+            The total count of unique units in the first spike train.
+        num_units_train2 : int
+            The total count of unique units in the second spike train.
+        delta_frames : int
+            The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
+            if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at `spike_frames_train1[i]`
+            and `spike_frames_train2[j]` are considered matching.
+
+        Returns
+        -------
+        matching_matrix : ndarray
+            A 2D numpy array of shape `(num_units_train1, num_units_train2)`. Each element `[i, j]` represents
+            the count of matching spike pairs between unit `i` from `spike_frames_train1` and unit `j` from `spike_frames_train2`.
+
+
+        Notes
+        -----
+        This algorithm identifies matching spikes between two ordered spike trains.
+        By iterating through each spike in the first train, it compares them against spikes in the second train,
+        determining matches based on the two spikes frames being within `delta_frames` of each other.
+
+        To avoid redundant comparisons the algorithm maintains a reference, `second_train_search_start `,
+        which signifies the minimal index in the second spike train that might match the upcoming spike
+        in the first train.
+
+        The logic can be summarized as follows:
+        1. Iterate through each spike in the first train
+        2. For each spike, find the first match in the second train.
+        3. Save the index of the first match as the new `second_train_search_start `
+        3. For each match, find as many matches as possible from the first match onwards.
+
+        An important condition here is that the same spike is not matched twice. This is managed by keeping track
+        of the last matched frame for each unit pair in `last_match_frame1` and `last_match_frame2`
+
+        For more details on the rationale behind this approach, refer to the documentation of this module and/or
+        the metrics section in SpikeForest documentation.
+        """
+
+        matching_matrix = np.zeros((num_units_train1, num_units_train2), dtype=np.uint16)
+
+        # Used to avoid the same spike matching twice
+        last_match_frame1 = -np.ones_like(matching_matrix, dtype=np.int64)
+        last_match_frame2 = -np.ones_like(matching_matrix, dtype=np.int64)
+
+        num_spike_frames_train1 = len(spike_frames_train1)
+        num_spike_frames_train2 = len(spike_frames_train2)
+
+        # Keeps track of which frame in the second spike train should be used as a search start for matches
+        second_train_search_start = 0
+        for index1 in range(num_spike_frames_train1):
+            frame1 = spike_frames_train1[index1]
+
+            for index2 in range(second_train_search_start, num_spike_frames_train2):
+                frame2 = spike_frames_train2[index2]
+                if frame2 < frame1 - delta_frames:
+                    # no match move the left limit for the next loop
+                    second_train_search_start += 1
+                    continue
+                elif frame2 > frame1 + delta_frames:
+                    # no match stop search in train2 and continue increment in train1
+                    break
+                else:
+                    # match
+                    unit_index1, unit_index2 = unit_indices1[index1], unit_indices2[index2]
+
+                    if (
+                        frame1 != last_match_frame1[unit_index1, unit_index2]
+                        and frame2 != last_match_frame2[unit_index1, unit_index2]
+                    ):
+                        last_match_frame1[unit_index1, unit_index2] = frame1
+                        last_match_frame2[unit_index1, unit_index2] = frame2
+
+                        matching_matrix[unit_index1, unit_index2] += 1
+
+        return matching_matrix
+
+    # Cache the compiled function
+    get_optimized_compute_matching_matrix._cached_function = compute_matching_matrix
+
+    return compute_matching_matrix
+
+
+def make_match_count_matrix(sorting1, sorting2, delta_frames):
+    num_units_sorting1 = sorting1.get_num_units()
+    num_units_sorting2 = sorting2.get_num_units()
+    matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.uint16)
+
+    spike_vector1_segments = sorting1.to_spike_vector(concatenated=False)
+    spike_vector2_segments = sorting2.to_spike_vector(concatenated=False)
+
+    num_segments_sorting1 = sorting1.get_num_segments()
+    num_segments_sorting2 = sorting2.get_num_segments()
+    assert (
+        num_segments_sorting1 == num_segments_sorting2
+    ), "make_match_count_matrix : sorting1 and sorting2 must have the same segment number"
+
+    # Segments should be matched one by one
+    for segment_index in range(num_segments_sorting1):
+        spike_vector1 = spike_vector1_segments[segment_index]
+        spike_vector2 = spike_vector2_segments[segment_index]
+
+        sample_frames1_sorted = spike_vector1["sample_index"]
+        sample_frames2_sorted = spike_vector2["sample_index"]
+
+        unit_indices1_sorted = spike_vector1["unit_index"]
+        unit_indices2_sorted = spike_vector2["unit_index"]
+
+        matching_matrix += get_optimized_compute_matching_matrix()(
+            sample_frames1_sorted,
+            sample_frames2_sorted,
+            unit_indices1_sorted,
+            unit_indices2_sorted,
+            num_units_sorting1,
+            num_units_sorting2,
+            delta_frames,
+        )
+
+    # Build a data frame from the matching matrix
     import pandas as pd
 
-    unit1_ids = np.array(sorting1.get_unit_ids())
-    unit2_ids = np.array(sorting2.get_unit_ids())
-
-    match_event_counts = np.zeros((len(unit1_ids), len(unit2_ids)), dtype="int64")
-
-    # preload all spiketrains 2 into a list
-    for segment_index in range(sorting1.get_num_segments()):
-        s2_spiketrains = [sorting2.get_unit_spike_train(u2, segment_index=segment_index) for u2 in unit2_ids]
-
-        match_event_count_segment = Parallel(n_jobs=n_jobs)(
-            delayed(count_match_spikes)(
-                sorting1.get_unit_spike_train(u1, segment_index=segment_index), s2_spiketrains, delta_frames
-            )
-            for i1, u1 in enumerate(unit1_ids)
-        )
-        match_event_counts += np.array(match_event_count_segment)
-
-    match_event_counts_df = pd.DataFrame(np.array(match_event_counts), index=unit1_ids, columns=unit2_ids)
+    unit_ids_of_sorting1 = sorting1.get_unit_ids()
+    unit_ids_of_sorting2 = sorting2.get_unit_ids()
+    match_event_counts_df = pd.DataFrame(matching_matrix, index=unit_ids_of_sorting1, columns=unit_ids_of_sorting2)
 
     return match_event_counts_df
 
 
-def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
+def make_agreement_scores(sorting1, sorting2, delta_frames):
     """
     Make the agreement matrix.
     No threshold (min_score) is applied at this step.
@@ -171,8 +293,6 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
         The second sorting extractor
     delta_frames: int
         Number of frames to consider spikes coincident
-    n_jobs: int
-        Number of jobs to run in parallel
 
     Returns
     -------
@@ -189,7 +309,7 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
     event_counts1 = pd.Series(ev_counts1, index=unit1_ids)
     event_counts2 = pd.Series(ev_counts2, index=unit2_ids)
 
-    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=n_jobs)
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)
 
     agreement_scores = make_agreement_scores_from_count(match_event_count, event_counts1, event_counts2)
 
@@ -570,7 +690,7 @@ def do_confusion_matrix(event_counts1, event_counts2, match_12, match_event_coun
 def do_count_score(event_counts1, event_counts2, match_12, match_event_count):
     """
     For each ground truth units count how many:
-    'tp', 'fn', 'cl', 'fp', 'num_gt', 'num_tested', 'tested_id'
+    "tp", "fn", "cl", "fp", "num_gt", "num_tested", "tested_id"
 
     Parameters
     ----------
@@ -634,8 +754,8 @@ def compute_performance(count_score):
 
     Note :
       * we don't have TN because it do not make sens here.
-      * 'accuracy' = 'tp_rate' because TN=0
-      * 'recall' = 'sensitivity'
+      * "accuracy" = "tp_rate" because TN=0
+      * "recall" = "sensitivity"
     """
     import pandas as pd
 
@@ -674,7 +794,7 @@ def make_matching_events(times1, times2, delta):
 
     Returns
     -------
-    matching_event: numpy array dtype = ['index1', 'index2', 'delta']
+    matching_event: numpy array dtype = ["index1", "index2", "delta"]
         1d of collision
     """
     times_concat = np.concatenate((times1, times2))
@@ -731,8 +851,8 @@ def make_collision_events(sorting, delta):
     -------
     collision_events: numpy array
             dtype =  [('index1', 'int64'), ('unit_id1', 'int64'),
-                ('index2', 'int64'), ('unit_id2', 'int64'),
-                ('delta', 'int64')]
+                      ('index2', 'int64'), ('unit_id2', 'int64'),
+                      ('delta', 'int64')]
         1d of all collision
     """
     unit_ids = np.array(sorting.get_unit_ids())

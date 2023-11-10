@@ -25,11 +25,11 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         The file path to the binary container usually a .dat, .lfp, .eeg extension.
-    xml_file_path: str, optional
+    xml_file_path: str, default: None
         The path to the xml file. If None, the xml file is assumed to have the same name as the binary file.
-    stream_id: str, optional
+    stream_id: str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
@@ -67,11 +67,11 @@ class NeuroScopeSortingExtractor(BaseSorting):
     """
     Extracts spiking information from an arbitrary number of .res.%i and .clu.%i files in the general folder path.
 
-    The .res is a text file with a sorted list of spiketimes from all units displayed in sample (integer '%i') units.
+    The .res is a text file with a sorted list of spiketimes from all units displayed in sample (integer "%i") units.
     The .clu file is a file with one more row than the .res with the first row corresponding to the total number of
     unique ids in the file (and may exclude 0 & 1 from this count)
     with the rest of the rows indicating which unit id the corresponding entry in the .res file refers to.
-    The group id is loaded as unit property 'group'.
+    The group id is loaded as unit property "group".
 
     In the original Neuroscope format:
         Unit ID 0 is the cluster of unsorted spikes (noise).
@@ -92,12 +92,12 @@ class NeuroScopeSortingExtractor(BaseSorting):
     clufile_path : PathType
         Optional. Path to a particular .clu text file. If given, only the single .clu file
         (and the respective .res file) are loaded
-    keep_mua_units : bool
-        Optional. Whether or not to return sorted spikes from multi-unit activity. Defaults to True.
+    keep_mua_units : bool, default: True
+        Optional. Whether or not to return sorted spikes from multi-unit activity
     exclude_shanks : list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res.%i and .clu.%i pairs.
-    xml_file_path : PathType, optional
+    xml_file_path : PathType, default: None
         Path to the .xml file referenced by this sorting.
     """
 
@@ -303,15 +303,16 @@ def read_neuroscope(
     file_path: str
         The xml file.
     stream_id: str or None
-    keep_mua_units: bool
-        Optional. Whether or not to return sorted spikes from multi-unit activity. Defaults to True.
+        The stream id to load. If None, the first stream is loaded
+    keep_mua_units: bool, default: False
+        Optional. Whether or not to return sorted spikes from multi-unit activity
     exclude_shanks: list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res. % i and .clu. % i pairs.
-    load_recording: bool
-        If True, the recording is loaded (default True)
-    load_sorting: bool
-        If True, the sorting is loaded (default False)
+    load_recording: bool, default: True
+        If True, the recording is loaded
+    load_sorting: bool, default: False
+        If True, the sorting is loaded
     """
     outputs = ()
     # TODO add checks for recording and sorting existence

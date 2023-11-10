@@ -12,8 +12,8 @@ def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extr
     ----------
     recording: RecordingExtractor
         The recording extractor object
-    method: str
-        Which method to use ('naive' | 'tridesclous' | 'circus' | 'circus-omp' | 'wobble')
+    method: "naive" | "tridesclous" | "circus" | "circus-omp" | "wobble"
+        Which method to use for template matching
     method_kwargs: dict, optional
         Keyword arguments for the chosen method
     extra_outputs: bool
@@ -30,8 +30,8 @@ def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extr
 
     Notes
     -----
-    For all methods except 'wobble', templates are represented as a WaveformExtractor in method_kwargs
-    so statistics can be extracted.  For 'wobble' templates are represented as a numpy.ndarray.
+    For all methods except "wobble", templates are represented as a WaveformExtractor in method_kwargs
+    so statistics can be extracted.  For "wobble" templates are represented as a numpy.ndarray.
     """
     from .method_list import matching_methods
 
