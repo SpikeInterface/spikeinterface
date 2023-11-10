@@ -132,7 +132,6 @@ def get_optimized_compute_matching_matrix():
         num_units_train2,
         delta_frames,
     ):
-
         matching_matrix = np.zeros((num_units_train1, num_units_train2), dtype=np.uint16)
 
         # Used to avoid the same spike matching twice
@@ -225,7 +224,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symetric=False):
     An important condition here is that the same spike is not matched twice. This is managed by keeping track
     of the last matched frame for each unit pair in `last_match_frame1` and `last_match_frame2`
     There are corner cases where a spike can be counted twice in the the spiketrain 2 in case of bursting situations
-    (below delta_frames) in the spiketrain 1. To ensure that the number of match do not exceed the number of spike, 
+    (below delta_frames) in the spiketrain 1. To ensure that the number of match do not exceed the number of spike,
     we applied a final clip.
 
     For more details on the rationale behind this approach, refer to the documentation of this module and/or
@@ -278,10 +277,8 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symetric=False):
             )
             matching_matrix_seg = np.maximum(matching_matrix_seg, matching_matrix_seg_switch.T)
 
-
         matching_matrix += matching_matrix_seg
 
-    
     # ensure the number of match do not exceed the number of spike in train 2
     # this is a simple way to handle corner cases for bursting in sorting1
     spike_count2 = np.array(list(sorting2.count_num_spikes_per_unit().values()))
