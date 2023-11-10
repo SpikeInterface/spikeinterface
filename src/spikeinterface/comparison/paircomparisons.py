@@ -84,9 +84,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         self.event_counts2 = do_count_event(self.sorting2)
 
         # matrix of  event match count for each pair
-        self.match_event_count = make_match_count_matrix(
-            self.sorting1, self.sorting2, self.delta_frames, n_jobs=self.n_jobs
-        )
+        self.match_event_count = make_match_count_matrix(self.sorting1, self.sorting2, self.delta_frames)
 
         # agreement matrix score for each pair
         self.agreement_scores = make_agreement_scores_from_count(
