@@ -15,7 +15,7 @@ Another advantage of *modularization* is that we can accurately benchmark every 
 For example, what is the performance of peak detection method 1 or 2, provided that the rest of the pipeline is the
 same?
 
-For now, we have methods for:
+Currently, we have methods for:
  * peak detection
  * peak localization
  * peak selection
@@ -24,7 +24,7 @@ For now, we have methods for:
  * clustering
  * template matching
 
-For some of theses steps, implementations are in a very early stage and are still a bit *drafty*.
+For some of these steps, implementations are in a very early stage and are still a bit *drafty*.
 Signature and behavior may change from time to time in this alpha period development.
 
 You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailed
@@ -76,7 +76,7 @@ Different methods are available with the :code:`method` argument:
 
 **NOTE**: the torch implementations give slightly different results due to a different implementation.
 
-Peak detection, as many sorting components, can be run in parallel.
+Peak detection, as many of the other sorting components, can be run in parallel.
 
 
 Peak localization
@@ -105,8 +105,8 @@ Currently, the following methods are implemented:
   * 'center_of_mass'
   * 'monopolar_triangulation' with optimizer='least_square'
     This method is from Julien Boussard and Erdem Varol from the Paninski lab.
-    This has been presented at [NeurIPS](https://nips.cc/Conferences/2021/ScheduleMultitrack?event=26709)
-    see also [here](https://openreview.net/forum?id=ohfi44BZPC4)
+    This has been presented at `NeurIPS <https://nips.cc/Conferences/2021/ScheduleMultitrack?event=26709>`_
+    see also `here <https://openreview.net/forum?id=ohfi44BZPC4>`_
   * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
 
 These methods are the same as implemented in :py:mod:`spikeinterface.postprocessing.unit_localization`
@@ -133,7 +133,7 @@ Peak selection
 --------------
 
 When too many peaks are detected a strategy can be used to select (or sub-sample) only some of them before clustering.
-This is the strategy used by spyking-circus or tridesclous, for instance.
+This is the strategy used by spyking-circus and tridesclous, for instance.
 Then, clustering is run on this subset of peaks, templates are extracted, and a template-matching step is run to find
 all spikes.
 
@@ -219,7 +219,7 @@ Here is a short example that depends on the output of "Motion interpolation":
   from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 
   recording_corrected = InterpolateMotionRecording(recording=recording_with_drift, motion=motion, temporal_bins=temporal_bins, spatial_bins=spatial_bins
-                                                   spatial_interpolation_method='kriging,
+                                                   spatial_interpolation_method='kriging',
                                                    border_mode='remove_channels')
 
 **Notes**:
@@ -227,14 +227,14 @@ Here is a short example that depends on the output of "Motion interpolation":
   * :code:`border_mode` is a very important parameter. It controls dealing with the border because motion causes units on the
     border to not be present throughout the entire recording. We highly recommend the :code:`border_mode='remove_channels'`
     because this removes channels on the border that will be impacted by drift. Of course the larger the motion is
-    the more channels are removed.
+    the greater the number of channels that would be removed.
 
 
 Clustering
 ----------
 
 The clustering step remains the central step of spike sorting.
-Historically this step was separted into two distinct parts: feature reduction and clustering.
+Historically this step was separated into two distinct parts: feature reduction and clustering.
 In SpikeInterface, we decided to regroup these two steps into the same module.
 This allows one to compute feature reduction 'on-the-fly' and avoid long computations and storage of
 large features.

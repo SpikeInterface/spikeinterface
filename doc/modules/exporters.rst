@@ -31,11 +31,11 @@ The input of the :py:func:`~spikeinterface.exporters.export_to_phy` is a :code:`
     we = extract_waveforms(recording=recording, sorting=sorting, folder='waveforms', sparse=True)
 
     # some computations are done before to control all options
-    compute_spike_amplitudes(waveform_extractor=we)
-    compute_principal_components(waveform_extractor=we, n_components=3, mode='by_channel_global')
+    _ = compute_spike_amplitudes(waveform_extractor=we)
+    _ = compute_principal_components(waveform_extractor=we, n_components=3, mode='by_channel_global')
 
     # the export process is fast because everything is pre-computed
-    export_to_phy(wavefor_extractor=we, output_folder='path/to/phy_folder')
+    export_to_phy(waveform_extractor=we, output_folder='path/to/phy_folder')
 
 
 
@@ -74,9 +74,9 @@ with many units!
     we = extract_waveforms(recording=recording, sorting=sorting, folder='path/to/wf', sparse=True)
 
     # some computations are done before to control all options
-    compute_spike_amplitudes(waveform_extractor=we)
-    compute_correlograms(waveform_extractor=we)
-    compute_quality_metrics(waveform_extractor=we, metric_names=['snr', 'isi_violation', 'presence_ratio'])
+    _ = compute_spike_amplitudes(waveform_extractor=we)
+    - = compute_correlograms(waveform_extractor=we)
+    _ = compute_quality_metrics(waveform_extractor=we, metric_names=['snr', 'isi_violation', 'presence_ratio'])
 
     # the export process
     export_report(waveform_extractor=we, output_folder='path/to/spikeinterface-report-folder')

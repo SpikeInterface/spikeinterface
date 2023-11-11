@@ -70,7 +70,7 @@ To install it, run:
 
 .. code-block:: bash
 
-    pip install sortingview figurl-jupyter
+    pip install sortingview
 
 Internally, the processed data to be rendered are uploaded to a public bucket in the cloud, so that they
 can be visualized via the web (if :code:`generate_url=True`).
@@ -78,7 +78,7 @@ When running in a Jupyter notebook or JupyterLab, the sortingview widget will al
 notebook!
 
 To set up the backend, you need to authenticate to `kachery-cloud` using your GitHub account by running
-the following command (you will be prompted a link):
+the following command (you will be prompted with a link):
 
 .. code-block:: bash
 
@@ -196,13 +196,13 @@ The functions have the following additional arguments:
 .. code-block:: python
 
     # sortingview backend
-    w_ts = sw.plot_traces(recording=recording, backend="ipywidgets")
-    w_ss = sw.plot_sorting_summary(recording=recording, backend="sortingview")
+    w_ts = sw.plot_traces(recording=recording, backend="sortingview")
+    w_ss = sw.plot_sorting_summary(waveform_extractor = we, curation=True, backend="sortingview")
 
 
 **Output:**
 
-* `Timeseries link <https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://6016ab466ee53facc5eb62de080c57f9b547ba92&label=SpikeInterface%20-%20Timeseries>`_
+* `plot_traces link <https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://6016ab466ee53facc5eb62de080c57f9b547ba92&label=SpikeInterface%20-%20Timeseries>`_
 
 .. image:: ../images/sv_timeseries.png
 
@@ -278,11 +278,7 @@ Available plotting functions
 * :py:func:`~spikeinterface.widgets.plot_unit_waveforms` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 
 
-Legacy plotting functions
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-These functions are still part of the package, but they are directly implemented in :code:`matplotlib` without the
-more recend backend mechanism:
+# Which have been moved over?
 
 * :py:func:`~spikeinterface.widgets.plot_rasters`
 * :py:func:`~spikeinterface.widgets.plot_probe_map`
