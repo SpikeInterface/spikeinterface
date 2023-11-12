@@ -343,7 +343,7 @@ def compute_distance_matrix(sorting1, sorting2, delta_frames):
     num_segments_sorting2 = sorting2.get_num_segments()
     assert (
         num_segments_sorting1 == num_segments_sorting2
-    ), "make_match_count_matrix : sorting1 and sorting2 must have the same segment number"
+    ), "make_match_count_matrix : sorting1 and sorting2 must have the same number of segments"
 
     optimized_compute_dot_product = get_optimized_dot_product_function()
     get_optimized_compute_norm = get_optimized_compute_norm_function()
