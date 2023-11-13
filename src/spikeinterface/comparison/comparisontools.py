@@ -155,7 +155,8 @@ def get_optimized_compute_matching_matrix():
         Returns
         -------
         matching_matrix : ndarray
-            A 2D numpy array of shape `(num_units_train1, num_units_train2)`
+            A 2D numpy array of shape `(num_units_train1, num_units_train2)`. Each element `[i, j]` represents
+            the count of matching spike pairs between unit `i` from `spike_frames_train1` and unit `j` from `spike_frames_train2`.
 
         """
 
