@@ -324,12 +324,12 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, ensure_symmetry=Fa
     return match_event_counts_df
 
 
-def make_agreement_scores(sorting1, sorting2, delta_frames):
+def make_agreement_scores(sorting1, sorting2, delta_frames, ensure_symmetry=True):
     """
     Make the agreement matrix.
     No threshold (min_score) is applied at this step.
 
-    Note : this computation is symmetric.
+    Note : this computation is symmetric by default.
     Inverting sorting1 and sorting2 give the transposed matrix.
 
     Parameters
@@ -340,7 +340,9 @@ def make_agreement_scores(sorting1, sorting2, delta_frames):
         The second sorting extractor
     delta_frames: int
         Number of frames to consider spikes coincident
-
+    ensure_symmetry: bool, default: True
+        If ensure_symmetry is True, then the algo is run two times by switching sorting1 and sorting2.
+        And the minimum of the two results is taken.
     Returns
     -------
     agreement_scores: array (float)
@@ -356,7 +358,7 @@ def make_agreement_scores(sorting1, sorting2, delta_frames):
     event_counts1 = pd.Series(ev_counts1, index=unit1_ids)
     event_counts2 = pd.Series(ev_counts2, index=unit2_ids)
 
-    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, ensure_symmetry=True)
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, ensure_symmetry=ensure_symmetry)
 
     agreement_scores = make_agreement_scores_from_count(match_event_count, event_counts1, event_counts2)
 
