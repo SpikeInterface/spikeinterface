@@ -110,7 +110,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update({"noise_levels": noise_levels})
 
         labels, peak_labels = find_cluster_from_peaks(
-            recording_f, selected_peaks, method="random_projections", method_kwargs=clustering_params
+            recording_f, selected_peaks, method="circus", method_kwargs=clustering_params
         )
 
         ## We get the labels for our peaks
