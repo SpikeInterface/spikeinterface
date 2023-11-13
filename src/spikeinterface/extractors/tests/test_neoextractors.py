@@ -278,7 +278,6 @@ class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(ON_GITHUB, reason="Maxwell plugin not installed on GitHub")
 class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MaxwellRecordingExtractor
     downloads = ["maxwell"]
