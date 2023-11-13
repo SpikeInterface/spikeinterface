@@ -178,7 +178,7 @@ def get_optimized_compute_matching_matrix():
 
 def make_match_count_matrix(sorting1, sorting2, delta_frames, symmetric=False):
     """
-    Compute a matrix representing the matches between two Sorting objects.
+    Computes a matrix representing the matches between two Sorting objects.
 
     Given two spike trains, this function finds matching spikes based on a temporal proximity criterion
     defined by `delta_frames`. The resulting matrix indicates the number of matches between units
