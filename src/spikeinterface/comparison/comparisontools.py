@@ -188,7 +188,7 @@ def get_optimized_compute_matching_matrix():
         the metrics section in SpikeForest documentation.
         """
 
-        matching_matrix = np.zeros((num_units_train1, num_units_train2), dtype=np.uint16)
+        matching_matrix = np.zeros((num_units_train1, num_units_train2), dtype=np.uint64)
 
         # Used to avoid the same spike matching twice
         last_match_frame1 = -np.ones_like(matching_matrix, dtype=np.int64)
