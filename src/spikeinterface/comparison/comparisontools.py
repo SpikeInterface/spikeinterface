@@ -235,7 +235,7 @@ def get_optimized_compute_matching_matrix():
 def make_match_count_matrix(sorting1, sorting2, delta_frames):
     num_units_sorting1 = sorting1.get_num_units()
     num_units_sorting2 = sorting2.get_num_units()
-    matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.uint16)
+    matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.uint64)
 
     spike_vector1_segments = sorting1.to_spike_vector(concatenated=False)
     spike_vector2_segments = sorting2.to_spike_vector(concatenated=False)
