@@ -449,6 +449,7 @@ def _download_bytes_to_tmpfile(url, start, end):
     headers = {"Range": "bytes={}-{}".format(start, end - 1)}
     r = requests.get(url, headers=headers, stream=True)
     fd, tmp_fname = tempfile.mkstemp()
+    os.close(fd)
     with open(tmp_fname, "wb") as f:
         for chunk in r.iter_content(chunk_size=1024):
             if chunk:
