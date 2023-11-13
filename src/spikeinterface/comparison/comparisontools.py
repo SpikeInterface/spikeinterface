@@ -63,7 +63,7 @@ def compute_agreement_score(num_matches, num1, num2):
 def do_count_event(sorting):
     """
     Count event for each units in a sorting.
-    
+
     Kept for backward compatibility sorting.count_num_spikes_per_unit() is doing the same.
 
     Parameters
@@ -79,7 +79,6 @@ def do_count_event(sorting):
     import pandas as pd
 
     return pd.Series(sorting.count_num_spikes_per_unit())
-
 
 
 def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, event_counts2  unit2_ids,
