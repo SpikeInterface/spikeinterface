@@ -257,7 +257,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, ensure_symmetry=Fa
     There are corner cases where a spike can be counted twice in the spiketrain 2 if there are bouts of bursting activity
     (below delta_frames) in the spiketrain 1. To ensure that the number of matches does not exceed the number of spikes,
     we apply a final clip.
-    
+
 
     For more details on the rationale behind this approach, refer to the documentation of this module and/or
     the metrics section in SpikeForest documentation.
