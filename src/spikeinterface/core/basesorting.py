@@ -280,14 +280,7 @@ class BaseSorting(BaseExtractor):
         """
         num_spikes = {}
 
-        if self._cached_spike_trains is not None:
-            for unit_id in self.unit_ids:
-                n = 0
-                for segment_index in range(self.get_num_segments()):
-                    st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                    n += st.size
-                num_spikes[unit_id] = n
-        else:
+        if self._cached_spike_vector is not None:
             spike_vector = self.to_spike_vector()
             unit_indices, counts = np.unique(spike_vector["unit_index"], return_counts=True)
             for unit_index, unit_id in enumerate(self.unit_ids):
@@ -296,6 +289,13 @@ class BaseSorting(BaseExtractor):
                     num_spikes[unit_id] = counts[idx]
                 else:  # This unit has no spikes, hence it's not in the counts array.
                     num_spikes[unit_id] = 0
+        else:
+            for unit_id in self.unit_ids:
+                n = 0
+                for segment_index in range(self.get_num_segments()):
+                    st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                    n += st.size
+                num_spikes[unit_id] = n
 
         return num_spikes
 
