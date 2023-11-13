@@ -74,7 +74,7 @@ class CircusClustering:
 
     _default_params = {
         "hdbscan_kwargs": {
-            "min_cluster_size": 50,
+            "min_cluster_size": 20,
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "leaf",
@@ -83,7 +83,7 @@ class CircusClustering:
         "waveforms": {"ms_before": 2, "ms_after": 2, "max_spikes_per_unit": 100},
         "radius_um": 100,
         "selection_method": "closest_to_centroid",
-        "n_svd": 10,
+        "n_svd": 5,
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
