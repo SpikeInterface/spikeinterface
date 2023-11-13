@@ -132,6 +132,36 @@ def get_optimized_compute_matching_matrix():
         num_units_train2,
         delta_frames,
     ):
+        """
+        Internal function used by `make_match_count_matrix()`.
+        This function is for one segment only.
+        The llop over segment is done in `make_match_count_matrix()`
+
+        Parameters
+        ----------
+        spike_frames_train1 : ndarray
+            An array of integer frame numbers corresponding to spike times for the first train. Must be in ascending order.
+        spike_frames_train2 : ndarray
+            An array of integer frame numbers corresponding to spike times for the second train. Must be in ascending order.
+        unit_indices1 : ndarray
+            An array of integers where `unit_indices1[i]` gives the unit index associated with the spike at `spike_frames_train1[i]`.
+        unit_indices2 : ndarray
+            An array of integers where `unit_indices2[i]` gives the unit index associated with the spike at `spike_frames_train2[i]`.
+        num_units_train1 : int
+            The total count of unique units in the first spike train.
+        num_units_train2 : int
+            The total count of unique units in the second spike train.
+        delta_frames : int
+            The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
+            if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at `spike_frames_train1[i]`
+            and `spike_frames_train2[j]` are considered matching.
+
+        Returns
+        -------
+        matching_matrix : ndarray
+            A 2D numpy array of shape `(num_units_train1, num_units_train2)`
+
+        """
         matching_matrix = np.zeros((num_units_train1, num_units_train2), dtype=np.uint16)
 
         # Used to avoid the same spike matching twice
@@ -176,7 +206,7 @@ def get_optimized_compute_matching_matrix():
     return compute_matching_matrix
 
 
-def make_match_count_matrix(sorting1, sorting2, delta_frames, symmetric=False):
+def make_match_count_matrix(sorting1, sorting2, delta_frames, ensure_symmetry=False):
     """
     Computes a matrix representing the matches between two Sorting objects.
 
@@ -194,11 +224,11 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symmetric=False):
         An array of integer frame numbers corresponding to spike times for the second train. Must be in ascending order.
     delta_frames : int
         The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
-        if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at `spike_frames_train1[i]`
-        and `spike_frames_train2[j]` are considered matching.
-    symmetric: bool, dfault False
-        If symmetric, the this the algos is run two times by switching sorting1 and sorting2 the minimum of the two
-        results is taken.
+        if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at
+        `spike_frames_train1[i]` and `spike_frames_train2[j]` are considered matching.
+    ensure_symmetry: bool, default False
+        If ensure_symmetry=True, then the algo is run two times by switching sorting1 and sorting2.
+        And the minimum of the two results is taken.
     Returns
     -------
     matching_matrix : ndarray
@@ -221,11 +251,12 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symmetric=False):
     3. Save the index of the first match as the new `second_train_search_start `
     3. For each match, find as many matches as possible from the first match onwards.
 
-    An important condition is that the same spike is not matched twice. This is managed by keeping track
+    An important condition here is that the same spike is not matched twice. This is managed by keeping track
     of the last matched frame for each unit pair in `last_match_frame1` and `last_match_frame2`
-    There are corner cases where a spike can be counted twice in the the spiketrain 2 in case of bursting situations
-    (below delta_frames) in the spiketrain 1. To ensure that the number of match do not exceed the number of spike,
-    we applied a final clip.
+    There are corner cases where a spike can be counted twice in the spiketrain 2 if there are bouts of bursting activity
+    (below delta_frames) in the spiketrain 1. To ensure that the number of matches does not exceed the number of spikes,
+    we apply a final clip.
+    
 
     For more details on the rationale behind this approach, refer to the documentation of this module and/or
     the metrics section in SpikeForest documentation.
@@ -265,7 +296,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symmetric=False):
             delta_frames,
         )
 
-        if symmetric:
+        if ensure_symmetry:
             matching_matrix_seg_switch = get_optimized_compute_matching_matrix()(
                 sample_frames2_sorted,
                 sample_frames1_sorted,
@@ -327,7 +358,7 @@ def make_agreement_scores(sorting1, sorting2, delta_frames):
     event_counts1 = pd.Series(ev_counts1, index=unit1_ids)
     event_counts2 = pd.Series(ev_counts2, index=unit2_ids)
 
-    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, ensure_symmetry=True)
 
     agreement_scores = make_agreement_scores_from_count(match_event_count, event_counts1, event_counts2)
 

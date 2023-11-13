@@ -28,7 +28,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         delta_time=0.4,
         match_score=0.5,
         chance_score=0.1,
-        symmetric=False,
+        ensure_symmetry=False,
         n_jobs=1,
         verbose=False,
     ):
@@ -56,7 +56,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         self.unit1_ids = self.sorting1.get_unit_ids()
         self.unit2_ids = self.sorting2.get_unit_ids()
 
-        self.symmetric = symmetric
+        self.ensure_symmetry = ensure_symmetry
 
         self._do_agreement()
         self._do_matching()
@@ -88,7 +88,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
 
         # matrix of  event match count for each pair
         self.match_event_count = make_match_count_matrix(
-            self.sorting1, self.sorting2, self.delta_frames, symmetric=self.symmetric
+            self.sorting1, self.sorting2, self.delta_frames, ensure_symmetry=self.ensure_symmetry
         )
 
         # agreement matrix score for each pair
@@ -156,7 +156,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
             delta_time=delta_time,
             match_score=match_score,
             chance_score=chance_score,
-            symmetric=True,
+            ensure_symmetry=True,
             n_jobs=n_jobs,
             verbose=verbose,
         )
@@ -289,7 +289,7 @@ class GroundTruthComparison(BasePairSorterComparison):
             delta_time=delta_time,
             match_score=match_score,
             chance_score=chance_score,
-            symmetric=False,
+            ensure_symmetry=False,
             n_jobs=n_jobs,
             verbose=verbose,
         )

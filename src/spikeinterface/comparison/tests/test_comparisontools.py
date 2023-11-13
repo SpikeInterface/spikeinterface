@@ -154,17 +154,17 @@ def test_make_match_count_matrix_repeated_matching_but_no_double_counting_2():
     sorting1, sorting2 = make_sorting(frames_spike_train1, unit_indices1, frames_spike_train2, unit_indices2)
 
     # this is easy because it is sorting2 centric
-    result = make_match_count_matrix(sorting2, sorting1, delta_frames=delta_frames, symmetric=False)
+    result = make_match_count_matrix(sorting2, sorting1, delta_frames=delta_frames, ensure_symmetry=False)
     expected_result = np.array([[2]])
     assert_array_equal(result.to_numpy(), expected_result)
 
     # this work only because we protect by clipping
-    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, symmetric=False)
+    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, ensure_symmetry=False)
     expected_result = np.array([[2]])
     assert_array_equal(result.to_numpy(), expected_result)
 
 
-def test_make_match_count_matrix_symmetric():
+def test_make_match_count_matrix_ensure_symmetry():
     frames_spike_train1 = [
         100,
         102,
@@ -179,8 +179,8 @@ def test_make_match_count_matrix_symmetric():
 
     sorting1, sorting2 = make_sorting(frames_spike_train1, unit_indices1, frames_spike_train2, unit_indices2)
 
-    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, symmetric=True)
-    result_T = make_match_count_matrix(sorting2, sorting1, delta_frames=delta_frames, symmetric=True)
+    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, ensure_symmetry=True)
+    result_T = make_match_count_matrix(sorting2, sorting1, delta_frames=delta_frames, ensure_symmetry=True)
 
     assert_array_equal(result.T, result_T)
 
@@ -481,23 +481,23 @@ def test_do_count_score_and_perf():
 
 
 if __name__ == "__main__":
-    # test_make_match_count_matrix()
-    # test_make_match_count_matrix_sorting_with_itself_simple()
-    # test_make_match_count_matrix_sorting_with_itself_longer()
-    # test_make_match_count_matrix_with_mismatched_sortings()
-    # test_make_match_count_matrix_no_double_matching()
-    # test_make_match_count_matrix_repeated_matching_but_no_double_counting()
-    # test_make_match_count_matrix_repeated_matching_but_no_double_counting_2()
-    # test_make_match_count_matrix_test_proper_search_in_the_second_train()
-    test_make_match_count_matrix_symmetric()
+    test_make_match_count_matrix()
+    test_make_match_count_matrix_sorting_with_itself_simple()
+    test_make_match_count_matrix_sorting_with_itself_longer()
+    test_make_match_count_matrix_with_mismatched_sortings()
+    test_make_match_count_matrix_no_double_matching()
+    test_make_match_count_matrix_repeated_matching_but_no_double_counting()
+    test_make_match_count_matrix_repeated_matching_but_no_double_counting_2()
+    test_make_match_count_matrix_test_proper_search_in_the_second_train()
+    test_make_match_count_matrix_ensure_symmetry()
 
-    # test_make_agreement_scores()
+    test_make_agreement_scores()
 
-    # test_make_possible_match()
-    # test_make_best_match()
-    # test_make_hungarian_match()
+    test_make_possible_match()
+    test_make_best_match()
+    test_make_hungarian_match()
 
-    # test_do_score_labels()
-    # test_compare_spike_trains()
-    # test_do_confusion_matrix()
-    # test_do_count_score_and_perf()
+    test_do_score_labels()
+    test_compare_spike_trains()
+    test_do_confusion_matrix()
+    test_do_count_score_and_perf()
