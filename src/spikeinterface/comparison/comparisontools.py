@@ -184,7 +184,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symmetric=False):
     defined by `delta_frames`. The resulting matrix indicates the number of matches between units
     in `spike_frames_train1` and `spike_frames_train2` for each pair of units.
 
-    Note that this algo is not symmetric and biased toward sorting1 is the ground truth.
+    Note that this algo is not symmetric and is biased with `sorting1` representing ground truth for the comparison
 
     Parameters
     ----------
