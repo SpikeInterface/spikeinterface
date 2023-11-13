@@ -63,6 +63,9 @@ def compute_agreement_score(num_matches, num1, num2):
 def do_count_event(sorting):
     """
     Count event for each units in a sorting.
+    
+    Kept for backward compatibility sorting.count_num_spikes_per_unit() is doing the same.
+
     Parameters
     ----------
     sorting: SortingExtractor
@@ -75,14 +78,8 @@ def do_count_event(sorting):
     """
     import pandas as pd
 
-    unit_ids = sorting.get_unit_ids()
-    ev_counts = np.zeros(len(unit_ids), dtype="int64")
-    for segment_index in range(sorting.get_num_segments()):
-        ev_counts += np.array(
-            [len(sorting.get_unit_spike_train(u, segment_index=segment_index)) for u in unit_ids], dtype="int64"
-        )
-    event_counts = pd.Series(ev_counts, index=unit_ids)
-    return event_counts
+    return pd.Series(sorting.count_num_spikes_per_unit())
+
 
 
 def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, event_counts2  unit2_ids,
