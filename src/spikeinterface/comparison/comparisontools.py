@@ -221,7 +221,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, symmetric=False):
     3. Save the index of the first match as the new `second_train_search_start `
     3. For each match, find as many matches as possible from the first match onwards.
 
-    An important condition here is that the same spike is not matched twice. This is managed by keeping track
+    An important condition is that the same spike is not matched twice. This is managed by keeping track
     of the last matched frame for each unit pair in `last_match_frame1` and `last_match_frame2`
     There are corner cases where a spike can be counted twice in the the spiketrain 2 in case of bursting situations
     (below delta_frames) in the spiketrain 1. To ensure that the number of match do not exceed the number of spike,
