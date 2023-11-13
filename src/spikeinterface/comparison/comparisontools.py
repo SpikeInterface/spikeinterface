@@ -131,7 +131,7 @@ def get_optimized_compute_matching_matrix():
         """
         Internal function used by `make_match_count_matrix()`.
         This function is for one segment only.
-        The llop over segment is done in `make_match_count_matrix()`
+        The loop over segment is done in `make_match_count_matrix()`
 
         Parameters
         ----------
