@@ -1,3 +1,4 @@
+from matplotlib import scale
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -8,7 +9,6 @@ from ..core.waveform_extractor import WaveformExtractor
 from ..core.basesorting import BaseSorting
 
 
-# TODO: add shading if plot_waveforms=False
 class UnitWaveformsWidget(BaseWidget):
     """
     Plots unit waveforms.
@@ -49,14 +49,20 @@ class UnitWaveformsWidget(BaseWidget):
         Alpha value for waveforms (matplotlib backend)
     alpha_templates : float, default: 1
         Alpha value for templates, (matplotlib backend)
-    hide_unit_selector : bool, default: False
-        For sortingview backend, if True the unit selector is not displayed
-    templates_percentile_shading : float or None, default: 5
-        For sortingview backend, it controls the shading of the templates.
-        If None, the template standard deviation is used to shade the templates.
+    shade_templates : bool, default: True
+        If True, templates are shaded, see templates_percentile_shading argument
+    templates_percentile_shading : float, list of floats, or None, default: [5, 25, 75, 95]
+        It controls the shading of the templates.
+        If None, the shading is +/- the standard deviation of the templates.
         If float, it controls the percentile of the template values used to shade the templates.
         Note that it is one-sided: if 5 is given, the 5th and 95th percentiles are used to shade
-        the templates
+        the templates. If list of floats, it can be a 2-element or 4-element list.
+        If 2-element, it controls the lower and upper percentile used to shade the templates.
+        If 4-element, it controls the lower and upper percentiles used to shade the templates:
+        the first two elements are used for the lower bounds of the light and dark shading,
+        and the last two elements are used for the upper bounds of the light and dark shading.
+    hide_unit_selector : bool, default: False
+        For sortingview backend, if True the unit selector is not displayed
     same_axis : bool, default: False
         If True, waveforms and templates are displayed on the same axis (matplotlib backend)
     x_offset_units : bool, default: False
@@ -84,7 +90,8 @@ class UnitWaveformsWidget(BaseWidget):
         max_spikes_per_unit=50,
         set_title=True,
         same_axis=False,
-        templates_percentile_shading=5,
+        shade_templates=True,
+        templates_percentile_shading=[5, 25, 75, 95],
         x_offset_units=False,
         alpha_waveforms=0.5,
         alpha_templates=1,
@@ -121,13 +128,7 @@ class UnitWaveformsWidget(BaseWidget):
 
         # get templates
         templates = we.get_all_templates(unit_ids=unit_ids)
-        if templates_percentile_shading is None:
-            template_stds = we.get_all_templates(unit_ids=unit_ids, mode="std")
-        else:
-            template_percentile = we.get_all_templates(
-                unit_ids=unit_ids, mode="percentile", percentile=templates_percentile_shading
-            )
-            template_stds = template_percentile - templates
+        templates_shading = self._get_template_shadings(we, unit_ids, templates_percentile_shading)
 
         xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
             waveform_extractor, templates, channel_locations, x_offset_units
@@ -151,7 +152,8 @@ class UnitWaveformsWidget(BaseWidget):
             unit_colors=unit_colors,
             channel_locations=channel_locations,
             templates=templates,
-            template_stds=template_stds,
+            templates_shading=templates_shading,
+            do_shading=shade_templates,
             plot_waveforms=plot_waveforms,
             plot_templates=plot_templates,
             plot_channels=plot_channels,
@@ -240,9 +242,71 @@ class UnitWaveformsWidget(BaseWidget):
                     xvec = xvectors_flat + i * 0.7 * dp.delta_x
                 else:
                     xvec = xvectors_flat
+                # plot template shading if waveforms are not plotted
+                if not dp.plot_waveforms and dp.do_shading:
+                    if len(dp.templates_shading) == 2:
+                        lower_bound = (
+                            dp.templates_shading[0][i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
+                        )
+                        upper_bound = (
+                            dp.templates_shading[1][i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
+                        )
+                        ax.fill_between(
+                            xvec,
+                            lower_bound.T.flatten(),
+                            upper_bound.T.flatten(),
+                            color="gray",
+                            alpha=0.5,
+                        )
+                    elif len(dp.templates_shading) == 4:
+                        lower_bound = (
+                            dp.templates_shading[0][i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
+                        )
+                        mid_lower_bound = (
+                            dp.templates_shading[1][i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
+                        )
+                        mid_upper_bound = (
+                            dp.templates_shading[2][i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
+                        )
+                        upper_bound = (
+                            dp.templates_shading[3][i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
+                        )
+                        ax.fill_between(
+                            xvec,
+                            lower_bound.T.flatten(),
+                            mid_lower_bound.T.flatten(),
+                            color="gray",
+                            alpha=0.2,
+                        )
+                        ax.fill_between(
+                            xvec,
+                            mid_lower_bound.T.flatten(),
+                            mid_upper_bound.T.flatten(),
+                            color="gray",
+                            alpha=0.5,
+                        )
+                        ax.fill_between(
+                            xvec,
+                            mid_upper_bound.T.flatten(),
+                            upper_bound.T.flatten(),
+                            color="gray",
+                            alpha=0.2,
+                        )
+                if dp.plot_waveforms:
+                    # make color darker (amount = 0.2)
+                    import matplotlib.colors as mc
 
+                    color_rgb = mc.to_rgb(color)
+                    template_color = tuple(np.clip([c - 0.2 for c in color_rgb], 0, 1))
+                else:
+                    template_color = color
                 ax.plot(
-                    xvec, template.T.flatten(), lw=dp.lw_templates, alpha=dp.alpha_templates, color=color, label=unit_id
+                    xvec,
+                    template.T.flatten(),
+                    lw=dp.lw_templates,
+                    alpha=dp.alpha_templates,
+                    color=template_color,
+                    label=unit_id,
                 )
 
                 template_label = dp.unit_ids[i]
@@ -265,7 +329,7 @@ class UnitWaveformsWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector, ScaleWidget
 
         check_ipywidget_backend()
 
@@ -289,8 +353,9 @@ class UnitWaveformsWidget(BaseWidget):
                 self.fig_probe, self.ax_probe = plt.subplots(figsize=((ratios[2] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        self.unit_selector = UnitSelector(data_plot["unit_ids"])
+        self.unit_selector = UnitSelector(data_plot["unit_ids"], layout=widgets.Layout(height="80%"))
         self.unit_selector.value = list(data_plot["unit_ids"])[:1]
+        self.scaler = ScaleWidget(layout=widgets.Layout(height="20%"))
 
         self.same_axis_button = widgets.Checkbox(
             value=False,
@@ -311,26 +376,46 @@ class UnitWaveformsWidget(BaseWidget):
         )
 
         footer = widgets.HBox([self.same_axis_button, self.plot_templates_button, self.hide_axis_button])
+        left_sidebar = widgets.VBox([self.unit_selector, self.scaler])
 
         self.widget = widgets.AppLayout(
             center=self.fig_wf.canvas,
-            left_sidebar=self.unit_selector,
+            left_sidebar=left_sidebar,
             right_sidebar=self.fig_probe.canvas,
             pane_widths=ratios,
             footer=footer,
         )
 
         # a first update
-        self._update_ipywidget(None)
+        self._update_plot(None)
 
-        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
+        self.unit_selector.observe(self._update_plot, names="value", type="change")
+        self.scaler.observe(self._update_plot, names="value", type="change")
         for w in self.same_axis_button, self.plot_templates_button, self.hide_axis_button:
-            w.observe(self._update_ipywidget, names="value", type="change")
+            w.observe(self._update_plot, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
 
-    def _update_ipywidget(self, change):
+    def _get_template_shadings(self, we, unit_ids, templates_percentile_shading):
+        templates = we.get_all_templates(unit_ids=unit_ids)
+        if templates_percentile_shading is None:
+            templates_std = we.get_all_templates(unit_ids=unit_ids, mode="std")
+            templates_shading = [templates - templates_std, templates + templates_std]
+        else:
+            if isinstance(templates_percentile_shading, (int, float)):
+                templates_percentile_shading = [templates_percentile_shading, 100 - templates_percentile_shading]
+            else:
+                assert isinstance(
+                    templates_percentile_shading, list
+                ), "'templates_percentile_shading' should be a float, a list of floats, or None!"
+            templates_shading = []
+            for percentile in templates_percentile_shading:
+                template_percentile = we.get_all_templates(unit_ids=unit_ids, mode="percentile", percentile=percentile)
+                templates_shading.append(template_percentile)
+        return templates_shading
+
+    def _update_plot(self, change):
         self.fig_wf.clear()
         self.ax_probe.clear()
 
@@ -347,12 +432,15 @@ class UnitWaveformsWidget(BaseWidget):
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = unit_ids
-        data_plot["templates"] = self.we.get_all_templates(unit_ids=unit_ids)
-        data_plot["template_stds"] = self.we.get_all_templates(unit_ids=unit_ids, mode="std")
+        data_plot["templates"] = self.we.get_all_templates(unit_ids=unit_ids) * self.scaler.value
+        templates_shadings = self._get_template_shadings(self.we, unit_ids, data_plot["templates_percentile_shading"])
+        data_plot["templates_shading"] = [ts * self.scaler.value for ts in templates_shadings]
         data_plot["same_axis"] = same_axis
         data_plot["plot_templates"] = plot_templates
         if data_plot["plot_waveforms"]:
-            data_plot["wfs_by_ids"] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
+            data_plot["wfs_by_ids"] = {
+                unit_id: self.we.get_waveforms(unit_id) * self.scaler.value for unit_id in unit_ids
+            }
 
         # TODO option for plot_legend
 

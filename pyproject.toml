@@ -100,7 +100,7 @@ widgets = [
     "matplotlib",
     "ipympl",
     "ipywidgets",
-    "sortingview>=0.11.15",
+    "sortingview>=0.12.0",
 ]
 
 qualitymetrics = [
