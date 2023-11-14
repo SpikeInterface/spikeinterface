@@ -52,6 +52,8 @@ jobs:
       - name: Shows installed packages by pip, git-annex and cached testing files
         uses: ./.github/actions/show-test-environment
       - name: run tests
+        env:
+          HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         run: |
           source ${{ github.workspace }}/test_env/bin/activate
           pytest -m "not sorters_external" --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
