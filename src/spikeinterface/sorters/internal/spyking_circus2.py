@@ -21,12 +21,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "ptp", "threshold": 1},
+        "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "energy", "threshold": 0.25},
         "filtering": {"freq_min": 150, "dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "localization": {},
-        "clustering": {},
+        "clustering": {"legacy" : False},
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
@@ -109,8 +108,18 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
         clustering_params.update({"noise_levels": noise_levels})
 
+        if "legacy" in clustering_params:
+            legacy = clustering_params["legacy"]
+        else:
+            legacy = False
+
+        if legacy:
+            clustering_method = "circus"
+        else:
+            clustering_method = "random_projections"
+
         labels, peak_labels = find_cluster_from_peaks(
-            recording_f, selected_peaks, method="circus", method_kwargs=clustering_params
+            recording_f, selected_peaks, method=clustering_method, method_kwargs=clustering_params
         )
 
         ## We get the labels for our peaks
