@@ -193,8 +193,11 @@ class CircusClustering:
             tsvd = TruncatedSVD(params["n_svd"][1])
             sub_data = all_pc_data[mask]
             hdbscan_data = tsvd.fit_transform(sub_data.reshape(len(sub_data), -1))
-            clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
-            local_labels = clustering[0]
+            try:
+                clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
+                local_labels = clustering[0]
+            except Exception:
+                local_labels = -1 * np.ones(len(hdbscan_data))
             valid_clusters = local_labels > -1
             if np.sum(valid_clusters) > 0:
                 local_labels[valid_clusters] += nb_clusters
