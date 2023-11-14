@@ -146,15 +146,15 @@ def compute_correlograms(
     Parameters
     ----------
     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-        If WaveformExtractor, the correlograms are saved as WaveformExtensions.
+        If WaveformExtractor, the correlograms are saved as WaveformExtensions
     load_if_exists : bool, default: False
-        Whether to load precomputed crosscorrelograms, if they already exist.
-    window_ms : float, optional
-        The window in ms, by default 100.0.
-    bin_ms : float, optional
-        The bin size in ms, by default 5.0.
-    method : str, optional
-        "auto" | "numpy" | "numba". If _auto" and numba is installed, numba is used, by default "auto"
+        Whether to load precomputed crosscorrelograms, if they already exist
+    window_ms : float, default: 100.0
+        The window in ms
+    bin_ms : float, default: 5
+        The bin size in ms
+    method : "auto" | "numpy" | "numba", default: "auto"
+         If "auto" and numba is installed, numba is used, otherwise numpy is used
 
     Returns
     -------

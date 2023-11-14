@@ -41,8 +41,8 @@ class AppendSegmentRecording(BaseRecording):
     ----------
     recording_list : list of BaseRecording
         A list of recordings
-    sampling_frequency_max_diff : float
-        Maximum allowed difference of sampling frequencies across recordings (default 0)
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across recordings
     """
 
     def __init__(self, recording_list, sampling_frequency_max_diff=0):
@@ -106,10 +106,10 @@ class ConcatenateSegmentRecording(BaseRecording):
     ----------
     recording_list : list of BaseRecording
         A list of recordings
-    ignore_times: bool
-        If True (default), time information (t_start, time_vector) is ignored when concatenating recordings.
-    sampling_frequency_max_diff : float
-        Maximum allowed difference of sampling frequencies across recordings (default 0)
+    ignore_times: bool, default: True
+        If True, time information (t_start, time_vector) is ignored when concatenating recordings
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across recordings
     """
 
     def __init__(self, recording_list, ignore_times=True, sampling_frequency_max_diff=0):
@@ -284,8 +284,8 @@ class AppendSegmentSorting(BaseSorting):
     ----------
     sorting_list : list of BaseSorting
         A list of sortings
-    sampling_frequency_max_diff : float
-        Maximum allowed difference of sampling frequencies across sortings (default 0)
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across sortings
     """
 
     def __init__(self, sorting_list, sampling_frequency_max_diff=0):
@@ -345,15 +345,15 @@ class ConcatenateSegmentSorting(BaseSorting):
         A list of sortings. If `total_samples_list` is not provided, all
         sortings should have an assigned recording.  Otherwise, all sortings
         should be monosegments.
-    total_samples_list : list[int] or None
+    total_samples_list : list[int] or None, default: None
         If the sortings have no assigned recording, the total number of samples
         of each of the concatenated (monosegment) sortings is pulled from this
         list.
-    ignore_times : bool
-        If True (default), time information (t_start, time_vector) is ignored
+    ignore_times : bool, default: True
+        If True, time information (t_start, time_vector) is ignored
         when concatenating the sortings' assigned recordings.
-    sampling_frequency_max_diff : float
-        Maximum allowed difference of sampling frequencies across sortings (default 0)
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across sortings
     """
 
     def __init__(self, sorting_list, total_samples_list=None, ignore_times=True, sampling_frequency_max_diff=0):
@@ -523,12 +523,12 @@ class SplitSegmentSorting(BaseSorting):
     ----------
     parent_sorting : BaseSorting
         Sorting with a single segment (e.g. from sorting concatenated recording)
-    recording_or_recording_list : list of recordings, ConcatenateSegmentRecording, or None
+    recording_or_recording_list : list of recordings, ConcatenateSegmentRecording, or None, default: None
         If list of recordings, uses the lengths of those recordings to split the sorting
         into smaller segments
         If ConcatenateSegmentRecording, uses the associated list of recordings to split
         the sorting into smaller segments
-        If None, looks for the recording associated with the sorting (default None)
+        If None, looks for the recording associated with the sorting
     """
 
     def __init__(self, parent_sorting: BaseSorting, recording_or_recording_list=None):

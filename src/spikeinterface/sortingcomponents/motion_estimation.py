@@ -47,57 +47,58 @@ def estimate_motion(
     peaks: numpy array
         Peak vector (complex dtype)
     peak_locations: numpy array
-        Complex dtype with 'x', 'y', 'z' fields
+        Complex dtype with "x", "y", "z" fields
 
     {method_doc}
 
     **histogram section**
 
-    direction: 'x', 'y', 'z'
+    direction: "x" | "y" | "z", default: "y"
         Dimension on which the motion is estimated
-    bin_duration_s: float
+    bin_duration_s: float, default: 10
         Bin duration in second
-    bin_um: float (default 10.)
-        Spatial bin size in micro meter
-    margin_um: float (default 0.)
+    bin_um: float, default: 10
+        Spatial bin size in micrometers
+    margin_um: float, default: 0
         Margin in um to exclude from histogram estimation and
         non-rigid smoothing functions to avoid edge effects.
         Positive margin extrapolate out of the probe the motion.
-        Negative margin crop the motion on the border.
+        Negative margin crop the motion on the border
 
     **non-rigid section**
 
-    rigid : bool (default True)
+    rigid : bool, default: False
         Compute rigid (one motion for the entire probe) or non rigid motion
         Rigid computation is equivalent to non-rigid with only one window with rectangular shape.
-    win_shape: 'gaussian' or 'rect' or 'triangle'
+    win_shape: "gaussian" | "rect" | "triangle", default: "gaussian"
         The shape of the windows for non rigid.
-        When rigid this is force to 'rect'
-    win_step_um: float (default 50.)
+        When rigid this is force to "rect"
+    win_step_um: float, default: 50
         Step deteween window
-    win_sigma_um: float (deafult 150.)
+    win_sigma_um: float, default: 150
+        Sigma of the gaussian window
 
     **motion cleaning section**
 
-    post_clean: bool (default False)
-        Apply some post cleaning to motion matrix or not.
-    speed_threshold: float default 30.
-        Detect to fast motion bump and remove then with interpolation.
+    post_clean: bool, default: False
+        Apply some post cleaning to motion matrix or not
+    speed_threshold: float default: 30.
+        Detect to fast motion bump and remove then with interpolation
     sigma_smooth_s: None or float
-        Optional smooting gaussian kernel when not None.
+        Optional smooting gaussian kernel when not None
 
-    output_extra_check: bool
+    output_extra_check: bool, default: False
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
-    upsample_to_histogram_bin: bool or None
+    upsample_to_histogram_bin: bool or None, default: False
         If True then upsample the returned motion array to the number of depth bins specified by bin_um.
         When None:
           * for non rigid case: then automatically True
           * for rigid (non_rigid_kwargs=None): automatically False
-        This feature is in fact a bad idea and the interpolation should be done outside using better methods.
-    progress_bar: bool
-        Display progress bar or not.
-    verbose: bool
+        This feature is in fact a bad idea and the interpolation should be done outside using better methods
+    progress_bar: bool, default: False
+        Display progress bar or not
+    verbose: bool, default: False
         If True, output is verbose
 
 
@@ -216,19 +217,19 @@ class DecentralizedRegistration:
     histogram_time_smooth_s: None or float
         Optional gaussian smoother on histogram on time axis.
         This is given as the sigma of the gaussian in seconds.
-    pairwise_displacement_method: 'conv' or 'phase_cross_correlation'
+    pairwise_displacement_method: "conv" or "phase_cross_correlation"
         How to estimate the displacement in the pairwise matrix.
     max_displacement_um: float
         Maximum possible discplacement in micrometers.
-    weight_scale: 'linear' or 'exp'
+    weight_scale: "linear" or "exp"
         For parwaise displacement, how to to rescale the associated weight matrix.
-    error_sigma: float 0.2
-        In case weight_scale='exp' this controls the sigma of the exponential.
-    conv_engine: 'numpy' or 'torch'
-        In case of pairwise_displacement_method='conv', what library to use to compute
-        the underlying correlation.
+    error_sigma: float, default: 0.2
+        In case weight_scale="exp" this controls the sigma of the exponential.
+    conv_engine: "numpy" or "torch" or None, default: None
+        In case of pairwise_displacement_method="conv", what library to use to compute
+        the underlying correlation
     torch_device=None
-        In case of conv_engine='torch', you can control which device (cpu or gpu)
+        In case of conv_engine="torch", you can control which device (cpu or gpu)
     batch_size: int
         Size of batch for the convolution. Increasing this will speed things up dramatically
         on GPUs and sometimes on CPU as well.
@@ -240,17 +241,17 @@ class DecentralizedRegistration:
         When not None the parwise discplament matrix is computed in a small time horizon.
         In short only pair of bins close in time.
         So the pariwaise matrix is super sparse and have values only the diagonal.
-    convergence_method='lsmr', 'lsqr_robust', 'gradient_descent'
+    convergence_method: "lsmr" | "lsqr_robust" | "gradient_descent", default: "lsqr_robust"
         Which method to use to compute the global displacement vector from the pairwise matrix.
     robust_regression_sigma: float
-        Use for convergence_method='lsqr_robust' for iterative selection of the regression.
-    temporal_prior : bool=True
+        Use for convergence_method="lsqr_robust" for iterative selection of the regression.
+    temporal_prior : bool, default: True
         Ensures continuity across time, unless there is evidence in the recording for jumps.
-    spatial_prior : bool, False
+    spatial_prior : bool, default: False
         Ensures continuity across space. Not usually necessary except in recordings with
         glitches across space.
-    force_spatial_median_continuity: bool, False
-        When spatial_prior=False we can optionaly apply a median continuity across spatial windows.
+    force_spatial_median_continuity: bool, default: False
+        When spatial_prior=False we can optionally apply a median continuity across spatial windows.
     reference_displacement : string, one of: "mean", "median", "time", "mode_search"
         Strategy for picking what is considered displacement=0.
          - "mean" : the mean displacement is subtracted
@@ -258,7 +259,7 @@ class DecentralizedRegistration:
          - "time" : the displacement at a given time (in seconds) is subtracted
          - "mode_search" : an attempt is made to guess the mode. needs work.
     lsqr_robust_n_iter: int
-        Number of iteration for convergence_method='lsqr_robust'.
+        Number of iteration for convergence_method="lsqr_robust".
     """
 
     @classmethod
@@ -467,17 +468,17 @@ class IterativeTemplateRegistration:
 
     name = "iterative_template"
     params_doc = """
-    num_amp_bins: int
-        number ob bins in the histogram on the log amplitues dimension, by default 20.
-    num_shifts_global: int
-        Number of spatial bin shifts to consider for global alignment, by default 15
-    num_iterations: int
-        Number of iterations for global alignment procedure, by default 10
-    num_shifts_block: int
-        Number of spatial bin shifts to consider for non-rigid alignment, by default 5
-    smoothing_sigma: float
-        Sigma of gaussian for covariance matrices smoothing, by default 0.5
-    kriging_sigma: float
+    num_amp_bins: int, default: 20
+        number ob bins in the histogram on the log amplitues dimension
+    num_shifts_global: int, default: 15
+        Number of spatial bin shifts to consider for global alignment
+    num_iterations: int, default: 10
+        Number of iterations for global alignment procedure
+    num_shifts_block: int, default: 5
+        Number of spatial bin shifts to consider for non-rigid alignment
+    smoothing_sigma: float, default: 0.5
+        Sigma of gaussian for covariance matrices smoothing
+    kriging_sigma: float,
         sigma parameter for kriging_kernel function
     kriging_p: foat
         p parameter for kriging_kernel function
@@ -663,19 +664,19 @@ def make_2d_motion_histogram(
         The peaks array
     peak_locations : np.array
         Array with peak locations
-    weight_with_amplitude : bool, optional
-        If True, motion histogram is weighted by amplitudes, by default False
-    direction : str, optional
-        'x', 'y', 'z', by default 'y'
-    bin_duration_s : float, optional
-        The temporal bin duration in s, by default 1.
-    bin_um : float, optional
-        The spatial bin size in um, by default 2. Ignored if spatial_bin_edges is given.
-    margin_um : float, optional
-        The margin to add to the minimum and maximum positions before spatial binning, by default 50.
+    weight_with_amplitude : bool, default: False
+        If True, motion histogram is weighted by amplitudes
+    direction : "x" | "y" | "z", default: "y"
+        The depth direction
+    bin_duration_s : float, default: 1.0
+        The temporal bin duration in s
+    bin_um : float, default: 2.0
+        The spatial bin size in um. Ignored if spatial_bin_edges is given.
+    margin_um : float, default: 50
+        The margin to add to the minimum and maximum positions before spatial binning.
         Ignored if spatial_bin_edges is given.
-    spatial_bin_edges : np.array, optional
-        The pre-computed spatial bin edges, by default None
+    spatial_bin_edges : np.array, default: None
+        The pre-computed spatial bin edges
 
     Returns
     -------
@@ -739,19 +740,19 @@ def make_3d_motion_histograms(
         The peaks array
     peak_locations : np.array
         Array with peak locations
-    direction : str, optional
-        'x', 'y', 'z', by default 'y'
-    bin_duration_s : float, optional
-        The temporal bin duration in s, by default 1.
-    bin_um : float, optional
-        The spatial bin size in um, by default 2. Ignored if spatial_bin_edges is given.
-    margin_um : float, optional
-        The margin to add to the minimum and maximum positions before spatial binning, by default 50.
+    direction : "x" | "y" | "z", default: "y"
+        The depth direction
+    bin_duration_s : float, default: 1.0
+        The temporal bin duration in s.
+    bin_um : float, default: 2.0
+        The spatial bin size in um. Ignored if spatial_bin_edges is given.
+    margin_um : float, default: 50
+        The margin to add to the minimum and maximum positions before spatial binning.
         Ignored if spatial_bin_edges is given.
-    log_transform : bool, optional
-        If True, histograms are log-transformed, by default True
-    spatial_bin_edges : np.array, optional
-        The pre-computed spatial bin edges, by default None
+    log_transform : bool, default: True
+        If True, histograms are log-transformed
+    spatial_bin_edges : np.array, default: None
+        The pre-computed spatial bin edges
 
     Returns
     -------
@@ -1198,22 +1199,22 @@ def iterative_template_registration(
 
     spikecounts_hist_images : np.ndarray
         Spike count histogram images (num_temporal_bins, num_spatial_bins, num_amps_bins)
-    non_rigid_windows : list, optional
+    non_rigid_windows : list, default: None
         If num_non_rigid_windows > 1, this argument is required and it is a list of
-        windows to taper spatial bins in different blocks, by default None
-    num_shifts_global : int, optional
-        Number of spatial bin shifts to consider for global alignment, by default 15
-    num_iterations : int, optional
-        Number of iterations for global alignment procedure, by default 10
-    num_shifts_block : int, optional
-        Number of spatial bin shifts to consider for non-rigid alignment, by default 5
-    smoothing_sigma : float, optional
-        Sigma of gaussian for covariance matrices smoothing, by default 0.5
-    kriging_sogma : float, optional
+        windows to taper spatial bins in different blocks
+    num_shifts_global : int, default: 15
+        Number of spatial bin shifts to consider for global alignment
+    num_iterations : int, default: 10
+        Number of iterations for global alignment procedure
+    num_shifts_block : int, default: 5
+        Number of spatial bin shifts to consider for non-rigid alignment
+    smoothing_sigma : float, default: 0.5
+        Sigma of gaussian for covariance matrices smoothing
+    kriging_sigma : float, default: 1
         sigma parameter for kriging_kernel function
-    kriging_p : float, optional
+    kriging_p : float, default: 2
         p parameter for kriging_kernel function
-    kriging_d : float, optional
+    kriging_d : float, default: 2
         d parameter for kriging_kernel function
 
     Returns
@@ -1350,8 +1351,8 @@ def normxcorr1d(
     the above formula is made to the weighted case -- and all of the
     normalizations are done per block in the same way.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     template : tensor, shape (num_templates, length)
         The reference template signal
     x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
@@ -1362,7 +1363,7 @@ def normxcorr1d(
         If true, means will be subtracted (per weighted patch).
     normalized : bool
         If true, normalize by the variance (per weighted patch).
-    padding : int, optional
+    padding : str
         How far to look? if unset, we'll use half the length
     conv_engine : string, one of "torch", "numpy"
         What library to use for computing cross-correlations.

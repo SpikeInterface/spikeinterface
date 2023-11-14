@@ -17,12 +17,14 @@ class TracePaddedRecording(BasePreprocessor):
     ----------
     parent_recording_segment : BaseRecording
         The parent recording segment from which the traces are to be retrieved.
-    padding_start : int
-        The amount of padding to add to the left of the traces. Default is 0. It has to be non-negative
-    padding_end : int
-        The amount of padding to add to the right of the traces. Default is 0. It has to be non-negative
-    fill_value: float
-        The value to pad with. Default is 0.
+    padding_start : int, default: 0
+        The amount of padding to add to the left of the traces. It has to be non-negative.
+        Note that this counts the number of samples, not the number of seconds.
+    padding_end : int, default: 0
+        The amount of padding to add to the right of the traces. It has to be non-negative
+        Note that this counts the number of samples, not the number of seconds
+    fill_value: float, default: 0
+        The value to pad with
     """
 
     def __init__(
@@ -88,13 +90,18 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
             raise ValueError(f"Unsupported channel_indices type: {type(channel_indices)} raise an issue on github ")
 
         # This avoids an extra memory allocation if we are within the confines of the old traces
-        if start_frame > self.padding_start and end_frame < self.num_samples_in_original_segment + self.padding_start:
+        end_of_original_traces = self.num_samples_in_original_segment + self.padding_start
+        if start_frame > self.padding_start and end_frame < end_of_original_traces:
             return self.get_original_traces_shifted(start_frame, end_frame, channel_indices)
 
-        # Else, we start with the full padded traces and allocate the original traces in the middle
+        # We start with the full padded traces and fill in the original traces if necessary
         output_traces = np.full(shape=(trace_size, num_channels), fill_value=self.fill_value, dtype=self.dtype)
 
-        # After the padding, the original traces are placed in the middle until the end of the original traces
+        # If start frame is larger than the end of the original traces, we return the padded traces as they are
+        if start_frame >= end_of_original_traces and end_frame > end_of_original_traces:
+            return output_traces
+
+        # We add the original traces if end_frame is larger than the start of the original traces
         if end_frame >= self.padding_start:
             original_traces = self.get_original_traces_shifted(
                 start_frame=start_frame,
@@ -119,6 +126,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         """
         original_start_frame = max(start_frame - self.padding_start, 0)
         original_end_frame = min(end_frame - self.padding_start, self.num_samples_in_original_segment)
+
         original_traces = self.parent_recording_segment.get_traces(
             start_frame=original_start_frame,
             end_frame=original_end_frame,
@@ -145,9 +153,8 @@ class ZeroChannelPaddedRecording(BaseRecording):
             recording to zero-pad
         num_channels : int
             Total number of channels in the zero-channel-padded recording
-        channel_mapping : Union[list, None], optional
-            Mapping from the channel index in the original recording to the zero-channel-padded recording,
-            by default None.
+        channel_mapping : Union[list, None], default: None
+            Mapping from the channel index in the original recording to the zero-channel-padded recording.
             If None, sorts the channel indices in ascending y channel location and puts them at the
             beginning of the zero-channel-padded recording.
         """

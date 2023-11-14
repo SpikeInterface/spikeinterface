@@ -15,11 +15,11 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     folder_path: str or Path-like
         The folder path to the AlphaOmega recordings.
-    lsx_files: list of strings or None, optional
+    lsx_files: list of strings or None, default: None
         A list of listings files that refers to mpx files to load.
-    stream_id: {'RAW', 'LFP', 'SPK', 'ACC', 'AI', 'UD'}, optional
+    stream_id: {"RAW", "LFP", "SPK", "ACC", "AI", "UD"}, default: "RAW"
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.

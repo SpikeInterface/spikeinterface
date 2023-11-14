@@ -241,12 +241,12 @@ def compute_template_metrics(
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor, optional
+    waveform_extractor : WaveformExtractor
         The waveform extractor used to compute template metrics
     load_if_exists : bool, default: False
         Whether to load precomputed template metrics, if they already exist.
-    metric_names : list, optional
-        List of metrics to compute (see si.postprocessing.get_template_metric_names()), by default None
+    metric_names : list or None, default: None
+        List of metrics to compute (see si.postprocessing.get_template_metric_names())
     peak_sign : {"neg", "pos"}, default: "neg"
         Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
@@ -278,8 +278,8 @@ def compute_template_metrics(
     -------
     template_metrics : pd.DataFrame
         Dataframe with the computed template metrics.
-        If 'sparsity' is None, the index is the unit_id.
-        If 'sparsity' is given, the index is a multi-index (unit_id, channel_id)
+        If "sparsity" is None, the index is the unit_id.
+        If "sparsity" is given, the index is a multi-index (unit_id, channel_id)
 
     Notes
     -----
