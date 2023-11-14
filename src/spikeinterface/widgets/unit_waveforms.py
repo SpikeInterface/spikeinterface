@@ -369,13 +369,21 @@ class UnitWaveformsWidget(BaseWidget):
             disabled=False,
         )
 
+        self.template_shading_button = widgets.Checkbox(
+            value=data_plot["do_shading"],
+            description="shading",
+            disabled=False,
+        )
+
         self.hide_axis_button = widgets.Checkbox(
             value=True,
             description="hide axis",
             disabled=False,
         )
 
-        footer = widgets.HBox([self.same_axis_button, self.plot_templates_button, self.hide_axis_button])
+        footer = widgets.HBox(
+            [self.same_axis_button, self.plot_templates_button, self.template_shading_button, self.hide_axis_button]
+        )
         left_sidebar = widgets.VBox([self.unit_selector, self.scaler])
 
         self.widget = widgets.AppLayout(
@@ -391,7 +399,7 @@ class UnitWaveformsWidget(BaseWidget):
 
         self.unit_selector.observe(self._update_plot, names="value", type="change")
         self.scaler.observe(self._update_plot, names="value", type="change")
-        for w in self.same_axis_button, self.plot_templates_button, self.hide_axis_button:
+        for w in self.same_axis_button, self.plot_templates_button, self.template_shading_button, self.hide_axis_button:
             w.observe(self._update_plot, names="value", type="change")
 
         if backend_kwargs["display"]:
@@ -419,15 +427,12 @@ class UnitWaveformsWidget(BaseWidget):
         self.fig_wf.clear()
         self.ax_probe.clear()
 
-        # unit_ids = self.controller["unit_ids"].value
         unit_ids = self.unit_selector.value
-        # same_axis = self.controller["same_axis"].value
-        # plot_templates = self.controller["plot_templates"].value
-        # hide_axis = self.controller["hide_axis"].value
 
         same_axis = self.same_axis_button.value
         plot_templates = self.plot_templates_button.value
         hide_axis = self.hide_axis_button.value
+        do_shading = self.template_shading_button.value
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
@@ -437,6 +442,7 @@ class UnitWaveformsWidget(BaseWidget):
         data_plot["templates_shading"] = [ts * self.scaler.value for ts in templates_shadings]
         data_plot["same_axis"] = same_axis
         data_plot["plot_templates"] = plot_templates
+        data_plot["do_shading"] = do_shading
         if data_plot["plot_waveforms"]:
             data_plot["wfs_by_ids"] = {
                 unit_id: self.we.get_waveforms(unit_id) * self.scaler.value for unit_id in unit_ids
