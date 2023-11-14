@@ -60,6 +60,27 @@ def compute_agreement_score(num_matches, num1, num2):
     return num_matches / denom
 
 
+def do_count_event(sorting):
+    """
+    Count event for each units in a sorting.
+
+    Kept for backward compatibility sorting.count_num_spikes_per_unit() is doing the same.
+
+    Parameters
+    ----------
+    sorting: SortingExtractor
+        A sorting extractor
+
+    Returns
+    -------
+    event_count: pd.Series
+        Nb of spike by units.
+    """
+    import pandas as pd
+
+    return pd.Series(sorting.count_num_spikes_per_unit())
+
+
 def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, event_counts2  unit2_ids,
     """
     Computes matching spikes between one spike train and a list of others.
@@ -81,27 +102,6 @@ def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, ev
         num_matches = count_matching_events(times1, times2, delta=delta_frames)
         matching_event_counts[i2] = num_matches
     return matching_event_counts
-
-
-def do_count_event(sorting):
-    """
-    Count event for each units in a sorting.
-
-    Kept for backward compatibility sorting.count_num_spikes_per_unit() is doing the same.
-
-    Parameters
-    ----------
-    sorting: SortingExtractor
-        A sorting extractor
-
-    Returns
-    -------
-    event_count: pd.Series
-        Nb of spike by units.
-    """
-    import pandas as pd
-
-    return pd.Series(sorting.count_num_spikes_per_unit())
 
 
 def get_optimized_compute_matching_matrix():
