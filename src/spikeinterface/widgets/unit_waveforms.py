@@ -1,4 +1,3 @@
-from matplotlib import scale
 import numpy as np
 
 from .base import BaseWidget, to_attr
