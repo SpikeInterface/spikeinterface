@@ -665,7 +665,6 @@ class NormalizedTemplateDiff:
 
         DEBUG = False
         # DEBUG = True
-        
         if DEBUG and normed_diff < 0.2:
             # if DEBUG:
 
