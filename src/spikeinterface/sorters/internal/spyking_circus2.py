@@ -21,11 +21,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "energy", "threshold": 0.25},
+        "waveforms": {
+            "max_spikes_per_unit": 200,
+            "overwrite": True,
+            "sparse": True,
+            "method": "energy",
+            "threshold": 0.25,
+        },
         "filtering": {"freq_min": 150, "dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "clustering": {"legacy" : False},
+        "clustering": {"legacy": False},
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
