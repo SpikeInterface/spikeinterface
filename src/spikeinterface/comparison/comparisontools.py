@@ -977,6 +977,9 @@ def get_compute_dot_product_function():
         The dot product gives a measure of the similarity between two spike trains. Each match is weighted by the
         delta_frames - abs(frame1 - frame2) where frame1 and frame2 are the frames of the matching spikes.
 
+        Note that the maximum weight of a match is delta_frames. This happens when the two spikes are exactly
+        delta_frames apart. The minimum weight is 0 which happens when the two spikes are more than delta_frames appart.
+
         Note the function assumes that the spike frames are sorted in ascending order.
 
         Parameters
@@ -1115,10 +1118,53 @@ def get_compute_square_norm_function():
     return compute_square_norm
 
 
-def _compute_spike_vector_squared_norm(spike_vector_per_segment, num_units, delta_frames):
+def _compute_spike_vector_squared_norm(
+    spike_vector_per_segment: list[np.ndarray],
+    num_units: int,
+    delta_frames: int,
+) -> np.ndarray:
+    """
+    Computes the squared norm of spike vectors for each unit across multiple segments.
+
+    This function calculates the squared norm for each unit in the provided spike vectors,
+    summing across different segments.
+
+    The norm is defined in the context of spike trains considered as box-car functions with
+    a specified width (delta_frames). The squared norm represents the integral of the squared spike train
+    when viewed as such a function.
+
+    The squared norm comprises two components:
+
+    ||x||^2 = num_spikes * delta_frames + self_match_component
+
+    1. A sum of the number of spikes for a given unit multiplied by delta_frames, representing the total 'active'
+    duration of the spike train.
+    2. A weighted sum of 'self-matches' within spikes from the same unit, where each match's weight depends on
+    the proximity of the spikes.
+
+    If no two spikes in a train are closer than delta_frames apart, the squared norm simplifies to the number of
+    spikes multiplied by delta_frames: ||x||^2 = delta_frames * num_spikes.
+
+
+    Parameters
+    ----------
+    spike_vector_per_segment : list of np.ndarray
+        A list containing spike vectors for each segment. Each spike vector is a structured numpy array with fields 'sample_index' and 'unit_index'.
+    num_units : int
+        The total number of units represented in the spike vectors.
+    delta_frames : int
+        The width of the box-car function, used in defining the norm.
+
+    Returns
+    -------
+    np.ndarray
+        A 1D numpy array of length `num_units`, where each entry represents the squared norm of the corresponding unit across all segments.
+
+    """
     compute_squared_norm = get_compute_square_norm_function()
 
     squared_norm = np.zeros(num_units, dtype=np.uint64)
+
     # Note that the squared norms are integrals and can be added over segments
     for spike_vector in spike_vector_per_segment:
         sample_frames = spike_vector["sample_index"]
@@ -1134,12 +1180,42 @@ def _compute_spike_vector_squared_norm(spike_vector_per_segment, num_units, delt
 
 
 def _compute_spike_vector_dot_product(
-    spike_vector_per_segment1,
-    spike_vector_per_segment2,
-    num_units1,
-    num_units2,
-    delta_frames,
-):
+    spike_vector_per_segment1: list[np.ndarray],  # TODO Add a propert type to spike vector that we can reference
+    spike_vector_per_segment2: list[np.ndarray],
+    num_units1: int,
+    num_units2: int,
+    delta_frames: int,
+) -> np.ndarray:
+    """
+    This function calculates the dot product for each pair of units between two sets of spike trains,
+    summing the results across different segments.
+
+    The dot product gives a measure of the similarity between two spike trains. The dot product here is induced by the
+    L2 norm in the Hilbert space of the spikes viewed as a box-car functions with width delta frames. Each match is
+    weighted by the delta_frames - abs(frame1 - frame2) where frame1 and frame2 are the frames of the matching spikes.
+
+    Note that the maximum weight of a match is delta_frames. This happens when the two spikes are exactly
+    delta_frames apart. The minimum weight is 0 which happens when the two spikes are more than delta_frames appart.
+
+
+    Parameters
+    ----------
+    spike_vector_per_segment1 : list of ndarray
+        A list of spike vectors for each segment of the first spike_vector.
+    spike_vector_per_segment2 : list of ndarray
+        A list of spike vectors for each segment of the second spike_vector.
+    num_units1 : int
+        The number of units in the first spike_vectors.
+    num_units2 : int
+        The number of units in the second spike_vectors.
+    delta_frames : int
+        The frame width to consider for the dot product calculation.
+
+    Returns
+    -------
+    dot_product_matrix : ndarray
+        A matrix containing the dot product for each pair of units between the two spike_vectors.
+    """
     dot_product_matrix = np.zeros((num_units1, num_units2), dtype=np.uint64)
 
     compute_dot_product = get_compute_dot_product_function()
@@ -1165,7 +1241,31 @@ def _compute_spike_vector_dot_product(
     return dot_product_matrix
 
 
-def compute_distance_matrix(sorting1: BaseSorting, sorting2: BaseSorting, delta_frames: int):
+def compute_distance_matrix(sorting1: BaseSorting, sorting2: BaseSorting, delta_frames: int) -> np.ndarray:
+    """
+    Computes a distance matrix between two sorting objects
+
+    This function calculates the L2 distance matrix between the spike train corresponding to units of
+    of the sorting extractors.
+
+    Each spike is considered as a box-car function with width delta_frames. The distance between two units is the
+    L2 distance between the two spike trains viewed as box-car functions. The distance then can be interpreted as
+    the integral of the squared difference between the two spike trains.
+
+    Parameters
+    ----------
+    sorting1 : BaseSorting
+        The first spike train set to compare.
+    sorting2 : BaseSorting
+        The second spike train set to compare.
+    delta_frames : int
+        The frame width to consider in distance calculations.
+
+    Returns
+    -------
+    distance_matrix : (num_units1, num_units2) ndarray (float)
+        A matrix representing the pairwise L2 distances between units of sorting objects.
+    """
     num_units1 = sorting1.get_num_units()
     num_units2 = sorting2.get_num_units()
 
@@ -1198,7 +1298,44 @@ def compute_distance_matrix(sorting1: BaseSorting, sorting2: BaseSorting, delta_
     return distance_metrix
 
 
-def calculate_generalized_metrics(sorting1: BaseSorting, sorting2: BaseSorting, delta_frames: int) -> dict[np.ndarray]:
+def calculate_generalized_comparison_metrics(
+    sorting1: BaseSorting, sorting2: BaseSorting, delta_frames: int
+) -> dict[np.ndarray]:
+    """
+    Calculates generalized metrics between two sorting objects.
+
+    This function computes several metrics, including generalized accuracy, recall, precision, and cosine similarity
+    between the spike trains of two sorting objects. The calculations are based on the dot product and squared norms
+    of the spike vectors, where spikes are viewed as box-car functions with a width of delta_frames.
+
+    The generalized accuracy is a measure of the overall match between two sets of spike trains. Generalized recall
+    and precision are useful in scenarios where one of the sortings is considered as ground truth, and the other is
+    being evaluated against it. Cosine similarity gives a normalized measure of similarity between two spike trains.
+
+    Parameters
+    ----------
+    sorting1 : BaseSorting
+        The first set of spike trains, can be considered as the ground truth in recall calculation.
+    sorting2 : BaseSorting
+        The second set of spike trains, typically the set being evaluated.
+    delta_frames : int
+        The width of the box-car function, used in defining the spike train representation.
+
+    Returns
+    -------
+    dict of np.ndarray
+        A dictionary containing the computed metrics:
+        - 'accuracy': Generalized accuracy between the two sets of spike trains.
+        - 'recall': Generalized recall, assuming sorting1 as ground truth.
+        - 'precision': Generalized precision, evaluating sorting2 against sorting1.
+        - 'cosine_similarity': Cosine similarity between the spike trains of sorting1 and sorting2.
+
+    Notes
+    -----
+    - The metrics are calculated based on the dot product and squared norms of the spike trains, which are represented
+        as box-car functions.
+    - The function assumes that both sorting objects have the same number of segments.
+    """
     num_units1 = sorting1.get_num_units()
     num_units2 = sorting2.get_num_units()
 
@@ -1211,8 +1348,8 @@ def calculate_generalized_metrics(sorting1: BaseSorting, sorting2: BaseSorting, 
         num_segments_sorting1 == num_segments_sorting2
     ), "make_match_count_matrix : sorting1 and sorting2 must have the same number of segments"
 
-    squared_norm_1 = _compute_spike_vector_squared_norm(spike_vector1_segments, num_units2, delta_frames)
-    squared_norm_2 = _compute_spike_vector_squared_norm(spike_vector2_segments, num_units2, delta_frames)
+    squared_norm1 = _compute_spike_vector_squared_norm(spike_vector1_segments, num_units2, delta_frames)
+    squared_norm2 = _compute_spike_vector_squared_norm(spike_vector2_segments, num_units2, delta_frames)
 
     dot_product = _compute_spike_vector_dot_product(
         spike_vector1_segments,
@@ -1222,15 +1359,13 @@ def calculate_generalized_metrics(sorting1: BaseSorting, sorting2: BaseSorting, 
         delta_frames,
     )
 
-    generalized_accuracy = dot_product / (squared_norm_1 + squared_norm_2 - dot_product)
-    cosine_similarity = dot_product / np.sqrt(squared_norm_1 * squared_norm_2)
+    generalized_accuracy = dot_product / (squared_norm1 + squared_norm2 - dot_product)
+    cosine_similarity = dot_product / np.sqrt(squared_norm1 * squared_norm2)
 
-    generalized_recall = dot_product / squared_norm_1**2  # Assumes sorting1 is the ground truth
-    generalized_precision = dot_product / squared_norm_2**2  # Assumes sorting2 is the sorting that is being evaluated
+    generalized_recall = dot_product / squared_norm1  # Assumes sorting1 is the ground truth
+    generalized_precision = dot_product / squared_norm2  # Assumes sorting2 is the sorting that is being evaluated
 
-    # Note that the generalized and recall can be written in terms of the cosine similarity
-    # generalized_recall = cosine_similarity / (1 + cosine_similarity)
-    # generalized_precision = cosine_similarity / (1 + cosine_similarity)
+    # TODO: Maybe distance should be here? who wants a distance by itself?
 
     metrics = dict(
         accuracy=generalized_accuracy,
