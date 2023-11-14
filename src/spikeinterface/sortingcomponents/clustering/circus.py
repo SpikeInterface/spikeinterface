@@ -77,13 +77,13 @@ class CircusClustering:
             "min_cluster_size": 20,
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
-            "cluster_selection_method": "leaf",
+            "cluster_selection_method": "eom",
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2, "max_spikes_per_unit": 100},
         "radius_um": 100,
         "selection_method": "closest_to_centroid",
-        "n_svd": 5,
+        "n_svd": [6, 6],
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
@@ -92,27 +92,6 @@ class CircusClustering:
         "tmp_folder": None,
         "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
     }
-
-    @classmethod
-    def _check_params(cls, recording, peaks, params):
-        d = params
-        params2 = params.copy()
-
-        tmp_folder = params["tmp_folder"]
-        if params["waveform_mode"] == "memmap":
-            if tmp_folder is None:
-                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
-            else:
-                tmp_folder = Path(tmp_folder)
-            tmp_folder.mkdir()
-            params2["tmp_folder"] = tmp_folder
-        elif params["waveform_mode"] == "shared_memory":
-            assert tmp_folder is None, "tmp_folder must be None for shared_memory"
-        else:
-            raise ValueError("'waveform_mode' must be 'memmap' or 'shared_memory'")
-
-        return params2
 
     @classmethod
     def main_function(cls, recording, peaks, params):
@@ -159,7 +138,7 @@ class CircusClustering:
         few_wfs = extract_waveform_at_max_channel(recording, few_peaks,  ms_before=ms_before, ms_after=ms_after, **params["job_kwargs"])
 
         wfs = few_wfs[:, :, 0]
-        tsvd = TruncatedSVD(params["n_svd"])
+        tsvd = TruncatedSVD(params["n_svd"][0])
         tsvd.fit(wfs)
 
         model_folder = tmp_folder / "tsvd_model"
@@ -209,7 +188,7 @@ class CircusClustering:
         nb_clusters = 0
         for c in np.unique(peaks['channel_index']):
             mask = peaks['channel_index'] == c
-            tsvd = TruncatedSVD(params["n_svd"])
+            tsvd = TruncatedSVD(params["n_svd"][1])
             sub_data = all_pc_data[mask]
             hdbscan_data = tsvd.fit_transform(sub_data.reshape(len(sub_data), -1))
             clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
