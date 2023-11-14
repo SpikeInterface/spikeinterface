@@ -219,10 +219,11 @@ class RandomProjectionClustering:
             recording,
             sorting,
             waveform_folder,
-            **params["job_kwargs"],
-            **params["waveforms"],
             return_scaled=False,
             mode=mode,
+            precompute_template=["median"],
+            **params["job_kwargs"],
+            **params["waveforms"],
         )
 
         cleaning_matching_params = params["job_kwargs"].copy()

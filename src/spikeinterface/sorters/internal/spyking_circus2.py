@@ -109,7 +109,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update({"noise_levels": noise_levels})
 
         if "legacy" in clustering_params:
-            legacy = clustering_params["legacy"]
+            legacy = clustering_params.pop("legacy")
         else:
             legacy = False
 
@@ -147,7 +147,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             waveforms_folder = sorter_output_folder / "waveforms"
 
         we = extract_waveforms(
-            recording_f, sorting, waveforms_folder, mode=mode, **waveforms_params, return_scaled=False
+            recording_f, 
+            sorting, 
+            waveforms_folder, 
+            return_scaled=False,
+            precompute_template=["median"],
+            mode=mode, 
+            **waveforms_params
+
         )
 
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
