@@ -36,29 +36,6 @@ def count_matching_events(times1, times2, delta=10):
     return len(inds2) + 1
 
 
-def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, event_counts2  unit2_ids,
-    """
-    Computes matching spikes between one spike train and a list of others.
-
-    Parameters
-    ----------
-    times1: array
-        Spike train 1 frames
-    all_times2: list of array
-        List of spike trains from sorting 2
-
-    Returns
-    -------
-    matching_events_count: list
-        List of counts of matching events
-    """
-    matching_event_counts = np.zeros(len(all_times2), dtype="int64")
-    for i2, times2 in enumerate(all_times2):
-        num_matches = count_matching_events(times1, times2, delta=delta_frames)
-        matching_event_counts[i2] = num_matches
-    return matching_event_counts
-
-
 def compute_agreement_score(num_matches, num1, num2):
     """
     Computes agreement score.
@@ -81,6 +58,29 @@ def compute_agreement_score(num_matches, num1, num2):
     if denom == 0:
         return 0
     return num_matches / denom
+
+
+def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, event_counts2  unit2_ids,
+    """
+    Computes matching spikes between one spike train and a list of others.
+
+    Parameters
+    ----------
+    times1: array
+        Spike train 1 frames
+    all_times2: list of array
+        List of spike trains from sorting 2
+
+    Returns
+    -------
+    matching_events_count: list
+        List of counts of matching events
+    """
+    matching_event_counts = np.zeros(len(all_times2), dtype="int64")
+    for i2, times2 in enumerate(all_times2):
+        num_matches = count_matching_events(times1, times2, delta=delta_frames)
+        matching_event_counts[i2] = num_matches
+    return matching_event_counts
 
 
 def do_count_event(sorting):
