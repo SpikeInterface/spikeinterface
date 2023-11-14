@@ -600,7 +600,7 @@ def remove_duplicates_via_matching(
             "waveform_extractor": waveform_extractor,
             "noise_levels": noise_levels,
             "amplitudes": [0.975, 1.025],
-            "omp_min_sps": 0.05,
+            "omp_min_sps": 0.1,
         }
     )
 

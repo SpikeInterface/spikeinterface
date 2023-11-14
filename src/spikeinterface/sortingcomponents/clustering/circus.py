@@ -161,7 +161,7 @@ class CircusClustering:
         node0 = PeakRetriever(recording, peaks)
 
         radius_um = params["radius_um"]
-        node3 = ExtractSparseWaveforms(
+        node1 = ExtractSparseWaveforms(
             recording,
             parents=[node0],
             return_output=False,
@@ -170,18 +170,17 @@ class CircusClustering:
             radius_um=radius_um,
         )
 
-        node4 = TemporalPCAProjection(
-            recording, parents=[node0, node3], return_output=True, model_folder_path=model_folder
+        node2 = TemporalPCAProjection(
+            recording, parents=[node0, node1], return_output=True, model_folder_path=model_folder
         )
 
-        # pipeline_nodes = [node0, node1, node2, node3, node4]
-        pipeline_nodes = [node0, node3, node4]
+        pipeline_nodes = [node0, node1, node2]
 
         all_pc_data = run_node_pipeline(
             recording,
             pipeline_nodes,
             params["job_kwargs"],
-            job_name="extracting PCs",
+            job_name="extracting features",
         )
 
         peak_labels = -1 * np.ones(len(peaks), dtype=int)
