@@ -153,14 +153,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             waveforms_folder = sorter_output_folder / "waveforms"
 
         we = extract_waveforms(
-            recording_f, 
-            sorting, 
-            waveforms_folder, 
+            recording_f,
+            sorting,
+            waveforms_folder,
             return_scaled=False,
             precompute_template=["median"],
-            mode=mode, 
-            **waveforms_params
-
+            mode=mode,
+            **waveforms_params,
         )
 
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
