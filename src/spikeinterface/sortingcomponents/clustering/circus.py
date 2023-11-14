@@ -67,6 +67,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
 
     return all_wfs
 
+
 class CircusClustering:
     """
     hdbscan clustering on peak_locations previously done by localize_peaks()
@@ -135,7 +136,9 @@ class CircusClustering:
 
         # SVD for time compression
         few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
-        few_wfs = extract_waveform_at_max_channel(recording, few_peaks,  ms_before=ms_before, ms_after=ms_after, **params["job_kwargs"])
+        few_wfs = extract_waveform_at_max_channel(
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **params["job_kwargs"]
+        )
 
         wfs = few_wfs[:, :, 0]
         tsvd = TruncatedSVD(params["n_svd"][0])
@@ -185,12 +188,12 @@ class CircusClustering:
 
         peak_labels = -1 * np.ones(len(peaks), dtype=int)
         nb_clusters = 0
-        for c in np.unique(peaks['channel_index']):
-            mask = peaks['channel_index'] == c
+        for c in np.unique(peaks["channel_index"]):
+            mask = peaks["channel_index"] == c
             tsvd = TruncatedSVD(params["n_svd"][1])
             sub_data = all_pc_data[mask]
             hdbscan_data = tsvd.fit_transform(sub_data.reshape(len(sub_data), -1))
-            clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
+            clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
             local_labels = clustering[0]
             valid_clusters = local_labels > -1
             if np.sum(valid_clusters) > 0:
@@ -290,4 +293,3 @@ class CircusClustering:
             print("We kept %d non-duplicated clusters..." % len(labels))
 
         return labels, peak_labels
-
