@@ -264,7 +264,7 @@ class CircusClustering:
             precompute_template=["median"],
             mode=mode,
             **params["job_kwargs"],
-            **params["waveforms"]
+            **params["waveforms"],
         )
 
         cleaning_matching_params = params["job_kwargs"].copy()
