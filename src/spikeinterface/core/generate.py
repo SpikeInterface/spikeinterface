@@ -168,7 +168,7 @@ def generate_sorting(
     spikes = []
     for segment_index in range(num_segments):
         num_samples = int(sampling_frequency * durations[segment_index])
-        times, labels = synthesize_random_firings(
+        times, labels = synthesize_random_firings_poisson(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
             duration=durations[segment_index],
