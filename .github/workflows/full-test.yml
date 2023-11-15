@@ -132,6 +132,8 @@ jobs:
       - name: Test core
         run: ./.github/run_tests.sh core
       - name: Test extractors
+        env:
+          HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh "extractors and not streaming_extractors"
       - name: Test preprocessing

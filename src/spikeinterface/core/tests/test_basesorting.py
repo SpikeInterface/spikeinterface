@@ -22,6 +22,7 @@ from spikeinterface.core import (
 )
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
+from spikeinterface.core.generate import generate_sorting
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -167,6 +168,18 @@ def test_npy_sorting():
     seg_nframes = [9, 5, 10]
     rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
     assert_raises(Exception, sorting.register_recording, rec)
+
+
+def test_rename_units_method():
+    num_units = 2
+    durations = [1.0, 1.0]
+
+    sorting = generate_sorting(num_units=num_units, durations=durations)
+
+    new_unit_ids = ["a", "b"]
+    new_sorting = sorting.rename_units(new_unit_ids=new_unit_ids)
+
+    assert np.array_equal(new_sorting.get_unit_ids(), new_unit_ids)
 
 
 def test_empty_sorting():
