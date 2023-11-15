@@ -316,35 +316,69 @@ class BaseExtractor:
         recursive: bool = False,
     ) -> dict:
         """
-        Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
-        an extractor using load_extractor_from_dict(dump_dict)
+        Construct a nested dictionary representation of the extractor.
+
+        This method facilitates the serialization of the extractor instance by converting it
+        to a dictionary. The resulting dictionary can be used to re-initialize the extractor
+        through the `load_extractor_from_dict` function.
+
+        Examples
+        --------
+        >>> dump_dict = original_extractor.to_dict()
+        >>> reloaded_extractor = load_extractor_from_dict(dump_dict)
 
         Parameters
         ----------
-        include_annotations: bool, default: False
-            If True, all annotations are added to the dict
-        include_properties: bool, default: False
-            If True, all properties are added to the dict
-        relative_to: str, Path, or None, default: None
-            If not None, files and folders are serialized relative to this path
-            Used in waveform extractor to maintain relative paths to binary files even if the
-            containing folder / diretory is moved
-        folder_metadata: str, Path, or None
-            Folder with numpy `npy` files containing additional information (e.g. probe in BaseRecording) and properties.
-        recursive: bool, default: False
-            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well
+        include_annotations : bool, default: False
+            Whether to include all annotations in the dictionary
+        include_properties : bool, default: False
+            Whether to include all properties in the dictionary, by default False.
+        relative_to : Union[str, Path, None], default: None
+            If provided, file and folder paths will be made relative to this path,
+            enabling portability in folder formats such as the waveform extractor,
+            by default None.
+        folder_metadata : Union[str, Path, None], default: None
+            Path to a folder containing additional metadata files (e.g., probe information in BaseRecording)
+            in numpy `npy` format, by default None.
+        recursive : bool, default: False
+            If True, recursively apply `to_dict` to dictionaries within the kwargs, by default False.
+
+        Raises
+        ------
+        ValueError
+            If `relative_to` is specified while `recursive` is False.
 
         Returns
         -------
-        dump_dict: dict
-            A dictionary representation of the extractor.
-        """
+        dict
+            A dictionary representation of the extractor, with the following structure:
+            {
+                "class": <the full import path of the class>,
+                "module": <module name>, (e.g. 'spikeinterface'),
+                "kwargs": <the values that were used to initialize the class>,
+                "version": <module version>,
+                "relative_paths": <whether paths are relative>,
+                "annotations": <annotations dictionary, if `include_annotations` is True>,
+                "properties": <properties dictionary, if `include_properties` is True>,
+                "folder_metadata": <relative path to folder_metadata, if specified>
+            }
 
-        kwargs = self._kwargs
+        Notes
+        -----
+        - The `relative_to` argument only has an effect if `recursive` is set to True.
+        - The `folder_metadata` argument will be made relative to `relative_to` if both are specified.
+        - The `version` field in the resulting dictionary reflects the version of the module
+          from which the extractor class originates.
+        - The full class attribute above is the full import of the class, e.g.
+        'spikeinterface.extractors.neoextractors.spikeglx.SpikeGLXRecordingExtractor'
+        - The module is usually 'spikeinterface', but can be different for custom extractors such as those of
+        SpikeForest or any other project that inherits the Extractor class from spikeinterface.
+        """
 
         if relative_to and not recursive:
             raise ValueError("`relative_to` is only possible when `recursive=True`")
 
+        kwargs = self._kwargs
         if recursive:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
@@ -366,27 +400,24 @@ class BaseExtractor:
                     new_kwargs[name] = transform_extractors_to_dict(value)
 
             kwargs = new_kwargs
-        class_name = str(type(self)).replace("<class '", "").replace("'>", "")
-        module = class_name.split(".")[0]
-        imported_module = importlib.import_module(module)
 
-        try:
-            version = imported_module.__version__
-        except AttributeError:
-            version = "unknown"
+        module_import_path = self.__class__.__module__
+        class_name_no_path = self.__class__.__name__
+        class_name = f"{module_import_path}.{class_name_no_path}"  # e.g. 'spikeinterface.core.generate.AClass'
+        module = class_name.split(".")[0]
+
+        imported_module = importlib.import_module(module)
+        module_version = getattr(imported_module, "__version__", "unknown")
 
         dump_dict = {
             "class": class_name,
             "module": module,
             "kwargs": kwargs,
-            "version": version,
+            "version": module_version,
             "relative_paths": (relative_to is not None),
         }
 
-        try:
-            dump_dict["version"] = imported_module.__version__
-        except AttributeError:
-            dump_dict["version"] = "unknown"
+        dump_dict["version"] = module_version  # Can be spikeinterface, spikefores, etc.
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations
@@ -805,7 +836,7 @@ class BaseExtractor:
           * explicit sub-folder, implicit base-folder : `extractor.save(name="extarctor_name")`
           * generated: `extractor.save()`
 
-        The second option saves to subfolder "extarctor_name" in
+        The second option saves to subfolder "extractor_name" in
         "get_global_tmp_folder()". You can set the global tmp folder with:
         "set_global_tmp_folder("path-to-global-folder")"
 
