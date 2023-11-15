@@ -61,7 +61,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
                 qm_params_[k]["peak_sign"] = peak_sign
 
         params = dict(
-            metric_names=[str(name) for name in metric_names],
+            metric_names=[str(name) for name in np.unique(metric_names)],
             sparsity=sparsity,
             peak_sign=peak_sign,
             seed=seed,
