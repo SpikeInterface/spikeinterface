@@ -113,32 +113,12 @@ class RandomProjectionClustering:
         nafter = int(params["ms_after"] * fs / 1000)
         nsamples = nbefore + nafter
 
-        import scipy
-
-        x = np.random.randn(100, nsamples, num_chans).astype(np.float32)
-        x = scipy.signal.savgol_filter(x, node2.window_length, node2.order, axis=1)
-
-        ptps = np.ptp(x, axis=1)
-        a, b = np.histogram(ptps.flatten(), np.linspace(0, 100, 1000))
-        ydata = np.cumsum(a) / a.sum()
-        xdata = b[1:]
-
-        from scipy.optimize import curve_fit
-
-        def sigmoid(x, L, x0, k, b):
-            y = L / (1 + np.exp(-k * (x - x0))) + b
-            return y
-
-        p0 = [max(ydata), np.median(xdata), 1, min(ydata)]  # this is an mandatory initial guess
-        popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
-
         node3 = RandomProjectionsFeature(
             recording,
             parents=[node0, node2],
             return_output=True,
             projections=projections,
             radius_um=params["radius_um"],
-            sigmoid=None,
             sparse=True,
         )
 
