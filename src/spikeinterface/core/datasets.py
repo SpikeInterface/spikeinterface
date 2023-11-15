@@ -20,19 +20,17 @@ def download_dataset(
 
     Parameters
     ----------
-    repo : str, optional
-        The repository to download the dataset from,
-        defaults to: 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-    remote_path : str
+    repo : str, default: "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+        The repository to download the dataset from
+    remote_path : str, default: "mearec/mearec_test_10s.h5"
         A specific subdirectory in the repository to download (e.g. Mearec, SpikeGLX, etc)
-        defaults to: "mearec/mearec_test_10s.h5"
-    local_folder : str, optional
+    local_folder : str, default: None
         The destination folder / directory to download the dataset to.
         defaults to the path "get_global_dataset_folder()" / f{repo_name} (see `spikeinterface.core.globals`)
-    update_if_exists : bool, optional
-        Forces re-download of the dataset if it already exists, by default False
-    unlock : bool, optional
-        Use to enable the edition of the downloaded file content, by default False
+    update_if_exists : bool, default: False
+        Forces re-download of the dataset if it already exists, default: False
+    unlock : bool, default: False
+        Use to enable the edition of the downloaded file content, default: False
 
     Returns
     -------

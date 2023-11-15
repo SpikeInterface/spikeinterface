@@ -84,36 +84,36 @@ def train_deepinterpolation(
         Number of frames after the frame to be predicted
     pre_post_omission : int
         Number of frames to be omitted before and after the frame to be predicted
-    existing_model_path : str | Path
-        Path to an existing model to be used for transfer learning, default is None
-    verbose : bool
-        Whether to print the progress of the training, default is True
-    steps_per_epoch : int
+    existing_model_path : str | Path | None, default: None
+        Path to an existing model to be used for transfer learning
+    verbose : bool, default: True
+        Whether to print the progress of the training
+    steps_per_epoch : int, default: 10
         Number of steps per epoch
-    period_save : int
+    period_save : int, default: 100
         Period of saving the model
-    apply_learning_decay : int
+    apply_learning_decay : int, default: 0
         Whether to use a learning scheduler during training
-    nb_times_through_data : int
+    nb_times_through_data : int, default: 1
         Number of times the data is repeated during training
-    learning_rate : float
+    learning_rate : float, default: 0.0001
         Learning rate
-    loss : str
+    loss : str, default: "mean_squared_error"
         Loss function to be used
-    nb_workers : int
+    nb_workers : int, default: -1
         Number of workers to be used for the training
-    caching_validation : bool
-        Whether to cache the validation data, default is False
-    run_uid : str
+    caching_validation : bool, default: False
+        Whether to cache the validation data
+    run_uid : str, default: "si"
         Unique identifier for the training
-    network_name : str
-        Name of the network to be used, default is None
-    use_gpu : bool
-        Whether to use GPU, default is True
-    disable_tf_logger : bool
-        Whether to disable the tensorflow logger, default is True
-    memory_gpu : int
-        Amount of memory to be used by the GPU, default is None
+    network_name : str, default: "unet_single_ephys_1024"
+        Name of the network to be used
+    use_gpu : bool, default: True
+        Whether to use GPU
+    disable_tf_logger : bool, default: True
+        Whether to disable the tensorflow logger
+    memory_gpu : int, default: None
+        Amount of memory to be used by the GPU
 
     Returns
     -------

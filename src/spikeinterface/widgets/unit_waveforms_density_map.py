@@ -14,23 +14,23 @@ class UnitWaveformDensityMapWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The waveformextractor for calculating waveforms
-    channel_ids : list
-        The channel ids to display, default None
-    unit_ids : list
-        List of unit ids, default None
-    sparsity : ChannelSparsity or None
-        Optional ChannelSparsity to apply, default None
+    channel_ids : list or None, default: None
+        The channel ids to display
+    unit_ids : list or None, default: None
+        List of unit ids
+    sparsity : ChannelSparsity or None, default: None
+        Optional ChannelSparsity to apply
         If WaveformExtractor is already sparse, the argument is ignored
-    use_max_channel : bool
-        Use only the max channel, default False
-    peak_sign : str (neg/pos/both)
-        Used to detect max channel only when use_max_channel=True, default 'neg'
-    unit_colors : None or dict
+    use_max_channel : bool, default: False
+        Use only the max channel
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        Used to detect max channel only when use_max_channel=True
+    unit_colors : None or dict, default: None
         A dict key is unit_id and value is any color format handled by matplotlib.
-        If None, then the get_unit_colors() is internally used, default None
-    same_axis : bool
+        If None, then the get_unit_colors() is internally used
+    same_axis : bool, default: False
         If True then all density are plot on the same axis and then channels is the union
-        all channel per units, default False
+        all channel per units
     """
 
     def __init__(

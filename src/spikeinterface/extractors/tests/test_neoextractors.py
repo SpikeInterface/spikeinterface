@@ -1,10 +1,10 @@
 import unittest
 import platform
 import subprocess
+import os
 from packaging import version
 
 import pytest
-import numpy as np
 
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface import get_global_dataset_folder
@@ -16,6 +16,7 @@ from spikeinterface.extractors.tests.common_tests import (
     EventCommonTestSuite,
 )
 
+ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 local_folder = get_global_dataset_folder() / "ephy_testing_data"
 
 
