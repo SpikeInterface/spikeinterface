@@ -84,7 +84,7 @@ class CircusClustering:
         "waveforms": {"ms_before": 2, "ms_after": 2, "max_spikes_per_unit": 100},
         "radius_um": 100,
         "selection_method": "closest_to_centroid",
-        "n_svd": [6, 6],
+        "n_svd": [5, 10],
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
