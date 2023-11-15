@@ -80,13 +80,13 @@ class UnitSummaryWidget(BaseWidget):
         fig = self.figure
         nrows = 2
         ncols = 3
-        if we.is_extension("correlograms") or we.is_extension("spike_amplitudes"):
+        if we.has_extension("correlograms") or we.has_extension("spike_amplitudes"):
             ncols += 1
-        if we.is_extension("spike_amplitudes"):
+        if we.has_extension("spike_amplitudes"):
             nrows += 1
         gs = fig.add_gridspec(nrows, ncols)
 
-        if we.is_extension("unit_locations"):
+        if we.has_extension("unit_locations"):
             ax1 = fig.add_subplot(gs[:2, 0])
             # UnitLocationsPlotter().do_plot(dp.plot_data_unit_locations, ax=ax1)
             w = UnitLocationsWidget(
@@ -129,7 +129,7 @@ class UnitSummaryWidget(BaseWidget):
         )
         ax3.set_ylabel(None)
 
-        if we.is_extension("correlograms"):
+        if we.has_extension("correlograms"):
             ax4 = fig.add_subplot(gs[:2, 3])
             AutoCorrelogramsWidget(
                 we,
@@ -142,7 +142,7 @@ class UnitSummaryWidget(BaseWidget):
             ax4.set_title(None)
             ax4.set_yticks([])
 
-        if we.is_extension("spike_amplitudes"):
+        if we.has_extension("spike_amplitudes"):
             ax5 = fig.add_subplot(gs[2, :3])
             ax6 = fig.add_subplot(gs[2, 3])
             axes = np.array([ax5, ax6])

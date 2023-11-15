@@ -107,7 +107,7 @@ class BaseWidget:
         error_msg = ""
         raise_error = False
         for extension in extensions:
-            if not waveform_extractor.is_extension(extension):
+            if not waveform_extractor.has_extension(extension):
                 raise_error = True
                 error_msg += (
                     f"The {extension} waveform extension is required for this widget. "
