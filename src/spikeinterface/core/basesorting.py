@@ -269,35 +269,40 @@ class BaseSorting(BaseExtractor):
         )
         return self.count_num_spikes_per_unit()
 
-    def count_num_spikes_per_unit(self) -> dict:
+    def count_num_spikes_per_unit(self, output="dict"):
         """
         For each unit : get number of spikes  across segments.
 
+        Parameters
+        ----------
+        output: "dict" | "array", dfault: "dict"
+            Return a dict (key is unit_id) or an numpy array.
+
         Returns
         -------
-        dict
-            Dictionary with unit_ids as key and number of spikes as values
+        dict or numpy.array
+            Dict : Dictionary with unit_ids as key and number of spikes as values
+            Numpy array : array of size len(unit_ids) in the same orderas unit_ids.
         """
-        num_spikes = {}
+        num_spikes = np.zeros(self.unit_ids.size, dtype="int64")
 
         if self._cached_spike_vector is not None:
             spike_vector = self.to_spike_vector()
             unit_indices, counts = np.unique(spike_vector["unit_index"], return_counts=True)
-            for unit_index, unit_id in enumerate(self.unit_ids):
-                if unit_index in unit_indices:
-                    idx = np.argmax(unit_indices == unit_index)
-                    num_spikes[unit_id] = counts[idx]
-                else:  # This unit has no spikes, hence it's not in the counts array.
-                    num_spikes[unit_id] = 0
+            num_spikes[unit_indices] = counts
         else:
-            for unit_id in self.unit_ids:
-                n = 0
+            for unit_index, unit_id in enumerate(self.unit_ids):
                 for segment_index in range(self.get_num_segments()):
                     st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                    n += st.size
-                num_spikes[unit_id] = n
+                    num_spikes[unit_index] += st.size
 
-        return num_spikes
+        if output == "array":
+            return num_spikes
+        elif output == "dict":
+            num_spikes = dict(zip(self.unit_ids, num_spikes))
+            return num_spikes
+        else:
+            raise ValueError("count_num_spikes_per_unit() output must be dict or array")
 
     def count_total_num_spikes(self):
         """
