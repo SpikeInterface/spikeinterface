@@ -125,7 +125,15 @@ class CommonReferenceRecording(BasePreprocessor):
 
 class CommonReferenceRecordingSegment(BasePreprocessorSegment):
     def __init__(
-        self, parent_recording_segment, reference, operator, groups_inds, ref_channel_inds, local_radius, neighbors, dtype
+        self,
+        parent_recording_segment,
+        reference,
+        operator,
+        groups_inds,
+        ref_channel_inds,
+        local_radius,
+        neighbors,
+        dtype,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
