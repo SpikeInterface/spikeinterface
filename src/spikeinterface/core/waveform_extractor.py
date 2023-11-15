@@ -558,7 +558,7 @@ class WaveformExtractor:
 
     def is_extension(self, extension_name) -> bool:
         warn(
-            "WaveformExtractor.is_extension is deprecated and will be removed in version 0.102.0! Use `has_extension` instead."
+            "WaveformExtractor.is_extension is deprecated and will be removed in version 0.102.0! Use `has_extension` instead.", DeprecationWarning, stacklevel=2
         )
         return self.has_extension(extension_name)
 
