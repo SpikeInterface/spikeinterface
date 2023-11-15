@@ -317,6 +317,51 @@ def generate_snippets(
 
 
 ## spiketrain zone ##
+def synthesize_random_firings_poisson(
+    num_units=20,
+    sampling_frequency=30000.0,  # Not sure we need this?
+    duration=60,
+    refractory_period_ms=4.0,
+    firing_rates=3.0,
+    seed=0,
+):
+    rng = np.random.default_rng(seed=seed)
+
+    if np.isscalar(firing_rates):
+        firing_rates = np.full(num_units, firing_rates, dtype="float64")
+
+    mean_inter_spike_time = 1.0 / firing_rates
+    spikes_per_unit = (duration * firing_rates).astype(int)
+
+    refractory_period_seconds = refractory_period_ms / 1000.0
+
+    unit_indices = np.empty(num_units, dtype="uint16")
+
+    # Generate spike times for each unit
+    max_spikes = np.max(spikes_per_unit)
+    scale = mean_inter_spike_time[:, np.newaxis] - refractory_period_seconds  # Keeps the firing rate as expected
+    inter_spike_frames = rng.exponential(scale=scale, size=(num_units, max_spikes))
+    inter_spike_frames += refractory_period_seconds
+
+    # This already produces pre-sorted spike times and flatten the array
+    spike_frames = np.cumsum(inter_spike_frames, axis=1, out=inter_spike_frames)
+    spike_frames = spike_frames.ravel()
+
+    # We map units to corresponding spike times and flatten the array
+    unit_indices = np.empty(spike_frames.size, dtype="uint16")
+    unit_indices[:] = np.repeat(np.arange(num_units), max_spikes).ravel()
+
+    # Eliminate spikes that are beyond the duration
+    mask = spike_frames < duration
+    num_spikes_correct_duration = np.sum(mask)
+    spike_frames[:num_spikes_correct_duration] = spike_frames[mask]
+    unit_indices[:num_spikes_correct_duration] = unit_indices[mask]
+
+    sort_indices = np.argsort(spike_frames, kind="stable")
+    spike_frames[:] = spike_frames[sort_indices]  # This is still generating a malloc, probably the ravel
+    unit_indices[:] = unit_indices[sort_indices]
+
+    return spike_frames, unit_indices
 
 
 def synthesize_random_firings(
