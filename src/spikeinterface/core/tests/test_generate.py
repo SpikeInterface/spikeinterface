@@ -292,23 +292,28 @@ def test_generate_single_fake_waveform():
 
 
 def test_generate_unit_locations():
-
     seed = 0
 
     probe = generate_multi_columns_probe(num_columns=2, num_contact_per_column=20, xpitch=20, ypitch=20)
     channel_locations = probe.contact_positions
 
     num_units = 100
-    minimum_distance = 20.
-    unit_locations = generate_unit_locations(num_units, channel_locations,
-                                             margin_um=20.0, minimum_z=5.0, maximum_z=40.0, 
-                                             minimum_distance=minimum_distance, max_iteration=500,
-                                             distance_strict=False, seed=seed)
+    minimum_distance = 20.0
+    unit_locations = generate_unit_locations(
+        num_units,
+        channel_locations,
+        margin_um=20.0,
+        minimum_z=5.0,
+        maximum_z=40.0,
+        minimum_distance=minimum_distance,
+        max_iteration=500,
+        distance_strict=False,
+        seed=seed,
+    )
     distances = np.linalg.norm(unit_locations[:, np.newaxis] - unit_locations[np.newaxis, :], axis=2)
     dist_flat = np.triu(distances, k=1).flatten()
-    dist_flat = dist_flat[dist_flat>0]
+    dist_flat = dist_flat[dist_flat > 0]
     assert np.all(dist_flat > minimum_distance)
-
 
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
