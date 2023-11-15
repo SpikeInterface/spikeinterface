@@ -9,7 +9,7 @@ import json
 import traceback
 import shutil
 import warnings
-
+import platform
 
 from spikeinterface.core import load_extractor, BaseRecordingSnippets
 from spikeinterface.core.core_tools import check_json
@@ -138,9 +138,23 @@ class BaseSorter:
 
         rec_file = output_folder / "spikeinterface_recording.json"
         if recording.check_serializablility("json"):
-            recording.dump(rec_file, relative_to=output_folder)
+            # because Windows has different drives we can't do `relative_to`
+            # unless user is on same drive, which is not guaranteed
+            if platform.system() == "Windows":
+                recording.dump(
+                    rec_file,
+                )
+            else:
+                recording.dump(rec_file, relative_to=output_folder)
         elif recording.check_serializablility("pickle"):
-            recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
+            # because Windows has different drives we can't do `relative_to`
+            # unless user is on same drive, which is not guaranteed
+            if platform.system() == "Windows":
+                recording.dump(
+                    output_folder / "spikeinterface_recording.pickle",
+                )
+            else:
+                recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
             # TODO: deprecate and finally remove this after 0.100
             d = {"warning": "The recording is not serializable to json"}
