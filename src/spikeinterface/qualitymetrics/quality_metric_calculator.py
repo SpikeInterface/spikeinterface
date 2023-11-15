@@ -198,10 +198,10 @@ def compute_quality_metrics(
     qm_params : dict or None
         Dictionary with parameters for quality metrics calculation.
         Default parameters can be obtained with: `si.qualitymetrics.get_default_qm_params()`
-    sparsity : dict or None
+    sparsity : dict or None, default: None
         If given, the sparse channel_ids for each unit in PCA metrics computation.
         This is used also to identify neighbor units and speed up computations.
-        If None (default) all channels and all units are used for each unit.
+        If None all channels and all units are used for each unit.
     skip_pc_metrics : bool
         If True, PC metrics computation is skipped.
     n_jobs : int

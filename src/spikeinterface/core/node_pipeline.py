@@ -55,10 +55,10 @@ class PipelineNode:
         ----------
         recording : BaseRecording
             The recording object.
-        parents : Optional[List[PipelineNode]], optional
-            Pass parents nodes to perform a previous computation, by default None
-        return_output : bool or tuple of bool
-            Whether or not the output of the node is returned by the pipeline, by default False
+        parents : Optional[List[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation
+        return_output : bool or tuple of bool, default: True
+            Whether or not the output of the node is returned by the pipeline.
             When a Node have several toutputs then this can be a tuple of bool.
 
 
@@ -160,10 +160,10 @@ class SpikeRetriever(PeakSource):
         If False, the max channel is computed for each spike given a radius around the template max channel.
     extremum_channel_inds: dict of int
         The extremum channel index dict given from template.
-    radius_um: float (default 50.)
+    radius_um: float, default: 50
         The radius to find the real max channel.
         Used only when channel_from_template=False
-    peak_sign: str (default "neg")
+    peak_sign: str, default: "neg"
         Peak sign to find the max channel.
         Used only when channel_from_template=False
     """
@@ -225,7 +225,9 @@ class SpikeRetriever(PeakSource):
                 elif self.peak_sign == "both":
                     local_peaks[i]["channel_index"] = chans[np.argmax(np.abs(sparse_wfs))]
 
-        # TODO: "amplitude" ???
+        # handle amplitude
+        for i, peak in enumerate(local_peaks):
+            local_peaks["amplitude"][i] = traces[peak["sample_index"], peak["channel_index"]]
 
         return (local_peaks,)
 
@@ -266,14 +268,14 @@ class WaveformsNode(PipelineNode):
         ----------
         recording : BaseRecording
             The recording object.
-        parents : Optional[List[PipelineNode]], optional
-            Pass parents nodes to perform a previous computation, by default None
-        return_output : bool, optional
-            Whether or not the output of the node is returned by the pipeline, by default False
-        ms_before : float, optional
-            The number of milliseconds to include before the peak of the spike, by default 1.
-        ms_after : float, optional
-            The number of milliseconds to include after the peak of the spike, by default 1.
+        ms_before : float
+            The number of milliseconds to include before the peak of the spike
+        ms_after : float
+            The number of milliseconds to include after the peak of the spike
+        parents : Optional[List[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation
+        return_output : bool, default: False
+            Whether or not the output of the node is returned by the pipeline
         """
 
         PipelineNode.__init__(self, recording=recording, parents=parents, return_output=return_output)
@@ -301,14 +303,15 @@ class ExtractDenseWaveforms(WaveformsNode):
         ----------
         recording : BaseRecording
             The recording object.
-        parents : Optional[List[PipelineNode]], optional
-            Pass parents nodes to perform a previous computation, by default None
-        return_output : bool, optional
-            Whether or not the output of the node is returned by the pipeline, by default False
-        ms_before : float, optional
-            The number of milliseconds to include before the peak of the spike, by default 1.
-        ms_after : float, optional
-            The number of milliseconds to include after the peak of the spike, by default 1.
+        ms_before : float
+            The number of milliseconds to include before the peak of the spike
+        ms_after : float
+            The number of milliseconds to include after the peak of the spike
+        parents : Optional[List[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation
+        return_output : bool, default: False
+            Whether or not the output of the node is returned by the pipeline
+
         """
 
         WaveformsNode.__init__(
@@ -354,17 +357,15 @@ class ExtractSparseWaveforms(WaveformsNode):
         Parameters
         ----------
         recording : BaseRecording
-            The recording object.
-        parents : Optional[List[PipelineNode]], optional
-            Pass parents nodes to perform a previous computation, by default None
-        return_output : bool, optional
-            Whether or not the output of the node is returned by the pipeline, by default False
-        ms_before : float, optional
-            The number of milliseconds to include before the peak of the spike, by default 1.
-        ms_after : float, optional
-            The number of milliseconds to include after the peak of the spike, by default 1.
-
-
+            The recording object
+        ms_before : float
+            The number of milliseconds to include before the peak of the spike
+        ms_after : float
+            The number of milliseconds to include after the peak of the spike
+        parents : Optional[List[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation
+        return_output : bool, default: False
+            Whether or not the output of the node is returned by the pipeline
         """
         WaveformsNode.__init__(
             self,
@@ -444,6 +445,7 @@ def run_node_pipeline(
     job_name="pipeline",
     mp_context=None,
     gather_mode="memory",
+    gather_kwargs={},
     squeeze_output=True,
     folder=None,
     names=None,
@@ -460,7 +462,7 @@ def run_node_pipeline(
     if gather_mode == "memory":
         gather_func = GatherToMemory()
     elif gather_mode == "npy":
-        gather_func = GatherToNpy(folder, names)
+        gather_func = GatherToNpy(folder, names, **gather_kwargs)
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
@@ -614,9 +616,9 @@ class GatherToNpy:
       * create the npy v1.0 header at the end with the correct shape and dtype
     """
 
-    def __init__(self, folder, names, npy_header_size=1024):
+    def __init__(self, folder, names, npy_header_size=1024, exist_ok=False):
         self.folder = Path(folder)
-        self.folder.mkdir(parents=True, exist_ok=False)
+        self.folder.mkdir(parents=True, exist_ok=exist_ok)
         assert names is not None
         self.names = names
         self.npy_header_size = npy_header_size

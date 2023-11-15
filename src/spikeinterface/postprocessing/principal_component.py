@@ -72,7 +72,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 new_extension_data[k] = v
         return new_extension_data
 
-    def get_projections(self, unit_id):
+    def get_projections(self, unit_id, sparse=False):
         """
         Returns the computed projections for the sampled waveforms of a unit id.
 
@@ -80,13 +80,22 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         ----------
         unit_id : int or str
             The unit id to return PCA projections for
+        sparse: bool, default: False
+            If True, and sparsity is not None, only projections on sparse channels are returned.
 
         Returns
         -------
-        proj: np.array
-            The PCA projections (num_waveforms, num_components, num_channels)
+        projections: np.array
+            The PCA projections (num_waveforms, num_components, num_channels).
+            In case sparsity is used, only the projections on sparse channels are returned.
         """
-        return self._extension_data[f"pca_{unit_id}"]
+        projections = self._extension_data[f"pca_{unit_id}"]
+        mode = self._params["mode"]
+        if mode in ("by_channel_local", "by_channel_global") and sparse:
+            sparsity = self.get_sparsity()
+            if sparsity is not None:
+                projections = projections[:, :, sparsity.unit_id_to_channel_indices[unit_id]]
+        return projections
 
     def get_pca_model(self):
         """
@@ -113,18 +122,18 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         Parameters
         ----------
-        channel_ids : list, optional
+        channel_ids : list, default: None
             List of channel ids on which projections are computed
-        unit_ids : list, optional
+        unit_ids : list, default: None
             List of unit ids to return projections for
         outputs: str
-            * 'id': 'all_labels' contain unit ids
-            * 'index': 'all_labels' contain unit indices
+            * "id": "all_labels" contain unit ids
+            * "index": "all_labels" contain unit indices
 
         Returns
         -------
         all_labels: np.array
-            Array with labels (ids or indices based on 'outputs') of returned PCA projections
+            Array with labels (ids or indices based on "outputs") of returned PCA projections
         all_projections: np.array
             The PCA projections (num_all_waveforms, num_components, num_channels)
         """
@@ -134,7 +143,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         all_labels = []  #  can be unit_id or unit_index
         all_projections = []
         for unit_index, unit_id in enumerate(unit_ids):
-            proj = self.get_projections(unit_id)
+            proj = self.get_projections(unit_id, sparse=False)
             if channel_ids is not None:
                 chan_inds = self.waveform_extractor.channel_ids_to_indices(channel_ids)
                 proj = proj[:, :, chan_inds]
@@ -151,7 +160,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return all_labels, all_projections
 
-    def project_new(self, new_waveforms, unit_id=None):
+    def project_new(self, new_waveforms, unit_id=None, sparse=False):
         """
         Projects new waveforms or traces snippets on the PC components.
 
@@ -160,7 +169,9 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         new_waveforms: np.array
             Array with new waveforms to project with shape (num_waveforms, num_samples, num_channels)
         unit_id: int or str
-            In case PCA is sparse and mode is by_channel_local, the unit_id of 'new_waveforms'
+            In case PCA is sparse and mode is by_channel_local, the unit_id of "new_waveforms"
+        sparse: bool, default: False
+            If True, and sparsity is not None, only projections on sparse channels are returned.
 
         Returns
         -------
@@ -175,7 +186,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         wfs0 = self.waveform_extractor.get_waveforms(unit_id=self.waveform_extractor.sorting.unit_ids[0])
         assert (
             wfs0.shape[1] == new_waveforms.shape[1]
-        ), "Mismatch in number of samples between waveforms used to fit the pca model and 'new_waveforms"
+        ), "Mismatch in number of samples between waveforms used to fit the pca model and 'new_waveforms'"
         num_channels = len(self.waveform_extractor.channel_ids)
 
         # check waveform shapes
@@ -189,7 +200,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         else:
             assert (
                 wfs0.shape[2] == new_waveforms.shape[2]
-            ), "Mismatch in number of channels between waveforms used to fit the pca model and 'new_waveforms"
+            ), "Mismatch in number of channels between waveforms used to fit the pca model and 'new_waveforms'"
             channel_inds = np.arange(num_channels, dtype=int)
 
         # get channel ids and pca models
@@ -211,6 +222,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             wfs_flat = new_waveforms.reshape(new_waveforms.shape[0], -1)
             projections = pca_model.transform(wfs_flat)
 
+        # take care of sparsity (not in case of concatenated)
+        if mode in ("by_channel_local", "by_channel_global") and sparse:
+            if sparsity is not None:
+                projections = projections[:, :, sparsity.unit_id_to_channel_indices[unit_id]]
         return projections
 
     def get_sparsity(self):
@@ -691,27 +706,28 @@ def compute_principal_components(
         The waveform extractor
     load_if_exists: bool
         If True and pc scores are already in the waveform extractor folders, pc scores are loaded and not recomputed.
-    n_components: int
-        Number of components fo PCA - default 5
-    mode: str, default: 'by_channel_local'
-        - 'by_channel_local': a local PCA is fitted for each channel (projection by channel)
-        - 'by_channel_global': a global PCA is fitted for all channels (projection by channel)
-        - 'concatenated': channels are concatenated and a global PCA is fitted
-    sparsity: ChannelSparsity or None
+    n_components: int, default: 5
+        Number of components fo PCA
+    mode: "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
+        The PCA mode:
+            - "by_channel_local": a local PCA is fitted for each channel (projection by channel)
+            - "by_channel_global": a global PCA is fitted for all channels (projection by channel)
+            - "concatenated": channels are concatenated and a global PCA is fitted
+    sparsity: ChannelSparsity or None, default: None
         The sparsity to apply to waveforms.
-        If waveform_extractor is already sparse, the default sparsity will be used - default None
-    whiten: bool
-        If True, waveforms are pre-whitened - default True
-    dtype: dtype
-        Dtype of the pc scores - default float32
-    n_jobs: int
-        Number of jobs used to fit the PCA model (if mode is 'by_channel_local') - default 1
-    progress_bar: bool
-        If True, a progress bar is shown - default False
-    tmp_folder: str
+        If waveform_extractor is already sparse, the default sparsity will be used
+    whiten: bool, default: True
+        If True, waveforms are pre-whitened
+    dtype: dtype, default: "float32"
+        Dtype of the pc scores
+    tmp_folder: str or Path or None, default: None
         The temporary folder to use for parallel computation. If you run several `compute_principal_components`
-        functions in parallel with mode 'by_channel_local', you need to specify a different `tmp_folder` for each call,
-        to avoid overwriting to the same folder - default None
+        functions in parallel with mode "by_channel_local", you need to specify a different `tmp_folder` for each call,
+        to avoid overwriting to the same folder
+    n_jobs: int, default: 1
+        Number of jobs used to fit the PCA model (if mode is "by_channel_local")
+    progress_bar: bool, default: False
+        If True, a progress bar is shown
 
     Returns
     -------

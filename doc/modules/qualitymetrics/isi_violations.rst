@@ -77,11 +77,11 @@ With SpikeInterface:
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as qm
+    import spikeinterface.qualitymetrics as sqm
 
     # Make recording, sorting and wvf_extractor object for your data.
 
-    isi_violations_ratio, isi_violations_count = qm.compute_isi_violations(wvf_extractor, isi_threshold_ms=1.0)
+    isi_violations_ratio, isi_violations_count = sqm.compute_isi_violations(wvf_extractor, isi_threshold_ms=1.0)
 
 References
 ----------

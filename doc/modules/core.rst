@@ -518,9 +518,9 @@ These are a set of keyword arguments which are common to all functions that supp
     A float like 0.5 means half of the availables core.
 * progress_bar: bool
     If True, a progress bar is printed
-* mp_context: str or None
-    Context for multiprocessing. It can be None (default), "fork" or "spawn".
-    Note that "fork" is only available on UNIX systems (not Windows)
+* mp_context: "fork" | "spawn" | None, default: None
+        "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
+        "fork" is only safely available on LINUX systems.
 
 The default **job_kwargs** are :code:`n_jobs=1, chunk_duration="1s", progress_bar=True`.
 
@@ -547,8 +547,7 @@ workflow.
 In order to do this, one can use the :code:`Numpy*` classes, :py:class:`~spikeinterface.core.NumpyRecording`,
 :py:class:`~spikeinterface.core.NumpySorting`, :py:class:`~spikeinterface.core.NumpyEvent`, and
 :py:class:`~spikeinterface.core.NumpySnippets`. These object behave exactly like normal SpikeInterface objects,
-but they are not bound to a file. This makes these objects *not dumpable*, so parallel processing is not supported.
-In order to make them *dumpable*, one can simply :code:`save()` them (see :ref:`save_load`).
+but they are not bound to a file.
 
 Also note the class :py:class:`~spikeinterface.core.SharedMemorySorting` which is very similar to
 Similar to :py:class:`~spikeinterface.core.NumpySorting` but with an unerlying SharedMemory which is usefull for

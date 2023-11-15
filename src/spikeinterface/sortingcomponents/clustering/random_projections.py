@@ -18,7 +18,14 @@ from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
-from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks, EnergyFeature
+from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
+from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
+from spikeinterface.core.node_pipeline import (
+    run_node_pipeline,
+    ExtractDenseWaveforms,
+    ExtractSparseWaveforms,
+    PeakRetriever,
+)
 
 
 class RandomProjectionClustering:
@@ -34,18 +41,18 @@ class RandomProjectionClustering:
             "cluster_selection_method": "leaf",
         },
         "cleaning_kwargs": {},
+        "waveforms": {"ms_before": 2, "ms_after": 2, "max_spikes_per_unit": 100},
         "radius_um": 100,
-        "max_spikes_per_unit": 200,
         "selection_method": "closest_to_centroid",
-        "nb_projections": {"ptp": 8, "energy": 2},
-        "ms_before": 1.5,
-        "ms_after": 1.5,
+        "nb_projections": 10,
+        "ms_before": 1,
+        "ms_after": 1,
         "random_seed": 42,
-        "cleaning_method": "matching",
-        "shared_memory": False,
-        "min_values": {"ptp": 0, "energy": 0},
+        "noise_levels": None,
+        "smoothing_kwargs": {"window_length_ms": 0.25},
+        "shared_memory": True,
         "tmp_folder": None,
-        "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "10M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
     }
 
     @classmethod
@@ -71,59 +78,92 @@ class RandomProjectionClustering:
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
 
-        noise_levels = get_noise_levels(recording, return_scaled=False)
+        if d["noise_levels"] is None:
+            noise_levels = get_noise_levels(recording, return_scaled=False)
+        else:
+            noise_levels = d["noise_levels"]
 
         np.random.seed(d["random_seed"])
 
-        features_params = {}
-        features_list = []
+        if params["tmp_folder"] is None:
+            name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            tmp_folder = get_global_tmp_folder() / name
+        else:
+            tmp_folder = Path(params["tmp_folder"]).absolute()
 
-        noise_snippets = None
+        tmp_folder.mkdir(parents=True, exist_ok=True)
 
-        for proj_type in ["ptp", "energy"]:
-            if d["nb_projections"][proj_type] > 0:
-                features_list += [f"random_projections_{proj_type}"]
-
-                if d["min_values"][proj_type] == "auto":
-                    if noise_snippets is None:
-                        num_segments = recording.get_num_segments()
-                        num_chunks = 3 * d["max_spikes_per_unit"] // num_segments
-                        noise_snippets = get_random_data_chunks(
-                            recording, num_chunks_per_segment=num_chunks, chunk_size=num_samples, seed=42
-                        )
-                        noise_snippets = noise_snippets.reshape(num_chunks, num_samples, num_chans)
-
-                    if proj_type == "energy":
-                        data = np.linalg.norm(noise_snippets, axis=1)
-                        min_values = np.median(data, axis=0)
-                    elif proj_type == "ptp":
-                        data = np.ptp(noise_snippets, axis=1)
-                        min_values = np.median(data, axis=0)
-                elif d["min_values"][proj_type] > 0:
-                    min_values = d["min_values"][proj_type]
-                else:
-                    min_values = None
-
-                projections = np.random.randn(num_chans, d["nb_projections"][proj_type])
-                features_params[f"random_projections_{proj_type}"] = {
-                    "radius_um": params["radius_um"],
-                    "projections": projections,
-                    "min_values": min_values,
-                }
-
-        features_data = compute_features_from_peaks(
-            recording, peaks, features_list, features_params, ms_before=1, ms_after=1, **params["job_kwargs"]
+        node0 = PeakRetriever(recording, peaks)
+        node1 = ExtractSparseWaveforms(
+            recording,
+            parents=[node0],
+            return_output=False,
+            ms_before=params["ms_before"],
+            ms_after=params["ms_after"],
+            radius_um=params["radius_um"],
         )
 
-        if len(features_data) > 1:
-            hdbscan_data = np.hstack((features_data[0], features_data[1]))
-        else:
-            hdbscan_data = features_data[0]
+        node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
+
+        projections = np.random.randn(num_chans, d["nb_projections"])
+        projections -= projections.mean(0)
+        projections /= projections.std(0)
+
+        nbefore = int(params["ms_before"] * fs / 1000)
+        nafter = int(params["ms_after"] * fs / 1000)
+        nsamples = nbefore + nafter
+
+        import scipy
+
+        x = np.random.randn(100, nsamples, num_chans).astype(np.float32)
+        x = scipy.signal.savgol_filter(x, node2.window_length, node2.order, axis=1)
+
+        ptps = np.ptp(x, axis=1)
+        a, b = np.histogram(ptps.flatten(), np.linspace(0, 100, 1000))
+        ydata = np.cumsum(a) / a.sum()
+        xdata = b[1:]
+
+        from scipy.optimize import curve_fit
+
+        def sigmoid(x, L, x0, k, b):
+            y = L / (1 + np.exp(-k * (x - x0))) + b
+            return y
+
+        p0 = [max(ydata), np.median(xdata), 1, min(ydata)]  # this is an mandatory initial guess
+        popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
+
+        node3 = RandomProjectionsFeature(
+            recording,
+            parents=[node0, node2],
+            return_output=True,
+            projections=projections,
+            radius_um=params["radius_um"],
+            sigmoid=None,
+            sparse=True,
+        )
+
+        pipeline_nodes = [node0, node1, node2, node3]
+
+        hdbscan_data = run_node_pipeline(
+            recording, pipeline_nodes, params["job_kwargs"], job_name="extracting features"
+        )
 
         import sklearn
 
         clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
         peak_labels = clustering[0]
+
+        # peak_labels = -1 * np.ones(len(peaks), dtype=int)
+        # nb_clusters = 0
+        # for c in np.unique(peaks['channel_index']):
+        #     mask = peaks['channel_index'] == c
+        #     clustering = hdbscan.hdbscan(hdbscan_data[mask], **d['hdbscan_kwargs'])
+        #     local_labels = clustering[0]
+        #     valid_clusters = local_labels > -1
+        #     if np.sum(valid_clusters) > 0:
+        #         local_labels[valid_clusters] += nb_clusters
+        #         peak_labels[mask] = local_labels
+        #         nb_clusters += len(np.unique(local_labels[valid_clusters]))
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
@@ -133,7 +173,7 @@ class RandomProjectionClustering:
 
         all_indices = np.arange(0, peak_labels.size)
 
-        max_spikes = params["max_spikes_per_unit"]
+        max_spikes = params["waveforms"]["max_spikes_per_unit"]
         selection_method = params["selection_method"]
 
         for unit_ind in labels:
@@ -160,84 +200,53 @@ class RandomProjectionClustering:
         spikes["segment_index"] = peaks[mask]["segment_index"]
         spikes["unit_index"] = peak_labels[mask]
 
-        cleaning_method = params["cleaning_method"]
-
         if verbose:
-            print("We found %d raw clusters, starting to clean with %s..." % (len(labels), cleaning_method))
+            print("We found %d raw clusters, starting to clean with matching..." % (len(labels)))
 
-        if cleaning_method == "cosine":
-            wfs_arrays = extract_waveforms_to_buffers(
-                recording,
-                spikes,
-                labels,
-                nbefore,
-                nafter,
-                mode="shared_memory",
-                return_scaled=False,
-                folder=None,
-                dtype=recording.get_dtype(),
-                sparsity_mask=None,
-                copy=True,
-                **params["job_kwargs"],
-            )
+        sorting_folder = tmp_folder / "sorting"
+        unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
+        sorting = NumpySorting(spikes, fs, unit_ids=unit_ids)
 
-            labels, peak_labels = remove_duplicates(
-                wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params["cleaning_kwargs"]
-            )
-
-        elif cleaning_method == "dip":
-            wfs_arrays = {}
-            for label in labels:
-                mask = label == peak_labels
-                wfs_arrays[label] = hdbscan_data[mask]
-
-            labels, peak_labels = remove_duplicates_via_dip(wfs_arrays, peak_labels, **params["cleaning_kwargs"])
-
-        elif cleaning_method == "matching":
-            # create a tmp folder
-            if params["tmp_folder"] is None:
-                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                tmp_folder = get_global_tmp_folder() / name
-            else:
-                tmp_folder = Path(params["tmp_folder"])
-
-            if params["shared_memory"]:
-                waveform_folder = None
-                mode = "memory"
-            else:
-                waveform_folder = tmp_folder / "waveforms"
-                mode = "folder"
-
-            sorting_folder = tmp_folder / "sorting"
-            sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["unit_index"], fs)
+        if params["shared_memory"]:
+            waveform_folder = None
+            mode = "memory"
+        else:
+            waveform_folder = tmp_folder / "waveforms"
+            mode = "folder"
             sorting = sorting.save(folder=sorting_folder)
-            we = extract_waveforms(
-                recording,
-                sorting,
-                waveform_folder,
-                ms_before=params["ms_before"],
-                ms_after=params["ms_after"],
-                **params["job_kwargs"],
-                return_scaled=False,
-                mode=mode,
-            )
 
-            cleaning_matching_params = params["job_kwargs"].copy()
-            cleaning_matching_params["chunk_duration"] = "100ms"
-            cleaning_matching_params["n_jobs"] = 1
-            cleaning_matching_params["verbose"] = False
-            cleaning_matching_params["progress_bar"] = False
+        we = extract_waveforms(
+            recording,
+            sorting,
+            waveform_folder,
+            **params["job_kwargs"],
+            **params["waveforms"],
+            return_scaled=False,
+            mode=mode,
+        )
 
-            cleaning_params = params["cleaning_kwargs"].copy()
-            cleaning_params["tmp_folder"] = tmp_folder
+        cleaning_matching_params = params["job_kwargs"].copy()
+        for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+            if value in cleaning_matching_params:
+                cleaning_matching_params.pop(value)
+        cleaning_matching_params["chunk_duration"] = "100ms"
+        cleaning_matching_params["n_jobs"] = 1
+        cleaning_matching_params["verbose"] = False
+        cleaning_matching_params["progress_bar"] = False
 
-            labels, peak_labels = remove_duplicates_via_matching(
-                we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
-            )
+        cleaning_params = params["cleaning_kwargs"].copy()
+        cleaning_params["tmp_folder"] = tmp_folder
 
-            if params["tmp_folder"] is None:
-                shutil.rmtree(tmp_folder)
-            else:
+        labels, peak_labels = remove_duplicates_via_matching(
+            we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
+        )
+
+        del we, sorting
+
+        if params["tmp_folder"] is None:
+            shutil.rmtree(tmp_folder)
+        else:
+            if not params["shared_memory"]:
                 shutil.rmtree(tmp_folder / "waveforms")
                 shutil.rmtree(tmp_folder / "sorting")
 

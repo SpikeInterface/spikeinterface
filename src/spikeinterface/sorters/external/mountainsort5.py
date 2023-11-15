@@ -87,9 +87,9 @@ class Mountainsort5Sorter(BaseSorter):
 
         if HAVE_MS5:
             vv = parse(mountainsort5.__version__)
-            if vv < parse("0.3") or vv >= parse("0.4"):
+            if vv < parse("0.3"):
                 print(
-                    f"WARNING: This version of SpikeInterface expects Mountainsort5 version 0.3.x. "
+                    f"WARNING: This version of SpikeInterface expects Mountainsort5 version 0.3.x or newer. "
                     f"You have version {mountainsort5.__version__}"
                 )
                 HAVE_MS5 = False
@@ -115,9 +115,7 @@ class Mountainsort5Sorter(BaseSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import mountainsort5 as ms5
 
-        recording: BaseRecording = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=sorter_output_folder.parent
-        )
+        recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
         # alias to params
         p = params

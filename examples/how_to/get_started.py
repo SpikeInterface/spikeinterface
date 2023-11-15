@@ -337,8 +337,8 @@ sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
 
 print('Units in agreement between TDC, SC2, and KS2:', sorting_agreement.get_unit_ids())
 
-w_multi = sw.plot_multicomp_agreement(comp_multi)
-w_multi = sw.plot_multicomp_agreement_by_sorter(comp_multi)
+w_multi = sw.plot_multicomparison_agreement(comp_multi)
+w_multi = sw.plot_multicomparison_agreement_by_sorter(comp_multi)
 # -
 
 # We see that 10 unit were found by all sorters (note that this simulated dataset is a very simple example, and usually sorters do not do such a great job)!

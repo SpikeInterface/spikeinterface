@@ -50,7 +50,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
         "save_rez_to_mat": False,
-        "delete_tmp_files": True,
+        "delete_tmp_files": ("matlab_files",),
         "delete_recording_dat": False,
     }
 
@@ -70,10 +70,12 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "AUCsplit": "Threshold on the area under the curve (AUC) criterion for performing a split in the final step",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "keep_good_only": "If True only 'good' units are returned",
-        "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
+        "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "save_rez_to_mat": "Save the full rez internal struc to mat file",
-        "delete_tmp_files": "Whether to delete all temporary files after a successful run",
+        "delete_tmp_files": "Delete temporary files created during sorting (matlab files and the `temp_wh.dat` file that "
+        "contains kilosort-preprocessed data). Accepts `False` (deletes no files), `True` (deletes all files) "
+        "or a Tuple containing the files to delete. Options are: ('temp_wh.dat', 'matlab_files')",
         "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
     }
 

@@ -56,13 +56,11 @@ def compute_noise_levels(waveform_extractor, load_if_exists=False, **params):
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
-        A waveform extractor object.
-    num_chunks_per_segment: int (deulf 20)
-        Number of chunks to estimate the noise
-    chunk_size: int (default 10000)
-        Size of chunks in sample
-    seed: int (default None)
-        Eventualy a seed for reproducibility.
+        A waveform extractor object
+    load_if_exists: bool, default: False
+        If True, the noise levels are loaded if they already exist
+    **params: dict with additional parameters
+
 
     Returns
     -------

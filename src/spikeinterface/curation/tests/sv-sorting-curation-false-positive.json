@@ -1,0 +1,19 @@
+{
+    "labelsByUnit": {
+        "1": [
+            "accept"
+        ],
+        "2": [
+            "artifact"
+        ],
+        "12": [
+            "artifact"
+        ]
+    },
+    "mergeGroups": [
+        [
+            2,
+            12
+        ]
+    ]
+}

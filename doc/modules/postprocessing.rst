@@ -14,9 +14,9 @@ WaveformExtractor extensions
 
 There are several postprocessing tools available, and all
 of them are implemented as a :py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`. All computations on top
-of a WaveformExtractor will be saved along side the WaveformExtractor itself (sub  folder, zarr path or sub dict).
+of a :code:`WaveformExtractor` will be saved along side the :code:`WaveformExtractor` itself (sub folder, zarr path or sub dict).
 This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a
-WaveformExtractor.
+:code:`WaveformExtractor`.
 
 :py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`  objects are tightly connected to the
 parent :code:`WaveformExtractor` object, so that operations done on the :code:`WaveformExtractor`, such as saving,
@@ -80,9 +80,9 @@ This extension computes the principal components of the waveforms. There are sev
 
 * "by_channel_local" (default): fits one PCA model for each by_channel
 * "by_channel_global": fits the same PCA model to all channels (also termed temporal PCA)
-* "concatenated": contatenates all channels and fits a PCA model on the concatenated data
+* "concatenated": concatenates all channels and fits a PCA model on the concatenated data
 
-If the input :code:`WaveformExtractor` is sparse, the sparsity is used when computing PCA.
+If the input :code:`WaveformExtractor` is sparse, the sparsity is used when computing the PCA.
 For dense waveforms, sparsity can also be passed as an argument.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_principal_components`
@@ -127,7 +127,7 @@ with center of mass (:code:`method="center_of_mass"` - fast, but less accurate),
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_locations`
 
 
-unit locations
+unit_locations
 ^^^^^^^^^^^^^^
 
 

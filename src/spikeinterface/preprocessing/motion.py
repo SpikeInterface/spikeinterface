@@ -200,14 +200,14 @@ def correct_motion(
     ----------
     recording: RecordingExtractor
         The recording extractor to be transformed
-    preset: str
-        The preset name. Default "nonrigid_accurate".
-    folder: Path str or None
-        If not None then intermediate motion info are saved into a folder. Default None
-    output_motion_info: bool
+    preset: str, default: "nonrigid_accurate"
+        The preset name
+    folder: Path str or None, default: None
+        If not None then intermediate motion info are saved into a folder
+    output_motion_info: bool, default: False
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
-        This dictionary is the same when reloaded from the folder. Default False
+        This dictionary is the same when reloaded from the folder
     detect_kwargs: dict
         Optional parameters to overwrite the ones in the preset for "detect" step.
     select_kwargs: dict
@@ -333,7 +333,7 @@ def correct_motion(
         )
         (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-        if recording.check_if_json_serializable():
+        if recording.check_serializablility("json"):
             recording.dump_to_json(folder / "recording.json")
 
         np.save(folder / "peaks.npy", peaks)

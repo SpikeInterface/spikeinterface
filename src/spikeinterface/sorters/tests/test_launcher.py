@@ -178,7 +178,7 @@ def test_run_sorters_with_list():
     if working_folder.is_dir():
         shutil.rmtree(working_folder)
 
-    # make dumpable
+    # make serializable
     rec0 = load_extractor(cache_folder / "toy_rec_0")
     rec1 = load_extractor(cache_folder / "toy_rec_1")
 
@@ -233,15 +233,15 @@ def test_run_sorters_with_dict():
 
 
 if __name__ == "__main__":
-    # setup_module()
+    setup_module()
     job_list = get_job_list()
 
-    # test_run_sorter_jobs_loop(job_list)
+    test_run_sorter_jobs_loop(job_list)
     # test_run_sorter_jobs_joblib(job_list)
     # test_run_sorter_jobs_processpoolexecutor(job_list)
     # test_run_sorter_jobs_multiprocessing(job_list)
     # test_run_sorter_jobs_dask(job_list)
-    test_run_sorter_jobs_slurm(job_list)
+    # test_run_sorter_jobs_slurm(job_list)
 
     # test_run_sorter_by_property()
 
