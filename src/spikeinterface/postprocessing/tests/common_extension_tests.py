@@ -143,7 +143,7 @@ class WaveformExtensionCommonTestSuite:
 
             # reload as an extension from we
             assert self.extension_class.extension_name in we.get_available_extension_names()
-            assert we.is_extension(self.extension_class.extension_name)
+            assert we.has_extension(self.extension_class.extension_name)
             ext = we.load_extension(self.extension_class.extension_name)
             assert isinstance(ext, self.extension_class)
             for ext_name in self.extension_data_names:
