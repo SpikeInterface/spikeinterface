@@ -77,12 +77,6 @@ class RandomProjectionClustering:
         nafter = int(params["ms_after"] * fs / 1000.0)
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
-
-        if d["noise_levels"] is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False)
-        else:
-            noise_levels = d["noise_levels"]
-
         np.random.seed(d["random_seed"])
 
         if params["tmp_folder"] is None:
@@ -219,7 +213,7 @@ class RandomProjectionClustering:
         cleaning_params["tmp_folder"] = tmp_folder
 
         labels, peak_labels = remove_duplicates_via_matching(
-            we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
+            we, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
         )
 
         del we, sorting

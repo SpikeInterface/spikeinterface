@@ -167,7 +167,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
         matching_params = params["matching"].copy()
         matching_params["waveform_extractor"] = we
-        matching_params.update({"noise_levels": noise_levels})
 
         matching_job_params = job_kwargs.copy()
         for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:

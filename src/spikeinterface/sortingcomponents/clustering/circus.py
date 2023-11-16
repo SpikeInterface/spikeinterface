@@ -88,7 +88,6 @@ class CircusClustering:
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
-        "noise_levels": None,
         "shared_memory": True,
         "tmp_folder": None,
         "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
@@ -118,12 +117,6 @@ class CircusClustering:
         nafter = int(ms_after * fs / 1000.0)
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
-
-        if d["noise_levels"] is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False)
-        else:
-            noise_levels = d["noise_levels"]
-
         np.random.seed(d["random_seed"])
 
         if params["tmp_folder"] is None:
@@ -280,7 +273,7 @@ class CircusClustering:
         cleaning_params["tmp_folder"] = tmp_folder
 
         labels, peak_labels = remove_duplicates_via_matching(
-            we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
+            we, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
         )
 
         del we, sorting

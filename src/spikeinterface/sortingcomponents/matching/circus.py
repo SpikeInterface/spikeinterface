@@ -496,9 +496,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         (Minimal, Maximal) amplitudes allowed for every template
     omp_min_sps: float
         Stopping criteria of the OMP algorithm, in percentage of the norm
-    noise_levels: array
-        The noise levels, for every channels. If None, they will be automatically
-        computed
     random_chunk_kwargs: dict
         Parameters for computing noise levels, if not provided (sub optimal)
     sparse_kwargs: dict
@@ -509,10 +506,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
         "amplitudes": [0.75, 1.25],
-        "omp_min_sps": 0.05,
+        "omp_min_sps": 1e-4,
         "waveform_extractor": None,
         "random_chunk_kwargs": {},
-        "noise_levels": None,
         "rank": 5,
         "sparse_kwargs": {"method": "ptp", "threshold": 1},
         "ignored_ids": [],
@@ -612,10 +608,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         d["sampling_frequency"] = d["waveform_extractor"].recording.get_sampling_frequency()
         d["vicinity"] *= d["num_samples"]
 
-        if d["noise_levels"] is None:
-            print("CircusOMPPeeler : noise should be computed outside")
-            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
-
         if "templates" not in d:
             d = cls._prepare_templates(d)
         else:
@@ -638,10 +630,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             d["unit_overlaps_tables"][i] = np.zeros(d["num_templates"], dtype=int)
             d["unit_overlaps_tables"][i][d["unit_overlaps_indices"][i]] = np.arange(len(d["unit_overlaps_indices"][i]))
 
-        omp_min_sps = d["omp_min_sps"]
-        # d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
-        d["stop_criteria"] = omp_min_sps * np.maximum(d["norms"], np.sqrt(d["noise_levels"].sum() * d["num_samples"]))
-
+        d["stop_criteria"] = d["omp_min_sps"]
         return d
 
     @classmethod
@@ -675,7 +664,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d["amplitudes"]
         ignored_ids = d["ignored_ids"]
-        stop_criteria = d["stop_criteria"][:, np.newaxis]
+        stop_criteria = d["stop_criteria"]
         vicinity = d["vicinity"]
         rank = d["rank"]
 
@@ -717,13 +706,15 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         neighbors = {}
         cached_overlaps = {}
 
-        is_valid = scalar_products > stop_criteria
         all_amplitudes = np.zeros(0, dtype=np.float32)
         is_in_vicinity = np.zeros(0, dtype=np.int32)
+        new_error = np.linalg.norm(scalar_products)
+        delta_error = np.inf
 
-        while np.any(is_valid):
-            best_amplitude_ind = scalar_products[is_valid].argmax()
-            best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
+        while delta_error > stop_criteria:
+
+            best_amplitude_ind = scalar_products.argmax()
+            best_cluster_ind, peak_index = np.unravel_index(best_amplitude_ind, scalar_products.shape)
 
             if num_selection > 0:
                 delta_t = selection[1] - peak_index
@@ -818,7 +809,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 to_add = diff_amp * local_overlaps[:, tdx[0] : tdx[1]]
                 scalar_products[overlapping_templates, idx[0] : idx[1]] -= to_add
 
-            is_valid = scalar_products > stop_criteria
+            previous_error = new_error
+            new_error = np.linalg.norm(scalar_products)
+            if previous_error != 0:
+                delta_error = np.abs(new_error / previous_error - 1)
+            else:
+                delta_error = 0
 
         is_valid = (final_amplitudes > min_amplitude) * (final_amplitudes < max_amplitude)
         valid_indices = np.where(is_valid)
