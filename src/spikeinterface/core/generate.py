@@ -1336,8 +1336,17 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
     return channel_locations
 
 
-def generate_unit_locations(num_units, channel_locations, margin_um=20.0, minimum_z=5.0, maximum_z=40.0, 
-                            minimum_distance=20., max_iteration=100, distance_strict=False,  seed=None):
+def generate_unit_locations(
+    num_units,
+    channel_locations,
+    margin_um=20.0,
+    minimum_z=5.0,
+    maximum_z=40.0,
+    minimum_distance=20.0,
+    max_iteration=100,
+    distance_strict=False,
+    seed=None,
+):
     rng = np.random.default_rng(seed=seed)
     units_locations = np.zeros((num_units, 3), dtype="float32")
 
@@ -1364,7 +1373,7 @@ def generate_unit_locations(num_units, channel_locations, margin_um=20.0, minimu
                 else:
                     # random only bad ones in the previous set
                     renew_inds = renew_inds[np.isin(renew_inds, np.unique(inds0))]
-                
+
                 units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
                 units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
                 units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
@@ -1374,8 +1383,10 @@ def generate_unit_locations(num_units, channel_locations, margin_um=20.0, minimu
 
     if not solution_found:
         if distance_strict:
-            raise ValueError(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
-                             "You can use distance_strict=False or reduce minimum distance")
+            raise ValueError(
+                f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
+                "You can use distance_strict=False or reduce minimum distance"
+            )
         else:
             warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
 
