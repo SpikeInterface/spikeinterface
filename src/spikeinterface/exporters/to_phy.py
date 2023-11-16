@@ -196,7 +196,7 @@ def export_to_phy(
         templates[unit_ind, :, :][:, : len(chan_inds)] = template
         templates_ind[unit_ind, : len(chan_inds)] = chan_inds
 
-    if waveform_extractor.is_extension("similarity"):
+    if waveform_extractor.has_extension("similarity"):
         tmc = waveform_extractor.load_extension("similarity")
         template_similarity = tmc.get_data()
     else:
@@ -219,7 +219,7 @@ def export_to_phy(
     np.save(str(output_folder / "channel_groups.npy"), channel_groups)
 
     if compute_amplitudes:
-        if waveform_extractor.is_extension("spike_amplitudes"):
+        if waveform_extractor.has_extension("spike_amplitudes"):
             sac = waveform_extractor.load_extension("spike_amplitudes")
             amplitudes = sac.get_data(outputs="concatenated")
         else:
@@ -231,7 +231,7 @@ def export_to_phy(
         np.save(str(output_folder / "amplitudes.npy"), amplitudes)
 
     if compute_pc_features:
-        if waveform_extractor.is_extension("principal_components"):
+        if waveform_extractor.has_extension("principal_components"):
             pc = waveform_extractor.load_extension("principal_components")
         else:
             pc = compute_principal_components(
@@ -264,7 +264,7 @@ def export_to_phy(
     channel_group = pd.DataFrame({"cluster_id": [i for i in range(len(unit_ids))], "channel_group": unit_groups})
     channel_group.to_csv(output_folder / "cluster_channel_group.tsv", sep="\t", index=False)
 
-    if waveform_extractor.is_extension("quality_metrics"):
+    if waveform_extractor.has_extension("quality_metrics"):
         qm = waveform_extractor.load_extension("quality_metrics")
         qm_data = qm.get_data()
         for column_name in qm_data.columns:

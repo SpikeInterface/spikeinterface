@@ -33,6 +33,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "job_kwargs": {"n_jobs": -1},
     }
 
+    handle_multi_segment = True
+
     @classmethod
     def get_sorter_version(cls):
         return "2.0"
