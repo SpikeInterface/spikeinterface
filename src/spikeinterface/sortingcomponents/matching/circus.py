@@ -676,13 +676,13 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         # Filter using overlap-and-add convolution
         if len(ignored_ids) > 0:
-            mask = ~np.isin(np.arange(num_templates), ignored_ids)
-            spatially_filtered_data = np.matmul(d["spatial"][:, mask, :], traces.T[np.newaxis, :, :])
-            scaled_filtered_data = spatially_filtered_data * d["singular"][:, mask, :]
+            not_ignored = ~np.isin(np.arange(num_templates), ignored_ids)
+            spatially_filtered_data = np.matmul(d["spatial"][:, not_ignored, :], traces.T[np.newaxis, :, :])
+            scaled_filtered_data = spatially_filtered_data * d["singular"][:, not_ignored, :]
             objective_by_rank = scipy.signal.oaconvolve(
-                scaled_filtered_data, d["temporal"][:, mask, :], axes=2, mode="valid"
+                scaled_filtered_data, d["temporal"][:, not_ignored, :], axes=2, mode="valid"
             )
-            scalar_products[mask] += np.sum(objective_by_rank, axis=0)
+            scalar_products[not_ignored] += np.sum(objective_by_rank, axis=0)
             scalar_products[ignored_ids] = -np.inf
         else:
             spatially_filtered_data = np.matmul(d["spatial"], traces.T[np.newaxis, :, :])
@@ -693,7 +693,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         num_spikes = 0
 
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
-        idx_lookup = np.arange(scalar_products.size).reshape(num_templates, -1)
 
         M = np.zeros((num_templates, num_templates), dtype=np.float32)
 
@@ -708,7 +707,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         all_amplitudes = np.zeros(0, dtype=np.float32)
         is_in_vicinity = np.zeros(0, dtype=np.int32)
-        new_error = np.linalg.norm(scalar_products)
+        if len(ignored_ids) > 0:
+            new_error = np.linalg.norm(scalar_products[not_ignored])
+        else:
+            new_error = np.linalg.norm(scalar_products)
         delta_error = np.inf
 
         while delta_error > stop_criteria:
@@ -810,11 +812,11 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 scalar_products[overlapping_templates, idx[0] : idx[1]] -= to_add
 
             previous_error = new_error
-            new_error = np.linalg.norm(scalar_products)
-            if previous_error != 0:
-                delta_error = np.abs(new_error / previous_error - 1)
+            if len(ignored_ids) > 0:
+                new_error = np.linalg.norm(scalar_products[not_ignored])
             else:
-                delta_error = 0
+                new_error = np.linalg.norm(scalar_products)
+            delta_error = np.abs(new_error / previous_error - 1)
 
         is_valid = (final_amplitudes > min_amplitude) * (final_amplitudes < max_amplitude)
         valid_indices = np.where(is_valid)
