@@ -712,7 +712,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         delta_error = np.inf
 
         while delta_error > stop_criteria:
-
             best_amplitude_ind = scalar_products.argmax()
             best_cluster_ind, peak_index = np.unravel_index(best_amplitude_ind, scalar_products.shape)
 
