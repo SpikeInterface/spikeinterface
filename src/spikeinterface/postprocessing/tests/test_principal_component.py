@@ -204,5 +204,5 @@ if __name__ == "__main__":
     # test.test_extension()
     # test.test_shapes()
     # test.test_compute_for_all_spikes()
-    test.test_sparse()
-    # test.test_project_new()
+    # test.test_sparse()
+    test.test_project_new()

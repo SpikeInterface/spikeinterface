@@ -370,7 +370,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
     def _fit_by_channel_local(self, n_jobs, progress_bar):
         from sklearn.decomposition import IncrementalPCA
-        from joblib import delayed, Parallel
+        from concurrent.futures import ProcessPoolExecutor
 
         we = self.waveform_extractor
         p = self._params
@@ -385,12 +385,15 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         tmp_folder = p["tmp_folder"]
         if tmp_folder is None:
-            tmp_folder = "tmp"
-        tmp_folder = Path(tmp_folder)
+            if n_jobs > 1:
+                import tempfile
+
+                tmp_folder = tempfile.mkdtemp(prefix="tmp", dir=".")
 
         for chan_ind, chan_id in enumerate(channel_ids):
             pca_model = pca_models[chan_ind]
             if n_jobs > 1:
+                tmp_folder = Path(tmp_folder)
                 tmp_folder.mkdir(exist_ok=True)
                 pca_model_file = tmp_folder / f"tmp_pca_model_{mode}_{chan_id}.pkl"
                 with pca_model_file.open("wb") as f:
@@ -411,10 +414,14 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                     pca = pca_models[chan_ind]
                     pca.partial_fit(wfs[:, :, wf_ind])
             else:
-                Parallel(n_jobs=n_jobs)(
-                    delayed(partial_fit_one_channel)(pca_model_files[chan_ind], wfs[:, :, wf_ind])
-                    for wf_ind, chan_ind in enumerate(channel_inds)
-                )
+                # parallel
+                items = [(pca_model_files[chan_ind], wfs[:, :, wf_ind]) for wf_ind, chan_ind in enumerate(channel_inds)]
+                n_jobs = min(n_jobs, len(items))
+
+                with ProcessPoolExecutor(max_workers=n_jobs) as executor:
+                    results = executor.map(partial_fit_one_channel, items)
+                    for res in results:
+                        pass
 
         # reload the models (if n_jobs > 1)
         if n_jobs not in (0, 1):
@@ -424,6 +431,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 with open(pca_model_file, "rb") as fid:
                     pca_models.append(pickle.load(fid))
                 pca_model_file.unlink()
+            print(f"Removing {tmp_folder}")
             shutil.rmtree(tmp_folder)
 
         # add models to extension data
@@ -762,7 +770,8 @@ def compute_principal_components(
     return pc
 
 
-def partial_fit_one_channel(pca_file, wf_chan):
+def partial_fit_one_channel(args):
+    pca_file, wf_chan = args
     with open(pca_file, "rb") as fid:
         pca_model = pickle.load(fid)
     pca_model.partial_fit(wf_chan)
