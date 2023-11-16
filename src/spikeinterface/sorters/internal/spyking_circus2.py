@@ -71,6 +71,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_f = common_reference(recording_f)
         else:
             recording_f = recording
+            recording_f.annotate(is_filtered=True)
 
         # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")

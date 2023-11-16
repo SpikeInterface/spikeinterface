@@ -12,7 +12,7 @@ except:
     HAVE_HDBSCAN = False
 
 import random, string, os
-from spikeinterface.core import get_global_tmp_folder, get_noise_levels, get_channel_distances, get_random_data_chunks
+from spikeinterface.core import get_global_tmp_folder, get_channel_distances, get_random_data_chunks
 from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
@@ -48,7 +48,6 @@ class RandomProjectionClustering:
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
-        "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "shared_memory": True,
         "tmp_folder": None,

@@ -505,8 +505,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     """
 
     _default_params = {
-        "amplitudes": [0.75, 1.25],
-        "omp_min_sps": 1e-4,
+        "amplitudes": [0.6, 1.4],
+        "omp_min_sps": 1e-5,
         "waveform_extractor": None,
         "random_chunk_kwargs": {},
         "rank": 5,
