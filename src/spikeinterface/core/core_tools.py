@@ -21,13 +21,6 @@ from .job_tools import (
     _shared_job_kwargs_doc,
 )
 
-try:
-    import numba
-
-    HAVE_NUMBA = True
-except:
-    HAVE_NUMBA = False
-
 
 def define_function_from_class(source_class, name):
     "Wrapper to change the name of a class"
