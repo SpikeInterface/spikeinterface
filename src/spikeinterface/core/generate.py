@@ -358,11 +358,7 @@ def synthesize_random_firings_poisson(
     Notes
     -----
     - The function uses a geometric distribution to simulate the discrete inter-spike intervals,
-    based that would be an exponential process.
-    - To ensure all spikes within the duration are captured, it initially generates more spikes
-    than expected and then filters out the excess.
-    - Refractory periods are enforced by adding a fixed number of frames to subsequent spikes.
-    - The output is sorted based on spike timings for easier analysis.
+    based that would be an exponential process for continuous time.
     """
 
     rng = np.random.default_rng(seed=seed)
@@ -403,7 +399,7 @@ def synthesize_random_firings_poisson(
     spike_frames = spike_frames[:num_correct_frames]
     unit_indices = unit_indices[:num_correct_frames]
 
-    # This should use tim or radix sort which is good for integers and presorted data. I profiled, re-profile in doubt.
+    # This should use tim or radix sort which is good for integers and presorted data. I profiled. re-profile in doubt.
     sort_indices = np.argsort(spike_frames, kind="stable")
     spike_frames = spike_frames[sort_indices]  # This is still generating a malloc, probably the ravel
     unit_indices = unit_indices[sort_indices]
