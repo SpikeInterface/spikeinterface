@@ -829,9 +829,13 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     max_channel_location = channel_locations[np.argmax(peak_amplitudes)]
     channel_distances = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations])
     distances_sort_indices = np.argsort(channel_distances)
-    # np.float128 avoids overflow error
-    channel_distances_sorted = channel_distances[distances_sort_indices].astype(np.float128)
-    peak_amplitudes_sorted = peak_amplitudes[distances_sort_indices].astype(np.float128)
+    channel_distances_sorted = channel_distances[distances_sort_indices]
+    peak_amplitudes_sorted = peak_amplitudes[distances_sort_indices]
+    
+    if hasattr(np, 'float128'):
+        # np.float128 avoids overflow error but numpy on window without standard compiler do not have it
+        channel_distances_sorted = channel_distances_sorted.astype(np.float128)
+        peak_amplitudes_sorted = peak_amplitudes_sorted.astype(np.float128)
     try:
         amp0 = peak_amplitudes_sorted[0]
         offset0 = np.min(peak_amplitudes_sorted)
