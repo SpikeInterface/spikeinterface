@@ -48,7 +48,7 @@ more aliases to keep track of.
 Flat Import
 -----------
 
-A second option is to import the SpikeInterface package in :code:`full` mode. 
+A second option is to import the SpikeInterface package in :code:`full` mode.
 To accomplish this one does:
 
 
