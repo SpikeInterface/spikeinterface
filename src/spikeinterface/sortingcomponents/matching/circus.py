@@ -495,12 +495,15 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     amplitude: tuple
         (Minimal, Maximal) amplitudes allowed for every template
     omp_min_sps: float
-        Stopping criteria of the OMP algorithm, in percentage of the norm
-    random_chunk_kwargs: dict
-        Parameters for computing noise levels, if not provided (sub optimal)
+        Stopping criteria of the OMP algorithm, as relative error
     sparse_kwargs: dict
         Parameters to extract a sparsity mask from the waveform_extractor, if not
         already sparse.
+    rank: int
+        Number of components used internally by the SVD (default 5)
+    vicinity: int
+        Size of the area surrounding a spike to perform modification (expressed in terms
+        of template temporal width)
     -----
     """
 
@@ -508,7 +511,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "amplitudes": [0.6, 1.4],
         "omp_min_sps": 5e-5,
         "waveform_extractor": None,
-        "random_chunk_kwargs": {},
         "rank": 5,
         "sparse_kwargs": {"method": "ptp", "threshold": 1},
         "ignored_ids": [],
