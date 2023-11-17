@@ -63,15 +63,15 @@ def get_numba_vector_to_list_of_spiketrain():
     import numba
 
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int64), nopython=True, nogil=True, cache=True)
-    def vector_to_list_of_spiketrain_numba(sample_index, unit_index, num_units):
+    def vector_to_list_of_spiketrain_numba(sample_indices, unit_indices, num_units):
         """
         Fast implementation of vetor_to_dict using numba loop.
         This is for one segment.
         """
-        num_spikes = sample_index.size
+        num_spikes = sample_indices.size
         num_spike_per_units = np.zeros(num_units, dtype=np.int32)
         for s in range(num_spikes):
-            num_spike_per_units[unit_index[s]] += 1
+            num_spike_per_units[unit_indices[s]] += 1
 
         spike_trains = []
         for u in range(num_units):
@@ -79,8 +79,8 @@ def get_numba_vector_to_list_of_spiketrain():
 
         current_x = np.zeros(num_units, dtype=np.int64)
         for s in range(num_spikes):
-            spike_trains[unit_index[s]][current_x[unit_index[s]]] = sample_index[s]
-            current_x[unit_index[s]] += 1
+            spike_trains[unit_indices[s]][current_x[unit_indices[s]]] = sample_indices[s]
+            current_x[unit_indices[s]] += 1
 
         return spike_trains
 
