@@ -500,7 +500,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         Parameters to extract a sparsity mask from the waveform_extractor, if not
         already sparse.
     rank: int
-        Number of components used internally by the SVD (default 5)
+        Number of components used internally by the SVD
     vicinity: int
         Size of the area surrounding a spike to perform modification (expressed in terms
         of template temporal width)
