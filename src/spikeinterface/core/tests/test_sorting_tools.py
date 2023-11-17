@@ -14,8 +14,6 @@ def test_spike_vector_to_spike_trains():
     sorting = NumpySorting.from_unit_dict({1: np.array([0, 51, 108]), 5: np.array([23, 87])}, 30_000)
     spike_vector = sorting.to_spike_vector(concatenated=False)
     spike_trains = spike_vector_to_spike_trains(spike_vector, sorting.unit_ids)
-    print(spike_vector)
-    print(spike_trains)
 
     assert len(spike_trains[0]) == sorting.get_num_units()
     for unit_index, unit_id in enumerate(sorting.unit_ids):

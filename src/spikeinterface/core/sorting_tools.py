@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.array) -> list[dict]:
+def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.array) -> dict[dict]:
     """
     Computes all spike trains for all units/segments from a spike vector list.
 
