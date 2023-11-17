@@ -22,5 +22,5 @@ def test_spike_vector_to_spike_trains():
         assert np.array_equal(spike_trains[0][unit_id], sorting.get_unit_spike_train(unit_id=unit_id, segment_index=0))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_spike_vector_to_spike_trains()

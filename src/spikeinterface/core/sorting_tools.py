@@ -23,11 +23,11 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
 
     try:
         import numba
+
         HAVE_NUMBA = True
     except:
         HAVE_NUMBA = False
 
-    
     if HAVE_NUMBA:
         # the trick here is to have a function getter
         vector_to_list_of_spiketrain = get_numba_vector_to_list_of_spiketrain()
@@ -57,7 +57,6 @@ def vector_to_list_of_spiketrain_numpy(sample_indices, unit_indices, num_units):
 
 
 def get_numba_vector_to_list_of_spiketrain():
-
     if hasattr(get_numba_vector_to_list_of_spiketrain, "_cached_numba_function"):
         return get_numba_vector_to_list_of_spiketrain._cached_numba_function
 
@@ -74,7 +73,6 @@ def get_numba_vector_to_list_of_spiketrain():
         for s in range(num_spikes):
             num_spike_per_units[unit_index[s]] += 1
 
-
         spike_trains = []
         for u in range(num_units):
             spike_trains.append(np.empty(num_spike_per_units[u], dtype=np.int64))
@@ -90,4 +88,3 @@ def get_numba_vector_to_list_of_spiketrain():
     get_numba_vector_to_list_of_spiketrain._cached_numba_function = vector_to_list_of_spiketrain_numba
 
     return vector_to_list_of_spiketrain_numba
-
