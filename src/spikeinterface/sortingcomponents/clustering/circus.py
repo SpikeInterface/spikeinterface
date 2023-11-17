@@ -34,7 +34,7 @@ from spikeinterface.core.node_pipeline import (
 
 def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **job_kwargs):
     """
-    Helper function to extractor waveforms at max channel from a peak list
+    Helper function to extract waveforms at the max channel from a peak list
 
 
     """
