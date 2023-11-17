@@ -10,7 +10,6 @@ from spikeinterface.core.core_tools import (
     write_binary_recording,
     write_memory_recording,
     recursive_path_modifier,
-    spike_vector_to_spike_trains,
 )
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 from spikeinterface.core.generate import NoiseGeneratorRecording
