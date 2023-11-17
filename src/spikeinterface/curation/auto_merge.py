@@ -136,7 +136,7 @@ def get_potential_auto_merge(
 
     # STEP 1 :
     if "min_spikes" in steps:
-        num_spikes = np.array(list(sorting.count_num_spikes_per_unit().values()))
+        num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
         to_remove = num_spikes < minimum_spikes
         pair_mask[to_remove, :] = False
         pair_mask[:, to_remove] = False
@@ -255,7 +255,7 @@ def compute_correlogram_diff(
 
     # Index of the middle of the correlograms.
     m = correlograms_smoothed.shape[2] // 2
-    num_spikes = sorting.count_num_spikes_per_unit()
+    num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
 
     corr_diff = np.full((n, n), np.nan, dtype="float64")
     for unit_ind1 in range(n):
@@ -263,9 +263,8 @@ def compute_correlogram_diff(
             if not pair_mask[unit_ind1, unit_ind2]:
                 continue
 
-            unit_id1, unit_id2 = unit_ids[unit_ind1], unit_ids[unit_ind2]
+            num1, num2 = num_spikes[unit_ind1], num_spikes[unit_ind2]
 
-            num1, num2 = num_spikes[unit_id1], num_spikes[unit_id2]
             # Weighted window (larger unit imposes its window).
             win_size = int(round((num1 * win_sizes[unit_ind1] + num2 * win_sizes[unit_ind2]) / (num1 + num2)))
             # Plage of indices where correlograms are inside the window.

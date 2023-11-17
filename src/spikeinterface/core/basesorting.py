@@ -267,16 +267,16 @@ class BaseSorting(BaseExtractor):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.count_num_spikes_per_unit()
+        return self.count_num_spikes_per_unit(outputs="dict")
 
-    def count_num_spikes_per_unit(self, output="dict"):
+    def count_num_spikes_per_unit(self, outputs="dict"):
         """
         For each unit : get number of spikes  across segments.
 
         Parameters
         ----------
-        output: "dict" | "array", dfault: "dict"
-            Return a dict (key is unit_id) or an numpy array.
+        outputs: "dict" | "array", dfault: "dict"
+            Control the type of the returned object: a dict (keys are unit_ids) or an numpy array.
 
         Returns
         -------
@@ -286,19 +286,37 @@ class BaseSorting(BaseExtractor):
         """
         num_spikes = np.zeros(self.unit_ids.size, dtype="int64")
 
-        if self._cached_spike_vector is not None:
-            spike_vector = self.to_spike_vector()
-            unit_indices, counts = np.unique(spike_vector["unit_index"], return_counts=True)
-            num_spikes[unit_indices] = counts
+        # speed strategy by order
+        # 1. if _cached_spike_trains have all units then use it
+        # 2. if _cached_spike_vector is not non use it
+        # 3. loop with get_unit_spike_train
+
+        # check if all spiketrains are cached
+        if len(self._cached_spike_trains) == self.get_num_segments():
+            all_spiketrain_are_cached = True
+            for segment_index in range(self.get_num_segments()):
+                if len(self._cached_spike_trains[segment_index]) != self.unit_ids.size:
+                    all_spiketrain_are_cached = False
+                    break
         else:
+            all_spiketrain_are_cached = False
+
+        if all_spiketrain_are_cached or self._cached_spike_vector is None:
+            # case one 1 or 3
             for unit_index, unit_id in enumerate(self.unit_ids):
                 for segment_index in range(self.get_num_segments()):
                     st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                     num_spikes[unit_index] += st.size
+        elif self._cached_spike_vector is not None:
+            # case 2
+            spike_vector = self.to_spike_vector()
+            unit_indices, counts = np.unique(spike_vector["unit_index"], return_counts=True)
+            num_spikes[unit_indices] = counts
 
-        if output == "array":
+
+        if outputs == "array":
             return num_spikes
-        elif output == "dict":
+        elif outputs == "dict":
             num_spikes = dict(zip(self.unit_ids, num_spikes))
             return num_spikes
         else:
