@@ -42,14 +42,22 @@ class WaveformExtensionCommonTestSuite:
         gain = 0.1
         recording.set_channel_gains(gain)
         recording.set_channel_offsets(0)
+
         if (cache_folder / "toy_rec_1seg").is_dir():
-            recording = load_extractor(cache_folder / "toy_rec_1seg")
-        else:
-            recording = recording.save(folder=cache_folder / "toy_rec_1seg")
+            shutil.rmtree(cache_folder / "toy_rec_1seg")
         if (cache_folder / "toy_sorting_1seg").is_dir():
-            sorting = load_extractor(cache_folder / "toy_sorting_1seg")
-        else:
-            sorting = sorting.save(folder=cache_folder / "toy_sorting_1seg")
+            shutil.rmtree(cache_folder / "toy_sorting_1seg")
+        recording = recording.save(folder=cache_folder / "toy_rec_1seg")
+        sorting = sorting.save(folder=cache_folder / "toy_sorting_1seg")
+
+        # if (cache_folder / "toy_rec_1seg").is_dir():
+        #     recording = load_extractor(cache_folder / "toy_rec_1seg")
+        # else:
+        #     recording = recording.save(folder=cache_folder / "toy_rec_1seg")
+        # if (cache_folder / "toy_sorting_1seg").is_dir():
+        #     sorting = load_extractor(cache_folder / "toy_sorting_1seg")
+        # else:
+        #     sorting = sorting.save(folder=cache_folder / "toy_sorting_1seg")
         we1 = extract_waveforms(
             recording,
             sorting,
@@ -76,14 +84,21 @@ class WaveformExtensionCommonTestSuite:
         )
         recording.set_channel_gains(gain)
         recording.set_channel_offsets(0)
+        # if (cache_folder / "toy_rec_2seg").is_dir():
+        #     recording = load_extractor(cache_folder / "toy_rec_2seg")
+        # else:
+        #     recording = recording.save(folder=cache_folder / "toy_rec_2seg")
+        # if (cache_folder / "toy_sorting_2seg").is_dir():
+        #     sorting = load_extractor(cache_folder / "toy_sorting_2seg")
+        # else:
+        #     sorting = sorting.save(folder=cache_folder / "toy_sorting_2seg")
         if (cache_folder / "toy_rec_2seg").is_dir():
-            recording = load_extractor(cache_folder / "toy_rec_2seg")
-        else:
-            recording = recording.save(folder=cache_folder / "toy_rec_2seg")
+            shutil.rmtree(cache_folder / "toy_rec_2seg")
         if (cache_folder / "toy_sorting_2seg").is_dir():
-            sorting = load_extractor(cache_folder / "toy_sorting_2seg")
-        else:
-            sorting = sorting.save(folder=cache_folder / "toy_sorting_2seg")
+            shutil.rmtree(cache_folder / "toy_sorting_2seg")
+        recording = recording.save(folder=cache_folder / "toy_rec_2seg")
+        sorting = sorting.save(folder=cache_folder / "toy_sorting_2seg")
+
         we2 = extract_waveforms(
             recording,
             sorting,
@@ -126,10 +141,33 @@ class WaveformExtensionCommonTestSuite:
         )
 
     def tearDown(self):
+        # delete object to release memmap
+        del self.we1, self.we2, self.we_memory2, self.we_zarr2, self.we_sparse
+
+
         # allow pytest to delete RO folder
         if platform.system() != "Windows":
             we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
             we_ro_folder.chmod(0o777)
+        
+        for name in ("toy_waveforms_1seg", "toy_waveforms_2seg", "toy_waveforms_2seg_readonly", "toy_sorting_2seg.zarr", "toy_sorting_2seg_sparse"):
+            folder = self.cache_folder / name
+            if folder.exists():
+                shutil.rmtree(folder)
+
+        for name in ("toy_waveforms_1seg", "toy_waveforms_2seg", "toy_sorting_2seg_sparse"):
+            for ext in self.extension_data_names:
+                folder = self.cache_folder / f"{name}_{ext}_selected" 
+                if folder.exists():
+                    shutil.rmtree(folder)
+        
+        # TODO this bug on windows with "PermissionError: [WinError 32] ..."
+        for name in ("toy_rec_1seg", "toy_sorting_1seg", "toy_rec_2seg", "toy_sorting_2seg"):
+            folder = self.cache_folder / name
+            if folder.exists():
+                shutil.rmtree(folder)
+
+
 
     def _test_extension_folder(self, we, in_memory=False):
         if self.extension_function_kwargs_list is None:
@@ -196,9 +234,9 @@ class WaveformExtensionCommonTestSuite:
         # test content of memory/content/zarr
         for ext in self.we2.get_available_extension_names():
             print(f"Testing data for {ext}")
-            ext_memory = self.we2.load_extension(ext)
+            ext_memory = self.we_memory2.load_extension(ext)
             ext_folder = self.we2.load_extension(ext)
-            ext_zarr = self.we2.load_extension(ext)
+            ext_zarr = self.we_zarr2.load_extension(ext)
 
             for ext_data_name, ext_data_mem in ext_memory._extension_data.items():
                 ext_data_folder = ext_folder._extension_data[ext_data_name]
