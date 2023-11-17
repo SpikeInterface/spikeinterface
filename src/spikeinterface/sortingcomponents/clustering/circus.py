@@ -95,7 +95,7 @@ class CircusClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-        assert HAVE_HDBSCAN, "random projections clustering need hdbscan to be installed"
+        assert HAVE_HDBSCAN, "random projections clustering needs hdbscan to be installed"
 
         if "n_jobs" in params["job_kwargs"]:
             if params["job_kwargs"]["n_jobs"] == -1:
