@@ -157,8 +157,8 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(self, **time_kwargs)
         self.parent_segments = parent_segments
         self.all_length = [rec_seg.get_num_samples() for rec_seg in self.parent_segments]
-        self.cumsum_length = np.cumsum([0] + self.all_length).item()
-        self.total_length = np.sum(self.all_length).item()
+        self.cumsum_length = np.cumsum([0] + self.all_length)
+        self.total_length = int(np.sum(self.all_length))
 
     def get_num_samples(self):
         return self.total_length
