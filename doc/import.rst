@@ -48,9 +48,7 @@ more aliases to keep track of.
 Flat Import
 -----------
 
-A second option is to import the SpikeInterface package in :code:`full` mode. This would be similar to
-what is seen with packages like NumPy (:code:`np`) or Pandas (:code:`pd`), which offer the majority of
-their functionality with a single alias and the option to import additional functionality separately.
+A second option is to import the SpikeInterface package in :code:`full` mode. 
 To accomplish this one does:
 
 
@@ -60,8 +58,6 @@ To accomplish this one does:
 
 
 This import statement will import all of the SpikeInterface modules as one flattened module.
-Note that importing :code:`spikeinterface.full` will take a few extra seconds, because some modules use
-just-in-time :code:`numba` compilation performed at the time of import.
 We recommend this approach for advanced (or lazy) users, since it requires a deeper knowledge of the API. The advantage
 being that users can access all functions using one alias without the need of memorizing all aliases.
 
