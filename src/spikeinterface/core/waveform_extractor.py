@@ -2027,13 +2027,14 @@ class BaseWaveformExtractorExtension:
         """
         Delete the extension in folder (binary or zarr)
         """
-        if self.extension_folder is not None:
-            if self.format == "binary":
-                if self.extension_folder.is_dir():
-                    shutil.rmtree(self.extension_folder)
-                self.extension_folder.mkdir()
-            elif self.format == "zarr":
-                del self.extension_group
+        if self.format == "binary" and self.extension_folder is not None:
+            if self.extension_folder.is_dir():
+                shutil.rmtree(self.extension_folder)
+            self.extension_folder.mkdir()
+        elif self.format == "zarr":
+            import zarr
+            zarr_root = zarr.open(self.folder, mode='r+')
+            self.extension_group = zarr_root.create_group(self.extension_name, overwrite=True)
 
     def reset(self):
         """
