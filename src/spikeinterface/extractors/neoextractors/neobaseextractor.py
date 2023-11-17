@@ -312,6 +312,10 @@ class NeoRecordingSegment(BaseRecordingSegment):
         num_samples = self.neo_reader.get_signal_size(
             block_index=self.block_index, seg_index=self.segment_index, stream_index=self.stream_index
         )
+
+        # Transform the num_samples to integer if if it is a numpy scalar
+        if isinstance(num_samples, np.generic):
+            num_samples = int(num_samples)
         return num_samples
 
     def get_traces(
