@@ -6,15 +6,8 @@ from typing import List, Optional, Union
 import numpy as np
 
 from .base import BaseExtractor, BaseSegment
-from .core_tools import spike_vector_to_spike_trains
+from .sorting_tools import spike_vector_to_spike_trains
 from .waveform_tools import has_exceeding_spikes
-
-try:
-    import numba
-
-    HAVE_NUMBA = True
-except:
-    HAVE_NUMBA = False
 
 
 minimum_spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
@@ -458,25 +451,28 @@ class BaseSorting(BaseExtractor):
             spikes.append((spike_times, spike_labels))
         return spikes
 
-    def precompute_spike_trains(self, from_spike_vector: bool = True):
+    def precompute_spike_trains(self, from_spike_vector=None):
         """
         Pre-computes and caches all spike trains for this sorting
 
+
+
         Parameters
         ----------
-        from_spike_vector: bool, default: True
+        from_spike_vector: None | bool, default: None
+            If None, then it is automatic dependin 
             If True, will compute it from the spike vector.
             If False, will call `get_unit_spike_train` for each segment for each unit.
         """
         unit_ids = self.unit_ids
 
-        if from_spike_vector and HAVE_NUMBA:
-            spike_trains = spike_vector_to_spike_trains(self.to_spike_vector())
+        if from_spike_vector is None:
+            # if spike vector is cached then use it
+            from_spike_vector = self._cached_spike_vector is not None
 
-            for segment_index in range(self.get_num_segments()):
-                self._cached_spike_trains[segment_index] = {
-                    unit_ids[unit_index]: spike_trains[segment_index][unit_index] for unit_index in range(len(unit_ids))
-                }
+        if from_spike_vector:
+            self._cached_spike_trains = spike_vector_to_spike_trains(self.to_spike_vector(concatenated=False))
+
         else:
             for segment_index in range(self.get_num_segments()):
                 for unit_id in unit_ids:

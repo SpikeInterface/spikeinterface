@@ -193,16 +193,3 @@ if __name__ == "__main__":
         test_write_binary_recording(tmp_path)
         # test_write_memory_recording()
         # test_recursive_path_modifier()
-
-
-@pytest.mark.skipif(
-    importlib.util.find_spec("numba") is None, reason="Testing `spike_vector_to_dict` requires Python package 'numba'."
-)
-def test_spike_vector_to_spike_trains() -> None:
-    sorting = NumpySorting.from_unit_dict({1: np.array([0, 51, 108]), 5: np.array([23, 87])}, 30_000)
-    spike_vector = sorting.to_spike_vector()
-    spike_trains = spike_vector_to_spike_trains(spike_vector)[0]
-
-    assert len(spike_trains) == sorting.get_num_units()
-    for unit_index in range(sorting.get_num_units()):
-        assert np.all(spike_trains[unit_index] == sorting.get_unit_spike_train(sorting.unit_ids[unit_index]))
