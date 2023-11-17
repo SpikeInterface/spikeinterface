@@ -186,7 +186,7 @@ class Mountainsort5Sorter(BaseSorter):
             elif p["scheme"] == "3":
                 sorting = ms5.sorting_scheme3(recording=recording_cached, sorting_parameters=scheme3_sorting_parameters)
             else:
-                raise Exception(f"Invalid scheme: {scheme}")
+                raise ValueError(f"Invalid scheme: {scheme} given. scheme must be one of '1', '2' or '3'")
 
         NpzSortingExtractor.write_sorting(sorting, str(sorter_output_folder / "firings.npz"))
 
