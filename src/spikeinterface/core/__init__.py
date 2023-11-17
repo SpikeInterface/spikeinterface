@@ -84,7 +84,6 @@ from .core_tools import (
     write_binary_recording,
     read_python,
     write_python,
-
 )
 from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
 from .recording_tools import (
@@ -95,7 +94,7 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
-from .sorting_tools import     spike_vector_to_spike_trains
+from .sorting_tools import spike_vector_to_spike_trains
 
 from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting

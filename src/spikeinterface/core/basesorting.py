@@ -460,7 +460,7 @@ class BaseSorting(BaseExtractor):
         Parameters
         ----------
         from_spike_vector: None | bool, default: None
-            If None, then it is automatic dependin 
+            If None, then it is automatic dependin
             If True, will compute it from the spike vector.
             If False, will call `get_unit_spike_train` for each segment for each unit.
         """
