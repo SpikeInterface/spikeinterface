@@ -566,12 +566,12 @@ class NwbSortingSegment(BaseSortingSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = np.inf
-        times = self._nwbfile.units["spike_times"][list(self._nwbfile.units.id[:]).index(unit_id)][:]
+        spike_times = self._nwbfile.units["spike_times"][list(self._nwbfile.units.id[:]).index(unit_id)][:]
 
         if self._timestamps is not None:
-            frames = np.searchsorted(times, self.timestamps).astype("int64")
+            frames = np.searchsorted(spike_times, self.timestamps).astype("int64")
         else:
-            frames = np.round(times * self._sampling_frequency).astype("int64")
+            frames = np.round(spike_times * self._sampling_frequency).astype("int64")
         return frames[(frames >= start_frame) & (frames < end_frame)]
 
 

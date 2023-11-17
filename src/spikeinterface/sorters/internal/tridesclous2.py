@@ -50,6 +50,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "save_array": True,
     }
 
+    handle_multi_segment = True
+
     @classmethod
     def get_sorter_version(cls):
         return "2.0"

@@ -506,7 +506,7 @@ class WaveformExtractor:
     def get_sorting_property(self, key) -> np.ndarray:
         return self.sorting.get_property(key)
 
-    def get_extension_class(self, extension_name):
+    def get_extension_class(self, extension_name: str):
         """
         Get extension class from name and check if registered.
 
@@ -525,7 +525,7 @@ class WaveformExtractor:
         ext_class = extensions_dict[extension_name]
         return ext_class
 
-    def is_extension(self, extension_name) -> bool:
+    def has_extension(self, extension_name: str) -> bool:
         """
         Check if the extension exists in memory or in the folder.
 
@@ -556,7 +556,15 @@ class WaveformExtractor:
                     and "params" in self._waveforms_root[extension_name].attrs.keys()
                 )
 
-    def load_extension(self, extension_name):
+    def is_extension(self, extension_name) -> bool:
+        warn(
+            "WaveformExtractor.is_extension is deprecated and will be removed in version 0.102.0! Use `has_extension` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.has_extension(extension_name)
+
+    def load_extension(self, extension_name: str):
         """
         Load an extension from its name.
         The module of the extension must be loaded and registered.
@@ -572,7 +580,7 @@ class WaveformExtractor:
             The loaded instance of the extension
         """
         if self.folder is not None and extension_name not in self._loaded_extensions:
-            if self.is_extension(extension_name):
+            if self.has_extension(extension_name):
                 ext_class = self.get_extension_class(extension_name)
                 ext = ext_class.load(self.folder, self)
         if extension_name not in self._loaded_extensions:
@@ -588,7 +596,7 @@ class WaveformExtractor:
         extension_name: str
             The extension name.
         """
-        assert self.is_extension(extension_name), f"The extension {extension_name} is not available"
+        assert self.has_extension(extension_name), f"The extension {extension_name} is not available"
         del self._loaded_extensions[extension_name]
         if self.folder is not None and (self.folder / extension_name).is_dir():
             shutil.rmtree(self.folder / extension_name)
@@ -610,7 +618,7 @@ class WaveformExtractor:
         """
         extension_names_in_folder = []
         for extension_class in self.extensions:
-            if self.is_extension(extension_class.extension_name):
+            if self.has_extension(extension_class.extension_name):
                 extension_names_in_folder.append(extension_class.extension_name)
         return extension_names_in_folder
 
