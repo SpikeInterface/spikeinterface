@@ -1,6 +1,8 @@
 from pathlib import Path
 from packaging.version import parse
 
+import numpy as np
+
 from spikeinterface.preprocessing import bandpass_filter, whiten
 
 from spikeinterface.core.baserecording import BaseRecording
@@ -130,7 +132,7 @@ class Mountainsort5Sorter(BaseSorter):
                 print("filtering")
             # important to use dtype=float here
             recording = bandpass_filter(
-                recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"], dtype=float
+                recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"], dtype=np.float32
             )
 
         # Whiten
