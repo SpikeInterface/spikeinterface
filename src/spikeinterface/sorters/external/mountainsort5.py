@@ -1,17 +1,12 @@
 from pathlib import Path
-from tempfile import tempdir
 from packaging.version import parse
 
 from spikeinterface.preprocessing import bandpass_filter, whiten
 
 from spikeinterface.core.baserecording import BaseRecording
 from ..basesorter import BaseSorter
-from spikeinterface.core.old_api_utils import NewToOldRecording
-from spikeinterface.core import load_extractor
 
-from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
-
-from packaging.version import parse
+from spikeinterface.extractors import NpzSortingExtractor
 
 
 class Mountainsort5Sorter(BaseSorter):
@@ -84,8 +79,10 @@ class Mountainsort5Sorter(BaseSorter):
             HAVE_MS5 = True
         except ImportError:
             HAVE_MS5 = False
+            mountainsort5 = None
 
         if HAVE_MS5:
+            assert mountainsort5
             vv = parse(mountainsort5.__version__)
             if vv < parse("0.3"):
                 print(
@@ -114,6 +111,7 @@ class Mountainsort5Sorter(BaseSorter):
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import mountainsort5 as ms5
+        from mountainsort5.util import TemporaryDirectory, create_cached_recording
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -124,7 +122,10 @@ class Mountainsort5Sorter(BaseSorter):
         if p["filter"] and p["freq_min"] is not None and p["freq_max"] is not None:
             if verbose:
                 print("filtering")
-            recording = bandpass_filter(recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"])
+            # important to use dtype=float here
+            recording = bandpass_filter(
+                recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"], dtype=float
+            )
 
         # Whiten
         if p["whiten"]:
@@ -169,13 +170,21 @@ class Mountainsort5Sorter(BaseSorter):
             block_sorting_parameters=scheme2_sorting_parameters, block_duration_sec=p["scheme3_block_duration_sec"]
         )
 
-        scheme = p["scheme"]
-        if scheme == "1":
-            sorting = ms5.sorting_scheme1(recording=recording, sorting_parameters=scheme1_sorting_parameters)
-        elif p["scheme"] == "2":
-            sorting = ms5.sorting_scheme2(recording=recording, sorting_parameters=scheme2_sorting_parameters)
-        elif p["scheme"] == "3":
-            sorting = ms5.sorting_scheme3(recording=recording, sorting_parameters=scheme3_sorting_parameters)
+        assert isinstance(recording, BaseRecording)
+
+        with TemporaryDirectory() as tmpdir:
+            # cache the recording to a temporary directory for efficient reading (so we don't have to re-filter)
+            recording_cached = create_cached_recording(recording=recording, folder=tmpdir)
+
+            scheme = p["scheme"]
+            if scheme == "1":
+                sorting = ms5.sorting_scheme1(recording=recording_cached, sorting_parameters=scheme1_sorting_parameters)
+            elif p["scheme"] == "2":
+                sorting = ms5.sorting_scheme2(recording=recording_cached, sorting_parameters=scheme2_sorting_parameters)
+            elif p["scheme"] == "3":
+                sorting = ms5.sorting_scheme3(recording=recording_cached, sorting_parameters=scheme3_sorting_parameters)
+            else:
+                raise Exception(f"Invalid scheme: {scheme}")
 
         NpzSortingExtractor.write_sorting(sorting, str(sorter_output_folder / "firings.npz"))
 
