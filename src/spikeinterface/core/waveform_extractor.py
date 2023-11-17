@@ -1928,7 +1928,11 @@ class BaseWaveformExtractorExtension:
                 if ext_data_file.suffix == ".json":
                     ext_data = json.load(ext_data_file.open("r"))
                 elif ext_data_file.suffix == ".npy":
-                    ext_data = np.load(ext_data_file, mmap_mode="r")
+                    # The lazy loading loading of extension is complicated because if we compute again
+                    # and have a link to the old buffer in window then it fails
+                    #ext_data = np.load(ext_data_file, mmap_mode="r")
+                    # so go back to full loading
+                    ext_data = np.load(ext_data_file)
                 elif ext_data_file.suffix == ".csv":
                     import pandas as pd
 
