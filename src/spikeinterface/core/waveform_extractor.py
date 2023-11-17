@@ -1968,6 +1968,11 @@ class BaseWaveformExtractorExtension:
         # Only save if not read only
         if self.waveform_extractor.is_read_only():
             return
+        
+        # delete already saved
+        self._delete_folder()
+        self._save_params()
+
         if self.format == "binary":
             import pandas as pd
 
@@ -2018,10 +2023,9 @@ class BaseWaveformExtractorExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
 
-    def reset(self):
+    def _delete_folder(self):
         """
-        Reset the waveform extension.
-        Delete the sub folder and create a new empty one.
+        Delete the extension in folder (binary or zarr)
         """
         if self.extension_folder is not None:
             if self.format == "binary":
@@ -2030,6 +2034,13 @@ class BaseWaveformExtractorExtension:
                 self.extension_folder.mkdir()
             elif self.format == "zarr":
                 del self.extension_group
+
+    def reset(self):
+        """
+        Reset the waveform extension.
+        Delete the sub folder and create a new empty one.
+        """
+        self._delete_folder()
 
         self._params = None
         self._extension_data = dict()
@@ -2062,18 +2073,23 @@ class BaseWaveformExtractorExtension:
         if self.waveform_extractor.is_read_only():
             return
 
-        params_to_save = params.copy()
-        if "sparsity" in params and params["sparsity"] is not None:
+        self._save_params()
+
+
+    def _save_params(self):
+        params_to_save = self._params.copy()
+        if "sparsity" in params_to_save and params_to_save["sparsity"] is not None:
             assert isinstance(
-                params["sparsity"], ChannelSparsity
+                params_to_save["sparsity"], ChannelSparsity
             ), "'sparsity' parameter must be a ChannelSparsity object!"
-            params_to_save["sparsity"] = params["sparsity"].to_dict()
+            params_to_save["sparsity"] = params_to_save["sparsity"].to_dict()
         if self.format == "binary":
             if self.extension_folder is not None:
                 param_file = self.extension_folder / "params.json"
                 param_file.write_text(json.dumps(check_json(params_to_save), indent=4), encoding="utf8")
         elif self.format == "zarr":
             self.extension_group.attrs["params"] = check_json(params_to_save)
+
 
     def _set_params(self, **params):
         # must be implemented in subclass

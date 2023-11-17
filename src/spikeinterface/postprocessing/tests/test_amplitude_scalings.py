@@ -53,5 +53,5 @@ if __name__ == "__main__":
     test = AmplitudeScalingsExtensionTest()
     test.setUp()
     test.test_extension()
-    test.test_scaling_values()
-    test.test_scaling_parallel()
+    # test.test_scaling_values()
+    # test.test_scaling_parallel()
