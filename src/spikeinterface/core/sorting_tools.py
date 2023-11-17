@@ -5,19 +5,19 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
     """
     Computes all spike trains for all units/segments from a spike vector list.
 
-    Internally call numba if numba is installed.
+    Internally calls numba if numba is installed.
 
     Parameters
     ----------
     spike_vector: list[np.ndarray]
-        List of spike vector optained with sorting.to_spike_vector(concatenated=False)
+        List of spike vectors optained with sorting.to_spike_vector(concatenated=False)
     unit_ids: np.array
         Unit ids
 
     Returns
     -------
     spike_trains: dict[dict]:
-        A list containing, for each segment, the spike trains of all units
+        A dict containing, for each segment, the spike trains of all units
         (as a dict: unit_id --> spike_train).
     """
 
@@ -65,7 +65,7 @@ def get_numba_vector_to_list_of_spiketrain():
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int64), nopython=True, nogil=True, cache=True)
     def vector_to_list_of_spiketrain_numba(sample_indices, unit_indices, num_units):
         """
-        Fast implementation of vetor_to_dict using numba loop.
+        Fast implementation of vector_to_dict using numba loop.
         This is for one segment.
         """
         num_spikes = sample_indices.size

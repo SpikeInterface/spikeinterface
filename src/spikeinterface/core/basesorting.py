@@ -471,7 +471,7 @@ class BaseSorting(BaseExtractor):
             from_spike_vector = self._cached_spike_vector is not None
 
         if from_spike_vector:
-            self._cached_spike_trains = spike_vector_to_spike_trains(self.to_spike_vector(concatenated=False))
+            self._cached_spike_trains = spike_vector_to_spike_trains(self.to_spike_vector(concatenated=False), unit_ids)
 
         else:
             for segment_index in range(self.get_num_segments()):
