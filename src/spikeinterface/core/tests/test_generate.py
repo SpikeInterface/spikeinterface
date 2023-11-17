@@ -4,6 +4,8 @@ import psutil
 import numpy as np
 
 from spikeinterface.core import load_extractor, extract_waveforms
+
+from probeinterface import generate_multi_columns_probe
 from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
@@ -289,6 +291,40 @@ def test_generate_single_fake_waveform():
     # plt.show()
 
 
+def test_generate_unit_locations():
+    seed = 0
+
+    probe = generate_multi_columns_probe(num_columns=2, num_contact_per_column=20, xpitch=20, ypitch=20)
+    channel_locations = probe.contact_positions
+
+    num_units = 100
+    minimum_distance = 20.0
+    unit_locations = generate_unit_locations(
+        num_units,
+        channel_locations,
+        margin_um=20.0,
+        minimum_z=5.0,
+        maximum_z=40.0,
+        minimum_distance=minimum_distance,
+        max_iteration=500,
+        distance_strict=False,
+        seed=seed,
+    )
+    distances = np.linalg.norm(unit_locations[:, np.newaxis] - unit_locations[np.newaxis, :], axis=2)
+    dist_flat = np.triu(distances, k=1).flatten()
+    dist_flat = dist_flat[dist_flat > 0]
+    assert np.all(dist_flat > minimum_distance)
+
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # ax.hist(dist_flat, bins = np.arange(0, 400, 10))
+    # fig, ax = plt.subplots()
+    # from probeinterface.plotting import plot_probe
+    # plot_probe(probe, ax=ax)
+    # ax.scatter(unit_locations[:, 0], unit_locations[:,1], marker='*', s=20)
+    # plt.show()
+
+
 def test_generate_templates():
     seed = 0
 
@@ -297,7 +333,7 @@ def test_generate_templates():
     num_units = 10
     margin_um = 15.0
     channel_locations = generate_channel_locations(num_chans, num_columns, 20.0)
-    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
+    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um=margin_um, seed=seed)
 
     sampling_frequency = 30000.0
     ms_before = 1.0
@@ -436,7 +472,8 @@ if __name__ == "__main__":
     # test_noise_generator_consistency_after_dump(strategy, None)
     # test_generate_recording()
     # test_generate_single_fake_waveform()
+    test_generate_unit_locations()
     # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
-    test_generate_sorting_with_spikes_on_borders()
+    # test_generate_sorting_with_spikes_on_borders()
