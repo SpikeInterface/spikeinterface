@@ -74,6 +74,9 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         filtered_fft = traces_fft * (gauss_high - gauss_low)[:, None]
         filtered_traces = np.real(np.fft.ifft(filtered_fft, axis=0))
 
+        if np.issubdtype(dtype, np.integer):
+            filtered_traces = filtered_traces.round()
+
         if right_margin > 0:
             return filtered_traces[left_margin:-right_margin, :].astype(dtype)
         else:

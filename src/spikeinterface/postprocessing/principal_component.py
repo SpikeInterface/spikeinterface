@@ -750,7 +750,7 @@ def compute_principal_components(
     >>> pc.run_for_all_spikes(file_path="all_pca_projections.npy")
     """
 
-    if load_if_exists and waveform_extractor.is_extension(WaveformPrincipalComponent.extension_name):
+    if load_if_exists and waveform_extractor.has_extension(WaveformPrincipalComponent.extension_name):
         pc = waveform_extractor.load_extension(WaveformPrincipalComponent.extension_name)
     else:
         pc = WaveformPrincipalComponent.create(waveform_extractor)

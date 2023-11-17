@@ -57,13 +57,13 @@ class BaseSorting(BaseExtractor):
         self._sorting_segments.append(sorting_segment)
         sorting_segment.set_parent_extractor(self)
 
-    def get_sampling_frequency(self):
+    def get_sampling_frequency(self) -> float:
         return self._sampling_frequency
 
-    def get_num_segments(self):
+    def get_num_segments(self) -> int:
         return len(self._sorting_segments)
 
-    def get_num_samples(self, segment_index=None):
+    def get_num_samples(self, segment_index=None) -> int:
         """Returns the number of samples of the associated recording for a segment.
 
         Parameters
@@ -82,7 +82,7 @@ class BaseSorting(BaseExtractor):
         ), "This methods requires an associated recording. Call self.register_recording() first."
         return self._recording.get_num_samples(segment_index=segment_index)
 
-    def get_total_samples(self):
+    def get_total_samples(self) -> int:
         """Returns the total number of samples of the associated recording.
 
         Returns
@@ -299,9 +299,11 @@ class BaseSorting(BaseExtractor):
 
         return num_spikes
 
-    def count_total_num_spikes(self):
+    def count_total_num_spikes(self) -> int:
         """
-        Get total number of spikes summed across segment and units.
+        Get total number of spikes in the sorting.
+
+        This is the sum of all spikes in all segments across all units.
 
         Returns
         -------
@@ -310,9 +312,10 @@ class BaseSorting(BaseExtractor):
         """
         return self.to_spike_vector().size
 
-    def select_units(self, unit_ids, renamed_unit_ids=None):
+    def select_units(self, unit_ids, renamed_unit_ids=None) -> BaseSorting:
         """
-        Selects a subset of units
+        Returns a new sorting object which contains only a selected subset of units.
+
 
         Parameters
         ----------
@@ -331,9 +334,30 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
 
-    def remove_units(self, remove_unit_ids):
+    def rename_units(self, new_unit_ids: np.ndarray | list) -> BaseSorting:
         """
-        Removes a subset of units
+        Returns a new sorting object with renamed units.
+
+
+        Parameters
+        ----------
+        new_unit_ids : numpy.array or list
+            List of new names for unit ids.
+            They should map positionally to the existing unit ids.
+
+        Returns
+        -------
+        BaseSorting
+            Sorting object with renamed units
+        """
+        from spikeinterface import UnitsSelectionSorting
+
+        sub_sorting = UnitsSelectionSorting(self, renamed_unit_ids=new_unit_ids)
+        return sub_sorting
+
+    def remove_units(self, remove_unit_ids) -> BaseSorting:
+        """
+        Returns a new sorting object with contains only a selected subset of units.
 
         Parameters
         ----------
@@ -343,7 +367,7 @@ class BaseSorting(BaseExtractor):
         Returns
         -------
         BaseSorting
-            Sorting object without removed units
+            Sorting without the removed units
         """
         from spikeinterface import UnitsSelectionSorting
 
@@ -353,7 +377,8 @@ class BaseSorting(BaseExtractor):
 
     def remove_empty_units(self):
         """
-        Removes units with empty spike trains
+        Returns a new sorting object which contains only units with at least one spike.
+        For multi-segments, a unit is considered empty if it contains no spikes in all segments.
 
         Returns
         -------
@@ -364,16 +389,12 @@ class BaseSorting(BaseExtractor):
         return self.select_units(non_empty_units)
 
     def get_non_empty_unit_ids(self):
-        non_empty_units = []
-        for segment_index in range(self.get_num_segments()):
-            for unit in self.get_unit_ids():
-                if len(self.get_unit_spike_train(unit, segment_index=segment_index)) > 0:
-                    non_empty_units.append(unit)
-        non_empty_units = np.unique(non_empty_units)
-        return non_empty_units
+        num_spikes_per_unit = self.count_num_spikes_per_unit()
+
+        return np.array([unit_id for unit_id in self.unit_ids if num_spikes_per_unit[unit_id] != 0])
 
     def get_empty_unit_ids(self):
-        unit_ids = self.get_unit_ids()
+        unit_ids = self.unit_ids
         empty_units = unit_ids[~np.isin(unit_ids, self.get_non_empty_unit_ids())]
         return empty_units
 
@@ -389,7 +410,7 @@ class BaseSorting(BaseExtractor):
         """
         Return all spike trains concatenated.
 
-        This is deprecated use  sorting.to_spike_vector() instead
+        This is deprecated and will be removed in spikeinterface 0.102 use sorting.to_spike_vector() instead
         """
 
         warnings.warn(
@@ -429,7 +450,6 @@ class BaseSorting(BaseExtractor):
         Construct a unique structured numpy vector concatenating all spikes
         with several fields: sample_index, unit_index, segment_index.
 
-        See also `get_all_spike_trains()`
 
         Parameters
         ----------
