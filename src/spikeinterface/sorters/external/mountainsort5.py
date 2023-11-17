@@ -114,6 +114,10 @@ class Mountainsort5Sorter(BaseSorter):
         from mountainsort5.util import TemporaryDirectory, create_cached_recording
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
+        if recording is None:
+            raise Exception("Unable to load recording from folder.")
+        if not isinstance(recording, BaseRecording):
+            raise Exception("Unexpected: recording extracted from folder is not a BaseRecording")
 
         # alias to params
         p = params
@@ -169,8 +173,6 @@ class Mountainsort5Sorter(BaseSorter):
         scheme3_sorting_parameters = ms5.Scheme3SortingParameters(
             block_sorting_parameters=scheme2_sorting_parameters, block_duration_sec=p["scheme3_block_duration_sec"]
         )
-
-        assert isinstance(recording, BaseRecording)
 
         with TemporaryDirectory() as tmpdir:
             # cache the recording to a temporary directory for efficient reading (so we don't have to re-filter)
