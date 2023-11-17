@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 from typing import Union, Optional, List, Literal
 import warnings
+from math import ceil
 
 
 from .numpyextractors import NumpyRecording, NumpySorting
@@ -168,7 +169,7 @@ def generate_sorting(
     spikes = []
     for segment_index in range(num_segments):
         num_samples = int(sampling_frequency * durations[segment_index])
-        times, labels = synthesize_random_firings_poisson(
+        samples, labels = synthesize_random_firings_poisson(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
             duration=durations[segment_index],
@@ -179,11 +180,11 @@ def generate_sorting(
 
         if empty_units is not None:
             keep = ~np.isin(labels, empty_units)
-            times = times[keep]
+            samples = samples[keep]
             labels = labels[keep]
 
-        spikes_in_seg = np.zeros(times.size, dtype=minimum_spike_dtype)
-        spikes_in_seg["sample_index"] = times
+        spikes_in_seg = np.zeros(samples.size, dtype=minimum_spike_dtype)
+        spikes_in_seg["sample_index"] = samples
         spikes_in_seg["unit_index"] = labels
         spikes_in_seg["segment_index"] = segment_index
         spikes.append(spikes_in_seg)
@@ -319,46 +320,93 @@ def generate_snippets(
 ## spiketrain zone ##
 def synthesize_random_firings_poisson(
     num_units=20,
-    sampling_frequency=30000.0,  # Not sure we need this?
+    sampling_frequency=30000.0,
     duration=60,
     refractory_period_ms=4.0,
     firing_rates=3.0,
     seed=0,
 ):
+    """
+    Generate random spike frames for neuronal units based on a Poisson process.
+
+    This function simulates the spike frames of a number of neuronal units, each firing according to
+    a Poisson process. The spike times are discretized to align with a given sampling frequency.
+
+    Parameters
+    ----------
+    num_units : int, optional
+        Number of neuronal units to simulate (default is 20).
+    sampling_frequency : float, optional
+        Sampling frequency in Hz (default is 30000.0).
+    duration : float, optional
+        Duration of the simulation in seconds (default is 60).
+    refractory_period_ms : float, optional
+        Refractory period between spikes in milliseconds (default is 4.0).
+    firing_rates : float or array_like, optional
+        Firing rate(s) in Hz. Can be a single value or an array of firing rates for each unit
+        (default is 3.0).
+    seed : int, optional
+        Seed for random number generator (default is 0).
+
+    Returns
+    -------
+    spike_frames : ndarray
+        1D array of spike frames.
+    unit_indices : ndarray
+        1D array of unit indices corresponding to each spike.
+
+    Notes
+    -----
+    - The function uses a geometric distribution to simulate the discrete inter-spike intervals,
+    based that would be an exponential process.
+    - To ensure all spikes within the duration are captured, it initially generates more spikes
+    than expected and then filters out the excess.
+    - Refractory periods are enforced by adding a fixed number of frames to subsequent spikes.
+    - The output is sorted based on spike timings for easier analysis.
+    """
+
     rng = np.random.default_rng(seed=seed)
 
     if np.isscalar(firing_rates):
         firing_rates = np.full(num_units, firing_rates, dtype="float64")
 
-    mean_inter_spike_time = 1.0 / firing_rates
-    spikes_per_unit = (duration * firing_rates).astype(int)
-    max_spikes = np.max(spikes_per_unit)
-
     refractory_period_seconds = refractory_period_ms / 1000.0
+    refactory_period_frames = int(refractory_period_seconds * sampling_frequency)
 
-    # Generate inter spike times, add the refactor period and accumulate for sorted spike times
-    scale = mean_inter_spike_time[:, np.newaxis] - refractory_period_seconds
-    inter_spike_frames = rng.exponential(scale=scale, size=(num_units, max_spikes))
-    inter_spike_frames += refractory_period_seconds
+    # Equivalence between exponential and geometric distributions scaled to the discrete mean
+    geometric_p = 1 - np.exp(-firing_rates / sampling_frequency)
+
+    # We generate as many spikes as the mean plus two std to be sure we have enough
+    max_frames = duration * sampling_frequency
+    max_p = geometric_p.max()
+    num_spikes_expected = ceil(max_frames * max_p)
+    num_spikes_std = int(np.sqrt(num_spikes_expected * (1 - max_p)))
+    num_spikes_max = num_spikes_expected + 2 * num_spikes_std
+
+    # Generate inter spike frames, add the refactory samples and accumulate for sorted spike frames
+    inter_spike_frames = rng.geometric(p=geometric_p[:, np.newaxis], size=(num_units, num_spikes_max))
+    inter_spike_frames[:, 1:] += refactory_period_frames
 
     spike_frames = np.cumsum(inter_spike_frames, axis=1, out=inter_spike_frames)
     spike_frames = spike_frames.ravel()
 
     # We map units to corresponding spike times and flatten the array
-    unit_indices = np.repeat(np.arange(num_units, dtype="uint16"), max_spikes).ravel()
+    unit_indices = np.repeat(np.arange(num_units, dtype="uint16"), num_spikes_max).ravel()
 
     # Eliminate spikes that are beyond the duration
-    mask = spike_frames < duration
-    num_spikes_correct_duration = np.sum(mask)
-    spike_frames[:num_spikes_correct_duration] = spike_frames[mask]
-    unit_indices[:num_spikes_correct_duration] = unit_indices[mask]
+    mask = spike_frames <= max_frames
+    num_correct_frames = np.sum(mask)
+    spike_frames[:num_correct_frames] = spike_frames[mask]
+    unit_indices[:num_correct_frames] = unit_indices[mask]
+
+    # All of this to avoid a malloc
+    spike_frames = spike_frames[:num_correct_frames]
+    unit_indices = unit_indices[:num_correct_frames]
 
     # This should use tim or radix sort which is good for integers and presorted data. I profiled, re-profile in doubt.
     sort_indices = np.argsort(spike_frames, kind="stable")
     spike_frames = spike_frames[sort_indices]  # This is still generating a malloc, probably the ravel
     unit_indices = unit_indices[sort_indices]
-
-    spike_frames = np.take_along_axis(spike_frames, sort_indices, axis=0)
 
     return spike_frames, unit_indices
 
@@ -403,14 +451,6 @@ def synthesize_random_firings(
     """
 
     rng = np.random.default_rng(seed=seed)
-
-    # unit_seeds = [rng.integers(0, 2 ** 63) for i in range(num_units)]
-
-    # if seed is not None:
-    #     np.random.seed(seed)
-    #     seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
-    # else:
-    #     seeds = np.random.randint(0, 2147483647, num_units)
 
     if np.isscalar(firing_rates):
         firing_rates = np.full(num_units, firing_rates, dtype="float64")
