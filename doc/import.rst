@@ -17,7 +17,7 @@ be accomplished by:
 
 .. code-block:: python
 
-    import spikeinterface as si
+    import spikeinterface.core as si
 
 to import the :code:`core` module followed by:
 
