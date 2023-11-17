@@ -117,7 +117,7 @@ class Mountainsort5Sorter(BaseSorter):
         if recording is None:
             raise Exception("Unable to load recording from folder.")
         if not isinstance(recording, BaseRecording):
-            raise Exception("Unexpected: recording extracted from folder is not a BaseRecording")
+            raise TypeError(f"Unexpected: recording extracted from folder is not a BaseRecording, but is of type: {type(recording)}")
 
         # alias to params
         p = params
