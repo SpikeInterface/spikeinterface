@@ -169,7 +169,7 @@ def generate_sorting(
     spikes = []
     for segment_index in range(num_segments):
         num_samples = int(sampling_frequency * durations[segment_index])
-        samples, labels = synthesize_random_firings_poisson(
+        samples, labels = synthesize_poisson_spike_vector(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
             duration=durations[segment_index],
@@ -318,7 +318,7 @@ def generate_snippets(
 
 
 ## spiketrain zone ##
-def synthesize_random_firings_poisson(
+def synthesize_poisson_spike_vector(
     num_units=20,
     sampling_frequency=30000.0,
     duration=60,
