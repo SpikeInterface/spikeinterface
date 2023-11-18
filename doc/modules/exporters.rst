@@ -28,7 +28,7 @@ The input of the :py:func:`~spikeinterface.exporters.export_to_phy` is a :code:`
     from spikeinterface.exporters import export_to_phy
 
     # the waveforms are sparse so it is faster to export to phy
-    we = extract_waveforms(recording=recording, sorting=sorting, folder='waveforms', sparse=True)
+    we = extract_waveforms(recording=recording, sorting=sorting, folder='waveforms')
 
     # some computations are done before to control all options
     _ = compute_spike_amplitudes(waveform_extractor=we)
@@ -71,7 +71,7 @@ with many units!
 
 
     # the waveforms are sparse for more interpretable figures
-    we = extract_waveforms(recording=recording, sorting=sorting, folder='path/to/wf', sparse=True)
+    we = extract_waveforms(recording=recording, sorting=sorting, folder='path/to/wf',)
 
     # some computations are done before to control all options
     _ = compute_spike_amplitudes(waveform_extractor=we)

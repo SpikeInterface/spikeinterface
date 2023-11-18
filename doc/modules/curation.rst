@@ -76,7 +76,7 @@ merges. Therefore, it has many parameters and options.
     clean_sorting = MergeUnitsSorting(parent_sorting=sorting, units_to_merge=merges)
 
 
-Manual curation with sorting view
+Manual curation with sortingview
 ---------------------------------
 
 Within the :code:`sortingview` widgets backend (see :ref:`sorting_view`), the

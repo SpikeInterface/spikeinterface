@@ -143,7 +143,7 @@ with 10 units:
 
 .. code-block:: python
 
-    unit_ids = sorting.channel_ids
+    unit_ids = sorting.unit_ids
     num_channels = sorting.get_num_units()
     sampling_frequency = sorting.sampling_frequency
 
@@ -419,11 +419,16 @@ probes, such as Neuropixels, because the waveforms of a unit will only appear on
 Sparsity is defined as the subset of channels on which waveforms (and related information) are defined. Of course,
 sparsity is not global, but it is unit-specific.
 
+**NOTE** As of version :code:`0.99.0` the default for a :code:`extract_waveforms()` has `sparse=True`, ie every :code:`waveform_extractor`
+will be sparse by default. Thus for users that wish to have dense waveforms they must set `sparse=False`. Keyword arguments
+can still be input into the :code:`extract_wavforms()` to generate the desired sparsity as explained below.
+
 Sparsity can be computed from a :py:class:`~spikeinterface.core.WaveformExtractor` object with the
 :py:func:`~spikeinterface.core.compute_sparsity` function:
 
 .. code-block:: python
 
+    # in this case 'we' should be a dense waveform_extractor
     sparsity = compute_sparsity(we, method="radius", radius_um=40)
 
 The returned :code:`sparsity` is a :py:class:`~spikeinterface.core.ChannelSparsity` object, which has convenient
@@ -437,11 +442,11 @@ methods to access the sparsity information in several ways:
 There are several methods to compute sparsity, including:
 
 * | :code:`method="radius"`: selects the channels based on the channel locations. For example, using a
-  | :code:`radius_um=40`, will select, for each unit, the channels which are whithin 40um of the channel with the
+  | :code:`radius_um=40`, will select, for each unit, the channels which are within 40um of the channel with the
   | largest amplitude (*the extremum channel*). **This is the recommended method for high-density probes**
 * | :code:`method="best_channels"`:  selects the best :code:`num_channels` channels based on their amplitudes. Note that
   | in this case the selected channels might not be close to each other.
-* | :code:`method="threshold"`: selects channels based on an SNR threshold (:code:`threshold` argument)
+* | :code:`method="threshold"`: selects channels based on an SNR threshold (given by the :code:`threshold` argument)
 * | :code:`method="by_property"`: selects channels based on a property, such as :code:`group`. This method is recommended
   | when working with tetrodes.
 
@@ -459,10 +464,6 @@ waveforms folder.
 
 .. _save_load:
 
-
-**NOTE:** As of SpikeInterface 0.99.0, :code:`extract_waveforms` now defaults to :code:`sparse=True`, so that default
-behavior is to always have sparse waveforms. To have dense waveforms (the previous default behavior), remember to set
-:code:`sparsity=False`.
 
 Saving, loading, and compression
 --------------------------------
@@ -635,7 +636,7 @@ the new objects will be a *view* of the original ones.
 
     # here we load a very long recording and sorting
     recording = read_spikeglx('np_folder')
-    sorting =read_kilosrt('ks_folder')
+    sorting =read_kilosort('ks_folder')
 
     # keep one channel of every tenth channel
     keep_ids = recording.channel_ids[::10]
