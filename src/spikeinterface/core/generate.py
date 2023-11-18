@@ -396,7 +396,7 @@ def synthesize_random_firings_poisson(
     unit_indices = unit_indices[mask]
 
     spike_frames = spike_frames[:num_correct_frames]
-    # This should use tim or radix sort which is good for integers and presorted data. I profiled. re-profile in doubt.
+    # Stable should use tim or radix sort which is good for integers and presorted data. I profiled. re-profile in doubt.
     sort_indices = np.argsort(spike_frames, kind="stable")
 
     unit_indices = unit_indices[sort_indices]
