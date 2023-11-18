@@ -118,6 +118,46 @@ def test_memory_sorting_generator():
     ), f"SortingGenerator wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
 
 
+def test_sorting_generator_consisency_across_calls():
+    sampling_frequency = 30000  # Hz
+    durations = [1.0]
+    num_units = 3
+    seed = 0
+
+    sorting = SortingGenerator(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        seed=seed,
+    )
+
+    for unit_id in sorting.get_unit_ids():
+        spike_train = sorting.get_unit_spike_train(unit_id=unit_id)
+        spike_train_again = sorting.get_unit_spike_train(unit_id=unit_id)
+
+        assert np.allclose(spike_train, spike_train_again)
+
+
+def test_sorting_generator_consisency_within_trains():
+    sampling_frequency = 30000  # Hz
+    durations = [1.0]
+    num_units = 3
+    seed = 0
+
+    sorting = SortingGenerator(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        seed=seed,
+    )
+
+    for unit_id in sorting.get_unit_ids():
+        spike_train = sorting.get_unit_spike_train(unit_id=unit_id, start_frame=0, end_frame=1000)
+        spike_train_again = sorting.get_unit_spike_train(unit_id=unit_id, start_frame=0, end_frame=1000)
+
+        assert np.allclose(spike_train, spike_train_again)
+
+
 def test_noise_generator_memory():
     # Test that get_traces does not consume more memory than allocated.
 
