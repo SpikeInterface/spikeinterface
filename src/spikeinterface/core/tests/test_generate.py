@@ -10,6 +10,7 @@ from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
     NoiseGeneratorRecording,
+    SortingGenerator,
     generate_recording_by_size,
     InjectTemplatesRecording,
     generate_single_fake_waveform,
@@ -88,6 +89,33 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
         memory = mem_info.total - mem_info.available
 
     return memory
+
+
+def test_memory_sorting_generator():
+    # Test that get_traces does not consume more memory than allocated.
+
+    bytes_to_MiB_factor = 1024**2
+    relative_tolerance = 0.05  # relative tolerance of 5 per cent
+
+    sampling_frequency = 30000  # Hz
+    durations = [60.0]
+    num_units = 1000
+    seed = 0
+
+    before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    sorting = SortingGenerator(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        seed=seed,
+    )
+    after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
+    ratio = memory_usage_MiB / before_instanciation_MiB
+    expected_allocation_MiB = 0
+    assert (
+        ratio <= 1.0 + relative_tolerance
+    ), f"SortingGenerator wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
 
 
 def test_noise_generator_memory():

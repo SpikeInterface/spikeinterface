@@ -566,6 +566,116 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
     return spike_train
 
 
+from spikeinterface.core.basesorting import BaseSortingSegment, BaseSorting
+
+
+class SortingGenerator(BaseSorting):
+    def __init__(
+        self,
+        num_units: int = 5,
+        sampling_frequency: float = 30000.0,  # in Hz
+        durations: List[float] = [10.325, 3.5],  #  in s for 2 segments
+        firing_rates: float | np.ndarray = 3.0,
+        refractory_period_ms: float | np.ndarray = 4.0,  # in ms
+        seed: Optional[int] = None,
+    ):
+        unit_ids = np.arange(num_units)
+        super().__init__(sampling_frequency, unit_ids)
+
+        self.num_units = num_units
+        self.num_segments = len(durations)
+        self.firing_rates = firing_rates
+        self.durations = durations
+        self.refactory_period_ms = refractory_period_ms
+
+        seed = _ensure_seed(seed)
+        self.seed = seed
+
+        for segment_index in range(self.num_segments):
+            segment_seed = self.seed + segment_index
+            segment = SortingGeneratorSegment(
+                num_units=num_units,
+                sampling_frequency=sampling_frequency,
+                duration=durations[segment_index],
+                firing_rates=firing_rates,
+                refractory_period_ms=refractory_period_ms,
+                seed=segment_seed,
+                t_start=None,
+            )
+            self.add_sorting_segment(segment)
+
+        self._kwargs = {
+            "num_units": num_units,
+            "sampling_frequency": sampling_frequency,
+            "durations": durations,
+            "firing_rates": firing_rates,
+            "refactory_period_ms": refractory_period_ms,
+            "seed": seed,
+        }
+
+
+class SortingGeneratorSegment(BaseSortingSegment):
+    def __init__(
+        self,
+        num_units: int,
+        sampling_frequency: float,
+        duration: float,
+        firing_rates: float | np.ndarray,
+        refractory_period_ms: float | np.ndarray,
+        seed: int,
+        t_start: Optional[float] = None,
+    ):
+        self.num_units = num_units
+        self.duration = duration
+        self.sampling_frequency = sampling_frequency
+
+        if np.isscalar(firing_rates):
+            firing_rates = np.full(num_units, firing_rates, dtype="float64")
+
+        self.firing_rates = firing_rates
+
+        if np.isscalar(refractory_period_ms):
+            refractory_period_ms = np.full(num_units, refractory_period_ms, dtype="float64")
+
+        self.refractory_period_seconds = refractory_period_ms / 1000.0
+        self.segment_seed = seed
+        self.units_seed = {unit_id: self.segment_seed + hash(unit_id) for unit_id in range(num_units)}
+        self.num_samples = math.ceil(sampling_frequency * duration)
+        super().__init__(t_start)
+
+    def get_unit_spike_train(self, unit_id, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
+        unit_seed = self.units_seed[unit_id]
+        unit_index = self.parent_extractor.id_to_index(unit_id)
+
+        rng = np.random.default_rng(seed=unit_seed)
+
+        # Poisson process statistics
+        num_spikes_expected = math.ceil(self.firing_rates[unit_id] * self.duration)
+        num_spikes_std = math.ceil(np.sqrt(num_spikes_expected))
+        num_spikes_max = num_spikes_expected + 2 * num_spikes_std
+
+        p_geometric = 1.0 - np.exp(-self.firing_rates[unit_index] / self.sampling_frequency)
+
+        inter_spike_frames = rng.geometric(p=p_geometric, size=num_spikes_max)
+        spike_frames = np.cumsum(inter_spike_frames, out=inter_spike_frames)
+
+        refactory_period_frames = int(self.refractory_period_seconds[unit_index] * self.sampling_frequency)
+        spike_frames[1:] += refactory_period_frames
+
+        if start_frame is not None:
+            start_index = np.searchsorted(spike_frames, start_frame, side="left")
+        else:
+            start_index = 0
+
+        if end_frame is not None:
+            end_index = np.searchsorted(spike_frames[start_index:], end_frame, side="right")
+        else:
+            end_index = int(self.duration * self.sampling_frequency)
+
+        spike_frames = spike_frames[start_index:end_index]
+        return spike_frames
+
+
 ## Noise generator zone ##
 
 
