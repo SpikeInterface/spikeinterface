@@ -153,6 +153,10 @@ class FilterRecordingSegment(BasePreprocessorSegment):
             filtered_traces = filtered_traces[left_margin:-right_margin, :]
         else:
             filtered_traces = filtered_traces[left_margin:, :]
+
+        if np.issubdtype(self.dtype, np.integer):
+            filtered_traces = filtered_traces.round()
+
         return filtered_traces.astype(self.dtype)
 
 
