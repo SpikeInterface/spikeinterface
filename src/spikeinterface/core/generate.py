@@ -386,23 +386,21 @@ def synthesize_random_firings_poisson(
     spike_frames = np.cumsum(inter_spike_frames, axis=1, out=inter_spike_frames)
     spike_frames = spike_frames.ravel()
 
-    # We map units to corresponding spike times and flatten the array
-    unit_indices = np.repeat(np.arange(num_units, dtype="uint16"), num_spikes_max).ravel()
+    # We map un its to corresponding spike times and flatten the array
+    unit_indices = np.repeat(np.arange(num_units, dtype="uint16"), num_spikes_max)
 
     # Eliminate spikes that are beyond the duration
     mask = spike_frames <= max_frames
     num_correct_frames = np.sum(mask)
-    spike_frames[:num_correct_frames] = spike_frames[mask]
-    unit_indices[:num_correct_frames] = unit_indices[mask]
+    spike_frames[:num_correct_frames] = spike_frames[mask]  # Avoids a malloc
+    unit_indices = unit_indices[mask]
 
-    # All of this to avoid a malloc
     spike_frames = spike_frames[:num_correct_frames]
-    unit_indices = unit_indices[:num_correct_frames]
-
     # This should use tim or radix sort which is good for integers and presorted data. I profiled. re-profile in doubt.
     sort_indices = np.argsort(spike_frames, kind="stable")
-    spike_frames = spike_frames[sort_indices]  # This is still generating a malloc, probably the ravel
+
     unit_indices = unit_indices[sort_indices]
+    spike_frames = spike_frames[sort_indices]
 
     return spike_frames, unit_indices
 
