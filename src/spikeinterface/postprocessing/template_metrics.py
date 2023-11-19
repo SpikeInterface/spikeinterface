@@ -60,7 +60,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
             metric_names += get_multi_channel_template_metric_names()
         metrics_kwargs = metrics_kwargs or dict()
         params = dict(
-            metric_names=[str(name) for name in metric_names],
+            metric_names=[str(name) for name in np.unique(metric_names)],
             sparsity=sparsity,
             peak_sign=peak_sign,
             upsampling_factor=int(upsampling_factor),

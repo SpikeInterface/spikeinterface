@@ -88,7 +88,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         we = self.we_long
 
         # avoid NaNs
-        if we.is_extension("spike_amplitudes"):
+        if we.has_extension("spike_amplitudes"):
             we.delete_extension("spike_amplitudes")
 
         # without PC
