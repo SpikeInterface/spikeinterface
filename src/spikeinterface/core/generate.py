@@ -321,7 +321,7 @@ def generate_snippets(
 def synthesize_poisson_spike_vector(
     num_units=20,
     sampling_frequency=30000.0,
-    duration=60,
+    duration=60.0,
     refractory_period_ms=4.0,
     firing_rates=3.0,
     seed=0,
