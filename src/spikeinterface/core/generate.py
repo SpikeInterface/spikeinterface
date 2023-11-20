@@ -379,7 +379,7 @@ def synthesize_poisson_spike_vector(
     max_p = geometric_p.max()
     num_spikes_expected = ceil(max_frames * max_p)
     num_spikes_std = int(np.sqrt(num_spikes_expected * (1 - max_p)))
-    num_spikes_max = num_spikes_expected + 2 * num_spikes_std
+    num_spikes_max = num_spikes_expected + 4 * num_spikes_std
 
     # Generate inter spike frames, add the refactory samples and accumulate for sorted spike frames
     inter_spike_frames = rng.geometric(p=geometric_p[:, np.newaxis], size=(num_units, num_spikes_max))
