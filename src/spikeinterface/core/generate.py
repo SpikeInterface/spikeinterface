@@ -345,8 +345,8 @@ def synthesize_poisson_spike_vector(
     firing_rates : float or array_like, default: 3.0
         Firing rate(s) in Hz. Can be a single value for all units or an array of firing rates with
         each element being the firing rate for one unit
-    seed : int, optional
-        Seed for random number generator (default is 0).
+    seed : int, default: 0 
+        Seed for random number generator
 
     Returns
     -------
