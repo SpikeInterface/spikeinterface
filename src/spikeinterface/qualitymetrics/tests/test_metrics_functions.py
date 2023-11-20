@@ -71,7 +71,7 @@ def _simulated_data():
 
 
 def _waveform_extractor_simple():
-    recording, sorting = toy_example(duration=80, seed=10)
+    recording, sorting = toy_example(duration=80, seed=10, firing_rate=6.0)
     recording = recording.save(folder=cache_folder / "rec1")
     sorting = sorting.save(folder=cache_folder / "sort1")
     folder = cache_folder / "waveform_folder1"
@@ -384,7 +384,7 @@ def test_calculate_sd_ratio(waveform_extractor_simple):
     sd_ratio = compute_sd_ratio(waveform_extractor_simple)
 
     assert np.all(list(sd_ratio.keys()) == waveform_extractor_simple.unit_ids)
-    assert np.allclose(np.array(list(sd_ratio.values())), 1, atol=0.5, rtol=0)
+    assert np.allclose(list(sd_ratio.values()), 1, atol=0.2, rtol=0)
 
 
 if __name__ == "__main__":

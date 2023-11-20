@@ -1371,6 +1371,7 @@ def compute_sd_ratio(
     wvf_extractor: WaveformExtractor,
     censored_period_ms: float = 4.0,
     correct_for_drift: bool = True,
+    correct_for_template_itself: bool = True,
     unit_ids=None,
     **kwargs,
 ):
@@ -1387,11 +1388,13 @@ def compute_sd_ratio(
         The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
     correct_for_drift: bool, default: True
         If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
+    correct_for_template_itself: bool, default:  True
+        If true, will take into account that the template itself impacts the standard deviation of the noise,
+        and will make a rough estimation of what that impact is (and remove it).
     unit_ids : list or None, default: None
         The list of unit ids to compute this metric. If None, all units are used.
     **kwargs:
         Keyword arguments for computing spike amplitudes and extremum channel.
-    TODO: Possibly remove spikes when computing noise?
     TODO: Take jitter into account.
 
     Returns
@@ -1428,6 +1431,7 @@ def compute_sd_ratio(
         wvf_extractor.recording, return_scaled=amplitudes_ext._params["return_scaled"], method="std"
     )
     best_channels = get_template_extremum_channel(wvf_extractor, outputs="index", **kwargs)
+    n_spikes = wvf_extractor.sorting.count_num_spikes_per_unit()
 
     sd_ratio = {}
     for unit_id in unit_ids:
@@ -1448,6 +1452,16 @@ def compute_sd_ratio(
 
         best_channel = best_channels[unit_id]
         std_noise = noise_levels[best_channel]
+
+        if correct_for_template_itself:
+            template = wvf_extractor.get_template(unit_id, force_dense=True)[:, best_channel]
+
+            # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
+            # TODO: Take into account that templates for different segments might differ.
+            p = wvf_extractor.nsamples * n_spikes[unit_id] / wvf_extractor.get_total_samples()
+            total_variance = p * np.mean(template**2) - p**2 * np.mean(template)
+
+            std_noise = np.sqrt(std_noise**2 - total_variance)
 
         sd_ratio[unit_id] = unit_std / std_noise
 
