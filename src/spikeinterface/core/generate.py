@@ -334,17 +334,17 @@ def synthesize_poisson_spike_vector(
 
     Parameters
     ----------
-    num_units : int, optional
-        Number of neuronal units to simulate (default is 20).
-    sampling_frequency : float, optional
-        Sampling frequency in Hz (default is 30000.0).
-    duration : float, optional
-        Duration of the simulation in seconds (default is 60).
-    refractory_period_ms : float, optional
-        Refractory period between spikes in milliseconds (default is 4.0).
-    firing_rates : float or array_like, optional
-        Firing rate(s) in Hz. Can be a single value or an array of firing rates for each unit
-        (default is 3.0).
+    num_units : int, default: 20
+        Number of neuronal units to simulate 
+    sampling_frequency : float, default: 30000.0
+        Sampling frequency in Hz 
+    duration : float, default: 60.0
+        Duration of the simulation in seconds
+    refractory_period_ms : float, default: 4.0
+        Refractory period between spikes in milliseconds
+    firing_rates : float or array_like, default: 3.0
+        Firing rate(s) in Hz. Can be a single value for all units or an array of firing rates with
+        each element being the firing rate for one unit
     seed : int, optional
         Seed for random number generator (default is 0).
 
