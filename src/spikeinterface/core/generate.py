@@ -1336,14 +1336,59 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
     return channel_locations
 
 
-def generate_unit_locations(num_units, channel_locations, margin_um=20.0, minimum_z=5.0, maximum_z=40.0, seed=None):
+def generate_unit_locations(
+    num_units,
+    channel_locations,
+    margin_um=20.0,
+    minimum_z=5.0,
+    maximum_z=40.0,
+    minimum_distance=20.0,
+    max_iteration=100,
+    distance_strict=False,
+    seed=None,
+):
     rng = np.random.default_rng(seed=seed)
     units_locations = np.zeros((num_units, 3), dtype="float32")
-    for dim in (0, 1):
-        lim0 = np.min(channel_locations[:, dim]) - margin_um
-        lim1 = np.max(channel_locations[:, dim]) + margin_um
-        units_locations[:, dim] = rng.uniform(lim0, lim1, size=num_units)
+
+    minimum_x, maximum_x = np.min(channel_locations[:, 0]) - margin_um, np.max(channel_locations[:, 0]) + margin_um
+    minimum_y, maximum_y = np.min(channel_locations[:, 1]) - margin_um, np.max(channel_locations[:, 1]) + margin_um
+
+    units_locations[:, 0] = rng.uniform(minimum_x, maximum_x, size=num_units)
+    units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
     units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
+
+    if minimum_distance is not None:
+        solution_found = False
+        renew_inds = None
+        for i in range(max_iteration):
+            distances = np.linalg.norm(units_locations[:, np.newaxis] - units_locations[np.newaxis, :], axis=2)
+            inds0, inds1 = np.nonzero(distances < minimum_distance)
+            mask = inds0 != inds1
+            inds0 = inds0[mask]
+            inds1 = inds1[mask]
+
+            if inds0.size > 0:
+                if renew_inds is None:
+                    renew_inds = np.unique(inds0)
+                else:
+                    # random only bad ones in the previous set
+                    renew_inds = renew_inds[np.isin(renew_inds, np.unique(inds0))]
+
+                units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
+                units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+                units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
+            else:
+                solution_found = True
+                break
+
+    if not solution_found:
+        if distance_strict:
+            raise ValueError(
+                f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
+                "You can use distance_strict=False or reduce minimum distance"
+            )
+        else:
+            warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
 
     return units_locations
 
@@ -1369,7 +1414,7 @@ def generate_ground_truth_recording(
     upsample_vector=None,
     generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0),
     noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
-    generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0),
+    generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
     generate_templates_kwargs=dict(),
     dtype="float32",
     seed=None,

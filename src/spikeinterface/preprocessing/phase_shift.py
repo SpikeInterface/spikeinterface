@@ -103,6 +103,8 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
         if self.tmp_dtype is not None:
+            if np.issubdtype(self.dtype, np.integer):
+                traces_shift = traces_shift.round()
             traces_shift = traces_shift.astype(self.dtype)
 
         return traces_shift
