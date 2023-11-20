@@ -79,8 +79,9 @@ def get_numba_vector_to_list_of_spiketrain():
 
         current_x = np.zeros(num_units, dtype=np.int64)
         for s in range(num_spikes):
-            spike_trains[unit_indices[s]][current_x[unit_indices[s]]] = sample_indices[s]
-            current_x[unit_indices[s]] += 1
+            unit_index = unit_indices[s]
+            spike_trains[unit_index][current_x[unit_index]] = sample_indices[s]
+            current_x[unit_index] += 1
 
         return spike_trains
 
