@@ -14,7 +14,7 @@ module. **Note that internal sorters are currently experimental and under develo
 
 A drawback of using external sorters is the separate installation of these tools. Sometimes they need MATLAB,
 specific versions of CUDA, specific gcc versions or outdated versions of
-Python/NumPy. In this case, SpikeInterface offer the mechanism of running external sorters inside a
+Python/NumPy. In this case, SpikeInterface offers the mechanism of running external sorters inside a
 container (Docker/Singularity) with the sorter pre-installed. See :ref:`containerizedsorters`.
 
 
