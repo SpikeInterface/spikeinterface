@@ -14,8 +14,9 @@ Since version 0.95.0, the :py:mod:`spikeinterface.widgets` module supports multi
 * | :code:`sortingview`: web-based and interactive rendering using the `sortingview <https://github.com/magland/sortingview>`_
   | and `FIGURL <https://github.com/flatironinstitute/figurl>`_ packages.
 
-Version 0.100.0, also comes with this new backend:
-* | :code:`ephyviewer`: interactive Qt based using the `ephyviewer <https://ephyviewer.readthedocs.io/en/latest/>`_ package
+Version 0.99.0 also comes with this new backend:
+
+* :code:`ephyviewer`: interactive Qt based using the `ephyviewer <https://ephyviewer.readthedocs.io/en/latest/>`_ package
 
 
 Installing backends
