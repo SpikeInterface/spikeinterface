@@ -258,7 +258,7 @@ Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be s
     we_zarr = we.save(folder="waveforms_zarr", format="zarr")
 
     # extract sparse waveforms (see Sparsity section)
-    # this will use 50 spike per unit to estimate the sparsity of 40um radius for each unit
+    # this will use 50 spikes per unit to estimate the sparsity within a 40um radius from that unit
     we_sparse = extract_waveforms(recording=recording,
                                   sorting=sorting,
                                   folder="waveforms_sparse",
@@ -575,7 +575,7 @@ In order to do this, one can use the :code:`Numpy*` classes, :py:class:`~spikein
 but they are not bound to a file.
 
 Also note the class :py:class:`~spikeinterface.core.SharedMemorySorting` which is very similar to
-Similar to :py:class:`~spikeinterface.core.NumpySorting` but with an unerlying SharedMemory which is useful for
+Similar to :py:class:`~spikeinterface.core.NumpySorting` but with an underlying SharedMemory which is useful for
 parallel computing.
 
 In this example, we create a recording and a sorting object from numpy objects:
@@ -617,7 +617,7 @@ Any sorting object can be transformed into a :py:class:`~spikeinterface.core.Num
     # turn any sortinto into NumpySorting
     sorting_np = sorting.to_numpy_sorting()
 
-    # or to SharedMemorySorting for parrallel computing
+    # or to SharedMemorySorting for parallel computing
     sorting_shm = sorting.to_shared_memory_sorting()
 
 

@@ -265,7 +265,7 @@ Available plotting functions
 * :py:func:`~spikeinterface.widgets.plot_amplitudes` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_autocorrelograms` (backends: :code:`matplotlib`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_confusion_matrix` (backends: :code:`matplotlib`)
-* :py:func:`~spikeinterface.widgets.plot_comparison_collision_by_similarity`
+* :py:func:`~spikeinterface.widgets.plot_comparison_collision_by_similarity` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_crosscorrelograms` (backends: :code:`matplotlib`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_isi_distribution` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_motion` (backends: :code:`matplotlib`)
