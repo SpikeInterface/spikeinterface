@@ -371,18 +371,22 @@ def synthesize_poisson_spike_vector(
     refractory_period_seconds = refractory_period_ms / 1000.0
     refactory_period_frames = int(refractory_period_seconds * sampling_frequency)
 
+    modified_firing_rate = firing_rates / (1 - firing_rates * refractory_period_seconds)
+    print(firing_rates.max(), modified_firing_rate.max())
     # Using the binomial_p as the probability of success at every tick of the sampling frequency
-    binomial_p = firing_rates / sampling_frequency
 
-    # We generate as many spikes as the mean plus two std to be sure we have enough
+    binomial_p = firing_rates / sampling_frequency
+    binomial_p_modified = modified_firing_rate / sampling_frequency
+    binomial_p_modified = np.minimum(binomial_p_modified, 1.0)
+
+    binomial_p_max = np.max(binomial_p).item()
     max_frames = duration * sampling_frequency
-    max_p = binomial_p.max()
-    num_spikes_expected = ceil(max_frames * max_p)
-    num_spikes_std = int(np.sqrt(num_spikes_expected * (1 - max_p)))
+    num_spikes_expected = ceil(max_frames * binomial_p_max)
+    num_spikes_std = int(np.sqrt(num_spikes_expected * (1 - binomial_p_max)))
     num_spikes_max = num_spikes_expected + 4 * num_spikes_std
 
     # Generate inter spike frames, add the refactory samples and accumulate for sorted spike frames
-    inter_spike_frames = rng.geometric(p=binomial_p[:, np.newaxis], size=(num_units, num_spikes_max))
+    inter_spike_frames = rng.geometric(p=binomial_p_modified[:, np.newaxis], size=(num_units, num_spikes_max))
     inter_spike_frames[:, 1:] += refactory_period_frames
 
     spike_frames = np.cumsum(inter_spike_frames, axis=1, out=inter_spike_frames)
