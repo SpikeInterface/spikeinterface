@@ -35,7 +35,7 @@ def generate_recording(
 ) -> BaseRecording:
     """
     Generate a lazy recording object.
-    Useful for testing for testing API and algos.
+    Useful for testing API and algos.
 
     Parameters
     ----------
