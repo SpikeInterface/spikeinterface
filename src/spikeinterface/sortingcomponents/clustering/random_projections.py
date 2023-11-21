@@ -12,7 +12,7 @@ except:
     HAVE_HDBSCAN = False
 
 import random, string, os
-from spikeinterface.core import get_global_tmp_folder, get_noise_levels, get_channel_distances, get_random_data_chunks
+from spikeinterface.core import get_global_tmp_folder, get_channel_distances, get_random_data_chunks
 from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
@@ -48,7 +48,6 @@ class RandomProjectionClustering:
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
-        "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "shared_memory": True,
         "tmp_folder": None,
@@ -77,12 +76,6 @@ class RandomProjectionClustering:
         nafter = int(params["ms_after"] * fs / 1000.0)
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
-
-        if d["noise_levels"] is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False)
-        else:
-            noise_levels = d["noise_levels"]
-
         np.random.seed(d["random_seed"])
 
         if params["tmp_folder"] is None:
@@ -113,32 +106,12 @@ class RandomProjectionClustering:
         nafter = int(params["ms_after"] * fs / 1000)
         nsamples = nbefore + nafter
 
-        import scipy
-
-        x = np.random.randn(100, nsamples, num_chans).astype(np.float32)
-        x = scipy.signal.savgol_filter(x, node2.window_length, node2.order, axis=1)
-
-        ptps = np.ptp(x, axis=1)
-        a, b = np.histogram(ptps.flatten(), np.linspace(0, 100, 1000))
-        ydata = np.cumsum(a) / a.sum()
-        xdata = b[1:]
-
-        from scipy.optimize import curve_fit
-
-        def sigmoid(x, L, x0, k, b):
-            y = L / (1 + np.exp(-k * (x - x0))) + b
-            return y
-
-        p0 = [max(ydata), np.median(xdata), 1, min(ydata)]  # this is an mandatory initial guess
-        popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
-
         node3 = RandomProjectionsFeature(
             recording,
             parents=[node0, node2],
             return_output=True,
             projections=projections,
             radius_um=params["radius_um"],
-            sigmoid=None,
             sparse=True,
         )
 
@@ -219,10 +192,11 @@ class RandomProjectionClustering:
             recording,
             sorting,
             waveform_folder,
-            **params["job_kwargs"],
-            **params["waveforms"],
             return_scaled=False,
             mode=mode,
+            precompute_template=["median"],
+            **params["job_kwargs"],
+            **params["waveforms"],
         )
 
         cleaning_matching_params = params["job_kwargs"].copy()
@@ -238,7 +212,7 @@ class RandomProjectionClustering:
         cleaning_params["tmp_folder"] = tmp_folder
 
         labels, peak_labels = remove_duplicates_via_matching(
-            we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
+            we, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
         )
 
         del we, sorting
