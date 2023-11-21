@@ -48,7 +48,7 @@ def generate_recording(
         Note that the number of segments is determined by the length of this list.
     set_probe: bool, default: True
     ndim : int, default: 2
-        The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probes.
+        The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probe.
     seed : Optional[int]
         A seed for the np.ramdom.default_rng function
 
