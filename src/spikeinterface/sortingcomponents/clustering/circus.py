@@ -31,7 +31,6 @@ from spikeinterface.core.node_pipeline import (
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
 
-
 class CircusClustering:
     """
     hdbscan clustering on peak_locations previously done by localize_peaks()

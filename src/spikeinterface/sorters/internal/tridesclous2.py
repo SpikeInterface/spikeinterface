@@ -122,7 +122,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         # SVD for time compression
         few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
-        few_wfs = extract_waveform_at_max_channel(recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs)
+        few_wfs = extract_waveform_at_max_channel(
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+        )
 
         wfs = few_wfs[:, :, 0]
         tsvd = TruncatedSVD(params["svd"]["n_components"])
@@ -322,6 +324,3 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting
-
-
-
