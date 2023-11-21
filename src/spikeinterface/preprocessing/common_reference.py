@@ -98,7 +98,7 @@ class CommonReferenceRecording(BasePreprocessor):
 
         # tranforms groups (ids) to groups (indices)
         if groups is not None:
-            groups_inds = [self.ids_to_indices(g) for g in groups]
+            group_indices = [self.ids_to_indices(g) for g in groups]
         else:
             groups_inds = None
         if ref_channel_ids is not None:
