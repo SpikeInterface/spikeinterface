@@ -18,8 +18,6 @@ from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
-from spikeinterface.core.recording_tools import get_channel_distances, get_random_data_chunks
-from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
 from sklearn.decomposition import TruncatedSVD
@@ -30,42 +28,8 @@ from spikeinterface.core.node_pipeline import (
     ExtractSparseWaveforms,
     PeakRetriever,
 )
+from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
-
-def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **job_kwargs):
-    """
-    Helper function to extract waveforms at the max channel from a peak list
-
-
-    """
-    n = rec.get_num_channels()
-    unit_ids = np.arange(n, dtype="int64")
-    sparsity_mask = np.eye(n, dtype="bool")
-
-    spikes = np.zeros(
-        peaks.size, dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
-    )
-    spikes["sample_index"] = peaks["sample_index"]
-    spikes["unit_index"] = peaks["channel_index"]
-    spikes["segment_index"] = peaks["segment_index"]
-
-    nbefore = int(ms_before * rec.sampling_frequency / 1000.0)
-    nafter = int(ms_after * rec.sampling_frequency / 1000.0)
-
-    all_wfs = extract_waveforms_to_single_buffer(
-        rec,
-        spikes,
-        unit_ids,
-        nbefore,
-        nafter,
-        mode="shared_memory",
-        return_scaled=False,
-        sparsity_mask=sparsity_mask,
-        copy=True,
-        **job_kwargs,
-    )
-
-    return all_wfs
 
 
 class CircusClustering:
