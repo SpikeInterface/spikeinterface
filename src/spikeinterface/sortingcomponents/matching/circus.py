@@ -821,7 +821,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
             # We stop when updates do not modify the chosen spikes anymore
             if d['stop_criteria'] == 'omp_min_sps':
-                is_valid = scalar_products > stop_criteria
+                is_valid = scalar_products > stop_criteria[:, np.newaxis]
                 do_loop = np.any(is_valid)
             elif d['stop_criteria'] == "max_failures":
                 is_valid = (final_amplitudes > min_amplitude) * (final_amplitudes < max_amplitude)
