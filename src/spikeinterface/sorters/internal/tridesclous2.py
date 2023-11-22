@@ -9,11 +9,13 @@ from spikeinterface.core import (
     NumpySorting,
     get_channel_distances,
 )
-from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
+
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
 from spikeinterface.core.basesorting import minimum_spike_dtype
+
+from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
 import numpy as np
 
@@ -115,9 +117,14 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print("We kept %d peaks for clustering" % len(peaks))
 
+        ms_before = params["waveforms"]["ms_before"]
+        ms_after = params["waveforms"]["ms_after"]
+
         # SVD for time compression
         few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
-        few_wfs = extract_waveform_at_max_channel(recording, few_peaks, **job_kwargs)
+        few_wfs = extract_waveform_at_max_channel(
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+        )
 
         wfs = few_wfs[:, :, 0]
         tsvd = TruncatedSVD(params["svd"]["n_components"])
@@ -129,8 +136,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         with open(model_folder / "pca_model.pkl", "wb") as f:
             pickle.dump(tsvd, f)
 
-        ms_before = params["waveforms"]["ms_before"]
-        ms_after = params["waveforms"]["ms_after"]
         model_params = {
             "ms_before": ms_before,
             "ms_after": ms_after,
@@ -319,39 +324,3 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting
-
-
-def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **job_kwargs):
-    """
-    Helper function to extractor waveforms at max channel from a peak list
-
-
-    """
-    n = rec.get_num_channels()
-    unit_ids = np.arange(n, dtype="int64")
-    sparsity_mask = np.eye(n, dtype="bool")
-
-    spikes = np.zeros(
-        peaks.size, dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
-    )
-    spikes["sample_index"] = peaks["sample_index"]
-    spikes["unit_index"] = peaks["channel_index"]
-    spikes["segment_index"] = peaks["segment_index"]
-
-    nbefore = int(ms_before * rec.sampling_frequency / 1000.0)
-    nafter = int(ms_after * rec.sampling_frequency / 1000.0)
-
-    all_wfs = extract_waveforms_to_single_buffer(
-        rec,
-        spikes,
-        unit_ids,
-        nbefore,
-        nafter,
-        mode="shared_memory",
-        return_scaled=False,
-        sparsity_mask=sparsity_mask,
-        copy=True,
-        **job_kwargs,
-    )
-
-    return all_wfs
