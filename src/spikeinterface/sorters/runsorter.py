@@ -6,7 +6,7 @@ import platform
 from warnings import warn
 from typing import Optional, Union
 
-from ..core import BaseRecording
+from ..core import BaseRecording, NumpySorting
 from .. import __version__ as si_version
 from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier
@@ -177,6 +177,9 @@ def run_sorter_local(
         sorting = None
     sorter_output_folder = output_folder / "sorter_output"
     if delete_output_folder:
+        if with_output:
+            # if we delete the folder the sorting can reference deleted data : we need a copy
+            sorting = NumpySorting.from_sorting(sorting)
         shutil.rmtree(sorter_output_folder)
 
     return sorting
