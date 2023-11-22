@@ -43,7 +43,7 @@ class UnitDepthsWidget(BaseWidget):
         unit_amplitudes = get_template_extremum_amplitude(we, peak_sign=peak_sign)
         unit_amplitudes = np.abs([unit_amplitudes[unit_id] for unit_id in unit_ids])
 
-        num_spikes = np.array(list(we.sorting.count_num_spikes_per_unit().values()))
+        num_spikes = we.sorting.count_num_spikes_per_unit(outputs="array")
 
         plot_data = dict(
             unit_depths=unit_depths,
