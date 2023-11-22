@@ -218,6 +218,17 @@ class TestWidgets(unittest.TestCase):
                         backend=backend,
                         **self.backend_kwargs[backend],
                     )
+                else:
+                    # sortingview doesn't support more than 2 shadings
+                    with self.assertRaises(AssertionError):
+                        sw.plot_unit_templates(
+                            self.we_sparse,
+                            sparsity=self.sparsity_best,
+                            unit_ids=unit_ids,
+                            templates_percentile_shading=[1, 5, 25, 75, 95, 99],
+                            backend=backend,
+                            **self.backend_kwargs[backend],
+                        )
 
     def test_plot_unit_waveforms_density_map(self):
         possible_backends = list(sw.UnitWaveformDensityMapWidget.get_possible_backends())
