@@ -312,7 +312,8 @@ class NeoRecordingSegment(BaseRecordingSegment):
         num_samples = self.neo_reader.get_signal_size(
             block_index=self.block_index, seg_index=self.segment_index, stream_index=self.stream_index
         )
-        return num_samples
+
+        return int(num_samples)
 
     def get_traces(
         self,

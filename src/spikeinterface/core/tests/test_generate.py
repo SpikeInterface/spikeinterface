@@ -273,8 +273,7 @@ def test_noise_generator_consistency_after_dump(strategy, seed):
 
 def test_generate_recording():
     # check the high level function
-    rec = generate_recording(mode="lazy")
-    rec = generate_recording(mode="legacy")
+    rec = generate_recording()
 
 
 def test_generate_single_fake_waveform():
@@ -405,7 +404,7 @@ def test_inject_templates():
 
     # generate some sutff
     rec_noise = generate_recording(
-        num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency, mode="lazy", seed=42
+        num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency, seed=42
     )
     channel_locations = rec_noise.get_channel_locations()
     sorting = generate_sorting(

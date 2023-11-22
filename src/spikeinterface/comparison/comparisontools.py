@@ -78,7 +78,7 @@ def do_count_event(sorting):
     """
     import pandas as pd
 
-    return pd.Series(sorting.count_num_spikes_per_unit())
+    return pd.Series(sorting.count_num_spikes_per_unit(outputs="dict"))
 
 
 def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, event_counts2  unit2_ids,
@@ -310,7 +310,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, ensure_symmetry=Fa
 
     # ensure the number of match do not exceed the number of spike in train 2
     # this is a simple way to handle corner cases for bursting in sorting1
-    spike_count2 = np.array(list(sorting2.count_num_spikes_per_unit().values()))
+    spike_count2 = sorting2.count_num_spikes_per_unit(outputs="array")
     spike_count2 = spike_count2[np.newaxis, :]
     matching_matrix = np.clip(matching_matrix, None, spike_count2)
 
@@ -353,8 +353,8 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, ensure_symmetry=True
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
 
-    ev_counts1 = np.array(list(sorting1.count_num_spikes_per_unit().values()))
-    ev_counts2 = np.array(list(sorting2.count_num_spikes_per_unit().values()))
+    ev_counts1 = sorting1.count_num_spikes_per_unit(outputs="array")
+    ev_counts2 = sorting2.count_num_spikes_per_unit(outputs="array")
     event_counts1 = pd.Series(ev_counts1, index=unit1_ids)
     event_counts2 = pd.Series(ev_counts2, index=unit2_ids)
 
