@@ -709,7 +709,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         is_in_vicinity = np.zeros(0, dtype=np.int32)
         
         if d['stop_criteria'] == 'omp_min_sps':
-            stop_criteria = d['omp_min_sps'] * np.maximum(d["norms"], np.sqrt(d["noise_levels"].sum() * d["num_samples"]))
+            stop_criteria = d['omp_min_sps'] * np.maximum(d["norms"], np.sqrt(num_channels * num_samples))
         elif d['stop_criteria'] == "max_failures":
             nb_valids = 0
             nb_failures = d['max_failures']
