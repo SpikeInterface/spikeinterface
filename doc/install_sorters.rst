@@ -32,8 +32,8 @@ Some novel spike sorting algorithms are implemented directly in SpikeInterface u
 :py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`si_based` section of this page
 for more information!
 
-If you experience installation problems please directly contact the authors of theses tools or write on the
-related mailing list, google group, etc.
+If you experience installation problems please directly contact the authors of these tools or write on the
+related mailing list, google group, GitHub issue page, etc.
 
 Please feel free to enhance this document with more installation tips.
 
@@ -251,31 +251,6 @@ Combinato
       # or using CombinatoSorter.set_combinato_path()
 
 
-Klusta (LEGACY)
-^^^^^^^^^^^^^^^
-
-* Python
-* Requires SpikeInterface<0.96.0 (and Python 3.7)
-* Url: https://github.com/kwikteam/klusta
-* Authors: Cyrille Rossant, Shabnam Kadir, Dan Goodman, Max Hunter, Kenneth Harris
-* Installation::
-
-       pip install Cython h5py tqdm
-       pip install click klusta klustakwik2
-
-* See also: https://github.com/kwikteam/phy
-
-
-Yass (LEGACY)
-^^^^^^^^^^^^^
-
-* Python, CUDA, torch
-* Requires SpikeInterface<0.96.0 (and Python 3.7)
-* Url: https://github.com/paninski-lab/yass
-* Authors: JinHyung Lee, Catalin Mitelut, Liam Paninski
-* Installation::
-
-      https://github.com/paninski-lab/yass/wiki/Installation-Local
 
 
 .. _si_based:
@@ -302,3 +277,50 @@ working not only at peak times but at all times, recovering more spikes close to
         pip install hdbscan
         pip install spikeinterface
         pip install numba  (or conda install numba as recommended by conda authors)
+
+
+Tridesclous2
+^^^^^^^^^^^^
+
+This is an upgraded version of Tridesclous, natively written in SpikeInterface.
+#Same add his notes.
+
+* Python
+* Requires: HDBSCAN and Numba
+* Authors: Samuel Garcia
+* Installation::
+
+      pip install hdbscan
+      pip install spikeinterface
+      pip install numba
+
+
+
+Legacy Sorters
+--------------
+
+Klusta (LEGACY)
+^^^^^^^^^^^^^^^
+
+* Python
+* Requires SpikeInterface<0.96.0 (and Python 3.7)
+* Url: https://github.com/kwikteam/klusta
+* Authors: Cyrille Rossant, Shabnam Kadir, Dan Goodman, Max Hunter, Kenneth Harris
+* Installation::
+
+       pip install Cython h5py tqdm
+       pip install click klusta klustakwik2
+
+* See also: https://github.com/kwikteam/phy
+
+
+Yass (LEGACY)
+^^^^^^^^^^^^^
+
+* Python, CUDA, torch
+* Requires SpikeInterface<0.96.0 (and Python 3.7)
+* Url: https://github.com/paninski-lab/yass
+* Authors: JinHyung Lee, Catalin Mitelut, Liam Paninski
+* Installation::
+
+      https://github.com/paninski-lab/yass/wiki/Installation-Local

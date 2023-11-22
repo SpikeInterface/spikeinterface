@@ -12,9 +12,9 @@ On the other hand SpikeInterface directly implements some internal sorters (**sp
 that do not depend on external tools, but depend on the :py:mod:`spikeinterface.sortingcomponents`
 module. **Note that internal sorters are currently experimental and under development**.
 
-A drawback of using external sorters is the installation of these tools. Sometimes they need MATLAB,
-specific versions of CUDA, specific gcc versions vary or even worse outdated versions of
-Python/NumPy. In that case, SpikeInterface offer the mechanism of running external sorters inside a
+A drawback of using external sorters is the separate installation of these tools. Sometimes they need MATLAB,
+specific versions of CUDA, specific gcc versions or outdated versions of
+Python/NumPy. In this case, SpikeInterface offers the mechanism of running external sorters inside a
 container (Docker/Singularity) with the sorter pre-installed. See :ref:`containerizedsorters`.
 
 
@@ -244,7 +244,7 @@ There are three options:
    the current development version from the :code:`main` branch will be installed in the container.
 
 3. **local copy**: if you installed :code:`spikeinterface` from source and you have some changes in your branch or fork
-   that are not in the :code:`main` branch, you can install a copy of your :code:`spikeinterface` packahe in the container.
+   that are not in the :code:`main` branch, you can install a copy of your :code:`spikeinterface` package in the container.
    To do so, you need to set en environment variable :code:`SPIKEINTERFACE_DEV_PATH` to the location where you cloned the
    :code:`spikeinterface` repo (e.g. on Linux: :code:`export SPIKEINTERFACE_DEV_PATH="path-to-spikeinterface-clone"`.
 
@@ -397,7 +397,7 @@ to concatenate the recordings before spike sorting and how to split the sorted o
 on the concatenation.
 
 Note that some sorters (tridesclous, spykingcircus2) handle a multi-segments paradigm directly. In
-that case we will use the :py:func:`~spikeinterface.core.append_recordings()` function. Many sorters
+this case we will use the :py:func:`~spikeinterface.core.append_recordings()` function. Many sorters
 do not handle multi-segment, and in that case we will use the
 :py:func:`~spikeinterface.core.concatenate_recordings()` function.
 
