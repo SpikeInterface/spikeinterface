@@ -206,10 +206,6 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
     show_legend: bool
         Show the legend in the last axes
 
-    Returns
-    -------
-    W: MultiCompGraphWidget
-        The output widget
     """
 
     def __init__(
