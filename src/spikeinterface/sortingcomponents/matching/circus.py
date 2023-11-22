@@ -660,7 +660,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d["amplitudes"]
         ignored_ids = d["ignored_ids"]
-        stop_criteria = d["stop_criteria"]
         vicinity = d["vicinity"]
         rank = d["rank"]
 
