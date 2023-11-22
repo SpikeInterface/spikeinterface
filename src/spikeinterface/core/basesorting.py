@@ -275,14 +275,14 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        outputs: "dict" | "array", dfault: "dict"
+        outputs: "dict" | "array", default: "dict"
             Control the type of the returned object: a dict (keys are unit_ids) or an numpy array.
 
         Returns
         -------
         dict or numpy.array
             Dict : Dictionary with unit_ids as key and number of spikes as values
-            Numpy array : array of size len(unit_ids) in the same orderas unit_ids.
+            Numpy array : array of size len(unit_ids) in the same order as unit_ids.
         """
         num_spikes = np.zeros(self.unit_ids.size, dtype="int64")
 
@@ -320,7 +320,7 @@ class BaseSorting(BaseExtractor):
             num_spikes = dict(zip(self.unit_ids, num_spikes))
             return num_spikes
         else:
-            raise ValueError("count_num_spikes_per_unit() output must be dict or array")
+            raise ValueError("count_num_spikes_per_unit() output must be 'dict' or 'array'")
 
     def count_total_num_spikes(self):
         """
