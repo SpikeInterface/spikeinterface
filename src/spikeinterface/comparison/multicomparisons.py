@@ -191,7 +191,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         for sorting in self.object_list:
             assert sorting.check_serializability(
                 "json"
-            ), "MultiSortingComparison.save_to_folder() need json serializable sortings"
+            ), "MultiSortingComparison.save_to_folder() needs json serializable sortings"
 
         save_folder = Path(save_folder)
         save_folder.mkdir(parents=True, exist_ok=True)
