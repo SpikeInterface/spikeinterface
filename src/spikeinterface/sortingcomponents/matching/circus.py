@@ -509,7 +509,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
         "amplitudes": [0.6, 2],
+        "stop_criteria" : "max_failures",
         "max_failures" : 20,
+        "omp_min_sps" : 0.1,
+        "relative_error" : 5e-5,
         "waveform_extractor": None,
         "rank": 5,
         "sparse_kwargs": {"method": "ptp", "threshold": 1},
@@ -521,6 +524,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     def _prepare_templates(cls, d):
         waveform_extractor = d["waveform_extractor"]
         num_templates = len(d["waveform_extractor"].sorting.unit_ids)
+
+        assert d['stop_criteria'] in ['max_failures', 'omp_min_sps', 'relative_error']
 
         if not waveform_extractor.is_sparse():
             sparsity = compute_sparsity(waveform_extractor, **d["sparse_kwargs"]).mask
@@ -686,7 +691,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             scalar_products += np.sum(objective_by_rank, axis=0)
 
         num_spikes = 0
-        nb_failures = d['max_failures']
 
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
 
@@ -703,9 +707,22 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         all_amplitudes = np.zeros(0, dtype=np.float32)
         is_in_vicinity = np.zeros(0, dtype=np.int32)
-        nb_valids = 0
+        
+        if d['stop_criteria'] == 'omp_min_sps':
+            stop_criteria = d['omp_min_sps'] * np.maximum(d["norms"], np.sqrt(d["noise_levels"].sum() * d["num_samples"]))
+        elif d['stop_criteria'] == "max_failures":
+            nb_valids = 0
+            nb_failures = d['max_failures']
+        elif d['stop_criteria'] == 'relative_error':
+            if len(ignored_ids) > 0:
+                new_error = np.linalg.norm(scalar_products[not_ignored])
+            else:
+                new_error = np.linalg.norm(scalar_products)
+            delta_error = np.inf
 
-        while nb_failures > 0:
+        do_loop = True
+
+        while do_loop:
             best_amplitude_ind = scalar_products.argmax()
             best_cluster_ind, peak_index = np.unravel_index(best_amplitude_ind, scalar_products.shape)
 
@@ -803,11 +820,24 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 scalar_products[overlapping_templates, idx[0] : idx[1]] -= to_add
 
             # We stop when updates do not modify the chosen spikes anymore
-            is_valid = (final_amplitudes > min_amplitude) * (final_amplitudes < max_amplitude)
-            new_nb_valids = np.sum(is_valid)
-            if (new_nb_valids - nb_valids) == 0:
-                nb_failures -= 1
-            nb_valids = new_nb_valids 
+            if d['stop_criteria'] == 'omp_min_sps':
+                is_valid = scalar_products > stop_criteria
+                do_loop = np.any(is_valid)
+            elif d['stop_criteria'] == "max_failures":
+                is_valid = (final_amplitudes > min_amplitude) * (final_amplitudes < max_amplitude)
+                new_nb_valids = np.sum(is_valid)
+                if (new_nb_valids - nb_valids) == 0:
+                    nb_failures -= 1
+                nb_valids = new_nb_valids
+                do_loop = nb_failures > 0
+            elif d['stop_criteria'] == 'relative_error':
+                previous_error = new_error
+                if len(ignored_ids) > 0:
+                    new_error = np.linalg.norm(scalar_products[not_ignored])
+                else:
+                    new_error = np.linalg.norm(scalar_products)
+                delta_error = np.abs(new_error / previous_error - 1)
+                do_loop = delta_error > d["relative_error"]
 
         is_valid = (final_amplitudes > min_amplitude) * (final_amplitudes < max_amplitude)
         valid_indices = np.where(is_valid)
