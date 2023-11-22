@@ -776,7 +776,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             all_selections[:, num_selection] = [best_cluster_ind, peak_index]
             num_selection += 1
 
-
             selection = all_selections[:, :num_selection]
             res_sps = full_sps[selection[0], selection[1]]
 
