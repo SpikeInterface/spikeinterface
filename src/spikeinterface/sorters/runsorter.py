@@ -162,7 +162,7 @@ def run_sorter_local(
     **sorter_params,
 ):
     if isinstance(recording, list):
-        raise Exception("You you want to run several sorters/recordings use run_sorters(...)")
+        raise Exception("If you want to run several sorters/recordings use run_sorter_jobs(...)")
 
     SorterClass = sorter_dict[sorter_name]
 
@@ -179,7 +179,8 @@ def run_sorter_local(
     if delete_output_folder:
         if with_output:
             # if we delete the folder the sorting can reference deleted data : we need a copy
-            sorting = NumpySorting.from_sorting(sorting)
+            sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+            print('ici', sorting)
         shutil.rmtree(sorter_output_folder)
 
     return sorting

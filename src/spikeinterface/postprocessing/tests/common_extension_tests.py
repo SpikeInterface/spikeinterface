@@ -146,7 +146,8 @@ class WaveformExtensionCommonTestSuite:
     def tearDown(self):
         # delete object to release memmap
         del self.we1, self.we2, self.we_memory2, self.we_zarr2, self.we_sparse
-
+        if hasattr(self, "we_ro"):
+            del self.we_ro
 
         # allow pytest to delete RO folder
         if platform.system() != "Windows":
@@ -169,7 +170,6 @@ class WaveformExtensionCommonTestSuite:
             folder = self.cache_folder / name
             if folder.exists():
                 shutil.rmtree(folder)
-
 
 
     def _test_extension_folder(self, we, in_memory=False):
