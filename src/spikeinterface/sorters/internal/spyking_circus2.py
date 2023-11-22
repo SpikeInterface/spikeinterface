@@ -36,7 +36,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "shared_memory": True,
         "job_kwargs": {"n_jobs": -1},
-        "debug" : False
+        "debug": False,
     }
 
     handle_multi_segment = True
