@@ -1181,7 +1181,7 @@ class WaveformExtractor:
 
     def precompute_templates(self, modes=("average", "std", "median", "percentile"), percentile=None) -> None:
         """
-        Precompute all template for different "modes":
+        Precompute all templates for different "modes":
           * average
           * std
           * median
