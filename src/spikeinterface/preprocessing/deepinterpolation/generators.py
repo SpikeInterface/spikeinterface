@@ -86,7 +86,7 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
         sequential_generator_params["total_samples"] = self.total_samples
         sequential_generator_params["pre_post_omission"] = pre_post_omission
 
-        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, dir="/tmp") as f:
+        with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False, dir="/tmp") as f:
             json.dump(sequential_generator_params, f)
             f.flush()
             json_path = f.name
@@ -246,7 +246,7 @@ class SpikeInterfaceRecordingSegmentGenerator(SequentialGenerator):
         sequential_generator_params["total_samples"] = self.total_samples
         sequential_generator_params["pre_post_omission"] = pre_post_omission
 
-        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, dir="/tmp") as f:
+        with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False, dir="/tmp") as f:
             json.dump(sequential_generator_params, f)
             f.flush()
             json_path = f.name
