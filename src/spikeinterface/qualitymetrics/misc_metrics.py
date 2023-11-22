@@ -524,7 +524,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), uni
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
     assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
-    spike_counts = waveform_extractor.sorting.count_num_spikes_per_unit()
+    spike_counts = waveform_extractor.sorting.count_num_spikes_per_unit(outputs="dict")
     sorting = waveform_extractor.sorting
     spikes = sorting.to_spike_vector(concatenated=False)
 
@@ -683,7 +683,7 @@ def compute_amplitude_cv_metrics(
     sorting = waveform_extractor.sorting
     total_duration = waveform_extractor.get_total_duration()
     spikes = sorting.to_spike_vector()
-    num_spikes = sorting.count_num_spikes_per_unit()
+    num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
