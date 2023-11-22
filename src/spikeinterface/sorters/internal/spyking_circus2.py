@@ -189,7 +189,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if params["debug"]:
             fitting_folder = sorter_output_folder / "fitting"
             fitting_folder.mkdir(parents=True, exist_ok=True)
-            np.save(fitting_folder / "spikes.npy", spikes)
+            np.save(fitting_folder / "spikes", spikes)
 
         if verbose:
             print("We found %d spikes" % len(spikes))
