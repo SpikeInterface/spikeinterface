@@ -302,7 +302,7 @@ class BaseSorting(BaseExtractor):
             all_spiketrain_are_cached = False
 
         if all_spiketrain_are_cached or self._cached_spike_vector is None:
-            # case one 1 or 3
+            # case 1 or 3
             for unit_index, unit_id in enumerate(self.unit_ids):
                 for segment_index in range(self.get_num_segments()):
                     st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
