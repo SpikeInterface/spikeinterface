@@ -179,10 +179,10 @@ def calculate_pc_metrics(
             if progress_bar:
                 results = tqdm(results, total=len(unit_ids))
 
-        for ui, pca_metrics_unit in enumerate(results):
-            unit_id = unit_ids[ui]
-            for metric_name, metric in pca_metrics_unit.items():
-                pc_metrics[metric_name][unit_id] = metric
+            for ui, pca_metrics_unit in enumerate(results):
+                unit_id = unit_ids[ui]
+                for metric_name, metric in pca_metrics_unit.items():
+                    pc_metrics[metric_name][unit_id] = metric
 
     return pc_metrics
 
