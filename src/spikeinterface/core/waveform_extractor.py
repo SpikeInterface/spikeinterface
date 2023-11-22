@@ -1815,7 +1815,6 @@ class BaseWaveformExtractorExtension:
     handle_sparsity = False
 
     def __init__(self, waveform_extractor):
-        # self.waveform_extractor = waveform_extractor
         self._waveform_extractor = weakref.ref(waveform_extractor)
 
         if self.waveform_extractor.folder is not None:
@@ -1867,7 +1866,9 @@ class BaseWaveformExtractorExtension:
     def waveform_extractor(self):
         # Important : to avoid that WaveformExtractor reference a BaseWaveformExtractorExtension
         # and BaseWaveformExtractorExtension reference a WaveformExtractor
-        # we need a weakref
+        # we need a weakref. Otherwise the garbage collecor is not working properly
+        # and so the WaveformExtractor + its recordsing are still alive even after deleting explicitly
+        # the WaveformExtractor which make impossible to delete folder!
         we = self._waveform_extractor()
         if we is None:
             raise ValueError(f"The extension {self.extension_name} has lost its WaveformExtractor")
