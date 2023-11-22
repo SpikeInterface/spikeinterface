@@ -304,7 +304,7 @@ class ScaleWidget(W.VBox):
         self.plus_selector.on_click(self.plus_clicked)
         self.minus_selector.on_click(self.minus_clicked)
 
-        self.value = 1.0
+        self.value = value
         super(W.VBox, self).__init__(
             children=[self.plus_selector, self.scale_label, self.minus_selector],
             #  layout=W.Layout(align_items="center", width="100%", height="100%"),
