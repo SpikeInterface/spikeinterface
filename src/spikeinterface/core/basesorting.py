@@ -6,6 +6,7 @@ from typing import List, Optional, Union
 import numpy as np
 
 from .base import BaseExtractor, BaseSegment
+from .sorting_tools import spike_vector_to_spike_trains
 from .waveform_tools import has_exceeding_spikes
 
 
@@ -130,9 +131,11 @@ class BaseSorting(BaseExtractor):
             else:
                 spike_frames = self._cached_spike_trains[segment_index][unit_id]
             if start_frame is not None:
-                spike_frames = spike_frames[spike_frames >= start_frame]
+                start = np.searchsorted(spike_frames, start_frame)
+                spike_frames = spike_frames[start:]
             if end_frame is not None:
-                spike_frames = spike_frames[spike_frames < end_frame]
+                end = np.searchsorted(spike_frames, end_frame)
+                spike_frames = spike_frames[:end]
         else:
             segment = self._sorting_segments[segment_index]
             spike_frames = segment.get_unit_spike_train(
@@ -431,7 +434,6 @@ class BaseSorting(BaseExtractor):
     def get_all_spike_trains(self, outputs="unit_id"):
         """
         Return all spike trains concatenated.
-
         This is deprecated and will be removed in spikeinterface 0.102 use sorting.to_spike_vector() instead
         """
 
@@ -466,6 +468,33 @@ class BaseSorting(BaseExtractor):
 
             spikes.append((spike_times, spike_labels))
         return spikes
+
+    def precompute_spike_trains(self, from_spike_vector=None):
+        """
+        Pre-computes and caches all spike trains for this sorting
+
+
+
+        Parameters
+        ----------
+        from_spike_vector: None | bool, default: None
+            If None, then it is automatic depending on whether the spike vector is cached.
+            If True, will compute it from the spike vector.
+            If False, will call `get_unit_spike_train` for each segment for each unit.
+        """
+        unit_ids = self.unit_ids
+
+        if from_spike_vector is None:
+            # if spike vector is cached then use it
+            from_spike_vector = self._cached_spike_vector is not None
+
+        if from_spike_vector:
+            self._cached_spike_trains = spike_vector_to_spike_trains(self.to_spike_vector(concatenated=False), unit_ids)
+
+        else:
+            for segment_index in range(self.get_num_segments()):
+                for unit_id in unit_ids:
+                    self.get_unit_spike_train(unit_id, segment_index=segment_index, use_cache=True)
 
     def to_spike_vector(self, concatenated=True, extremum_channel_inds=None, use_cache=True):
         """
