@@ -3,6 +3,7 @@ import tempfile
 import json
 from typing import Optional
 import numpy as np
+import os
 
 from ...core import load_extractor, concatenate_recordings, BaseRecording, BaseRecordingSegment
 
@@ -85,7 +86,8 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
         sequential_generator_params["total_samples"] = self.total_samples
         sequential_generator_params["pre_post_omission"] = pre_post_omission
 
-        json_path = tempfile.mktemp(suffix=".json")
+        json_fd, json_path = tempfile.mkstemp(suffix=".json")
+        os.close(json_fd)
         with open(json_path, "w") as f:
             json.dump(sequential_generator_params, f)
         super().__init__(json_path)
@@ -243,7 +245,8 @@ class SpikeInterfaceRecordingSegmentGenerator(SequentialGenerator):
         sequential_generator_params["total_samples"] = self.total_samples
         sequential_generator_params["pre_post_omission"] = pre_post_omission
 
-        json_path = tempfile.mktemp(suffix=".json")
+        json_fd, json_path = tempfile.mkstemp(suffix=".json")
+        os.close(json_fd)
         with open(json_path, "w") as f:
             json.dump(sequential_generator_params, f)
         super().__init__(json_path)
