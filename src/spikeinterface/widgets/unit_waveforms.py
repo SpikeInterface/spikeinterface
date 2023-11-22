@@ -50,7 +50,7 @@ class UnitWaveformsWidget(BaseWidget):
         Alpha value for templates, (matplotlib backend)
     shade_templates : bool, default: True
         If True, templates are shaded, see templates_percentile_shading argument
-    templates_percentile_shading : float, list of floats, or None, default: [5, 25, 75, 95]
+    templates_percentile_shading : float, list of floats, or None, default: [1, 25, 75, 98]
         It controls the shading of the templates.
         If None, the shading is +/- the standard deviation of the templates.
         If float, it controls the percentile of the template values used to shade the templates.
@@ -90,7 +90,7 @@ class UnitWaveformsWidget(BaseWidget):
         set_title=True,
         same_axis=False,
         shade_templates=True,
-        templates_percentile_shading=[5, 25, 75, 95],
+        templates_percentile_shading=[1, 25, 75, 98],
         x_offset_units=False,
         alpha_waveforms=0.5,
         alpha_templates=1,

@@ -174,6 +174,16 @@ class TestWidgets(unittest.TestCase):
                     templates_percentile_shading=None,
                     **self.backend_kwargs[backend],
                 )
+                # test different shadings
+                sw.plot_unit_templates(
+                    self.we_sparse,
+                    sparsity=self.sparsity_best,
+                    unit_ids=unit_ids,
+                    backend=backend,
+                    shade_templates=False,
+                    templates_percentile_shading=None,
+                    **self.backend_kwargs[backend],
+                )
                 sw.plot_unit_templates(
                     self.we_sparse,
                     sparsity=self.sparsity_best,
@@ -187,7 +197,7 @@ class TestWidgets(unittest.TestCase):
                     sparsity=self.sparsity_best,
                     unit_ids=unit_ids,
                     backend=backend,
-                    templates_percentile_shading=1,
+                    templates_percentile_shading=[10, 90],
                     **self.backend_kwargs[backend],
                 )
 
