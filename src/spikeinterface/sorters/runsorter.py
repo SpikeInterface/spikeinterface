@@ -172,15 +172,19 @@ def run_sorter_local(
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
     SorterClass.run_from_folder(output_folder, raise_error, verbose)
     if with_output:
-        sorting = SorterClass.get_result_from_folder(output_folder)
+        sorting = SorterClass.get_result_from_folder(output_folder, register_recording=True, sorting_info=True)
     else:
         sorting = None
     sorter_output_folder = output_folder / "sorter_output"
     if delete_output_folder:
-        if with_output:
-            # if we delete the folder the sorting can reference deleted data : we need a copy
-            sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
-            print('ici', sorting)
+        if with_output and sorting is not None:
+            # if we delete the folder the sorting can have a data reference to deleted file/folder: we need a copy
+            sorting_info = sorting.sorting_info
+            sorting= NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+            sorting.set_sorting_info(recording_dict=sorting_info["recording"],
+                                     params_dict=sorting_info["params"],
+                                     log_dict=sorting_info["log"],
+                                     )
         shutil.rmtree(sorter_output_folder)
 
     return sorting
