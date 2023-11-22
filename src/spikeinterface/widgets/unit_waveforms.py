@@ -55,7 +55,7 @@ class UnitWaveformsWidget(BaseWidget):
         If None, the shading is +/- the standard deviation of the templates.
         If float, it controls the percentile of the template values used to shade the templates.
         Note that it is one-sided: if 5 is given, the 5th and 95th percentiles are used to shade
-        the templates. If list of floats, it can be a 2-element or 4-element list.
+        the templates. If list of floats, it can be a 2-element or a 4-element list.
         If 2-element, it controls the lower and upper percentile used to shade the templates.
         If 4-element, it controls the lower and upper percentiles used to shade the templates:
         the first two elements are used for the lower bounds of the light and dark shading,

@@ -1195,7 +1195,7 @@ class WaveformExtractor:
             Percentile to use for mode="percentile"
 
         The results is cached in memory as a 3d ndarray (nunits, nsamples, nchans)
-        and also saved as npy file in the folder to avoid recomputation each time.
+        and also saved as an npy file in the folder to avoid recomputation each time.
         """
         # TODO : run this in parralel
 
@@ -1241,13 +1241,13 @@ class WaveformExtractor:
 
     def get_all_templates(self, unit_ids: Optional[Iterable] = None, mode="average", percentile: float | None = None):
         """
-        Return  templates (average waveform) for multiple units.
+        Return templates (average waveforms) for multiple units.
 
         Parameters
         ----------
         unit_ids: list or None
             Unit ids to retrieve waveforms for
-        mode: "average" | "median" | "std" | "perentile", default: "average"
+        mode: "average" | "median" | "std" | "percentile", default: "average"
             The mode to compute the templates
         percentile: float, default: None
             Percentile to use for mode="percentile"
