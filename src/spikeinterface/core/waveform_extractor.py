@@ -5,6 +5,7 @@ import shutil
 from typing import Iterable, Literal, Optional
 import json
 import os
+import weakref
 
 import numpy as np
 from copy import deepcopy
@@ -1814,7 +1815,8 @@ class BaseWaveformExtractorExtension:
     handle_sparsity = False
 
     def __init__(self, waveform_extractor):
-        self.waveform_extractor = waveform_extractor
+        # self.waveform_extractor = waveform_extractor
+        self._waveform_extractor = weakref.ref(waveform_extractor)
 
         if self.waveform_extractor.folder is not None:
             self.folder = self.waveform_extractor.folder
@@ -1861,8 +1863,18 @@ class BaseWaveformExtractorExtension:
         # register
         self.waveform_extractor._loaded_extensions[self.extension_name] = self
 
+    @property
+    def waveform_extractor(self):
+        # Important : to avoid that WaveformExtractor reference a BaseWaveformExtractorExtension
+        # and BaseWaveformExtractorExtension reference a WaveformExtractor
+        # we need a weakref
+        we = self._waveform_extractor()
+        if we is None:
+            raise ValueError(f"The extension {self.extension_name} has lost its WaveformExtractor")
+        return we
+
     @classmethod
-    def load(cls, folder, waveform_extractor=None):
+    def load(cls, folder, waveform_extractor):
         folder = Path(folder)
         assert folder.is_dir(), "Waveform folder does not exists"
         if folder.suffix == ".zarr":
@@ -1873,8 +1885,8 @@ class BaseWaveformExtractorExtension:
         if "sparsity" in params and params["sparsity"] is not None:
             params["sparsity"] = ChannelSparsity.from_dict(params["sparsity"])
 
-        if waveform_extractor is None:
-            waveform_extractor = WaveformExtractor.load(folder)
+        # if waveform_extractor is None:
+        #     waveform_extractor = WaveformExtractor.load(folder)
 
         # make instance with params
         ext = cls(waveform_extractor)
