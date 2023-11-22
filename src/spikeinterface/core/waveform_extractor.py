@@ -1194,7 +1194,7 @@ class WaveformExtractor:
         percentile: float, default: None
             Percentile to use for mode="percentile"
 
-        The results is cache in memory as 3d ndarray (nunits, nsamples, nchans)
+        The results is cached in memory as a 3d ndarray (nunits, nsamples, nchans)
         and also saved as npy file in the folder to avoid recomputation each time.
         """
         # TODO : run this in parralel
