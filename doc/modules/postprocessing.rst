@@ -18,7 +18,7 @@ of a :code:`WaveformExtractor` will be saved along side the :code:`WaveformExtra
 This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a
 :code:`WaveformExtractor`.
 
-:py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`  objects are tightly connected to the
+:py:class:`~spikeinterface.core.BaseWaveformExtractorExtension` objects are tightly connected to the
 parent :code:`WaveformExtractor` object, so that operations done on the :code:`WaveformExtractor`, such as saving,
 loading, or selecting units, will be automatically applied to all extensions.
 
