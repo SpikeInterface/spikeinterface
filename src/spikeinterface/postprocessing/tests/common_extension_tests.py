@@ -23,6 +23,9 @@ class WaveformExtensionCommonTestSuite:
     extension_data_names = []
     extension_function_kwargs_list = None
 
+    # this flag enable to check that all backend have the same contents
+    exact_same_content = True
+
     def setUp(self):
         self.cache_folder = cache_folder
 
@@ -231,24 +234,27 @@ class WaveformExtensionCommonTestSuite:
         print("Sparse", self.we_sparse)
         self._test_extension_folder(self.we_sparse)
 
-        # test content of memory/content/zarr
-        for ext in self.we2.get_available_extension_names():
-            print(f"Testing data for {ext}")
-            ext_memory = self.we_memory2.load_extension(ext)
-            ext_folder = self.we2.load_extension(ext)
-            ext_zarr = self.we_zarr2.load_extension(ext)
+        
+        if self.exact_same_content:
+            # check content is the same across modes: memory/content/zarr
 
-            for ext_data_name, ext_data_mem in ext_memory._extension_data.items():
-                ext_data_folder = ext_folder._extension_data[ext_data_name]
-                ext_data_zarr = ext_zarr._extension_data[ext_data_name]
-                if isinstance(ext_data_mem, np.ndarray):
-                    np.testing.assert_array_equal(ext_data_mem, ext_data_folder)
-                    np.testing.assert_array_equal(ext_data_mem, ext_data_zarr)
-                elif isinstance(ext_data_mem, pd.DataFrame):
-                    assert ext_data_mem.equals(ext_data_folder)
-                    assert ext_data_mem.equals(ext_data_zarr)
-                else:
-                    print(f"{ext_data_name} of type {type(ext_data_mem)} not tested.")
+            for ext in self.we2.get_available_extension_names():
+                print(f"Testing data for {ext}")
+                ext_memory = self.we_memory2.load_extension(ext)
+                ext_folder = self.we2.load_extension(ext)
+                ext_zarr = self.we_zarr2.load_extension(ext)
+
+                for ext_data_name, ext_data_mem in ext_memory._extension_data.items():
+                    ext_data_folder = ext_folder._extension_data[ext_data_name]
+                    ext_data_zarr = ext_zarr._extension_data[ext_data_name]
+                    if isinstance(ext_data_mem, np.ndarray):
+                        np.testing.assert_array_equal(ext_data_mem, ext_data_folder)
+                        np.testing.assert_array_equal(ext_data_mem, ext_data_zarr)
+                    elif isinstance(ext_data_mem, pd.DataFrame):
+                        assert ext_data_mem.equals(ext_data_folder)
+                        assert ext_data_mem.equals(ext_data_zarr)
+                    else:
+                        print(f"{ext_data_name} of type {type(ext_data_mem)} not tested.")
 
         # read-only - Extension is memory only
         if platform.system() != "Windows":
