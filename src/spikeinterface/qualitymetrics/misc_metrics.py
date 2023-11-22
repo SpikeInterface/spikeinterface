@@ -201,7 +201,7 @@ def compute_snrs(
     snrs : dict
         Computed signal to noise ratio for each unit.
     """
-    if waveform_extractor.is_extension("noise_levels"):
+    if waveform_extractor.has_extension("noise_levels"):
         noise_levels = waveform_extractor.load_extension("noise_levels").get_data()
     else:
         if random_chunk_kwargs_dict is None:
@@ -687,7 +687,7 @@ def compute_amplitude_cv_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    if waveform_extractor.is_extension(amplitude_extension):
+    if waveform_extractor.has_extension(amplitude_extension):
         sac = waveform_extractor.load_extension(amplitude_extension)
         amps = sac.get_data(outputs="concatenated")
         if amplitude_extension == "spike_amplitudes":
@@ -803,7 +803,7 @@ def compute_amplitude_cutoffs(
 
     spike_amplitudes = None
     invert_amplitudes = False
-    if waveform_extractor.is_extension("spike_amplitudes"):
+    if waveform_extractor.has_extension("spike_amplitudes"):
         amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
         spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
         if amp_calculator._params["peak_sign"] == "pos":
@@ -881,7 +881,7 @@ def compute_amplitude_medians(waveform_extractor, peak_sign="neg", unit_ids=None
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
 
     spike_amplitudes = None
-    if waveform_extractor.is_extension("spike_amplitudes"):
+    if waveform_extractor.has_extension("spike_amplitudes"):
         amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
         spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
 
@@ -974,7 +974,7 @@ def compute_drift_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    if waveform_extractor.is_extension("spike_locations"):
+    if waveform_extractor.has_extension("spike_locations"):
         locs_calculator = waveform_extractor.load_extension("spike_locations")
         spike_locations = locs_calculator.get_data(outputs="concatenated")
         spike_locations_by_unit = locs_calculator.get_data(outputs="by_unit")
