@@ -84,7 +84,7 @@ class HybridUnitsRecording(InjectTemplatesRecording):
             )
         # save injected sorting if necessary
         self.injected_sorting = injected_sorting
-        if not self.injected_sorting.check_serializablility("json"):
+        if not self.injected_sorting.check_serializability("json"):
             # TODO later : also use pickle
             assert injected_sorting_folder is not None, "Provide injected_sorting_folder to injected sorting object"
             self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)
@@ -181,7 +181,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
             self.injected_sorting = injected_sorting
 
         # save injected sorting if necessary
-        if not self.injected_sorting.check_serializablility("json"):
+        if not self.injected_sorting.check_serializability("json"):
             # TODO later : also use pickle
             assert injected_sorting_folder is not None, "Provide injected_sorting_folder to injected sorting object"
             self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)

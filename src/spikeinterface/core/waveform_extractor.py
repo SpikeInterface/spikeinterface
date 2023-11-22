@@ -284,14 +284,14 @@ class WaveformExtractor:
             else:
                 relative_to = None
 
-            if recording.check_serializablility("json"):
+            if recording.check_serializability("json"):
                 recording.dump(folder / "recording.json", relative_to=relative_to)
-            elif recording.check_serializablility("pickle"):
+            elif recording.check_serializability("pickle"):
                 recording.dump(folder / "recording.pickle", relative_to=relative_to)
 
-            if sorting.check_serializablility("json"):
+            if sorting.check_serializability("json"):
                 sorting.dump(folder / "sorting.json", relative_to=relative_to)
-            elif sorting.check_serializablility("pickle"):
+            elif sorting.check_serializability("pickle"):
                 sorting.dump(folder / "sorting.pickle", relative_to=relative_to)
             else:
                 warn(
@@ -920,14 +920,14 @@ class WaveformExtractor:
             (folder / "params.json").write_text(json.dumps(check_json(self._params), indent=4), encoding="utf8")
 
             if self.has_recording():
-                if self.recording.check_serializablility("json"):
+                if self.recording.check_serializability("json"):
                     self.recording.dump(folder / "recording.json", relative_to=relative_to)
-                elif self.recording.check_serializablility("pickle"):
+                elif self.recording.check_serializability("pickle"):
                     self.recording.dump(folder / "recording.pickle", relative_to=relative_to)
 
-            if self.sorting.check_serializablility("json"):
+            if self.sorting.check_serializability("json"):
                 self.sorting.dump(folder / "sorting.json", relative_to=relative_to)
-            elif self.sorting.check_serializablility("pickle"):
+            elif self.sorting.check_serializability("pickle"):
                 self.sorting.dump(folder / "sorting.pickle", relative_to=relative_to)
             else:
                 warn(
@@ -977,10 +977,10 @@ class WaveformExtractor:
             # write metadata
             zarr_root.attrs["params"] = check_json(self._params)
             if self.has_recording():
-                if self.recording.check_serializablility("json"):
+                if self.recording.check_serializability("json"):
                     rec_dict = self.recording.to_dict(relative_to=relative_to, recursive=True)
                     zarr_root.attrs["recording"] = check_json(rec_dict)
-            if self.sorting.check_serializablility("json"):
+            if self.sorting.check_serializability("json"):
                 sort_dict = self.sorting.to_dict(relative_to=relative_to, recursive=True)
                 zarr_root.attrs["sorting"] = check_json(sort_dict)
             else:
