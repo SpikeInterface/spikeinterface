@@ -137,9 +137,9 @@ class BaseSorter:
                 )
 
         rec_file = output_folder / "spikeinterface_recording.json"
-        if recording.check_serializablility("json"):
-            recording.dump(rec_file, relative_to=output_folder)
-        elif recording.check_serializablility("pickle"):
+        if recording.check_serializability("json"):
+            recording.dump(rec_file)
+        elif recording.check_serializability("pickle"):
             recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
             # TODO: deprecate and finally remove this after 0.100
