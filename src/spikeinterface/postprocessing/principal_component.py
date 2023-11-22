@@ -9,6 +9,7 @@ import numpy as np
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+from spikeinterface.core.globals import get_global_tmp_folder
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
@@ -388,7 +389,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             if n_jobs > 1:
                 import tempfile
 
-                tmp_folder = tempfile.mkdtemp(prefix="tmp", dir=".")
+                tmp_folder = tempfile.mkdtemp(prefix="tmp", dir=get_global_tmp_folder())
 
         for chan_ind, chan_id in enumerate(channel_ids):
             pca_model = pca_models[chan_ind]
