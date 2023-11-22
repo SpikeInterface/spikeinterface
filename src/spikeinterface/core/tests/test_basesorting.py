@@ -105,7 +105,8 @@ def test_BaseSorting():
     spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1: 5, 2: 18})
     # print(spikes)
 
-    num_spikes_per_unit = sorting.count_num_spikes_per_unit()
+    num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="dict")
+    num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="array")
     total_spikes = sorting.count_total_num_spikes()
 
     # select units
