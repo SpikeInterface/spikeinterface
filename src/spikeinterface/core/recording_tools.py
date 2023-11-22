@@ -164,9 +164,9 @@ def get_noise_levels(
     """
 
     if return_scaled:
-        key = "noise_level_scaled"
+        key = f"noise_level_{method}_scaled"
     else:
-        key = "noise_level_raw"
+        key = f"noise_level_{method}_raw"
 
     if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
