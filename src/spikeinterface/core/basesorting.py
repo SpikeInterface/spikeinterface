@@ -288,7 +288,7 @@ class BaseSorting(BaseExtractor):
 
         # speed strategy by order
         # 1. if _cached_spike_trains have all units then use it
-        # 2. if _cached_spike_vector is not non use it
+        # 2. if _cached_spike_vector is not non use it
         # 3. loop with get_unit_spike_train
 
         # check if all spiketrains are cached
@@ -312,7 +312,6 @@ class BaseSorting(BaseExtractor):
             spike_vector = self.to_spike_vector()
             unit_indices, counts = np.unique(spike_vector["unit_index"], return_counts=True)
             num_spikes[unit_indices] = counts
-
 
         if outputs == "array":
             return num_spikes
