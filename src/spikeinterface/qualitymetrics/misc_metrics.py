@@ -389,7 +389,10 @@ def compute_refrac_period_violations(
     nb_violations = {}
     rp_contamination = {}
 
-    for i, unit_id in enumerate(unit_ids):
+    for i, unit_id in enumerate(sorting.unit_ids):
+        if unit_id not in unit_ids:
+            continue
+        
         nb_violations[unit_id] = n_v = nb_rp_violations[i]
         N = num_spikes[unit_id]
         if N == 0:
