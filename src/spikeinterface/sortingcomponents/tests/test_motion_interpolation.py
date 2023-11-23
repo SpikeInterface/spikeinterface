@@ -22,8 +22,6 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "sortingcomponents"
 
-# Note : all theses tests are testing the accuracy methods but check that it is not buggy
-
 
 def make_fake_motion(rec):
     # make a fake motion vector
