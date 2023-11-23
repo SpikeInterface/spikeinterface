@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface import download_dataset
-from spikeinterface.extractors import read_mearec, MEArecRecordingExtractor
+# from spikeinterface.extractors import read_mearec, MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.motion_interpolation import (
     correct_motion_on_peaks,
@@ -11,9 +11,10 @@ from spikeinterface.sortingcomponents.motion_interpolation import (
     InterpolateMotionRecording,
 )
 
+from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-remote_path = "mearec/mearec_test_10s.h5"
+# repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+# remote_path = "mearec/mearec_test_10s.h5"
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -37,8 +38,9 @@ def make_fake_motion(rec):
 
 
 def test_correct_motion_on_peaks():
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    rec, sorting = read_mearec(local_path)
+    # local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    # rec, sorting = read_mearec(local_path)
+    rec, sorting = make_dataset()
     peaks = sorting.to_spike_vector()
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
 
@@ -65,8 +67,10 @@ def test_correct_motion_on_peaks():
 
 
 def test_interpolate_motion_on_traces():
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    rec = MEArecRecordingExtractor(local_path)
+    # local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    # rec = MEArecRecordingExtractor(local_path)
+    rec, sorting = make_dataset()
+
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
 
     channel_locations = rec.get_channel_locations()
@@ -92,8 +96,9 @@ def test_interpolate_motion_on_traces():
 
 
 def test_InterpolateMotionRecording():
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    rec = MEArecRecordingExtractor(local_path)
+    # local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    # rec = MEArecRecordingExtractor(local_path)
+    rec, sorting = make_dataset()
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
 
     rec2 = InterpolateMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate")
@@ -103,14 +108,14 @@ def test_InterpolateMotionRecording():
     assert rec2.channel_ids.size == 32
 
     rec2 = InterpolateMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="remove_channels")
-    assert rec2.channel_ids.size == 26
-    for ch_id in ("1", "11", "12", "21", "22", "23"):
+    assert rec2.channel_ids.size == 24
+    for ch_id in (0, 1, 14, 15, 16, 17, 30, 31):
         assert ch_id not in rec2.channel_ids
 
     traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000)
-    assert traces.shape == (30000, 26)
+    assert traces.shape == (30000, 24)
 
-    traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000, channel_ids=["3", "4"])
+    traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000, channel_ids=[3, 4])
     assert traces.shape == (30000, 2)
 
     # import matplotlib.pyplot as plt
