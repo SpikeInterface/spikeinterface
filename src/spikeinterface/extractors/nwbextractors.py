@@ -388,6 +388,7 @@ class NwbRecordingExtractor(BaseRecording):
             "load_time_vector": load_time_vector,
             "samples_for_rate_estimation": samples_for_rate_estimation,
             "stream_mode": stream_mode,
+            "cache": cache,
             "stream_cache_path": stream_cache_path,
         }
 
