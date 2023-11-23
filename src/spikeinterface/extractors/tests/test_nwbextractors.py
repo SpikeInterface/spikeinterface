@@ -29,6 +29,9 @@ class NwbSortingTest(SortingCommonTestSuite, unittest.TestCase):
     entities = []
 
 
+from pynwb.testing.mock.ecephys import mock_ElectrodeGroup
+
+
 @pytest.fixture(scope="module")
 def nwbfile_with_ecephys_content():
     nwbfile = mock_NWBFile()
@@ -180,6 +183,33 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     expected_offsets_uV = np.ones(recording_extractor.get_num_channels()) * expected_offsets_uV
     extracted_offsets_uV = recording_extractor.get_channel_offsets()
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
+
+
+def test_sorting_extraction_of_ragged_arrays(tmp_path):
+    nwbfile = mock_NWBFile()
+
+    # Add the spikes
+    spike_times1 = np.array([0.0, 1.0, 2.0])
+    nwbfile.add_unit(spike_times=spike_times1)
+    spike_times2 = np.array([0.0, 1.0, 2.0, 3.0])
+    nwbfile.add_unit(spike_times=spike_times2)
+    spike_times3 = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
+    nwbfile.add_unit(spike_times=spike_times3)
+
+    ragged_array = [[1, 2, 3], [1, 2, 3], [1, 2, 3, 5]]
+    nwbfile.add_unit_column(
+        name="ragged_array",
+        description="an evill array that wants to destroy your test",
+        data=ragged_array,
+        index=True,
+    )
+
+    file_path = tmp_path / "test.nwb"
+    # Write the nwbfile to a temporary file
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0)
 
 
 if __name__ == "__main__":
