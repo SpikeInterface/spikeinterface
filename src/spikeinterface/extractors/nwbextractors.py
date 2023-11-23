@@ -448,6 +448,9 @@ class NwbSortingExtractor(BaseSorting):
         Used if "rate" is not specified in the ElectricalSeries.
     stream_mode: str or None, default: None
         Specify the stream mode: "fsspec" or "ros3".
+    cache: bool, default: True
+        If True, the file is cached in the file passed to stream_cache_path
+        if False, the file is not cached.
     stream_cache_path: str or Path or None, default: None
         Local path for caching. If None it uses cwd
 
@@ -469,6 +472,7 @@ class NwbSortingExtractor(BaseSorting):
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 100000,
         stream_mode: str | None = None,
+        cache: bool = True,
         stream_cache_path: str | Path | None = None,
     ):
         try:
@@ -482,27 +486,10 @@ class NwbSortingExtractor(BaseSorting):
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        if stream_mode == "fsspec":
-            import fsspec
-            from fsspec.implementations.cached import CachingFileSystem
-            import h5py
+        self._nwbfile = read_nwbfile(
+            file_path=file_path, stream_mode=stream_mode, cache=cache, stream_cache_path=stream_cache_path
+        )
 
-            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else "cache"
-            self.cfs = CachingFileSystem(
-                fs=fsspec.filesystem("http"),
-                cache_storage=str(self.stream_cache_path),
-            )
-            file_path_ = self.cfs.open(file_path, "rb")
-            file = h5py.File(file_path_)
-            self.io = NWBHDF5IO(file=file, mode="r", load_namespaces=True)
-
-        elif stream_mode == "ros3":
-            self.io = NWBHDF5IO(file_path, mode="r", load_namespaces=True, driver="ros3")
-        else:
-            file_path_ = str(Path(file_path).absolute())
-            self.io = NWBHDF5IO(file_path_, mode="r", load_namespaces=True)
-
-        self._nwbfile = self.io.read()
         units_ids = list(self._nwbfile.units.id[:])
 
         timestamps = None
@@ -558,6 +545,7 @@ class NwbSortingExtractor(BaseSorting):
             "electrical_series_name": self._electrical_series_name,
             "sampling_frequency": sampling_frequency,
             "samples_for_rate_estimation": samples_for_rate_estimation,
+            "cache": cache,
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
         }
