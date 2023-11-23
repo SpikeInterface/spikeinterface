@@ -34,6 +34,7 @@ from spikeinterface.qualitymetrics import (
     compute_synchrony_metrics,
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
+    compute_sd_ratio,
 )
 
 
@@ -74,7 +75,8 @@ def _waveform_extractor_simple():
         if (cache_folder / name).exists():
             shutil.rmtree(cache_folder / name)
 
-    recording, sorting = toy_example(duration=50, seed=10)
+    recording, sorting = toy_example(duration=50, seed=10, firing_rate=6.0)
+
     recording = recording.save(folder=cache_folder / "rec1")
     sorting = sorting.save(folder=cache_folder / "sort1")
     folder = cache_folder / "waveform_folder1"
@@ -90,6 +92,7 @@ def _waveform_extractor_simple():
         overwrite=True,
     )
     _ = compute_principal_components(we, n_components=5, mode="by_channel_local")
+    _ = compute_spike_amplitudes(we, return_scaled=True)
     return we
 
 
@@ -235,7 +238,7 @@ def test_calculate_firing_range(waveform_extractor_simple):
 
 def test_calculate_amplitude_cutoff(waveform_extractor_simple):
     we = waveform_extractor_simple
-    spike_amps = compute_spike_amplitudes(we)
+    spike_amps = we.load_extension("spike_amplitudes").get_data()
     amp_cuts = compute_amplitude_cutoffs(we, num_histogram_bins=10)
     print(amp_cuts)
 
@@ -246,7 +249,7 @@ def test_calculate_amplitude_cutoff(waveform_extractor_simple):
 
 def test_calculate_amplitude_median(waveform_extractor_simple):
     we = waveform_extractor_simple
-    spike_amps = compute_spike_amplitudes(we)
+    spike_amps = we.load_extension("spike_amplitudes").get_data()
     amp_medians = compute_amplitude_medians(we)
     print(spike_amps, amp_medians)
 
@@ -257,7 +260,6 @@ def test_calculate_amplitude_median(waveform_extractor_simple):
 
 def test_calculate_amplitude_cv_metrics(waveform_extractor_simple):
     we = waveform_extractor_simple
-    spike_amps = compute_spike_amplitudes(we)
     amp_cv_median, amp_cv_range = compute_amplitude_cv_metrics(we, average_num_spikes_per_bin=20)
     print(amp_cv_median)
     print(amp_cv_range)
@@ -387,9 +389,17 @@ def test_calculate_drift_metrics(waveform_extractor_simple):
     # assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
 
 
+def test_calculate_sd_ratio(waveform_extractor_simple):
+    sd_ratio = compute_sd_ratio(waveform_extractor_simple)
+
+    assert np.all(list(sd_ratio.keys()) == waveform_extractor_simple.unit_ids)
+    assert np.allclose(list(sd_ratio.values()), 1, atol=0.2, rtol=0)
+
+
 if __name__ == "__main__":
     sim_data = _simulated_data()
     we = _waveform_extractor_simple()
+
     we_violations = _waveform_extractor_violations(sim_data)
     test_calculate_amplitude_cutoff(we)
     test_calculate_presence_ratio(we)

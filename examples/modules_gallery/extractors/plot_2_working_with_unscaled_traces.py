@@ -3,7 +3,7 @@ Working with unscaled traces
 ============================
 
 Some file formats store data in convenient types that require offsetting and scaling in order to convert the
-traces to uV. This example shows how to work with unscaled and scaled traces int :py:mod:`spikeinterface.extractors`
+traces to uV. This example shows how to work with unscaled and scaled traces in the :py:mod:`spikeinterface.extractors`
 module.
 
 '''
@@ -39,21 +39,21 @@ gain = 0.1
 offset = -2 ** (10 - 1) * gain
 
 ###############################################################################
-# We are now ready to set gains and offsets to our extractor. We also have to set the :code:`has_unscaled` field to
+# We are now ready to set gains and offsets for our extractor. We also have to set the :code:`has_unscaled` field to
 # :code:`True`:
 
 recording.set_channel_gains(gain)
 recording.set_channel_offsets(offset)
 
 ###############################################################################
-#  Internally this gains and offsets are handle with properties
+#  Internally the gain and offset are handled with properties
 # So the gain could be "by channel".
 
 print(recording.get_property('gain_to_uV'))
 print(recording.get_property('offset_to_uV'))
 
 ###############################################################################
-# With gains and offset information, we can retrieve traces both in their unscaled (raw) type, and in their scaled
+# With gain and offset information, we can retrieve traces both in their unscaled (raw) type, and in their scaled
 # type:
 
 traces_unscaled = recording.get_traces(return_scaled=False)
