@@ -15,6 +15,8 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
 
         dp = to_attr(data_plot)
 
+        assert len(dp.templates_shading) <= 4, "Only 2 ans 4 templates shading are supported in sortingview"
+
         # ensure serializable for sortingview
         unit_id_to_channel_ids = dp.sparsity.unit_id_to_channel_ids
         unit_id_to_channel_indices = dp.sparsity.unit_id_to_channel_indices
@@ -25,14 +27,19 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         for u_i, unit in enumerate(unit_ids):
             templates_dict[unit] = {}
             templates_dict[unit]["mean"] = dp.templates[u_i].T.astype("float32")[unit_id_to_channel_indices[unit]]
-            templates_dict[unit]["std"] = dp.template_stds[u_i].T.astype("float32")[unit_id_to_channel_indices[unit]]
+            if dp.do_shading:
+                templates_dict[unit]["shading"] = [
+                    s[u_i].T.astype("float32")[unit_id_to_channel_indices[unit]] for s in dp.templates_shading
+                ]
+            else:
+                templates_dict[unit]["shading"] = None
 
         aw_items = [
             vv.AverageWaveformItem(
                 unit_id=u,
                 channel_ids=list(unit_id_to_channel_ids[u]),
-                waveform=t["mean"].astype("float32"),
-                waveform_std_dev=t["std"].astype("float32"),
+                waveform=t["mean"],
+                waveform_percentiles=t["shading"],
             )
             for u, t in templates_dict.items()
         ]
