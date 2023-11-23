@@ -520,7 +520,8 @@ class NwbSortingExtractor(BaseSorting):
             property_values = self._nwbfile.units[column][:]
 
             # only load columns with same shape for all units
-            if np.all(p.shape == property_values[0].shape for p in property_values):
+            all_values_have_equal_shape = np.all([p.shape == property_values[0].shape for p in property_values])
+            if all_values_have_equal_shape:
                 properties[column] = property_values
             else:
                 print(f"Skipping {column} because of unequal shapes across units")
