@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, Union
 
 from pathlib import Path
@@ -6,6 +7,7 @@ from probeinterface import ProbeGroup
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
+from .basesorting import BaseSorting, BaseSortingSegment
 from .core_tools import define_function_from_class
 
 try:
@@ -40,7 +42,7 @@ class ZarrRecordingExtractor(BaseRecording):
     installation_mesg = "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
     name = "zarr"
 
-    def __init__(self, root_path: Union[Path, str], storage_options=None):
+    def __init__(self, root_path: Union[Path, str], storage_options: dict | None = None):
         assert self.installed, self.installation_mesg
 
         if storage_options is None:
@@ -155,7 +157,138 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-read_zarr = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr")
+class ZarrSortingExtractor(BaseSorting):
+    """
+    SortingExtractor for a zarr format
+
+    Parameters
+    ----------
+    root_path: str or Path
+        Path to the zarr root file
+    storage_options: dict or None
+        Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+
+    Returns
+    -------
+    sorting: ZarrSortingExtractor
+        The sorting Extractor
+    """
+
+    extractor_name = "ZarrSorting"
+    installed = HAVE_ZARR  # check at class level if installed or not
+    mode = "file"
+    # error message when not installed
+    installation_mesg = "To use the ZarrSortingExtractor install zarr: \n\n pip install zarr\n\n"
+    name = "zarr"
+
+    def __init__(self, root_path: Union[Path, str], storage_options: dict | None = None):
+        assert self.installed, self.installation_mesg
+
+        if storage_options is None:
+            if isinstance(root_path, str):
+                root_path_init = root_path
+                root_path = Path(root_path)
+            else:
+                root_path_init = str(root_path)
+            root_path_kwarg = str(Path(root_path).absolute())
+        else:
+            root_path_init = root_path
+            root_path_kwarg = root_path_init
+
+        self._root = zarr.open(root_path_init, mode="r", storage_options=storage_options)
+
+        sampling_frequency = self._root.attrs.get("sampling_frequency", None)
+        num_segments = self._root.attrs.get("num_segments", None)
+        assert "unit_ids" in self._root.keys(), "'unit_ids' dataset not found!"
+        unit_ids = self._root["unit_ids"][:]
+
+        assert sampling_frequency is not None, "'sampling_frequency' attiribute not found!"
+        assert num_segments is not None, "'num_segments' attiribute not found!"
+
+        unit_ids = np.array(unit_ids)
+        assert "spikes" in self._root.keys(), "'spikes' dataset not found!"
+        spikes_group = self._root["spikes"]
+        segment_slices_list = spikes_group["segment_slices"][:]
+        segment_slices = [slice(s[0], s[1]) for s in segment_slices_list]
+
+        BaseSorting.__init__(self, sampling_frequency, unit_ids)
+
+        for segment_index in range(num_segments):
+            soring_segment = ZarrSortingSegment(spikes_group, segment_slices[segment_index], unit_ids)
+            self.add_sorting_segment(soring_segment)
+
+        # load properties
+        if "properties" in self._root:
+            prop_group = self._root["properties"]
+            for key in prop_group.keys():
+                values = self._root["properties"][key]
+                self.set_property(key, values)
+
+        # load annotations
+        annotations = self._root.attrs.get("annotations", None)
+        if annotations is not None:
+            self.annotate(**annotations)
+
+        self._kwargs = {"root_path": root_path_kwarg, "storage_options": storage_options}
+
+
+class ZarrSortingSegment(BaseSortingSegment):
+    def __init__(self, spikes_dset, segment_slice, unit_ids):
+        BaseSortingSegment.__init__(self)
+        self._spikes_dset = spikes_dset
+        self._segment_slice = segment_slice
+        self._unit_ids = list(unit_ids)
+
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+    ) -> np.ndarray:
+        sample_indices = self._spikes_dset["sample_index"][self._segment_slice][start_frame:end_frame]
+        unit_indices = self._spikes_dset["unit_index"][self._segment_slice][start_frame:end_frame]
+        unit_index = self._unit_ids.index(unit_id)
+        return sample_indices[unit_indices == unit_index]
+
+
+read_zarr_recording = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr_recording")
+read_zarr_sorting = define_function_from_class(source_class=ZarrSortingExtractor, name="read_zarr_sorting")
+
+
+def read_zarr(
+    root_path: Union[str, Path], storage_options: dict | None = None
+) -> Union[ZarrRecordingExtractor, ZarrSortingExtractor]:
+    """
+    Read recording or sorting from a zarr format
+
+    Parameters
+    ----------
+    root_path: str or Path
+        Path to the zarr root file
+    storage_options: dict or None
+        Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+
+    Returns
+    -------
+    extractor: ZarrExtractor
+        The loaded extractor
+    """
+    if storage_options is None:
+        if isinstance(root_path, str):
+            root_path_init = root_path
+            root_path = Path(root_path)
+        else:
+            root_path_init = str(root_path)
+    else:
+        root_path_init = root_path
+
+    root = zarr.open(root_path_init, mode="r", storage_options=storage_options)
+    if "channel_ids" in root.keys():
+        return read_zarr_recording(root_path, storage_options=storage_options)
+    elif "unit_ids" in root.keys():
+        return read_zarr_sorting(root_path, storage_options=storage_options)
+    else:
+        raise ValueError("Cannot find 'channel_ids' or 'unit_ids' in zarr root. Not a valid SpikeInterface zarr format")
 
 
 def get_default_zarr_compressor(clevel=5):

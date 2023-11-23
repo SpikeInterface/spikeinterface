@@ -240,6 +240,44 @@ class BaseSorting(BaseExtractor):
                 warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
 
+        elif format == "zarr":
+            import numcodecs
+            from .zarrextractors import ZarrSortingExtractor, get_default_zarr_compressor
+
+            zarr_kwargs = save_kwargs.copy()
+            zarr_path = zarr_kwargs.pop("zarr_path")
+            zarr_root = zarr_kwargs["zarr_root"]
+            zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
+            zarr_root.attrs["num_segments"] = int(self.get_num_segments())
+            zarr_root.create_dataset(name="unit_ids", data=self.unit_ids, compressor=None)
+
+            if "compressor" not in zarr_kwargs:
+                zarr_kwargs["compressor"] = get_default_zarr_compressor()
+
+            # save sub fields
+            spikes_group = zarr_root.create_group(name="spikes")
+            spikes = self.to_spike_vector()
+            for field in spikes.dtype.fields:
+                if field != "segment_index":
+                    spikes_group.create_dataset(
+                        name=field,
+                        data=spikes[field],
+                        compressor=zarr_kwargs["compressor"],
+                        filters=[numcodecs.Delta(dtype=spikes[field].dtype)],
+                    )
+                else:
+                    segment_slices = []
+                    for segment_index in range(self.get_num_segments()):
+                        i0, i1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
+                        segment_slices.append([i0, i1])
+                    spikes_group.create_dataset(name="segment_slices", data=segment_slices, compressor=None)
+
+            cached = ZarrSortingExtractor(zarr_path)
+
+            if self.has_recording():
+                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
+                cached.register_recording(self._recording)
+
         elif format == "npz_folder":
             from .sortingfolder import NpzFolderSorting
 
@@ -496,7 +534,9 @@ class BaseSorting(BaseExtractor):
                 for unit_id in unit_ids:
                     self.get_unit_spike_train(unit_id, segment_index=segment_index, use_cache=True)
 
-    def to_spike_vector(self, concatenated=True, extremum_channel_inds=None, use_cache=True):
+    def to_spike_vector(
+        self, concatenated=True, extremum_channel_inds=None, use_cache=True
+    ) -> np.ndarray | list[np.ndarray]:
         """
         Construct a unique structured numpy vector concatenating all spikes
         with several fields: sample_index, unit_index, segment_index.

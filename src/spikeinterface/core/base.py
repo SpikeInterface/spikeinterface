@@ -1,5 +1,5 @@
 from pathlib import Path
-import re
+import shutil
 from typing import Any, Iterable, List, Optional, Sequence, Union
 import importlib
 import warnings
@@ -726,7 +726,7 @@ class BaseExtractor:
             file = None
 
             if folder.suffix == ".zarr":
-                from .zarrrecordingextractor import read_zarr
+                from .zarrextractors import read_zarr
 
                 extractor = read_zarr(folder)
             else:
@@ -907,6 +907,7 @@ class BaseExtractor:
         self,
         name=None,
         folder=None,
+        overwrite=False,
         storage_options=None,
         channel_chunk_size=None,
         verbose=True,
@@ -925,10 +926,12 @@ class BaseExtractor:
         ----------
         name: str or None, default: None
             Name of the subfolder in get_global_tmp_folder()
-            If "name" is given, "folder" must be None.
+            If "name" is given, "folder" must be None
         folder: str, Path, or None, default: None
             The folder used to save the zarr output. If the folder does not have a ".zarr" suffix,
-            it will be automatically appended.
+            it will be automatically appended
+        overwrite: bool, default: False
+            If True, the folder is removed if it already exists
         storage_options: dict or None, default: None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
@@ -946,7 +949,7 @@ class BaseExtractor:
             Saved copy of the extractor.
         """
         import zarr
-        from .zarrrecordingextractor import read_zarr
+        from .zarrextractors import read_zarr
 
         if zarr_path is not None:
             warnings.warn(
@@ -971,6 +974,8 @@ class BaseExtractor:
                 folder = Path(folder)
                 if folder.suffix != ".zarr":
                     folder = folder.parent / f"{folder.stem}.zarr"
+                if folder.is_dir() and overwrite:
+                    shutil.rmtree(folder)
                 zarr_path = folder
                 zarr_path_init = str(zarr_path)
             else:
@@ -1002,7 +1007,6 @@ class BaseExtractor:
 
         # save annotations
         zarr_root.attrs["annotations"] = check_json(self._annotations)
-
         cached = read_zarr(zarr_path)
 
         return cached
