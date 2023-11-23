@@ -495,24 +495,22 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     amplitude: tuple
         (Minimal, Maximal) amplitudes allowed for every template
     omp_min_sps: float
-        Stopping criteria of the OMP algorithm, in percentage of the norm
-    noise_levels: array
-        The noise levels, for every channels. If None, they will be automatically
-        computed
-    random_chunk_kwargs: dict
-        Parameters for computing noise levels, if not provided (sub optimal)
+        Stopping criteria of the OMP algorithm, as relative error
     sparse_kwargs: dict
         Parameters to extract a sparsity mask from the waveform_extractor, if not
         already sparse.
+    rank: int, default: 5
+        Number of components used internally by the SVD
+    vicinity: int
+        Size of the area surrounding a spike to perform modification (expressed in terms
+        of template temporal width)
     -----
     """
 
     _default_params = {
-        "amplitudes": [0.6, 2],
-        "omp_min_sps": 0.1,
+        "amplitudes": [0.6, 1.4],
+        "omp_min_sps": 5e-5,
         "waveform_extractor": None,
-        "random_chunk_kwargs": {},
-        "noise_levels": None,
         "rank": 5,
         "sparse_kwargs": {"method": "ptp", "threshold": 1},
         "ignored_ids": [],
@@ -612,10 +610,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         d["sampling_frequency"] = d["waveform_extractor"].recording.get_sampling_frequency()
         d["vicinity"] *= d["num_samples"]
 
-        if d["noise_levels"] is None:
-            print("CircusOMPPeeler : noise should be computed outside")
-            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
-
         if "templates" not in d:
             d = cls._prepare_templates(d)
         else:
@@ -638,10 +632,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             d["unit_overlaps_tables"][i] = np.zeros(d["num_templates"], dtype=int)
             d["unit_overlaps_tables"][i][d["unit_overlaps_indices"][i]] = np.arange(len(d["unit_overlaps_indices"][i]))
 
-        omp_min_sps = d["omp_min_sps"]
-        # d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
-        d["stop_criteria"] = omp_min_sps * np.maximum(d["norms"], np.sqrt(d["noise_levels"].sum() * d["num_samples"]))
-
+        d["stop_criteria"] = d["omp_min_sps"]
         return d
 
     @classmethod
@@ -675,7 +666,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d["amplitudes"]
         ignored_ids = d["ignored_ids"]
-        stop_criteria = d["stop_criteria"][:, np.newaxis]
+        stop_criteria = d["stop_criteria"]
         vicinity = d["vicinity"]
         rank = d["rank"]
 
@@ -687,13 +678,13 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         # Filter using overlap-and-add convolution
         if len(ignored_ids) > 0:
-            mask = ~np.isin(np.arange(num_templates), ignored_ids)
-            spatially_filtered_data = np.matmul(d["spatial"][:, mask, :], traces.T[np.newaxis, :, :])
-            scaled_filtered_data = spatially_filtered_data * d["singular"][:, mask, :]
+            not_ignored = ~np.isin(np.arange(num_templates), ignored_ids)
+            spatially_filtered_data = np.matmul(d["spatial"][:, not_ignored, :], traces.T[np.newaxis, :, :])
+            scaled_filtered_data = spatially_filtered_data * d["singular"][:, not_ignored, :]
             objective_by_rank = scipy.signal.oaconvolve(
-                scaled_filtered_data, d["temporal"][:, mask, :], axes=2, mode="valid"
+                scaled_filtered_data, d["temporal"][:, not_ignored, :], axes=2, mode="valid"
             )
-            scalar_products[mask] += np.sum(objective_by_rank, axis=0)
+            scalar_products[not_ignored] += np.sum(objective_by_rank, axis=0)
             scalar_products[ignored_ids] = -np.inf
         else:
             spatially_filtered_data = np.matmul(d["spatial"], traces.T[np.newaxis, :, :])
@@ -704,7 +695,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         num_spikes = 0
 
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
-        idx_lookup = np.arange(scalar_products.size).reshape(num_templates, -1)
 
         M = np.zeros((num_templates, num_templates), dtype=np.float32)
 
@@ -717,13 +707,17 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         neighbors = {}
         cached_overlaps = {}
 
-        is_valid = scalar_products > stop_criteria
         all_amplitudes = np.zeros(0, dtype=np.float32)
         is_in_vicinity = np.zeros(0, dtype=np.int32)
+        if len(ignored_ids) > 0:
+            new_error = np.linalg.norm(scalar_products[not_ignored])
+        else:
+            new_error = np.linalg.norm(scalar_products)
+        delta_error = np.inf
 
-        while np.any(is_valid):
-            best_amplitude_ind = scalar_products[is_valid].argmax()
-            best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
+        while delta_error > stop_criteria:
+            best_amplitude_ind = scalar_products.argmax()
+            best_cluster_ind, peak_index = np.unravel_index(best_amplitude_ind, scalar_products.shape)
 
             if num_selection > 0:
                 delta_t = selection[1] - peak_index
@@ -818,7 +812,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 to_add = diff_amp * local_overlaps[:, tdx[0] : tdx[1]]
                 scalar_products[overlapping_templates, idx[0] : idx[1]] -= to_add
 
-            is_valid = scalar_products > stop_criteria
+            previous_error = new_error
+            if len(ignored_ids) > 0:
+                new_error = np.linalg.norm(scalar_products[not_ignored])
+            else:
+                new_error = np.linalg.norm(scalar_products)
+            delta_error = np.abs(new_error / previous_error - 1)
 
         is_valid = (final_amplitudes > min_amplitude) * (final_amplitudes < max_amplitude)
         valid_indices = np.where(is_valid)

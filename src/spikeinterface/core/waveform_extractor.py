@@ -22,7 +22,7 @@ from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
 from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 
-_possible_template_modes = ("average", "std", "median")
+_possible_template_modes = ("average", "std", "median", "percentile")
 
 
 class WaveformExtractor:
@@ -284,14 +284,14 @@ class WaveformExtractor:
             else:
                 relative_to = None
 
-            if recording.check_serializablility("json"):
+            if recording.check_serializability("json"):
                 recording.dump(folder / "recording.json", relative_to=relative_to)
-            elif recording.check_serializablility("pickle"):
+            elif recording.check_serializability("pickle"):
                 recording.dump(folder / "recording.pickle", relative_to=relative_to)
 
-            if sorting.check_serializablility("json"):
+            if sorting.check_serializability("json"):
                 sorting.dump(folder / "sorting.json", relative_to=relative_to)
-            elif sorting.check_serializablility("pickle"):
+            elif sorting.check_serializability("pickle"):
                 sorting.dump(folder / "sorting.pickle", relative_to=relative_to)
             else:
                 warn(
@@ -920,14 +920,14 @@ class WaveformExtractor:
             (folder / "params.json").write_text(json.dumps(check_json(self._params), indent=4), encoding="utf8")
 
             if self.has_recording():
-                if self.recording.check_serializablility("json"):
+                if self.recording.check_serializability("json"):
                     self.recording.dump(folder / "recording.json", relative_to=relative_to)
-                elif self.recording.check_serializablility("pickle"):
+                elif self.recording.check_serializability("pickle"):
                     self.recording.dump(folder / "recording.pickle", relative_to=relative_to)
 
-            if self.sorting.check_serializablility("json"):
+            if self.sorting.check_serializability("json"):
                 self.sorting.dump(folder / "sorting.json", relative_to=relative_to)
-            elif self.sorting.check_serializablility("pickle"):
+            elif self.sorting.check_serializability("pickle"):
                 self.sorting.dump(folder / "sorting.pickle", relative_to=relative_to)
             else:
                 warn(
@@ -977,10 +977,10 @@ class WaveformExtractor:
             # write metadata
             zarr_root.attrs["params"] = check_json(self._params)
             if self.has_recording():
-                if self.recording.check_serializablility("json"):
+                if self.recording.check_serializability("json"):
                     rec_dict = self.recording.to_dict(relative_to=relative_to, recursive=True)
                     zarr_root.attrs["recording"] = check_json(rec_dict)
-            if self.sorting.check_serializablility("json"):
+            if self.sorting.check_serializability("json"):
                 sort_dict = self.sorting.to_dict(relative_to=relative_to, recursive=True)
                 zarr_root.attrs["sorting"] = check_json(sort_dict)
             else:
@@ -1179,25 +1179,36 @@ class WaveformExtractor:
         mask = index_ar["segment_index"] == segment_index
         return wfs[mask, :, :]
 
-    def precompute_templates(self, modes=("average", "std")) -> None:
+    def precompute_templates(self, modes=("average", "std", "median", "percentile"), percentile=None) -> None:
         """
-        Precompute all template for different "modes":
+        Precompute all templates for different "modes":
           * average
           * std
           * median
+          * percentile
 
-        The results is cache in memory as 3d ndarray (nunits, nsamples, nchans)
-        and also saved as npy file in the folder to avoid recomputation each time.
+        Parameters
+        ----------
+        modes: list
+            The modes to compute the templates
+        percentile: float, default: None
+            Percentile to use for mode="percentile"
+
+        The results is cached in memory as a 3d ndarray (nunits, nsamples, nchans)
+        and also saved as an npy file in the folder to avoid recomputation each time.
         """
         # TODO : run this in parralel
 
         unit_ids = self.unit_ids
         num_chans = self.get_num_channels()
 
+        mode_names = {}
         for mode in modes:
+            mode_name = mode if mode != "percentile" else f"{mode}_{percentile}"
+            mode_names[mode] = mode_name
             dtype = self._params["dtype"] if mode == "median" else np.float32
             templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
-            self._template_cache[mode] = templates
+            self._template_cache[mode_names[mode]] = templates
 
         for unit_ind, unit_id in enumerate(unit_ids):
             wfs = self.get_waveforms(unit_id, cache=False)
@@ -1214,26 +1225,32 @@ class WaveformExtractor:
                     arr = np.average(wfs, axis=0)
                 elif mode == "std":
                     arr = np.std(wfs, axis=0)
+                elif mode == "percentile":
+                    assert percentile is not None, "percentile must be specified for mode='percentile'"
+                    assert 0 <= percentile <= 100, "percentile must be between 0 and 100 inclusive"
+                    arr = np.percentile(wfs, percentile, axis=0)
                 else:
-                    raise ValueError("mode must in median/average/std")
-                self._template_cache[mode][unit_ind][:, mask] = arr
+                    raise ValueError(f"'mode' must be in {_possible_template_modes}")
+                self._template_cache[mode_names[mode]][unit_ind][:, mask] = arr
 
         for mode in modes:
-            templates = self._template_cache[mode]
+            templates = self._template_cache[mode_names[mode]]
             if self.folder is not None:
-                template_file = self.folder / f"templates_{mode}.npy"
+                template_file = self.folder / f"templates_{mode_names[mode]}.npy"
                 np.save(template_file, templates)
 
-    def get_all_templates(self, unit_ids: Optional[Iterable] = None, mode="average"):
+    def get_all_templates(self, unit_ids: Optional[Iterable] = None, mode="average", percentile: float | None = None):
         """
-        Return  templates (average waveform) for multiple units.
+        Return templates (average waveforms) for multiple units.
 
         Parameters
         ----------
         unit_ids: list or None
             Unit ids to retrieve waveforms for
-        mode: "average" | "median" | "std", default: "average"
+        mode: "average" | "median" | "std" | "percentile", default: "average"
             The mode to compute the templates
+        percentile: float, default: None
+            Percentile to use for mode="percentile"
 
         Returns
         -------
@@ -1241,9 +1258,9 @@ class WaveformExtractor:
             The returned templates (num_units, num_samples, num_channels)
         """
         if mode not in self._template_cache:
-            self.precompute_templates(modes=[mode])
-
-        templates = self._template_cache[mode]
+            self.precompute_templates(modes=[mode], percentile=percentile)
+        mode_name = mode if mode != "percentile" else f"{mode}_{percentile}"
+        templates = self._template_cache[mode_name]
 
         if unit_ids is not None:
             unit_indices = self.sorting.ids_to_indices(unit_ids)
@@ -1251,7 +1268,9 @@ class WaveformExtractor:
 
         return np.array(templates)
 
-    def get_template(self, unit_id, mode="average", sparsity=None, force_dense: bool = False):
+    def get_template(
+        self, unit_id, mode="average", sparsity=None, force_dense: bool = False, percentile: float | None = None
+    ):
         """
         Return template (average waveform).
 
@@ -1259,12 +1278,15 @@ class WaveformExtractor:
         ----------
         unit_id: int or str
             Unit id to retrieve waveforms for
-        mode: "average" | "median" | "std", default: "average"
+        mode: "average" | "median" | "std" | "percentile", default: "average"
             The mode to compute the template
         sparsity: ChannelSparsity, default: None
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
-        force_dense: bool (False)
+        force_dense: bool, default: False
             Return a dense template even if the waveform extractor is sparse
+        percentile: float, default: None
+            Percentile to use for mode="percentile".
+            Values must be between 0 and 100 inclusive
 
         Returns
         -------
@@ -1304,6 +1326,10 @@ class WaveformExtractor:
             template = np.average(wfs, axis=0)
         elif mode == "std":
             template = np.std(wfs, axis=0)
+        elif mode == "percentile":
+            assert percentile is not None, "percentile must be specified for mode='percentile'"
+            assert 0 <= percentile <= 100, "percentile must be between 0 and 100 inclusive"
+            template = np.percentile(wfs, percentile, axis=0)
 
         return np.array(template)
 

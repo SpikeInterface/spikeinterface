@@ -13,8 +13,8 @@ import math
 import numpy as np
 import warnings
 
-from ..postprocessing import correlogram_for_one_segment
-from ..core import get_noise_levels
+from ..postprocessing import compute_spike_amplitudes, correlogram_for_one_segment
+from ..core import WaveformExtractor, get_noise_levels
 from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
@@ -524,7 +524,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), uni
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
     assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
-    spike_counts = waveform_extractor.sorting.count_num_spikes_per_unit()
+    spike_counts = waveform_extractor.sorting.count_num_spikes_per_unit(outputs="dict")
     sorting = waveform_extractor.sorting
     spikes = sorting.to_spike_vector(concatenated=False)
 
@@ -683,7 +683,7 @@ def compute_amplitude_cv_metrics(
     sorting = waveform_extractor.sorting
     total_duration = waveform_extractor.get_total_duration()
     spikes = sorting.to_spike_vector()
-    num_spikes = sorting.count_num_spikes_per_unit()
+    num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
@@ -1365,3 +1365,104 @@ if HAVE_NUMBA:
             spike_train = spike_trains[spike_clusters == i]
             n_v = _compute_nb_violations_numba(spike_train, t_r)
             nb_rp_violations[i] += n_v
+
+
+def compute_sd_ratio(
+    wvf_extractor: WaveformExtractor,
+    censored_period_ms: float = 4.0,
+    correct_for_drift: bool = True,
+    correct_for_template_itself: bool = True,
+    unit_ids=None,
+    **kwargs,
+):
+    """
+    Computes the SD (Standard Deviation) of each unit's spike amplitudes, and compare it to the SD of noise.
+    In this case, noise refers to the global voltage trace on the same channel as the best channel of the unit.
+    (ideally (not implemented yet), the noise would be computed outside of spikes from the unit itself).
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    censored_period_ms : float, default: 4.0
+        The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
+    correct_for_drift: bool, default: True
+        If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
+    correct_for_template_itself: bool, default:  True
+        If true, will take into account that the template itself impacts the standard deviation of the noise,
+        and will make a rough estimation of what that impact is (and remove it).
+    unit_ids : list or None, default: None
+        The list of unit ids to compute this metric. If None, all units are used.
+    **kwargs:
+        Keyword arguments for computing spike amplitudes and extremum channel.
+    TODO: Take jitter into account.
+
+    Returns
+    -------
+    num_spikes : dict
+        The number of spikes, across all segments, for each unit ID.
+    """
+
+    from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
+
+    censored_period = int(round(censored_period_ms * 1e-3 * wvf_extractor.sampling_frequency))
+    if unit_ids is None:
+        unit_ids = wvf_extractor.unit_ids
+
+    if not wvf_extractor.has_recording():
+        warnings.warn(
+            "The `sd_ratio` metric cannot work with a recordless WaveformExtractor object"
+            "SD ratio metric will be set to NaN"
+        )
+        return {unit_id: np.nan for unit_id in unit_ids}
+
+    if wvf_extractor.is_extension("spike_amplitudes"):
+        amplitudes_ext = wvf_extractor.load_extension("spike_amplitudes")
+        spike_amplitudes = amplitudes_ext.get_data(outputs="by_unit")
+    else:
+        warnings.warn(
+            "The `sd_ratio` metric require the `spike_amplitudes` waveform extension. "
+            "Use the `postprocessing.compute_spike_amplitudes()` functions. "
+            "SD ratio metric will be set to NaN"
+        )
+        return {unit_id: np.nan for unit_id in unit_ids}
+
+    noise_levels = get_noise_levels(
+        wvf_extractor.recording, return_scaled=amplitudes_ext._params["return_scaled"], method="std"
+    )
+    best_channels = get_template_extremum_channel(wvf_extractor, outputs="index", **kwargs)
+    n_spikes = wvf_extractor.sorting.count_num_spikes_per_unit()
+
+    sd_ratio = {}
+    for unit_id in unit_ids:
+        spk_amp = []
+
+        for segment_index in range(wvf_extractor.get_num_segments()):
+            spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(
+                np.int64
+            )
+            censored_indices = _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period)
+            spk_amp.append(np.delete(spike_amplitudes[segment_index][unit_id], censored_indices))
+        spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
+
+        if correct_for_drift:
+            unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
+        else:
+            unit_std = np.std(spk_amp)
+
+        best_channel = best_channels[unit_id]
+        std_noise = noise_levels[best_channel]
+
+        if correct_for_template_itself:
+            template = wvf_extractor.get_template(unit_id, force_dense=True)[:, best_channel]
+
+            # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
+            # TODO: Take into account that templates for different segments might differ.
+            p = wvf_extractor.nsamples * n_spikes[unit_id] / wvf_extractor.get_total_samples()
+            total_variance = p * np.mean(template**2) - p**2 * np.mean(template)
+
+            std_noise = np.sqrt(std_noise**2 - total_variance)
+
+        sd_ratio[unit_id] = unit_std / std_noise
+
+    return sd_ratio

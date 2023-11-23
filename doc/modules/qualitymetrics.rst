@@ -35,11 +35,12 @@ For more details about each metric and it's availability and use within SpikeInt
   qualitymetrics/isolation_distance
   qualitymetrics/l_ratio
   qualitymetrics/nearest_neighbor
+  qualitymetrics/noise_cutoff
   qualitymetrics/presence_ratio
+  qualitymetrics/sd_ratio
+  qualitymetrics/silhouette_score
   qualitymetrics/sliding_rp_violations
   qualitymetrics/snr
-  qualitymetrics/noise_cutoff
-  qualitymetrics/silhouette_score
   qualitymetrics/synchrony
 
 

@@ -279,6 +279,9 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 
         # check metrics are the same
         for metric_name in qm_rec.columns:
+            if metric_name == "sd_ratio":
+                continue
+
             # rtol is addedd for sliding_rp_violation, for a reason I do not have to explore now. Sam.
             assert np.allclose(qm_rec[metric_name].values, qm_no_rec[metric_name].values, rtol=1e-02)
 
