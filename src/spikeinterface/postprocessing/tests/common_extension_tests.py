@@ -26,8 +26,23 @@ class WaveformExtensionCommonTestSuite:
     # this flag enables us to check that all backends have the same contents
     exact_same_content = True
 
+    def _clean_all_folders(self):
+        for name in ("toy_rec_1seg", "toy_sorting_1seg", "toy_waveforms_1seg",
+                     "toy_rec_2seg", "toy_sorting_2seg", "toy_waveforms_2seg",
+                     "toy_sorting_2seg.zarr", "toy_sorting_2seg_sparse", 
+                     ):
+            if (cache_folder / name).is_dir():
+                shutil.rmtree(cache_folder / name)
+
+        for name in ("toy_waveforms_1seg", "toy_waveforms_2seg", "toy_sorting_2seg_sparse"):
+            for ext in self.extension_data_names:
+                folder = self.cache_folder / f"{name}_{ext}_selected" 
+                if folder.exists():
+                    shutil.rmtree(folder)
+
     def setUp(self):
         self.cache_folder = cache_folder
+        self._clean_all_folders()
 
         # 1-segment
         recording, sorting = generate_ground_truth_recording(
@@ -46,21 +61,9 @@ class WaveformExtensionCommonTestSuite:
         recording.set_channel_gains(gain)
         recording.set_channel_offsets(0)
 
-        if (cache_folder / "toy_rec_1seg").is_dir():
-            shutil.rmtree(cache_folder / "toy_rec_1seg")
-        if (cache_folder / "toy_sorting_1seg").is_dir():
-            shutil.rmtree(cache_folder / "toy_sorting_1seg")
         recording = recording.save(folder=cache_folder / "toy_rec_1seg")
         sorting = sorting.save(folder=cache_folder / "toy_sorting_1seg")
 
-        # if (cache_folder / "toy_rec_1seg").is_dir():
-        #     recording = load_extractor(cache_folder / "toy_rec_1seg")
-        # else:
-        #     recording = recording.save(folder=cache_folder / "toy_rec_1seg")
-        # if (cache_folder / "toy_sorting_1seg").is_dir():
-        #     sorting = load_extractor(cache_folder / "toy_sorting_1seg")
-        # else:
-        #     sorting = sorting.save(folder=cache_folder / "toy_sorting_1seg")
         we1 = extract_waveforms(
             recording,
             sorting,
@@ -87,18 +90,6 @@ class WaveformExtensionCommonTestSuite:
         )
         recording.set_channel_gains(gain)
         recording.set_channel_offsets(0)
-        # if (cache_folder / "toy_rec_2seg").is_dir():
-        #     recording = load_extractor(cache_folder / "toy_rec_2seg")
-        # else:
-        #     recording = recording.save(folder=cache_folder / "toy_rec_2seg")
-        # if (cache_folder / "toy_sorting_2seg").is_dir():
-        #     sorting = load_extractor(cache_folder / "toy_sorting_2seg")
-        # else:
-        #     sorting = sorting.save(folder=cache_folder / "toy_sorting_2seg")
-        if (cache_folder / "toy_rec_2seg").is_dir():
-            shutil.rmtree(cache_folder / "toy_rec_2seg")
-        if (cache_folder / "toy_sorting_2seg").is_dir():
-            shutil.rmtree(cache_folder / "toy_sorting_2seg")
         recording = recording.save(folder=cache_folder / "toy_rec_2seg")
         sorting = sorting.save(folder=cache_folder / "toy_sorting_2seg")
 
@@ -154,22 +145,9 @@ class WaveformExtensionCommonTestSuite:
             we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
             we_ro_folder.chmod(0o777)
         
-        for name in ("toy_waveforms_1seg", "toy_waveforms_2seg", "toy_waveforms_2seg_readonly", "toy_sorting_2seg.zarr", "toy_sorting_2seg_sparse"):
-            folder = self.cache_folder / name
-            if folder.exists():
-                shutil.rmtree(folder)
+        self._clean_all_folders()
 
-        for name in ("toy_waveforms_1seg", "toy_waveforms_2seg", "toy_sorting_2seg_sparse"):
-            for ext in self.extension_data_names:
-                folder = self.cache_folder / f"{name}_{ext}_selected" 
-                if folder.exists():
-                    shutil.rmtree(folder)
         
-        # TODO this bug on windows with "PermissionError: [WinError 32] ..."
-        for name in ("toy_rec_1seg", "toy_sorting_1seg", "toy_rec_2seg", "toy_sorting_2seg"):
-            folder = self.cache_folder / name
-            if folder.exists():
-                shutil.rmtree(folder)
 
 
     def _test_extension_folder(self, we, in_memory=False):
