@@ -438,6 +438,7 @@ def compute_grid_convolution(
 
     weights_sparsity_mask = weights > sparsity_threshold
 
+    assert mode in ("2d", "3d"), "mode can be '2d' or '3d'"
     if mode == "2d":
         ndim = 2
     else:
