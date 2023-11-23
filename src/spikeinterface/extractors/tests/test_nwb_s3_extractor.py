@@ -52,12 +52,16 @@ def test_recording_s3_nwb_ros3(tmp_path):
     check_recordings_equal(rec, reloaded_recording)
 
 
-@pytest.mark.streaming_extractors
-def test_recording_s3_nwb_fsspec(tmp_path):
+@pytest.mark.parametrize("cache", [True, False])  # Test with and without cache
+def test_recording_s3_nwb_fsspec(tmp_path, cache):
     file_path = (
         "https://dandi-api-staging-dandisets.s3.amazonaws.com/blobs/5f4/b7a/5f4b7a1f-7b95-4ad8-9579-4df6025371cc"
     )
-    rec = NwbRecordingExtractor(file_path, stream_mode="fsspec", stream_cache_path=cache_folder)
+
+    # Instantiate NwbRecordingExtractor with the cache parameter
+    rec = NwbRecordingExtractor(
+        file_path, stream_mode="fsspec", cache=cache, stream_cache_path=tmp_path if cache else None
+    )
 
     start_frame = 0
     end_frame = 300
