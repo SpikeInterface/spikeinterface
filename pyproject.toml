@@ -22,7 +22,6 @@ classifiers = [
 dependencies = [
     "numpy",
     "neo>=0.12.0",
-    "joblib",
     "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.19",
