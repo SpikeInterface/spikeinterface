@@ -3,7 +3,6 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface import download_dataset
-# from spikeinterface.extractors import read_mearec, MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.motion_interpolation import (
     correct_motion_on_peaks,
@@ -12,9 +11,6 @@ from spikeinterface.sortingcomponents.motion_interpolation import (
 )
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
-
-# repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-# remote_path = "mearec/mearec_test_10s.h5"
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -36,8 +32,6 @@ def make_fake_motion(rec):
 
 
 def test_correct_motion_on_peaks():
-    # local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    # rec, sorting = read_mearec(local_path)
     rec, sorting = make_dataset()
     peaks = sorting.to_spike_vector()
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
@@ -65,8 +59,6 @@ def test_correct_motion_on_peaks():
 
 
 def test_interpolate_motion_on_traces():
-    # local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    # rec = MEArecRecordingExtractor(local_path)
     rec, sorting = make_dataset()
 
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
@@ -94,8 +86,6 @@ def test_interpolate_motion_on_traces():
 
 
 def test_InterpolateMotionRecording():
-    # local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    # rec = MEArecRecordingExtractor(local_path)
     rec, sorting = make_dataset()
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
 

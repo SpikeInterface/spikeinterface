@@ -4,9 +4,6 @@ import shutil
 
 import numpy as np
 
-# from spikeinterface import download_dataset
-# from spikeinterface.extractors import MEArecRecordingExtractor
-
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
 
@@ -17,10 +14,6 @@ from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
-
-# repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-# remote_path = "mearec/mearec_test_10s.h5"
-
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "sortingcomponents"
@@ -37,8 +30,6 @@ if DEBUG:
 
 
 def setup_module():
-    # local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    # recording = MEArecRecordingExtractor(local_path)
     recording, sorting = make_dataset()
 
     cache_folder.mkdir(parents=True, exist_ok=True)
@@ -60,17 +51,15 @@ def setup_module():
         progress_bar=True,
         pipeline_nodes=pipeline_nodes,
     )
-    np.save(cache_folder / "mearec_peaks.npy", peaks)
-    np.save(cache_folder / "mearec_peak_locations.npy", peak_locations)
+    np.save(cache_folder / "dataset_peaks.npy", peaks)
+    np.save(cache_folder / "dataset_peak_locations.npy", peak_locations)
 
 
 def test_estimate_motion():
-    # local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    # recording = MEArecRecordingExtractor(local_path)
     recording, sorting = make_dataset()
 
-    peaks = np.load(cache_folder / "mearec_peaks.npy")
-    peak_locations = np.load(cache_folder / "mearec_peak_locations.npy")
+    peaks = np.load(cache_folder / "dataset_peaks.npy")
+    peak_locations = np.load(cache_folder / "dataset_peak_locations.npy")
 
     # test many case and sub case
     all_cases = {

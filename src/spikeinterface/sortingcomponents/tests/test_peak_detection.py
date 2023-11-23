@@ -5,11 +5,6 @@ import tempfile
 
 import pytest
 
-# from spikeinterface import download_dataset
-# from spikeinterface.extractors.neoextractors.mearec import MEArecRecordingExtractor, MEArecSortingExtractor
-
-from spikeinterface.core import generate_ground_truth_recording
-
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
