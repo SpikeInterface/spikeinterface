@@ -1,6 +1,7 @@
 import shutil
 import pickle
 import warnings
+import tempfile
 from pathlib import Path
 from tqdm.auto import tqdm
 
@@ -387,9 +388,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         tmp_folder = p["tmp_folder"]
         if tmp_folder is None:
             if n_jobs > 1:
-                import tempfile
-
-                tmp_folder = tempfile.mkdtemp(prefix="tmp", dir=get_global_tmp_folder())
+                tmp_folder = tempfile.mkdtemp(prefix="pca", dir=get_global_tmp_folder())
 
         for chan_ind, chan_id in enumerate(channel_ids):
             pca_model = pca_models[chan_ind]
@@ -432,7 +431,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 with open(pca_model_file, "rb") as fid:
                     pca_models.append(pickle.load(fid))
                 pca_model_file.unlink()
-            print(f"Removing {tmp_folder}")
             shutil.rmtree(tmp_folder)
 
         # add models to extension data
