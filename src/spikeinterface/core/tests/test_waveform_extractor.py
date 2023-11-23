@@ -297,6 +297,48 @@ def test_extract_waveforms():
     )
     assert we4.sparsity is not None
 
+    # test with sparsity estimation
+    folder5 = cache_folder / "test_extract_waveforms_compute_sparsity_tmp_folder"
+    sparsity_temp_folder = cache_folder / "tmp_sparsity"
+    if folder5.is_dir():
+        shutil.rmtree(folder5)
+
+    we5 = extract_waveforms(
+        recording,
+        sorting,
+        folder5,
+        max_spikes_per_unit=100,
+        return_scaled=True,
+        sparse=True,
+        sparsity_temp_folder=sparsity_temp_folder,
+        method="radius",
+        radius_um=50.0,
+        n_jobs=2,
+        chunk_duration="500ms",
+    )
+    assert we5.sparsity is not None
+    # tmp folder is cleaned up
+    assert not sparsity_temp_folder.is_dir()
+
+    # should raise an error if sparsity_temp_folder is not empty
+    with pytest.raises(AssertionError):
+        if folder5.is_dir():
+            shutil.rmtree(folder5)
+        sparsity_temp_folder.mkdir()
+        we5 = extract_waveforms(
+            recording,
+            sorting,
+            folder5,
+            max_spikes_per_unit=100,
+            return_scaled=True,
+            sparse=True,
+            sparsity_temp_folder=sparsity_temp_folder,
+            method="radius",
+            radius_um=50.0,
+            n_jobs=2,
+            chunk_duration="500ms",
+        )
+
 
 def test_recordingless():
     durations = [30, 40]
@@ -388,14 +430,17 @@ def test_unfiltered_extraction():
             shutil.rmtree(wf_folder)
         we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, allow_unfiltered=True)
 
-        we.set_params(ms_before=3.0, ms_after=4.0, max_spikes_per_unit=500)
-
+        ms_before = 2.0
+        ms_after = 3.0
+        max_spikes_per_unit = 500
+        num_samples = int((ms_before + ms_after) * sampling_frequency / 1000.0)
+        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
         we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
 
         wfs = we.get_waveforms(0)
-        assert wfs.shape[0] <= 500
-        assert wfs.shape[1:] == (210, num_channels)
+        assert wfs.shape[0] <= max_spikes_per_unit
+        assert wfs.shape[1:] == (num_samples, num_channels)
 
         wfs, sampled_index = we.get_waveforms(0, with_index=True)
 
@@ -406,18 +451,18 @@ def test_unfiltered_extraction():
         wfs = we.get_waveforms(0)
 
         template = we.get_template(0)
-        assert template.shape == (210, 2)
+        assert template.shape == (num_samples, 2)
         templates = we.get_all_templates()
-        assert templates.shape == (num_units, 210, num_channels)
+        assert templates.shape == (num_units, num_samples, num_channels)
 
         wf_std = we.get_template(0, mode="std")
-        assert wf_std.shape == (210, num_channels)
+        assert wf_std.shape == (num_samples, num_channels)
         wfs_std = we.get_all_templates(mode="std")
-        assert wfs_std.shape == (num_units, 210, num_channels)
+        assert wfs_std.shape == (num_units, num_samples, num_channels)
 
         wf_segment = we.get_template_segment(unit_id=0, segment_index=0)
-        assert wf_segment.shape == (210, num_channels)
-        assert wf_segment.shape == (210, num_channels)
+        assert wf_segment.shape == (num_samples, num_channels)
+        assert wf_segment.shape == (num_samples, num_channels)
 
 
 def test_portability():

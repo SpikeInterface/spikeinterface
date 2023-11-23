@@ -8,7 +8,7 @@ import warnings
 from .numpyextractors import NumpyRecording, NumpySorting
 from .basesorting import minimum_spike_dtype
 
-from probeinterface import Probe, generate_linear_probe
+from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from .snippets_tools import snippets_from_sorting
@@ -40,19 +40,19 @@ def generate_recording(
 
     Parameters
     ----------
-    num_channels : int, default 2
+    num_channels : int, default: 2
         The number of channels in the recording.
-    sampling_frequency : float, default 30000. (in Hz)
-        The sampling frequency of the recording, by default 30000.
-    durations: List[float], default [5.0, 2.5]
-        The duration in seconds of each segment in the recording, by default [5.0, 2.5].
+    sampling_frequency : float, default: 30000. (in Hz)
+        The sampling frequency of the recording, default: 30000.
+    durations: List[float], default: [5.0, 2.5]
+        The duration in seconds of each segment in the recording, default: [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
-    set_probe: bool, default True
-    ndim : int, default 2
-        The number of dimensions of the probe, by default 2. Set to 3 to make 3 dimensional probes.
+    set_probe: bool, default: True
+    ndim : int, default: 2
+        The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probes.
     seed : Optional[int]
         A seed for the np.ramdom.default_rng function
-    mode: str ["lazy", "legacy"] Default "lazy".
+    mode: str ["lazy", "legacy"], default: "lazy".
         "legacy": generate a NumpyRecording with white noise.
                 This mode is kept for backward compatibility and will be deprecated version 0.100.0.
         "lazy": return a NoiseGeneratorRecording instance.
@@ -93,7 +93,6 @@ def generate_recording(
             probe = probe.to_3d()
         probe.set_device_channel_indices(np.arange(num_channels))
         recording.set_probe(probe, in_place=True)
-        probe = generate_linear_probe(num_elec=num_channels)
 
     return recording
 
@@ -122,7 +121,7 @@ def generate_sorting(
     durations=[10.325, 3.5],  # in s for 2 segments
     firing_rates=3.0,
     empty_units=None,
-    refractory_period_ms=3.0,  # in ms
+    refractory_period_ms=4.0,  # in ms
     add_spikes_on_borders=False,
     num_spikes_per_border=3,
     border_size_samples=20,
@@ -143,10 +142,12 @@ def generate_sorting(
         The firing rate of each unit (in Hz).
     empty_units : list, default: None
         List of units that will have no spikes. (used for testing mainly).
-    refractory_period_ms : float, default: 3.0
+    refractory_period_ms : float, default: 4.0
         The refractory period in ms
     add_spikes_on_borders : bool, default: False
         If True, spikes will be added close to the borders of the segments.
+        This is for testing some post-processing functions when they have
+        to deal with border spikes.
     num_spikes_per_border : int, default: 3
         The number of spikes to add close to the borders of the segments.
     border_size_samples : int, default: 20
@@ -173,7 +174,7 @@ def generate_sorting(
             duration=durations[segment_index],
             refractory_period_ms=refractory_period_ms,
             firing_rates=firing_rates,
-            seed=seed,
+            seed=seed + segment_index,
         )
 
         if empty_units is not None:
@@ -465,9 +466,9 @@ def synthesize_random_firings(
     firing_rates: float or list[float]
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
-    add_shift_shuffle: bool, default False
-        Optionaly add a small shuffle on half spike to autocorrelogram
-    seed: int, optional
+    add_shift_shuffle: bool, default: False
+        Optionally add a small shuffle on half of the spikes to make the autocorrelogram less flat.
+    seed: int, default: None
         seed for the generator
 
     Returns
@@ -505,8 +506,8 @@ def synthesize_random_firings(
         spike_times = rng.integers(0, segment_size, n)
         spike_times = np.sort(spike_times)
 
+        # make less flat autocorrelogram shape by jittering half of the spikes
         if add_shift_shuffle:
-            ## make an interesting autocorrelogram shape
             # this replace the previous rand_distr2()
             some = rng.choice(spike_times.size, spike_times.size // 2, replace=False)
             x = rng.random(some.size)
@@ -514,7 +515,7 @@ def synthesize_random_firings(
             b = refractory_sample * 20
             shift = a + (b - a) * x**2
             spike_times[some] += shift
-            times0 = times0[(0 <= times0) & (times0 < N)]
+            times0 = times0[(0 <= times0) & (times0 < segment_size)]
 
         (violations,) = np.nonzero(np.diff(spike_times) < refractory_sample)
         spike_times = np.delete(spike_times, violations)
@@ -666,11 +667,11 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
     duration : float
         Length of simulated recording (in seconds).
     baseline_rate : float
-        Firing rate for 'true' spikes.
+        Firing rate for "true" spikes.
     num_violations : int
         Number of contaminating spikes.
-    violation_delta : float, optional
-        Temporal offset of contaminating spikes (in seconds), by default 1e-5.
+    violation_delta : float, default: 1e-5
+        Temporal offset of contaminating spikes (in seconds)
 
     Returns
     -------
@@ -709,11 +710,11 @@ class NoiseGeneratorRecording(BaseRecording):
         The sampling frequency of the recorder.
     durations : List[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
-    noise_level: float, default 1:
+    noise_level: float, default: 1
         Std of the white noise
-    dtype : Optional[Union[np.dtype, str]], default='float32'
+    dtype : Optional[Union[np.dtype, str]], default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
-    seed : Optional[int], default=None
+    seed : Optional[int], default: None
         The seed for np.random.default_rng.
     strategy : "tile_pregenerated" or "on_the_fly"
         The strategy of generating noise chunk:
@@ -886,8 +887,9 @@ def generate_recording_by_size(
         The size in gigabytes (GiB) of the recording.
     num_channels: int
         Number of channels.
-    seed : int, optional
-        The seed for np.random.default_rng, by default None
+    seed : int, default: None
+        The seed for np.random.default_rng
+
     Returns
     -------
     GeneratorRecording
@@ -1003,9 +1005,10 @@ default_unit_params_range = dict(
     depolarization_ms=(0.09, 0.14),
     repolarization_ms=(0.5, 0.8),
     recovery_ms=(1.0, 1.5),
-    positive_amplitude=(0.05, 0.15),
+    positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
     decay_power=(1.4, 1.8),
+    propagation_speed=(250.0, 350.0),  # um  / ms
 )
 
 
@@ -1043,7 +1046,7 @@ def generate_templates(
         Cut out in ms after spike peak.
     seed: int or None
         A seed for random.
-    dtype: numpy.dtype, default "float32"
+    dtype: numpy.dtype, default: "float32"
         Templates dtype
     upsample_factor: None or int
         If not None then template are generated upsampled by this factor.
@@ -1053,13 +1056,14 @@ def generate_templates(
         An optional dict containing parameters per units.
         Keys are parameter names:
 
-            * 'alpha': amplitude of the action potential in a.u. (default range: (5'000-15'000))
-            * 'depolarization_ms': the depolarization interval in ms (default range: (0.09-0.14))
-            * 'repolarization_ms': the repolarization interval in ms (default range: (0.5-0.8))
-            * 'recovery_ms': the recovery interval in ms (default range: (1.0-1.5))
-            * 'positive_amplitude': the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
-            * 'smooth_ms': the gaussian smooth in ms (default range: (0.03-0.07))
-            * 'decay_power': the decay power (default range: (1.2-1.8))
+            * "alpha": amplitude of the action potential in a.u. (default range: (6'000-9'000))
+            * "depolarization_ms": the depolarization interval in ms (default range: (0.09-0.14))
+            * "repolarization_ms": the repolarization interval in ms (default range: (0.5-0.8))
+            * "recovery_ms": the recovery interval in ms (default range: (1.0-1.5))
+            * "positive_amplitude": the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
+            * "smooth_ms": the gaussian smooth in ms (default range: (0.03-0.07))
+            * "decay_power": the decay power (default range: (1.2-1.8))
+            * "propagation_speed": mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
         Values contains vector with same size of num_units.
         If the key is not in dict then it is generated using unit_params_range
     unit_params_range: dict of tuple
@@ -1107,12 +1111,16 @@ def generate_templates(
             assert unit_params[k].size == num_units
             params[k] = unit_params[k]
         else:
-            v = rng.random(num_units)
             if k in unit_params_range:
-                lim0, lim1 = unit_params_range[k]
+                lims = unit_params_range[k]
             else:
-                lim0, lim1 = default_unit_params_range[k]
-            params[k] = v * (lim1 - lim0) + lim0
+                lims = default_unit_params_range[k]
+            if lims is not None:
+                lim0, lim1 = lims
+                v = rng.random(num_units)
+                params[k] = v * (lim1 - lim0) + lim0
+            else:
+                params[k] = [None] * num_units
 
     for u in range(num_units):
         wf = generate_single_fake_waveform(
@@ -1128,17 +1136,42 @@ def generate_templates(
             dtype=dtype,
         )
 
+        ## Add a spatial decay depend on distance from unit to each channel
         alpha = params["alpha"][u]
         # the espilon avoid enormous factors
         eps = 1.0
         # naive formula for spatial decay
         pow = params["decay_power"][u]
         channel_factors = alpha / (distances[u, :] + eps) ** pow
+        wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
+
+        # This mimic a propagation delay for distant channel
+        propagation_speed = params["propagation_speed"][u]
+        if propagation_speed is not None:
+            # the speed is um/ms
+            dist = distances[u, :].copy()
+            dist -= np.min(dist)
+            delay_s = dist / propagation_speed / 1000.0
+            sample_shifts = delay_s * fs
+
+            # apply the delay with fft transform to get sub sample shift
+            n = wfs.shape[0]
+            wfs_f = np.fft.rfft(wfs, axis=0)
+            if n % 2 == 0:
+                # n is even sig_f[-1] is nyquist and so pi
+                omega = np.linspace(0, np.pi, wfs_f.shape[0])
+            else:
+                # n is odd sig_f[-1] is exactly nyquist!! we need (n-1) / n factor!!
+                omega = np.linspace(0, np.pi * (n - 1) / n, wfs_f.shape[0])
+            # broadcast omega and sample_shifts depend the axis
+            shifts = omega[:, np.newaxis] * sample_shifts[np.newaxis, :]
+            wfs = np.fft.irfft(wfs_f * np.exp(-1j * shifts), n=n, axis=0)
+
         if upsample_factor is not None:
             for f in range(upsample_factor):
-                templates[u, :, :, f] = wf[f::upsample_factor, np.newaxis] * channel_factors[np.newaxis, :]
+                templates[u, :, :, f] = wfs[f::upsample_factor]
         else:
-            templates[u, :, :] = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
+            templates[u, :, :] = wfs
 
     return templates
 
@@ -1160,10 +1193,10 @@ class InjectTemplatesRecording(BaseRecording):
         Shape can be:
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce sampling jitter.
-    nbefore: list[int] | int | None
+    nbefore: list[int] | int | None, default: None
         Where is the center of the template for each unit?
         If None, will default to the highest peak.
-    amplitude_factor: list[float] | float | None, default None
+    amplitude_factor: list[float] | float | None, default: None
         The amplitude of each spike for each unit.
         Can be None (no scaling).
         Can be scalar all spikes have the same factor (certainly useless).
@@ -1174,7 +1207,7 @@ class InjectTemplatesRecording(BaseRecording):
     num_samples: list[int] | int | None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
-    upsample_vector: np.array or None, default None.
+    upsample_vector: np.array or None, default: None.
         When templates is 4d we can simulate a jitter.
         Optional the upsample_vector is the jitter index with a number per spike in range 0-templates.sahpe[3]
 
@@ -1425,14 +1458,59 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
     return channel_locations
 
 
-def generate_unit_locations(num_units, channel_locations, margin_um=20.0, minimum_z=5.0, maximum_z=40.0, seed=None):
+def generate_unit_locations(
+    num_units,
+    channel_locations,
+    margin_um=20.0,
+    minimum_z=5.0,
+    maximum_z=40.0,
+    minimum_distance=20.0,
+    max_iteration=100,
+    distance_strict=False,
+    seed=None,
+):
     rng = np.random.default_rng(seed=seed)
     units_locations = np.zeros((num_units, 3), dtype="float32")
-    for dim in (0, 1):
-        lim0 = np.min(channel_locations[:, dim]) - margin_um
-        lim1 = np.max(channel_locations[:, dim]) + margin_um
-        units_locations[:, dim] = rng.uniform(lim0, lim1, size=num_units)
+
+    minimum_x, maximum_x = np.min(channel_locations[:, 0]) - margin_um, np.max(channel_locations[:, 0]) + margin_um
+    minimum_y, maximum_y = np.min(channel_locations[:, 1]) - margin_um, np.max(channel_locations[:, 1]) + margin_um
+
+    units_locations[:, 0] = rng.uniform(minimum_x, maximum_x, size=num_units)
+    units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
     units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
+
+    if minimum_distance is not None:
+        solution_found = False
+        renew_inds = None
+        for i in range(max_iteration):
+            distances = np.linalg.norm(units_locations[:, np.newaxis] - units_locations[np.newaxis, :], axis=2)
+            inds0, inds1 = np.nonzero(distances < minimum_distance)
+            mask = inds0 != inds1
+            inds0 = inds0[mask]
+            inds1 = inds1[mask]
+
+            if inds0.size > 0:
+                if renew_inds is None:
+                    renew_inds = np.unique(inds0)
+                else:
+                    # random only bad ones in the previous set
+                    renew_inds = renew_inds[np.isin(renew_inds, np.unique(inds0))]
+
+                units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
+                units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+                units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
+            else:
+                solution_found = True
+                break
+
+    if not solution_found:
+        if distance_strict:
+            raise ValueError(
+                f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
+                "You can use distance_strict=False or reduce minimum distance"
+            )
+        else:
+            warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
 
     return units_locations
 
@@ -1444,14 +1522,21 @@ def generate_ground_truth_recording(
     num_units=10,
     sorting=None,
     probe=None,
+    generate_probe_kwargs=dict(
+        num_columns=2,
+        xpitch=20,
+        ypitch=20,
+        contact_shapes="circle",
+        contact_shape_params={"radius": 6},
+    ),
     templates=None,
     ms_before=1.0,
     ms_after=3.0,
     upsample_factor=None,
     upsample_vector=None,
-    generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=1.5),
+    generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0),
     noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
-    generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0),
+    generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
     generate_templates_kwargs=dict(),
     dtype="float32",
     seed=None,
@@ -1461,29 +1546,31 @@ def generate_ground_truth_recording(
 
     Parameters
     ----------
-    durations: list of float, default [10.]
+    durations: list of float, default: [10.]
         Durations in seconds for all segments.
-    sampling_frequency: float, default 25000
+    sampling_frequency: float, default: 25000
         Sampling frequency.
-    num_channels: int, default 4
+    num_channels: int, default: 4
         Number of channels, not used when probe is given.
-    num_units: int, default 10.
+    num_units: int, default: 10
         Number of units,  not used when sorting is given.
     sorting: Sorting or None
         An external sorting object. If not provide, one is genrated.
     probe: Probe or None
-        An external Probe object. If not provided of linear probe is generated.
+        An external Probe object. If not provided a probe is generated using generate_probe_kwargs.
+    generate_probe_kwargs: dict
+        A dict to constuct the Probe using :py:func:`probeinterface.generate_multi_columns_probe()`.
     templates: np.array or None
         The templates of units.
         If None they are generated.
         Shape can be:
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce jitter.
-    ms_before: float, default 1.5
+    ms_before: float, default: 1.5
         Cut out in ms before spike peak.
-    ms_after: float, default 3.
+    ms_after: float, default: 3
         Cut out in ms after spike peak.
-    upsample_factor: None or int, default None
+    upsample_factor: None or int, default: None
         A upsampling factor used only when templates are not provided.
     upsample_vector: np.array or None
         Optional the upsample_vector can given. This has the same shape as spike_vector
@@ -1495,7 +1582,7 @@ def generate_ground_truth_recording(
         Dict used to generated template when template not provided.
     generate_templates_kwargs: dict
         Dict used to generated template when template not provided.
-    dtype: np.dtype, default "float32"
+    dtype: np.dtype, default: "float32"
         The dtype of the recording.
     seed: int or None
         Seed for random initialization.
@@ -1529,8 +1616,28 @@ def generate_ground_truth_recording(
     num_spikes = sorting.to_spike_vector().size
 
     if probe is None:
-        probe = generate_linear_probe(num_elec=num_channels)
+        # probe = generate_linear_probe(num_elec=num_channels)
+        # probe.set_device_channel_indices(np.arange(num_channels))
+
+        prb_kwargs = generate_probe_kwargs.copy()
+        if "num_contact_per_column" in prb_kwargs:
+            assert (
+                prb_kwargs["num_contact_per_column"] * prb_kwargs["num_columns"]
+            ) == num_channels, (
+                "generate_multi_columns_probe : num_channels do not match num_contact_per_column x num_columns"
+            )
+        elif "num_contact_per_column" not in prb_kwargs and "num_columns" in prb_kwargs:
+            n = num_channels // prb_kwargs["num_columns"]
+            num_contact_per_column = [n] * prb_kwargs["num_columns"]
+            mid = prb_kwargs["num_columns"] // 2
+            num_contact_per_column[mid] += num_channels % prb_kwargs["num_columns"]
+            prb_kwargs["num_contact_per_column"] = num_contact_per_column
+        else:
+            raise ValueError("num_columns should be provided in dict generate_probe_kwargs")
+
+        probe = generate_multi_columns_probe(**prb_kwargs)
         probe.set_device_channel_indices(np.arange(num_channels))
+
     else:
         num_channels = probe.get_contact_count()
 

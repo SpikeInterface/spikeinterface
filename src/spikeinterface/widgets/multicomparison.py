@@ -1,6 +1,8 @@
 import numpy as np
+from warnings import warn
 
-from .basewidget import BaseWidget
+from .base import BaseWidget, to_attr
+from .utils import get_unit_colors
 
 
 class MultiCompGraphWidget(BaseWidget):
@@ -11,25 +13,16 @@ class MultiCompGraphWidget(BaseWidget):
     ----------
     multi_comparison: BaseMultiComparison
         The multi comparison object
-    draw_labels: bool
+    draw_labels: bool, default: False
         If True unit labels are shown
-    node_cmap: matplotlib colormap
-        The colormap to be used for the nodes (default 'viridis')
-    edge_cmap: matplotlib colormap
-        The colormap to be used for the edges (default 'hot')
-    alpha_edges: float
+    node_cmap: matplotlib colormap, default: "viridis"
+        The colormap to be used for the nodes
+    edge_cmap: matplotlib colormap, default: "hot"
+        The colormap to be used for the edges
+    alpha_edges: float, default: 0.5
         Alpha value for edges
-    colorbar: bool
+    colorbar: bool, default: False
         If True a colorbar for the edges is plotted
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        The axis to be used. If not given an axis is created
-
-    Returns
-    -------
-    W: MultiCompGraphWidget
-        The output widget
     """
 
     def __init__(
@@ -40,42 +33,44 @@ class MultiCompGraphWidget(BaseWidget):
         edge_cmap="hot",
         alpha_edges=0.5,
         colorbar=False,
-        figure=None,
-        ax=None,
+        backend=None,
+        **backend_kwargs,
     ):
-        import matplotlib
-        from matplotlib import pyplot as plt
+        plot_data = dict(
+            multi_comparison=multi_comparison,
+            draw_labels=draw_labels,
+            node_cmap=node_cmap,
+            edge_cmap=edge_cmap,
+            alpha_edges=alpha_edges,
+            colorbar=colorbar,
+        )
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-        BaseWidget.__init__(self, figure, ax)
-        self._msc = multi_comparison
-        self._draw_labels = draw_labels
-        self._node_cmap = node_cmap
-        self._edge_cmap = edge_cmap
-        self._colorbar = colorbar
-        self._alpha_edges = alpha_edges
-        self.name = "MultiCompGraph"
-
-    def plot(self):
-        self._do_plot()
-
-    def _do_plot(self):
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.colors as mpl_colors
+        import matplotlib.pyplot as plt
         import networkx as nx
+        from .utils_matplotlib import make_mpl_figure
 
-        g = self._msc.graph
+        dp = to_attr(data_plot)
+
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+        mcmp = dp.multi_comparison
+        g = mcmp.graph
         edge_col = []
         for e in g.edges(data=True):
             n1, n2, d = e
             edge_col.append(d["weight"])
         nodes_col_dict = {}
-        for i, sort_name in enumerate(self._msc.name_list):
+        for i, sort_name in enumerate(mcmp.name_list):
             nodes_col_dict[sort_name] = i
         nodes_col = []
         for node in sorted(g.nodes):
             nodes_col.append(nodes_col_dict[node[0]])
-        nodes_col = np.array(nodes_col) / len(self._msc.name_list)
-        import matplotlib.pyplot as plt
+        nodes_col = np.array(nodes_col) / len(mcmp.name_list)
 
-        _ = plt.set_cmap(self._node_cmap)
+        _ = plt.set_cmap(dp.node_cmap)
         _ = nx.draw_networkx_nodes(
             g,
             pos=nx.circular_layout(sorted(g)),
@@ -89,13 +84,13 @@ class MultiCompGraphWidget(BaseWidget):
             pos=nx.circular_layout((sorted(g))),
             nodelist=sorted(g.nodes),
             edge_color=edge_col,
-            alpha=self._alpha_edges,
-            edge_cmap=plt.cm.get_cmap(self._edge_cmap),
-            edge_vmin=self._msc.match_score,
+            alpha=dp.alpha_edges,
+            edge_cmap=plt.cm.get_cmap(dp.edge_cmap),
+            edge_vmin=mcmp.match_score,
             edge_vmax=1,
             ax=self.ax,
         )
-        if self._draw_labels:
+        if dp.draw_labels:
             labels = {key: f"{key[0]}_{key[1]}" for key in sorted(g.nodes)}
             pos = nx.circular_layout(sorted(g))
             # extend position radially
@@ -105,12 +100,11 @@ class MultiCompGraphWidget(BaseWidget):
                 pos_extended[node] = pos_new
             _ = nx.draw_networkx_labels(g, pos=pos_extended, labels=labels, ax=self.ax)
 
-        if self._colorbar:
-            import matplotlib
+        if dp.colorbar:
             import matplotlib.pyplot as plt
 
-            norm = matplotlib.colors.Normalize(vmin=self._msc.match_score, vmax=1)
-            cmap = plt.cm.get_cmap(self._edge_cmap)
+            norm = mpl_colors.Normalize(vmin=mcmp.match_score, vmax=1)
+            cmap = plt.cm.get_cmap(dp.edge_cmap)
             m = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
             self.figure.colorbar(m)
 
@@ -125,44 +119,50 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
     ----------
     multi_comparison: BaseMultiComparison
         The multi comparison object
-    plot_type: str
-        'pie' or 'bar'
-    cmap: matplotlib colormap
-        The colormap to be used for the nodes (default 'Reds')
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        The axis to be used. If not given an axis is created
-
-    Returns
-    -------
-    W: MultiCompGraphWidget
-        The output widget
+    plot_type: "pie" | "bar", default: "pie"
+        The plot type
+    cmap: matplotlib colormap, default: "YlOrRd"
+        The colormap to be used for the nodes
+    fontsize: int, default: 9
+        The text fontsize
+    show_legend: bool, default: True
+        If True a legend is shown
     """
 
-    def __init__(self, multi_comparison, plot_type="pie", cmap="YlOrRd", fs=10, figure=None, ax=None):
-        BaseWidget.__init__(self, figure, ax)
-        import matplotlib
+    def __init__(
+        self,
+        multi_comparison,
+        plot_type="pie",
+        cmap="YlOrRd",
+        fontsize=9,
+        show_legend=True,
+        backend=None,
+        **backend_kwargs,
+    ):
+        plot_data = dict(
+            multi_comparison=multi_comparison,
+            plot_type=plot_type,
+            cmap=cmap,
+            fontsize=fontsize,
+            show_legend=show_legend,
+        )
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
 
-        self._msc = multi_comparison
-        self._type = plot_type
-        self._cmap = cmap
-        self._fs = fs
-        self.name = "MultiCompGlobalAgreement"
+        dp = to_attr(data_plot)
 
-    def plot(self):
-        self._do_plot()
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-    def _do_plot(self):
-        import matplotlib.pyplot as plt
-
-        cmap = plt.get_cmap(self._cmap)
-        colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))])
-        sg_names, sg_units = self._msc.compute_subgraphs()
+        mcmp = dp.multi_comparison
+        cmap = plt.get_cmap(dp.cmap)
+        colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(mcmp.name_list))])
+        sg_names, sg_units = mcmp.compute_subgraphs()
         # fraction of units with agreement > threshold
         v, c = np.unique([len(np.unique(s)) for s in sg_names], return_counts=True)
-        if self._type == "pie":
+        if dp.plot_type == "pie":
             p = self.ax.pie(c, colors=colors[v - 1], autopct=lambda pct: _getabs(pct, c), pctdistance=1.25)
             self.ax.legend(
                 p[0],
@@ -175,9 +175,9 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
                 loc=2,
                 borderaxespad=0.5,
                 labelspacing=0.15,
-                fontsize=self._fs,
+                fontsize=dp.fontsize,
             )
-        elif self._type == "bar":
+        elif dp.plot_type == "bar":
             self.ax.bar(v, c, color=colors[v - 1])
             x_labels = [f"k={vi}" for vi in v]
             self.ax.spines["top"].set_visible(False)
@@ -197,15 +197,14 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
     ----------
     multi_comparison: BaseMultiComparison
         The multi comparison object
-    plot_type: str
-        'pie' or 'bar'
-    cmap: matplotlib colormap
-        The colormap to be used for the nodes (default 'Reds')
-    axes: list of matplotlib axes
-        The axes to be used for the individual plots. If not given the required axes are created. If provided, the ax
-        and figure parameters are ignored.
+    plot_type: "pie" | "bar", default: "pie
+        The plot type
+    cmap: matplotlib colormap, default: "Reds"
+        The colormap to be used for the nodes
+    fontsize: int, default: 9
+        The text fontsize
     show_legend: bool
-        Show the legend in the last axes (default True).
+        Show the legend in the last axes
 
     Returns
     -------
@@ -213,44 +212,54 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, multi_comparison, plot_type="pie", cmap="YlOrRd", fs=9, axes=None, show_legend=True):
+    def __init__(
+        self,
+        multi_comparison,
+        plot_type="pie",
+        cmap="YlOrRd",
+        fontsize=9,
+        show_legend=True,
+        backend=None,
+        **backend_kwargs,
+    ):
+        plot_data = dict(
+            multi_comparison=multi_comparison,
+            plot_type=plot_type,
+            cmap=cmap,
+            fontsize=fontsize,
+            show_legend=show_legend,
+        )
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.colors as mpl_colors
         import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
 
-        self._msc = multi_comparison
-        self._type = plot_type
-        self._cmap = cmap
-        self._fs = fs
-        self._show_legend = show_legend
-        self.name = "MultiCompAgreementBySorterWidget"
+        dp = to_attr(data_plot)
+        mcmp = dp.multi_comparison
+        name_list = mcmp.name_list
 
-        if axes is None:
-            ncols = len(self._msc.name_list)
-            fig, axes = plt.subplots(nrows=1, ncols=ncols, sharex=True, sharey=True)
-        BaseWidget.__init__(self, None, None, axes)
+        backend_kwargs["num_axes"] = len(name_list)
+        backend_kwargs["ncols"] = len(name_list)
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-    def plot(self):
-        self._do_plot()
-
-    def _do_plot(self):
-        name_list = self._msc.name_list
-        import matplotlib.pyplot as plt
-
-        cmap = plt.get_cmap(self._cmap)
-        colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))])
-        sg_names, sg_units = self._msc.compute_subgraphs()
+        cmap = plt.get_cmap(dp.cmap)
+        colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(mcmp.name_list))])
+        sg_names, sg_units = mcmp.compute_subgraphs()
         # fraction of units with agreement > threshold
         for i, name in enumerate(name_list):
-            ax = self.axes[i]
+            ax = np.squeeze(self.axes)[i]
             v, c = np.unique([len(np.unique(sn)) for sn in sg_names if name in sn], return_counts=True)
-            if self._type == "pie":
+            if dp.plot_type == "pie":
                 p = ax.pie(
                     c,
                     colors=colors[v - 1],
-                    textprops={"color": "k", "fontsize": self._fs},
+                    textprops={"color": "k", "fontsize": dp.fontsize},
                     autopct=lambda pct: _getabs(pct, c),
                     pctdistance=1.18,
                 )
-                if (self._show_legend) and (i == len(name_list) - 1):
+                if (dp.show_legend) and (i == len(name_list) - 1):
                     plt.legend(
                         p[0],
                         v,
@@ -263,7 +272,7 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
                         borderaxespad=0.0,
                         labelspacing=0.15,
                     )
-            elif self._type == "bar":
+            elif dp.plot_type == "bar":
                 ax.bar(v, c, color=colors[v - 1])
                 x_labels = [f"k={vi}" for vi in v]
                 ax.spines["top"].set_visible(False)
@@ -273,7 +282,8 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
             else:
                 raise AttributeError("Wrong plot_type. It can be 'pie' or 'bar'")
             ax.set_title(name)
-        if self._type == "bar":
+
+        if dp.plot_type == "bar":
             ylims = [np.max(ax_single.get_ylim()) for ax_single in self.axes]
             max_yval = np.max(ylims)
             for ax_single in self.axes:
@@ -282,31 +292,4 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
 
 def _getabs(pct, allvals):
     absolute = int(np.round(pct / 100.0 * np.sum(allvals)))
-    return "{:d}".format(absolute)
-
-
-def plot_multicomp_graph(*args, **kwargs):
-    W = MultiCompGraphWidget(*args, **kwargs)
-    W.plot()
-    return W
-
-
-plot_multicomp_graph.__doc__ = MultiCompGraphWidget.__doc__
-
-
-def plot_multicomp_agreement(*args, **kwargs):
-    W = MultiCompGlobalAgreementWidget(*args, **kwargs)
-    W.plot()
-    return W
-
-
-plot_multicomp_agreement.__doc__ = MultiCompGlobalAgreementWidget.__doc__
-
-
-def plot_multicomp_agreement_by_sorter(*args, **kwargs):
-    W = MultiCompAgreementBySorterWidget(*args, **kwargs)
-    W.plot()
-    return W
-
-
-plot_multicomp_agreement_by_sorter.__doc__ = MultiCompAgreementBySorterWidget.__doc__
+    return f"{absolute}"

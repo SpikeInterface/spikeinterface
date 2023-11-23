@@ -103,7 +103,7 @@ class BaseSorter:
             )
 
         if not isinstance(recording, BaseRecordingSnippets):
-            raise ValueError("recording must be a Recording or Snippets!!")
+            raise ValueError("recording must be a Recording or a Snippets!!")
 
         if cls.requires_locations:
             locations = recording.get_channel_locations()
@@ -133,15 +133,16 @@ class BaseSorter:
         if recording.get_num_segments() > 1:
             if not cls.handle_multi_segment:
                 raise ValueError(
-                    f"This sorter {cls.sorter_name} do not handle multi segment, use si.concatenate_recordings(...)"
+                    f"This sorter {cls.sorter_name} does not handle multi-segment recordings, use si.concatenate_recordings(...)"
                 )
 
         rec_file = output_folder / "spikeinterface_recording.json"
         if recording.check_serializablility("json"):
             recording.dump(rec_file, relative_to=output_folder)
         elif recording.check_serializablility("pickle"):
-            recording.dump(output_folder / "spikeinterface_recording.pickle")
+            recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
+            # TODO: deprecate and finally remove this after 0.100
             d = {"warning": "The recording is not serializable to json"}
             rec_file.write_text(json.dumps(d, indent=4), encoding="utf8")
 
@@ -203,7 +204,7 @@ class BaseSorter:
             else:
                 recording = load_extractor(json_file, base_folder=output_folder)
         elif pickle_file.exists():
-            recording = load_extractor(pickle_file)
+            recording = load_extractor(pickle_file, base_folder=output_folder)
 
         return recording
 
@@ -299,7 +300,7 @@ class BaseSorter:
         # check errors in log file
         log_file = output_folder / "spikeinterface_log.json"
         if not log_file.is_file():
-            raise SpikeSortingError("get result error: the folder does not contain the `spikeinterface_log.json` file")
+            raise SpikeSortingError("Get result error: the folder does not contain the `spikeinterface_log.json` file")
 
         with log_file.open("r", encoding="utf8") as f:
             log = json.load(f)

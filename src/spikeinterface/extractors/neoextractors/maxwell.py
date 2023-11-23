@@ -1,7 +1,7 @@
 import numpy as np
 from pathlib import Path
 
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface import BaseEvent, BaseEventSegment
 from spikeinterface.core.core_tools import define_function_from_class
@@ -20,15 +20,15 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         The file path to the maxwell h5 file.
-    stream_id: str, optional
+    stream_id: str, default: None
         If there are several streams, specify the stream id you want to load.
         For MaxTwo when there are several wells at the same time you
         need to specify stream_id='well000' or 'well0001', etc.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
-    rec_name: str, optional
+    rec_name: str, default: None
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
     install_maxwell_plugin: bool, default: False
@@ -68,7 +68,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         well_name = self.stream_id
         # rec_name auto set by neo
         rec_name = self.neo_reader.rec_name
-        probe = pi.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
+        probe = probeinterface.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
         self.set_probe(probe, in_place=True)
         self.set_property("electrode", self.get_property("contact_vector")["electrode"])
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), rec_name=rec_name))

@@ -16,21 +16,21 @@ class UnitLocationsWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The object to compute/get unit locations from
-    unit_ids : list
-        List of unit ids default None
-    with_channel_ids : bool
-        Add channel ids text on the probe, default False
-    unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values, default None
-    hide_unit_selector : bool
-        If True, the unit selector is not displayed, default False (sortingview backend)
-    plot_all_units : bool
+    unit_ids : list or None, default: None
+        List of unit ids
+    with_channel_ids : bool, default: False
+        Add channel ids text on the probe
+    unit_colors :  dict or None, default: None
+        If given, a dictionary with unit ids as keys and colors as values
+    hide_unit_selector : bool, default: False
+        If True, the unit selector is not displayed (sortingview backend)
+    plot_all_units : bool, default: True
         If True, all units are plotted. The unselected ones (not in unit_ids),
-        are plotted in grey, default True (matplotlib backend)
-    plot_legend : bool
-        If True, the legend is plotted, default False (matplotlib backend)
-    hide_axis : bool
-        If True, the axis is set to off, default False (matplotlib backend)
+        are plotted in grey (matplotlib backend)
+    plot_legend : bool, default: False
+        If True, the legend is plotted (matplotlib backend)
+    hide_axis : bool, default: False
+        If True, the axis is set to off (matplotlib backend)
     """
 
     def __init__(

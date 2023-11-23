@@ -1,11 +1,6 @@
 import numpy as np
 
 from .base import BaseWidget, to_attr
-from .utils import get_unit_colors
-
-from ..core import ChannelSparsity
-from ..core.waveform_extractor import WaveformExtractor
-from ..core.basesorting import BaseSorting
 
 
 class StudyRunTimesWidget(BaseWidget):
@@ -129,7 +124,6 @@ class StudyUnitCountsWidget(BaseWidget):
         self.ax.legend()
 
 
-# TODO : plot optionally average on some levels using group by
 class StudyPerformances(BaseWidget):
     """
     Plot performances over case for a study.
@@ -139,17 +133,23 @@ class StudyPerformances(BaseWidget):
     ----------
     study: GroundTruthStudy
         A study object.
-    mode: str
-        Which mode in "swarm"
+    mode: "ordered" | "snr" | "swarm", default: "ordered"
+        Which plot mode to use:
+
+        * "ordered": plot performance metrics vs unit indices ordered by decreasing accuracy
+        * "snr": plot performance metrics vs snr
+        * "swarm": plot performance metrics as a swarm plot (see seaborn.swarmplot for details)
+    performance_names: list or tuple, default: ("accuracy", "precision", "recall")
+        Which performances to plot ("accuracy", "precision", "recall")
     case_keys: list or None
         A selection of cases to plot, if None, then all.
-
     """
 
     def __init__(
         self,
         study,
-        mode="swarm",
+        mode="ordered",
+        performance_names=("accuracy", "precision", "recall"),
         case_keys=None,
         backend=None,
         **backend_kwargs,
@@ -161,6 +161,7 @@ class StudyPerformances(BaseWidget):
             study=study,
             perfs=study.get_performance_by_unit(case_keys=case_keys),
             mode=mode,
+            performance_names=performance_names,
             case_keys=case_keys,
         )
 
@@ -176,43 +177,75 @@ class StudyPerformances(BaseWidget):
 
         dp = to_attr(data_plot)
         perfs = dp.perfs
+        study = dp.study
 
+        if dp.mode in ("ordered", "snr"):
+            backend_kwargs["num_axes"] = len(dp.performance_names)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        if dp.mode == "swarm":
+        if dp.mode == "ordered":
+            for count, performance_name in enumerate(dp.performance_names):
+                ax = self.axes.flatten()[count]
+                for key in dp.case_keys:
+                    label = study.cases[key]["label"]
+
+                    val = perfs.xs(key).loc[:, performance_name].values
+                    val = np.sort(val)[::-1]
+                    ax.plot(val, label=label)
+                ax.set_title(performance_name)
+                if count == 0:
+                    ax.legend(loc="upper right")
+
+        elif dp.mode == "snr":
+            metric_name = dp.mode
+            for count, performance_name in enumerate(dp.performance_names):
+                ax = self.axes.flatten()[count]
+
+                max_metric = 0
+                for key in dp.case_keys:
+                    x = study.get_metrics(key).loc[:, metric_name].values
+                    y = perfs.xs(key).loc[:, performance_name].values
+                    label = study.cases[key]["label"]
+                    ax.scatter(x, y, s=10, label=label)
+                    max_metric = max(max_metric, np.max(x))
+                ax.set_title(performance_name)
+                ax.set_xlim(0, max_metric * 1.05)
+                ax.set_ylim(0, 1.05)
+                if count == 0:
+                    ax.legend(loc="lower right")
+
+        elif dp.mode == "swarm":
             levels = perfs.index.names
             df = pd.melt(
                 perfs.reset_index(),
                 id_vars=levels,
                 var_name="Metric",
                 value_name="Score",
-                value_vars=("accuracy", "precision", "recall"),
+                value_vars=dp.performance_names,
             )
             df["x"] = df.apply(lambda r: " ".join([r[col] for col in levels]), axis=1)
             sns.swarmplot(data=df, x="x", y="Score", hue="Metric", dodge=True)
 
 
-class StudyPerformancesVsMetrics(BaseWidget):
+class StudyAgreementMatrix(BaseWidget):
     """
-    Plot performances vs a metrics (snr for instance) over case for a study.
-
+    Plot agreement matrix.
 
     Parameters
     ----------
     study: GroundTruthStudy
         A study object.
-    mode: str
-        Which mode in "swarm"
     case_keys: list or None
         A selection of cases to plot, if None, then all.
-
+    ordered: bool
+        Order units with best agreement scores.
+        This enable to see agreement on a diagonal.
     """
 
     def __init__(
         self,
         study,
-        metric_name="snr",
-        performance_name="accuracy",
+        ordered=True,
         case_keys=None,
         backend=None,
         **backend_kwargs,
@@ -222,8 +255,74 @@ class StudyPerformancesVsMetrics(BaseWidget):
 
         plot_data = dict(
             study=study,
-            metric_name=metric_name,
-            performance_name=performance_name,
+            case_keys=case_keys,
+            ordered=ordered,
+        )
+
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
+        from .comparison import AgreementMatrixWidget
+
+        dp = to_attr(data_plot)
+        study = dp.study
+
+        backend_kwargs["num_axes"] = len(dp.case_keys)
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+        for count, key in enumerate(dp.case_keys):
+            ax = self.axes.flatten()[count]
+            comp = study.comparisons[key]
+            unit_ticks = len(comp.sorting1.unit_ids) <= 16
+            count_text = len(comp.sorting1.unit_ids) <= 16
+
+            AgreementMatrixWidget(
+                comp, ordered=dp.ordered, count_text=count_text, unit_ticks=unit_ticks, backend="matplotlib", ax=ax
+            )
+            label = study.cases[key]["label"]
+            ax.set_xlabel(label)
+
+            if count > 0:
+                ax.set_ylabel(None)
+                ax.set_yticks([])
+            ax.set_xticks([])
+
+        # ax0 = self.axes.flatten()[0]
+        # for ax in self.axes.flatten()[1:]:
+        #     ax.sharey(ax0)
+
+
+class StudySummary(BaseWidget):
+    """
+    Plot a summary of a ground truth study.
+    Internally does:
+        plot_study_run_times
+        plot_study_unit_counts
+        plot_study_performances
+        plot_study_agreement_matrix
+
+    Parameters
+    ----------
+    study: GroundTruthStudy
+        A study object.
+    case_keys: list or None, default: None
+        A selection of cases to plot, if None, then all.
+    """
+
+    def __init__(
+        self,
+        study,
+        case_keys=None,
+        backend=None,
+        **backend_kwargs,
+    ):
+        if case_keys is None:
+            case_keys = list(study.cases.keys())
+
+        plot_data = dict(
+            study=study,
             case_keys=case_keys,
         )
 
@@ -232,22 +331,12 @@ class StudyPerformancesVsMetrics(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
-        from .utils import get_some_colors
 
-        dp = to_attr(data_plot)
-        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+        study = data_plot["study"]
+        case_keys = data_plot["case_keys"]
 
-        study = dp.study
-        perfs = study.get_performance_by_unit(case_keys=dp.case_keys)
-
-        max_metric = 0
-        for key in dp.case_keys:
-            x = study.get_metrics(key)[dp.metric_name].values
-            y = perfs.xs(key)[dp.performance_name].values
-            label = dp.study.cases[key]["label"]
-            self.ax.scatter(x, y, label=label)
-            max_metric = max(max_metric, np.max(x))
-
-        self.ax.legend()
-        self.ax.set_xlim(0, max_metric * 1.05)
-        self.ax.set_ylim(0, 1.05)
+        StudyPerformances(study=study, case_keys=case_keys, mode="ordered", backend="matplotlib", **backend_kwargs)
+        StudyPerformances(study=study, case_keys=case_keys, mode="snr", backend="matplotlib", **backend_kwargs)
+        StudyAgreementMatrix(study=study, case_keys=case_keys, backend="matplotlib", **backend_kwargs)
+        StudyRunTimesWidget(study=study, case_keys=case_keys, backend="matplotlib", **backend_kwargs)
+        StudyUnitCountsWidget(study=study, case_keys=case_keys, backend="matplotlib", **backend_kwargs)

@@ -26,7 +26,7 @@ function kilosort2_5_master(fpath, kilosortPath)
         if skip_kilosort_preprocessing
             % hack to skip the internal preprocessing
             % this mimic the preprocessDataSub() function
-            fprintf("SKIP kilosort2.5 preprocessing\n");
+            fprintf("Skipping kilosort2.5 preprocessing\n");
 
             ops.nt0 	  = getOr(ops, {'nt0'}, 61); % number of time samples for the templates (has to be <=81 due to GPU shared memory)
             ops.nt0min  = getOr(ops, 'nt0min', ceil(20 * ops.nt0/61)); % time sample where the negative peak should be aligned
@@ -49,11 +49,13 @@ function kilosort2_5_master(fpath, kilosortPath)
             rez.xcoords = xc;
             rez.ycoords = yc;
             Nbatch      = ceil(ops.sampsToRead / ops.NT); % number of data batches
+            ops.Nbatch = Nbatch;
             NTbuff      = ops.NT + 3*ops.ntbuff; % we need buffers on both sides for filtering
 
             rez.Wrot    = eye(ops.Nchan); % fake whitenning
             rez.temp.Nbatch = Nbatch;
-            % fproc is the same as the binary
+            % fproc (preprocessed output) is the same as the fbinary (unprocessed input)
+            % because we are skipping preprocessing.
             ops.fproc = ops.fbinary;
 
             rez.ops = ops; % memorize ops
@@ -62,7 +64,7 @@ function kilosort2_5_master(fpath, kilosortPath)
             rez.ops.Nbatch = Nbatch;
             rez.ops.NTbuff = NTbuff;
 
-            tic;  % tocs are coming
+            tic;  % tocs are supplied in other parts of KS code
 
         else
             % preprocess data to create temp_wh.dat

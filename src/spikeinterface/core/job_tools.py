@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import platform
 import os
+import warnings
 
 import joblib
 import sys
@@ -21,18 +22,18 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
                 - chunk_size: int
                     Number of samples per chunk
                 - chunk_memory: str
-                    Memory usage for each job (e.g. '100M', '1G')
+                    Memory usage for each job (e.g. "100M", "1G")
                 - total_memory: str
-                    Total memory usage (e.g. '500M', '2G')
+                    Total memory usage (e.g. "500M", "2G")
                 - chunk_duration : str or float or None
-                    Chunk duration in s if float or with units if str (e.g. '1s', '500ms')
+                    Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
             * n_jobs: int
                 Number of jobs to use. With -1 the number of jobs is the same as number of cores
             * progress_bar: bool
                 If True, a progress bar is printed
-            * mp_context: str or None
-                Context for multiprocessing. It can be None (default), "fork" or "spawn".
-                Note that "fork" is only available on UNIX systems
+            * mp_context: "fork" | "spawn" | None, default: None
+                Context for multiprocessing. It can be None, "fork" or "spawn".
+                Note that "fork" is only safely available on LINUX systems
     """
 
 
@@ -181,7 +182,7 @@ def ensure_chunk_size(
     recording, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
 ):
     """
-    'chunk_size' is the traces.shape[0] for each worker.
+    "chunk_size" is the traces.shape[0] for each worker.
 
     Flexible chunk_size setter with 3 ways:
         * "chunk_size": is the length in sample for each chunk independently of channel count and dtype.
@@ -196,12 +197,12 @@ def ensure_chunk_size(
     chunk_size: int or None
         size for one chunk per job
     chunk_memory: str or None
-        must endswith 'k', 'M' or 'G'
+        must end with "k", "M" or "G"
     total_memory: str or None
-        must endswith 'k', 'M' or 'G'
+        must end with "k", "M" or "G"
     chunk_duration: None or float or str
         Units are second if float.
-        If str then the str must contain units(e.g. '1s', '500ms')
+        If str then the str must contain units(e.g. "1s", "500ms")
     """
     if chunk_size is not None:
         # manual setting
@@ -255,7 +256,7 @@ class ChunkRecordingExecutor:
         * at once if chunk_size is None (high RAM usage)
         * in parallel with ProcessPoolExecutor (higher speed)
 
-    The initializer ('init_func') allows to set a global context to avoid heavy serialization
+    The initializer ("init_func") allows to set a global context to avoid heavy serialization
     (for examples, see implementation in `core.WaveformExtractor`).
 
     Parameters
@@ -265,43 +266,43 @@ class ChunkRecordingExecutor:
     func: function
         Function that runs on each chunk
     init_func: function
-        Initializer function to set the global context (accessible by 'func')
+        Initializer function to set the global context (accessible by "func")
     init_args: tuple
         Arguments for init_func
     verbose: bool
         If True, output is verbose
-    progress_bar: bool
-        If True, a progress bar is printed to monitor the progress of the process
-    handle_returns: bool
+    job_name: str, default: ""
+        Job name
+    handle_returns: bool, default: False
         If True, the function can return values
-    gather_func: None or callable
+    gather_func: None or callable, default: None
         Optional function that is called in the main thread and retrieves the results of each worker.
         This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
-    n_jobs: int
-        Number of jobs to be used (default 1). Use -1 to use as many jobs as number of cores
-    total_memory: str
+    n_jobs: int, default: 1
+        Number of jobs to be used. Use -1 to use as many jobs as number of cores
+    total_memory: str, default: None
         Total memory (RAM) to use (e.g. "1G", "500M")
-    chunk_memory: str
+    chunk_memory: str, default: None
         Memory per chunk (RAM) to use (e.g. "1G", "500M")
-    chunk_size: int or None
-        Size of each chunk in number of samples. If 'total_memory' or 'chunk_memory' are used, it is ignored.
+    chunk_size: int or None, default: None
+        Size of each chunk in number of samples. If "total_memory" or "chunk_memory" are used, it is ignored.
     chunk_duration : str or float or None
-        Chunk duration in s if float or with units if str (e.g. '1s', '500ms')
-    mp_context : str or None
-        "fork" (default) or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
-        "fork" is only available on UNIX systems.
-    job_name: str
-        Job name
-    max_threads_per_process: int or None
+        Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
+    mp_context : "fork" | "spawn" | None, default: None
+        "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
+        "fork" is only safely available on LINUX systems.
+    max_threads_per_process: int or None, default: None
         Limit the number of thread per process using threadpoolctl modules.
         This used only when n_jobs>1
         If None, no limits.
+    progress_bar: bool, default: False
+        If True, a progress bar is printed to monitor the progress of the process
 
 
     Returns
     -------
     res: list
-        If 'handle_returns' is True, the results for each chunk process
+        If "handle_returns" is True, the results for each chunk process
     """
 
     def __init__(
@@ -332,6 +333,8 @@ class ChunkRecordingExecutor:
             mp_context = recording.get_preferred_mp_context()
         if mp_context is not None and platform.system() == "Windows":
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+        elif mp_context == "fork" and platform.system() == "Darwin":
+            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
         self.mp_context = mp_context
 

@@ -54,8 +54,6 @@ class WaveformExtensionCommonTestSuite:
             recording,
             sorting,
             cache_folder / "toy_waveforms_1seg",
-            ms_before=3.0,
-            ms_after=4.0,
             max_spikes_per_unit=500,
             sparse=False,
             n_jobs=1,
@@ -90,8 +88,6 @@ class WaveformExtensionCommonTestSuite:
             recording,
             sorting,
             cache_folder / "toy_waveforms_2seg",
-            ms_before=3.0,
-            ms_after=4.0,
             max_spikes_per_unit=500,
             sparse=False,
             n_jobs=1,
@@ -115,8 +111,6 @@ class WaveformExtensionCommonTestSuite:
             sorting,
             mode="memory",
             sparse=False,
-            ms_before=3.0,
-            ms_after=4.0,
             max_spikes_per_unit=500,
             n_jobs=1,
             chunk_size=30000,
@@ -149,7 +143,7 @@ class WaveformExtensionCommonTestSuite:
 
             # reload as an extension from we
             assert self.extension_class.extension_name in we.get_available_extension_names()
-            assert we.is_extension(self.extension_class.extension_name)
+            assert we.has_extension(self.extension_class.extension_name)
             ext = we.load_extension(self.extension_class.extension_name)
             assert isinstance(ext, self.extension_class)
             for ext_name in self.extension_data_names:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from typing import List, Optional, Union
 
@@ -55,20 +57,20 @@ class BaseSorting(BaseExtractor):
         self._sorting_segments.append(sorting_segment)
         sorting_segment.set_parent_extractor(self)
 
-    def get_sampling_frequency(self):
+    def get_sampling_frequency(self) -> float:
         return self._sampling_frequency
 
-    def get_num_segments(self):
+    def get_num_segments(self) -> int:
         return len(self._sorting_segments)
 
-    def get_num_samples(self, segment_index=None):
+    def get_num_samples(self, segment_index=None) -> int:
         """Returns the number of samples of the associated recording for a segment.
 
         Parameters
         ----------
-        segment_index : int, optional
+        segment_index : int or None, default: None
             The segment index to retrieve the number of samples for.
-            For multi-segment objects, it is required, by default None
+            For multi-segment objects, it is required
 
         Returns
         -------
@@ -80,7 +82,7 @@ class BaseSorting(BaseExtractor):
         ), "This methods requires an associated recording. Call self.register_recording() first."
         return self._recording.get_num_samples(segment_index=segment_index)
 
-    def get_total_samples(self):
+    def get_total_samples(self) -> int:
         """Returns the total number of samples of the associated recording.
 
         Returns
@@ -157,9 +159,8 @@ class BaseSorting(BaseExtractor):
         recording : BaseRecording
             Recording with the same number of segments as current sorting.
             Assigned to self._recording.
-        check_spike_frames : bool, optional
+        check_spike_frames : bool, default: True
             If True, assert for each segment that all spikes are within the recording's range.
-            By default True.
         """
         assert np.isclose(
             self.get_sampling_frequency(), recording.get_sampling_frequency(), atol=0.1
@@ -221,8 +222,8 @@ class BaseSorting(BaseExtractor):
         This function replaces the old CachesortingExtractor, but enables more engines
         for caching a results.
 
-        Since v0.98.0 'numpy_folder' is used by defult.
-        From v0.96.0 to 0.97.0 'npz_folder' was the default.
+        Since v0.98.0 "numpy_folder" is used by defult.
+        From v0.96.0 to 0.97.0 "npz_folder" was the default.
 
         """
         if format == "numpy_folder":
@@ -268,7 +269,7 @@ class BaseSorting(BaseExtractor):
         )
         return self.count_num_spikes_per_unit()
 
-    def count_num_spikes_per_unit(self):
+    def count_num_spikes_per_unit(self) -> dict:
         """
         For each unit : get number of spikes  across segments.
 
@@ -298,9 +299,11 @@ class BaseSorting(BaseExtractor):
 
         return num_spikes
 
-    def count_total_num_spikes(self):
+    def count_total_num_spikes(self) -> int:
         """
-        Get total number of spikes summed across segment and units.
+        Get total number of spikes in the sorting.
+
+        This is the sum of all spikes in all segments across all units.
 
         Returns
         -------
@@ -309,16 +312,17 @@ class BaseSorting(BaseExtractor):
         """
         return self.to_spike_vector().size
 
-    def select_units(self, unit_ids, renamed_unit_ids=None):
+    def select_units(self, unit_ids, renamed_unit_ids=None) -> BaseSorting:
         """
-        Selects a subset of units
+        Returns a new sorting object which contains only a selected subset of units.
+
 
         Parameters
         ----------
         unit_ids : numpy.array or list
             List of unit ids to keep
-        renamed_unit_ids : numpy.array or list, optional
-            If given, the kept unit ids are renamed, by default None
+        renamed_unit_ids : numpy.array or list, default: None
+            If given, the kept unit ids are renamed
 
         Returns
         -------
@@ -330,9 +334,30 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
 
-    def remove_units(self, remove_unit_ids):
+    def rename_units(self, new_unit_ids: np.ndarray | list) -> BaseSorting:
         """
-        Removes a subset of units
+        Returns a new sorting object with renamed units.
+
+
+        Parameters
+        ----------
+        new_unit_ids : numpy.array or list
+            List of new names for unit ids.
+            They should map positionally to the existing unit ids.
+
+        Returns
+        -------
+        BaseSorting
+            Sorting object with renamed units
+        """
+        from spikeinterface import UnitsSelectionSorting
+
+        sub_sorting = UnitsSelectionSorting(self, renamed_unit_ids=new_unit_ids)
+        return sub_sorting
+
+    def remove_units(self, remove_unit_ids) -> BaseSorting:
+        """
+        Returns a new sorting object with contains only a selected subset of units.
 
         Parameters
         ----------
@@ -342,7 +367,7 @@ class BaseSorting(BaseExtractor):
         Returns
         -------
         BaseSorting
-            Sorting object without removed units
+            Sorting without the removed units
         """
         from spikeinterface import UnitsSelectionSorting
 
@@ -352,7 +377,8 @@ class BaseSorting(BaseExtractor):
 
     def remove_empty_units(self):
         """
-        Removes units with empty spike trains
+        Returns a new sorting object which contains only units with at least one spike.
+        For multi-segments, a unit is considered empty if it contains no spikes in all segments.
 
         Returns
         -------
@@ -363,16 +389,12 @@ class BaseSorting(BaseExtractor):
         return self.select_units(non_empty_units)
 
     def get_non_empty_unit_ids(self):
-        non_empty_units = []
-        for segment_index in range(self.get_num_segments()):
-            for unit in self.get_unit_ids():
-                if len(self.get_unit_spike_train(unit, segment_index=segment_index)) > 0:
-                    non_empty_units.append(unit)
-        non_empty_units = np.unique(non_empty_units)
-        return non_empty_units
+        num_spikes_per_unit = self.count_num_spikes_per_unit()
+
+        return np.array([unit_id for unit_id in self.unit_ids if num_spikes_per_unit[unit_id] != 0])
 
     def get_empty_unit_ids(self):
-        unit_ids = self.get_unit_ids()
+        unit_ids = self.unit_ids
         empty_units = unit_ids[~np.isin(unit_ids, self.get_non_empty_unit_ids())]
         return empty_units
 
@@ -388,7 +410,7 @@ class BaseSorting(BaseExtractor):
         """
         Return all spike trains concatenated.
 
-        This is deprecated use  sorting.to_spike_vector() instead
+        This is deprecated and will be removed in spikeinterface 0.102 use sorting.to_spike_vector() instead
         """
 
         warnings.warn(
@@ -428,27 +450,25 @@ class BaseSorting(BaseExtractor):
         Construct a unique structured numpy vector concatenating all spikes
         with several fields: sample_index, unit_index, segment_index.
 
-        See also `get_all_spike_trains()`
 
         Parameters
         ----------
-        concatenated: bool
-            With concatenated=True (default) the output is one numpy "spike vector" with spikes from all segments.
+        concatenated: bool, default: True
+            With concatenated=True the output is one numpy "spike vector" with spikes from all segments.
             With concatenated=False the output is a list "spike vector" by segment.
-        extremum_channel_inds: None or dict
-            If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_index'.
+        extremum_channel_inds: None or dict, default: None
+            If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
             This can be convinient for computing spikes postion after sorter.
-
             This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
-        use_cache: bool
-            When True (default) the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
+        use_cache: bool, default: True
+            When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
             This caching only occurs when extremum_channel_inds=None.
 
         Returns
         -------
         spikes: np.array
-            Structured numpy array ('sample_index', 'unit_index', 'segment_index') with all spikes
-            Or ('sample_index', 'unit_index', 'segment_index', 'channel_index') if extremum_channel_inds
+            Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes
+            Or ("sample_index", "unit_index", "segment_index", "channel_index") if extremum_channel_inds
             is given
 
         """
@@ -597,8 +617,8 @@ class BaseSortingSegment(BaseSegment):
         Parameters
         ----------
         unit_id
-        start_frame: int, optional
-        end_frame: int, optional
+        start_frame: int, default: None
+        end_frame: int, default: None
 
         Returns
         -------

@@ -4,7 +4,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 import numpy as np
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.core_tools import define_function_from_class
@@ -18,24 +18,24 @@ class IblStreamingRecordingExtractor(BaseRecording):
     ----------
     session : str
         The session ID to extract recordings for.
-        In ONE, this is sometimes referred to as the 'eid'.
+        In ONE, this is sometimes referred to as the "eid".
         When doing a session lookup such as
 
         >>> from one.api import ONE
         >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
-        >>> sessions = one.alyx.rest('sessions', 'list', tag='2022_Q2_IBL_et_al_RepeatedSite')
+        >>> sessions = one.alyx.rest("sessions", "list", tag="2022_Q2_IBL_et_al_RepeatedSite")
 
-        each returned value in `sessions` refers to it as the 'id'.
+        each returned value in `sessions` refers to it as the "id".
     stream_name : str
         The name of the stream to load for the session.
         These can be retrieved from calling `StreamingIblExtractor.get_stream_names(session="<your session ID>")`.
     load_sync_channels : bool, default: false
         Load or not the last channel (sync).
         If not then the probe is loaded.
-    cache_folder : str, optional
+    cache_folder : str or None, default: None
         The location to temporarily store chunks of data during streaming.
         The default uses the folder designated by ONE.alyx._par.CACHE_DIR / "cache", which is typically the designated
-        'Downloads' folder on your operating system. As long as `remove_cached` is set to True, the only files that will
+        "Downloads" folder on your operating system. As long as `remove_cached` is set to True, the only files that will
         persist in this folder are the metadata header files and the chunk of data being actively streamed and used in RAM.
     remove_cached : bool, default: True
         Whether or not to remove streamed data from the cache immediately after it is read.
@@ -61,14 +61,14 @@ class IblStreamingRecordingExtractor(BaseRecording):
         ----------
         session : str
             The session ID to extract recordings for.
-            In ONE, this is sometimes referred to as the 'eid'.
+            In ONE, this is sometimes referred to as the "eid".
             When doing a session lookup such as
 
             >>> from one.api import ONE
             >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
-            >>> sessions = one.alyx.rest('sessions', 'list', tag='2022_Q2_IBL_et_al_RepeatedSite')
+            >>> sessions = one.alyx.rest("sessions", "list", tag="2022_Q2_IBL_et_al_RepeatedSite")
 
-            each returned value in `sessions` refers to it as the 'id'.
+            each returned value in `sessions` refers to it as the "id".
 
         Returns
         -------
@@ -165,7 +165,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
 
         # set probe
         if not load_sync_channel:
-            probe = pi.read_spikeglx(meta_file)
+            probe = probeinterface.read_spikeglx(meta_file)
 
             if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")

@@ -28,18 +28,23 @@ def compute_features_from_peaks(
     Parameters
     ----------
     recording: RecordingExtractor
-        The recording extractor object.
+        The recording extractor object
     peaks: array
-        Peaks array, as returned by detect_peaks() in "compact_numpy" way.
-    feature_list: List of features to be computed.
+        Peaks array, as returned by detect_peaks() in "compact_numpy" way
+    feature_list: list, default: ["ptp"]
+        List of features to be computed. Possible features are:
             - amplitude
             - ptp
-            - com
+            - center_of_mass
             - energy
-    ms_before: float
-        The duration in ms before the peak for extracting the features (default 1 ms)
-    ms_after: float
-        The duration in ms  after the peakfor extracting the features (default 1 ms)
+            - std_ptp
+            - ptp_lag
+            - random_projections_ptp
+            - random_projections_energy
+    ms_before: float, default: 1.0
+        The duration in ms before the peak for extracting the features
+    ms_after: float, default: 1.0
+        The duration in ms  after the peakfor extracting the features
 
     {}
 
@@ -61,6 +66,9 @@ def compute_features_from_peaks(
         extract_dense_waveforms,
     ]
     for feature_name in feature_list:
+        assert (
+            feature_name in _features_class.keys()
+        ), f"Feature {feature_name} in 'feature_list' is not possible. Possible features are {list(_features_class.keys())}"
         Class = _features_class[feature_name]
         params = feature_params.get(feature_name, {}).copy()
         node = Class(recording, parents=[peak_retriever, extract_dense_waveforms], **params)

@@ -6,12 +6,9 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
-    plot_sorting_performance,
     plot_agreement_matrix,
     plot_comparison_collision_by_similarity,
-    plot_unit_templates,
     plot_unit_waveforms,
-    plot_gt_performances,
 )
 
 import time
@@ -127,13 +124,13 @@ class BenchmarkMatching:
         Parameters
         ----------
         spike_num: int
-            The maximum number of spikes per unit.
-        seed: int
-            Random seed. (Default: 0)
+            The maximum number of spikes per unit
+        seed: int, default: 0
+            Random seed
         we_kwargs: dict
-            A dictionary of keyword arguments for the WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
-            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+            A dictionary of keyword arguments for the WaveformExtractor
+        template_mode: "mean" | "median" | "std", default: "median"
+            The mode to use to extract templates from the WaveformExtractor
 
         Returns
         -------
@@ -164,8 +161,8 @@ class BenchmarkMatching:
         ----------
         we: WaveformExtractor
             The new WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
-            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+        template_mode: "mean" | "median" | "std", default: "median"
+            The mode to use to extract templates from the WaveformExtractor
 
         Returns
         -------
@@ -191,14 +188,14 @@ class BenchmarkMatching:
         ----------
         fraction_misclassed: float
             The fraction of misclassified spikes.
-        min_similarity: float
-            The minimum cosine similarity between templates to be considered similar. (Default: -1)
-        seed: int
-            Random seed. (Default: 0)
+        min_similarity: float, default: -1
+            The minimum cosine similarity between templates to be considered similar
+        seed: int, default: 0
+            Random seed
         we_kwargs: dict
-            A dictionary of keyword arguments for the WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
-            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+            A dictionary of keyword arguments for the WaveformExtractor
+        template_mode: "mean" | "median" | "std", default: "median"
+            The mode to use to extract templates from the WaveformExtractor
 
         Returns
         -------
@@ -264,14 +261,14 @@ class BenchmarkMatching:
         ----------
         fraction_missing: float
             The fraction of missing units.
-        snr_threshold: float
-            The SNR threshold below which units are considered missing. (Default: 0)
-        seed: int
-            Random seed. (Default: 0)
+        snr_threshold: float, default: 0
+            The SNR threshold below which units are considered missing
+        seed: int, default: 0
+            Random seed
         we_kwargs: dict
             A dictionary of keyword arguments for the WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
-            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+        template_mode: "mean" | "median" | "std", default: "median"
+            The mode to use to extract templates from the WaveformExtractor
 
         Returns
         -------
@@ -338,16 +335,16 @@ class BenchmarkMatching:
         ----------
         parameters: array-like
             The values of the parameter to vary.
-        parameter_name: {'num_spikes', 'fraction_misclassed', 'fraction_missing}
+        parameter_name: "num_spikes", "fraction_misclassed", "fraction_missing"
             The name of the parameter to vary.
-        num_replicates: int
-            The number of replicates to run for each parameter value. (Default: 1)
+        num_replicates: int, default: 1
+            The number of replicates to run for each parameter value
         we_kwargs: dict
-            A dictionary of keyword arguments for the WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
-            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+            A dictionary of keyword arguments for the WaveformExtractor
+        template_mode: "mean" | "median" | "std", default: "median"
+            The mode to use to extract templates from the WaveformExtractor
         **kwargs
-            Keyword arguments for the run_matching method.
+            Keyword arguments for the run_matching method
 
         Returns
         -------
@@ -441,15 +438,15 @@ class BenchmarkMatching:
             A dataframe of NumpySortings for each method/parameter_value/iteration combination.
         collision: bool
             If True, use the CollisionGTComparison class. If False, use the compare_sorter_to_ground_truth function.
-        ground_truth: {'from_self' | 'from_df'}
-            If 'from_self', use the ground-truth sorting stored in the BenchmarkMatching object. If 'from_df', use the
+        ground_truth: "from_self" | "from_df", default: "from_self"
+            If "from_self", use the ground-truth sorting stored in the BenchmarkMatching object. If "from_df", use the
             ground-truth sorting stored in the matching_df.
         **kwargs
             Keyword arguments for the comparison function.
 
         Notes
         -----
-        This function adds a new column to the matching_df called 'comparison' that contains the GroundTruthComparison
+        This function adds a new column to the matching_df called "comparison" that contains the GroundTruthComparison
         object for each row.
         """
         if ground_truth == "from_self":
@@ -474,13 +471,12 @@ class BenchmarkMatching:
         ax = axs[1, 0]
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        plot_sorting_performance(comp, self.metrics, performance_name="accuracy", metric_name="snr", ax=ax, color="r")
-        plot_sorting_performance(comp, self.metrics, performance_name="recall", metric_name="snr", ax=ax, color="g")
-        plot_sorting_performance(comp, self.metrics, performance_name="precision", metric_name="snr", ax=ax, color="b")
-        ax.legend(["accuracy", "recall", "precision"])
 
-        ax = axs[1, 1]
-        plot_gt_performances(comp, ax=ax)
+        for k in ("accuracy", "recall", "precision"):
+            x = comp.get_performance()[k]
+            y = self.metrics["snr"]
+            ax.scatter(x, y, markersize=10, marker=".", label=k)
+        ax.legend()
 
         ax = axs[0, 1]
         if self.exhaustive_gt:

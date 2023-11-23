@@ -74,6 +74,8 @@ dtype (unless specified otherwise):
 
 Some scaling pre-processors, such as :code:`whiten()` or :code:`zscore()`, will force the output to :code:`float32`.
 
+When converting from a :code:`float` to an :code:`int`, the value will first be rounded to the nearest integer.
+
 
 Available preprocessing
 -----------------------

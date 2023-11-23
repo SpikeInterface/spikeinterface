@@ -3,7 +3,6 @@ from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
 from sklearn.decomposition import TruncatedSVD
-from hdbscan import HDBSCAN
 
 import numpy as np
 
@@ -37,17 +36,17 @@ def split_clusters(
     recording: Recording
         Recording object
     features_dict_or_folder: dict or folder
-        A dictionary of features precomputed with peak_pipeline or a folder containing npz file for features.
-    method: str
+        A dictionary of features precomputed with peak_pipeline or a folder containing npz file for features
+    method: str, default: "hdbscan_on_local_pca"
         The method name
-    method_kwargs: dict
+    method_kwargs: dict, default: dict()
         The method option
-    recursive: bool Default False
-        Reccursive or not.
-    recursive_depth: None or int
-        If recursive=True, then this is the max split per spikes.
-    returns_split_count: bool
-        Optionally return  the split count vector. Same size as labels.
+    recursive: bool, default: False
+        Recursive or not
+    recursive_depth: None or int, default: None
+        If recursive=True, then this is the max split per spikes
+    returns_split_count: bool, default: False
+        Optionally return  the split count vector. Same size as labels
 
     Returns
     -------
@@ -59,9 +58,9 @@ def split_clusters(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     n_jobs = job_kwargs["n_jobs"]
-    mp_context = job_kwargs["mp_context"]
+    mp_context = job_kwargs.get("mp_context", None)
     progress_bar = job_kwargs["progress_bar"]
-    max_threads_per_process = job_kwargs["max_threads_per_process"]
+    max_threads_per_process = job_kwargs.get("max_threads_per_process", 1)
 
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
@@ -72,7 +71,7 @@ def split_clusters(
     with Executor(
         max_workers=n_jobs,
         initializer=split_worker_init,
-        mp_context=get_context(mp_context),
+        mp_context=get_context(method=mp_context),
         initargs=(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process),
     ) as pool:
         labels_set = np.setdiff1d(peak_labels, [-1])
@@ -218,6 +217,8 @@ class LocalFeatureClustering:
         final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         if clusterer == "hdbscan":
+            from hdbscan import HDBSCAN
+
             clust = HDBSCAN(
                 min_cluster_size=min_cluster_size,
                 min_samples=min_samples,

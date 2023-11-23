@@ -17,7 +17,7 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
         The parent sorting.
     censored_period_ms: float
         The censored period to consider 2 spikes to be duplicated (in ms).
-    method: str in ("keep_first", "keep_last", "keep_first_iterative', 'keep_last_iterative", random")
+    method: "keep_first" | "keep_last" | "keep_first_iterative" | "keep_last_iterative" | "random", default: "keep_first"
         Method used to remove the duplicated spikes.
         If method = "random", will randomly choose to remove the first or last spike.
         If method = "keep_first", for each ISI violation, will remove the second spike.

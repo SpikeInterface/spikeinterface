@@ -132,11 +132,13 @@ jobs:
       - name: Test core
         run: ./.github/run_tests.sh core
       - name: Test extractors
+        env:
+          HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh "extractors and not streaming_extractors"
       - name: Test preprocessing
         if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
-        run: ./.github/run_tests.sh preprocessing
+        run: ./.github/run_tests.sh "preprocessing and not deepinterpolation"
       - name: Test postprocessing
         if: ${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh postprocessing

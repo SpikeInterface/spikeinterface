@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 
 import neo
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
@@ -22,21 +22,21 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
     Based on :py:class:`neo.rawio.SpikeGLXRawIO`
 
-    Contrary to older verion this reader is folder based.
-    So if the folder contain several streams ('imec0.ap' 'nidq' 'imec0.lf')
-    then it has to be specified with 'stream_id'.
+    Contrary to older verions, this reader is folder-based.
+    If the folder contains several streams (e.g., "imec0.ap", "nidq" ,"imec0.lf"),
+    then the stream has to be specified with "stream_id" or "stream_name".
 
     Parameters
     ----------
     folder_path: str
         The folder path to load the recordings from.
-    load_sync_channel: bool default False
+    load_sync_channel: bool default: False
         Whether or not to load the last channel in the stream, which is typically used for synchronization.
         If True, then the probe is not loaded.
-    stream_id: str, optional
+    stream_id: str or None, default: None
         If there are several streams, specify the stream id you want to load.
-        For example, 'imec0.ap' 'nidq' or 'imec0.lf'.
-    stream_name: str, optional
+        For example, "imec0.ap", "nidq", or "imec0.lf".
+    stream_name: str or None, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
@@ -60,7 +60,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             # Load probe geometry if available
             if "lf" in self.stream_id:
                 meta_filename = meta_filename.replace(".lf", ".ap")
-            probe = pi.read_spikeglx(meta_filename)
+            probe = probeinterface.read_spikeglx(meta_filename)
 
             if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")
@@ -84,7 +84,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc, num_cycles_in_adc)
             if self.get_num_channels() != total_channels:
                 # need slice because not all channel are saved
-                chans = pi.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
+                chans = probeinterface.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
                 # lets clip to 384 because this contains also the synchro channel
                 chans = chans[chans < total_channels]
                 sample_shifts = sample_shifts[chans]

@@ -10,7 +10,6 @@ from spikeinterface.core import extract_waveforms, precompute_sparsity, Waveform
 from spikeinterface.extractors import read_mearec
 from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference, scale, highpass_filter, whiten
 from spikeinterface.sorters import run_sorter, read_sorter_folder
-from spikeinterface.widgets import plot_unit_waveforms, plot_gt_performances
 
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording

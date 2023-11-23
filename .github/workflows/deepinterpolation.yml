@@ -1,0 +1,51 @@
+name: Testing deepinterpolation
+
+on:
+  pull_request:
+    types: [synchronize, opened, reopened]
+    branches:
+      - main
+
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Test on ${{ matrix.os }} OS
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+      - name: Deepinteprolation changes
+        id: modules-changed
+        run: |
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ $file == *"/deepinterpolation/"* ]]; then
+              echo "DeepInterpolation changed"
+              echo "DEEPINTERPOLATION_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
+          done
+      - name: Install dependencies
+        if: ${{ steps.modules-changed.outputs.DEEPINTERPOLATION_CHANGED == 'true' }}
+        run: |
+          python -m pip install -U pip  # Official recommended way
+          # install deepinteprolation
+          pip install tensorflow==2.7.0
+          pip install deepinterpolation@git+https://github.com/AllenInstitute/deepinterpolation.git
+          pip install protobuf==3.20.*
+          pip install -e .[full,test_core]
+      - name: Test DeepInterpolation with pytest
+        if: ${{ steps.modules-changed.outputs.DEEPINTERPOLATION_CHANGED == 'true' }}
+        run: |
+          pytest -v src/spikeinterface/preprocessing/deepinterpolation
+        shell: bash  # Necessary for pipeline to work on windows
