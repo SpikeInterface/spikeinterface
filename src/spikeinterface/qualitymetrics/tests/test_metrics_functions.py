@@ -70,6 +70,10 @@ def _simulated_data():
 
 
 def _waveform_extractor_simple():
+    for name in ("rec1", "sort1", "waveform_folder1"):
+        if (cache_folder / name).exists():
+            shutil.rmtree(cache_folder / name)
+
     recording, sorting = toy_example(duration=50, seed=10)
     recording = recording.save(folder=cache_folder / "rec1")
     sorting = sorting.save(folder=cache_folder / "sort1")
@@ -90,6 +94,10 @@ def _waveform_extractor_simple():
 
 
 def _waveform_extractor_violations(data):
+    for name in ("rec2", "sort2", "waveform_folder2"):
+        if (cache_folder / name).exists():
+            shutil.rmtree(cache_folder / name)
+
     recording, sorting = toy_example(
         duration=[data["duration"]],
         spike_times=[data["times"]],
@@ -382,13 +390,16 @@ def test_calculate_drift_metrics(waveform_extractor_simple):
 if __name__ == "__main__":
     sim_data = _simulated_data()
     we = _waveform_extractor_simple()
-    # we_violations = _waveform_extractor_violations(sim_data)
-    # test_calculate_amplitude_cutoff(we)
-    # test_calculate_presence_ratio(we)
-    # test_calculate_amplitude_median(we)
-    # test_calculate_isi_violations(we)
-    # test_calculate_sliding_rp_violations(we)
-    # test_calculate_drift_metrics(we)
-    # test_synchrony_metrics(we)
+    we_violations = _waveform_extractor_violations(sim_data)
+    test_calculate_amplitude_cutoff(we)
+    test_calculate_presence_ratio(we)
+    test_calculate_amplitude_median(we)
+    test_calculate_isi_violations(we)
+    test_calculate_sliding_rp_violations(we)
+    test_calculate_drift_metrics(we)
+    test_synchrony_metrics(we)
     test_calculate_firing_range(we)
-    # test_calculate_amplitude_cv_metrics(we)
+    test_calculate_amplitude_cv_metrics(we)
+
+    # for windows we need an explicit del for closing the recording files
+    del we, we_violations

@@ -41,6 +41,8 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     extension_data_names = ["metrics"]
     extension_function_kwargs_list = [dict(), dict(n_jobs=2), dict(metric_names=["snr", "firing_rate"])]
 
+    exact_same_content = False
+
     def setUp(self):
         super().setUp()
         self.cache_folder = cache_folder
@@ -302,9 +304,9 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 if __name__ == "__main__":
     test = QualityMetricsExtensionTest()
     test.setUp()
-    # test.test_drift_metrics()
-    # test.test_extension()
+    test.test_drift_metrics()
+    test.test_extension()
     test.test_nn_metrics()
-    # test.test_peak_sign()
-    # test.test_empty_units()
-    # test.test_recordingless()
+    test.test_peak_sign()
+    test.test_empty_units()
+    test.test_recordingless()
