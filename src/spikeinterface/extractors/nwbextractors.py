@@ -72,7 +72,7 @@ def read_nwbfile(
     file_path: str | Path,
     stream_mode: Literal["ffspec", "ros3"] | None = None,
     cache: bool = True,
-    stream_cache_path: str | Path | bool = True,
+    stream_cache_path: str | Path | None = None,
 ) -> NWBFile:
     """
     Read an NWB file and return the NWBFile object.
@@ -87,7 +87,8 @@ def read_nwbfile(
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path : str or None, default: None
-        The path to the cache storage
+        The path to the cache storage, when default to None it uses the a temporary
+        folder.
     Returns
     -------
     nwbfile : NWBFile
@@ -452,7 +453,7 @@ class NwbSortingExtractor(BaseSorting):
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path: str or Path or None, default: None
-        Local path for caching. If None it uses cwd
+        Local path for caching. If None it uses the system temporary directory.
 
     Returns
     -------
@@ -539,7 +540,9 @@ class NwbSortingExtractor(BaseSorting):
         if stream_mode not in ["fsspec", "ros3"]:
             file_path = str(Path(file_path).absolute())
         if stream_mode == "fsspec":
-            stream_cache_path = str(Path(self.stream_cache_path).absolute())
+            # only add stream_cache_path to kwargs if it was passed as an argument
+            if stream_cache_path is not None:
+                stream_cache_path = str(Path(self.stream_cache_path).absolute())
         self._kwargs = {
             "file_path": file_path,
             "electrical_series_name": self._electrical_series_name,
