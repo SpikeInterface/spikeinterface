@@ -153,7 +153,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         for k in ["ms_before", "ms_after"]:
             waveforms_params[k] = params["general"][k]
 
-        if params["shared_memory"] and not params['debug']:
+        if params["shared_memory"] and not params["debug"]:
             mode = "memory"
             waveforms_folder = None
         else:
