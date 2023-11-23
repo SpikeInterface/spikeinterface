@@ -21,7 +21,7 @@ from .paircomparisons import compare_sorter_to_ground_truth, GroundTruthComparis
 
 
 # This is to separate names when the key are tuples when saving folders
-_key_separator = " ## "
+_key_separator = "_##_"
 
 
 class GroundTruthStudy:
@@ -38,7 +38,7 @@ class GroundTruthStudy:
     In this case, the result dataframes will have `MultiIndex` to handle the different levels.
 
     A ground-truth dataset is made of a `Recording` and a `Sorting` object. For example, it can be a simulated dataset with MEArec or internally generated (see
-    :py:fun:`~spikeinterface.core.generate.generate_ground_truth_recording()`).
+    :py:func:`~spikeinterface.core.generate.generate_ground_truth_recording()`).
 
     This GroundTruthStudy have been refactor in version 0.100 to be more flexible than previous versions.
     Note that the underlying folder structure is not backward compatible!

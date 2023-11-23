@@ -534,7 +534,6 @@ def remove_duplicates(
 
 def remove_duplicates_via_matching(
     waveform_extractor,
-    noise_levels,
     peak_labels,
     method_kwargs={},
     job_kwargs={},
@@ -542,7 +541,6 @@ def remove_duplicates_via_matching(
     method="circus-omp-svd",
 ):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-    from spikeinterface import get_noise_levels
     from spikeinterface.core import BinaryRecordingExtractor
     from spikeinterface.core import NumpySorting
     from spikeinterface.core import extract_waveforms
@@ -595,14 +593,7 @@ def remove_duplicates_via_matching(
 
     local_params = method_kwargs.copy()
 
-    local_params.update(
-        {
-            "waveform_extractor": waveform_extractor,
-            "noise_levels": noise_levels,
-            "amplitudes": [0.95, 1.05],
-            "omp_min_sps": 0.05,
-        }
-    )
+    local_params.update({"waveform_extractor": waveform_extractor, "amplitudes": [0.975, 1.025], "omp_min_sps": 1e-3})
 
     spikes_per_units, counts = np.unique(waveform_extractor.sorting.to_spike_vector()["unit_index"], return_counts=True)
     indices = np.argsort(counts)

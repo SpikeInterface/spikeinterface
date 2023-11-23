@@ -29,7 +29,12 @@ class BaseRecording(BaseRecordingSnippets):
     _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
     _main_features = []  # recording do not handle features
 
-    _skip_properties = ["noise_level_raw", "noise_level_scaled"]
+    _skip_properties = [
+        "noise_level_std_raw",
+        "noise_level_std_scaled",
+        "noise_level_mad_raw",
+        "noise_level_mad_scaled",
+    ]
 
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseRecordingSnippets.__init__(

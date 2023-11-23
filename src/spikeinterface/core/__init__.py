@@ -94,6 +94,8 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
+from .sorting_tools import spike_vector_to_spike_trains
+
 from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting
 
