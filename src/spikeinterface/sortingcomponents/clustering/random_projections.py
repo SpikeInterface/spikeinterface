@@ -19,7 +19,7 @@ from .clustering_tools import remove_duplicates, remove_duplicates_via_matching,
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
-from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature, PeakToPeakMapsFeature
+from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     ExtractDenseWaveforms,
@@ -47,8 +47,6 @@ class RandomProjectionClustering:
         "nb_projections": 10,
         "ms_before": 1,
         "ms_after": 1,
-        "ptp_threshold" : 3,
-        "valid_channels" : None,
         "random_seed": 42,
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "shared_memory": True,
@@ -99,41 +97,14 @@ class RandomProjectionClustering:
         )
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
-        node3 = PeakToPeakMapsFeature(recording, parents=[node0, node2], sparse=True, radius_um=params['radius_um'])
 
-        ## First we get the ptp maps on a per channel basis
-        if params["valid_channels"] is None:
-            pipeline_nodes = [node0, node1, node2, node3]
-            ptp_maps = run_node_pipeline(
-                recording, pipeline_nodes, params["job_kwargs"], job_name="extracting ptp maps"
-            )
-            
-            import scipy
-
-            x = np.random.randn(100, num_samples, num_chans).astype(np.float32)
-            x = scipy.signal.savgol_filter(x, node2.window_length, node2.order, axis=1)
-
-            ptps = np.ptp(x, axis=1)
-            mean_ptps = ptps.mean()
-            std_ptps = ptps.std()
-
-            contact_locations = recording.get_channel_locations()
-            channel_distance = get_channel_distances(recording)
-            neighbours_mask = channel_distance < params['radius_um']
-            max_num_chans = np.max(np.sum(neighbours_mask, axis=1))
-            ptp_maps = np.sum(ptp_maps.reshape(len(ptp_maps)//num_chans, num_chans, max_num_chans), axis=0)
-            for main_channel in range(num_chans):
-                n_peaks = np.sum(peaks['channel_index'] == main_channel)
-                if n_peaks > 0:
-                    ptp_maps[main_channel] /= n_peaks
-
-            valid_channels = np.abs(ptp_maps - mean_ptps) > d['ptp_threshold']*std_ptps
-        else:
-            valid_channels = params["valid_channels"]        
-        
         projections = np.random.randn(num_chans, d["nb_projections"])
         projections -= projections.mean(0)
         projections /= projections.std(0)
+
+        nbefore = int(params["ms_before"] * fs / 1000)
+        nafter = int(params["ms_after"] * fs / 1000)
+        nsamples = nbefore + nafter
 
         node3 = RandomProjectionsFeature(
             recording,
@@ -154,6 +125,18 @@ class RandomProjectionClustering:
 
         clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
         peak_labels = clustering[0]
+
+        # peak_labels = -1 * np.ones(len(peaks), dtype=int)
+        # nb_clusters = 0
+        # for c in np.unique(peaks['channel_index']):
+        #     mask = peaks['channel_index'] == c
+        #     clustering = hdbscan.hdbscan(hdbscan_data[mask], **d['hdbscan_kwargs'])
+        #     local_labels = clustering[0]
+        #     valid_clusters = local_labels > -1
+        #     if np.sum(valid_clusters) > 0:
+        #         local_labels[valid_clusters] += nb_clusters
+        #         peak_labels[mask] = local_labels
+        #         nb_clusters += len(np.unique(local_labels[valid_clusters]))
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]

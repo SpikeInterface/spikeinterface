@@ -11,7 +11,7 @@ from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffe
 
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
-from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature, PeakToPeakMapsFeature
+from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     ExtractDenseWaveforms,
@@ -19,6 +19,7 @@ from spikeinterface.core.node_pipeline import (
     PeakRetriever,
 )
 
+from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
 try:
     import hdbscan
@@ -47,7 +48,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
-        "matched_filtering" : False,
+        "matched_filtering" : True,
         "whitening" : False,
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "job_kwargs": {"n_jobs": -1, "chunk_memory" : "10M"},
@@ -113,43 +114,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         num_samples = nbefore + nafter
         num_chans = recording_f.get_num_channels()
 
-        node0 = DetectPeakLocallyExclusive(recording_f, **detection_params)
-        node1 = ExtractSparseWaveforms(
-            recording_f,
-            parents=[node0],
-            return_output=False,
-            ms_before=ms_before,
-            ms_after=ms_after,
-            radius_um=radius_um,
-        )
-
-        node2 = SavGolDenoiser(recording_f, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
-        node3 = PeakToPeakMapsFeature(recording_f, parents=[node0, node2], sparse=True, radius_um=radius_um)
-        pipeline_nodes = [node0, node1, node2, node3]
-        peaks, ptp_maps = run_node_pipeline(
-            recording_f, pipeline_nodes, params["job_kwargs"], job_name="detecting peaks"
-        )
-
-        import scipy
-
-        x = np.random.randn(100, num_samples, num_chans).astype(np.float32)
-        x = scipy.signal.savgol_filter(x, node2.window_length, node2.order, axis=1)
-
-        ptps = np.ptp(x, axis=1)
-        mean_ptps = ptps.mean()
-        std_ptps = ptps.std()
-
-        contact_locations = recording_f.get_channel_locations()
-        channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < radius_um
-        max_num_chans = np.max(np.sum(neighbours_mask, axis=1))
-        ptp_maps = np.sum(ptp_maps.reshape(len(ptp_maps)//num_chans, num_chans, max_num_chans), axis=0)
-        for main_channel in range(num_chans):
-            n_peaks = np.sum(peaks['channel_index'] == main_channel)
-            if n_peaks > 0:
-                ptp_maps[main_channel] /= n_peaks
-
-        valid_channels = np.abs(ptp_maps - mean_ptps) > 3*std_ptps
+        peaks = detect_peaks(recording_f, "locally_exclusive", **detection_params, **job_kwargs)
 
         if params["matched_filtering"]:
             few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
@@ -159,7 +124,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             prototype = few_wfs[:, :, 0]
             prototype = np.median(prototype, 0)
             detection_params["prototype"] = prototype
-            peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params)
+            peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params, **job_kwargs)
         
         if verbose:
             print("We found %d peaks in total" % len(peaks))
@@ -181,7 +146,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We launch a clustering (using hdbscan) relying on positions and features extracted on
         ## the fly from the snippets
         clustering_params = params["clustering"].copy()
-        clustering_params["valid_channels"] = valid_channels
         clustering_params["waveforms"] = params["waveforms"].copy()
 
         for k in ["ms_before", "ms_after"]:
@@ -268,38 +232,3 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         sorting = sorting.save(folder=sorting_folder)
 
         return sorting
-
-def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **job_kwargs):
-    """
-    Helper function to extractor waveforms at max channel from a peak list
-
-
-    """
-    n = rec.get_num_channels()
-    unit_ids = np.arange(n, dtype="int64")
-    sparsity_mask = np.eye(n, dtype="bool")
-
-    spikes = np.zeros(
-        peaks.size, dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
-    )
-    spikes["sample_index"] = peaks["sample_index"]
-    spikes["unit_index"] = peaks["channel_index"]
-    spikes["segment_index"] = peaks["segment_index"]
-
-    nbefore = int(ms_before * rec.sampling_frequency / 1000.0)
-    nafter = int(ms_after * rec.sampling_frequency / 1000.0)
-
-    all_wfs = extract_waveforms_to_single_buffer(
-        rec,
-        spikes,
-        unit_ids,
-        nbefore,
-        nafter,
-        mode="shared_memory",
-        return_scaled=False,
-        sparsity_mask=sparsity_mask,
-        copy=True,
-        **job_kwargs,
-    )
-
-    return all_wfs
