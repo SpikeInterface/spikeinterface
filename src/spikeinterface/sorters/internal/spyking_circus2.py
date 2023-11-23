@@ -48,9 +48,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
-        "matched_filtering" : True,
-        "whitening" : False,
-        "smoothing_kwargs": {"window_length_ms": 0.25},
+        "matched_filtering" : False,
         "job_kwargs": {"n_jobs": -1, "chunk_memory" : "10M"},
     }
 
