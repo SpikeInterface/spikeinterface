@@ -9,6 +9,7 @@ from probeinterface import generate_multi_columns_probe
 from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
+    generate_injected_sorting,
     NoiseGeneratorRecording,
     generate_recording_by_size,
     InjectTemplatesRecording,
@@ -35,6 +36,19 @@ def test_generate_recording():
 def test_generate_sorting():
     # TODO even this is extensively tested in all other functions
     pass
+
+
+def test_generate_injected_sorting():
+    durations = [10.0, 20.0]
+    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0)
+    injected_sorting = generate_injected_sorting(
+        sorting, [int(duration * sorting.sampling_frequency) for duration in durations]
+    )
+    num_spikes = sorting.count_num_spikes_per_unit()
+    num_injected_spikes = injected_sorting.count_num_spikes_per_unit()
+    # injected spikes should be less than original spikes
+    for unit_id in num_spikes:
+        assert num_injected_spikes[unit_id] <= num_spikes[unit_id]
 
 
 def test_generate_sorting_with_spikes_on_borders():
