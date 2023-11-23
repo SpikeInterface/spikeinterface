@@ -21,12 +21,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "ptp", "threshold": 1},
+        "waveforms": {
+            "max_spikes_per_unit": 200,
+            "overwrite": True,
+            "sparse": True,
+            "method": "energy",
+            "threshold": 0.25,
+        },
         "filtering": {"freq_min": 150, "dtype": "float32"},
-        "detection": {"peak_sign": "neg", "detect_threshold": 5},
+        "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "localization": {},
-        "clustering": {},
+        "clustering": {"legacy": False},
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
@@ -66,6 +71,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_f = common_reference(recording_f)
         else:
             recording_f = recording
+            recording_f.annotate(is_filtered=True)
 
         # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")
@@ -111,8 +117,18 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
         clustering_params.update({"noise_levels": noise_levels})
 
+        if "legacy" in clustering_params:
+            legacy = clustering_params.pop("legacy")
+        else:
+            legacy = False
+
+        if legacy:
+            clustering_method = "circus"
+        else:
+            clustering_method = "random_projections"
+
         labels, peak_labels = find_cluster_from_peaks(
-            recording_f, selected_peaks, method="random_projections", method_kwargs=clustering_params
+            recording_f, selected_peaks, method=clustering_method, method_kwargs=clustering_params
         )
 
         ## We get the labels for our peaks
@@ -140,13 +156,18 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             waveforms_folder = sorter_output_folder / "waveforms"
 
         we = extract_waveforms(
-            recording_f, sorting, waveforms_folder, mode=mode, **waveforms_params, return_scaled=False
+            recording_f,
+            sorting,
+            waveforms_folder,
+            return_scaled=False,
+            precompute_template=["median"],
+            mode=mode,
+            **waveforms_params,
         )
 
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
         matching_params = params["matching"].copy()
         matching_params["waveform_extractor"] = we
-        matching_params.update({"noise_levels": noise_levels})
 
         matching_job_params = job_kwargs.copy()
         for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:

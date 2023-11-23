@@ -6,6 +6,7 @@ from typing import List, Optional, Union
 import numpy as np
 
 from .base import BaseExtractor, BaseSegment
+from .sorting_tools import spike_vector_to_spike_trains
 from .waveform_tools import has_exceeding_spikes
 
 
@@ -130,9 +131,11 @@ class BaseSorting(BaseExtractor):
             else:
                 spike_frames = self._cached_spike_trains[segment_index][unit_id]
             if start_frame is not None:
-                spike_frames = spike_frames[spike_frames >= start_frame]
+                start = np.searchsorted(spike_frames, start_frame)
+                spike_frames = spike_frames[start:]
             if end_frame is not None:
-                spike_frames = spike_frames[spike_frames < end_frame]
+                end = np.searchsorted(spike_frames, end_frame)
+                spike_frames = spike_frames[:end]
         else:
             segment = self._sorting_segments[segment_index]
             spike_frames = segment.get_unit_spike_train(
@@ -267,37 +270,59 @@ class BaseSorting(BaseExtractor):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.count_num_spikes_per_unit()
+        return self.count_num_spikes_per_unit(outputs="dict")
 
-    def count_num_spikes_per_unit(self) -> dict:
+    def count_num_spikes_per_unit(self, outputs="dict"):
         """
         For each unit : get number of spikes  across segments.
 
+        Parameters
+        ----------
+        outputs: "dict" | "array", default: "dict"
+            Control the type of the returned object: a dict (keys are unit_ids) or an numpy array.
+
         Returns
         -------
-        dict
-            Dictionary with unit_ids as key and number of spikes as values
+        dict or numpy.array
+            Dict : Dictionary with unit_ids as key and number of spikes as values
+            Numpy array : array of size len(unit_ids) in the same order as unit_ids.
         """
-        num_spikes = {}
+        num_spikes = np.zeros(self.unit_ids.size, dtype="int64")
 
-        if self._cached_spike_trains is not None:
-            for unit_id in self.unit_ids:
-                n = 0
+        # speed strategy by order
+        # 1. if _cached_spike_trains have all units then use it
+        # 2. if _cached_spike_vector is not non use it
+        # 3. loop with get_unit_spike_train
+
+        # check if all spiketrains are cached
+        if len(self._cached_spike_trains) == self.get_num_segments():
+            all_spiketrain_are_cached = True
+            for segment_index in range(self.get_num_segments()):
+                if len(self._cached_spike_trains[segment_index]) != self.unit_ids.size:
+                    all_spiketrain_are_cached = False
+                    break
+        else:
+            all_spiketrain_are_cached = False
+
+        if all_spiketrain_are_cached or self._cached_spike_vector is None:
+            # case 1 or 3
+            for unit_index, unit_id in enumerate(self.unit_ids):
                 for segment_index in range(self.get_num_segments()):
                     st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                    n += st.size
-                num_spikes[unit_id] = n
-        else:
+                    num_spikes[unit_index] += st.size
+        elif self._cached_spike_vector is not None:
+            # case 2
             spike_vector = self.to_spike_vector()
             unit_indices, counts = np.unique(spike_vector["unit_index"], return_counts=True)
-            for unit_index, unit_id in enumerate(self.unit_ids):
-                if unit_index in unit_indices:
-                    idx = np.argmax(unit_indices == unit_index)
-                    num_spikes[unit_id] = counts[idx]
-                else:  # This unit has no spikes, hence it's not in the counts array.
-                    num_spikes[unit_id] = 0
+            num_spikes[unit_indices] = counts
 
-        return num_spikes
+        if outputs == "array":
+            return num_spikes
+        elif outputs == "dict":
+            num_spikes = dict(zip(self.unit_ids, num_spikes))
+            return num_spikes
+        else:
+            raise ValueError("count_num_spikes_per_unit() output must be 'dict' or 'array'")
 
     def count_total_num_spikes(self) -> int:
         """
@@ -409,7 +434,6 @@ class BaseSorting(BaseExtractor):
     def get_all_spike_trains(self, outputs="unit_id"):
         """
         Return all spike trains concatenated.
-
         This is deprecated and will be removed in spikeinterface 0.102 use sorting.to_spike_vector() instead
         """
 
@@ -444,6 +468,33 @@ class BaseSorting(BaseExtractor):
 
             spikes.append((spike_times, spike_labels))
         return spikes
+
+    def precompute_spike_trains(self, from_spike_vector=None):
+        """
+        Pre-computes and caches all spike trains for this sorting
+
+
+
+        Parameters
+        ----------
+        from_spike_vector: None | bool, default: None
+            If None, then it is automatic depending on whether the spike vector is cached.
+            If True, will compute it from the spike vector.
+            If False, will call `get_unit_spike_train` for each segment for each unit.
+        """
+        unit_ids = self.unit_ids
+
+        if from_spike_vector is None:
+            # if spike vector is cached then use it
+            from_spike_vector = self._cached_spike_vector is not None
+
+        if from_spike_vector:
+            self._cached_spike_trains = spike_vector_to_spike_trains(self.to_spike_vector(concatenated=False), unit_ids)
+
+        else:
+            for segment_index in range(self.get_num_segments()):
+                for unit_id in unit_ids:
+                    self.get_unit_spike_train(unit_id, segment_index=segment_index, use_cache=True)
 
     def to_spike_vector(self, concatenated=True, extremum_channel_inds=None, use_cache=True):
         """

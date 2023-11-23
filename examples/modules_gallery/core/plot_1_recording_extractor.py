@@ -26,7 +26,7 @@ import spikeinterface.extractors as se
 
 num_channels = 7
 sampling_frequency = 30000.  # in Hz
-durations = [10., 15.]  #  in s for 2 segments
+durations = [10., 15.]  # in s for 2 segments
 num_segments = 2
 num_timepoints = [int(sampling_frequency * d) for d in durations]
 
@@ -38,7 +38,7 @@ traces0 = np.random.normal(0, 10, (num_timepoints[0], num_channels))
 traces1 = np.random.normal(0, 10, (num_timepoints[1], num_channels))
 
 ##############################################################################
-# And instantiate a :py:class:`~spikeinterface.core.NumpyRecording`. Each object has a pretty print to
+# And instantiate a :py:class:`~spikeinterface.core.NumpyRecording`. Each object has a pretty print to
 # summarize its content:
 
 recording = se.NumpyRecording(traces_list=[traces0, traces1], sampling_frequency=sampling_frequency)
@@ -47,24 +47,28 @@ print(recording)
 ##############################################################################
 # We can now print properties that the :code:`RecordingExtractor` retrieves from the underlying recording.
 
-print('Num. channels = {}'.format(len(recording.get_channel_ids())))
-print('Sampling frequency = {} Hz'.format(recording.get_sampling_frequency()))
-print('Num. timepoints seg0= {}'.format(recording.get_num_segments()))
-print('Num. timepoints seg0= {}'.format(recording.get_num_frames(segment_index=0)))
-print('Num. timepoints seg1= {}'.format(recording.get_num_frames(segment_index=1)))
+print(f'Number of channels = {recording.get_channel_ids()}')
+print(f'Sampling frequency = {recording.get_sampling_frequency()} Hz')
+print(f'Number of segments= {recording.get_num_segments()}')
+print(f'Number of timepoints in seg0= {recording.get_num_frames(segment_index=0)}')
+print(f'Number of timepoints in seg1= {recording.get_num_frames(segment_index=1)}')
 
 ##############################################################################
-# The geometry of the Probe is handle with the :probeinterface:`ProbeInterface <>`.
-# Let's generate a linear probe:
+# The geometry of the Probe is handled with the :probeinterface:`ProbeInterface <>` library.
+# Let's generate a linear probe by specifying our number of electrodes/contacts (num_elec)
+# the distance between the contacts (ypitch), their shape (contact_shapes) and their size
+# (contact_shape_params):
 
 from probeinterface import generate_linear_probe
 from probeinterface.plotting import plot_probe
 
 probe = generate_linear_probe(num_elec=7, ypitch=20, contact_shapes='circle', contact_shape_params={'radius': 6})
 
-# the probe has to be wired to the recording
+# the probe has to be wired to the recording device (i.e., which electrode corresponds to an entry in the data
+# matrix)
 probe.set_device_channel_indices(np.arange(7))
 
+# then we need to actually set the probe to the recording object
 recording = recording.set_probe(probe)
 plot_probe(probe)
 
@@ -76,14 +80,14 @@ se.BinaryRecordingExtractor.write_recording(recording, file_paths)
 
 ##############################################################################
 # We can read the written recording back with the proper extractor.
-# Note that this new recording is now "on disk" and not "in memory" as the Numpy recording.
-# This means that the loading is "lazy" and the data are not loaded in memory.
+# Note that this new recording is now "on disk" and not "in memory" as the Numpy recording was.
+# This means that the loading is "lazy" and the data are not loaded into memory.
 
 recording2 = se.BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=traces0.dtype)
 print(recording2)
 
 ##############################################################################
-#  Loading traces in memory is done on demand:
+#  Loading traces in memory is done on demand:
 
 # entire segment 0
 traces0 = recording2.get_traces(segment_index=0)
@@ -93,8 +97,8 @@ print(traces0.shape)
 print(traces1_short.shape)
 
 ##############################################################################
-# A recording internally has :code:`channel_ids`: these are a vector that can have
-# dtype int or str:
+# Internally, a recording has :code:`channel_ids`: that are a vector that can have a
+# dtype of :code:`int` or :code:`str`:
 
 print('chan_ids (dtype=int):', recording.get_channel_ids())
 
@@ -111,7 +115,7 @@ traces = recording3.get_traces(segment_index=1, end_frame=50, channel_ids=['a', 
 print(traces.shape)
 
 ##############################################################################
-# You can also get a a recording with a subset of channel (a channel slice):
+# You can also get a recording with a subset of channels (i.e. a channel slice):
 
 recording4 = recording3.channel_slice(channel_ids=['a', 'c', 'e'])
 print(recording4)
@@ -136,7 +140,7 @@ print(recordings[2].get_channel_ids())
 ###############################################################################
 # A recording can be "dumped" (exported) to:
 #  * a dict
-#  * a json file
+#  * a json file
 #  * a pickle file
 #
 # The "dump" operation is lazy, i.e., the traces are not exported.
@@ -164,7 +168,7 @@ print(recording2_loaded)
 #
 # If you wish to also store the traces in a compact way you need to use the
 # :code:`save()` function. This operation is very useful to save traces obtained
-# after long computation (e.g. filtering):
+# after long computations (e.g. filtering or referencing):
 
 recording2.save(folder='./my_recording')
 

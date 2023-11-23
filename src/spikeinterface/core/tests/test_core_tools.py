@@ -1,13 +1,19 @@
 import platform
 from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
+import importlib
 
 import pytest
 import numpy as np
 
-from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
+from spikeinterface.core.core_tools import (
+    write_binary_recording,
+    write_memory_recording,
+    recursive_path_modifier,
+)
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 from spikeinterface.core.generate import NoiseGeneratorRecording
+from spikeinterface.core.numpyextractors import NumpySorting
 
 
 if hasattr(pytest, "global_test_folder"):
