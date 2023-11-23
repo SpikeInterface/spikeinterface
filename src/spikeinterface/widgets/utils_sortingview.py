@@ -76,7 +76,7 @@ def generate_unit_table_view(sorting, unit_properties=None, similarity_scores=No
             for prop_name in valid_unit_properties:
                 property_values = sorting.get_property(prop_name)
                 val0 = np.array(property_values[0])
-                if val0.dtype.kind in "iufb":
+                if val0.dtype.kind == "f":
                     if np.isnan(property_values[ui]):
                         continue
                 values[prop_name] = property_values[ui]
