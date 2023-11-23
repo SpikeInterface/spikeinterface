@@ -51,6 +51,7 @@ class RandomProjectionClustering:
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "shared_memory": True,
         "tmp_folder": None,
+        "debug": False,
         "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
     }
 
