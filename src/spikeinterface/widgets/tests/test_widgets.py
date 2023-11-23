@@ -150,10 +150,13 @@ class TestWidgets(unittest.TestCase):
                 )
 
     def test_plot_unit_templates(self):
-        possible_backends = list(sw.UnitWaveformsWidget.get_possible_backends())
+        possible_backends = list(sw.UnitTemplatesWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_unit_templates(self.we_dense, backend=backend, **self.backend_kwargs[backend])
+                print(f"Testing backend {backend}")
+                sw.plot_unit_templates(
+                    self.we_dense, backend=backend, templates_percentile_shading=None, **self.backend_kwargs[backend]
+                )
                 unit_ids = self.sorting.unit_ids[:6]
                 sw.plot_unit_templates(
                     self.we_dense,
@@ -162,13 +165,70 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
+                # test different shadings
+                sw.plot_unit_templates(
+                    self.we_sparse,
+                    sparsity=self.sparsity_best,
+                    unit_ids=unit_ids,
+                    templates_percentile_shading=None,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                sw.plot_unit_templates(
+                    self.we_sparse,
+                    sparsity=self.sparsity_best,
+                    unit_ids=unit_ids,
+                    templates_percentile_shading=None,
+                    scale=10,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                # test different shadings
                 sw.plot_unit_templates(
                     self.we_sparse,
                     sparsity=self.sparsity_best,
                     unit_ids=unit_ids,
                     backend=backend,
+                    templates_percentile_shading=None,
+                    shade_templates=False,
                     **self.backend_kwargs[backend],
                 )
+                sw.plot_unit_templates(
+                    self.we_sparse,
+                    sparsity=self.sparsity_best,
+                    unit_ids=unit_ids,
+                    templates_percentile_shading=5,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                sw.plot_unit_templates(
+                    self.we_sparse,
+                    sparsity=self.sparsity_best,
+                    unit_ids=unit_ids,
+                    templates_percentile_shading=[10, 90],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                if backend != "sortingview":
+                    sw.plot_unit_templates(
+                        self.we_sparse,
+                        sparsity=self.sparsity_best,
+                        unit_ids=unit_ids,
+                        templates_percentile_shading=[1, 5, 25, 75, 95, 99],
+                        backend=backend,
+                        **self.backend_kwargs[backend],
+                    )
+                else:
+                    # sortingview doesn't support more than 2 shadings
+                    with self.assertRaises(AssertionError):
+                        sw.plot_unit_templates(
+                            self.we_sparse,
+                            sparsity=self.sparsity_best,
+                            unit_ids=unit_ids,
+                            templates_percentile_shading=[1, 5, 25, 75, 95, 99],
+                            backend=backend,
+                            **self.backend_kwargs[backend],
+                        )
 
     def test_plot_unit_waveforms_density_map(self):
         possible_backends = list(sw.UnitWaveformDensityMapWidget.get_possible_backends())
@@ -423,7 +483,7 @@ if __name__ == "__main__":
     # mytest.test_plot_traces()
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
-    # mytest.test_plot_unit_templates()
+    mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
@@ -439,6 +499,6 @@ if __name__ == "__main__":
     # mytest.test_plot_rasters()
     # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_unit_presence()
-    mytest.test_plot_multicomparison()
+    # mytest.test_plot_multicomparison()
 
     plt.show()

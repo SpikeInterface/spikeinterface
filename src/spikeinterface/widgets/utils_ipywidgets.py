@@ -304,7 +304,7 @@ class ScaleWidget(W.VBox):
         self.plus_selector.on_click(self.plus_clicked)
         self.minus_selector.on_click(self.minus_clicked)
 
-        self.value = 1.0
+        self.value = value
         super(W.VBox, self).__init__(
             children=[self.plus_selector, self.scale_label, self.minus_selector],
             #  layout=W.Layout(align_items="center", width="100%", height="100%"),
@@ -340,10 +340,10 @@ class UnitSelector(W.VBox):
             options=self.unit_ids,
             value=self.unit_ids,
             disabled=False,
-            layout=W.Layout(height="100%", width="2cm"),
+            layout=W.Layout(height="100%", width="80%", align="center"),
         )
 
-        super(W.VBox, self).__init__(children=[label, self.selector], layout=W.Layout(align_items="center"), **kwargs)
+        super(W.VBox, self).__init__(children=[label, self.selector], **kwargs)
 
         self.selector.observe(self.on_selector_changed, names=["value"], type="change")
 

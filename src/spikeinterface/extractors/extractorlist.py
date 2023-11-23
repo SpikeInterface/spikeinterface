@@ -13,6 +13,7 @@ from spikeinterface.core import (
     ZarrRecordingExtractor,
     read_binary,
     read_zarr,
+    read_npz_sorting,
 )
 
 # sorting/recording/event from neo
