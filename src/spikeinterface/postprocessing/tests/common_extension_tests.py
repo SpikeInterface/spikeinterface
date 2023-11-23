@@ -23,7 +23,7 @@ class WaveformExtensionCommonTestSuite:
     extension_data_names = []
     extension_function_kwargs_list = None
 
-    # this flag enable to check that all backend have the same contents
+    # this flag enables us to check that all backends have the same contents
     exact_same_content = True
 
     def setUp(self):

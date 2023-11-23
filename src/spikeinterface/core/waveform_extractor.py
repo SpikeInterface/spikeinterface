@@ -1864,11 +1864,11 @@ class BaseWaveformExtractorExtension:
 
     @property
     def waveform_extractor(self):
-        # Important : to avoid that WaveformExtractor reference a BaseWaveformExtractorExtension
-        # and BaseWaveformExtractorExtension reference a WaveformExtractor
-        # we need a weakref. Otherwise the garbage collecor is not working properly
-        # and so the WaveformExtractor + its recordsing are still alive even after deleting explicitly
-        # the WaveformExtractor which make impossible to delete folder!
+        # Important : to avoid the WaveformExtractor referencing a BaseWaveformExtractorExtension
+        # and BaseWaveformExtractorExtension referencing a WaveformExtractor
+        # we need a weakref. Otherwise the garbage collector is not working properly
+        # and so the WaveformExtractor + its recording are still alive even after deleting explicitly
+        # the WaveformExtractor which makes it impossible to delete the folder!
         we = self._waveform_extractor()
         if we is None:
             raise ValueError(f"The extension {self.extension_name} has lost its WaveformExtractor")
@@ -1941,10 +1941,10 @@ class BaseWaveformExtractorExtension:
                 if ext_data_file.suffix == ".json":
                     ext_data = json.load(ext_data_file.open("r"))
                 elif ext_data_file.suffix == ".npy":
-                    # The lazy loading loading of extension is complicated because if we compute again
-                    # and have a link to the old buffer in window then it fails
-                    #ext_data = np.load(ext_data_file, mmap_mode="r")
-                    # so go back to full loading
+                    # The lazy loading of an extension is complicated because if we compute again
+                    # and have a link to the old buffer on windows then it fails
+                    # ext_data = np.load(ext_data_file, mmap_mode="r")
+                    # so we go back to full loading
                     ext_data = np.load(ext_data_file)
                 elif ext_data_file.suffix == ".csv":
                     import pandas as pd
