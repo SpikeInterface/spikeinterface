@@ -116,7 +116,7 @@ def remove_redundant_units(
             else:
                 remove_unit_ids.append(u2)
     elif remove_strategy == "max_spikes":
-        num_spikes = sorting.count_num_spikes_per_unit()
+        num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
         for u1, u2 in redundant_unit_pairs:
             if num_spikes[u1] < num_spikes[u2]:
                 remove_unit_ids.append(u1)

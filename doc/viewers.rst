@@ -16,7 +16,7 @@ spikeinterface.widgets
 
 The easiest way to visualize :code:`spikeinterface` objects is to use the :code:`widgets` module for plotting.
 You can find an extensive description in the module documentation :ref:`modulewidgets`
-and many examples in this tutorial :ref:`sphx_glr_modules_gallery_widgets`.
+and many examples in the :code:`Widgets tutorials` section of the :code:`Modules example gallery`.
 
 spikeinterface-gui
 ------------------
@@ -24,7 +24,7 @@ spikeinterface-gui
 `spikeinterface-gui <https://github.com/SpikeInterface/spikeinterface-gui>`_ is a local desktop application
 which is built on top of :code:`spikeinterface`.
 
-It is the easiest and fastest way to inspect interactively a spike sorting output.
+It is the easiest and fastest way to interactively inspect a spike sorting output.
 It's easy to install and ready to use!
 
 Authors: Samuel Garcia
@@ -44,6 +44,7 @@ phy
 ---
 
 `phy <https://github.com/cortex-lab/phy>`_ is the de-facto standard tool for manual curation of a sorting output.
-The current drawback of :code:`phy` is that the dataset (including filtered signals and **all** waveforms of spikes) has to be copied in a separate folder and this is very time consuming process and occupies a lot of disk space.
+The current drawback of :code:`phy` is that the dataset (including filtered signals and **all** waveforms of spikes) has to be copied
+in a separate folder and this is very time consuming process and occupies a lot of disk space.
 
 Author : Cyrill Rossant

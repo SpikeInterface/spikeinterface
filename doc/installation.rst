@@ -14,7 +14,7 @@ To install the current release version, you can use:
 
 The :code:`[full]` option installs all the extra dependencies for all the different sub-modules.
 
-Note that if using Z shell (:code:`zsh` - the default shell on mac), you will need to use quotes (:code:`pip install "spikeinterface[full]"`).
+Note that if using Z shell (:code:`zsh` - the default shell on macOS), you will need to use quotes (:code:`pip install "spikeinterface[full]"`).
 
 
 To install all interactive widget backends, you can use:
@@ -63,14 +63,14 @@ as :code:`spikeinterface` strongly relies on these packages to interface with va
 
 
 It is also sometimes useful to have local copies of :code:`neo` and :code:`probeinterface` to make changes to the code. To achieve this, repeat the first set of commands,
-replacing `https://github.com/SpikeInterface/spikeinterface.git` with the appropriate repository in the first code block of this section.
+replacing :code:`https://github.com/SpikeInterface/spikeinterface.git` with the appropriate repository in the first code block of this section.
 
 For beginners
 -------------
 
 We provide some installation tips for beginners in Python here:
 
-https://github.com/SpikeInterface/spikeinterface/tree/master/installation_tips
+https://github.com/SpikeInterface/spikeinterface/tree/main/installation_tips
 
 
 
@@ -89,12 +89,16 @@ Requirements
 Sub-modules have more dependencies, so you should also install:
 
   * zarr
+  * h5py
   * scipy
   * pandas
   * xarray
-  * sklearn
+  * scikit-learn
   * networkx
   * matplotlib
+  * numba
+  * distinctipy
+  * cuda-python (for non-macOS users)
 
 
 All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`)
