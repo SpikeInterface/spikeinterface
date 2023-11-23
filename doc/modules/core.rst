@@ -22,41 +22,10 @@ All classes support:
   * multiple segments, where each segment is a contiguous piece of data (recording, sorting, events).
 
 
-Import rules
-------------
-
-Importing the SpikeInterface module
-
-.. code-block:: python
-
-    import spikeinterface as si
-
-will only import the :code:`core` module. Other submodules must be imported separately:
-
-.. code-block:: python
-
-    import spikeinterface.extractors as se
-    import spikeinterface.sorters as ss
-    import spikeinterface.widgets as sw
-
-
-A second option is to import the SpikeInterface package in :code:`full` mode:
-
-.. code-block:: python
-
-    import spikeinterface.full as si
-
-This import statement will import all of SpikeInterface modules as a flattened module.
-Note that importing :code:`spikeinterface.full` will take a few extra seconds, because some modules use
-just-in-time :code:`numba` compilation performed at the time of import.
-We recommend this approach to advanced users, since it requires a deeper knowledge of the API.
-
-
-
 Recording
 ---------
 
-The :py:class:`~spikeinterface.core.BaseRecording` class serves as basis for all
+The :py:class:`~spikeinterface.core.BaseRecording` class serves as the basis for all
 :code:`Recording` classes.
 It interfaces with the raw traces and has the following features:
 
@@ -86,7 +55,7 @@ with 16 channels:
 
     # retrieve raw traces between frames 100 and 200
     traces = recording.get_traces(start_frame=100, end_frame=200, segment_index=0)
-    # retrieve raw traces only for the first 4 of the channels
+    # retrieve raw traces only for the first 4 channels
     traces_slice = recording.get_traces(start_frame=100, end_frame=200, segment_index=0,
                                         channel_ids=channel_ids[:4])
     # retrieve traces after scaling to uV
@@ -119,7 +88,7 @@ with 16 channels:
     # 'recording_by_group' is a dict with group as keys (0,1,2,3) and channel
     # sliced recordings as values
 
-    # set times (for synchronization) - assume out times start at 300 seconds
+    # set times (for synchronization) - assume our times start at 300 seconds
     timestamps = np.arange(num_samples) / sampling_frequency + 300
     recording.set_times(timestamps, segment_index=0)
 
@@ -127,7 +96,7 @@ with 16 channels:
 Sorting
 -------
 
-The :py:class:`~spikeinterface.core.BaseSorting` class serves as basis for all :code:`Sorting` classes.
+The :py:class:`~spikeinterface.core.BaseSorting` class serves as the basis for all :code:`Sorting` classes.
 It interfaces with a spike-sorted output and has the following features:
 
 * retrieve spike trains of different units
@@ -143,14 +112,14 @@ with 10 units:
 
 .. code-block:: python
 
-    unit_ids = sorting.channel_ids
+    unit_ids = sorting.unit_ids
     num_channels = sorting.get_num_units()
     sampling_frequency = sorting.sampling_frequency
 
     # retrieve spike trains for a unit (returned as sample indices)
     unit0 = unit_ids[0]
     spike_train = sorting.get_unit_spike_train(unit_id=unit0, segment_index=0)
-    # retrieve spikes between 100 and 200
+    # retrieve spikes between frames 100 and 200
     spike_train_slice = sorting.get_unit_spike_train(unit_id=unit0,
                                                      start_frame=100, end_frame=200,
                                                      segment_index=0)
@@ -167,13 +136,13 @@ with 10 units:
     sorting.annotate(date="Spike sorted today")
     sorting.get_annotation(key="date")
 
-    # get new sorting with the first 10s of spike trains
+    # get new sorting within the first 10s of the spike trains
     sorting_slice_frames = sorting.frame_slice(start_frame=0,
                                                end_frame=int(10*sampling_frequency))
-    # get new sorting with the first 4 units
+    # get new sorting with only the first 4 units
     sorting_select_units = sorting.select_units(unit_ids=unit_ids[:4])
 
-    # register 'recording' from previous and get spike trains in seconds
+    # register 'recording' from the previous example and get the spike trains in seconds
     sorting.register_recording(recording)
     spike_train_s = sorting.get_unit_spike_train(unit_id=unit0, segment_index=0,
                                                  return_times=True)
@@ -183,10 +152,10 @@ with 10 units:
 
 
 Internally, any sorting object can construct 2 internal caches:
-  1. a list (per segment) of dict (per unit) of numpy.array. This cache is usefull when accessing spiketrains unit
-     per unit across segments.
-  2. a unique numpy.array with structured dtype aka "spikes vector". This is usefull for processing by small chunk of
-     time, like extract amplitudes from a recording.
+  1. a list (per segment) of dict (per unit) of numpy.array. This cache is useful when accessing spike trains on a unit
+     per unit basis across segments.
+  2. a unique numpy.array with structured dtype aka "spikes vector". This is useful for processing by small chunks of
+     time, like for extracting amplitudes from a recording.
 
 
 WaveformExtractor
@@ -194,12 +163,12 @@ WaveformExtractor
 
 The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core object to combine a
 :py:class:`~spikeinterface.core.BaseRecording` and a :py:class:`~spikeinterface.core.BaseSorting` object.
-Waveforms are very important for additional analysis, and the basis of several postprocessing and quality metrics
+Waveforms are very important for additional analyses, and the basis of several postprocessing and quality metrics
 computations.
 
 The :py:class:`~spikeinterface.core.WaveformExtractor` allows us to:
 
-* extract and waveforms
+* extract waveforms
 * sub-sample spikes for waveform extraction
 * compute templates (i.e. average extracellular waveforms) with different modes
 * save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_) for easy retrieval
@@ -215,16 +184,28 @@ Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be s
 .. code-block:: python
 
     # extract dense waveforms on 500 spikes per unit
-    we = extract_waveforms(recording, sorting, folder="waveforms",
-                           max_spikes_per_unit=500)
+    we = extract_waveforms(recording=recording,
+                           sorting=sorting,
+                           sparse=False,
+                           folder="waveforms",
+                           max_spikes_per_unit=500
+                           overwrite=True)
     # same, but with parallel processing! (1s chunks processed by 8 jobs)
     job_kwargs = dict(n_jobs=8, chunk_duration="1s")
-    we = extract_waveforms(recording, sorting, folder="waveforms_par",
-                           max_spikes_per_unit=500, overwrite=True,
+    we = extract_waveforms(recording=recording,
+                           sorting=sorting,
+                           sparse=False,
+                           folder="waveforms_parallel",
+                           max_spikes_per_unit=500,
+                           overwrite=True,
                            **job_kwargs)
     # same, but in-memory
-    we_mem = extract_waveforms(recording, sorting, folder=None,
-                               mode="memory", max_spikes_per_unit=500,
+    we_mem = extract_waveforms(recording=recording,
+                               sorting=sorting,
+                               sparse=False,
+                               folder=None,
+                               mode="memory",
+                               max_spikes_per_unit=500,
                                **job_kwargs)
 
     # load pre-computed waveforms
@@ -243,13 +224,16 @@ Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be s
     template_stds = we.get_all_templates(mode="std")
 
     # save to Zarr
-    we_zarr = we.save(folder="waveforms.zarr", format="zarr")
+    we_zarr = we.save(folder="waveforms_zarr", format="zarr")
 
     # extract sparse waveforms (see Sparsity section)
-    # this will use 50 spike per unit to estimate the sparsity of 40um radius for each unit
-    we_sparse = extract_waveforms(recording, sorting, folder="waveforms_sparse",
-                                  max_spikes_per_unit=500, sparse=True,
-                                  method="radius", radius_um=40,
+    # this will use 50 spikes per unit to estimate the sparsity within a 40um radius from that unit
+    we_sparse = extract_waveforms(recording=recording,
+                                  sorting=sorting,
+                                  folder="waveforms_sparse",
+                                  max_spikes_per_unit=500,
+                                  method="radius",
+                                  radius_um=40,
                                   num_spikes_for_sparsity=50)
 
 
@@ -265,11 +249,14 @@ In order to make a waveform folder portable (e.g. copied to another location or 
     # save the sorting object in the "processed" folder
     sorting = sorting.save(folder=processed_folder / "sorting")
     # extract waveforms using relative paths
-    we = extract_waveforms(recording, sorting, folder=processed_folder / "waveforms",
+    we = extract_waveforms(recording=recording,
+                           sorting=sorting,
+                           folder=processed_folder / "waveforms",
                            use_relative_path=True)
     # the "processed" folder is now portable, and the waveform extractor can be reloaded
     # from a different location/machine (without loading the recording)
-    we_loaded = si.load_waveforms(processed_folder / "waveforms", with_recording=False)
+    we_loaded = si.load_waveforms(folder=processed_folder / "waveforms",
+                                  with_recording=False)
 
 
 Event
@@ -278,7 +265,7 @@ Event
 The :py:class:`~spikeinterface.core.BaseEvent` class serves as basis for all :code:`Event` classes.
 It allows one to retrieve events and epochs (e.g. TTL pulses).
 Internally, events are represented as numpy arrays with a structured dtype. The structured dtype
-must contain the :code:`time` field, which represent the event times in seconds. Other fields are
+must contain the :code:`time` field, which represents the event times in seconds. Other fields are
 optional.
 
 Here we assume :code:`event` is a :py:class:`~spikeinterface.core.BaseEvent` object
@@ -313,7 +300,7 @@ threshold and only record the times at which a peak was detected and the wavefor
 the peak.
 
 **NOTE**: while we support this class (mainly for legacy formats), this approach is a bad practice
-and highly discouraged! Most modern spike sorters, in fact, require the raw traces to perform
+and is highly discouraged! Most modern spike sorters, in fact, require the raw traces to perform
 template matching to recover spikes!
 
 Here we assume :code:`snippets` is a :py:class:`~spikeinterface.core.BaseSnippets` object
@@ -374,9 +361,9 @@ The probe has 4 shanks, which can be loaded as separate groups (and spike sorted
 
     # set probe
     recording_w_probe = recording.set_probe(probe)
-    # set probe with group info
+    # set probe with group info and return a new recording object
     recording_w_probe = recording.set_probe(probe, group_mode="by_shank")
-    # set probe in place
+    # set probe in place, ie, modify the current recording
     recording.set_probe(probe, group_mode="by_shank", in_place=True)
 
     # retrieve probe
@@ -401,11 +388,16 @@ probes, such as Neuropixels, because the waveforms of a unit will only appear on
 Sparsity is defined as the subset of channels on which waveforms (and related information) are defined. Of course,
 sparsity is not global, but it is unit-specific.
 
+**NOTE** As of version :code:`0.99.0` the default for a :code:`extract_waveforms()` has `sparse=True`, ie every :code:`waveform_extractor`
+will be sparse by default. Thus for users that wish to have dense waveforms they must set `sparse=False`. Keyword arguments
+can still be input into the :code:`extract_wavforms()` to generate the desired sparsity as explained below.
+
 Sparsity can be computed from a :py:class:`~spikeinterface.core.WaveformExtractor` object with the
 :py:func:`~spikeinterface.core.compute_sparsity` function:
 
 .. code-block:: python
 
+    # in this case 'we' should be a dense waveform_extractor
     sparsity = compute_sparsity(we, method="radius", radius_um=40)
 
 The returned :code:`sparsity` is a :py:class:`~spikeinterface.core.ChannelSparsity` object, which has convenient
@@ -419,11 +411,11 @@ methods to access the sparsity information in several ways:
 There are several methods to compute sparsity, including:
 
 * | :code:`method="radius"`: selects the channels based on the channel locations. For example, using a
-  | :code:`radius_um=40`, will select, for each unit, the channels which are whithin 40um of the channel with the
-  | largest amplitude (*extremum channel*). **This is the recommended method for high-density probes**
+  | :code:`radius_um=40`, will select, for each unit, the channels which are within 40um of the channel with the
+  | largest amplitude (*the extremum channel*). **This is the recommended method for high-density probes**
 * | :code:`method="best_channels"`:  selects the best :code:`num_channels` channels based on their amplitudes. Note that
   | in this case the selected channels might not be close to each other.
-* | :code:`method="threshold"`: selects channels based on an SNR threshold (:code:`threshold` argument)
+* | :code:`method="threshold"`: selects channels based on an SNR threshold (given by the :code:`threshold` argument)
 * | :code:`method="by_property"`: selects channels based on a property, such as :code:`group`. This method is recommended
   | when working with tetrodes.
 
@@ -432,7 +424,7 @@ The computed sparsity can be used in several postprocessing and visualization fu
 
 .. code-block:: python
 
-    we_sparse = we.save(we, sparsity=sparsity, folder="waveforms_sparse")
+    we_sparse = we.save(waveform_extractor=we, sparsity=sparsity, folder="waveforms_sparse")
 
 The :code:`we_sparse` object will now have an associated sparsity (:code:`we.sparsity`), which is automatically taken
 into consideration for downstream analysis (with the :py:meth:`~spikeinterface.core.WaveformExtractor.is_sparse`
@@ -460,10 +452,12 @@ and annotations associated to the object.
 The save function also supports parallel processing to speed up the writing process.
 
 From a SpikeInterface folder, the saved object can be reloaded with the :code:`load_extractor()` function.
-This saving/loading features enables to store SpikeInterface objects efficiently and to distribute processing.
+This saving/loading features enables us to store SpikeInterface objects efficiently and to distribute processing.
 
 .. code-block:: python
 
+    # n_jobs is related to the number of processors you want to use
+    # n_jobs=-1 indicates to use all available
     job_kwargs = dict(n_jobs=8, chunk_duration="1s")
     # save recording to folder in binary (default) format
     recording_bin = recording.save(folder="recording", **job_kwargs)
@@ -475,7 +469,7 @@ This saving/loading features enables to store SpikeInterface objects efficiently
     sorting_saved = sorting.save(folder="sorting")
 
 **NOTE:** the Zarr format by default applies data compression with :code:`Blosc.Zstandard` codec with BIT shuffling.
-Any other Zarr-compatible compressor and filters can be applied using the :code:`compressor` and :code:`filters`
+Any other Zarr-compatible compressors and filters can be applied using the :code:`compressor` and :code:`filters`
 arguments. For example, in this case we apply `LZMA <https://numcodecs.readthedocs.io/en/stable/lzma.html>`_
 and use a `Delta <https://numcodecs.readthedocs.io/en/stable/delta.html>`_ filter:
 
@@ -550,7 +544,7 @@ In order to do this, one can use the :code:`Numpy*` classes, :py:class:`~spikein
 but they are not bound to a file.
 
 Also note the class :py:class:`~spikeinterface.core.SharedMemorySorting` which is very similar to
-Similar to :py:class:`~spikeinterface.core.NumpySorting` but with an unerlying SharedMemory which is usefull for
+Similar to :py:class:`~spikeinterface.core.NumpySorting` but with an underlying SharedMemory which is useful for
 parallel computing.
 
 In this example, we create a recording and a sorting object from numpy objects:
@@ -585,14 +579,14 @@ In this example, we create a recording and a sorting object from numpy objects:
 
 
 Any sorting object can be transformed into a :py:class:`~spikeinterface.core.NumpySorting` or
-:py:class:`~spikeinterface.core.SharedMemorySorting` easily like this
+:py:class:`~spikeinterface.core.SharedMemorySorting` easily like this:
 
 .. code-block:: python
 
     # turn any sortinto into NumpySorting
-    soring_np = sorting.to_numpy_sorting()
+    sorting_np = sorting.to_numpy_sorting()
 
-    # or to SharedMemorySorting for parrallel computing
+    # or to SharedMemorySorting for parallel computing
     sorting_shm = sorting.to_shared_memory_sorting()
 
 
@@ -602,7 +596,7 @@ Manipulating objects: slicing, aggregating
 -------------------------------------------
 
 :py:class:`~spikeinterface.core.BaseRecording` (and :py:class:`~spikeinterface.core.BaseSnippets`)
-and :py:class:`~spikeinterface.core.BaseSorting` objects can be sliced in the time or channel/unit axis.
+and :py:class:`~spikeinterface.core.BaseSorting` objects can be sliced on the time or channel/unit axis.
 
 This operations are completely lazy, as there is no data duplication. After slicing or aggregating,
 the new objects will be a *view* of the original ones.
@@ -611,11 +605,11 @@ the new objects will be a *view* of the original ones.
 
     # here we load a very long recording and sorting
     recording = read_spikeglx('np_folder')
-    sorting =read_kilosrt('ks_folder')
+    sorting =read_kilosort('ks_folder')
 
-    # keep one channel every ten channels
-    keep_ids = rec.channel_ids[::10]
-    sub_recording = rec.channel_slice(channel_ids=keep_ids)
+    # keep one channel of every tenth channel
+    keep_ids = recording.channel_ids[::10]
+    sub_recording = recording.channel_slice(channel_ids=keep_ids)
 
     # keep between 5min and 12min
     fs = recording.sampling_frequency
@@ -641,8 +635,8 @@ We can also aggregate (or stack) multiple sortings on the unit axis using the
 
 .. code-block:: python
 
-    sortingA = read_npz('sortingA.npz')
-    sortingB = read_npz('sortingB.npz')
+    sortingA = read_npz_sorting('sortingA.npz')
+    sortingB = read_npz_sorting('sortingB.npz')
     sorting_20_units = aggregate_units([sortingA, sortingB])
 
 
@@ -706,7 +700,7 @@ object:
   * :py:func:`~spikeinterface.core.get_chunk_with_margin`: gets traces with a left and right margin
   * :py:func:`~spikeinterface.core.get_closest_channels`: returns the :code:`num_channels` closest channels to each specified channel
   * :py:func:`~spikeinterface.core.get_channel_distances`: returns a square matrix with channel distances
-  * :py:func:`~spikeinterface.core.order_channels_by_depth`: gets channel order in depth:
+  * :py:func:`~spikeinterface.core.order_channels_by_depth`: gets channel order in depth
 
 
 Template tools
