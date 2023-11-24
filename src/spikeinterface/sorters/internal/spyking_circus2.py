@@ -45,7 +45,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "shared_memory": True,
         "matched_filtering": False,
-        "job_kwargs": {"n_jobs": 1},
+        "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
     }
 
@@ -196,7 +196,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             precompute_template=["median"],
             mode=mode,
             **waveforms_params,
-            **job_kwargs,
+            **job_kwargs
         )
 
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
