@@ -18,6 +18,7 @@ class UnitsSelectionSorting(BaseSorting):
             unit_ids = parent_sorting.get_unit_ids()
         if renamed_unit_ids is None:
             renamed_unit_ids = unit_ids
+        assert len(renamed_unit_ids) == len(np.unique(renamed_unit_ids)), "renamed_unit_ids must be unique!"
 
         self._parent_sorting = parent_sorting
         self._unit_ids = np.asarray(unit_ids)
