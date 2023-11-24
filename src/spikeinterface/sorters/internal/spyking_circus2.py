@@ -45,7 +45,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "shared_memory": True,
         "matched_filtering": False,
-        "job_kwargs": {"n_jobs": -1},
+        "job_kwargs": {"n_jobs": 1},
         "debug": False,
     }
 
@@ -92,7 +92,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
-        detection_params.update(job_kwargs)
         detection_params["noise_levels"] = noise_levels
         if "exclude_sweep_ms" not in detection_params:
             detection_params["exclude_sweep_ms"] = max(ms_before, ms_after)
@@ -177,7 +176,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We get the templates our of such a clustering
         waveforms_params = params["waveforms"].copy()
-        waveforms_params.update(job_kwargs)
 
         for k in ["ms_before", "ms_after"]:
             waveforms_params[k] = params["general"][k]
@@ -198,6 +196,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             precompute_template=["median"],
             mode=mode,
             **waveforms_params,
+            **job_kwargs
         )
 
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces

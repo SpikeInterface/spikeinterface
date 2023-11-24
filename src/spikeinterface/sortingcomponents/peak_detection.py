@@ -497,9 +497,7 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
 
     @classmethod
     def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, device, return_tensor):
-        sample_inds, chan_inds = _torch_detect_peaks(
-            traces, peak_sign, abs_thresholds, exclude_sweep_size, None, device
-        )
+        sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_thresholds, exclude_sweep_size, None, device)
         if not return_tensor:
             sample_inds = np.array(sample_inds.cpu())
             chan_inds = np.array(chan_inds.cpu())
@@ -581,7 +579,6 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
         return peak_sample_ind, peak_chan_ind
 
-
 class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
     """Detect peaks using the 'locally exclusive' method."""
 
@@ -638,7 +635,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
             raise NotImplementedError("Matched filtering not working with peak_sign=both yet!")
 
         import sklearn.metrics
-
         contact_locations = recording.get_channel_locations()
         nb_templates = len(contact_locations)
 
@@ -677,7 +673,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
     @classmethod
     def get_convolved_traces(cls, traces, temporal, spatial, singular):
         import scipy.signal
-
         num_channels = traces.shape[1]
         num_templates = temporal.shape[1]
         num_sigma = num_templates // num_channels
@@ -702,7 +697,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular
     ):
         assert HAVE_NUMBA, "You need to install numba"
-
         traces = cls.get_convolved_traces(traces, temporal, spatial, singular)
         traces_center = traces[:, exclude_sweep_size:-exclude_sweep_size]
 
@@ -728,6 +722,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         peak_sample_ind += exclude_sweep_size
 
         return peak_sample_ind, peak_chan_ind
+
 
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
@@ -846,6 +841,56 @@ if HAVE_NUMBA:
                         if not peak_mask[s, chan_ind]:
                             break
                     if not peak_mask[s, chan_ind]:
+                        break
+        return peak_mask
+
+    @numba.jit(nopython=True, parallel=False)
+    def _numba_detect_peak_pos_transposed(
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
+    ):
+        num_chans = traces_center.shape[0]
+        for chan_ind in range(num_chans):
+            for s in range(peak_mask.shape[1]):
+                if not peak_mask[chan_ind, s]:
+                    continue
+                for neighbour in range(num_chans):
+                    if not neighbours_mask[chan_ind, neighbour]:
+                        continue
+                    for i in range(exclude_sweep_size):
+                        if chan_ind != neighbour:
+                            peak_mask[chan_ind, s] &= traces_center[chan_ind, s] >= traces_center[neighbour, s]
+                        peak_mask[chan_ind, s] &= traces_center[chan_ind, s] > traces[neighbour, s + i]
+                        peak_mask[chan_ind, s] &= (
+                            traces_center[chan_ind, s] >= traces[neighbour, exclude_sweep_size + s + i + 1]
+                        )
+                        if not peak_mask[chan_ind, s]:
+                            break
+                    if not peak_mask[chan_ind, s]:
+                        break
+        return peak_mask
+
+    @numba.jit(nopython=True, parallel=False)
+    def _numba_detect_peak_neg_transposed(
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
+    ):
+        num_chans = traces_center.shape[0]
+        for chan_ind in range(num_chans):
+            for s in range(peak_mask.shape[1]):
+                if not peak_mask[chan_ind, s]:
+                    continue
+                for neighbour in range(num_chans):
+                    if not neighbours_mask[chan_ind, neighbour]:
+                        continue
+                    for i in range(exclude_sweep_size):
+                        if chan_ind != neighbour:
+                            peak_mask[chan_ind, s] &= traces_center[chan_ind, s] <= traces_center[neighbour, s]
+                        peak_mask[chan_ind, s] &= traces_center[chan_ind, s] < traces[neighbour, s + i]
+                        peak_mask[chan_ind, s] &= (
+                            traces_center[chan_ind, s] <= traces[neighbour, exclude_sweep_size + s + i + 1]
+                        )
+                        if not peak_mask[chan_ind, s]:
+                            break
+                    if not peak_mask[chan_ind, s]:
                         break
         return peak_mask
 
@@ -1231,7 +1276,7 @@ _methods_list = [
     DetectPeakLocallyExclusiveOpenCL,
     DetectPeakByChannelTorch,
     DetectPeakLocallyExclusiveTorch,
-    DetectPeakLocallyExclusiveMatchedFiltering,
+    DetectPeakLocallyExclusiveMatchedFiltering
 ]
 detect_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
