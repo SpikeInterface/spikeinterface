@@ -75,7 +75,9 @@ def test_ChannelSliceRecording():
 
 
 def test_unique_channel_ids():
-    rec = generate_recording(num_channels=4, num_segments=2)
+    durations = [1.0]
+    seed = 10
+    rec = generate_recording(num_channels=4, durations=durations, set_probe=False, seed=seed)
     with pytest.raises(AssertionError):
         rec_sliced = ChannelSliceRecording(rec, channel_ids=[0, 0])
 

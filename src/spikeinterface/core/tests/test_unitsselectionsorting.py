@@ -32,7 +32,8 @@ def test_basic_functions():
 
 
 def test_no_repeated_names():
-    sorting = generate_sorting(num_units=3, durations=[0.100, 0.100], sampling_frequency=30000.0)
+    seed = 10
+    sorting = generate_sorting(num_units=3, durations=[0.100], sampling_frequency=30000.0, seed=seed)
     with pytest.raises(AssertionError):
         sorting2 = UnitsSelectionSorting(sorting, unit_ids=[0, 2], renamed_unit_ids=["a", "a"])
 
