@@ -625,8 +625,14 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance < radius_um
 
+        idx = np.argmax(np.abs(prototype))
         if peak_sign == 'neg':
+            assert prototype[idx] < 0, "Prototype should have a negative peak"
             prototype *= -1
+        elif peak_sign == 'pos':
+            assert prototype[idx] > 0, "Prototype should have a positive peak"
+        elif peak_sign == 'both':
+            raise NotImplementedError("Matched filtering not working with peak_sign=both yet!")
 
         import sklearn.metrics
         contact_locations = recording.get_channel_locations()
