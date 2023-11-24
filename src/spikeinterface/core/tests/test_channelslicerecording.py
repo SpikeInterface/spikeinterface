@@ -74,7 +74,7 @@ def test_ChannelSliceRecording():
     assert np.all(traces3[:, 1] == 2)
 
 
-def test_failre_with_non_unique_channel_ids():
+def test_failure_with_non_unique_channel_ids():
     durations = [1.0]
     seed = 10
     rec = generate_recording(num_channels=4, durations=durations, set_probe=False, seed=seed)
