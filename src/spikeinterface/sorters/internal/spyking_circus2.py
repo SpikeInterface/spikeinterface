@@ -4,7 +4,14 @@ import os
 import shutil
 import numpy as np
 
-from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms, get_channel_distances
+from spikeinterface.core import (
+    NumpySorting,
+    load_extractor,
+    BaseRecording,
+    get_noise_levels,
+    extract_waveforms,
+    get_channel_distances,
+)
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
@@ -38,7 +45,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
-        "matched_filtering" : False,
+        "matched_filtering": False,
         "job_kwargs": {"n_jobs": -1},
         "debug": False,
     }
@@ -83,11 +90,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         recording_f = zscore(recording_f, dtype="float32")
         noise_levels = np.ones(num_channels, dtype=np.float32)
-        
+
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
-        detection_params['noise_levels'] = noise_levels
-        #detection_params.update(job_kwargs)
+        detection_params["noise_levels"] = noise_levels
+        # detection_params.update(job_kwargs)
         if "exclude_sweep_ms" not in detection_params:
             detection_params["exclude_sweep_ms"] = max(ms_before, ms_after)
         if "radius_um" not in detection_params:
@@ -110,7 +117,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             prototype = np.median(prototype, 0)
             detection_params["prototype"] = prototype
             peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params, **job_kwargs)
-        
+
         if verbose:
             print("We found %d peaks in total" % len(peaks))
 
