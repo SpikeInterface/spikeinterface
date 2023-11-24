@@ -608,7 +608,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        sigma_um=25,
+        sigma_um=np.linspace(5, 25, 5),
         rank=5,
         noise_levels=None,
         random_chunk_kwargs={},
@@ -633,10 +633,14 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         nb_templates = len(contact_locations)
 
         dist = sklearn.metrics.pairwise_distances(contact_locations, contact_locations)
-        templates = np.zeros((nb_templates, len(prototype), len(contact_locations)), dtype=np.float32)
-        weights = np.exp(-(dist**2) / (2 * (sigma_um**2)))
-        for count, w in enumerate(weights):
-            templates[count] = w * prototype[:, np.newaxis]
+        templates = np.zeros((nb_templates*len(sigma_um), len(prototype), len(contact_locations)), dtype=np.float32)
+
+        count = 0
+        for sigma in sigma_um:
+            weights = np.exp(-(dist**2) / (2 * (sigma**2)))
+            for w in weights:
+                templates[count] = w * prototype[:, np.newaxis]
+                count += 1
 
         temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
         temporal = temporal[:, :, :rank]
@@ -663,12 +667,18 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
     @classmethod
     def get_convolved_traces(cls, traces, temporal, spatial, singular):
         import scipy.signal
-        num_timesteps, num_channels = traces.shape
-        scalar_products = np.zeros((num_channels, num_timesteps), dtype=np.float32)
+        num_channels = traces.shape[1]
+        num_templates = temporal.shape[1]
+        num_sigma = num_templates // num_channels
+        num_timesteps, num_templates = len(traces), temporal.shape[1]
+        scalar_products = np.zeros((num_templates, num_timesteps), dtype=np.float32)
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
         scaled_filtered_data = spatially_filtered_data * singular
         objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="same")
         scalar_products += np.sum(objective_by_rank, axis=0)
+        if num_sigma > 1:
+            scalar_products = scalar_products.reshape(num_sigma, num_channels, -1)
+            scalar_products = np.mean(scalar_products, axis=0)
         return scalar_products
 
     @classmethod

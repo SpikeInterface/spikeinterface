@@ -91,12 +91,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_f = recording
             recording_f.annotate(is_filtered=True)
 
-        if params['whitening']:
-            recording_f = whiten(recording_f, mode='local', dtype="float32")
-            noise_levels = get_noise_levels(recording_f, return_scaled=False)
-        else:
-            recording_f = zscore(recording_f, dtype="float32")
-            noise_levels = np.ones(num_channels, dtype=np.float32)
+        recording_f = zscore(recording_f, dtype="float32")
+        noise_levels = np.ones(num_channels, dtype=np.float32)
         
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
