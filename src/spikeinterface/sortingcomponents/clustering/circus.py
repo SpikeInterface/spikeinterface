@@ -165,7 +165,6 @@ class CircusClustering:
 
         best_spikes = {}
         nb_spikes = 0
-        max_components = 5
 
         import sklearn
 
