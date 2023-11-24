@@ -508,28 +508,36 @@ class NwbSortingExtractor(BaseSorting):
             "Couldn't load sampling frequency. Please provide it with the " "'sampling_frequency' argument"
         )
 
-        # get all units ids
-
-        # store units properties and spike features to dictionaries
-        properties = dict()
-
-        for column in list(self._nwbfile.units.colnames):
-            if column == "spike_times":
-                continue
-            # if it is unit_property
-            property_values = self._nwbfile.units[column][:]
-
-            # only load columns with same shape for all units
-            if np.all(p.shape == property_values[0].shape for p in property_values):
-                properties[column] = property_values
-            else:
-                print(f"Skipping {column} because of unequal shapes across units")
-
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=units_ids)
         sorting_segment = NwbSortingSegment(
             nwbfile=self._nwbfile, sampling_frequency=sampling_frequency, timestamps=timestamps
         )
         self.add_sorting_segment(sorting_segment)
+
+        # Add properties:
+        properties = dict()
+        import warnings
+
+        for column in list(self._nwbfile.units.colnames):
+            if column == "spike_times":
+                continue
+
+            # Note that this has a different behavior than self._nwbfile.units[column].data
+            property_values = self._nwbfile.units[column][:]
+
+            # Making this explicit because I am not sure this is the best test
+            is_raggged_array = isinstance(property_values, list)
+            if is_raggged_array:
+                all_values_have_equal_shape = np.all([p.shape == property_values[0].shape for p in property_values])
+                if all_values_have_equal_shape:
+                    properties[column] = property_values
+                else:
+                    warnings.warn(f"Skipping {column} because of unequal shapes across units")
+
+                continue  # To next property
+
+            # The rest of the properties are added as they come
+            properties[column] = property_values
 
         for prop_name, values in properties.items():
             self.set_property(prop_name, np.array(values))
@@ -569,10 +577,10 @@ class NwbSortingSegment(BaseSortingSegment):
         spike_times = self._nwbfile.units["spike_times"][list(self._nwbfile.units.id[:]).index(unit_id)][:]
 
         if self._timestamps is not None:
-            frames = np.searchsorted(spike_times, self.timestamps).astype("int64")
+            frames = np.searchsorted(spike_times, self.timestamps)
         else:
-            frames = np.round(spike_times * self._sampling_frequency).astype("int64")
-        return frames[(frames >= start_frame) & (frames < end_frame)]
+            frames = np.round(spike_times * self._sampling_frequency)
+        return frames[(frames >= start_frame) & (frames < end_frame)].astype("int64", copy=False)
 
 
 read_nwb_recording = define_function_from_class(source_class=NwbRecordingExtractor, name="read_nwb_recording")
