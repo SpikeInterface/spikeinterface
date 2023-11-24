@@ -241,38 +241,12 @@ class BaseSorting(BaseExtractor):
                 cached.register_recording(self._recording)
 
         elif format == "zarr":
-            import numcodecs
-            from .zarrextractors import ZarrSortingExtractor, get_default_zarr_compressor
+            from .zarrextractors import ZarrSortingExtractor
 
-            zarr_kwargs = save_kwargs.copy()
-            zarr_path = zarr_kwargs.pop("zarr_path")
-            zarr_root = zarr_kwargs["zarr_root"]
-            zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
-            zarr_root.attrs["num_segments"] = int(self.get_num_segments())
-            zarr_root.create_dataset(name="unit_ids", data=self.unit_ids, compressor=None)
-
-            if "compressor" not in zarr_kwargs:
-                zarr_kwargs["compressor"] = get_default_zarr_compressor()
-
-            # save sub fields
-            spikes_group = zarr_root.create_group(name="spikes")
-            spikes = self.to_spike_vector()
-            for field in spikes.dtype.fields:
-                if field != "segment_index":
-                    spikes_group.create_dataset(
-                        name=field,
-                        data=spikes[field],
-                        compressor=zarr_kwargs["compressor"],
-                        filters=[numcodecs.Delta(dtype=spikes[field].dtype)],
-                    )
-                else:
-                    segment_slices = []
-                    for segment_index in range(self.get_num_segments()):
-                        i0, i1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
-                        segment_slices.append([i0, i1])
-                    spikes_group.create_dataset(name="segment_slices", data=segment_slices, compressor=None)
-
-            cached = ZarrSortingExtractor(zarr_path)
+            zarr_path = save_kwargs.pop("zarr_path")
+            storage_options = save_kwargs.pop("storage_options")
+            ZarrSortingExtractor.write_sorting(self, zarr_path, storage_options, **save_kwargs)
+            cached = ZarrSortingExtractor(zarr_path, storage_options)
 
             if self.has_recording():
                 warnings.warn("The registered recording will not be persistent on disk, but only available in memory")

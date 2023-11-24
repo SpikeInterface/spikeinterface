@@ -8,7 +8,8 @@ import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
-from .core_tools import define_function_from_class
+from .core_tools import define_function_from_class, check_json, write_traces_to_zarr
+from .job_tools import split_job_kwargs
 
 try:
     import zarr
@@ -131,6 +132,63 @@ class ZarrRecordingExtractor(BaseRecording):
 
         self._kwargs = {"root_path": root_path_kwarg, "storage_options": storage_options}
 
+    @staticmethod
+    def write_recording(
+        recording: BaseRecording, zarr_path: Union[str, Path], storage_options: dict | None = None, **kwargs
+    ):
+        zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
+        zarr_root = zarr.open(str(zarr_path), mode="w", storage_options=storage_options)
+
+        if recording.check_if_json_serializable():
+            zarr_root.attrs["provenance"] = check_json(recording.to_dict(recursive=True))
+        else:
+            zarr_root.attrs["provenance"] = None
+
+        # save data (done the subclass)
+        zarr_root.attrs["sampling_frequency"] = float(recording.get_sampling_frequency())
+        zarr_root.attrs["num_segments"] = int(recording.get_num_segments())
+        zarr_root.create_dataset(name="channel_ids", data=recording.get_channel_ids(), compressor=None)
+        dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
+
+        zarr_kwargs["dtype"] = kwargs.get("dtype", None) or recording.get_dtype()
+        if "compressor" not in zarr_kwargs:
+            zarr_kwargs["compressor"] = get_default_zarr_compressor()
+
+        write_traces_to_zarr(
+            recording=recording,
+            zarr_root=zarr_root,
+            zarr_path=zarr_path,
+            storage_options=storage_options,
+            dataset_paths=dataset_paths,
+            **zarr_kwargs,
+            **job_kwargs,
+        )
+
+        # # save probe
+        if recording.get_property("contact_vector") is not None:
+            probegroup = recording.get_probegroup()
+            zarr_root.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
+
+        # save time vector if any
+        t_starts = np.zeros(recording.get_num_segments(), dtype="float64") * np.nan
+        for segment_index, rs in enumerate(recording._recording_segments):
+            d = rs.get_times_kwargs()
+            time_vector = d["time_vector"]
+            if time_vector is not None:
+                _ = zarr_root.create_dataset(
+                    name=f"times_seg{segment_index}",
+                    data=time_vector,
+                    filters=zarr_kwargs.get("filters", None),
+                    compressor=zarr_kwargs["compressor"],
+                )
+            elif d["t_start"] is not None:
+                t_starts[segment_index] = d["t_start"]
+
+        if np.any(~np.isnan(t_starts)):
+            zarr_root.create_dataset(name="t_starts", data=t_starts, compressor=None)
+
+        add_properties_and_annotations(zarr_root, recording)
+
 
 class ZarrRecordingSegment(BaseRecordingSegment):
     def __init__(self, root, dataset_name, **time_kwargs):
@@ -231,12 +289,46 @@ class ZarrSortingExtractor(BaseSorting):
 
         self._kwargs = {"root_path": root_path_kwarg, "storage_options": storage_options}
 
+    @staticmethod
+    def write_sorting(sorting: BaseSorting, zarr_path: Union[str, Path], storage_options: dict | None = None, **kwargs):
+        from numcodecs import Delta
+
+        zarr_root = zarr.open(str(zarr_path), mode="w", storage_options=storage_options)
+
+        num_segments = sorting.get_num_segments()
+        zarr_root.attrs["sampling_frequency"] = float(sorting.sampling_frequency)
+        zarr_root.attrs["num_segments"] = int(num_segments)
+        zarr_root.create_dataset(name="unit_ids", data=sorting.unit_ids, compressor=None)
+
+        if "compressor" not in kwargs:
+            compressor = get_default_zarr_compressor()
+
+        # save sub fields
+        spikes_group = zarr_root.create_group(name="spikes")
+        spikes = sorting.to_spike_vector()
+        for field in spikes.dtype.fields:
+            if field != "segment_index":
+                spikes_group.create_dataset(
+                    name=field,
+                    data=spikes[field],
+                    compressor=compressor,
+                    filters=[Delta(dtype=spikes[field].dtype)],
+                )
+            else:
+                segment_slices = []
+                for segment_index in range(num_segments):
+                    i0, i1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
+                    segment_slices.append([i0, i1])
+                spikes_group.create_dataset(name="segment_slices", data=segment_slices, compressor=None)
+
+        add_properties_and_annotations(zarr_root, sorting)
+
 
 class ZarrSortingSegment(BaseSortingSegment):
     def __init__(self, spikes_dset, segment_slice, unit_ids):
         BaseSortingSegment.__init__(self)
-        self._spikes_dset = spikes_dset
-        self._segment_slice = segment_slice
+        self._spikes_indices = spikes_dset["sample_index"][segment_slice]
+        self._unit_indices = spikes_dset["unit_index"][segment_slice]
         self._unit_ids = list(unit_ids)
 
     def get_unit_spike_train(
@@ -245,8 +337,10 @@ class ZarrSortingSegment(BaseSortingSegment):
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,
     ) -> np.ndarray:
-        sample_indices = self._spikes_dset["sample_index"][self._segment_slice][start_frame:end_frame]
-        unit_indices = self._spikes_dset["unit_index"][self._segment_slice][start_frame:end_frame]
+        start = 0 if start_frame is None else np.searchsorted(self._spikes_indices, start_frame)
+        end = len(self._spikes_indices) if end_frame is None else np.searchsorted(self._spikes_indices, end_frame)
+        sample_indices = self._spikes_indices[start:end]
+        unit_indices = self._unit_indices[start:end]
         unit_index = self._unit_ids.index(unit_id)
         return sample_indices[unit_indices == unit_index]
 
@@ -315,3 +409,16 @@ def get_default_zarr_compressor(clevel=5):
     from numcodecs import Blosc
 
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
+
+
+def add_properties_and_annotations(
+    zarr_root: zarr.hierarchy.Group, recording_or_sorting: Union[BaseRecording, BaseSorting]
+):
+    # save properties
+    prop_group = zarr_root.create_group("properties")
+    for key in recording_or_sorting.get_property_keys():
+        values = recording_or_sorting.get_property(key)
+        prop_group.create_dataset(name=key, data=values, compressor=None)
+
+    # save annotations
+    zarr_root.attrs["annotations"] = check_json(recording_or_sorting._annotations)
