@@ -1402,7 +1402,7 @@ def compute_sd_ratio(
     num_spikes : dict
         The number of spikes, across all segments, for each unit ID.
     """
-
+    import numba
     from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
 
     censored_period = int(round(censored_period_ms * 1e-3 * wvf_extractor.sampling_frequency))
@@ -1441,7 +1441,10 @@ def compute_sd_ratio(
             spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(
                 np.int64, copy=False
             )
-            censored_indices = _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period)
+            censored_indices = _find_duplicated_spikes_keep_first_iterative(
+                spike_train,
+                censored_period,
+            )
             spk_amp.append(np.delete(spike_amplitudes[segment_index][unit_id], censored_indices))
         spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
 
