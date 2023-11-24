@@ -31,7 +31,7 @@ def test_basic_functions():
     )
 
 
-def test_no_repeated_names():
+def test_failure_with_non_unique_unit_ids():
     seed = 10
     sorting = generate_sorting(num_units=3, durations=[0.100], sampling_frequency=30000.0, seed=seed)
     with pytest.raises(AssertionError):
