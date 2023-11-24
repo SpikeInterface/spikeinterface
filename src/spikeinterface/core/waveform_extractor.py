@@ -2023,7 +2023,7 @@ class BaseWaveformExtractorExtension:
             return
         
         # delete already saved
-        self._delete_folder()
+        self._reset_folder()
         self._save_params()
 
         if self.format == "binary":
@@ -2076,9 +2076,9 @@ class BaseWaveformExtractorExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
 
-    def _delete_folder(self):
+    def _reset_folder(self):
         """
-        Delete the extension in folder (binary or zarr)
+        Delete the extension in folder (binary or zarr) and create an empty one.
         """
         if self.format == "binary" and self.extension_folder is not None:
             if self.extension_folder.is_dir():
@@ -2094,7 +2094,7 @@ class BaseWaveformExtractorExtension:
         Reset the waveform extension.
         Delete the sub folder and create a new empty one.
         """
-        self._delete_folder()
+        self._reset_folder()
 
         self._params = None
         self._extension_data = dict()
