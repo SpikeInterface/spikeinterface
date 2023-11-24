@@ -199,7 +199,7 @@ class RandomProjectionsFeature(PipelineNode):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.projections = projections
-        self.valid_channels = valid_channels
+        self.sigmoid = sigmoid
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance < radius_um

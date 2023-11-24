@@ -14,7 +14,6 @@ from spikeinterface.core import (
 )
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
-from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
