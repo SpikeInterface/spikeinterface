@@ -139,29 +139,6 @@ class PeakToPeakFeature(PipelineNode):
                 all_ptps[idx] = np.max(np.ptp(wfs, axis=1))
         return all_ptps
 
-class PeakToPeakMapsFeature(PipelineNode):
-    def __init__(
-        self, recording, name="ptp_maps_feature", return_output=True, radius_um=None, sparse=True, parents=None
-        ):
-
-        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
-        self._dtype = recording.get_dtype()
-        self.contact_locations = recording.get_channel_locations()
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
-        self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
-
-    def get_dtype(self):
-        return self._dtype
-
-    def compute(self, traces, peaks, waveforms):
-        all_ptps = np.ptp(waveforms, axis=1)
-        result = np.zeros((len(self.contact_locations), self.max_num_chans))
-        for main_chan in np.unique(peaks["channel_index"]):
-            mask = peaks["channel_index"] == main_chan
-            (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
-            result[main_chan, :len(chan_inds)] = np.sum(all_ptps[mask][:, :len(chan_inds)], axis=0)
-        return result
 
 class PeakToPeakLagsFeature(PipelineNode):
     def __init__(
@@ -215,7 +192,7 @@ class RandomProjectionsFeature(PipelineNode):
         return_output=True,
         parents=None,
         projections=None,
-        valid_channels=None,
+        sigmoid=None,
         radius_um=None,
         sparse=True,
     ):
@@ -228,11 +205,16 @@ class RandomProjectionsFeature(PipelineNode):
         self.neighbours_mask = self.channel_distance < radius_um
         self.radius_um = radius_um
         self.sparse = sparse
-        self._kwargs.update(dict(projections=projections, valid_channels=valid_channels, radius_um=radius_um, sparse=sparse))
+        self._kwargs.update(dict(projections=projections, sigmoid=sigmoid, radius_um=radius_um, sparse=sparse))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
+
+    def _sigmoid(self, x):
+        L, x0, k, b = self.sigmoid
+        y = L / (1 + np.exp(-k * (x - x0))) + b
+        return y
 
     def compute(self, traces, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
@@ -246,8 +228,8 @@ class RandomProjectionsFeature(PipelineNode):
             else:
                 wf_ptp = np.ptp(waveforms[idx][:, :, chan_inds], axis=1)
 
-            if self.valid_channels is not None:
-                wf_ptp *= self.valid_channels[main_chan, :len(chan_inds)]
+            if self.sigmoid is not None:
+                wf_ptp *= self._sigmoid(wf_ptp)
 
             denom = np.sum(wf_ptp, axis=1)
             mask = denom != 0

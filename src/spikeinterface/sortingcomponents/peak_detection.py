@@ -843,56 +843,6 @@ if HAVE_NUMBA:
                         break
         return peak_mask
 
-    @numba.jit(nopython=True, parallel=False)
-    def _numba_detect_peak_pos_transposed(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
-    ):
-        num_chans = traces_center.shape[0]
-        for chan_ind in range(num_chans):
-            for s in range(peak_mask.shape[1]):
-                if not peak_mask[chan_ind, s]:
-                    continue
-                for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind, neighbour]:
-                        continue
-                    for i in range(exclude_sweep_size):
-                        if chan_ind != neighbour:
-                            peak_mask[chan_ind, s] &= traces_center[chan_ind, s] >= traces_center[neighbour, s]
-                        peak_mask[chan_ind, s] &= traces_center[chan_ind, s] > traces[neighbour, s + i]
-                        peak_mask[chan_ind, s] &= (
-                            traces_center[chan_ind, s] >= traces[neighbour, exclude_sweep_size + s + i + 1]
-                        )
-                        if not peak_mask[chan_ind, s]:
-                            break
-                    if not peak_mask[chan_ind, s]:
-                        break
-        return peak_mask
-
-    @numba.jit(nopython=True, parallel=False)
-    def _numba_detect_peak_neg_transposed(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
-    ):
-        num_chans = traces_center.shape[0]
-        for chan_ind in range(num_chans):
-            for s in range(peak_mask.shape[1]):
-                if not peak_mask[chan_ind, s]:
-                    continue
-                for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind, neighbour]:
-                        continue
-                    for i in range(exclude_sweep_size):
-                        if chan_ind != neighbour:
-                            peak_mask[chan_ind, s] &= traces_center[chan_ind, s] <= traces_center[neighbour, s]
-                        peak_mask[chan_ind, s] &= traces_center[chan_ind, s] < traces[neighbour, s + i]
-                        peak_mask[chan_ind, s] &= (
-                            traces_center[chan_ind, s] <= traces[neighbour, exclude_sweep_size + s + i + 1]
-                        )
-                        if not peak_mask[chan_ind, s]:
-                            break
-                    if not peak_mask[chan_ind, s]:
-                        break
-        return peak_mask
-
 
 if HAVE_TORCH:
 

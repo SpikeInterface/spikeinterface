@@ -9,16 +9,6 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 
-from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
-from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
-from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
-from spikeinterface.core.node_pipeline import (
-    run_node_pipeline,
-    ExtractDenseWaveforms,
-    ExtractSparseWaveforms,
-    PeakRetriever,
-)
-
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
 try:
