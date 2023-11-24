@@ -497,7 +497,9 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
 
     @classmethod
     def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, device, return_tensor):
-        sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_thresholds, exclude_sweep_size, None, device)
+        sample_inds, chan_inds = _torch_detect_peaks(
+            traces, peak_sign, abs_thresholds, exclude_sweep_size, None, device
+        )
         if not return_tensor:
             sample_inds = np.array(sample_inds.cpu())
             chan_inds = np.array(chan_inds.cpu())
@@ -579,6 +581,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
         return peak_sample_ind, peak_chan_ind
 
+
 class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
     """Detect peaks using the 'locally exclusive' method."""
 
@@ -626,20 +629,21 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         neighbours_mask = channel_distance < radius_um
 
         idx = np.argmax(np.abs(prototype))
-        if peak_sign == 'neg':
+        if peak_sign == "neg":
             assert prototype[idx] < 0, "Prototype should have a negative peak"
             prototype *= -1
-        elif peak_sign == 'pos':
+        elif peak_sign == "pos":
             assert prototype[idx] > 0, "Prototype should have a positive peak"
-        elif peak_sign == 'both':
+        elif peak_sign == "both":
             raise NotImplementedError("Matched filtering not working with peak_sign=both yet!")
 
         import sklearn.metrics
+
         contact_locations = recording.get_channel_locations()
         nb_templates = len(contact_locations)
 
         dist = sklearn.metrics.pairwise_distances(contact_locations, contact_locations)
-        templates = np.zeros((nb_templates*len(sigma_um), len(prototype), len(contact_locations)), dtype=np.float32)
+        templates = np.zeros((nb_templates * len(sigma_um), len(prototype), len(contact_locations)), dtype=np.float32)
 
         count = 0
         for sigma in sigma_um:
@@ -673,6 +677,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
     @classmethod
     def get_convolved_traces(cls, traces, temporal, spatial, singular):
         import scipy.signal
+
         num_channels = traces.shape[1]
         num_templates = temporal.shape[1]
         num_sigma = num_templates // num_channels
@@ -693,9 +698,11 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular):
+    def detect_peaks(
+        cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular
+    ):
         assert HAVE_NUMBA, "You need to install numba"
-        
+
         traces = cls.get_convolved_traces(traces, temporal, spatial, singular)
         traces_center = traces[:, exclude_sweep_size:-exclude_sweep_size]
 
@@ -721,7 +728,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         peak_sample_ind += exclude_sweep_size
 
         return peak_sample_ind, peak_chan_ind
-
 
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
@@ -1275,7 +1281,7 @@ _methods_list = [
     DetectPeakLocallyExclusiveOpenCL,
     DetectPeakByChannelTorch,
     DetectPeakLocallyExclusiveTorch,
-    DetectPeakLocallyExclusiveMatchedFiltering
+    DetectPeakLocallyExclusiveMatchedFiltering,
 ]
 detect_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)

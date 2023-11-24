@@ -139,11 +139,11 @@ class PeakToPeakFeature(PipelineNode):
                 all_ptps[idx] = np.max(np.ptp(wfs, axis=1))
         return all_ptps
 
+
 class PeakToPeakMapsFeature(PipelineNode):
     def __init__(
         self, recording, name="ptp_maps_feature", return_output=True, radius_um=None, sparse=True, parents=None
-        ):
-
+    ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         self._dtype = recording.get_dtype()
         self.contact_locations = recording.get_channel_locations()
@@ -160,8 +160,9 @@ class PeakToPeakMapsFeature(PipelineNode):
         for main_chan in np.unique(peaks["channel_index"]):
             mask = peaks["channel_index"] == main_chan
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
-            result[main_chan, :len(chan_inds)] = np.sum(all_ptps[mask][:, :len(chan_inds)], axis=0)
+            result[main_chan, : len(chan_inds)] = np.sum(all_ptps[mask][:, : len(chan_inds)], axis=0)
         return result
+
 
 class PeakToPeakLagsFeature(PipelineNode):
     def __init__(
@@ -228,7 +229,9 @@ class RandomProjectionsFeature(PipelineNode):
         self.neighbours_mask = self.channel_distance < radius_um
         self.radius_um = radius_um
         self.sparse = sparse
-        self._kwargs.update(dict(projections=projections, valid_channels=valid_channels, radius_um=radius_um, sparse=sparse))
+        self._kwargs.update(
+            dict(projections=projections, valid_channels=valid_channels, radius_um=radius_um, sparse=sparse)
+        )
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
@@ -247,7 +250,7 @@ class RandomProjectionsFeature(PipelineNode):
                 wf_ptp = np.ptp(waveforms[idx][:, :, chan_inds], axis=1)
 
             if self.valid_channels is not None:
-                wf_ptp *= self.valid_channels[main_chan, :len(chan_inds)]
+                wf_ptp *= self.valid_channels[main_chan, : len(chan_inds)]
 
             denom = np.sum(wf_ptp, axis=1)
             mask = denom != 0

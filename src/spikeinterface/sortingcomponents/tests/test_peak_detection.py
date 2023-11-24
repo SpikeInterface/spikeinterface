@@ -22,7 +22,7 @@ from spikeinterface.sortingcomponents.peak_detection import (
     DetectPeakByChannelTorch,
     DetectPeakLocallyExclusive,
     DetectPeakLocallyExclusiveTorch,
-    DetectPeakLocallyExclusiveMatchedFiltering
+    DetectPeakLocallyExclusiveMatchedFiltering,
 )
 
 from spikeinterface.core.node_pipeline import run_node_pipeline
@@ -349,8 +349,13 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, spike_train
     prototype = np.median(prototype, 0)
 
     peaks_local_numba = detect_peaks(
-        recording, method="locally_exclusive_mf", peak_sign="neg", detect_threshold=5, 
-        exclude_sweep_ms=0.1, prototype=prototype, **job_kwargs
+        recording,
+        method="locally_exclusive_mf",
+        peak_sign="neg",
+        detect_threshold=5,
+        exclude_sweep_ms=0.1,
+        prototype=prototype,
+        **job_kwargs,
     )
     assert len(peaks_by_channel_np) > len(peaks_local_numba)
 
