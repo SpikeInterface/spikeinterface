@@ -293,7 +293,7 @@ class NumpySorting(BaseSorting):
             units_dict = {}
             for u, unit_id in enumerate(unit_ids):
                 st = neo_spiketrains[seg_index][u]
-                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64")
+                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64", copy=False)
             units_dict_list.append(units_dict)
 
         sorting = NumpySorting.from_unit_dict(units_dict_list, sampling_frequency)

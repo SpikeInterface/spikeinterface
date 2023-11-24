@@ -125,7 +125,7 @@ class BaseSorting(BaseExtractor):
             if unit_id not in self._cached_spike_trains[segment_index]:
                 segment = self._sorting_segments[segment_index]
                 spike_frames = segment.get_unit_spike_train(unit_id=unit_id, start_frame=None, end_frame=None).astype(
-                    "int64"
+                    "int64", copy=False
                 )
                 self._cached_spike_trains[segment_index][unit_id] = spike_frames
             else:

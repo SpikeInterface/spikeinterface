@@ -305,7 +305,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
     )
     if traces.dtype != dtype:
-        traces = traces.astype(dtype)
+        traces = traces.astype(dtype, copy=False)
     array[start_frame:end_frame, :] = traces
 
     # Close the memmap
@@ -344,7 +344,7 @@ def write_binary_recording_file_handle(
         if time_axis == 1:
             traces = traces.T
         if dtype is not None:
-            traces = traces.astype(dtype)
+            traces = traces.astype(dtype, copy=False)
         traces.tofile(file_handle)
     else:
         num_frames = recording.get_num_samples(segment_index=0)
@@ -355,7 +355,7 @@ def write_binary_recording_file_handle(
             if time_axis == 1:
                 traces = traces.T
             if dtype is not None:
-                traces = traces.astype(dtype)
+                traces = traces.astype(dtype, copy=False)
             file_handle.write(traces.tobytes())
 
 
@@ -403,7 +403,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     traces = recording.get_traces(
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
     )
-    traces = traces.astype(dtype)
+    traces = traces.astype(dtype, copy=False)
     arr[start_frame:end_frame, :] = traces
 
 
@@ -580,7 +580,7 @@ def write_to_h5_dataset_format(
     if chunk_size is None:
         traces = recording.get_traces(cast_unsigned=cast_unsigned, return_scaled=return_scaled)
         if dtype is not None:
-            traces = traces.astype(dtype_file)
+            traces = traces.astype(dtype_file, copy=False)
         if time_axis == 1:
             traces = traces.T
         if single_axis:
@@ -607,7 +607,7 @@ def write_to_h5_dataset_format(
             )
             chunk_frames = traces.shape[0]
             if dtype is not None:
-                traces = traces.astype(dtype_file)
+                traces = traces.astype(dtype_file, copy=False)
             if single_axis:
                 dset[chunk_start : chunk_start + chunk_frames] = traces[:, 0]
             else:
@@ -756,7 +756,7 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     traces = recording.get_traces(
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
     )
-    traces = traces.astype(dtype)
+    traces = traces.astype(dtype, copy=False)
     zarr_dataset[start_frame:end_frame, :] = traces
 
     # fix memory leak by forcing garbage collection
