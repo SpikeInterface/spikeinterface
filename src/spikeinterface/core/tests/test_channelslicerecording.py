@@ -79,7 +79,7 @@ def test_failure_with_non_unique_channel_ids():
     seed = 10
     rec = generate_recording(num_channels=4, durations=durations, set_probe=False, seed=seed)
     with pytest.raises(AssertionError):
-        rec_sliced = ChannelSliceRecording(rec, channel_ids=[0, 0])
+        rec_sliced = ChannelSliceRecording(rec, channel_ids=[0, 1], renamed_channel_ids=[0, 0])
 
 
 if __name__ == "__main__":
