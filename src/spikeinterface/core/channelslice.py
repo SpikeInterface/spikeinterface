@@ -20,6 +20,10 @@ class ChannelSliceRecording(BaseRecording):
             channel_ids = parent_recording.get_channel_ids()
         if renamed_channel_ids is None:
             renamed_channel_ids = channel_ids
+        else:
+            assert len(renamed_channel_ids) == len(
+                np.unique(renamed_channel_ids)
+            ), "renamed_channel_ids must be unique!"
 
         self._parent_recording = parent_recording
         self._channel_ids = np.asarray(channel_ids)

@@ -1200,7 +1200,7 @@ class WaveformExtractor:
         The results is cached in memory as a 3d ndarray (nunits, nsamples, nchans)
         and also saved as an npy file in the folder to avoid recomputation each time.
         """
-        # TODO : run this in parralel
+        # TODO : run this in parallel
 
         unit_ids = self.unit_ids
         num_chans = self.get_num_channels()
@@ -1238,7 +1238,7 @@ class WaveformExtractor:
 
         for mode in modes:
             templates = self._template_cache[mode_names[mode]]
-            if self.folder is not None:
+            if self.folder is not None and not self.is_read_only():
                 template_file = self.folder / f"templates_{mode_names[mode]}.npy"
                 np.save(template_file, templates)
 
