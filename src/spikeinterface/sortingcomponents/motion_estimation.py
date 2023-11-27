@@ -1172,6 +1172,7 @@ def compute_global_displacement(
             # warm start next iteration
             p0 = displacement
             # Cleanup lsmr memory (see https://stackoverflow.com/questions/56147713/memory-leak-in-scipy)
+            # TODO: check if this gets fixed in scipy
             gc.collect()
 
         displacement = displacement.reshape(B, T).T
