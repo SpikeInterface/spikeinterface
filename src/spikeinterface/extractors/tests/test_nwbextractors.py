@@ -29,6 +29,9 @@ class NwbSortingTest(SortingCommonTestSuite, unittest.TestCase):
     entities = []
 
 
+from pynwb.testing.mock.ecephys import mock_ElectrodeGroup
+
+
 @pytest.fixture(scope="module")
 def nwbfile_with_ecephys_content():
     nwbfile = mock_NWBFile()
@@ -180,6 +183,45 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     expected_offsets_uV = np.ones(recording_extractor.get_num_channels()) * expected_offsets_uV
     extracted_offsets_uV = recording_extractor.get_channel_offsets()
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
+
+
+def test_sorting_extraction_of_ragged_arrays(tmp_path):
+    nwbfile = mock_NWBFile()
+
+    # Add the spikes
+    nwbfile.add_unit_column(name="unit_name", description="the name of the unit")
+    spike_times1 = np.array([0.0, 1.0, 2.0])
+    nwbfile.add_unit(spike_times=spike_times1, unit_name="a")
+    spike_times2 = np.array([0.0, 1.0, 2.0, 3.0])
+    nwbfile.add_unit(spike_times=spike_times2, unit_name="b")
+
+    ragged_array_bad = [[1, 2, 3], [1, 2, 3, 5]]
+    nwbfile.add_unit_column(
+        name="ragged_array_bad",
+        description="an evill array that wants to destroy your test",
+        data=ragged_array_bad,
+        index=True,
+    )
+
+    ragged_array_good = [[1, 2], [3, 4]]
+    nwbfile.add_unit_column(
+        name="ragged_array_good",
+        description="a good array that wants to help your test be nice to nice arrays",
+        data=ragged_array_good,
+        index=True,
+    )
+
+    file_path = tmp_path / "test.nwb"
+    # Write the nwbfile to a temporary file
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0)
+
+    # Check that the bad array was not added
+    added_properties = sorting_extractor.get_property_keys()
+    assert "ragged_array_bad" not in added_properties
+    assert "ragged_array_good" in added_properties
 
 
 if __name__ == "__main__":

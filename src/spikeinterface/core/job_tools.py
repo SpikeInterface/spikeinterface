@@ -7,7 +7,6 @@ import platform
 import os
 import warnings
 
-import joblib
 import sys
 import contextlib
 from tqdm.auto import tqdm
@@ -95,25 +94,6 @@ def split_job_kwargs(mixed_kwargs):
     return specific_kwargs, job_kwargs
 
 
-# from https://stackoverflow.com/questions/24983493/tracking-progress-of-joblib-parallel-execution
-@contextlib.contextmanager
-def tqdm_joblib(tqdm_object):
-    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
-
-    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
-        def __call__(self, *args, **kwargs):
-            tqdm_object.update(n=self.batch_size)
-            return super().__call__(*args, **kwargs)
-
-    old_batch_callback = joblib.parallel.BatchCompletionCallBack
-    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
-    try:
-        yield tqdm_object
-    finally:
-        joblib.parallel.BatchCompletionCallBack = old_batch_callback
-        tqdm_object.close()
-
-
 def divide_segment_into_chunks(num_frames, chunk_size):
     if chunk_size is None:
         chunks = [(0, num_frames)]
@@ -156,7 +136,7 @@ def _mem_to_int(mem):
 
 def ensure_n_jobs(recording, n_jobs=1):
     if n_jobs == -1:
-        n_jobs = joblib.cpu_count()
+        n_jobs = os.cpu_count()
     elif n_jobs == 0:
         n_jobs = 1
     elif n_jobs is None:
