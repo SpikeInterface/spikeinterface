@@ -460,6 +460,19 @@ def test_unfiltered_extraction():
         wfs_std = we.get_all_templates(mode="std")
         assert wfs_std.shape == (num_units, num_samples, num_channels)
 
+        wf_prct = we.get_template(0, mode="percentile", percentile=10)
+        assert wf_prct.shape == (num_samples, num_channels)
+        wfs_prct = we.get_all_templates(mode="percentile", percentile=10)
+        assert wfs_prct.shape == (num_units, num_samples, num_channels)
+
+        # percentile mode should fail if percentile is None or not in [0, 100]
+        with pytest.raises(AssertionError):
+            wf_prct = we.get_template(0, mode="percentile")
+        with pytest.raises(AssertionError):
+            wfs_prct = we.get_all_templates(mode="percentile")
+        with pytest.raises(AssertionError):
+            wfs_prct = we.get_all_templates(mode="percentile", percentile=101)
+
         wf_segment = we.get_template_segment(unit_id=0, segment_index=0)
         assert wf_segment.shape == (num_samples, num_channels)
         assert wf_segment.shape == (num_samples, num_channels)

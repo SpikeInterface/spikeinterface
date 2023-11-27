@@ -40,7 +40,7 @@ def test_check_if_memory_serializable():
         assert extractor.check_if_memory_serializable()
 
     # make not not memory serilizable
-    test_extractor._serializablility["memory"] = False
+    test_extractor._serializability["memory"] = False
     extractors_not_mem_serializable = make_nested_extractors(test_extractor)
     for extractor in extractors_not_mem_serializable:
         assert not extractor.check_if_memory_serializable()
@@ -50,18 +50,18 @@ def test_check_if_serializable():
     test_extractor = generate_recording(seed=0, durations=[2])
 
     # make a list of json serializable objects
-    test_extractor._serializablility["json"] = True
+    test_extractor._serializability["json"] = True
     extractors_json_serializable = make_nested_extractors(test_extractor)
     for extractor in extractors_json_serializable:
         print(extractor)
-        assert extractor.check_serializablility("json")
+        assert extractor.check_serializability("json")
 
     # make of not json serializable objects
-    test_extractor._serializablility["json"] = False
+    test_extractor._serializability["json"] = False
     extractors_not_json_serializable = make_nested_extractors(test_extractor)
     for extractor in extractors_not_json_serializable:
         print(extractor)
-        assert not extractor.check_serializablility("json")
+        assert not extractor.check_serializability("json")
 
 
 if __name__ == "__main__":

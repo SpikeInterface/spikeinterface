@@ -62,7 +62,7 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        self._serializablility = {"memory": True, "json": True, "pickle": True}
+        self._serializability = {"memory": True, "json": True, "pickle": True}
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
@@ -507,22 +507,22 @@ class BaseExtractor:
         clone = BaseExtractor.from_dict(d)
         return clone
 
-    def check_serializablility(self, type):
+    def check_serializability(self, type):
         kwargs = self._kwargs
         for value in kwargs.values():
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
             if isinstance(value, BaseExtractor):
-                if not value.check_serializablility(type=type):
+                if not value.check_serializability(type=type):
                     return False
             elif isinstance(value, list):
                 for v in value:
-                    if isinstance(v, BaseExtractor) and not v.check_serializablility(type=type):
+                    if isinstance(v, BaseExtractor) and not v.check_serializability(type=type):
                         return False
             elif isinstance(value, dict):
                 for v in value.values():
-                    if isinstance(v, BaseExtractor) and not v.check_serializablility(type=type):
+                    if isinstance(v, BaseExtractor) and not v.check_serializability(type=type):
                         return False
-        return self._serializablility[type]
+        return self._serializability[type]
 
     def check_if_memory_serializable(self):
         """
@@ -533,7 +533,7 @@ class BaseExtractor:
         bool
             True if the object is memory serializable, False otherwise.
         """
-        return self.check_serializablility("memory")
+        return self.check_serializability("memory")
 
     def check_if_json_serializable(self):
         """
@@ -546,11 +546,11 @@ class BaseExtractor:
         """
         # we keep this for backward compatilibity or not ????
         # is this needed ??? I think no.
-        return self.check_serializablility("json")
+        return self.check_serializability("json")
 
     def check_if_pickle_serializable(self):
         # is this needed ??? I think no.
-        return self.check_serializablility("pickle")
+        return self.check_serializability("pickle")
 
     @staticmethod
     def _get_file_path(file_path: Union[str, Path], extensions: Sequence) -> Path:
@@ -623,7 +623,7 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties
         """
-        assert self.check_serializablility("json"), "The extractor is not json serializable"
+        assert self.check_serializability("json"), "The extractor is not json serializable"
 
         # Writing paths as relative_to requires recursively expanding the dict
         if relative_to:
@@ -882,7 +882,7 @@ class BaseExtractor:
 
         # dump provenance
         provenance_file = folder / f"provenance.json"
-        if self.check_serializablility("json"):
+        if self.check_serializability("json"):
             self.dump(provenance_file)
         else:
             provenance_file.write_text(

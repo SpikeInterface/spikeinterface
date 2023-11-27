@@ -66,8 +66,8 @@ class NumpyRecording(BaseRecording):
             assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
             t_starts = [float(t_start) for t_start in t_starts]
 
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         for i, traces in enumerate(traces_list):
             if t_starts is None:
@@ -129,10 +129,10 @@ class NumpySorting(BaseSorting):
         """ """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self._serializablility["memory"] = True
-        self._serializablility["json"] = False
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
         # theorically this should be False but for simplicity make generators simples we still need this.
-        self._serializablility["pickle"] = True
+        self._serializability["pickle"] = True
 
         if spikes.size == 0:
             nseg = 1
@@ -347,13 +347,16 @@ class NumpySortingSegment(BaseSortingSegment):
             s0, s1 = np.searchsorted(self.spikes["segment_index"], [self.segment_index, self.segment_index + 1])
             self.spikes_in_seg = self.spikes[s0:s1]
 
-        unit_index = self.unit_ids.index(unit_id)
-        times = self.spikes_in_seg[self.spikes_in_seg["unit_index"] == unit_index]["sample_index"]
+        start = 0 if start_frame is None else np.searchsorted(self.spikes_in_seg["sample_index"], start_frame)
+        end = (
+            len(self.spikes_in_seg)
+            if end_frame is None
+            else np.searchsorted(self.spikes_in_seg["sample_index"], end_frame)
+        )
 
-        if start_frame is not None:
-            times = times[times >= start_frame]
-        if end_frame is not None:
-            times = times[times < end_frame]
+        unit_index = self.unit_ids.index(unit_id)
+        times = self.spikes_in_seg[start:end][self.spikes_in_seg[start:end]["unit_index"] == unit_index]["sample_index"]
+
         return times
 
 
@@ -364,9 +367,9 @@ class SharedMemorySorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self._serializablility["memory"] = True
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         self.shm = SharedMemory(shm_name, create=False)
         self.shm_spikes = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
@@ -524,9 +527,9 @@ class NumpySnippets(BaseSnippets):
             dtype=dtype,
         )
 
-        self._serializablility["memory"] = False
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        self._serializability["memory"] = False
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         for snippets, spikesframes in zip(snippets_list, spikesframes_list):
             snp_segment = NumpySnippetsSegment(snippets, spikesframes)
