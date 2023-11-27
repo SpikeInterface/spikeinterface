@@ -1039,6 +1039,7 @@ def compute_global_displacement(
         displacement = p
 
     elif convergence_method == "lsmr":
+        import gc
         from scipy import sparse
         from scipy.stats import zscore
 
@@ -1170,6 +1171,8 @@ def compute_global_displacement(
 
             # warm start next iteration
             p0 = displacement
+            # Cleanup lsmr memory (see https://stackoverflow.com/questions/56147713/memory-leak-in-scipy)
+            gc.collect()
 
         displacement = displacement.reshape(B, T).T
     else:
