@@ -334,7 +334,7 @@ def compute_refrac_period_violations(
         The waveform extractor object
     refractory_period_ms : float, default: 1.0
         The period (in ms) where no 2 good spikes can occur.
-    censored_period_ùs : float, default: 0.0
+    censored_period_ms : float, default: 0.0
         The period (in ms) where no 2 spikes can occur (because they are not detected, or
         because they were removed by another mean).
     unit_ids : list or None
