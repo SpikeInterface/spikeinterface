@@ -4,6 +4,7 @@ import pickle
 import pytest
 import numpy as np
 import h5py
+from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
@@ -85,6 +86,70 @@ def test_recording_s3_nwb_fsspec(tmp_path, cache):
         reloaded_recording = pickle.load(f)
 
     check_recordings_equal(rec, reloaded_recording)
+
+
+@pytest.mark.streaming_extractors
+def test_recording_s3_nwb_remfile():
+    file_path = (
+        "https://dandi-api-staging-dandisets.s3.amazonaws.com/blobs/5f4/b7a/5f4b7a1f-7b95-4ad8-9579-4df6025371cc"
+    )
+    rec = NwbRecordingExtractor(file_path, stream_mode="remfile")
+
+    start_frame = 0
+    end_frame = 300
+    num_frames = end_frame - start_frame
+
+    num_seg = rec.get_num_segments()
+    num_chans = rec.get_num_channels()
+    dtype = rec.get_dtype()
+
+    for segment_index in range(num_seg):
+        num_samples = rec.get_num_samples(segment_index=segment_index)
+
+        full_traces = rec.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame)
+        assert full_traces.shape == (num_frames, num_chans)
+        assert full_traces.dtype == dtype
+
+    if rec.has_scaled():
+        trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
+        assert trace_scaled.dtype == "float32"
+
+
+@pytest.mark.streaming_extractors
+def test_recording_s3_nwb_remfile_file_like(tmp_path):
+    import remfile
+
+    file_path = (
+        "https://dandi-api-staging-dandisets.s3.amazonaws.com/blobs/5f4/b7a/5f4b7a1f-7b95-4ad8-9579-4df6025371cc"
+    )
+    file = remfile.File(file_path)
+    rec = NwbRecordingExtractor(file=file)
+
+    start_frame = 0
+    end_frame = 300
+    num_frames = end_frame - start_frame
+
+    num_seg = rec.get_num_segments()
+    num_chans = rec.get_num_channels()
+    dtype = rec.get_dtype()
+
+    for segment_index in range(num_seg):
+        num_samples = rec.get_num_samples(segment_index=segment_index)
+
+        full_traces = rec.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame)
+        assert full_traces.shape == (num_frames, num_chans)
+        assert full_traces.dtype == dtype
+
+    if rec.has_scaled():
+        trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
+        assert trace_scaled.dtype == "float32"
+
+    # test pickling
+    with open(tmp_path / "rec.pkl", "wb") as f:
+        pickle.dump(rec, f)
+    with open(tmp_path / "rec.pkl", "rb") as f:
+        rec2 = pickle.load(f)
+    check_recordings_equal(rec, rec2)
 
 
 @pytest.mark.ros3_test
