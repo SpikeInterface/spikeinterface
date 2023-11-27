@@ -7,6 +7,7 @@ import shutil
 from typing import Iterable, Literal, Optional
 import json
 import os
+import weakref
 
 import numpy as np
 from copy import deepcopy
@@ -1850,7 +1851,7 @@ class BaseWaveformExtractorExtension:
     handle_sparsity = False
 
     def __init__(self, waveform_extractor):
-        self.waveform_extractor = waveform_extractor
+        self._waveform_extractor = weakref.ref(waveform_extractor)
 
         if self.waveform_extractor.folder is not None:
             self.folder = self.waveform_extractor.folder
@@ -1897,8 +1898,20 @@ class BaseWaveformExtractorExtension:
         # register
         self.waveform_extractor._loaded_extensions[self.extension_name] = self
 
+    @property
+    def waveform_extractor(self):
+        # Important : to avoid the WaveformExtractor referencing a BaseWaveformExtractorExtension
+        # and BaseWaveformExtractorExtension referencing a WaveformExtractor
+        # we need a weakref. Otherwise the garbage collector is not working properly
+        # and so the WaveformExtractor + its recording are still alive even after deleting explicitly
+        # the WaveformExtractor which makes it impossible to delete the folder!
+        we = self._waveform_extractor()
+        if we is None:
+            raise ValueError(f"The extension {self.extension_name} has lost its WaveformExtractor")
+        return we
+
     @classmethod
-    def load(cls, folder, waveform_extractor=None):
+    def load(cls, folder, waveform_extractor):
         folder = Path(folder)
         assert folder.is_dir(), "Waveform folder does not exists"
         if folder.suffix == ".zarr":
@@ -1909,8 +1922,8 @@ class BaseWaveformExtractorExtension:
         if "sparsity" in params and params["sparsity"] is not None:
             params["sparsity"] = ChannelSparsity.from_dict(params["sparsity"])
 
-        if waveform_extractor is None:
-            waveform_extractor = WaveformExtractor.load(folder)
+        # if waveform_extractor is None:
+        #     waveform_extractor = WaveformExtractor.load(folder)
 
         # make instance with params
         ext = cls(waveform_extractor)
@@ -1964,7 +1977,11 @@ class BaseWaveformExtractorExtension:
                 if ext_data_file.suffix == ".json":
                     ext_data = json.load(ext_data_file.open("r"))
                 elif ext_data_file.suffix == ".npy":
-                    ext_data = np.load(ext_data_file, mmap_mode="r")
+                    # The lazy loading of an extension is complicated because if we compute again
+                    # and have a link to the old buffer on windows then it fails
+                    # ext_data = np.load(ext_data_file, mmap_mode="r")
+                    # so we go back to full loading
+                    ext_data = np.load(ext_data_file)
                 elif ext_data_file.suffix == ".csv":
                     import pandas as pd
 
@@ -2004,6 +2021,11 @@ class BaseWaveformExtractorExtension:
         # Only save if not read only
         if self.waveform_extractor.is_read_only():
             return
+
+        # delete already saved
+        self._reset_folder()
+        self._save_params()
+
         if self.format == "binary":
             import pandas as pd
 
@@ -2054,18 +2076,26 @@ class BaseWaveformExtractorExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
 
+    def _reset_folder(self):
+        """
+        Delete the extension in folder (binary or zarr) and create an empty one.
+        """
+        if self.format == "binary" and self.extension_folder is not None:
+            if self.extension_folder.is_dir():
+                shutil.rmtree(self.extension_folder)
+            self.extension_folder.mkdir()
+        elif self.format == "zarr":
+            import zarr
+
+            zarr_root = zarr.open(self.folder, mode="r+")
+            self.extension_group = zarr_root.create_group(self.extension_name, overwrite=True)
+
     def reset(self):
         """
         Reset the waveform extension.
         Delete the sub folder and create a new empty one.
         """
-        if self.extension_folder is not None:
-            if self.format == "binary":
-                if self.extension_folder.is_dir():
-                    shutil.rmtree(self.extension_folder)
-                self.extension_folder.mkdir()
-            elif self.format == "zarr":
-                del self.extension_group
+        self._reset_folder()
 
         self._params = None
         self._extension_data = dict()
@@ -2098,12 +2128,15 @@ class BaseWaveformExtractorExtension:
         if self.waveform_extractor.is_read_only():
             return
 
-        params_to_save = params.copy()
-        if "sparsity" in params and params["sparsity"] is not None:
+        self._save_params()
+
+    def _save_params(self):
+        params_to_save = self._params.copy()
+        if "sparsity" in params_to_save and params_to_save["sparsity"] is not None:
             assert isinstance(
-                params["sparsity"], ChannelSparsity
+                params_to_save["sparsity"], ChannelSparsity
             ), "'sparsity' parameter must be a ChannelSparsity object!"
-            params_to_save["sparsity"] = params["sparsity"].to_dict()
+            params_to_save["sparsity"] = params_to_save["sparsity"].to_dict()
         if self.format == "binary":
             if self.extension_folder is not None:
                 param_file = self.extension_folder / "params.json"

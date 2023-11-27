@@ -148,14 +148,15 @@ class NumpySorting(BaseSorting):
         self._kwargs = dict(spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
     @staticmethod
-    def from_sorting(source_sorting: BaseSorting, with_metadata=False) -> "NumpySorting":
+    def from_sorting(source_sorting: BaseSorting, with_metadata=False, copy_spike_vector=False) -> "NumpySorting":
         """
         Create a numpy sorting from another sorting extractor
         """
 
-        sorting = NumpySorting(
-            source_sorting.to_spike_vector(), source_sorting.get_sampling_frequency(), source_sorting.unit_ids
-        )
+        spike_vector = source_sorting.to_spike_vector()
+        if copy_spike_vector:
+            spike_vector = spike_vector.copy()
+        sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids)
         if with_metadata:
             sorting.copy_metadata(source_sorting)
         return sorting
