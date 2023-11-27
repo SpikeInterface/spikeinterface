@@ -20,12 +20,12 @@ def job_kwargs():
 def job_kwargs_fixture():
     return job_kwargs()
 
+
 @pytest.fixture(name="recording", scope="module")
 def recording():
     rec, sorting = make_dataset()
     print(rec)
     return rec
-
 
 
 def run_peaks(recording, job_kwargs):
@@ -39,6 +39,7 @@ def run_peaks(recording, job_kwargs):
         noise_levels=noise_levels,
         **job_kwargs,
     )
+
 
 @pytest.fixture(name="peaks", scope="module")
 def peaks_fixture(recording, job_kwargs):

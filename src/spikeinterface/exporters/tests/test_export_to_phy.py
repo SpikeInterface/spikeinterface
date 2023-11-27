@@ -10,8 +10,13 @@ from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.core import compute_sparsity
 from spikeinterface.exporters import export_to_phy
 
-from spikeinterface.exporters.tests.common import (cache_folder, make_waveforms_extractor, 
-    waveforms_extractor_sparse_for_export, waveforms_extractor_dense_for_export, waveforms_extractor_with_group_for_export)
+from spikeinterface.exporters.tests.common import (
+    cache_folder,
+    make_waveforms_extractor,
+    waveforms_extractor_sparse_for_export,
+    waveforms_extractor_dense_for_export,
+    waveforms_extractor_with_group_for_export,
+)
 
 
 def test_export_to_phy(waveforms_extractor_sparse_for_export):
@@ -54,7 +59,7 @@ def test_export_to_phy_by_property(waveforms_extractor_with_group_for_export):
         if f.is_dir():
             shutil.rmtree(f)
 
-    waveform_extractor= waveforms_extractor_with_group_for_export
+    waveform_extractor = waveforms_extractor_with_group_for_export
 
     sparsity_group = compute_sparsity(waveform_extractor, method="by_property", by_property="group")
     export_to_phy(

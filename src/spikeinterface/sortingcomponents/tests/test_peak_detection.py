@@ -48,7 +48,7 @@ except:
 
 @pytest.fixture(name="dataset", scope="module")
 def dataset_fixture():
-    return  make_dataset()
+    return make_dataset()
 
 
 @pytest.fixture(name="recording", scope="module")
@@ -56,13 +56,16 @@ def recording(dataset):
     recording, sorting = dataset
     return recording
 
+
 @pytest.fixture(name="sorting", scope="module")
 def sorting(dataset):
     recording, sorting = dataset
     return sorting
 
+
 def job_kwargs():
     return dict(n_jobs=1, chunk_size=10000, progress_bar=True, verbose=True, mp_context="spawn")
+
 
 @pytest.fixture(name="job_kwargs", scope="module")
 def job_kwargs_fixture():

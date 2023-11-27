@@ -44,11 +44,15 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     exact_same_content = False
 
     def _clean_folders_metrics(self):
-        for name in ("toy_rec_long", "toy_sorting_long", "toy_waveforms_long",
-                     "toy_waveforms_short", "toy_waveforms_inv"
-                     ):
+        for name in (
+            "toy_rec_long",
+            "toy_sorting_long",
+            "toy_waveforms_long",
+            "toy_waveforms_short",
+            "toy_waveforms_inv",
+        ):
             if (cache_folder / name).is_dir():
-                shutil.rmtree(cache_folder / name)        
+                shutil.rmtree(cache_folder / name)
 
     def setUp(self):
         super().setUp()

@@ -6,9 +6,9 @@ from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
+
 def test_localize_peaks():
     recording, _ = make_dataset()
-
 
     # job_kwargs = dict(n_jobs=2, chunk_size=10000, verbose=False, progress_bar=True)
     job_kwargs = dict(n_jobs=1, chunk_size=10000, verbose=False, progress_bar=True)

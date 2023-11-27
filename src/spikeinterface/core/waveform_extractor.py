@@ -2021,7 +2021,7 @@ class BaseWaveformExtractorExtension:
         # Only save if not read only
         if self.waveform_extractor.is_read_only():
             return
-        
+
         # delete already saved
         self._reset_folder()
         self._save_params()
@@ -2086,7 +2086,8 @@ class BaseWaveformExtractorExtension:
             self.extension_folder.mkdir()
         elif self.format == "zarr":
             import zarr
-            zarr_root = zarr.open(self.folder, mode='r+')
+
+            zarr_root = zarr.open(self.folder, mode="r+")
             self.extension_group = zarr_root.create_group(self.extension_name, overwrite=True)
 
     def reset(self):
@@ -2129,7 +2130,6 @@ class BaseWaveformExtractorExtension:
 
         self._save_params()
 
-
     def _save_params(self):
         params_to_save = self._params.copy()
         if "sparsity" in params_to_save and params_to_save["sparsity"] is not None:
@@ -2143,7 +2143,6 @@ class BaseWaveformExtractorExtension:
                 param_file.write_text(json.dumps(check_json(params_to_save), indent=4), encoding="utf8")
         elif self.format == "zarr":
             self.extension_group.attrs["params"] = check_json(params_to_save)
-
 
     def _set_params(self, **params):
         # must be implemented in subclass

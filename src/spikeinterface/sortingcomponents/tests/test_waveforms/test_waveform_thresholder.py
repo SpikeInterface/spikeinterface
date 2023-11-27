@@ -15,7 +15,9 @@ def extract_waveforms(generated_recording):
     ms_after = 1.0
 
     # Node initialization
-    return ExtractDenseWaveforms(recording=generated_recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
+    return ExtractDenseWaveforms(
+        recording=generated_recording, ms_before=ms_before, ms_after=ms_after, return_output=True
+    )
 
 
 def test_waveform_thresholder_ptp(extract_waveforms, generated_recording, detected_peaks, chunk_executor_kwargs):

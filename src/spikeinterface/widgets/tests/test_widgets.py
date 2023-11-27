@@ -12,8 +12,14 @@ if __name__ != "__main__":
 import matplotlib.pyplot as plt
 
 
-from spikeinterface import (load_extractor, extract_waveforms, load_waveforms, download_dataset, compute_sparsity, 
-    generate_ground_truth_recording)
+from spikeinterface import (
+    load_extractor,
+    extract_waveforms,
+    load_waveforms,
+    download_dataset,
+    compute_sparsity,
+    generate_ground_truth_recording,
+)
 
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
@@ -41,10 +47,14 @@ KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.geten
 
 
 class TestWidgets(unittest.TestCase):
-
     @classmethod
     def _delete_widget_folders(cls):
-        for name in ("recording", "sorting", "we_dense", "we_sparse", ):
+        for name in (
+            "recording",
+            "sorting",
+            "we_dense",
+            "we_sparse",
+        ):
             if (cache_folder / name).is_dir():
                 shutil.rmtree(cache_folder / name)
 
@@ -57,18 +67,20 @@ class TestWidgets(unittest.TestCase):
             cls.sorting = load_extractor(cache_folder / "sorting")
         else:
             recording, sorting = generate_ground_truth_recording(
-                    durations=[30.], sampling_frequency=28000.0,
-                    num_channels=32, num_units=10,
-                    generate_probe_kwargs=dict(
-                        num_columns=2,
-                        xpitch=20,
-                        ypitch=20,
-                        contact_shapes="circle",
-                        contact_shape_params={"radius": 6},
-                    ),
-                    generate_sorting_kwargs=dict(firing_rates=10., refractory_period_ms=4.0),
-                    noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
-                    seed=2205,
+                durations=[30.0],
+                sampling_frequency=28000.0,
+                num_channels=32,
+                num_units=10,
+                generate_probe_kwargs=dict(
+                    num_columns=2,
+                    xpitch=20,
+                    ypitch=20,
+                    contact_shapes="circle",
+                    contact_shape_params={"radius": 6},
+                ),
+                generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
+                noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
+                seed=2205,
             )
             # cls.recording = recording.save(folder=cache_folder / "recording")
             # cls.sorting = sorting.save(folder=cache_folder / "sorting")

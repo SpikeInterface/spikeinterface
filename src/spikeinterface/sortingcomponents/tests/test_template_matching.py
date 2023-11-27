@@ -30,6 +30,7 @@ def make_waveform_extractor():
 
     return waveform_extractor
 
+
 @pytest.fixture(name="waveform_extractor", scope="module")
 def waveform_extractor_fixture():
     return make_waveform_extractor()
@@ -91,7 +92,6 @@ def test_find_spikes_from_templates(method, waveform_extractor):
 
 
 if __name__ == "__main__":
-
     waveform_extractor = make_waveform_extractor()
     method = "naive"
     test_find_spikes_from_templates(method, waveform_extractor)

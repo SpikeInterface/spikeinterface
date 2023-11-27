@@ -156,9 +156,7 @@ class NumpySorting(BaseSorting):
         spike_vector = source_sorting.to_spike_vector()
         if copy_spike_vector:
             spike_vector = spike_vector.copy()
-        sorting = NumpySorting(
-            spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids
-        )
+        sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids)
         if with_metadata:
             sorting.copy_metadata(source_sorting)
         return sorting

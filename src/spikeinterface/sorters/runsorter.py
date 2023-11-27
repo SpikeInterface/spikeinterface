@@ -180,11 +180,12 @@ def run_sorter_local(
         if with_output and sorting is not None:
             # if we delete the folder the sorting can have a data reference to deleted file/folder: we need a copy
             sorting_info = sorting.sorting_info
-            sorting= NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
-            sorting.set_sorting_info(recording_dict=sorting_info["recording"],
-                                     params_dict=sorting_info["params"],
-                                     log_dict=sorting_info["log"],
-                                     )
+            sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+            sorting.set_sorting_info(
+                recording_dict=sorting_info["recording"],
+                params_dict=sorting_info["params"],
+                log_dict=sorting_info["log"],
+            )
         shutil.rmtree(sorter_output_folder)
 
     return sorting

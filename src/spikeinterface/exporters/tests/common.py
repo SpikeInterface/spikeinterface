@@ -15,11 +15,12 @@ else:
     cache_folder = Path("cache_folder") / "exporters"
 
 
-
 def make_waveforms_extractor(sparse=True, with_group=False):
     recording, sorting = generate_ground_truth_recording(
-        durations=[30.], sampling_frequency=28000.0,
-        num_channels=8, num_units=4,
+        durations=[30.0],
+        sampling_frequency=28000.0,
+        num_channels=8,
+        num_units=4,
         generate_probe_kwargs=dict(
             num_columns=2,
             xpitch=20,
@@ -27,7 +28,7 @@ def make_waveforms_extractor(sparse=True, with_group=False):
             contact_shapes="circle",
             contact_shape_params={"radius": 6},
         ),
-        generate_sorting_kwargs=dict(firing_rates=10., refractory_period_ms=4.0),
+        generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
         noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
         seed=2205,
     )
@@ -35,7 +36,6 @@ def make_waveforms_extractor(sparse=True, with_group=False):
     if with_group:
         recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
         sorting.set_property("group", [0, 0, 1, 1])
-
 
     we = extract_waveforms(recording=recording, sorting=sorting, folder=None, mode="memory", sparse=sparse)
     compute_principal_components(we)
@@ -45,13 +45,16 @@ def make_waveforms_extractor(sparse=True, with_group=False):
 
     return we
 
+
 @pytest.fixture(scope="module")
 def waveforms_extractor_dense_for_export():
     return make_waveforms_extractor(sparse=False)
 
+
 @pytest.fixture(scope="module")
 def waveforms_extractor_with_group_for_export():
     return make_waveforms_extractor(sparse=False, with_group=True)
+
 
 @pytest.fixture(scope="module")
 def waveforms_extractor_sparse_for_export():

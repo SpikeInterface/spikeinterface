@@ -13,8 +13,10 @@ def chunk_executor_kwargs():
 @pytest.fixture(scope="package")
 def generated_recording():
     recording, sorting = generate_ground_truth_recording(
-        durations=[10.], sampling_frequency=32000.0,
-        num_channels=32, num_units=10,
+        durations=[10.0],
+        sampling_frequency=32000.0,
+        num_channels=32,
+        num_units=10,
         seed=2205,
     )
     return recording

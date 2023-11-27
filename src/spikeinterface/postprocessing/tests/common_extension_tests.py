@@ -27,16 +27,22 @@ class WaveformExtensionCommonTestSuite:
     exact_same_content = True
 
     def _clean_all_folders(self):
-        for name in ("toy_rec_1seg", "toy_sorting_1seg", "toy_waveforms_1seg",
-                     "toy_rec_2seg", "toy_sorting_2seg", "toy_waveforms_2seg",
-                     "toy_sorting_2seg.zarr", "toy_sorting_2seg_sparse", 
-                     ):
+        for name in (
+            "toy_rec_1seg",
+            "toy_sorting_1seg",
+            "toy_waveforms_1seg",
+            "toy_rec_2seg",
+            "toy_sorting_2seg",
+            "toy_waveforms_2seg",
+            "toy_sorting_2seg.zarr",
+            "toy_sorting_2seg_sparse",
+        ):
             if (cache_folder / name).is_dir():
                 shutil.rmtree(cache_folder / name)
 
         for name in ("toy_waveforms_1seg", "toy_waveforms_2seg", "toy_sorting_2seg_sparse"):
             for ext in self.extension_data_names:
-                folder = self.cache_folder / f"{name}_{ext}_selected" 
+                folder = self.cache_folder / f"{name}_{ext}_selected"
                 if folder.exists():
                     shutil.rmtree(folder)
 
@@ -144,11 +150,8 @@ class WaveformExtensionCommonTestSuite:
         if platform.system() != "Windows":
             we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
             we_ro_folder.chmod(0o777)
-        
+
         self._clean_all_folders()
-
-        
-
 
     def _test_extension_folder(self, we, in_memory=False):
         if self.extension_function_kwargs_list is None:
@@ -158,7 +161,7 @@ class WaveformExtensionCommonTestSuite:
         for ext_kwargs in extension_function_kwargs_list:
             compute_func = self.extension_class.get_extension_function()
             _ = compute_func(we, load_if_exists=False, **ext_kwargs)
-            
+
             # reload as an extension from we
             assert self.extension_class.extension_name in we.get_available_extension_names()
             assert we.has_extension(self.extension_class.extension_name)
@@ -193,9 +196,7 @@ class WaveformExtensionCommonTestSuite:
                 # select_units() not supported for Zarr
                 pass
 
-
     def test_extension(self):
-        
         print("Test extension", self.extension_class)
         # 1 segment
         print("1 segment", self.we1)
@@ -216,7 +217,6 @@ class WaveformExtensionCommonTestSuite:
         print("Sparse", self.we_sparse)
         self._test_extension_folder(self.we_sparse)
 
-        
         if self.exact_same_content:
             # check content is the same across modes: memory/content/zarr
 

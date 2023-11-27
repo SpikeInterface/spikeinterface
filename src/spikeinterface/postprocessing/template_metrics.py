@@ -833,7 +833,7 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     # longdouble is float128 when the platform supports it, otherwise it is float64
     channel_distances_sorted = channel_distances[distances_sort_indices].astype(np.longdouble)
     peak_amplitudes_sorted = peak_amplitudes[distances_sort_indices].astype(np.longdouble)
-    
+
     try:
         amp0 = peak_amplitudes_sorted[0]
         offset0 = np.min(peak_amplitudes_sorted)

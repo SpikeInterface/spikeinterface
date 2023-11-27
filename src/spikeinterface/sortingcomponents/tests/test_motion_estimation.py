@@ -177,7 +177,7 @@ def test_estimate_motion():
         corrected_rec = InterpolateMotionRecording(
             recording, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate"
         )
-        rec_folder =  cache_folder / (name.replace('/', '').replace(' ', '_') + "_recording")
+        rec_folder = cache_folder / (name.replace("/", "").replace(" ", "_") + "_recording")
         if rec_folder.exists():
             shutil.rmtree(rec_folder)
         corrected_rec.save(folder=rec_folder)
@@ -211,25 +211,25 @@ def test_estimate_motion():
         motions["rigid / decentralized / torch / time_horizon_s"],
         motions["rigid / decentralized / numpy / time_horizon_s"],
     )
-    # TODO : later torch and numpy used to be the same
+    # TODO : later torch and numpy used to be the same
     # assert np.testing.assert_almost_equal(motion0, motion1)
 
     motion0, motion1 = motions["non-rigid / decentralized / torch"], motions["non-rigid / decentralized / numpy"]
-    # TODO : later torch and numpy used to be the same
+    # TODO : later torch and numpy used to be the same
     # assert np.testing.assert_almost_equal(motion0, motion1)
 
     motion0, motion1 = (
         motions["non-rigid / decentralized / torch / time_horizon_s"],
         motions["non-rigid / decentralized / numpy / time_horizon_s"],
     )
-    # TODO : later torch and numpy used to be the same
+    # TODO : later torch and numpy used to be the same
     # assert np.testing.assert_almost_equal(motion0, motion1)
 
     motion0, motion1 = (
         motions["non-rigid / decentralized / torch / spatial_prior"],
         motions["non-rigid / decentralized / numpy / spatial_prior"],
     )
-    # TODO : later torch and numpy used to be the same
+    # TODO : later torch and numpy used to be the same
     # assert np.testing.assert_almost_equal(motion0, motion1)
 
 
