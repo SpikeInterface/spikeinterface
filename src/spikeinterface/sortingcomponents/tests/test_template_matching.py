@@ -93,5 +93,5 @@ def test_find_spikes_from_templates(method, waveform_extractor):
 if __name__ == "__main__":
 
     waveform_extractor = make_waveform_extractor()
-    method = "wobble"
+    method = "naive"
     test_find_spikes_from_templates(method, waveform_extractor)
