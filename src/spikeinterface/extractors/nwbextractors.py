@@ -71,7 +71,8 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
 def read_nwbfile(
     file_path: str | Path,
     stream_mode: Literal["ffspec", "ros3"] | None = None,
-    stream_cache_path: str | Path | None = None,
+    cache: bool = True,
+    stream_cache_path: str | Path | bool = True,
 ) -> NWBFile:
     """
     Read an NWB file and return the NWBFile object.
@@ -82,9 +83,11 @@ def read_nwbfile(
         The path to the NWB file.
     stream_mode : "fsspec" or "ros3" or None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
+    cache: bool, default: True
+        If True, the file is cached in the file passed to stream_cache_path
+        if False, the file is not cached.
     stream_cache_path : str or None, default: None
         The path to the cache storage
-
     Returns
     -------
     nwbfile : NWBFile
@@ -104,7 +107,7 @@ def read_nwbfile(
     --------
     >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
     """
-    from pynwb import NWBHDF5IO, NWBFile
+    from pynwb import NWBHDF5IO
 
     if stream_mode == "fsspec":
         import fsspec
@@ -112,13 +115,19 @@ def read_nwbfile(
 
         from fsspec.implementations.cached import CachingFileSystem
 
-        stream_cache_path = stream_cache_path if stream_cache_path is not None else str(get_global_tmp_folder())
-        caching_file_system = CachingFileSystem(
-            fs=fsspec.filesystem("http"),
-            cache_storage=str(stream_cache_path),
-        )
-        cached_file = caching_file_system.open(path=file_path, mode="rb")
-        file = h5py.File(cached_file)
+        fsspec_file_system = fsspec.filesystem("http")
+
+        if cache:
+            stream_cache_path = stream_cache_path if stream_cache_path is not None else str(get_global_tmp_folder())
+            caching_file_system = CachingFileSystem(
+                fs=fsspec_file_system,
+                cache_storage=str(stream_cache_path),
+            )
+            ffspec_file = caching_file_system.open(path=file_path, mode="rb")
+        else:
+            ffspec_file = fsspec_file_system.open(file_path, "rb")
+
+        file = h5py.File(ffspec_file, "r")
         io = NWBHDF5IO(file=file, mode="r", load_namespaces=True)
 
     elif stream_mode == "ros3":
@@ -153,6 +162,9 @@ class NwbRecordingExtractor(BaseRecording):
         Used if "rate" is not specified in the ElectricalSeries.
     stream_mode: str or None, default: None
         Specify the stream mode: "fsspec" or "ros3".
+    cache: bool, default: True
+        If True, the file is cached in the file passed to stream_cache_path
+        if False, the file is not cached.
     stream_cache_path: str or Path or None, default: None
         Local path for caching. If None it uses cwd
 
@@ -193,6 +205,7 @@ class NwbRecordingExtractor(BaseRecording):
         electrical_series_name: str = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
+        cache: bool = True,
         stream_mode: Optional[Literal["fsspec", "ros3"]] = None,
         stream_cache_path: str | Path | None = None,
     ):
@@ -207,7 +220,9 @@ class NwbRecordingExtractor(BaseRecording):
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        self._nwbfile = read_nwbfile(file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path)
+        self._nwbfile = read_nwbfile(
+            file_path=file_path, stream_mode=stream_mode, cache=cache, stream_cache_path=stream_cache_path
+        )
         electrical_series = retrieve_electrical_series(self._nwbfile, electrical_series_name)
         # The indices in the electrode table corresponding to this electrical series
         electrodes_indices = electrical_series.electrodes.data[:]
@@ -373,6 +388,7 @@ class NwbRecordingExtractor(BaseRecording):
             "load_time_vector": load_time_vector,
             "samples_for_rate_estimation": samples_for_rate_estimation,
             "stream_mode": stream_mode,
+            "cache": cache,
             "stream_cache_path": stream_cache_path,
         }
 
