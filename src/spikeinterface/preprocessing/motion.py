@@ -8,7 +8,6 @@ import copy
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.core_tools import SIJsonEncoder
-from torch import gather
 
 motion_options_preset = {
     # This preset should be the most acccurate
