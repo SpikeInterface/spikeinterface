@@ -20,22 +20,44 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
+        "general": {
+            "ms_before": 2, 
+            "ms_after": 2, 
+            "radius_um": 100
+            },
         "waveforms": {
             "max_spikes_per_unit": 200,
             "overwrite": True,
             "sparse": True,
             "method": "energy",
             "threshold": 0.25,
-        },
-        "filtering": {"freq_min": 150, "dtype": "float32"},
-        "detection": {"peak_sign": "neg", "detect_threshold": 4},
-        "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "clustering": {"legacy": False},
-        "matching": {},
+            },
+        "filtering": {
+            "freq_min": 150, 
+            "dtype": "float32"
+            },
+        "detection": {
+            "peak_sign": "neg", 
+            "detect_threshold": 4
+            },
+        "selection": {
+            "method" : "smart_sampling_amplitudes", 
+            "n_peaks_per_channel": 5000, 
+            "min_n_peaks": 20000,
+            "select_per_channel" : False
+            },
+        "clustering": {
+            "method" : "random_projections",
+            "method_kwargs" : {}
+            "legacy": False
+            },
+        "matching": {
+            "method" : "circus-omp-svd", 
+            "method_kwargs" : {}
+            },
         "apply_preprocessing": True,
         "shared_memory": True,
-        "job_kwargs": {"n_jobs": -1},
+        "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
     }
 
@@ -99,7 +121,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         selection_params.update({"noise_levels": noise_levels})
         selected_peaks = select_peaks(
-            peaks, method="smart_sampling_amplitudes", select_per_channel=False, **selection_params
+            peaks, **selection_params
         )
 
         if verbose:
@@ -116,7 +138,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(dict(shared_memory=params["shared_memory"]))
         clustering_params["job_kwargs"] = job_kwargs
         clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
-        clustering_params.update({"noise_levels": noise_levels})
 
         if "legacy" in clustering_params:
             legacy = clustering_params.pop("legacy")
@@ -124,12 +145,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             legacy = False
 
         if legacy:
-            clustering_method = "circus"
+            clustering_params['method'] = "circus"
         else:
-            clustering_method = "random_projections"
+            clustering_params['method'] = "random_projections"
 
+        print(clustering_params)
         labels, peak_labels = find_cluster_from_peaks(
-            recording_f, selected_peaks, method=clustering_method, method_kwargs=clustering_params
+            recording_f, selected_peaks, **clustering_params
         )
 
         ## We get the labels for our peaks
@@ -173,17 +195,23 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
         matching_params = params["matching"].copy()
-        matching_params["waveform_extractor"] = we
+        matching_params.update(job_kwargs)
+        if matching_params['method'] == 'woble':
+            matching_params['templates'] = we.get_all_templates('median')
+            matching_params['nbefore'] = we.nbefore
+            matching_params['nafter'] = we.nafter
+        else:
+            matching_params["waveform_extractor"] = we
+        
+        if matching_params['method'] == 'circus-omp-svd':
+            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+                if value in matching_params:
+                    matching_params.pop(value)
 
-        matching_job_params = job_kwargs.copy()
-        for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-            if value in matching_job_params:
-                matching_job_params.pop(value)
-
-        matching_job_params["chunk_duration"] = "100ms"
+        matching_params["chunk_duration"] = "100ms"
 
         spikes = find_spikes_from_templates(
-            recording_f, method="circus-omp-svd", method_kwargs=matching_params, **matching_job_params
+            recording_f, **matching_params
         )
 
         if params["debug"]:
