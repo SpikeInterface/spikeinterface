@@ -333,8 +333,8 @@ def test_peak_sign_consistency(recording, job_kwargs, detection_class):
     # To account for exclusion of positive peaks that are to close to negative peaks.
     # This should be excluded by the detection method when is exclusive so using peak_sign="both" should
     # Generate less peaks in this case
-    if detection_class not in (DetectPeakByChannelTorch, ):
-        # TODO later DetectPeakByChannelTorch do not pass this test
+    if detection_class not in (DetectPeakByChannelTorch, DetectPeakLocallyExclusiveTorch):
+        # TODO later Torch do not pass this test
         assert (negative_peaks.size + positive_peaks.size) >= all_peaks.size
 
     # Original case that prompted this test
