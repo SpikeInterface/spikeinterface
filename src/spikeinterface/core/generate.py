@@ -1186,7 +1186,7 @@ class InjectTemplatesRecording(BaseRecording):
         dtype = parent_recording.dtype if parent_recording is not None else templates.dtype
         BaseRecording.__init__(self, sorting.get_sampling_frequency(), channel_ids, dtype)
 
-        # Important : self._serializablility is not change here because it will depend on the sorting parents itself.
+        # Important : self._serializability is not change here because it will depend on the sorting parents itself.
 
         n_units = len(sorting.unit_ids)
         assert len(templates) == n_units
