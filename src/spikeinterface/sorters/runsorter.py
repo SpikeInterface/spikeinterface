@@ -6,7 +6,7 @@ import platform
 from warnings import warn
 from typing import Optional, Union
 
-from ..core import BaseRecording
+from ..core import BaseRecording, NumpySorting
 from .. import __version__ as si_version
 from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier
@@ -162,7 +162,7 @@ def run_sorter_local(
     **sorter_params,
 ):
     if isinstance(recording, list):
-        raise Exception("You you want to run several sorters/recordings use run_sorters(...)")
+        raise Exception("If you want to run several sorters/recordings use run_sorter_jobs(...)")
 
     SorterClass = sorter_dict[sorter_name]
 
@@ -172,11 +172,20 @@ def run_sorter_local(
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
     SorterClass.run_from_folder(output_folder, raise_error, verbose)
     if with_output:
-        sorting = SorterClass.get_result_from_folder(output_folder)
+        sorting = SorterClass.get_result_from_folder(output_folder, register_recording=True, sorting_info=True)
     else:
         sorting = None
     sorter_output_folder = output_folder / "sorter_output"
     if delete_output_folder:
+        if with_output and sorting is not None:
+            # if we delete the folder the sorting can have a data reference to deleted file/folder: we need a copy
+            sorting_info = sorting.sorting_info
+            sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+            sorting.set_sorting_info(
+                recording_dict=sorting_info["recording"],
+                params_dict=sorting_info["params"],
+                log_dict=sorting_info["log"],
+            )
         shutil.rmtree(sorter_output_folder)
 
     return sorting

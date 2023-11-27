@@ -70,22 +70,13 @@ class NaiveMatching(BaseTemplateMatchingEngine):
     def serialize_method_kwargs(cls, kwargs):
         kwargs = dict(kwargs)
 
-        waveform_extractor = kwargs["waveform_extractor"]
-        kwargs["waveform_extractor"] = str(waveform_extractor.folder)
+        we = kwargs.pop("waveform_extractor")
+        kwargs["templates"] = we.get_all_templates(mode="average")
 
         return kwargs
 
     @classmethod
     def unserialize_in_worker(cls, kwargs):
-        we = kwargs["waveform_extractor"]
-        if isinstance(we, str):
-            we = WaveformExtractor.load(we)
-            kwargs["waveform_extractor"] = we
-
-        templates = we.get_all_templates(mode="average")
-
-        kwargs["templates"] = templates
-
         return kwargs
 
     @classmethod

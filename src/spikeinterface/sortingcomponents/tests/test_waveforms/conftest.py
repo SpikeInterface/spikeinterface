@@ -1,8 +1,6 @@
 import pytest
 
-import spikeinterface as si
-import spikeinterface.extractors as se
-
+from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 
@@ -13,14 +11,19 @@ def chunk_executor_kwargs():
 
 
 @pytest.fixture(scope="package")
-def mearec_recording():
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    recording, sorting = se.read_mearec(local_path)
+def generated_recording():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[10.0],
+        sampling_frequency=32000.0,
+        num_channels=32,
+        num_units=10,
+        seed=2205,
+    )
     return recording
 
 
 @pytest.fixture(scope="package")
-def detected_peaks(mearec_recording, chunk_executor_kwargs):
-    recording = mearec_recording
+def detected_peaks(generated_recording, chunk_executor_kwargs):
+    recording = generated_recording
     peaks = detect_peaks(recording=recording, **chunk_executor_kwargs)
     return peaks
