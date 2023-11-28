@@ -41,24 +41,30 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     extension_data_names = ["metrics"]
     extension_function_kwargs_list = [dict(), dict(n_jobs=2), dict(metric_names=["snr", "firing_rate"])]
 
+    exact_same_content = False
+
+    def _clean_folders_metrics(self):
+        for name in (
+            "toy_rec_long",
+            "toy_sorting_long",
+            "toy_waveforms_long",
+            "toy_waveforms_short",
+            "toy_waveforms_inv",
+        ):
+            if (cache_folder / name).is_dir():
+                shutil.rmtree(cache_folder / name)
+
     def setUp(self):
         super().setUp()
-        self.cache_folder = cache_folder
-        if cache_folder.exists():
-            shutil.rmtree(cache_folder)
+        self._clean_folders_metrics()
+
         recording, sorting = toy_example(num_segments=2, num_units=10, duration=120, seed=42)
-        if (cache_folder / "toy_rec_long").is_dir():
-            recording = load_extractor(self.cache_folder / "toy_rec_long")
-        else:
-            recording = recording.save(folder=self.cache_folder / "toy_rec_long")
-        if (cache_folder / "toy_sorting_long").is_dir():
-            sorting = load_extractor(self.cache_folder / "toy_sorting_long")
-        else:
-            sorting = sorting.save(folder=self.cache_folder / "toy_sorting_long")
+        recording = recording.save(folder=cache_folder / "toy_rec_long")
+        sorting = sorting.save(folder=cache_folder / "toy_sorting_long")
         we_long = extract_waveforms(
             recording,
             sorting,
-            self.cache_folder / "toy_waveforms_long",
+            cache_folder / "toy_waveforms_long",
             max_spikes_per_unit=500,
             overwrite=True,
             seed=0,
@@ -75,7 +81,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         we_short = extract_waveforms(
             recording_short,
             sorting_short,
-            self.cache_folder / "toy_waveforms_short",
+            cache_folder / "toy_waveforms_short",
             max_spikes_per_unit=500,
             overwrite=True,
             seed=0,
@@ -83,6 +89,12 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         self.sparsity_long = compute_sparsity(we_long, method="radius", radius_um=50)
         self.we_long = we_long
         self.we_short = we_short
+
+    def tearDown(self):
+        super().tearDown()
+        # delete object to release memmap
+        del self.we_long, self.we_short
+        self._clean_folders_metrics()
 
     def test_metrics(self):
         we = self.we_long
@@ -103,10 +115,10 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         assert qm._params["qm_params"]["isi_violation"]["isi_threshold_ms"] == 2
         assert "snr" in metrics.columns
         assert "isolation_distance" not in metrics.columns
-        print(metrics)
+        # print(metrics)
 
         # with PCs
-        print("Computing PCA")
+        # print("Computing PCA")
         _ = compute_principal_components(we, n_components=5, mode="by_channel_local")
         metrics = self.extension_class.get_extension_function()(we, seed=0)
         assert "isolation_distance" in metrics.columns
@@ -115,21 +127,21 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         metrics_par = self.extension_class.get_extension_function()(
             we, n_jobs=2, verbose=True, progress_bar=True, seed=0
         )
-        print(metrics)
-        print(metrics_par)
+        # print(metrics)
+        # print(metrics_par)
         for metric_name in metrics.columns:
             # skip NaNs
             metric_values = metrics[metric_name].values[~np.isnan(metrics[metric_name].values)]
             metric_par_values = metrics_par[metric_name].values[~np.isnan(metrics_par[metric_name].values)]
             assert np.allclose(metric_values, metric_par_values)
-        print(metrics)
+        # print(metrics)
 
         # with sparsity
         metrics_sparse = self.extension_class.get_extension_function()(we, sparsity=self.sparsity_long, n_jobs=1)
         assert "isolation_distance" in metrics_sparse.columns
         # for metric_name in metrics.columns:
         #     assert np.allclose(metrics[metric_name], metrics_par[metric_name])
-        print(metrics_sparse)
+        # print(metrics_sparse)
 
     def test_amplitude_cutoff(self):
         we = self.we_short
@@ -197,7 +209,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             metrics = self.extension_class.get_extension_function()(we, metric_names=["drift"], qm_params=qm_params)
-        print(metrics)
+        # print(metrics)
         assert all(not np.isnan(metric) for metric in metrics["drift_ptp"].values)
         assert all(not np.isnan(metric) for metric in metrics["drift_std"].values)
         assert all(not np.isnan(metric) for metric in metrics["drift_mad"].values)
@@ -210,7 +222,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # invert recording
         rec_inv = scale(rec, gain=-1.0)
 
-        we_inv = extract_waveforms(rec_inv, sort, self.cache_folder / "toy_waveforms_inv", seed=0)
+        we_inv = extract_waveforms(rec_inv, sort, cache_folder / "toy_waveforms_inv", seed=0)
 
         # compute amplitudes
         _ = compute_spike_amplitudes(we, peak_sign="neg")
@@ -234,7 +246,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         we_dense = self.we1
         we_sparse = self.we_sparse
         sparsity = self.sparsity1
-        print(sparsity)
+        # print(sparsity)
 
         metric_names = ["nearest_neighbor", "nn_isolation", "nn_noise_overlap"]
 
@@ -243,14 +255,14 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         metrics = self.extension_class.get_extension_function()(
             we_dense, metric_names=metric_names, sparsity=sparsity, seed=0
         )
-        print(metrics)
+        # print(metrics)
 
         # with sparse waveforms
         _ = compute_principal_components(we_sparse, n_components=5, mode="by_channel_local")
         metrics = self.extension_class.get_extension_function()(
             we_sparse, metric_names=metric_names, sparsity=None, seed=0
         )
-        print(metrics)
+        # print(metrics)
 
         # with 2 jobs
         # with sparse waveforms
@@ -274,8 +286,8 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         qm_rec = self.extension_class.get_extension_function()(we)
         qm_no_rec = self.extension_class.get_extension_function()(we_no_rec)
 
-        print(qm_rec)
-        print(qm_no_rec)
+        # print(qm_rec)
+        # print(qm_no_rec)
 
         # check metrics are the same
         for metric_name in qm_rec.columns:
@@ -305,9 +317,13 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 if __name__ == "__main__":
     test = QualityMetricsExtensionTest()
     test.setUp()
-    # test.test_drift_metrics()
-    # test.test_extension()
+    test.test_extension()
+    test.test_metrics()
+    test.test_amplitude_cutoff()
+    test.test_presence_ratio()
+    test.test_drift_metrics()
+    test.test_peak_sign()
     test.test_nn_metrics()
-    # test.test_peak_sign()
-    # test.test_empty_units()
-    # test.test_recordingless()
+    test.test_recordingless()
+    test.test_empty_units()
+    test.tearDown()
