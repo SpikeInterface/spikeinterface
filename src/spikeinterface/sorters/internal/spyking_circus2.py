@@ -61,6 +61,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     handle_multi_segment = True
 
+    _params_description = {
+    }
+
+    sorter_description = """Spyking Circus 2 is a rewritting of Spyking Circus, within the SpikeInterface framework
+    It uses a more conservative clustering (compared to Spyking Circus) less prone to hallucinate units and/or find noise.
+    In addition, it also uses a full Orthogonal Matching Pursuit engine to reconstruct the traces, leading to more spikes
+    that can be discovered."""
+
     @classmethod
     def get_sorter_version(cls):
         return "2.0"
