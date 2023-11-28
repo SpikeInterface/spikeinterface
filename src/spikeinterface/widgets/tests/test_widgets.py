@@ -2,6 +2,7 @@ import unittest
 import pytest
 import os
 from pathlib import Path
+import shutil
 
 if __name__ != "__main__":
     import matplotlib
@@ -11,8 +12,14 @@ if __name__ != "__main__":
 import matplotlib.pyplot as plt
 
 
-from spikeinterface import extract_waveforms, load_waveforms, download_dataset, compute_sparsity
-
+from spikeinterface import (
+    load_extractor,
+    extract_waveforms,
+    load_waveforms,
+    download_dataset,
+    compute_sparsity,
+    generate_ground_truth_recording,
+)
 
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
@@ -41,18 +48,52 @@ KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.geten
 
 class TestWidgets(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
-        local_path = download_dataset(remote_path="mearec/mearec_test_10s.h5")
-        cls.recording = se.MEArecRecordingExtractor(local_path)
+    def _delete_widget_folders(cls):
+        for name in (
+            "recording",
+            "sorting",
+            "we_dense",
+            "we_sparse",
+        ):
+            if (cache_folder / name).is_dir():
+                shutil.rmtree(cache_folder / name)
 
-        cls.sorting = se.MEArecSortingExtractor(local_path)
+    @classmethod
+    def setUpClass(cls):
+        cls._delete_widget_folders()
+
+        if (cache_folder / "recording").is_dir() and (cache_folder / "sorting").is_dir():
+            cls.recording = load_extractor(cache_folder / "recording")
+            cls.sorting = load_extractor(cache_folder / "sorting")
+        else:
+            recording, sorting = generate_ground_truth_recording(
+                durations=[30.0],
+                sampling_frequency=28000.0,
+                num_channels=32,
+                num_units=10,
+                generate_probe_kwargs=dict(
+                    num_columns=2,
+                    xpitch=20,
+                    ypitch=20,
+                    contact_shapes="circle",
+                    contact_shape_params={"radius": 6},
+                ),
+                generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
+                noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
+                seed=2205,
+            )
+            # cls.recording = recording.save(folder=cache_folder / "recording")
+            # cls.sorting = sorting.save(folder=cache_folder / "sorting")
+            cls.recording = recording
+            cls.sorting = sorting
 
         cls.num_units = len(cls.sorting.get_unit_ids())
-        if (cache_folder / "mearec_test_dense").is_dir():
-            cls.we_dense = load_waveforms(cache_folder / "mearec_test_dense")
+
+        if (cache_folder / "we_dense").is_dir():
+            cls.we_dense = load_waveforms(cache_folder / "we_dense")
         else:
             cls.we_dense = extract_waveforms(
-                cls.recording, cls.sorting, cache_folder / "mearec_test_dense", sparse=False
+                recording=cls.recording, sorting=cls.sorting, folder=None, mode="memory", sparse=False
             )
             metric_names = ["snr", "isi_violation", "num_spikes"]
             _ = compute_spike_amplitudes(cls.we_dense)
@@ -68,10 +109,10 @@ class TestWidgets(unittest.TestCase):
         # make sparse waveforms
         cls.sparsity_radius = compute_sparsity(cls.we_dense, method="radius", radius_um=50)
         cls.sparsity_best = compute_sparsity(cls.we_dense, method="best_channels", num_channels=5)
-        if (cache_folder / "mearec_test_sparse").is_dir():
-            cls.we_sparse = load_waveforms(cache_folder / "mearec_test_sparse")
+        if (cache_folder / "we_sparse").is_dir():
+            cls.we_sparse = load_waveforms(cache_folder / "we_sparse")
         else:
-            cls.we_sparse = cls.we_dense.save(folder=cache_folder / "mearec_test_sparse", sparsity=cls.sparsity_radius)
+            cls.we_sparse = cls.we_dense.save(folder=cache_folder / "we_sparse", sparsity=cls.sparsity_radius)
 
         cls.skip_backends = ["ipywidgets", "ephyviewer"]
 
@@ -87,6 +128,11 @@ class TestWidgets(unittest.TestCase):
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
         cls.peaks = detect_peaks(cls.recording, method="locally_exclusive")
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.recording, cls.sorting, cls.peaks, cls.gt_comp, cls.we_sparse, cls.we_dense
+        # cls._delete_widget_folders()
 
     def test_plot_traces(self):
         possible_backends = list(sw.TracesWidget.get_possible_backends())
@@ -474,8 +520,8 @@ class TestWidgets(unittest.TestCase):
 if __name__ == "__main__":
     # unittest.main()
 
+    TestWidgets.setUpClass()
     mytest = TestWidgets()
-    mytest.setUpClass()
 
     # mytest.test_plot_unit_waveforms_density_map()
     # mytest.test_plot_unit_summary()
@@ -500,5 +546,7 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_unit_presence()
     # mytest.test_plot_multicomparison()
+
+    TestWidgets.tearDownClass()
 
     plt.show()

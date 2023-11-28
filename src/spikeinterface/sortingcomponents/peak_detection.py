@@ -781,7 +781,7 @@ if HAVE_TORCH:
 
         # we need this due to the padding in convolution
         valid_indices = torch.nonzero((0 < sample_indices) & (sample_indices < traces.shape[0] - 1)).squeeze()
-        if not sample_indices.numel():
+        if not valid_indices.numel():
             return empty_return_value
         sample_indices = sample_indices[valid_indices]
         channel_indices = channel_indices[valid_indices]

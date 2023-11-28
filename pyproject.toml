@@ -79,6 +79,7 @@ streaming_extractors = [
     "aiohttp",
     "requests",
     "pynwb>=2.3.0",
+    "remfile"
 ]
 
 full = [

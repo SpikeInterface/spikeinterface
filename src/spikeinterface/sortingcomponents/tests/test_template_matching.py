@@ -3,49 +3,43 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface import NumpySorting
-from spikeinterface import download_dataset
 from spikeinterface import extract_waveforms
 from spikeinterface.core import get_noise_levels
-from spikeinterface.extractors import read_mearec
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods
 
+from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 DEBUG = False
 
 
-def waveform_extractor(folder):
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path)
-    recording, gt_sorting = read_mearec(local_path)
-
+def make_waveform_extractor():
+    recording, sorting = make_dataset()
     waveform_extractor = extract_waveforms(
-        recording,
-        gt_sorting,
-        folder,
-        overwrite=True,
+        recording=recording,
+        sorting=sorting,
+        folder=None,
+        mode="memory",
         ms_before=1,
         ms_after=2.0,
         max_spikes_per_unit=500,
         return_scaled=False,
         n_jobs=1,
-        chunk_size=10000,
+        chunk_size=30000,
     )
 
     return waveform_extractor
 
 
 @pytest.fixture(name="waveform_extractor", scope="module")
-def waveform_extractor_fixture(tmp_path_factory):
-    folder = tmp_path_factory.mktemp("my_temp_dir")
-    return waveform_extractor(folder)
+def waveform_extractor_fixture():
+    return make_waveform_extractor()
 
 
 @pytest.mark.parametrize("method", matching_methods.keys())
 def test_find_spikes_from_templates(method, waveform_extractor):
     recording = waveform_extractor._recording
-    waveform = waveform_extractor.get_waveforms("#0")
+    waveform = waveform_extractor.get_waveforms(waveform_extractor.unit_ids[0])
     num_waveforms, _, _ = waveform.shape
     assert num_waveforms != 0
     method_kwargs_all = {"waveform_extractor": waveform_extractor, "noise_levels": get_noise_levels(recording)}
@@ -98,9 +92,6 @@ def test_find_spikes_from_templates(method, waveform_extractor):
 
 
 if __name__ == "__main__":
-    import tempfile
-
-    tmp_dir_main = tempfile.mkdtemp()
-    waveform_extractor = waveform_extractor(tmp_dir_main)
-    method = "wobble"
+    waveform_extractor = make_waveform_extractor()
+    method = "naive"
     test_find_spikes_from_templates(method, waveform_extractor)
