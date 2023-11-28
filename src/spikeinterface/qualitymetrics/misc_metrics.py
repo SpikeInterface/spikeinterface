@@ -1416,7 +1416,7 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    if wvf_extractor.is_extension("spike_amplitudes"):
+    if wvf_extractor.has_extension("spike_amplitudes"):
         amplitudes_ext = wvf_extractor.load_extension("spike_amplitudes")
         spike_amplitudes = amplitudes_ext.get_data(outputs="by_unit")
     else:
