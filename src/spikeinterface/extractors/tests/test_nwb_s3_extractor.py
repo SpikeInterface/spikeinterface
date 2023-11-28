@@ -48,6 +48,7 @@ def test_recording_s3_nwb_ros3(tmp_path):
     check_recordings_equal(rec, reloaded_recording)
 
 
+@pytest.mark.streaming_extractors
 @pytest.mark.parametrize("cache", [True, False])  # Test with and without cache
 def test_recording_s3_nwb_fsspec(tmp_path, cache):
     file_path = (
