@@ -68,7 +68,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                            "filtering" : "A dictionnary for the high_pass filer used during preprocessing",
                            "detection" : "A dictionnary for the peak detection node (locally_exclusive)",
                            "selection" : "A dictionnary for the peak selection node. Default is to use smart_sampling_amplitudes, with a minimum of 20000 peak_sign\
-                                         and 5000 peaks per electrode on average."
+                                         and 5000 peaks per electrode on average.",
                             "clustering" : "A dictionnary to be provided to the clustering method. By default, we used random_projections, but if legcacy is set to\
                             True, one other clustering called circus will be used, similar to the one used in Spyking circus 1",
                             "matching" : "A dictionnary to specify the matching engine used to recover spikes. The method default is circus-omp-svd, but other engines\
