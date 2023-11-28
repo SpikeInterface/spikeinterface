@@ -47,12 +47,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "select_per_channel" : False
             },
         "clustering": {
-            "method" : "random_projections",
-            "method_kwargs" : {}
             "legacy": False
             },
         "matching": {
-            "method" : "circus-omp-svd", 
+            "method" : "circus-omp-svd",
             "method_kwargs" : {}
             },
         "apply_preprocessing": True,
@@ -145,13 +143,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             legacy = False
 
         if legacy:
-            clustering_params['method'] = "circus"
+            clustering_method = "circus"
         else:
-            clustering_params['method'] = "random_projections"
+            clustering_method = "random_projections"
 
-        print(clustering_params)
         labels, peak_labels = find_cluster_from_peaks(
-            recording_f, selected_peaks, **clustering_params
+            recording_f, selected_peaks, method=clustering_method, method_kwargs=clustering_params
         )
 
         ## We get the labels for our peaks
@@ -194,24 +191,27 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         )
 
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
-        matching_params = params["matching"].copy()
-        matching_params.update(job_kwargs)
-        if matching_params['method'] == 'woble':
-            matching_params['templates'] = we.get_all_templates('median')
+
+        matching_method = params['matching']['method']
+
+        matching_params = params["matching"]['method_kwargs'].copy()
+        matching_job_params = {}
+        matching_job_params.update(job_kwargs)
+        if matching_method == 'wobble':
+            matching_params['templates'] = we.get_all_templates(mode='median')
             matching_params['nbefore'] = we.nbefore
             matching_params['nafter'] = we.nafter
         else:
             matching_params["waveform_extractor"] = we
         
-        if matching_params['method'] == 'circus-omp-svd':
+        if matching_method == 'circus-omp-svd':
             for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                if value in matching_params:
-                    matching_params.pop(value)
-
-        matching_params["chunk_duration"] = "100ms"
+                if value in matching_job_params:
+                    matching_job_params.pop(value)
+            matching_job_params["chunk_duration"] = "100ms"
 
         spikes = find_spikes_from_templates(
-            recording_f, **matching_params
+            recording_f, matching_method, method_kwargs=matching_params, **matching_job_params
         )
 
         if params["debug"]:
