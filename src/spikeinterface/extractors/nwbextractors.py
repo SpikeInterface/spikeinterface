@@ -73,7 +73,7 @@ def read_nwbfile(
     file_path: str | Path | None,
     file: BinaryIO | None = None,
     stream_mode: Literal["ffspec", "ros3", "remfile"] | None = None,
-    cache: bool = True,
+    cache: bool = False,
     stream_cache_path: str | Path | None = None,
 ) -> NWBFile:
     """
@@ -87,7 +87,7 @@ def read_nwbfile(
         The file-like object to read from. Either provide this or file_path.
     stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
-    cache: bool, default: True
+    cache: bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path : str or None, default: None
@@ -105,7 +105,7 @@ def read_nwbfile(
 
     Notes
     -----
-    This function can stream data from either the "fsspec" or "ros3" protocols.
+    This function can stream data from the "fsspec", "ros3" and "rem" protocols.
 
 
     Examples
@@ -194,7 +194,7 @@ class NwbRecordingExtractor(BaseRecording):
         Used if "rate" is not specified in the ElectricalSeries.
     stream_mode: str or None, default: None
         Specify the stream mode: "fsspec" or "ros3".
-    cache: bool, default: True
+    cache: bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path: str or Path or None, default: None
@@ -237,7 +237,7 @@ class NwbRecordingExtractor(BaseRecording):
         electrical_series_name: str | None = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
-        cache: bool = True,
+        cache: bool = False,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -495,7 +495,7 @@ class NwbSortingExtractor(BaseSorting):
         Used if "rate" is not specified in the ElectricalSeries.
     stream_mode: str or None, default: None
         Specify the stream mode: "fsspec" or "ros3".
-    cache: bool, default: True
+    cache: bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path: str or Path or None, default: None
@@ -519,7 +519,7 @@ class NwbSortingExtractor(BaseSorting):
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 100000,
         stream_mode: str | None = None,
-        cache: bool = True,
+        cache: bool = False,
         stream_cache_path: str | Path | None = None,
     ):
         try:
