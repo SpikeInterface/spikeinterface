@@ -61,8 +61,23 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     handle_multi_segment = True
 
-    _params_description = {
-    }
+    _params_description = {"general" : "A dictionnary to describe how templates should be computed. User can define ms_before and ms_after (in ms) \
+                                        and also the radius_um used to consider during clustering",
+                           "waveforms" : "A dictionnary to be passed to all the calls to extract_waveforms that will be perfomed internally. Default is \
+                                        to consider sparse waveforms",
+                           "filtering" : "A dictionnary for the high_pass filer used during preprocessing",
+                           "detection" : "A dictionnary for the peak detection node (locally_exclusive)",
+                           "selection" : "A dictionnary for the peak selection node. Default is to use smart_sampling_amplitudes, with a minimum of 20000 peak_sign\
+                                         and 5000 peaks per electrode on average."
+                            "clustering" : "A dictionnary to be provided to the clustering method. By default, we used random_projections, but if legcacy is set to\
+                            True, one other clustering called circus will be used, similar to the one used in Spyking circus 1",
+                            "matching" : "A dictionnary to specify the matching engine used to recover spikes. The method default is circus-omp-svd, but other engines\
+                                          can be used",
+                            "apply_preprocessing" : "Boolean to specify is circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
+                                                    median reference + z_score",
+                            "shared_memory" : "Boolean to specify if the code should use, as much as possible, to put internal datastructure in memory (faster)",
+                            "job_kwargs" : "A dictionnary to specify how many jobs and which parameters they should used",
+                            "debug" : "Boolean to specify if internal datastructure should be kept for debugging"}
 
     sorter_description = """Spyking Circus 2 is a rewritting of Spyking Circus, within the SpikeInterface framework
     It uses a more conservative clustering (compared to Spyking Circus) less prone to hallucinate units and/or find noise.
