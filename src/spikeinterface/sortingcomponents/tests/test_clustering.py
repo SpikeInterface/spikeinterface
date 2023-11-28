@@ -1,17 +1,13 @@
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset
-from spikeinterface import extract_waveforms
-
-from spikeinterface.extractors.neoextractors.mearec import MEArecRecordingExtractor
-
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks, clustering_methods
 
 from spikeinterface.core import get_noise_levels
-from spikeinterface.extractors import read_mearec
+
+from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 import time
 
@@ -25,20 +21,14 @@ def job_kwargs_fixture():
     return job_kwargs()
 
 
-def recording():
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    recording = MEArecRecordingExtractor(local_path)
-    return recording
-
-
 @pytest.fixture(name="recording", scope="module")
-def recording_fixture():
-    return recording()
+def recording():
+    rec, sorting = make_dataset()
+    print(rec)
+    return rec
 
 
-def peaks(recording, job_kwargs):
+def run_peaks(recording, job_kwargs):
     noise_levels = get_noise_levels(recording, return_scaled=False)
     return detect_peaks(
         recording,
@@ -51,18 +41,18 @@ def peaks(recording, job_kwargs):
     )
 
 
-@pytest.fixture(scope="module", name="peaks")
+@pytest.fixture(name="peaks", scope="module")
 def peaks_fixture(recording, job_kwargs):
-    return peaks(recording, job_kwargs)
+    return run_peaks(recording, job_kwargs)
 
 
-def peak_locations(recording, peaks, job_kwargs):
+def run_peak_locations(recording, peaks, job_kwargs):
     return localize_peaks(recording, peaks, method="center_of_mass", **job_kwargs)
 
 
-@pytest.fixture(scope="module", name="peak_locations")
+@pytest.fixture(name="peak_locations", scope="module")
 def peak_locations_fixture(recording, peaks, job_kwargs):
-    return peak_locations(recording, peaks, job_kwargs)
+    return run_peak_locations(recording, peaks, job_kwargs)
 
 
 @pytest.mark.parametrize("clustering_method", list(clustering_methods.keys()))
@@ -83,9 +73,9 @@ def test_find_cluster_from_peaks(clustering_method, recording, peaks, peak_locat
 
 if __name__ == "__main__":
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
-    recording_instance = recording()
-    peaks_instance = peaks(recording_instance, job_kwargs)
-    peak_locations_instance = peak_locations(recording_instance, peaks_instance, job_kwargs)
+    recording, sorting = make_dataset()
+    peaks = run_peaks(recording, job_kwargs)
+    peak_locations = run_peak_locations(recording, peaks, job_kwargs)
     method = "position_and_pca"
 
     test_find_cluster_from_peaks(method, recording, peaks, peak_locations)

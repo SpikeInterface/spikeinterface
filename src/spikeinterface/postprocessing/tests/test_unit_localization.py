@@ -25,3 +25,4 @@ if __name__ == "__main__":
     test = UnitLocationsExtensionTest()
     test.setUp()
     test.test_extension()
+    test.tearDown()

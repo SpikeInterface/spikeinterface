@@ -1,19 +1,14 @@
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset
-
-from spikeinterface.extractors import MEArecRecordingExtractor
-
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
+from spikeinterface.sortingcomponents.tests.common import make_dataset
+
 
 def test_localize_peaks():
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    recording = MEArecRecordingExtractor(local_path)
+    recording, _ = make_dataset()
 
     # job_kwargs = dict(n_jobs=2, chunk_size=10000, verbose=False, progress_bar=True)
     job_kwargs = dict(n_jobs=1, chunk_size=10000, verbose=False, progress_bar=True)
