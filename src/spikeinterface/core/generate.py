@@ -269,11 +269,31 @@ def generate_injected_sorting(
 
 
 class TransformedSorting(BaseSorting):
+    """
+    Generates sorting object with added spike from an external spike_vector.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object
+    added_spikes : np.array (spike_vector)
+        The spikes that should be added to the sorting object
+    refractory_period_ms : float, default 5
+        The refractory period violation to prevent duplicates and/or unphysiological addition
+        of spikes. Any spike times in added_spikes violating the refractory period will be
+        discarded
+
+    """
     def __init__(self, sorting, added_spikes=None, refractory_period_ms=5):
         fs = sorting.get_sampling_frequency()
         unit_ids = sorting.get_unit_ids()
         
         BaseSorting.__init__(self, fs, unit_ids)
+
+        # We need to add the sorting segments
+        for segment in sorting._sorting_segments:
+            self.add_sorting_segment(segment)
+        
         sorting.precompute_spike_trains()
         assert added_spikes.dtype == minimum_spike_dtype, "added_spikes should be a spike vector"
 
