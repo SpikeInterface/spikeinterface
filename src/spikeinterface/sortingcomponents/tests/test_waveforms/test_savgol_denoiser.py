@@ -10,8 +10,8 @@ from spikeinterface.core.node_pipeline import (
 )
 
 
-def test_savgol_denoising(mearec_recording, detected_peaks, chunk_executor_kwargs):
-    recording = mearec_recording
+def test_savgol_denoising(generated_recording, detected_peaks, chunk_executor_kwargs):
+    recording = generated_recording
     peaks = detected_peaks
 
     # Parameters
