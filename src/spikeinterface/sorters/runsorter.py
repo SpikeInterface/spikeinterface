@@ -502,14 +502,19 @@ if __name__ == '__main__':
         if DEV_MODE:
             if is_editable_mode():
                 installation_mode = "dev"
-                host_folder_source = Path(spikeinterface.__file__).parents[2]
             else:
                 installation_mode = "github"
         else:
             installation_mode = "github"
-    elif installation_mode == "folder":
+        if verbose:
+            print(f"installation_mode='auto' is switch to '{installation_mode}'")
+
+    if installation_mode == "folder":
         assert spikeinterface_folder_source is not None, "for installation_mode='folder', spikeinterface_folder_source must provided"
         host_folder_source = Path(spikeinterface_folder_source)
+
+    if installation_mode == "dev":
+        host_folder_source = Path(spikeinterface.__file__).parents[2]
 
     if host_folder_source is not None:
         host_folder_source = host_folder_source.resolve()
@@ -581,9 +586,6 @@ if __name__ == '__main__':
             if DEV_MODE:
                 # not released yet use main branch
                 cmd = "pip install --user --upgrade --no-input --no-build-isolation git+https://github.com/SpikeInterface/spikeinterface.git@main#egg=spikeinterface[full]"
-                print("#"*50)
-                print(cmd)
-                print("#"*50)
                 res_output = container_client.run_command(cmd)
             else:
                 # already released and has a tag 
