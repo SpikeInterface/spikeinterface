@@ -272,7 +272,7 @@ class TransformedSorting(BaseSorting):
     def __init__(self, sorting, added_spikes=None, refractory_period_ms=5):
         fs = sorting.get_sampling_frequency()
         unit_ids = sorting.get_unit_ids()
-        rpv = int(fs * refractory_period_ms / 1000)
+        
         BaseSorting.__init__(self, fs, unit_ids)
         sorting.precompute_spike_trains()
         assert added_spikes.dtype == minimum_spike_dtype, "added_spikes should be a spike vector"
@@ -284,15 +284,19 @@ class TransformedSorting(BaseSorting):
         sort_idxs = np.lexsort([self._cached_spike_vector["sample_index"], self._cached_spike_vector["segment_index"]])
         self._cached_spike_vector = self._cached_spike_vector[sort_idxs]
         self.added = self.added[sort_idxs]
-
         unit_indices = np.unique(self._cached_spike_vector["unit_index"])
-        to_keep = np.ones(len(self._cached_spike_vector), dtype=bool)
-        for unit_ind in unit_indices:
-            (indices,) = np.nonzero(self._cached_spike_vector["unit_index"] == unit_ind)
-            to_keep[indices[1:]] = np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv
+        segment_indices = np.unique(self._cached_spike_vector["segment_index"])
 
-        self._cached_spike_vector = self._cached_spike_vector[to_keep]
-        self.added = self.added[to_keep]
+        if refractory_period_ms is not None:
+            rpv = int(fs * refractory_period_ms / 1000)
+            to_keep = np.ones(len(self._cached_spike_vector), dtype=bool)
+            for segment_index in segment_indices:
+                for unit_ind in unit_indices:
+                    (indices,) = np.nonzero((self._cached_spike_vector["unit_index"] == unit_ind) * (self._cached_spike_vector["segment_index"] == segment_index))
+                    to_keep[indices[1:]] = np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv
+
+            self._cached_spike_vector = self._cached_spike_vector[to_keep]
+            self.added = self.added[to_keep]
 
 
 def create_sorting_npz(num_seg, file_path):

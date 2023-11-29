@@ -467,6 +467,10 @@ def test_transformedsorting():
     n_spikes_added_2 = len(transformed_2.to_spike_vector())
     assert n_spikes_added_2 < n_spikes_added_1
 
+    transformed_3 = TransformedSorting(sorting_1, sorting_1.to_spike_vector(), refractory_period_ms=0.1)
+    n_spikes_added_3 = len(transformed_3.to_spike_vector())
+    assert(n_spikes_added_3 == n_spikes_1)
+
 
 def test_generate_ground_truth_recording():
     rec, sorting = generate_ground_truth_recording(upsample_factor=None)
