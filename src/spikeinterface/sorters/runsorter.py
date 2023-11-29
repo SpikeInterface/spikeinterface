@@ -7,10 +7,13 @@ import platform
 from warnings import warn
 from typing import Optional, Union
 
+from spikeinterface import DEV_MODE
+import spikeinterface
+
 from ..core import BaseRecording, NumpySorting
 from .. import __version__ as si_version
 from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
-from spikeinterface.core.core_tools import check_json, recursive_path_modifier
+from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_editable_mode
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError, has_nvidia
 
@@ -354,6 +357,8 @@ def run_sorter_container(
     with_output: bool = True,
     delete_container_files: bool = True,
     extra_requirements=None,
+    installation_mode="auto",
+    spikeinterface_folder_source=None,
     **sorter_params,
 ):
     """
@@ -384,9 +389,25 @@ def run_sorter_container(
         If True, the container temporary files are deleted after the sorting is done
     extra_requirements: list, default: None
         List of extra requirements to install in the container
+    installation_mode: "auto" | "pypi" | "github" | "folder" | "dev" | "no-install"
+        How spikeinterface is installed in the container:
+          * "auto": if host installation is release then use "github" with tag
+                    if host is DEV_MODE=True then use "dev"
+          * "pypi": use pypi with pip install spikeinterface
+          * "github": use github with 
+          * "folder": mount a folder in container and install from this one.
+                      So the version in the container a different spikeinterface  version from host, usefull for
+                      cross checks.
+          * "dev": same as dev but the folder is the spikeinterface.__file__ to ensure same version as host.
+          * "no-install": do not install spikeinterface ine the container because it is already installed
+    spikeinterface_folder_source: None or Path
+        In case of installation_mode="folder", this must be contains the spikeinterface folder source.
+        
     **sorter_params: keyword args for the sorter
 
     """
+
+    assert installation_mode in ("auto", "pypi", "github", "folder", "dev", "no-install")
 
     if extra_requirements is None:
         extra_requirements = []
@@ -476,15 +497,25 @@ if __name__ == '__main__':
             volumes[str(recording_folder)] = {"bind": str(recording_folder_unix), "mode": "ro"}
     volumes[str(parent_folder)] = {"bind": str(parent_folder_unix), "mode": "rw"}
 
-    si_dev_path = os.getenv("SPIKEINTERFACE_DEV_PATH", None)
+    host_folder_source = None
+    if installation_mode == "auto":
+        if DEV_MODE:
+            if is_editable_mode():
+                installation_mode = "dev"
+                host_folder_source = Path(spikeinterface.__file__).parents[2]
+            else:
+                installation_mode = "github"
+        else:
+            installation_mode = "github"
+    elif installation_mode == "folder":
+        assert spikeinterface_folder_source is not None, "for installation_mode='folder', spikeinterface_folder_source must provided"
+        host_folder_source = Path(spikeinterface_folder_source)
 
-    install_si_from_source = False
-    if "dev" in si_version and si_dev_path is not None:
-        install_si_from_source = True
-        # Making sure to get rid of last / or \
-        si_dev_path = str(Path(si_dev_path).absolute().resolve())
-        si_dev_path_unix = path_to_unix(si_dev_path)
-        volumes[si_dev_path] = {"bind": si_dev_path_unix, "mode": "ro"}
+    if host_folder_source is not None:
+        host_folder_source = host_folder_source.resolve()
+        # this bind is read only  and will be copy later
+        container_folder_source_ro = '/spikeinterface'
+        volumes[str(host_folder_source)] = {"bind": container_folder_source_ro, "mode": "ro"}
 
     extra_kwargs = {}
 
@@ -513,58 +544,72 @@ if __name__ == '__main__':
         py_user_base_folder = parent_folder / "in_container_python_base"
         py_user_base_folder.mkdir(parents=True, exist_ok=True)
         py_user_base_unix = path_to_unix(py_user_base_folder)
-        si_source_folder = f"{py_user_base_unix}/sources"
+        container_folder_source = f"{py_user_base_unix}/sources"
     else:
-        si_source_folder = "/sources"
+        container_folder_source = "/sources"
+
     container_client = ContainerClient(mode, container_image, volumes, py_user_base_unix, extra_kwargs)
     if verbose:
         print("Starting container")
     container_client.start()
 
-    if verbose and install_si_from_source:
-        print("******")
-        print("Container started with the following paths")
-        print(si_dev_path_unix, si_source_folder)
-
-    # check if container contains spikeinterface already
-    cmd_1 = ["python", "-c", "import spikeinterface; print(spikeinterface.__version__)"]
-    cmd_2 = ["python", "-c", "from spikeinterface.sorters import run_sorter_local"]
-    res_output = ""
-    for cmd in [cmd_1, cmd_2]:
-        res_output += str(container_client.run_command(cmd))
-    need_si_install = "ModuleNotFoundError" in res_output
+    if installation_mode == "no-install":
+        need_si_install = False
+    else:
+        cmd_1 = ["python", "-c", "import spikeinterface; print(spikeinterface.__version__)"]
+        cmd_2 = ["python", "-c", "from spikeinterface.sorters import run_sorter_local"]
+        res_output = ""
+        for cmd in [cmd_1, cmd_2]:
+            res_output += str(container_client.run_command(cmd))
+        need_si_install = "ModuleNotFoundError" in res_output
 
     if need_si_install:
-        if "dev" in si_version:
-            if verbose:
-                print(f"Installing spikeinterface from sources in {container_image}")
+        # update pip in container
+        cmd = f"pip install --user --upgrade pip"
+        res_output = container_client.run_command(cmd)
 
-            # TODO later check output
-            if install_si_from_source:
-                si_source = "local machine"
-                # install in local copy of host SI folder in sources/spikeinterface to avoid permission errors
-                cmd = f"mkdir {si_source_folder}"
-                res_output = container_client.run_command(cmd)
-                cmd = f"cp -r {si_dev_path_unix} {si_source_folder}"
-                res_output = container_client.run_command(cmd)
-                cmd = f"pip install --user {si_source_folder}/spikeinterface[full]"
-            else:
-                si_source = "remote repository"
-                cmd = "pip install --user --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]"
+        if installation_mode == "pypi":
             if verbose:
-                print(f"Installing dev spikeinterface from {si_source}")
+                print(f"Installing spikeinterface=={si_version} with pypi in {container_image}")
+
+            cmd = f"pip install --user --upgrade --no-input --no-build-isolation spikeinterface[full]=={si_version}"
             res_output = container_client.run_command(cmd)
+        elif installation_mode == "github":
+            if verbose:
+                print(f"Installing spikeinterface from github sources in {container_image}")
+
+            if DEV_MODE:
+                # not released yet use main branch
+                cmd = "pip install --user --upgrade --no-input --no-build-isolation git+https://github.com/SpikeInterface/spikeinterface.git@main#egg=spikeinterface[full]"
+                print("#"*50)
+                print(cmd)
+                print("#"*50)
+                res_output = container_client.run_command(cmd)
+            else:
+                # already released and has a tag 
+                si_version = '0.99.1'
+                cmd = f"pip install --user --upgrade --no-input --no-build-isolation https://github.com/SpikeInterface/spikeinterface/archive/{si_version}.tar.gz#egg=spikeinterface[full]"
+                res_output = container_client.run_command(cmd)
+
+        elif host_folder_source is not None:
+            # this is "dev" + "folder"
+            if verbose:
+                print(f"Installing spikeinterface from local sources in {container_image}")
+
+            # copy spikeinterface sources to avoid problems between host and containers
+            cmd = f"mkdir {container_folder_source}"
+            res_output = container_client.run_command(cmd)
+            cmd = f"cp -r {container_folder_source_ro} {container_folder_source}"
+            res_output = container_client.run_command(cmd)
+
+            cmd = f"pip install --user --no-input {container_folder_source}/spikeinterface[full]"
+            res_output = container_client.run_command(cmd)
+
+        if installation_mode == "dev":
+            # also install neo from github
             cmd = "pip install --user --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
             res_output = container_client.run_command(cmd)
-        else:
-            if verbose:
-                print(f"Installing spikeinterface=={si_version} in {container_image}")
-            cmd = f"pip install --user --upgrade --no-input spikeinterface[full]=={si_version}"
-            res_output = container_client.run_command(cmd)
-    else:
-        # TODO version checking
-        if verbose:
-            print(f"spikeinterface is already installed in {container_image}")
+
 
     if hasattr(recording, "extra_requirements"):
         extra_requirements.extend(recording.extra_requirements)

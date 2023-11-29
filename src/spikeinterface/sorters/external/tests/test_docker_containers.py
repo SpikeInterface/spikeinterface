@@ -29,6 +29,8 @@ def generate_run_kwargs():
     test_recording.set_channel_offsets(0)
     run_kwargs = dict(recording=test_recording, verbose=True)
     run_kwargs["docker_image"] = True
+    run_kwargs["installation_mode"] = "folder"
+    run_kwargs["spikeinterface_folder_source"] = os.getenv("SPIKEINTERFACE_DEV_PATH")
     return run_kwargs
 
 
