@@ -268,7 +268,7 @@ def generate_injected_sorting(
     return NumpySorting.from_unit_dict(injected_spike_trains, sorting.get_sampling_frequency())
 
 
-class TransformedSorting(BaseSorting):
+class TransformSorting(BaseSorting):
     """
     Generates sorting object with added spike from an external spike_vector.
 
