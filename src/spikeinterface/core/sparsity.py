@@ -154,11 +154,8 @@ class ChannelSparsity:
             or a single sparsified waveform (template) with shape (num_samples, num_active_channels).
         """
 
-        assert_msg = (
-            "Waveforms must be dense to sparsify them. "
-            f"Their last dimension {waveforms.shape[-1]} must be equal to the number of channels {self.num_channels}"
-        )
-        assert self.are_waveforms_dense(waveforms=waveforms), assert_msg
+        if self.are_waveforms_sparse(waveforms=waveforms, unit_id=unit_id):
+            return waveforms
 
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
         sparsified_waveforms = waveforms[..., non_zero_indices]
@@ -189,16 +186,20 @@ class ChannelSparsity:
         """
 
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
+        num_active_channels = len(non_zero_indices)
 
-        assert_msg = (
-            "Waveforms do not seem to be be in the sparsity shape of this unit_id. The number of active channels is "
-            f"{len(non_zero_indices)} but the waveform has {waveforms.shape[-1]} active channels."
-        )
-        assert self.are_waveforms_sparse(waveforms=waveforms, unit_id=unit_id), assert_msg
+        if not self.are_waveforms_sparse(waveforms=waveforms, unit_id=unit_id):
+            error_message = (
+                "Waveforms do not seem to be in the sparsity shape for this unit_id. The number of active channels is "
+                f"{num_active_channels}, but the waveform has non-zero values outsies of those active channels: \n"
+                f"{waveforms[..., num_active_channels:]}"
+            )
+            raise ValueError(error_message)
 
         densified_shape = waveforms.shape[:-1] + (self.num_channels,)
-        densified_waveforms = np.zeros(densified_shape, dtype=waveforms.dtype)
-        densified_waveforms[..., non_zero_indices] = waveforms
+        densified_waveforms = np.zeros(shape=densified_shape, dtype=waveforms.dtype)
+        # Maps the active channels to their original indices
+        densified_waveforms[..., non_zero_indices] = waveforms[..., :num_active_channels]
 
         return densified_waveforms
 
@@ -208,7 +209,21 @@ class ChannelSparsity:
     def are_waveforms_sparse(self, waveforms: np.ndarray, unit_id: str | int) -> bool:
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
         num_active_channels = len(non_zero_indices)
-        return waveforms.shape[-1] == num_active_channels
+
+        # If any channel is non-zero outside of the active channels, then the waveforms are not sparse
+        excess_zeros = waveforms[..., num_active_channels:].sum()
+
+        return int(excess_zeros) == 0
+
+    def sparisfy_templates(self, templates_array: np.ndarray) -> np.ndarray:
+        max_num_active_channels = self.max_num_active_channels
+        sparisfied_shape = (self.num_units, self.num_samples, max_num_active_channels)
+        sparse_templates = np.zeros(shape=sparisfied_shape, dtype=templates_array.dtype)
+        for unit_index, unit_id in enumerate(self.unit_ids):
+            template = templates_array[unit_index, ...]
+            sparse_templates[unit_index, ...] = self.sparsify_waveforms(waveforms=template, unit_id=unit_id)
+
+        return sparse_templates
 
     @classmethod
     def from_unit_id_to_channel_ids(cls, unit_id_to_channel_ids, unit_ids, channel_ids):

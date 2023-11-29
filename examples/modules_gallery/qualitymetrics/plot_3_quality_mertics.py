@@ -2,12 +2,12 @@
 Quality Metrics Tutorial
 ========================
 
-After spike sorting, you might want to validate the goodness of the sorted units. This can be done using the
+After spike sorting, you might want to validate the 'goodness' of the sorted units. This can be done using the
 :code:`qualitymetrics` submodule, which computes several quality metrics of the sorted units.
 
 """
 
-import spikeinterface as si
+import spikeinterface.core as si
 import spikeinterface.extractors as se
 from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.qualitymetrics import (compute_snrs, compute_firing_rates,
@@ -29,10 +29,15 @@ print(sorting)
 # For convenience, metrics are computed on the :code:`WaveformExtractor` object,
 # because it contains a reference to the "Recording" and the "Sorting" objects:
 
-folder = 'waveforms_mearec'
-we = si.extract_waveforms(recording, sorting, folder, sparse=False,
-                          ms_before=1, ms_after=2., max_spikes_per_unit=500,
-                          n_jobs=1, chunk_durations='1s')
+we = si.extract_waveforms(recording=recording,
+                          sorting=sorting,
+                          folder='waveforms_mearec',
+                          sparse=False,
+                          ms_before=1,
+                          ms_after=2.,
+                          max_spikes_per_unit=500,
+                          n_jobs=1,
+                          chunk_durations='1s')
 print(we)
 
 ##############################################################################
@@ -51,7 +56,7 @@ print(snrs)
 # Some metrics are based on the principal component scores, so they require a
 # :code:`WaveformsPrincipalComponent` object as input:
 
-pc = compute_principal_components(we, load_if_exists=True,
+pc = compute_principal_components(waveform_extractor=we, load_if_exists=True,
                                      n_components=3, mode='by_channel_local')
 print(pc)
 

@@ -14,6 +14,7 @@ from .misc_metrics import (
     compute_synchrony_metrics,
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
+    compute_sd_ratio,
 )
 
 from .pca_metrics import (
@@ -46,4 +47,5 @@ _misc_metric_name_to_func = {
     "synchrony": compute_synchrony_metrics,
     "firing_range": compute_firing_ranges,
     "drift": compute_drift_metrics,
+    "sd_ratio": compute_sd_ratio,
 }

@@ -3,13 +3,13 @@ Curation Tutorial
 ==================
 
 After spike sorting and computing quality metrics, you can automatically curate the spike sorting output using the
-quality metrics.
+quality metrics that you have calculated.
 
 """
 #############################################################################
 # Import the modules and/or functions necessary from spikeinterface
 
-import spikeinterface as si
+import spikeinterface.core as si
 import spikeinterface.extractors as se
 
 from spikeinterface.postprocessing import compute_principal_components
@@ -29,11 +29,16 @@ print(sorting)
 
 ##############################################################################
 # First, we extract waveforms (to be saved in the folder 'wfs_mearec') and
-# compute their PC scores:
+# compute their PC (principal component) scores:
 
-we = si.extract_waveforms(recording, sorting, folder='wfs_mearec',
-                          ms_before=1, ms_after=2., max_spikes_per_unit=500,
-                          n_jobs=1, chunk_size=30000)
+we = si.extract_waveforms(recording=recording,
+                          sorting=sorting,
+                          folder='wfs_mearec',
+                          ms_before=1,
+                          ms_after=2.,
+                          max_spikes_per_unit=500,
+                          n_jobs=1,
+                          chunk_size=30000)
 print(we)
 
 pc = compute_principal_components(we, load_if_exists=True, n_components=3, mode='by_channel_local')
@@ -42,7 +47,7 @@ pc = compute_principal_components(we, load_if_exists=True, n_components=3, mode=
 ##############################################################################
 # Then we compute some quality metrics:
 
-metrics = compute_quality_metrics(we, metric_names=['snr', 'isi_violation', 'nearest_neighbor'])
+metrics = compute_quality_metrics(waveform_extractor=we, metric_names=['snr', 'isi_violation', 'nearest_neighbor'])
 print(metrics)
 
 ##############################################################################

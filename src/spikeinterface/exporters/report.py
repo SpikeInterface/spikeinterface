@@ -51,7 +51,7 @@ def export_report(
     unit_ids = sorting.unit_ids
 
     # load or compute spike_amplitudes
-    if we.is_extension("spike_amplitudes"):
+    if we.has_extension("spike_amplitudes"):
         spike_amplitudes = we.load_extension("spike_amplitudes").get_data(outputs="by_unit")
     elif force_computation:
         spike_amplitudes = compute_spike_amplitudes(we, peak_sign=peak_sign, outputs="by_unit", **job_kwargs)
@@ -62,7 +62,7 @@ def export_report(
         )
 
     # load or compute quality_metrics
-    if we.is_extension("quality_metrics"):
+    if we.has_extension("quality_metrics"):
         metrics = we.load_extension("quality_metrics").get_data()
     elif force_computation:
         metrics = compute_quality_metrics(we)
@@ -73,7 +73,7 @@ def export_report(
         )
 
     # load or compute correlograms
-    if we.is_extension("correlograms"):
+    if we.has_extension("correlograms"):
         correlograms, bins = we.load_extension("correlograms").get_data()
     elif force_computation:
         correlograms, bins = compute_correlograms(we, window_ms=100.0, bin_ms=1.0)
@@ -84,7 +84,7 @@ def export_report(
         )
 
     # pre-compute unit locations if not done
-    if not we.is_extension("unit_locations"):
+    if not we.has_extension("unit_locations"):
         unit_locations = compute_unit_locations(we)
 
     output_folder = Path(output_folder).absolute()

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import pickle
 from pathlib import Path
@@ -5,6 +7,7 @@ import shutil
 from typing import Iterable, Literal, Optional
 import json
 import os
+import weakref
 
 import numpy as np
 from copy import deepcopy
@@ -22,7 +25,7 @@ from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
 from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 
-_possible_template_modes = ("average", "std", "median")
+_possible_template_modes = ("average", "std", "median", "percentile")
 
 
 class WaveformExtractor:
@@ -284,14 +287,14 @@ class WaveformExtractor:
             else:
                 relative_to = None
 
-            if recording.check_serializablility("json"):
+            if recording.check_serializability("json"):
                 recording.dump(folder / "recording.json", relative_to=relative_to)
-            elif recording.check_serializablility("pickle"):
+            elif recording.check_serializability("pickle"):
                 recording.dump(folder / "recording.pickle", relative_to=relative_to)
 
-            if sorting.check_serializablility("json"):
+            if sorting.check_serializability("json"):
                 sorting.dump(folder / "sorting.json", relative_to=relative_to)
-            elif sorting.check_serializablility("pickle"):
+            elif sorting.check_serializability("pickle"):
                 sorting.dump(folder / "sorting.pickle", relative_to=relative_to)
             else:
                 warn(
@@ -506,7 +509,7 @@ class WaveformExtractor:
     def get_sorting_property(self, key) -> np.ndarray:
         return self.sorting.get_property(key)
 
-    def get_extension_class(self, extension_name):
+    def get_extension_class(self, extension_name: str):
         """
         Get extension class from name and check if registered.
 
@@ -525,7 +528,7 @@ class WaveformExtractor:
         ext_class = extensions_dict[extension_name]
         return ext_class
 
-    def is_extension(self, extension_name) -> bool:
+    def has_extension(self, extension_name: str) -> bool:
         """
         Check if the extension exists in memory or in the folder.
 
@@ -556,7 +559,15 @@ class WaveformExtractor:
                     and "params" in self._waveforms_root[extension_name].attrs.keys()
                 )
 
-    def load_extension(self, extension_name):
+    def is_extension(self, extension_name) -> bool:
+        warn(
+            "WaveformExtractor.is_extension is deprecated and will be removed in version 0.102.0! Use `has_extension` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.has_extension(extension_name)
+
+    def load_extension(self, extension_name: str):
         """
         Load an extension from its name.
         The module of the extension must be loaded and registered.
@@ -572,7 +583,7 @@ class WaveformExtractor:
             The loaded instance of the extension
         """
         if self.folder is not None and extension_name not in self._loaded_extensions:
-            if self.is_extension(extension_name):
+            if self.has_extension(extension_name):
                 ext_class = self.get_extension_class(extension_name)
                 ext = ext_class.load(self.folder, self)
         if extension_name not in self._loaded_extensions:
@@ -588,7 +599,7 @@ class WaveformExtractor:
         extension_name: str
             The extension name.
         """
-        assert self.is_extension(extension_name), f"The extension {extension_name} is not available"
+        assert self.has_extension(extension_name), f"The extension {extension_name} is not available"
         del self._loaded_extensions[extension_name]
         if self.folder is not None and (self.folder / extension_name).is_dir():
             shutil.rmtree(self.folder / extension_name)
@@ -610,7 +621,7 @@ class WaveformExtractor:
         """
         extension_names_in_folder = []
         for extension_class in self.extensions:
-            if self.is_extension(extension_class.extension_name):
+            if self.has_extension(extension_class.extension_name):
                 extension_names_in_folder.append(extension_class.extension_name)
         return extension_names_in_folder
 
@@ -912,14 +923,14 @@ class WaveformExtractor:
             (folder / "params.json").write_text(json.dumps(check_json(self._params), indent=4), encoding="utf8")
 
             if self.has_recording():
-                if self.recording.check_serializablility("json"):
+                if self.recording.check_serializability("json"):
                     self.recording.dump(folder / "recording.json", relative_to=relative_to)
-                elif self.recording.check_serializablility("pickle"):
+                elif self.recording.check_serializability("pickle"):
                     self.recording.dump(folder / "recording.pickle", relative_to=relative_to)
 
-            if self.sorting.check_serializablility("json"):
+            if self.sorting.check_serializability("json"):
                 self.sorting.dump(folder / "sorting.json", relative_to=relative_to)
-            elif self.sorting.check_serializablility("pickle"):
+            elif self.sorting.check_serializability("pickle"):
                 self.sorting.dump(folder / "sorting.pickle", relative_to=relative_to)
             else:
                 warn(
@@ -969,10 +980,10 @@ class WaveformExtractor:
             # write metadata
             zarr_root.attrs["params"] = check_json(self._params)
             if self.has_recording():
-                if self.recording.check_serializablility("json"):
+                if self.recording.check_serializability("json"):
                     rec_dict = self.recording.to_dict(relative_to=relative_to, recursive=True)
                     zarr_root.attrs["recording"] = check_json(rec_dict)
-            if self.sorting.check_serializablility("json"):
+            if self.sorting.check_serializability("json"):
                 sort_dict = self.sorting.to_dict(relative_to=relative_to, recursive=True)
                 zarr_root.attrs["sorting"] = check_json(sort_dict)
             else:
@@ -1171,25 +1182,36 @@ class WaveformExtractor:
         mask = index_ar["segment_index"] == segment_index
         return wfs[mask, :, :]
 
-    def precompute_templates(self, modes=("average", "std")) -> None:
+    def precompute_templates(self, modes=("average", "std", "median", "percentile"), percentile=None) -> None:
         """
-        Precompute all template for different "modes":
+        Precompute all templates for different "modes":
           * average
           * std
           * median
+          * percentile
 
-        The results is cache in memory as 3d ndarray (nunits, nsamples, nchans)
-        and also saved as npy file in the folder to avoid recomputation each time.
+        Parameters
+        ----------
+        modes: list
+            The modes to compute the templates
+        percentile: float, default: None
+            Percentile to use for mode="percentile"
+
+        The results is cached in memory as a 3d ndarray (nunits, nsamples, nchans)
+        and also saved as an npy file in the folder to avoid recomputation each time.
         """
-        # TODO : run this in parralel
+        # TODO : run this in parallel
 
         unit_ids = self.unit_ids
         num_chans = self.get_num_channels()
 
+        mode_names = {}
         for mode in modes:
+            mode_name = mode if mode != "percentile" else f"{mode}_{percentile}"
+            mode_names[mode] = mode_name
             dtype = self._params["dtype"] if mode == "median" else np.float32
             templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
-            self._template_cache[mode] = templates
+            self._template_cache[mode_names[mode]] = templates
 
         for unit_ind, unit_id in enumerate(unit_ids):
             wfs = self.get_waveforms(unit_id, cache=False)
@@ -1206,26 +1228,32 @@ class WaveformExtractor:
                     arr = np.average(wfs, axis=0)
                 elif mode == "std":
                     arr = np.std(wfs, axis=0)
+                elif mode == "percentile":
+                    assert percentile is not None, "percentile must be specified for mode='percentile'"
+                    assert 0 <= percentile <= 100, "percentile must be between 0 and 100 inclusive"
+                    arr = np.percentile(wfs, percentile, axis=0)
                 else:
-                    raise ValueError("mode must in median/average/std")
-                self._template_cache[mode][unit_ind][:, mask] = arr
+                    raise ValueError(f"'mode' must be in {_possible_template_modes}")
+                self._template_cache[mode_names[mode]][unit_ind][:, mask] = arr
 
         for mode in modes:
-            templates = self._template_cache[mode]
-            if self.folder is not None:
-                template_file = self.folder / f"templates_{mode}.npy"
+            templates = self._template_cache[mode_names[mode]]
+            if self.folder is not None and not self.is_read_only():
+                template_file = self.folder / f"templates_{mode_names[mode]}.npy"
                 np.save(template_file, templates)
 
-    def get_all_templates(self, unit_ids: Optional[Iterable] = None, mode="average"):
+    def get_all_templates(self, unit_ids: Optional[Iterable] = None, mode="average", percentile: float | None = None):
         """
-        Return  templates (average waveform) for multiple units.
+        Return templates (average waveforms) for multiple units.
 
         Parameters
         ----------
         unit_ids: list or None
             Unit ids to retrieve waveforms for
-        mode: "average" | "median" | "std", default: "average"
+        mode: "average" | "median" | "std" | "percentile", default: "average"
             The mode to compute the templates
+        percentile: float, default: None
+            Percentile to use for mode="percentile"
 
         Returns
         -------
@@ -1233,9 +1261,9 @@ class WaveformExtractor:
             The returned templates (num_units, num_samples, num_channels)
         """
         if mode not in self._template_cache:
-            self.precompute_templates(modes=[mode])
-
-        templates = self._template_cache[mode]
+            self.precompute_templates(modes=[mode], percentile=percentile)
+        mode_name = mode if mode != "percentile" else f"{mode}_{percentile}"
+        templates = self._template_cache[mode_name]
 
         if unit_ids is not None:
             unit_indices = self.sorting.ids_to_indices(unit_ids)
@@ -1243,7 +1271,9 @@ class WaveformExtractor:
 
         return np.array(templates)
 
-    def get_template(self, unit_id, mode="average", sparsity=None, force_dense: bool = False):
+    def get_template(
+        self, unit_id, mode="average", sparsity=None, force_dense: bool = False, percentile: float | None = None
+    ):
         """
         Return template (average waveform).
 
@@ -1251,12 +1281,15 @@ class WaveformExtractor:
         ----------
         unit_id: int or str
             Unit id to retrieve waveforms for
-        mode: "average" | "median" | "std", default: "average"
+        mode: "average" | "median" | "std" | "percentile", default: "average"
             The mode to compute the template
         sparsity: ChannelSparsity, default: None
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
-        force_dense: bool (False)
+        force_dense: bool, default: False
             Return a dense template even if the waveform extractor is sparse
+        percentile: float, default: None
+            Percentile to use for mode="percentile".
+            Values must be between 0 and 100 inclusive
 
         Returns
         -------
@@ -1296,6 +1329,10 @@ class WaveformExtractor:
             template = np.average(wfs, axis=0)
         elif mode == "std":
             template = np.std(wfs, axis=0)
+        elif mode == "percentile":
+            assert percentile is not None, "percentile must be specified for mode='percentile'"
+            assert 0 <= percentile <= 100, "percentile must be between 0 and 100 inclusive"
+            template = np.percentile(wfs, percentile, axis=0)
 
         return np.array(template)
 
@@ -1814,7 +1851,7 @@ class BaseWaveformExtractorExtension:
     handle_sparsity = False
 
     def __init__(self, waveform_extractor):
-        self.waveform_extractor = waveform_extractor
+        self._waveform_extractor = weakref.ref(waveform_extractor)
 
         if self.waveform_extractor.folder is not None:
             self.folder = self.waveform_extractor.folder
@@ -1861,8 +1898,20 @@ class BaseWaveformExtractorExtension:
         # register
         self.waveform_extractor._loaded_extensions[self.extension_name] = self
 
+    @property
+    def waveform_extractor(self):
+        # Important : to avoid the WaveformExtractor referencing a BaseWaveformExtractorExtension
+        # and BaseWaveformExtractorExtension referencing a WaveformExtractor
+        # we need a weakref. Otherwise the garbage collector is not working properly
+        # and so the WaveformExtractor + its recording are still alive even after deleting explicitly
+        # the WaveformExtractor which makes it impossible to delete the folder!
+        we = self._waveform_extractor()
+        if we is None:
+            raise ValueError(f"The extension {self.extension_name} has lost its WaveformExtractor")
+        return we
+
     @classmethod
-    def load(cls, folder, waveform_extractor=None):
+    def load(cls, folder, waveform_extractor):
         folder = Path(folder)
         assert folder.is_dir(), "Waveform folder does not exists"
         if folder.suffix == ".zarr":
@@ -1873,8 +1922,8 @@ class BaseWaveformExtractorExtension:
         if "sparsity" in params and params["sparsity"] is not None:
             params["sparsity"] = ChannelSparsity.from_dict(params["sparsity"])
 
-        if waveform_extractor is None:
-            waveform_extractor = WaveformExtractor.load(folder)
+        # if waveform_extractor is None:
+        #     waveform_extractor = WaveformExtractor.load(folder)
 
         # make instance with params
         ext = cls(waveform_extractor)
@@ -1928,7 +1977,11 @@ class BaseWaveformExtractorExtension:
                 if ext_data_file.suffix == ".json":
                     ext_data = json.load(ext_data_file.open("r"))
                 elif ext_data_file.suffix == ".npy":
-                    ext_data = np.load(ext_data_file, mmap_mode="r")
+                    # The lazy loading of an extension is complicated because if we compute again
+                    # and have a link to the old buffer on windows then it fails
+                    # ext_data = np.load(ext_data_file, mmap_mode="r")
+                    # so we go back to full loading
+                    ext_data = np.load(ext_data_file)
                 elif ext_data_file.suffix == ".csv":
                     import pandas as pd
 
@@ -1968,6 +2021,11 @@ class BaseWaveformExtractorExtension:
         # Only save if not read only
         if self.waveform_extractor.is_read_only():
             return
+
+        # delete already saved
+        self._reset_folder()
+        self._save_params()
+
         if self.format == "binary":
             import pandas as pd
 
@@ -2018,18 +2076,26 @@ class BaseWaveformExtractorExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
 
+    def _reset_folder(self):
+        """
+        Delete the extension in folder (binary or zarr) and create an empty one.
+        """
+        if self.format == "binary" and self.extension_folder is not None:
+            if self.extension_folder.is_dir():
+                shutil.rmtree(self.extension_folder)
+            self.extension_folder.mkdir()
+        elif self.format == "zarr":
+            import zarr
+
+            zarr_root = zarr.open(self.folder, mode="r+")
+            self.extension_group = zarr_root.create_group(self.extension_name, overwrite=True)
+
     def reset(self):
         """
         Reset the waveform extension.
         Delete the sub folder and create a new empty one.
         """
-        if self.extension_folder is not None:
-            if self.format == "binary":
-                if self.extension_folder.is_dir():
-                    shutil.rmtree(self.extension_folder)
-                self.extension_folder.mkdir()
-            elif self.format == "zarr":
-                del self.extension_group
+        self._reset_folder()
 
         self._params = None
         self._extension_data = dict()
@@ -2062,12 +2128,15 @@ class BaseWaveformExtractorExtension:
         if self.waveform_extractor.is_read_only():
             return
 
-        params_to_save = params.copy()
-        if "sparsity" in params and params["sparsity"] is not None:
+        self._save_params()
+
+    def _save_params(self):
+        params_to_save = self._params.copy()
+        if "sparsity" in params_to_save and params_to_save["sparsity"] is not None:
             assert isinstance(
-                params["sparsity"], ChannelSparsity
+                params_to_save["sparsity"], ChannelSparsity
             ), "'sparsity' parameter must be a ChannelSparsity object!"
-            params_to_save["sparsity"] = params["sparsity"].to_dict()
+            params_to_save["sparsity"] = params_to_save["sparsity"].to_dict()
         if self.format == "binary":
             if self.extension_folder is not None:
                 param_file = self.extension_folder / "params.json"
