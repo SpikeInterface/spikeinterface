@@ -25,3 +25,9 @@ or alternativley you can do
 import spikeinterface.full as si
 
 """
+
+# This flag must set to False for release
+# This avoid to use versionning that contains ".dev0" (and this is a better choice)
+# This mainly usefull when using run_sorter in container and spikeinterface install
+DEV_MODE = True
+# DEV_MODE = False
