@@ -10,7 +10,7 @@ from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
     NoiseGeneratorRecording,
-    TransformedSorting, 
+    TransformedSorting,
     generate_recording_by_size,
     InjectTemplatesRecording,
     generate_single_fake_waveform,
@@ -18,7 +18,6 @@ from spikeinterface.core.generate import (
     generate_channel_locations,
     generate_unit_locations,
     generate_ground_truth_recording,
-
 )
 
 
@@ -462,11 +461,11 @@ def test_transformedsorting():
     n_spikes_1 = len(sorting_1.to_spike_vector())
     n_spikes_2 = len(sorting_2.to_spike_vector())
     n_spikes_added_1 = len(transformed_1.to_spike_vector())
-    assert(n_spikes_added_1 < n_spikes_1 + n_spikes_2)
+    assert n_spikes_added_1 < n_spikes_1 + n_spikes_2
 
     transformed_2 = TransformedSorting(sorting_1, sorting_2.to_spike_vector(), refractory_period_ms=20)
     n_spikes_added_2 = len(transformed_2.to_spike_vector())
-    assert(n_spikes_added_2 < n_spikes_added_1)
+    assert n_spikes_added_2 < n_spikes_added_1
 
 
 def test_generate_ground_truth_recording():
