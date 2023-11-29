@@ -284,6 +284,7 @@ class TransformedSorting(BaseSorting):
         discarded
 
     """
+
     def __init__(self, sorting, added_spikes=None, refractory_period_ms=5):
         fs = sorting.get_sampling_frequency()
         unit_ids = sorting.get_unit_ids()
@@ -293,7 +294,7 @@ class TransformedSorting(BaseSorting):
         # We need to add the sorting segments
         for segment in sorting._sorting_segments:
             self.add_sorting_segment(segment)
-        
+
         sorting.precompute_spike_trains()
         assert added_spikes.dtype == minimum_spike_dtype, "added_spikes should be a spike vector"
 
