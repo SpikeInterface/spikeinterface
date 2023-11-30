@@ -618,7 +618,7 @@ def get_grid_convolution_templates_and_weights(
     with np.errstate(divide="ignore", invalid="ignore"):
         norm = np.sqrt(np.sum(weights**2, axis=1))[:, np.newaxis, :]
         weights /= norm
-        weights[np.isnan(weights)] = 0.0
+        weights[np.isfinite(weights)] = 0.0
 
     return template_positions, weights, nearest_template_mask
 
