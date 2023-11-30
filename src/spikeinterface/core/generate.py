@@ -353,7 +353,7 @@ class TransformSorting(BaseSorting):
                 common[mask]['unit_index'] = i
 
         not_common = spike_vector_2[~from_existing_units].copy()
-        spike_vector_2['unit_index'] += len(s1.unit_ids)
+        not_common['unit_index'] += len(s1.unit_ids)
         sorting = TransformSorting(s1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids)
         return sorting
 
