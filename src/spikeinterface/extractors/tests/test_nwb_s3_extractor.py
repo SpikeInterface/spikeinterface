@@ -219,6 +219,7 @@ def test_sorting_s3_nwb_fsspec(tmp_path, cache):
 
     check_sortings_equal(reloaded_sorting, sorting)
 
+
 @pytest.mark.streaming_extractors
 def test_sorting_s3_nwb_remfile(tmp_path):
     file_path = "https://dandiarchive.s3.amazonaws.com/blobs/84b/aa4/84baa446-cf19-43e8-bdeb-fc804852279b"

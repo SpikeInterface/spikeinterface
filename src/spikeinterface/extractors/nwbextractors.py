@@ -411,7 +411,7 @@ class NwbRecordingExtractor(BaseRecording):
                 self.set_channel_groups(groups)
             else:
                 self.set_property(property_name, values)
-        
+
         if stream_mode is None and file_path is not None:
             file_path = str(Path(file_path).resolve())
 
@@ -592,7 +592,7 @@ class NwbSortingExtractor(BaseSorting):
 
         if stream_mode is None and file_path is not None:
             file_path = str(Path(file_path).resolve())
-        
+
         self._kwargs = {
             "file_path": file_path,
             "electrical_series_name": self._electrical_series_name,
