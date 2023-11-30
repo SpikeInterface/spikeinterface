@@ -273,9 +273,6 @@ def correct_motion(
         (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
         if recording.check_serializability("json"):
             recording.dump_to_json(folder / "recording.json")
-        gather_mode = "npy"
-    else:
-        gather_mode = "memory"
 
     if not do_selection:
         # node detect
@@ -296,11 +293,11 @@ def correct_motion(
             pipeline_nodes,
             job_kwargs,
             job_name="detect and localize",
-            gather_mode=gather_mode,
+            gather_mode="memory",
             gather_kwargs={"exist_ok": True},
             squeeze_output=False,
-            folder=folder,
-            names=["peaks", "peak_locations"],
+            folder=None,
+            names=None,
         )
         t1 = time.perf_counter()
         run_times = dict(
@@ -324,9 +321,9 @@ def correct_motion(
             select_peaks=t2 - t1,
             localize_peaks=t3 - t2,
         )
-        if folder is not None:
-            np.save(folder / "peaks.npy", peaks)
-            np.save(folder / "peak_locations.npy", peak_locations)
+    if folder is not None:
+        np.save(folder / "peaks.npy", peaks)
+        np.save(folder / "peak_locations.npy", peak_locations)
 
     t0 = time.perf_counter()
     motion, temporal_bins, spatial_bins = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
