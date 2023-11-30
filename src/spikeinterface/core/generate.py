@@ -349,6 +349,7 @@ class TransformSorting(BaseSorting):
         sorting_1: the first sorting
         sorting_2: the second sorting
         """
+        assert sorting_1.get_sampling_frequency() == sorting_2.get_sampling_frequency(), "sampling_frequency should be the same"
         assert type(sorting_1.unit_ids[0]) == type(sorting_2.unit_ids[0]), "unit_ids should have the same type"
         # We detect the indices that are shared by the two sortings
         mask_1 = np.isin(sorting_2.unit_ids, sorting_1.unit_ids)
