@@ -289,7 +289,9 @@ class TransformSorting(BaseSorting):
 
     """
 
-    def __init__(self, sorting: BaseSorting, added_spikes_existing_units=None, added_spikes_new_units=None, new_unit_ids=None):
+    def __init__(
+        self, sorting: BaseSorting, added_spikes_existing_units=None, added_spikes_new_units=None, new_unit_ids=None
+    ):
         sampling_frequency = sorting.get_sampling_frequency()
         unit_ids = list(sorting.get_unit_ids())
 
