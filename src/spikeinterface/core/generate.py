@@ -358,8 +358,17 @@ class TransformSorting(BaseSorting):
                 mask = common["unit_index"] == j
                 common[mask]["unit_index"] = i
 
+        
+        idx_1 = len(s1.unit_ids) + np.arange(len(exclusive_ids))
+        idx_2 = s2.ids_to_indices(exclusive_ids)
         not_common = spike_vector_2[~from_existing_units].copy()
-        not_common["unit_index"] += len(s1.unit_ids)
+
+        # If indices are not the same, we need to remap
+        if not np.all(idx_1 == idx_2):
+            for i, j in enumerate(idx_1, idx_2):
+                mask = not_common["unit_index"] == j
+                not_common[mask]["unit_index"] = i
+
         sorting = TransformSorting(
             s1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids
         )
@@ -380,7 +389,8 @@ class TransformSorting(BaseSorting):
                     to_keep[indices[1:]] = np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv
 
             self._cached_spike_vector = self._cached_spike_vector[to_keep]
-            self.added = self.added[to_keep]
+            self.added_spikes = self.added_spikes[to_keep]
+            self.added_units = self.added_units[sort_idxs]
 
     # @classmethod
     # def add_spikes_from_sorting(cls, s1, {}):
