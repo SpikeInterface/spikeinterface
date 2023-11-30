@@ -470,7 +470,7 @@ def test_transformsorting():
     transformed_2 = TransformSorting.add_from_sorting(sorting_1, sorting_3)
     assert len(transformed_2.unit_ids) == 50
 
-    transformed_3 = TransformSorting.add_from_unit_dict(sorting_1, {46 : np.array([12,150], dtype=int)})
+    transformed_3 = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
 
     # transformed_3 = TransformSorting(sorting_1, sorting_1.to_spike_vector())
     # n_spikes_added_3 = len(transformed_3.to_spike_vector())

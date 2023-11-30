@@ -365,7 +365,7 @@ class TransformSorting(BaseSorting):
             for i, j in zip(idx_1, idx_2):
                 mask = common["unit_index"] == j
                 common[mask]["unit_index"] = i
-    
+
         idx_1 = len(sorting_1.unit_ids) + np.arange(len(exclusive_ids))
         idx_2 = sorting_2.ids_to_indices(exclusive_ids)
         not_common = spike_vector_2[~from_existing_units].copy()
@@ -390,7 +390,7 @@ class TransformSorting(BaseSorting):
 
         Parameters
         ----------
-        
+
         sorting_1: the first sorting
         dict_list: list of dict
         """
