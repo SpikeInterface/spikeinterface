@@ -347,7 +347,7 @@ def detect_bad_channels_ibl(
     ichannels[inoisy] = 2
 
     # the channels outside of the brains are the contiguous channels below the threshold on the trend coherency
-    # the chanels outide need to be at the extreme of the probe
+    # the chanels outside need to be at the extreme of the probe
     (ioutside,) = np.where(xcorr_distant < outside_channel_thr)
     a = np.cumsum(np.r_[0, np.diff(ioutside) - 1])
     if ioutside.size > 0:
