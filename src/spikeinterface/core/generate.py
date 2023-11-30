@@ -220,7 +220,7 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
             continue
         new_unit_indices[i] = rng.choice(units_not_used)
         units_used_for_spike[sample_index] = np.append(units_used_for_spike[sample_index], new_unit_indices[i])
-    
+
     spikes_duplicated["unit_index"] = new_unit_indices
     sort_idxs = np.lexsort([spikes_duplicated["sample_index"], spikes_duplicated["segment_index"]])
     spikes_duplicated = spikes_duplicated[sort_idxs]
