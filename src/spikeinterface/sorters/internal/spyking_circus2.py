@@ -20,66 +20,53 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {
-            "ms_before": 2, 
-            "ms_after": 2, 
-            "radius_um": 100
-            },
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "waveforms": {
             "max_spikes_per_unit": 200,
             "overwrite": True,
             "sparse": True,
             "method": "energy",
             "threshold": 0.25,
-            },
-        "filtering": {
-            "freq_min": 150, 
-            "dtype": "float32"
-            },
-        "detection": {
-            "peak_sign": "neg", 
-            "detect_threshold": 4
-            },
+        },
+        "filtering": {"freq_min": 150, "dtype": "float32"},
+        "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
-            "method" : "smart_sampling_amplitudes", 
-            "n_peaks_per_channel": 5000, 
+            "method": "smart_sampling_amplitudes",
+            "n_peaks_per_channel": 5000,
             "min_n_peaks": 20000,
-            "select_per_channel" : False
-            },
-        "clustering": {
-            "legacy": False
-            },
-        "matching": {
-            "method" : "circus-omp-svd",
-            "method_kwargs" : {}
-            },
+            "select_per_channel": False,
+        },
+        "clustering": {"legacy": False},
+        "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
         "apply_preprocessing": True,
         "shared_memory": True,
-        "multi_units_only" : False,
+        "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
     }
 
     handle_multi_segment = True
 
-    _params_description = {"general" : "A dictionnary to describe how templates should be computed. User can define ms_before and ms_after (in ms) \
+    _params_description = {
+        "general": "A dictionnary to describe how templates should be computed. User can define ms_before and ms_after (in ms) \
                                         and also the radius_um used to consider during clustering",
-                           "waveforms" : "A dictionnary to be passed to all the calls to extract_waveforms that will be perfomed internally. Default is \
+        "waveforms": "A dictionnary to be passed to all the calls to extract_waveforms that will be perfomed internally. Default is \
                                         to consider sparse waveforms",
-                           "filtering" : "A dictionnary for the high_pass filer used during preprocessing",
-                           "detection" : "A dictionnary for the peak detection node (locally_exclusive)",
-                           "selection" : "A dictionnary for the peak selection node. Default is to use smart_sampling_amplitudes, with a minimum of 20000 peak_sign\
+        "filtering": "A dictionnary for the high_pass filer used during preprocessing",
+        "detection": "A dictionnary for the peak detection node (locally_exclusive)",
+        "selection": "A dictionnary for the peak selection node. Default is to use smart_sampling_amplitudes, with a minimum of 20000 peak_sign\
                                          and 5000 peaks per electrode on average.",
-                            "clustering" : "A dictionnary to be provided to the clustering method. By default, we used random_projections, but if legacy is set to\
+        "clustering": "A dictionnary to be provided to the clustering method. By default, we used random_projections, but if legacy is set to\
                             True, one other clustering called circus will be used, similar to the one used in Spyking Circus 1",
-                            "matching" : "A dictionnary to specify the matching engine used to recover spikes. The method default is circus-omp-svd, but other engines\
+        "matching": "A dictionnary to specify the matching engine used to recover spikes. The method default is circus-omp-svd, but other engines\
                                           can be used",
-                            "apply_preprocessing" : "Boolean to specify is circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
+        "apply_preprocessing": "Boolean to specify is circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + zscore",
-                            "shared_memory" : "Boolean to specify if the code should use, as much as possible, to put internal datastructure in memory (faster)",
-                            "multi_units_only" : "Boolean to get only multi units activity (i.e. one template per electrode)",
-                            "job_kwargs" : "A dictionnary to specify how many jobs and which parameters they should used",
-                            "debug" : "Boolean to specify if internal datastructure should be kept for debugging"}
+        "shared_memory": "Boolean to specify if the code should use, as much as possible, to put internal datastructure in memory (faster)",
+        "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
+        "job_kwargs": "A dictionnary to specify how many jobs and which parameters they should used",
+        "debug": "Boolean to specify if internal datastructure should be kept for debugging",
+    }
 
     sorter_description = """Spyking Circus 2 is a rewritting of Spyking Circus, within the SpikeInterface framework
     It uses a more conservative clustering (compared to Spyking Circus) less prone to hallucinate units and/or find noise.
@@ -146,9 +133,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             selection_params["n_peaks"] = max(selection_params["min_n_peaks"], selection_params["n_peaks"])
 
             selection_params.update({"noise_levels": noise_levels})
-            selected_peaks = select_peaks(
-                peaks, **selection_params
-            )
+            selected_peaks = select_peaks(peaks, **selection_params)
 
             if verbose:
                 print("We kept %d peaks for clustering" % len(selected_peaks))
@@ -220,19 +205,19 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
 
-            matching_method = params['matching']['method']
+            matching_method = params["matching"]["method"]
 
-            matching_params = params["matching"]['method_kwargs'].copy()
+            matching_params = params["matching"]["method_kwargs"].copy()
             matching_job_params = {}
             matching_job_params.update(job_kwargs)
-            if matching_method == 'wobble':
-                matching_params['templates'] = we.get_all_templates(mode='median')
-                matching_params['nbefore'] = we.nbefore
-                matching_params['nafter'] = we.nafter
+            if matching_method == "wobble":
+                matching_params["templates"] = we.get_all_templates(mode="median")
+                matching_params["nbefore"] = we.nbefore
+                matching_params["nafter"] = we.nafter
             else:
                 matching_params["waveform_extractor"] = we
-            
-            if matching_method == 'circus-omp-svd':
+
+            if matching_method == "circus-omp-svd":
                 for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
                     if value in matching_job_params:
                         matching_job_params.pop(value)
@@ -251,8 +236,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 print("We found %d spikes" % len(spikes))
 
             ## And this is it! We have a spyking circus
-            sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
-        
+            sorting = NumpySorting.from_times_labels(
+                spikes["sample_index"], spikes["cluster_index"], sampling_frequency
+            )
+
         sorting_folder = sorter_output_folder / "sorting"
         if sorting_folder.exists():
             shutil.rmtree(sorting_folder)
