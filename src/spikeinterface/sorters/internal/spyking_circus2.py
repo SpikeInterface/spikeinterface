@@ -158,7 +158,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             if legacy:
                 if verbose:
-                    print('We are using the legacy mode for the clustering')
+                    print("We are using the legacy mode for the clustering")
                 clustering_method = "circus"
             else:
                 clustering_method = "random_projections"
