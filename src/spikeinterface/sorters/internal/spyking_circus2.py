@@ -54,7 +54,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                                         to consider sparse waveforms",
         "filtering": "A dictionary for the high_pass filter to be used during preprocessing",
         "detection": "A dictionary for the peak detection node (locally_exclusive)",
-        "selection": "A dictionary for the peak selection node. Default is to use smart_sampling_amplitudes, with a minimum of 20000 peak_sign\
+        "selection": "A dictionary for the peak selection node. Default is to use smart_sampling_amplitudes, with a minimum of 20000 peaks\
                                          and 5000 peaks per electrode on average.",
         "clustering": "A dictionary to be provided to the clustering method. By default, random_projections is used, but if legacy is set to\
                             True, one other clustering called circus will be used, similar to the one used in Spyking Circus 1",
@@ -201,20 +201,18 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting,
                 waveforms_folder,
                 return_scaled=False,
-                precompute_template=["median"],
+                precompute_template=["average"],
                 mode=mode,
                 **waveforms_params,
             )
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
-
             matching_method = params["matching"]["method"]
-
             matching_params = params["matching"]["method_kwargs"].copy()
             matching_job_params = {}
             matching_job_params.update(job_kwargs)
             if matching_method == "wobble":
-                matching_params["templates"] = we.get_all_templates(mode="median")
+                matching_params["templates"] = we.get_all_templates(mode="average")
                 matching_params["nbefore"] = we.nbefore
                 matching_params["nafter"] = we.nafter
             else:
