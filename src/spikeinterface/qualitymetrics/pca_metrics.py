@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import numpy as np
 from tqdm.auto import tqdm
+from concurrent.futures import ProcessPoolExecutor
 
 try:
     import scipy.stats
@@ -11,12 +12,10 @@ try:
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
     from sklearn.neighbors import NearestNeighbors
     from sklearn.decomposition import IncrementalPCA
-    from joblib import delayed, Parallel
 except:
     pass
 
 from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
-from ..core.job_tools import tqdm_joblib
 from ..core.template_tools import get_template_extremum_channel
 
 from ..postprocessing import WaveformPrincipalComponent
@@ -25,7 +24,6 @@ import warnings
 from .misc_metrics import compute_num_spikes, compute_firing_rates
 
 from ..core import get_random_data_chunks, load_waveforms, compute_sparsity, WaveformExtractor
-from ..core.job_tools import tqdm_joblib
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import WaveformPrincipalComponent
 
@@ -134,7 +132,9 @@ def calculate_pc_metrics(
         parallel_functions = []
 
     all_labels, all_pcs = pca.get_all_projections()
-    for unit_ind, unit_id in units_loop:
+
+    items = []
+    for unit_id in unit_ids:
         if we.is_sparse():
             neighbor_channel_ids = we.sparsity.unit_id_to_channel_ids[unit_id]
             neighbor_unit_ids = [
@@ -166,26 +166,23 @@ def calculate_pc_metrics(
             n_spikes_all_units,
             fr_all_units,
         )
+        items.append(func_args)
 
-        if not run_in_parallel:
-            pca_metrics_unit = pca_metrics_one_unit(*func_args)
+    if not run_in_parallel:
+        for unit_ind, unit_id in units_loop:
+            pca_metrics_unit = pca_metrics_one_unit(items[unit_ind])
             for metric_name, metric in pca_metrics_unit.items():
                 pc_metrics[metric_name][unit_id] = metric
-        else:
-            parallel_functions.append(delayed(pca_metrics_one_unit)(*func_args))
+    else:
+        with ProcessPoolExecutor(n_jobs) as executor:
+            results = executor.map(pca_metrics_one_unit, items)
+            if progress_bar:
+                results = tqdm(results, total=len(unit_ids))
 
-    if run_in_parallel:
-        if progress_bar:
-            units_loop = tqdm(units_loop, desc="Computing PCA metrics", total=len(unit_ids))
-            with tqdm_joblib(units_loop) as pb:
-                pc_metrics_units = Parallel(n_jobs=n_jobs)(parallel_functions)
-        else:
-            pc_metrics_units = Parallel(n_jobs=n_jobs)(parallel_functions)
-
-        for ui, pca_metrics_unit in enumerate(pc_metrics_units):
-            unit_id = unit_ids[ui]
-            for metric_name, metric in pca_metrics_unit.items():
-                pc_metrics[metric_name][unit_id] = metric
+            for ui, pca_metrics_unit in enumerate(results):
+                unit_id = unit_ids[ui]
+                for metric_name, metric in pca_metrics_unit.items():
+                    pc_metrics[metric_name][unit_id] = metric
 
     return pc_metrics
 
@@ -888,9 +885,20 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
     return isolation
 
 
-def pca_metrics_one_unit(
-    pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params, seed, we_folder, n_spikes_all_units, fr_all_units
-):
+def pca_metrics_one_unit(args):
+    (
+        pcs_flat,
+        labels,
+        metric_names,
+        unit_id,
+        unit_ids,
+        qm_params,
+        seed,
+        we_folder,
+        n_spikes_all_units,
+        fr_all_units,
+    ) = args
+
     if "nn_isolation" in metric_names or "nn_noise_overlap" in metric_names:
         we = load_waveforms(we_folder)
 

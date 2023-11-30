@@ -10,6 +10,7 @@ from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
     NoiseGeneratorRecording,
+    TransformSorting,
     generate_recording_by_size,
     InjectTemplatesRecording,
     generate_single_fake_waveform,
@@ -450,6 +451,25 @@ def test_inject_templates():
         # Check dumpability
         saved_loaded = load_extractor(rec.to_dict())
         check_recordings_equal(rec, saved_loaded, return_scaled=False)
+
+
+def test_transformsorting():
+    sorting_1 = generate_sorting(seed=0)
+    sorting_2 = generate_sorting(seed=1)
+
+    transformed_1 = TransformSorting(sorting_1, sorting_2.to_spike_vector())
+    n_spikes_1 = len(sorting_1.to_spike_vector())
+    n_spikes_2 = len(sorting_2.to_spike_vector())
+    n_spikes_added_1 = len(transformed_1.to_spike_vector())
+    assert n_spikes_added_1 < n_spikes_1 + n_spikes_2
+
+    transformed_2 = TransformSorting(sorting_1, sorting_2.to_spike_vector(), refractory_period_ms=20)
+    n_spikes_added_2 = len(transformed_2.to_spike_vector())
+    assert n_spikes_added_2 < n_spikes_added_1
+
+    transformed_3 = TransformSorting(sorting_1, sorting_1.to_spike_vector(), refractory_period_ms=0.1)
+    n_spikes_added_3 = len(transformed_3.to_spike_vector())
+    assert n_spikes_added_3 == n_spikes_1
 
 
 def test_generate_ground_truth_recording():
