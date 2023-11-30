@@ -602,7 +602,7 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
 
     Parameters
     ----------
-    soring :
+    sorting :
         Original sorting
     num : int
         Number of injected units
@@ -633,6 +633,8 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
             unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in sorting.unit_ids
         }
 
+        r = {}
+
         # inject some duplicate
         for i, unit_id in enumerate(other_ids):
             original_times = d[sorting.unit_ids[i]]
@@ -646,10 +648,11 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
             # clip inside 0 and last spike
             times = np.clip(times, 0, original_times[-1])
             times = np.sort(times)
-            d[unit_id] = times
-        spiketrains.append(d)
+            r[unit_id] = times
+        spiketrains.append(r)
 
-    sorting_with_dup = NumpySorting.from_unit_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
+    sorting_new_units = NumpySorting.from_unit_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
+    sorting_with_dup = TransformSorting.add_from_sorting(sorting, sorting_new_units)
 
     return sorting_with_dup
 
