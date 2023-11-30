@@ -368,7 +368,7 @@ def auto_clean_clustering(
 
             # we use
             (radius_chans,) = np.nonzero(
-                (channel_distances[main_chan0, :] <= radius_um) | (channel_distances[main_chan1, :] <= radius_um)
+                (channel_distances[main_chan0, :] < radius_um) | (channel_distances[main_chan1, :] < radius_um)
             )
             if radius_chans.size < (intersect_chans.size * ratio_num_channel_intersect):
                 # ~ print('WARNING INTERSECT')
