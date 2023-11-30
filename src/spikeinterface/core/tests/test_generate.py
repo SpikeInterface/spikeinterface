@@ -465,14 +465,14 @@ def test_transformsorting():
     assert n_spikes_added_1 == n_spikes_1 + n_spikes_2
 
     transformed_2 = TransformSorting.add_units_from_sorting(sorting_1, sorting_3)
-    
+
     assert n_spikes_added_2 < n_spikes_added_1
 
     # transformed_3 = TransformSorting(sorting_1, sorting_1.to_spike_vector())
     # n_spikes_added_3 = len(transformed_3.to_spike_vector())
     # assert n_spikes_added_3 == n_spikes_1
 
-    #transformed_4 = TransformSorting(sorting_1, sorting_3.to_spike_vector(), refractory_period_ms=0.1)
+    # transformed_4 = TransformSorting(sorting_1, sorting_3.to_spike_vector(), refractory_period_ms=0.1)
 
 
 def test_generate_ground_truth_recording():
