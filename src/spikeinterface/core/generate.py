@@ -195,8 +195,8 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
 
     Returns
     -------
-    sorting : NumpySorting
-        The sorting object
+    sorting : TransformSorting
+        The sorting object, keeping track of added spikes
 
     """
     rng = np.random.default_rng(seed)
@@ -220,12 +220,13 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
             continue
         new_unit_indices[i] = rng.choice(units_not_used)
         units_used_for_spike[sample_index] = np.append(units_used_for_spike[sample_index], new_unit_indices[i])
+    
     spikes_duplicated["unit_index"] = new_unit_indices
-    spikes_all = np.concatenate((spikes, spikes_duplicated))
-    sort_idxs = np.lexsort([spikes_all["sample_index"], spikes_all["segment_index"]])
-    spikes_all = spikes_all[sort_idxs]
+    sort_idxs = np.lexsort([spikes_duplicated["sample_index"], spikes_duplicated["segment_index"]])
+    spikes_duplicated = spikes_duplicated[sort_idxs]
 
-    sorting = NumpySorting(spikes=spikes_all, sampling_frequency=sorting.sampling_frequency, unit_ids=unit_ids)
+    synchronous_spikes = NumpySorting(spikes_duplicated, sorting.get_sampling_frequency(), unit_ids)
+    sorting = TransformSorting.add_from_sorting(sorting, synchronous_spikes)
 
     return sorting
 
@@ -289,11 +290,11 @@ class TransformSorting(BaseSorting):
 
     """
 
-    def __init__(self, sorting: BaseSorting, added_spikes_existing_units=None, added_spikes_new_units=None, new_unit_ids=None):
+    def __init__(self, sorting: BaseSorting, added_spikes_existing_units=None, added_spikes_new_units=None, new_unit_ids=[]):
         sampling_frequency = sorting.get_sampling_frequency()
         unit_ids = list(sorting.get_unit_ids())
 
-        if new_unit_ids is not None:
+        if len(new_unit_ids) > 0:
             assert type(unit_ids[0]) == type(new_unit_ids[0]), "unit_ids should have the same type"
             unit_ids += list(new_unit_ids)
 
@@ -309,7 +310,7 @@ class TransformSorting(BaseSorting):
             ), "added_spikes_existing_units should be a spike vector"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
             self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_existing_units))))
-            self.added_units = np.concatenate((self.added_spikes, np.zeros(len(added_spikes_existing_units))))
+            self.added_units = np.concatenate((self.added_units, np.zeros(len(added_spikes_existing_units))))
 
         if added_spikes_new_units is not None:
             assert (
@@ -317,7 +318,7 @@ class TransformSorting(BaseSorting):
             ), "added_spikes_new_units should be a spike vector"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_new_units))
             self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_new_units))))
-            self.added_units = np.concatenate((self.added_spikes, np.ones(len(added_spikes_new_units))))
+            self.added_units = np.concatenate((self.added_units, np.ones(len(added_spikes_new_units))))
 
         sort_idxs = np.lexsort([self._cached_spike_vector["sample_index"], self._cached_spike_vector["segment_index"]])
         self._cached_spike_vector = self._cached_spike_vector[sort_idxs]
