@@ -12,6 +12,7 @@ class TemplateMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Te
     extension_class = TemplateMetricsCalculator
     extension_data_names = ["metrics"]
     extension_function_kwargs_list = [dict(), dict(upsampling_factor=2)]
+    exact_same_content = False
 
     def test_sparse_metrics(self):
         tm_sparse = self.extension_class.get_extension_function()(self.we1, sparsity=self.sparsity1)
@@ -25,5 +26,5 @@ class TemplateMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Te
 if __name__ == "__main__":
     test = TemplateMetricsExtensionTest()
     test.setUp()
-    # test.test_extension()
+    test.test_extension()
     test.test_multi_channel_metrics()

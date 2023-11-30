@@ -36,6 +36,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "shared_memory": True,
         "job_kwargs": {"n_jobs": -1},
+        "debug": False,
     }
 
     handle_multi_segment = True
@@ -137,8 +138,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             selected_peaks["sample_index"][mask], peak_labels[mask].astype(int), sampling_rate
         )
         clustering_folder = sorter_output_folder / "clustering"
-        if clustering_folder.exists():
+        clustering_folder.mkdir(parents=True, exist_ok=True)
+
+        if not params["debug"]:
             shutil.rmtree(clustering_folder)
+        else:
+            np.save(clustering_folder / "labels", labels)
+            np.save(clustering_folder / "peaks", selected_peaks)
 
         ## We get the templates our of such a clustering
         waveforms_params = params["waveforms"].copy()
@@ -147,7 +153,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         for k in ["ms_before", "ms_after"]:
             waveforms_params[k] = params["general"][k]
 
-        if params["shared_memory"]:
+        if params["shared_memory"] and not params["debug"]:
             mode = "memory"
             waveforms_folder = None
         else:
@@ -179,6 +185,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         spikes = find_spikes_from_templates(
             recording_f, method="circus-omp-svd", method_kwargs=matching_params, **matching_job_params
         )
+
+        if params["debug"]:
+            fitting_folder = sorter_output_folder / "fitting"
+            fitting_folder.mkdir(parents=True, exist_ok=True)
+            np.save(fitting_folder / "spikes", spikes)
 
         if verbose:
             print("We found %d spikes" % len(spikes))

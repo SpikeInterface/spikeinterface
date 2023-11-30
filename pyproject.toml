@@ -22,7 +22,6 @@ classifiers = [
 dependencies = [
     "numpy",
     "neo>=0.12.0",
-    "joblib",
     "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.19",
@@ -80,6 +79,7 @@ streaming_extractors = [
     "aiohttp",
     "requests",
     "pynwb>=2.3.0",
+    "remfile"
 ]
 
 full = [
