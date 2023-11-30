@@ -337,41 +337,66 @@ class TransformSorting(BaseSorting):
         )
 
     @classmethod
-    def add_from_sorting(cls, s1, s2):
-        assert type(s1.unit_ids[0]) == type(s2.unit_ids[0]), "unit_ids should have the same type"
+    def add_from_sorting(cls, sorting_1, sorting_2) -> "TransformSorting":
+        """
+        Construct TransformSorting by adding one sorting to one other.
+
+        Parameters
+        ----------
+        sorting_1: the first sorting
+        sorting_2: the second sorting
+        """
+        assert type(sorting_1.unit_ids[0]) == type(sorting_2.unit_ids[0]), "unit_ids should have the same type"
         # We detect the indices that are shared by the two sortings
-        mask_1 = np.isin(s2.unit_ids, s1.unit_ids)
-        common_ids = s2.unit_ids[mask_1]
-        exclusive_ids = s2.unit_ids[~mask_1]
+        mask_1 = np.isin(sorting_2.unit_ids, sorting_1.unit_ids)
+        common_ids = sorting_2.unit_ids[mask_1]
+        exclusive_ids = sorting_2.unit_ids[~mask_1]
 
         # We detect the indicies in the spike_vectors
-        idx_1 = s1.ids_to_indices(common_ids)
-        idx_2 = s2.ids_to_indices(common_ids)
+        idx_1 = sorting_1.ids_to_indices(common_ids)
+        idx_2 = sorting_2.ids_to_indices(common_ids)
 
-        spike_vector_2 = s2.to_spike_vector()
+        spike_vector_2 = sorting_2.to_spike_vector()
         from_existing_units = np.isin(spike_vector_2["unit_index"], idx_2)
         common = spike_vector_2[from_existing_units].copy()
 
         # If indices are not the same, we need to remap
         if not np.all(idx_1 == idx_2):
-            for i, j in enumerate(idx_1, idx_2):
+            for i, j in zip(idx_1, idx_2):
                 mask = common["unit_index"] == j
                 common[mask]["unit_index"] = i
 
         
-        idx_1 = len(s1.unit_ids) + np.arange(len(exclusive_ids))
-        idx_2 = s2.ids_to_indices(exclusive_ids)
+        idx_1 = len(sorting_1.unit_ids) + np.arange(len(exclusive_ids))
+        idx_2 = sorting_2.ids_to_indices(exclusive_ids)
         not_common = spike_vector_2[~from_existing_units].copy()
 
         # If indices are not the same, we need to remap
         if not np.all(idx_1 == idx_2):
-            for i, j in enumerate(idx_1, idx_2):
+            for i, j in zip(idx_1, idx_2):
                 mask = not_common["unit_index"] == j
                 not_common[mask]["unit_index"] = i
 
         sorting = TransformSorting(
-            s1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids
+            sorting_1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids
         )
+        return sorting
+
+    @classmethod
+    def add_from_unit_dict(cls, sorting_1, units_dict_list) -> "TransformSorting":
+        """
+        Construct TransformSorting by adding one sorting with a
+        list of dict. The list length is the segment count.
+        Each dict have unit_ids as keys and spike times as values.
+
+        Parameters
+        ----------
+        
+        sorting_1: the first sorting
+        dict_list: list of dict
+        """
+        sorting_2 = NumpySorting.from_unit_dict(units_dict_list, sorting_1.get_sampling_frequency())
+        sorting = TransformSorting.add_from_sorting(sorting_1, sorting_2)
         return sorting
 
     def _check_rpv(self, refractory_period_ms):
@@ -391,11 +416,6 @@ class TransformSorting(BaseSorting):
             self._cached_spike_vector = self._cached_spike_vector[to_keep]
             self.added_spikes = self.added_spikes[to_keep]
             self.added_units = self.added_units[sort_idxs]
-
-    # @classmethod
-    # def add_spikes_from_sorting(cls, s1, {}):
-
-    #     return cls(s1, added_spikes_new_units=spike_vector_2, new_units_ids=s2.unit_ids, clean_refractory_period)
 
 
 def create_sorting_npz(num_seg, file_path):
