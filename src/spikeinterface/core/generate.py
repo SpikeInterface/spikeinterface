@@ -304,17 +304,21 @@ class TransformSorting(BaseSorting):
         self.added_units = np.zeros(len(self._cached_spike_vector), dtype=bool)
 
         if added_spikes_existing_units is not None:
-            assert added_spikes_existing_units.dtype == minimum_spike_dtype, "added_spikes_existing_units should be a spike vector"
+            assert (
+                added_spikes_existing_units.dtype == minimum_spike_dtype
+            ), "added_spikes_existing_units should be a spike vector"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
             self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_existing_units))))
             self.added_units = np.concatenate((self.added_spikes, np.zeros(len(added_spikes_existing_units))))
 
         if added_spikes_new_units is not None:
-            assert added_spikes_new_units.dtype == minimum_spike_dtype, "added_spikes_new_units should be a spike vector"
+            assert (
+                added_spikes_new_units.dtype == minimum_spike_dtype
+            ), "added_spikes_new_units should be a spike vector"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_new_units))
             self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_new_units))))
             self.added_units = np.concatenate((self.added_spikes, np.ones(len(added_spikes_new_units))))
-        
+
         sort_idxs = np.lexsort([self._cached_spike_vector["sample_index"], self._cached_spike_vector["segment_index"]])
         self._cached_spike_vector = self._cached_spike_vector[sort_idxs]
         self.added_spikes = self.added_spikes[sort_idxs]
@@ -325,10 +329,12 @@ class TransformSorting(BaseSorting):
             segment = NumpySortingSegment(self._cached_spike_vector, segment_index, unit_ids=self.unit_ids)
             self.add_sorting_segment(segment)
 
-        self._kwargs = dict(sorting=sorting, 
-                            added_spikes_existing_units=added_spikes_existing_units, 
-                            added_spikes_new_units=added_spikes_new_units, 
-                            new_unit_ids=new_unit_ids)
+        self._kwargs = dict(
+            sorting=sorting,
+            added_spikes_existing_units=added_spikes_existing_units,
+            added_spikes_new_units=added_spikes_new_units,
+            new_unit_ids=new_unit_ids,
+        )
 
     @classmethod
     def add_from_sorting(cls, s1, s2):
@@ -343,18 +349,20 @@ class TransformSorting(BaseSorting):
         idx_2 = s2.ids_to_indices(common_ids)
 
         spike_vector_2 = s2.to_spike_vector()
-        from_existing_units = np.isin(spike_vector_2['unit_index'], idx_2)
+        from_existing_units = np.isin(spike_vector_2["unit_index"], idx_2)
         common = spike_vector_2[from_existing_units].copy()
 
         # If indices are not the same, we need to remap
         if not np.all(idx_1 == idx_2):
-            for (i, j) in enumerate(idx_1, idx_2):
-                mask = common['unit_index'] == j
-                common[mask]['unit_index'] = i
+            for i, j in enumerate(idx_1, idx_2):
+                mask = common["unit_index"] == j
+                common[mask]["unit_index"] = i
 
         not_common = spike_vector_2[~from_existing_units].copy()
-        not_common['unit_index'] += len(s1.unit_ids)
-        sorting = TransformSorting(s1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids)
+        not_common["unit_index"] += len(s1.unit_ids)
+        sorting = TransformSorting(
+            s1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids
+        )
         return sorting
 
     def _check_rpv(self, refractory_period_ms):
@@ -376,8 +384,9 @@ class TransformSorting(BaseSorting):
 
     # @classmethod
     # def add_spikes_from_sorting(cls, s1, {}):
-        
+
     #     return cls(s1, added_spikes_new_units=spike_vector_2, new_units_ids=s2.unit_ids, clean_refractory_period)
+
 
 def create_sorting_npz(num_seg, file_path):
     # create a NPZ sorting file
