@@ -289,7 +289,7 @@ class TransformSorting(BaseSorting):
 
     """
 
-    def __init__(self, sorting, added_spikes_existing_units=None, added_spikes_new_units=None, new_unit_ids=None):
+    def __init__(self, sorting: BaseSorting, added_spikes_existing_units=None, added_spikes_new_units=None, new_unit_ids=None):
         sampling_frequency = sorting.get_sampling_frequency()
         unit_ids = list(sorting.get_unit_ids())
 
@@ -337,7 +337,7 @@ class TransformSorting(BaseSorting):
         )
 
     @classmethod
-    def add_from_sorting(cls, sorting_1, sorting_2) -> "TransformSorting":
+    def add_from_sorting(cls, sorting_1: BaseSorting, sorting_2: BaseSorting) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting to one other.
 
@@ -382,7 +382,7 @@ class TransformSorting(BaseSorting):
         return sorting
 
     @classmethod
-    def add_from_unit_dict(cls, sorting_1, units_dict_list) -> "TransformSorting":
+    def add_from_unit_dict(cls, sorting_1: BaseSorting, units_dict_list: dict) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting with a
         list of dict. The list length is the segment count.
