@@ -358,7 +358,6 @@ class TransformSorting(BaseSorting):
                 mask = common["unit_index"] == j
                 common[mask]["unit_index"] = i
 
-        
         idx_1 = len(s1.unit_ids) + np.arange(len(exclusive_ids))
         idx_2 = s2.ids_to_indices(exclusive_ids)
         not_common = spike_vector_2[~from_existing_units].copy()
