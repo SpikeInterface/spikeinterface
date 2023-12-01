@@ -292,7 +292,7 @@ class ChannelSparsity:
         best_chan = get_template_extremum_channel(we, peak_sign=peak_sign, outputs="index")
         for unit_ind, unit_id in enumerate(we.unit_ids):
             chan_ind = best_chan[unit_id]
-            (chan_inds,) = np.nonzero(distances[chan_ind, :] < radius_um)
+            (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
             mask[unit_ind, chan_inds] = True
         return cls(mask, we.unit_ids, we.channel_ids)
 
