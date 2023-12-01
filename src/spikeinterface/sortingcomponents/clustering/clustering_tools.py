@@ -593,7 +593,9 @@ def remove_duplicates_via_matching(
 
     local_params = method_kwargs.copy()
 
-    local_params.update({"waveform_extractor": waveform_extractor, "amplitudes": [0.975, 1.025], "optimize_amplitudes" : False})
+    local_params.update(
+        {"waveform_extractor": waveform_extractor, "amplitudes": [0.975, 1.025], "optimize_amplitudes": False}
+    )
 
     spikes_per_units, counts = np.unique(waveform_extractor.sorting.to_spike_vector()["unit_index"], return_counts=True)
     indices = np.argsort(counts)
