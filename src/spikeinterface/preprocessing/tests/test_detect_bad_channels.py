@@ -19,7 +19,7 @@ except:  # Catch relevant exception
     HAVE_NPIX = False
 
 
-def test_remove_bad_channels_std_mad():
+def test_detect_bad_channels_std_mad():
     num_channels = 4
     sampling_frequency = 30000.0
     durations = [10.325, 3.5]
@@ -60,9 +60,48 @@ def test_remove_bad_channels_std_mad():
     ), "wrong channels locations."
 
 
+@pytest.mark.parametrize("outside_channels_location", ["bottom", "top", "both"])
+def test_detect_bad_channels_extremes(outside_channels_location):
+    num_channels = 64
+    sampling_frequency = 30000.0
+    durations = [20]
+    num_out_channels = 10
+
+    num_segments = len(durations)
+    num_timepoints = [int(sampling_frequency * d) for d in durations]
+
+    traces_list = []
+    for i in range(num_segments):
+        traces = np.random.randn(num_timepoints[i], num_channels).astype("float32")
+        # extreme channels are "out"
+        traces[:, :num_out_channels] *= 0.05
+        traces[:, -num_out_channels:] *= 0.05
+        traces_list.append(traces)
+
+    rec = NumpyRecording(traces_list, sampling_frequency)
+    rec.set_channel_gains(1)
+    rec.set_channel_offsets(0)
+
+    probe = generate_linear_probe(num_elec=num_channels)
+    probe.set_device_channel_indices(np.arange(num_channels))
+    rec.set_probe(probe, in_place=True)
+
+    bad_channel_ids, bad_labels = detect_bad_channels(
+        rec, method="coherence+psd", outside_channels_location=outside_channels_location
+    )
+    if outside_channels_location == "top":
+        assert np.array_equal(bad_channel_ids, rec.channel_ids[-num_out_channels:])
+    elif outside_channels_location == "bottom":
+        assert np.array_equal(bad_channel_ids, rec.channel_ids[:num_out_channels])
+    elif outside_channels_location == "both":
+        assert np.array_equal(
+            bad_channel_ids, np.concatenate((rec.channel_ids[:num_out_channels], rec.channel_ids[-num_out_channels:]))
+        )
+
+
 @pytest.mark.skipif(not HAVE_NPIX, reason="ibl-neuropixel is not installed")
 @pytest.mark.parametrize("num_channels", [32, 64, 384])
-def test_remove_bad_channels_ibl(num_channels):
+def test_detect_bad_channels_ibl(num_channels):
     """
     Cannot test against DL datasets because they are too short
     and need to control the PSD scaling. Here generate a dataset
@@ -121,7 +160,9 @@ def test_remove_bad_channels_ibl(num_channels):
         traces_uV = random_chunk.T
         traces_V = traces_uV * 1e-6
         channel_flags, _ = neurodsp.voltage.detect_bad_channels(
-            traces_V, recording.get_sampling_frequency(), psd_hf_threshold=psd_cutoff
+            traces_V,
+            recording.get_sampling_frequency(),
+            psd_hf_threshold=psd_cutoff,
         )
         channel_flags_ibl[:, i] = channel_flags
 
@@ -209,5 +250,10 @@ def add_dead_channels(recording, is_dead):
 
 
 if __name__ == "__main__":
-    test_remove_bad_channels_std_mad()
-    test_remove_bad_channels_ibl(num_channels=384)
+    # test_detect_bad_channels_std_mad()
+    test_detect_bad_channels_ibl(num_channels=32)
+    test_detect_bad_channels_ibl(num_channels=64)
+    test_detect_bad_channels_ibl(num_channels=384)
+    # test_detect_bad_channels_extremes("top")
+    # test_detect_bad_channels_extremes("bottom")
+    # test_detect_bad_channels_extremes("both")
