@@ -220,7 +220,7 @@ class DecentralizedRegistration:
     pairwise_displacement_method: "conv" or "phase_cross_correlation"
         How to estimate the displacement in the pairwise matrix.
     max_displacement_um: float
-        Maximum possible discplacement in micrometers.
+        Maximum possible displacement in micrometers.
     weight_scale: "linear" or "exp"
         For parwaise displacement, how to to rescale the associated weight matrix.
     error_sigma: float, default: 0.2

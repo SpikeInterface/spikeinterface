@@ -275,6 +275,8 @@ def correct_motion(
             recording.dump_to_json(folder / "recording.json")
 
     if not do_selection:
+        # maybe do this directly in the folder when not None, but might be slow on external storage
+        gather_mode = "memory"
         # node detect
         method = detect_kwargs.pop("method", "locally_exclusive")
         method_class = detect_peak_methods[method]
@@ -293,8 +295,8 @@ def correct_motion(
             pipeline_nodes,
             job_kwargs,
             job_name="detect and localize",
-            gather_mode="memory",
-            gather_kwargs={"exist_ok": True},
+            gather_mode=gather_mode,
+            gather_kwargs=None,
             squeeze_output=False,
             folder=None,
             names=None,
