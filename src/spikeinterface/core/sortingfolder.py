@@ -3,10 +3,9 @@ import json
 
 import numpy as np
 
-from .base import _make_paths_absolute
 from .basesorting import BaseSorting, BaseSortingSegment
 from .npzsortingextractor import NpzSortingExtractor
-from .core_tools import define_function_from_class
+from .core_tools import define_function_from_class, make_paths_absolute
 from .numpyextractors import NumpySortingSegment
 
 
@@ -107,7 +106,7 @@ class NpzFolderSorting(NpzSortingExtractor):
 
         assert d["relative_paths"]
 
-        d = _make_paths_absolute(d, folder_path)
+        d = make_paths_absolute(d, folder_path)
 
         NpzSortingExtractor.__init__(self, **d["kwargs"])
 
