@@ -5,8 +5,6 @@ import shutil
 
 from spikeinterface import extract_waveforms, get_template_extremum_channel, generate_ground_truth_recording
 
-# from spikeinterface.extractors import MEArecRecordingExtractor
-from spikeinterface.extractors import read_mearec
 
 # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.core.node_pipeline import (
