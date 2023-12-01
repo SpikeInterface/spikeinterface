@@ -2,7 +2,7 @@ import platform
 from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
 import importlib
-
+import pathlib
 import pytest
 import numpy as np
 
@@ -10,6 +10,9 @@ from spikeinterface.core.core_tools import (
     write_binary_recording,
     write_memory_recording,
     recursive_path_modifier,
+    make_paths_relative,
+    make_paths_absolute,
+    check_paths_relative,
 )
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 from spikeinterface.core.generate import NoiseGeneratorRecording
@@ -163,17 +166,17 @@ def test_write_memory_recording():
         write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, total_memory="200k", progress_bar=True)
 
 
-def test_recursive_path_modifier():
+def test_path_utils_functions():
     # this test nested depth 2 path modifier
     d = {
         "kwargs": {
-            "path": "/yep/path1",
+            "path": "/yep/sub/path1",
             "recording": {
                 "module": "mock_module",
                 "class": "mock_class",
                 "version": "1.2",
                 "annotations": {},
-                "kwargs": {"path": "/yep/path2"},
+                "kwargs": {"path": "/yep/sub/path2"},
             },
         }
     }
@@ -182,13 +185,46 @@ def test_recursive_path_modifier():
     assert d2["kwargs"]["path"].startswith("/yop")
     assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
 
+    d3 = make_paths_relative(d, Path("/yep"))
+    assert d3["kwargs"]["path"] == "sub/path1"
+    assert d3["kwargs"]["recording"]["kwargs"]["path"]  == "sub/path2"
+
+    d4 = make_paths_absolute(d3, "/yop")
+    assert d4["kwargs"]["path"].startswith("/yop")
+    assert d4["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
+
+
+
+    if platform.system() == "Windows":
+        # test for windows Path
+        d = {
+            "kwargs": {
+                "path": "c:\\yep\\sub\\path1",
+                "recording": {
+                    "kwargs": {"path": "c:\\yep\\sub\\path2"},
+                },
+            }
+        }
+        d2 = make_paths_relative(d, pathlib.PureWindowsPath("c:\\yep\\"))
+        print(d2)
+
+
+    # make_paths_relative,
+    # make_paths_absolute,
+    # check_paths_relative,
+
+
+
+
+
 
 if __name__ == "__main__":
     # Create a temporary folder using the standard library
-    import tempfile
+    # import tempfile
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tmp_path = Path(tmpdirname)
-        test_write_binary_recording(tmp_path)
+    # with tempfile.TemporaryDirectory() as tmpdirname:
+    #     tmp_path = Path(tmpdirname)
+    #     test_write_binary_recording(tmp_path)
         # test_write_memory_recording()
-        # test_recursive_path_modifier()
+    
+    test_path_utils_functions()
