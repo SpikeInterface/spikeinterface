@@ -376,7 +376,7 @@ class NwbRecordingExtractor(BaseRecording):
             for column in electrodes_table.colnames:
                 if isinstance(electrodes_table[column][electrode_table_index], ElectrodeGroup):
                     continue
-                if column == "channel_name":
+                elif column == "channel_name":
                     # channel_names are already set as channel ids!
                     continue
                 elif column == "group_name":
