@@ -322,8 +322,8 @@ class BaseExtractor:
         to a dictionary. The resulting dictionary can be used to re-initialize the extractor
         through the `load_extractor_from_dict` function.
 
-        In some situations, relative_to is not possible, (for instance differnt drive on window or url like path), then
-        the relative will ignored and absolut (relative_to=None) will be done instead.
+        In some situations, 'relative_to' is not possible, (for instance different drives on Windows or url-like path), then
+        the relative will ignored and absolute (relative_to=None) will be done instead.
 
         Examples
         --------
@@ -421,7 +421,7 @@ class BaseExtractor:
             # "relative_paths": (relative_to is not None),
         }
 
-        dump_dict["version"] = module_version  # Can be spikeinterface, spikefores, etc.
+        dump_dict["version"] = module_version  # Can be spikeinterface, spikeforest, etc.
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations

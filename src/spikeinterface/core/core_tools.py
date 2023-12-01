@@ -876,7 +876,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     """
     Check if relative path is possible to be applied on a dict describing an BaseExtractor.
 
-    For instance on windows, if some data are on a driver "d:/" and the folder is on drive "C:/" it returns False.
+    For instance on windows, if some data are on a drive "D:/" and the folder is on drive "C:/" it returns False.
 
     Parameters
     ----------
@@ -919,7 +919,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
 
 def make_paths_relative(input_dict, relative_folder) -> dict:
     """
-    Recursivelly transform a dict describing an BaseExtractor to make every path relative to a folder.
+    Recursively transform a dict describing an BaseExtractor to make every path relative to a folder.
 
     Parameters
     ----------
@@ -941,7 +941,7 @@ def make_paths_relative(input_dict, relative_folder) -> dict:
 
 def make_paths_absolute(input_dict, base_folder):
     """
-    Recursivelly transform a dict describing an BaseExtractor to make every path absolut given a base_folder.
+    Recursively transform a dict describing an BaseExtractor to make every path absolute given a base_folder.
 
     Parameters
     ----------
