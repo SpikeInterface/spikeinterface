@@ -322,6 +322,9 @@ class BaseExtractor:
         to a dictionary. The resulting dictionary can be used to re-initialize the extractor
         through the `load_extractor_from_dict` function.
 
+        In some situations, relative_to is not possible, (for instance differnt drive on window or url like path), then
+        the relative will ignored and absolut (relative_to=None) will be done instead.
+
         Examples
         --------
         >>> dump_dict = original_extractor.to_dict()

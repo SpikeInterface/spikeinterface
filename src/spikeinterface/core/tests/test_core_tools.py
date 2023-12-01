@@ -233,18 +233,6 @@ def test_path_utils_functions():
 
 
 
-
-
-
-    # make_paths_relative,
-    # make_paths_absolute,
-    # check_paths_relative,
-
-
-
-
-
-
 if __name__ == "__main__":
     # Create a temporary folder using the standard library
     # import tempfile
