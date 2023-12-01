@@ -859,7 +859,7 @@ def _get_paths_list(d):
     path_list = []
     def append_to_path(p):
         path_list.append(p)
-    recursive_path_modifier(d, append_to_path, target="path", copy=False)
+    recursive_path_modifier(d, append_to_path, target="path", copy=True)
     return path_list
 
 
@@ -870,7 +870,7 @@ def _relative_to(p, relative_folder):
     p = Path(p).resolve().absolute()
     # the as_posix transform \\ to / on window which make better json files
     rel_to = os.path.relpath(p.as_posix(), start=relative_folder.as_posix())
-    return rel_to
+    return Path(rel_to).as_posix()
 
 def check_paths_relative(input_dict, relative_folder) -> bool:
     """
@@ -897,19 +897,22 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
         # check path is not an URL
         if 'http' in str(p):
             not_possible.append(p)
+            continue
 
         # If windows path check have same drive
         if isinstance(p, pathlib.WindowsPath) and isinstance(relative_folder, pathlib.WindowsPath):
             # check that on same drive
             # important note : for UNC path on window the "//host/shared" is the drive
-            if p.drive != relative_folder.drive:
+            if p.resolve().absolute().drive != relative_folder.drive:
                 not_possible.append(p)
+                continue
         
         # check relative is possible
         try:
-            _relative_to(p, relative_folder)
+            p2 = _relative_to(p, relative_folder)
         except ValueError:
             not_possible.append(p)
+            continue
     
     return len(not_possible) == 0
 
