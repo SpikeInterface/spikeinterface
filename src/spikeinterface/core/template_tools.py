@@ -4,6 +4,7 @@ import warnings
 
 from .sparsity import compute_sparsity, _sparsity_doc
 from .recording_tools import get_channel_distances, get_noise_levels
+from .template import Templates
 
 
 def get_template_amplitudes(
@@ -248,3 +249,66 @@ def get_template_extremum_amplitude(
         unit_amplitudes[unit_id] = extremum_amplitudes[unit_id][best_channel]
 
     return unit_amplitudes
+
+
+
+def move_templates(templates, motions, source_probe, ):
+    """
+    
+    """
+    pass
+
+
+
+def interpolate_templates(templates, source_locations, dest_locations, interpolation_method="cubic"):
+    """
+    Interpolate template to a new position.
+    Uselfull to create motion or to remap template form probeA to probeB.
+
+    Note that several moves can be done by broadcating when dest_locations have one more dim.
+
+    Parameters
+    ----------
+    templates: np.array
+        A numpy array with dense templates.
+        shape = (num_template, num_sample, num_channel)
+    source_locations: np.array 
+        The channel source location corresponding to templates.
+        shape = (num_channel, 2)
+    dest_locations: np.array
+        The new channel position, if ndim == 3, then the interpolation is broadcated with last dim.
+        shape = (num_channel, 2) or (num_motion, num_channel, 2)
+
+    interpolation_method: str, default "cubic"
+        The interpolation method.
+    
+    Returns
+    -------
+    new_templates: np.array
+        shape = (num_template, num_sample, num_channel) or = (num_motion, num_template, num_sample, num_channel, )
+    """
+    import scipy.interpolate
+
+    source_locations = np.asarray(source_locations)
+    dest_locations = np.asarray(dest_locations)
+    if dest_locations.ndim == 2:
+        new_shape = templates.shape
+    elif dest_locations.ndim == 3:
+        new_shape = (dest_locations.shape[0], ) + templates.shape
+    else:
+        raise ValueError("Bad dest_locations")
+
+    new_templates = np.zeros(new_shape, dtype=templates.dtype)
+    
+    for template_ind in range(templates.shape[0]):
+        for time_ind in range(templates.shape[1]):
+            template = templates[template_ind, time_ind, :]
+            interp_template = scipy.interpolate.griddata(source_locations, template, dest_locations,
+                                                         method=interpolation_method,
+                                                         fill_value=0)
+            if dest_locations.ndim == 2:
+                new_templates[template_ind, time_ind, :] = interp_template
+            elif dest_locations.ndim == 3: 
+                new_templates[:, template_ind, time_ind, :] = interp_template
+
+    return new_templates
