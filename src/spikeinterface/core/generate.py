@@ -237,9 +237,35 @@ def generate_injected_sorting(
     max_injected_per_unit: int = 1000,
     injected_rate: float = 0.05,
     refractory_period_ms: float = 1.5,
+    seed=None
 ) -> NumpySorting:
+
+    """
+    Generates a sorting with spikes that are injected into the already existing sorting
+    
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object
+    num_samples: list of size num_segments. 
+        The number of samples in all the segments of the sorting, to generate spike times
+        covering entire the entire duration of the segments
+    max_injected_per_unit: int, default 1000
+        The maximal number of spikes injected per units
+    injected_rate: float, default 0.05
+        The rate at which spikes are injected
+    refractory_period_ms: float, default 1.5
+        The refractory period that should not be violated while injecting new spikes
+    seed: int, default None
+        The random seed
+
+    """
+
+
     injected_spike_trains = [{} for seg_index in range(sorting.get_num_segments())]
     t_r = int(round(refractory_period_ms * sorting.get_sampling_frequency() * 1e-3))
+
+    rng = np.random.default_rng(seed=seed)
 
     for segment_index in range(sorting.get_num_segments()):
         for unit_id in sorting.unit_ids:
