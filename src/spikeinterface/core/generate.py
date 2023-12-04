@@ -286,7 +286,7 @@ class TransformSorting(BaseSorting):
         The spikes that should be added to the sorting object, for new units
     new_units_ids: list
         The unit_ids that should be added if spikes for new units are added
-    refractory_period_ms : float, default 5
+    refractory_period_ms : float, default None
         The refractory period violation to prevent duplicates and/or unphysiological addition
         of spikes. Any spike times in added_spikes violating the refractory period will be
         discarded
@@ -322,16 +322,16 @@ class TransformSorting(BaseSorting):
                 added_spikes_existing_units.dtype == minimum_spike_dtype
             ), "added_spikes_existing_units should be a spike vector"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
-            self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_existing_units))))
-            self.added_units = np.concatenate((self.added_units, np.zeros(len(added_spikes_existing_units))))
+            self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_existing_units), dtype=bool)))
+            self.added_units = np.concatenate((self.added_units, np.zeros(len(added_spikes_existing_units), dtype=bool)))
 
         if added_spikes_new_units is not None:
             assert (
                 added_spikes_new_units.dtype == minimum_spike_dtype
             ), "added_spikes_new_units should be a spike vector"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_new_units))
-            self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_new_units))))
-            self.added_units = np.concatenate((self.added_units, np.ones(len(added_spikes_new_units))))
+            self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_new_units), dtype=bool)))
+            self.added_units = np.concatenate((self.added_units, np.ones(len(added_spikes_new_units), dtype=bool)))
 
         sort_idxs = np.lexsort([self._cached_spike_vector["sample_index"], self._cached_spike_vector["segment_index"]])
         self._cached_spike_vector = self._cached_spike_vector[sort_idxs]
@@ -355,7 +355,7 @@ class TransformSorting(BaseSorting):
         )
 
     @staticmethod
-    def add_from_sorting(sorting1: BaseSorting, sorting2: BaseSorting) -> "TransformSorting":
+    def add_from_sorting(sorting1: BaseSorting, sorting2: BaseSorting, refractory_period_ms=None) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting to one other.
 
@@ -363,6 +363,10 @@ class TransformSorting(BaseSorting):
         ----------
         sorting1: the first sorting
         sorting2: the second sorting
+        refractory_period_ms : float, default None
+            The refractory period violation to prevent duplicates and/or unphysiological addition
+            of spikes. Any spike times in added_spikes violating the refractory period will be
+            discarded
         """
         assert (
             sorting1.get_sampling_frequency() == sorting2.get_sampling_frequency()
@@ -383,8 +387,9 @@ class TransformSorting(BaseSorting):
 
         # If indices are not the same, we need to remap
         if not np.all(idx1 == idx2):
+            old_indices = common["unit_index"].copy()
             for i, j in zip(idx1, idx2):
-                mask = common["unit_index"] == j
+                mask = old_indices == j
                 common["unit_index"][mask] = i
 
         idx1 = len(sorting1.unit_ids) + np.arange(len(exclusive_ids), dtype=int)
@@ -400,12 +405,13 @@ class TransformSorting(BaseSorting):
                 not_common["unit_index"][mask] = i
 
         sorting = TransformSorting(
-            sorting1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids
+            sorting1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids,
+            refractory_period_ms=refractory_period_ms
         )
         return sorting
 
     @staticmethod
-    def add_from_unit_dict(sorting1: BaseSorting, units_dict_list: dict) -> "TransformSorting":
+    def add_from_unit_dict(sorting1: BaseSorting, units_dict_list: dict, refractory_period_ms=None) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting with a
         list of dict. The list length is the segment count.
@@ -416,13 +422,17 @@ class TransformSorting(BaseSorting):
 
         sorting1: the first sorting
         dict_list: list of dict
+        refractory_period_ms : float, default None
+            The refractory period violation to prevent duplicates and/or unphysiological addition
+            of spikes. Any spike times in added_spikes violating the refractory period will be
+            discarded
         """
         sorting2 = NumpySorting.from_unit_dict(units_dict_list, sorting1.get_sampling_frequency())
-        sorting = TransformSorting.add_from_sorting(sorting1, sorting2)
+        sorting = TransformSorting.add_from_sorting(sorting1, sorting2, refractory_period_ms)
         return sorting
 
     @staticmethod
-    def from_times_labels(sorting1, times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_times_labels(sorting1, times_list, labels_list, sampling_frequency, unit_ids=None, refractory_period_ms=None) -> "NumpySorting":
         """
         Construct TransformSorting from:
           * an array of spike times (in frames)
@@ -439,31 +449,36 @@ class TransformSorting(BaseSorting):
         unit_ids: list or None, default: None
             The explicit list of unit_ids that should be extracted from labels_list
             If None, then it will be np.unique(labels_list)
+        refractory_period_ms : float, default None
+            The refractory period violation to prevent duplicates and/or unphysiological addition
+            of spikes. Any spike times in added_spikes violating the refractory period will be
+            discarded
         """
 
         sorting2 = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency, unit_ids)
-        sorting = TransformSorting.add_from_sorting(sorting1, sorting2)
+        sorting = TransformSorting.add_from_sorting(sorting1, sorting2, refractory_period_ms)
         return sorting
 
     def _check_rpv(self):
-        ## This function will remove the added spikes that will violate RPV, but do not affect the
+        ## This function will remove the added spikes that will violate RPV, but does not affect the
         ## spikes in the original sorting. So if some RPV violation are present in this sorting,
         ## they will be left untouched
         unit_indices = np.unique(self._cached_spike_vector["unit_index"])
         segment_indices = np.unique(self._cached_spike_vector["segment_index"])
-        rpv = int(fs * refractory_period_ms / 1000)
-        to_keep = np.ones(len(self._cached_spike_vector), dtype=bool)
+        rpv = int(self.get_sampling_frequency() * self.refractory_period_ms / 1000)
+        to_keep = ~self.added_spikes.copy()
         for segment_index in segment_indices:
             for unit_ind in unit_indices:
                 (indices,) = np.nonzero(
                     (self._cached_spike_vector["unit_index"] == unit_ind)
                     * (self._cached_spike_vector["segment_index"] == segment_index)
                 )
-                to_keep[indices[1:]] = np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv
+                to_keep[indices[1:]] = np.logical_or(to_keep[indices[1:]], np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv)
+
 
         self._cached_spike_vector = self._cached_spike_vector[to_keep]
         self.added_spikes = self.added_spikes[to_keep]
-        self.added_units = self.added_units[sort_idxs]
+        self.added_units = self.added_units[to_keep]
 
 
 def create_sorting_npz(num_seg, file_path):
