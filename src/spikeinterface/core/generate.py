@@ -361,7 +361,7 @@ class TransformSorting(BaseSorting):
         common_ids = sorting_2.unit_ids[mask_1]
         exclusive_ids = sorting_2.unit_ids[~mask_1]
 
-        # We detect the indicies in the spike_vectors
+        # We detect the indcies in the spike_vectors
         idx_1 = sorting_1.ids_to_indices(common_ids)
         idx_2 = sorting_2.ids_to_indices(common_ids)
 
