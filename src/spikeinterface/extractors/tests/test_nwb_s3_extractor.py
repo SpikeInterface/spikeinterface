@@ -220,6 +220,38 @@ def test_sorting_s3_nwb_fsspec(tmp_path, cache):
     check_sortings_equal(reloaded_sorting, sorting)
 
 
+@pytest.mark.streaming_extractors
+def test_sorting_s3_nwb_remfile(tmp_path):
+    file_path = "https://dandiarchive.s3.amazonaws.com/blobs/84b/aa4/84baa446-cf19-43e8-bdeb-fc804852279b"
+    # We provide the 'sampling_frequency' because the NWB file does not have the electrical series
+    sorting = NwbSortingExtractor(
+        file_path,
+        sampling_frequency=30000.0,
+        stream_mode="remfile",
+    )
+
+    num_seg = sorting.get_num_segments()
+    assert num_seg == 1
+    num_units = len(sorting.unit_ids)
+    assert num_units == 64
+
+    for segment_index in range(num_seg):
+        for unit in sorting.unit_ids:
+            spike_train = sorting.get_unit_spike_train(unit_id=unit, segment_index=segment_index)
+            assert len(spike_train) > 0
+            assert spike_train.dtype == "int64"
+            assert np.all(spike_train >= 0)
+
+    tmp_file = tmp_path / "test_remfile_sorting.pkl"
+    with open(tmp_file, "wb") as f:
+        pickle.dump(sorting, f)
+
+    with open(tmp_file, "rb") as f:
+        reloaded_sorting = pickle.load(f)
+
+    check_sortings_equal(reloaded_sorting, sorting)
+
+
 if __name__ == "__main__":
     test_recording_s3_nwb_ros3()
     test_recording_s3_nwb_fsspec()
