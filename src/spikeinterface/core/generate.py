@@ -343,7 +343,7 @@ class TransformSorting(BaseSorting):
         )
 
     @staticmethod
-    def add_from_sorting(sorting_1: BaseSorting, sorting_2: BaseSorting) -> "TransformSorting":
+    def add_from_sorting(sorting1: BaseSorting, sorting2: BaseSorting) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting to one other.
 
