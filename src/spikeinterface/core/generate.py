@@ -324,8 +324,12 @@ class TransformSorting(BaseSorting):
                 added_spikes_existing_units.dtype == minimum_spike_dtype
             ), "added_spikes_existing_units should be a spike vector"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
-            self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_existing_units), dtype=bool)))
-            self.added_units = np.concatenate((self.added_units, np.zeros(len(added_spikes_existing_units), dtype=bool)))
+            self.added_spikes = np.concatenate(
+                (self.added_spikes, np.ones(len(added_spikes_existing_units), dtype=bool))
+            )
+            self.added_units = np.concatenate(
+                (self.added_units, np.zeros(len(added_spikes_existing_units), dtype=bool))
+            )
 
         if added_spikes_new_units is not None:
             assert (
@@ -407,13 +411,18 @@ class TransformSorting(BaseSorting):
                 not_common["unit_index"][mask] = i
 
         sorting = TransformSorting(
-            sorting1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids,
-            refractory_period_ms=refractory_period_ms
+            sorting1,
+            added_spikes_existing_units=common,
+            added_spikes_new_units=not_common,
+            new_unit_ids=exclusive_ids,
+            refractory_period_ms=refractory_period_ms,
         )
         return sorting
 
     @staticmethod
-    def add_from_unit_dict(sorting1: BaseSorting, units_dict_list: dict, refractory_period_ms=None) -> "TransformSorting":
+    def add_from_unit_dict(
+        sorting1: BaseSorting, units_dict_list: dict, refractory_period_ms=None
+    ) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting with a
         list of dict. The list length is the segment count.
@@ -434,7 +443,9 @@ class TransformSorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_times_labels(sorting1, times_list, labels_list, sampling_frequency, unit_ids=None, refractory_period_ms=None) -> "NumpySorting":
+    def from_times_labels(
+        sorting1, times_list, labels_list, sampling_frequency, unit_ids=None, refractory_period_ms=None
+    ) -> "NumpySorting":
         """
         Construct TransformSorting from:
           * an array of spike times (in frames)
@@ -475,8 +486,9 @@ class TransformSorting(BaseSorting):
                     (self._cached_spike_vector["unit_index"] == unit_ind)
                     * (self._cached_spike_vector["segment_index"] == segment_index)
                 )
-                to_keep[indices[1:]] = np.logical_or(to_keep[indices[1:]], np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv)
-
+                to_keep[indices[1:]] = np.logical_or(
+                    to_keep[indices[1:]], np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv
+                )
 
         self._cached_spike_vector = self._cached_spike_vector[to_keep]
         self.added_spikes = self.added_spikes[to_keep]

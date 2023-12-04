@@ -485,13 +485,14 @@ def test_transformsorting():
     assert np.all(np.array([k for k in transformed.get_total_num_spikes().values()]) == [2, 2])
 
     transformed = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
-    
+
     sorting_1 = generate_sorting(seed=0)
     transformed = TransformSorting(sorting_1, sorting_1.to_spike_vector(), refractory_period_ms=0)
     assert len(sorting_1.to_spike_vector()) == len(transformed.to_spike_vector())
 
     transformed = TransformSorting(sorting_1, sorting_1.to_spike_vector(), refractory_period_ms=5)
-    assert 2*len(sorting_1.to_spike_vector()) > len(transformed.to_spike_vector())
+    assert 2 * len(sorting_1.to_spike_vector()) > len(transformed.to_spike_vector())
+
 
 def test_generate_ground_truth_recording():
     rec, sorting = generate_ground_truth_recording(upsample_factor=None)
