@@ -305,7 +305,9 @@ class TransformSorting(BaseSorting):
         unit_ids = list(sorting.get_unit_ids())
 
         if new_unit_ids is not None:
-            assert (~np.any(np.isin(new_unit_ids, sorting.unit_ids))), "some units ids are already present. Consider using added_spikes_existing_units"
+            assert ~np.any(
+                np.isin(new_unit_ids, sorting.unit_ids)
+            ), "some units ids are already present. Consider using added_spikes_existing_units"
             if len(new_unit_ids) > 0:
                 assert type(unit_ids[0]) == type(new_unit_ids[0]), "unit_ids should have the same type"
                 unit_ids += list(new_unit_ids)

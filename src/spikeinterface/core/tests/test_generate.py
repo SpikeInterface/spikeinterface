@@ -468,17 +468,21 @@ def test_transformsorting():
     transformed = TransformSorting.add_from_sorting(sorting_1, sorting_3)
     assert len(transformed.unit_ids) == 50
 
-    sorting_1 = NumpySorting.from_unit_dict({46: np.array([0, 150], dtype=int)}, sampling_frequency=20000.)
-    sorting_2 = NumpySorting.from_unit_dict({0: np.array([100, 2000], dtype=int), 3: np.array([200, 4000], dtype=int)}, sampling_frequency=20000.)
+    sorting_1 = NumpySorting.from_unit_dict({46: np.array([0, 150], dtype=int)}, sampling_frequency=20000.0)
+    sorting_2 = NumpySorting.from_unit_dict(
+        {0: np.array([100, 2000], dtype=int), 3: np.array([200, 4000], dtype=int)}, sampling_frequency=20000.0
+    )
     transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
-    assert (len(transformed.unit_ids) == 3)
+    assert len(transformed.unit_ids) == 3
     assert np.all(np.array([k for k in transformed.get_total_num_spikes().values()]) == 2)
 
-    sorting_1 = NumpySorting.from_unit_dict({0: np.array([12], dtype=int)}, sampling_frequency=20000.)
-    sorting_2 = NumpySorting.from_unit_dict({0: np.array([150], dtype=int), 3: np.array([12, 150], dtype=int)}, sampling_frequency=20000.)
+    sorting_1 = NumpySorting.from_unit_dict({0: np.array([12], dtype=int)}, sampling_frequency=20000.0)
+    sorting_2 = NumpySorting.from_unit_dict(
+        {0: np.array([150], dtype=int), 3: np.array([12, 150], dtype=int)}, sampling_frequency=20000.0
+    )
     transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
-    assert (len(transformed.unit_ids) == 2)
-    assert np.all(np.array([k for k in transformed.get_total_num_spikes().values()]) == [2,2])
+    assert len(transformed.unit_ids) == 2
+    assert np.all(np.array([k for k in transformed.get_total_num_spikes().values()]) == [2, 2])
 
     transformed = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
     
