@@ -441,8 +441,8 @@ class LocalizeGridConvolution(PipelineNode):
                 dot_products[dot_products < thresholds[:, np.newaxis]] = 0
 
             scalar_products = dot_products.sum(1)
-            found_positions = np.dot(dot_products, self.template_positions[nearest_templates, :])
-
+            found_positions = np.zeros((len(idx), ndim), dtype=np.float32)
+            found_positions[:, :2] = np.dot(dot_products, self.template_positions[nearest_templates, :])
             found_positions /= scalar_products[:, np.newaxis]
             found_positions = np.nan_to_num(found_positions)
             peak_locations["x"][idx] = found_positions[:, 0]
