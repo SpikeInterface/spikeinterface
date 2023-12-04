@@ -21,7 +21,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def __init__(self, sampling_frequency: float, channel_ids: list[str, int], dtype: np.dtype):
         BaseExtractor.__init__(self, channel_ids)
-        self._sampling_frequency = sampling_frequency
+        self._sampling_frequency = float(sampling_frequency)
         self._dtype = np.dtype(dtype)
 
     @property

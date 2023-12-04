@@ -1,21 +1,17 @@
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset, BaseSorting
-from spikeinterface.extractors import MEArecRecordingExtractor
-
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
 
 from spikeinterface.core import get_noise_levels
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
+from spikeinterface.sortingcomponents.tests.common import make_dataset
+
 
 def test_features_from_peaks():
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    recording = MEArecRecordingExtractor(local_path)
+    recording, sorting = make_dataset()
 
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
