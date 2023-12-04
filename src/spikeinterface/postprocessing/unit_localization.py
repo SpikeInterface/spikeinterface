@@ -458,23 +458,18 @@ def compute_grid_convolution(
         num_templates = np.sum(nearest_templates)
         global_products = ((wf[:, channel_mask] / amplitude) * prototype).sum(axis=0)
 
-        dot_products = np.zeros((weights.shape[0], num_templates), dtype=np.float32)
-        for count in range(weights.shape[0]):
-            w = weights[count, :, :][channel_mask, :][:, nearest_templates]
-            dot_products[count, :] = np.dot(global_products, w)
+        mid_depth = len(depth_um) // 2
+        #dot_products = np.zeros((1, num_templates), dtype=np.float32)
+        
+        w = weights[mid_depth, :, :][channel_mask, :][:, nearest_templates]
+        dot_products = np.dot(global_products, w)
 
         dot_products = np.maximum(0, dot_products)
         if percentile < 100:
-            thresholds = np.percentile(dot_products, percentile, axis=0)
-            dot_products[dot_products < thresholds[np.newaxis, :]] = 0
+            thresholds = np.percentile(dot_products, percentile)
+            dot_products[dot_products < thresholds] = 0
 
-        found_positions = np.zeros(ndim, dtype=np.float32)
-        scalar_products = np.zeros(num_templates, dtype=np.float32)
-        for count in range(weights.shape[0]):
-            scalar_products += dot_products[count]
-            found_positions[:2] += np.dot(dot_products[count], template_positions[nearest_templates])
-
-        unit_location[i, :] = found_positions / scalar_products.sum()
+        unit_location[i, :2] = np.dot(dot_products, template_positions[nearest_templates])/dot_products.sum()
 
         if mode == "3d":
             n_best_templates = 4
@@ -590,7 +585,7 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 
 def get_grid_convolution_templates_and_weights(
-    contact_locations, radius_um=50, upsampling_um=5, depth_um=np.linspace(5, 100.0, 5),
+    contact_locations, radius_um=50, upsampling_um=5, depth_um=np.arange(5, 100.0, 5),
     margin_um=50, decay_power=2
 ):
     import sklearn.metrics
