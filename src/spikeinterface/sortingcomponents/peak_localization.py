@@ -328,7 +328,7 @@ class LocalizeGridConvolution(PipelineNode):
         The margin for the grid of fake templates
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float, default: 5
+    percentile: float, default: 20
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
     sparsity_threshold: float, default: 0.01
@@ -342,12 +342,12 @@ class LocalizeGridConvolution(PipelineNode):
         parents=["extract_waveforms"],
         radius_um=40.0,
         upsampling_um=5.0,
-        depth_um=np.linspace(5.0, 100.0, 5),
+        depth_um=np.arange(5.0, 100.0, 5),
         decay_power=2,
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=5.0,
+        percentile=20.0,
         sparsity_threshold=0.01,
         mode="2d",
     ):
@@ -425,31 +425,25 @@ class LocalizeGridConvolution(PipelineNode):
             nearest_templates = self.nearest_template_mask[main_chan, :]
             num_templates = np.sum(nearest_templates)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
-            # print(np.sum(nearest_templates), channel_mask.shape, self.weights.shape, np.sum(channel_mask))
 
             global_products = (
                 waveforms[idx, :, :][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
             ).sum(axis=1)
 
-            dot_products = np.zeros((self.weights.shape[0], num_spikes, num_templates), dtype=np.float32)
-            for count in range(self.weights.shape[0]):
-                w = self.weights[count, :, :][channel_mask, :][:, nearest_templates]
-                dot_products[count, :, :] = np.dot(global_products, w)
+            mid_depth = len(self.depth_um) // 2
+            dot_products = np.zeros((num_spikes, num_templates), dtype=np.float32)
+            w = self.weights[mid_depth, :, :][channel_mask, :][:, nearest_templates]
+            dot_products = np.dot(global_products, w)
 
             dot_products = np.maximum(0, dot_products)
             if self.percentile < 100:
-                thresholds = np.percentile(dot_products, self.percentile, axis=(0, 2))
-                dot_products[dot_products < thresholds[np.newaxis, :, np.newaxis]] = 0
+                thresholds = np.percentile(dot_products, self.percentile, axis=(1))
+                dot_products[dot_products < thresholds[:, np.newaxis]] = 0
+            
+            scalar_products = dot_products.sum(1)
+            found_positions = np.dot(dot_products, self.template_positions[nearest_templates, :])
 
-            scalar_products = np.zeros((num_spikes, num_templates), dtype=np.float32)
-            found_positions = np.zeros((num_spikes, ndim), dtype=np.float32)
-            for count in range(self.weights.shape[0]):
-                scalar_products += dot_products[count, :, :]
-                found_positions[:, :2] += np.dot(
-                    dot_products[count, :, :], self.template_positions[nearest_templates, :]
-                )
-
-            found_positions /= scalar_products.sum(1)[:, np.newaxis]
+            found_positions /= scalar_products[:, np.newaxis]
             found_positions = np.nan_to_num(found_positions)
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
