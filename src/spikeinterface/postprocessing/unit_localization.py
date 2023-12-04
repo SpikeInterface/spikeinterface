@@ -458,7 +458,7 @@ def compute_grid_convolution(
         num_templates = np.sum(nearest_templates)
         global_products = ((wf[:, channel_mask] / amplitude) * prototype).sum(axis=0)
 
-        mid_depth = 0 #len(depth_um) // 2
+        mid_depth = 0  # len(depth_um) // 2
         w = weights[mid_depth, :, :][channel_mask, :][:, nearest_templates]
         dot_products = np.dot(global_products, w)
 

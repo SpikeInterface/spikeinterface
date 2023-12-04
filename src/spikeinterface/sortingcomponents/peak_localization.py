@@ -430,7 +430,7 @@ class LocalizeGridConvolution(PipelineNode):
                 waveforms[idx, :, :][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
             ).sum(axis=1)
 
-            mid_depth = 0 #len(self.depth_um) // 2
+            mid_depth = 0  # len(self.depth_um) // 2
             dot_products = np.zeros((num_spikes, num_templates), dtype=np.float32)
             w = self.weights[mid_depth, :, :][channel_mask, :][:, nearest_templates]
             dot_products = np.dot(global_products, w)
