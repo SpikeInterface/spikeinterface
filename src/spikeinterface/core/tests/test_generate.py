@@ -18,7 +18,7 @@ from spikeinterface.core.generate import (
     generate_channel_locations,
     generate_unit_locations,
     generate_ground_truth_recording,
-    generate_injected_sorting
+    generate_injected_sorting,
 )
 
 from spikeinterface.core.numpyextractors import NumpySorting
@@ -514,6 +514,7 @@ def test_generate_injected_sorting():
     # injected spikes should be less than original spikes
     for unit_id in num_spikes:
         assert num_injected_spikes[unit_id] <= num_spikes[unit_id]
+
 
 if __name__ == "__main__":
     strategy = "tile_pregenerated"
