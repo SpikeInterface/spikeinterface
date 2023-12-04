@@ -459,8 +459,8 @@ def compute_grid_convolution(
         global_products = ((wf[:, channel_mask] / amplitude) * prototype).sum(axis=0)
 
         mid_depth = len(depth_um) // 2
-        #dot_products = np.zeros((1, num_templates), dtype=np.float32)
-        
+        # dot_products = np.zeros((1, num_templates), dtype=np.float32)
+
         w = weights[mid_depth, :, :][channel_mask, :][:, nearest_templates]
         dot_products = np.dot(global_products, w)
 
@@ -469,7 +469,7 @@ def compute_grid_convolution(
             thresholds = np.percentile(dot_products, percentile)
             dot_products[dot_products < thresholds] = 0
 
-        unit_location[i, :2] = np.dot(dot_products, template_positions[nearest_templates])/dot_products.sum()
+        unit_location[i, :2] = np.dot(dot_products, template_positions[nearest_templates]) / dot_products.sum()
 
         if mode == "3d":
             n_best_templates = 4
