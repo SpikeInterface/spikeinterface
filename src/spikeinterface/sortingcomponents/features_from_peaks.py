@@ -119,7 +119,7 @@ class PeakToPeakFeature(PipelineNode):
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
         self.all_channels = all_channels
         self._kwargs.update(dict(radius_um=radius_um, all_channels=all_channels))
         self._dtype = recording.get_dtype()
@@ -157,7 +157,7 @@ class PeakToPeakLagsFeature(PipelineNode):
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
 
         self._kwargs.update(dict(radius_um=radius_um, all_channels=all_channels))
         self._dtype = recording.get_dtype()
@@ -202,7 +202,7 @@ class RandomProjectionsFeature(PipelineNode):
         self.sigmoid = sigmoid
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
         self.radius_um = radius_um
         self.sparse = sparse
         self._kwargs.update(dict(projections=projections, sigmoid=sigmoid, radius_um=radius_um, sparse=sparse))
@@ -253,7 +253,7 @@ class RandomProjectionsEnergyFeature(PipelineNode):
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
 
         self.projections = projections
         self.min_values = min_values
@@ -288,7 +288,7 @@ class StdPeakToPeakFeature(PipelineNode):
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
 
         self._kwargs.update(dict(radius_um=radius_um))
 
@@ -313,7 +313,7 @@ class GlobalPeakToPeakFeature(PipelineNode):
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
 
         self._kwargs.update(dict(radius_um=radius_um))
 
@@ -338,7 +338,7 @@ class KurtosisPeakToPeakFeature(PipelineNode):
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
 
         self._kwargs.update(dict(radius_um=radius_um))
 
@@ -365,7 +365,7 @@ class EnergyFeature(PipelineNode):
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
 
         self._kwargs.update(dict(radius_um=radius_um))
 

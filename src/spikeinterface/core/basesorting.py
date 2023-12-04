@@ -20,7 +20,7 @@ class BaseSorting(BaseExtractor):
 
     def __init__(self, sampling_frequency: float, unit_ids: List):
         BaseExtractor.__init__(self, unit_ids)
-        self._sampling_frequency = sampling_frequency
+        self._sampling_frequency = float(sampling_frequency)
         self._sorting_segments: List[BaseSortingSegment] = []
         # this weak link is to handle times from a recording object
         self._recording = None
