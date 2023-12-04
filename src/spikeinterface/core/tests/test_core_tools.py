@@ -199,13 +199,13 @@ def test_path_utils_functions():
         # test for windows Path
         d = {
             "kwargs": {
-                "path": "c:\\yep\\sub\\path1",
+                "path": r"c:\yep\sub\path1",
                 "recording": {
                     "module": "mock_module",
                     "class": "mock_class",
                     "version": "1.2",
                     "annotations": {},
-                    "kwargs": {"path": "c:\\yep\\sub\\path2"},
+                    "kwargs": {"path": r"c:\yep\sub\path2"},
                 },
             }
         }
@@ -216,17 +216,17 @@ def test_path_utils_functions():
         assert d2["kwargs"]["recording"]["kwargs"]["path"]  == "sub/path2"
 
         # same drive
-        assert check_paths_relative(d, "c:\\yep")
+        assert check_paths_relative(d, r"c:\yep")
         # not the same drive
-        assert not check_paths_relative(d, "d:\\yep")
+        assert not check_paths_relative(d, r"d:\yep")
 
         d = {
             "kwargs": {
-                "path": r"\\host\share\yep\\sub\\path1",
+                "path": r"\\host\share\yep\sub\path1",
             }
         }
         # UNC cannot be relative to d: drive
-        assert not check_paths_relative(d, "d:\\yep")
+        assert not check_paths_relative(d, r"d:\yep")
 
         # UNC can be relative to the same UNC
         assert check_paths_relative(d, r"\\host\share")
