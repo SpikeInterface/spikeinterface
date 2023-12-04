@@ -451,9 +451,9 @@ class LocalizeGridConvolution(PipelineNode):
             if self.mode == "3d":
                 d = sklearn.metrics.pairwise_distances(self.template_positions, found_positions[:, :2])
                 best_templates = np.argmin(d, axis=0)
+                w = self.weights[:, channel_mask]
                 for i, t in enumerate(best_templates):
-                    w = self.weights[:, channel_mask][:, :, t]
-                    dot_products = np.dot(w, global_products[i])
+                    dot_products = np.dot(w[:, :, t], global_products[i])
                     dot_products = np.maximum(0, dot_products)
                     if self.percentile < 100:
                         thresholds = np.percentile(dot_products, self.percentile)
