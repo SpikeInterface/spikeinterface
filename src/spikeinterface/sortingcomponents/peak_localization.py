@@ -320,7 +320,7 @@ class LocalizeGridConvolution(PipelineNode):
         Upsampling resolution for the grid of templates
     depth_um: np.array, default: np.linspace(5.0, 100.0, 5)
         Putative depth of the fake templates
-    decay_power: float, default:2 
+    decay_power: float, default:2
         The decay power as function of the distances for the amplitudes
     sigma_ms: float
         The temporal decay of the fake templates
@@ -463,12 +463,14 @@ class LocalizeGridConvolution(PipelineNode):
                     dot_products = np.zeros((w.shape[0], n_best_templates), dtype=np.float32)
                     for count in range(w.shape[0]):
                         dot_products[count] = np.dot(global_products[i], w[count])
-                    
+
                     dot_products = np.maximum(0, dot_products)
                     if self.percentile < 100:
                         thresholds = np.percentile(dot_products, self.percentile, axis=0)
-                        dot_products[dot_products < thresholds[np.newaxis, :]] = 0 
-                    peak_locations["z"][idx[i]] = (dot_products*self.depth_um[:, np.newaxis]).sum() / dot_products.sum()
+                        dot_products[dot_products < thresholds[np.newaxis, :]] = 0
+                    peak_locations["z"][idx[i]] = (
+                        dot_products * self.depth_um[:, np.newaxis]
+                    ).sum() / dot_products.sum()
 
         return peak_locations
 
