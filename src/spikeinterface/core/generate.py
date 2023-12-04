@@ -339,8 +339,8 @@ class TransformSorting(BaseSorting):
             new_unit_ids=new_unit_ids,
         )
 
-    @classmethod
-    def add_from_sorting(cls, sorting_1: BaseSorting, sorting_2: BaseSorting) -> "TransformSorting":
+    @staticmethod
+    def add_from_sorting(sorting_1: BaseSorting, sorting_2: BaseSorting) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting to one other.
 
@@ -387,8 +387,8 @@ class TransformSorting(BaseSorting):
         )
         return sorting
 
-    @classmethod
-    def add_from_unit_dict(cls, sorting_1: BaseSorting, units_dict_list: dict) -> "TransformSorting":
+    @staticmethod
+    def add_from_unit_dict(sorting_1: BaseSorting, units_dict_list: dict) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting with a
         list of dict. The list length is the segment count.
@@ -401,6 +401,30 @@ class TransformSorting(BaseSorting):
         dict_list: list of dict
         """
         sorting_2 = NumpySorting.from_unit_dict(units_dict_list, sorting_1.get_sampling_frequency())
+        sorting = TransformSorting.add_from_sorting(sorting_1, sorting_2)
+        return sorting
+
+    @staticmethod
+    def from_times_labels(sorting_1, times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+        """
+        Construct TransformSorting from:
+          * an array of spike times (in frames)
+          * an array of spike labels and adds all the
+        In case of multisegment, it is a list of array.
+
+        Parameters
+        ----------
+        sorting_1: the first sorting
+        times_list: list of array (or array)
+            An array of spike times (in frames)
+        labels_list: list of array (or array)
+            An array of spike labels corresponding to the given times
+        unit_ids: list or None, default: None
+            The explicit list of unit_ids that should be extracted from labels_list
+            If None, then it will be np.unique(labels_list)
+        """
+
+        sorting_2 = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency, unit_ids)
         sorting = TransformSorting.add_from_sorting(sorting_1, sorting_2)
         return sorting
 
