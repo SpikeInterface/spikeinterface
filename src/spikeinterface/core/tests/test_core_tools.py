@@ -229,7 +229,7 @@ def test_path_utils_functions():
         assert not check_paths_relative(d, "d:\\yep")
 
         # UNC can be relative to the same UNC
-        assert check_paths_relative(d, "\\host\share")
+        assert check_paths_relative(d, r"\\host\share")
 
 
 
