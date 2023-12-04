@@ -294,18 +294,21 @@ class TransformSorting(BaseSorting):
     """
 
     def __init__(
-        self, sorting: BaseSorting, added_spikes_existing_units=None, added_spikes_new_units=None, new_unit_ids=[]
+        self, sorting: BaseSorting, added_spikes_existing_units=None, added_spikes_new_units=None, new_unit_ids=None, 
+        refractory_period_ms=None
     ):
         sampling_frequency = sorting.get_sampling_frequency()
         unit_ids = list(sorting.get_unit_ids())
 
-        if len(new_unit_ids) > 0:
-            assert type(unit_ids[0]) == type(new_unit_ids[0]), "unit_ids should have the same type"
-            unit_ids += list(new_unit_ids)
+        if new_unit_ids is not None:
+            if len(new_unit_ids) > 0:
+                assert type(unit_ids[0]) == type(new_unit_ids[0]), "unit_ids should have the same type"
+                unit_ids += list(new_unit_ids)
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
         self._cached_spike_vector = sorting.to_spike_vector().copy()
+        self.refractory_period_ms = refractory_period_ms
         self.added_spikes = np.zeros(len(self._cached_spike_vector), dtype=bool)
         self.added_units = np.zeros(len(self._cached_spike_vector), dtype=bool)
 
@@ -335,11 +338,15 @@ class TransformSorting(BaseSorting):
             segment = NumpySortingSegment(self._cached_spike_vector, segment_index, unit_ids=self.unit_ids)
             self.add_sorting_segment(segment)
 
+        if self.refractory_period_ms is not None:
+            self._check_rpv()
+
         self._kwargs = dict(
             sorting=sorting,
             added_spikes_existing_units=added_spikes_existing_units,
             added_spikes_new_units=added_spikes_new_units,
             new_unit_ids=new_unit_ids,
+            refractory_period_ms=refractory_period_ms
         )
 
     @staticmethod
@@ -349,49 +356,49 @@ class TransformSorting(BaseSorting):
 
         Parameters
         ----------
-        sorting_1: the first sorting
-        sorting_2: the second sorting
+        sorting1: the first sorting
+        sorting2: the second sorting
         """
         assert (
-            sorting_1.get_sampling_frequency() == sorting_2.get_sampling_frequency()
+            sorting1.get_sampling_frequency() == sorting2.get_sampling_frequency()
         ), "sampling_frequency should be the same"
-        assert type(sorting_1.unit_ids[0]) == type(sorting_2.unit_ids[0]), "unit_ids should have the same type"
+        assert type(sorting1.unit_ids[0]) == type(sorting2.unit_ids[0]), "unit_ids should have the same type"
         # We detect the indices that are shared by the two sortings
-        mask_1 = np.isin(sorting_2.unit_ids, sorting_1.unit_ids)
-        common_ids = sorting_2.unit_ids[mask_1]
-        exclusive_ids = sorting_2.unit_ids[~mask_1]
+        mask1 = np.isin(sorting2.unit_ids, sorting1.unit_ids)
+        common_ids = sorting2.unit_ids[mask1]
+        exclusive_ids = sorting2.unit_ids[~mask1]
 
-        # We detect the indcies in the spike_vectors
-        idx_1 = sorting_1.ids_to_indices(common_ids)
-        idx_2 = sorting_2.ids_to_indices(common_ids)
+        # We detect the indicies in the spike_vectors
+        idx1 = sorting1.ids_to_indices(common_ids)
+        idx2 = sorting2.ids_to_indices(common_ids)
 
-        spike_vector_2 = sorting_2.to_spike_vector()
-        from_existing_units = np.isin(spike_vector_2["unit_index"], idx_2)
+        spike_vector_2 = sorting2.to_spike_vector()
+        from_existing_units = np.isin(spike_vector_2["unit_index"], idx2)
         common = spike_vector_2[from_existing_units].copy()
 
         # If indices are not the same, we need to remap
-        if not np.all(idx_1 == idx_2):
-            for i, j in zip(idx_1, idx_2):
+        if not np.all(idx1 == idx2):
+            for i, j in zip(idx1, idx2):
                 mask = common["unit_index"] == j
                 common[mask]["unit_index"] = i
 
-        idx_1 = len(sorting_1.unit_ids) + np.arange(len(exclusive_ids))
-        idx_2 = sorting_2.ids_to_indices(exclusive_ids)
+        idx1 = len(sorting1.unit_ids) + np.arange(len(exclusive_ids))
+        idx2 = sorting2.ids_to_indices(exclusive_ids)
         not_common = spike_vector_2[~from_existing_units].copy()
 
         # If indices are not the same, we need to remap
-        if not np.all(idx_1 == idx_2):
-            for i, j in zip(idx_1, idx_2):
+        if not np.all(idx1 == idx2):
+            for i, j in zip(idx1, idx2):
                 mask = not_common["unit_index"] == j
                 not_common[mask]["unit_index"] = i
 
         sorting = TransformSorting(
-            sorting_1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids
+            sorting1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids
         )
         return sorting
 
     @staticmethod
-    def add_from_unit_dict(sorting_1: BaseSorting, units_dict_list: dict) -> "TransformSorting":
+    def add_from_unit_dict(sorting1: BaseSorting, units_dict_list: dict) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting with a
         list of dict. The list length is the segment count.
@@ -400,15 +407,15 @@ class TransformSorting(BaseSorting):
         Parameters
         ----------
 
-        sorting_1: the first sorting
+        sorting1: the first sorting
         dict_list: list of dict
         """
-        sorting_2 = NumpySorting.from_unit_dict(units_dict_list, sorting_1.get_sampling_frequency())
-        sorting = TransformSorting.add_from_sorting(sorting_1, sorting_2)
+        sorting2 = NumpySorting.from_unit_dict(units_dict_list, sorting1.get_sampling_frequency())
+        sorting = TransformSorting.add_from_sorting(sorting1, sorting2)
         return sorting
 
     @staticmethod
-    def from_times_labels(sorting_1, times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_times_labels(sorting1, times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
         """
         Construct TransformSorting from:
           * an array of spike times (in frames)
@@ -417,7 +424,7 @@ class TransformSorting(BaseSorting):
 
         Parameters
         ----------
-        sorting_1: the first sorting
+        sorting1: the first sorting
         times_list: list of array (or array)
             An array of spike times (in frames)
         labels_list: list of array (or array)
@@ -427,27 +434,26 @@ class TransformSorting(BaseSorting):
             If None, then it will be np.unique(labels_list)
         """
 
-        sorting_2 = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency, unit_ids)
-        sorting = TransformSorting.add_from_sorting(sorting_1, sorting_2)
+        sorting2 = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency, unit_ids)
+        sorting = TransformSorting.add_from_sorting(sorting1, sorting2)
         return sorting
 
-    def _check_rpv(self, refractory_period_ms):
+    def _check_rpv(self):
         unit_indices = np.unique(self._cached_spike_vector["unit_index"])
         segment_indices = np.unique(self._cached_spike_vector["segment_index"])
-        if refractory_period_ms is not None:
-            rpv = int(fs * refractory_period_ms / 1000)
-            to_keep = np.ones(len(self._cached_spike_vector), dtype=bool)
-            for segment_index in segment_indices:
-                for unit_ind in unit_indices:
-                    (indices,) = np.nonzero(
-                        (self._cached_spike_vector["unit_index"] == unit_ind)
-                        * (self._cached_spike_vector["segment_index"] == segment_index)
-                    )
-                    to_keep[indices[1:]] = np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv
+        rpv = int(fs * refractory_period_ms / 1000)
+        to_keep = np.ones(len(self._cached_spike_vector), dtype=bool)
+        for segment_index in segment_indices:
+            for unit_ind in unit_indices:
+                (indices,) = np.nonzero(
+                    (self._cached_spike_vector["unit_index"] == unit_ind)
+                    * (self._cached_spike_vector["segment_index"] == segment_index)
+                )
+                to_keep[indices[1:]] = np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv
 
-            self._cached_spike_vector = self._cached_spike_vector[to_keep]
-            self.added_spikes = self.added_spikes[to_keep]
-            self.added_units = self.added_units[sort_idxs]
+        self._cached_spike_vector = self._cached_spike_vector[to_keep]
+        self.added_spikes = self.added_spikes[to_keep]
+        self.added_units = self.added_units[sort_idxs]
 
 
 def create_sorting_npz(num_seg, file_path):
