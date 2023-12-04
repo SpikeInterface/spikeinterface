@@ -222,7 +222,7 @@ def test_path_utils_functions():
 
         d = {
             "kwargs": {
-                "path": "\\host\share\yep\\sub\\path1",
+                "path": r"\\host\share\yep\\sub\\path1",
             }
         }
         # UNC cannot be relative to d: drive
