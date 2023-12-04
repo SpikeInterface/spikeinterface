@@ -192,7 +192,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 mode = "memory"
                 waveforms_folder = None
             else:
-                sorting = sorting.save(folder=clustering_folder)
+                sorting = sorting.save(folder=clustering_folder / "sorting")
                 mode = "folder"
                 waveforms_folder = sorter_output_folder / "waveforms"
 
