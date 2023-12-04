@@ -477,10 +477,10 @@ def compute_grid_convolution(
             for count in range(w.shape[0]):
                 dot_products[count] = np.dot(global_products, w[count])
 
-            dot_products = np.maximum(0, dot_products)
-            if percentile < 100:
-                thresholds = np.percentile(dot_products, percentile)
-                dot_products[dot_products < thresholds] = 0
+            # dot_products = np.maximum(0, dot_products)
+            # if percentile < 100:
+            #     thresholds = np.percentile(dot_products, percentile)
+            #     dot_products[dot_products < thresholds] = 0
             unit_location[i, 2] = (dot_products * depth_um).sum() / dot_products.sum()
     return unit_location
 

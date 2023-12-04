@@ -454,10 +454,10 @@ class LocalizeGridConvolution(PipelineNode):
                 w = self.weights[:, channel_mask]
                 for i, t in enumerate(best_templates):
                     dot_products = np.dot(w[:, :, t], global_products[i])
-                    dot_products = np.maximum(0, dot_products)
-                    if self.percentile < 100:
-                        thresholds = np.percentile(dot_products, self.percentile)
-                        dot_products[dot_products < thresholds] = 0
+                    # dot_products = np.maximum(0, dot_products)
+                    # if self.percentile < 100:
+                    #     thresholds = np.percentile(dot_products, self.percentile)
+                    #     dot_products[dot_products < thresholds] = 0
                     found_positions[i, 2] = (dot_products * self.depth_um).sum() / dot_products.sum()
 
                 peak_locations["z"][idx] = found_positions[:, 2]
