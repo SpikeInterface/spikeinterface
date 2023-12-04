@@ -439,7 +439,7 @@ class LocalizeGridConvolution(PipelineNode):
             if self.percentile < 100:
                 thresholds = np.percentile(dot_products, self.percentile, axis=(1))
                 dot_products[dot_products < thresholds[:, np.newaxis]] = 0
-            
+
             scalar_products = dot_products.sum(1)
             found_positions = np.dot(dot_products, self.template_positions[nearest_templates, :])
 
