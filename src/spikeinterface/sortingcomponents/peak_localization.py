@@ -449,22 +449,18 @@ class LocalizeGridConvolution(PipelineNode):
             peak_locations["y"][idx] = found_positions[:, 1]
 
             if self.mode == "3d":
-                n_best_templates = 4
                 d = sklearn.metrics.pairwise_distances(self.template_positions, found_positions[:, :2])
-                best_templates = np.argsort(d, axis=0)[:n_best_templates]
-                for i in range(len(idx)):
-                    w = self.weights[:, channel_mask][:, :, best_templates[:, i]]
-                    dot_products = np.zeros((w.shape[0], n_best_templates), dtype=np.float32)
-                    for count in range(w.shape[0]):
-                        dot_products[count] = np.dot(global_products[i], w[count])
-
+                best_templates = np.argmin(d, axis=0)
+                for i, t in enumerate(best_templates):
+                    w = self.weights[:, channel_mask][:, :, t]
+                    dot_products = np.dot(w, global_products[i])
                     dot_products = np.maximum(0, dot_products)
                     if self.percentile < 100:
-                        thresholds = np.percentile(dot_products, self.percentile, axis=0)
-                        dot_products[dot_products < thresholds[np.newaxis, :]] = 0
-                    peak_locations["z"][idx[i]] = (
-                        dot_products * self.depth_um[:, np.newaxis]
-                    ).sum() / dot_products.sum()
+                        thresholds = np.percentile(dot_products, self.percentile)
+                        dot_products[dot_products < thresholds] = 0
+                    found_positions[i, 2] = (dot_products * self.depth_um).sum() / dot_products.sum()
+
+                peak_locations["z"][idx] = found_positions[:, 2]
 
         return peak_locations
 

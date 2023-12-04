@@ -459,8 +459,6 @@ def compute_grid_convolution(
         global_products = ((wf[:, channel_mask] / amplitude) * prototype).sum(axis=0)
 
         mid_depth = len(depth_um) // 2
-        # dot_products = np.zeros((1, num_templates), dtype=np.float32)
-
         w = weights[mid_depth, :, :][channel_mask, :][:, nearest_templates]
         dot_products = np.dot(global_products, w)
 
@@ -472,21 +470,18 @@ def compute_grid_convolution(
         unit_location[i, :2] = np.dot(dot_products, template_positions[nearest_templates]) / dot_products.sum()
 
         if mode == "3d":
-            n_best_templates = 4
-            best_templates = np.argsort(np.linalg.norm(template_positions - unit_location[i, :2], axis=1))[
-                :n_best_templates
-            ]
-            w = weights[:, channel_mask][:, :, best_templates]
+            best_template = np.argmin(np.linalg.norm(template_positions - unit_location[i, :2], axis=1))
+            w = weights[:, channel_mask][:, :, best_template]
 
-            dot_products = np.zeros((w.shape[0], n_best_templates), dtype=np.float32)
+            dot_products = np.zeros(w.shape[0], dtype=np.float32)
             for count in range(w.shape[0]):
-                dot_products[count, :] = np.dot(global_products, w[count])
+                dot_products[count] = np.dot(global_products, w[count])
 
             dot_products = np.maximum(0, dot_products)
             if percentile < 100:
-                thresholds = np.percentile(dot_products, percentile, axis=0)
-                dot_products[dot_products < thresholds[np.newaxis, :]] = 0
-            unit_location[i, 2] = (dot_products * depth_um[:, np.newaxis]).sum() / dot_products.sum()
+                thresholds = np.percentile(dot_products, percentile)
+                dot_products[dot_products < thresholds] = 0
+            unit_location[i, 2] = (dot_products * depth_um).sum() / dot_products.sum()
     return unit_location
 
 
