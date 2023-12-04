@@ -305,6 +305,7 @@ class TransformSorting(BaseSorting):
         unit_ids = list(sorting.get_unit_ids())
 
         if new_unit_ids is not None:
+            assert (~np.any(np.isin(new_unit_ids, sorting.unit_ids))), "some units ids are already present. Consider using added_spikes_existing_units"
             if len(new_unit_ids) > 0:
                 assert type(unit_ids[0]) == type(new_unit_ids[0]), "unit_ids should have the same type"
                 unit_ids += list(new_unit_ids)
@@ -384,17 +385,19 @@ class TransformSorting(BaseSorting):
         if not np.all(idx1 == idx2):
             for i, j in zip(idx1, idx2):
                 mask = common["unit_index"] == j
-                common[mask]["unit_index"] = i
+                common["unit_index"][mask] = i
 
-        idx1 = len(sorting1.unit_ids) + np.arange(len(exclusive_ids))
+        idx1 = len(sorting1.unit_ids) + np.arange(len(exclusive_ids), dtype=int)
         idx2 = sorting2.ids_to_indices(exclusive_ids)
+
         not_common = spike_vector_2[~from_existing_units].copy()
 
         # If indices are not the same, we need to remap
         if not np.all(idx1 == idx2):
+            old_indices = not_common["unit_index"].copy()
             for i, j in zip(idx1, idx2):
-                mask = not_common["unit_index"] == j
-                not_common[mask]["unit_index"] = i
+                mask = old_indices == j
+                not_common["unit_index"][mask] = i
 
         sorting = TransformSorting(
             sorting1, added_spikes_existing_units=common, added_spikes_new_units=not_common, new_unit_ids=exclusive_ids
@@ -443,6 +446,9 @@ class TransformSorting(BaseSorting):
         return sorting
 
     def _check_rpv(self):
+        ## This function will remove the added spikes that will violate RPV, but do not affect the
+        ## spikes in the original sorting. So if some RPV violation are present in this sorting,
+        ## they will be left untouched
         unit_indices = np.unique(self._cached_spike_vector["unit_index"])
         segment_indices = np.unique(self._cached_spike_vector["segment_index"])
         rpv = int(fs * refractory_period_ms / 1000)

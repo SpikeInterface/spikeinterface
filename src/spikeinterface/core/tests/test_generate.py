@@ -20,6 +20,7 @@ from spikeinterface.core.generate import (
     generate_ground_truth_recording,
 )
 
+from spikeinterface.core.numpyextractors import NumpySorting
 
 from spikeinterface.core.core_tools import convert_bytes_to_str
 
@@ -464,10 +465,27 @@ def test_transformsorting():
     n_spikes_added_1 = len(transformed_1.to_spike_vector())
     assert n_spikes_added_1 == n_spikes_1 + n_spikes_2
 
-    transformed_2 = TransformSorting.add_from_sorting(sorting_1, sorting_3)
-    assert len(transformed_2.unit_ids) == 50
+    transformed = TransformSorting.add_from_sorting(sorting_1, sorting_3)
+    assert len(transformed.unit_ids) == 50
 
-    transformed_3 = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
+    sorting_1 = NumpySorting.from_unit_dict({46: np.array([0, 150], dtype=int)}, sampling_frequency=20000.)
+    sorting_2 = NumpySorting.from_unit_dict({0: np.array([100, 2000], dtype=int), 3: np.array([200, 4000], dtype=int)}, sampling_frequency=20000.)
+    transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
+    assert (len(transformed.unit_ids) == 3)
+    assert np.all(np.array([k for k in transformed.get_total_num_spikes().values()]) == 2)
+
+    sorting_1 = NumpySorting.from_unit_dict({0: np.array([12], dtype=int)}, sampling_frequency=20000.)
+    sorting_2 = NumpySorting.from_unit_dict({0: np.array([150], dtype=int), 3: np.array([12, 150], dtype=int)}, sampling_frequency=20000.)
+    transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
+    assert (len(transformed.unit_ids) == 2)
+    print("test", transformed.to_spike_vector(), transformed.unit_ids)
+    assert np.all(np.array([k for k in transformed.get_total_num_spikes().values()]) == [2,2])
+    print([k for k in transformed.get_total_num_spikes().values()])
+    
+
+
+
+    transformed = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
 
     # transformed_4 = TransformSorting(sorting_1, sorting_3.to_spike_vector(), refractory_period_ms=0.1)
 
