@@ -445,9 +445,10 @@ class BaseExtractor:
                 dump_dict["relative_paths"] = True
                 dump_dict = make_paths_relative(dump_dict, relative_to)
             else:
+                # A warning will be very annoying for end user.
+                # So the swith back to absolut path but silently!
+                # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
                 dump_dict["relative_paths"] = False
-                # @alessio @ramon @zach: is this warning wanted or not ?
-                warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
 
 
         if folder_metadata is not None:
