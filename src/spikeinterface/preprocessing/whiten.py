@@ -197,7 +197,7 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
         distances = get_channel_distances(recording)
         W = np.zeros((n, n), dtype="float64")
         for c in range(n):
-            (inds,) = np.nonzero(distances[c, :] < radius_um)
+            (inds,) = np.nonzero(distances[c, :] <= radius_um)
             cov_local = cov[inds, :][:, inds]
             U, S, Ut = np.linalg.svd(cov_local, full_matrices=True)
             W_local = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
