@@ -478,12 +478,7 @@ def test_transformsorting():
     sorting_2 = NumpySorting.from_unit_dict({0: np.array([150], dtype=int), 3: np.array([12, 150], dtype=int)}, sampling_frequency=20000.)
     transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
     assert (len(transformed.unit_ids) == 2)
-    print("test", transformed.to_spike_vector(), transformed.unit_ids)
     assert np.all(np.array([k for k in transformed.get_total_num_spikes().values()]) == [2,2])
-    print([k for k in transformed.get_total_num_spikes().values()])
-    
-
-
 
     transformed = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
 
