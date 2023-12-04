@@ -373,7 +373,7 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    depth_um=np.arange(5.0, 150.0, 5),
+    depth_um=np.linspace(5, 150.0, 10),
     decay_power=2,
     sigma_ms=0.25,
     margin_um=50,
@@ -395,7 +395,7 @@ def compute_grid_convolution(
         Radius to consider for the fake templates
     upsampling_um: float, default: 5
         Upsampling resolution for the grid of templates
-    depth_um: np.array, default: np.linspace(5.0, 100.0, 5)
+    depth_um: np.array, default: np.linspace(5, 150.0, 10)
         Putative depth of the fake templates
     decay_power: float, default: 2
         The decay power as function of the distances for the amplitudes
@@ -458,7 +458,7 @@ def compute_grid_convolution(
         num_templates = np.sum(nearest_templates)
         global_products = ((wf[:, channel_mask] / amplitude) * prototype).sum(axis=0)
 
-        mid_depth = len(depth_um) // 2
+        mid_depth = 0 #len(depth_um) // 2
         w = weights[mid_depth, :, :][channel_mask, :][:, nearest_templates]
         dot_products = np.dot(global_products, w)
 
@@ -472,11 +472,7 @@ def compute_grid_convolution(
         if mode == "3d":
             best_template = np.argmin(np.linalg.norm(template_positions - unit_location[i, :2], axis=1))
             w = weights[:, channel_mask][:, :, best_template]
-
-            dot_products = np.zeros(w.shape[0], dtype=np.float32)
-            for count in range(w.shape[0]):
-                dot_products[count] = np.dot(global_products, w[count])
-
+            dot_products = np.dot(w, global_products)
             # dot_products = np.maximum(0, dot_products)
             # if percentile < 100:
             #     thresholds = np.percentile(dot_products, percentile)
@@ -582,7 +578,7 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 
 def get_grid_convolution_templates_and_weights(
-    contact_locations, radius_um=50, upsampling_um=5, depth_um=np.arange(5, 150.0, 5), margin_um=50, decay_power=2
+    contact_locations, radius_um=50, upsampling_um=5, depth_um=np.linspace(5, 150.0, 10), margin_um=50, decay_power=2
 ):
     import sklearn.metrics
 
