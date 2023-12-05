@@ -449,7 +449,9 @@ class LocalizeGridConvolution(PipelineNode):
             peak_locations["y"][idx] = found_positions[:, 1]
 
             if self.mode == "3d":
-                d = sklearn.metrics.pairwise_distances(self.template_positions[nearest_templates], found_positions[:, :2])
+                d = sklearn.metrics.pairwise_distances(
+                    self.template_positions[nearest_templates], found_positions[:, :2]
+                )
                 best_templates = np.argmin(d, axis=0)
                 w = self.weights[:, channel_mask][:, :, nearest_templates]
 

@@ -470,7 +470,9 @@ def compute_grid_convolution(
         unit_location[i, :2] = np.dot(dot_products, template_positions[nearest_templates]) / dot_products.sum()
 
         if mode == "3d":
-            best_template = np.argmin(np.linalg.norm(template_positions[nearest_templates] - unit_location[i, :2], axis=1))
+            best_template = np.argmin(
+                np.linalg.norm(template_positions[nearest_templates] - unit_location[i, :2], axis=1)
+            )
             w = weights[:, channel_mask][:, :, nearest_templates]
             w = w[:, :, best_template]
             dot_products = np.dot(w, global_products)
