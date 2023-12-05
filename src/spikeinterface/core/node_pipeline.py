@@ -175,7 +175,7 @@ class SpikeRetriever(PeakSource):
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
-            self.neighbours_mask = channel_distance < radius_um
+            self.neighbours_mask = channel_distance <= radius_um
             self.peak_sign = peak_sign
 
         # precompute segment slice
@@ -367,7 +367,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
 
     def get_trace_margin(self):
