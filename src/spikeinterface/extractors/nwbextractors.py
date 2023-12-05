@@ -73,7 +73,7 @@ def read_nwbfile(
     file_path: str | Path | None,
     file: BinaryIO | None = None,
     stream_mode: Literal["ffspec", "ros3", "remfile"] | None = None,
-    cache: bool = True,
+    cache: bool = False,
     stream_cache_path: str | Path | None = None,
 ) -> NWBFile:
     """
@@ -87,7 +87,7 @@ def read_nwbfile(
         The file-like object to read from. Either provide this or file_path.
     stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
-    cache: bool, default: True
+    cache: bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path : str or None, default: None
@@ -105,7 +105,7 @@ def read_nwbfile(
 
     Notes
     -----
-    This function can stream data from either the "fsspec" or "ros3" protocols.
+    This function can stream data from the "fsspec", "ros3" and "rem" protocols.
 
 
     Examples
@@ -192,9 +192,9 @@ class NwbRecordingExtractor(BaseRecording):
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
-    stream_mode: str or None, default: None
-        Specify the stream mode: "fsspec" or "ros3".
-    cache: bool, default: True
+    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
+        The streaming mode to use. If None it assumes the file is on the local disk.
+    cache: bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path: str or Path or None, default: None
@@ -237,7 +237,7 @@ class NwbRecordingExtractor(BaseRecording):
         electrical_series_name: str | None = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
-        cache: bool = True,
+        cache: bool = False,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -376,6 +376,9 @@ class NwbRecordingExtractor(BaseRecording):
             for column in electrodes_table.colnames:
                 if isinstance(electrodes_table[column][electrode_table_index], ElectrodeGroup):
                     continue
+                elif column == "channel_name":
+                    # channel_names are already set as channel ids!
+                    continue
                 elif column == "group_name":
                     group = unique_electrode_group_names.index(electrodes_table[column][electrode_table_index])
                     if "group" not in properties:
@@ -412,12 +415,11 @@ class NwbRecordingExtractor(BaseRecording):
             else:
                 self.set_property(property_name, values)
 
-        if stream_mode not in ["fsspec", "ros3", "remfile"]:
-            if file_path is not None:
-                file_path = str(Path(file_path).absolute())
-        if stream_mode == "fsspec":
-            if stream_cache_path is not None:
-                stream_cache_path = str(Path(self.stream_cache_path).absolute())
+        if stream_mode is None and file_path is not None:
+            file_path = str(Path(file_path).resolve())
+
+        if stream_mode == "fsspec" and stream_cache_path is not None:
+            stream_cache_path = str(Path(self.stream_cache_path).absolute())
 
         self.extra_requirements.extend(["pandas", "pynwb", "hdmf"])
         self._electrical_series = electrical_series
@@ -493,9 +495,9 @@ class NwbSortingExtractor(BaseSorting):
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
-    stream_mode: str or None, default: None
-        Specify the stream mode: "fsspec" or "ros3".
-    cache: bool, default: True
+    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
+        The streaming mode to use. If None it assumes the file is on the local disk.
+    cache: bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path: str or Path or None, default: None
@@ -519,7 +521,7 @@ class NwbSortingExtractor(BaseSorting):
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 100000,
         stream_mode: str | None = None,
-        cache: bool = True,
+        cache: bool = False,
         stream_cache_path: str | Path | None = None,
     ):
         try:
@@ -591,12 +593,9 @@ class NwbSortingExtractor(BaseSorting):
         for prop_name, values in properties.items():
             self.set_property(prop_name, np.array(values))
 
-        if stream_mode not in ["fsspec", "ros3"]:
-            file_path = str(Path(file_path).absolute())
-        if stream_mode == "fsspec":
-            # only add stream_cache_path to kwargs if it was passed as an argument
-            if stream_cache_path is not None:
-                stream_cache_path = str(Path(self.stream_cache_path).absolute())
+        if stream_mode is None and file_path is not None:
+            file_path = str(Path(file_path).resolve())
+
         self._kwargs = {
             "file_path": file_path,
             "electrical_series_name": self._electrical_series_name,

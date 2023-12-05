@@ -120,6 +120,12 @@ class TracesWidget(BaseWidget):
         if time_range is None:
             time_range = (0, 1.0)
         time_range = np.array(time_range)
+        if time_range[1] > rec0.get_duration(segment_index=segment_index):
+            warnings.warn(
+                "You have selected a time after the end of the segment. The range will be clipped to "
+                f"{rec0.get_duration(segment_index=segment_index)}"
+            )
+            time_range[1] = rec0.get_duration(segment_index=segment_index)
 
         assert mode in ("auto", "line", "map"), 'Mode must be one of "auto","line", "map"'
         if mode == "auto":

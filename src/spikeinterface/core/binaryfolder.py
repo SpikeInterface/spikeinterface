@@ -3,9 +3,8 @@ import json
 
 import numpy as np
 
-from .base import _make_paths_absolute
 from .binaryrecordingextractor import BinaryRecordingExtractor
-from .core_tools import define_function_from_class
+from .core_tools import define_function_from_class, make_paths_absolute
 
 
 class BinaryFolderRecording(BinaryRecordingExtractor):
@@ -40,7 +39,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
 
         assert d["relative_paths"]
 
-        d = _make_paths_absolute(d, folder_path)
+        d = make_paths_absolute(d, folder_path)
 
         BinaryRecordingExtractor.__init__(self, **d["kwargs"])
 
