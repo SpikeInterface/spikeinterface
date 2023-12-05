@@ -251,8 +251,65 @@ def get_template_extremum_amplitude(
     return unit_amplitudes
 
 
-def move_templates():
-    pass
+def move_templates(templates, displacements, source_probe, dest_probe=None, interpolation_method="cubic"):
+    """
+    Move all templates given some displacements using spatial interpolation (cubic or linear).
+    Optionally can be remapped to another probe with a diffrents geometry.
+
+    Before interpolation this function make is checking that templates can be interpolated on new
+    positions using the sparsity information : the entire sparse template must be covered at all new positions.
+    If the Templates object is dense then no check is possible and a wrning is emited.
+
+    Parameters
+    ----------
+    templates: Templates
+        A numpy array with dense templates.
+        shape = (num_template, num_sample, num_channel)
+    displacements: np.array
+        Displacement vector
+        shape: (num_displacement, 2)
+    source_probe: Probe
+        The Probe object on which templates are defined
+    dest_probe: Probe or None
+        The destination Probe. Can be different geometry than the original.
+        If None then the same probe  is used.
+    interpolation_method: str, default "cubic"
+        The interpolation method.
+    interpolation_method: str, default "cubic"
+        The interpolation method.
+    
+    Returns
+    -------
+    new_templates: list of Templates
+
+    """
+    if templates.are_templates_sparse():
+        # TODO make some check!!
+        pass
+    else:
+        warnings.warn("move_templates() with dense templates cannot checks that template can be interpolated at all places")
+    
+    dense_templates = templates.get_dense_templates()
+    dense_templates_moved = move_dense_templates(templates, displacements, source_probe, dest_probe=None, interpolation_method="cubic")
+
+    new_templates = []
+    for i in range(dense_templates_moved.shape[0]):
+        dense_templates = Templates(
+            templates_array=dense_templates_moved,
+            sampling_frequency=templates.sampling_frequency,
+            nbefore=templates.nbefore,
+            channel_ids=templates.channel_ids,
+            unit_ids=templates.unit_ids,
+        )
+        # TODO : sparsify back the templates
+        new_templates.append(dense_templates)
+
+    return new_templates
+
+
+
+
+
 
 
 def move_dense_templates(templates, displacements, source_probe, dest_probe=None, interpolation_method="cubic"):
@@ -261,6 +318,9 @@ def move_dense_templates(templates, displacements, source_probe, dest_probe=None
     Optionally can be remapped to another probe with a diffrents geometry.
 
     This function operate on dense template.
+
+    Note : in this function no check are done if template can be interpolable after displacements.
+    To make some check use teh higher level function move_templates().
 
     Parameters
     ----------
@@ -293,7 +353,7 @@ def move_dense_templates(templates, displacements, source_probe, dest_probe=None
     src_channel_locations = source_probe.contact_positions
     dest_channel_locations = dest_probe.contact_positions
     moved_locations = dest_channel_locations[np.newaxis, :, :] - displacements.reshape(-1, 1, 2)
-    templates_moved = interpolate_templates(templates, src_channel_locations, moved_locations)
+    templates_moved = interpolate_templates(templates, src_channel_locations, moved_locations, interpolation_method=interpolation_method)
     return templates_moved
 
 
