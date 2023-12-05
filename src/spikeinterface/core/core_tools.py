@@ -851,13 +851,14 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
 
-
 def _get_paths_list(d):
     # this explore a dict and get all paths flatten in a list
     # the trick is to use a closure func called by recursive_path_modifier()
     path_list = []
+
     def append_to_path(p):
         path_list.append(p)
+
     recursive_path_modifier(d, append_to_path, target="path", copy=True)
     return path_list
 
@@ -867,9 +868,10 @@ def _relative_to(p, relative_folder):
 
     relative_folder = Path(relative_folder).resolve()
     p = Path(p).resolve()
-    # the as_posix transform \\ to / on window which make better json files
+    # the as_posix transform \\ to / on window which make better json files
     rel_to = os.path.relpath(p.as_posix(), start=relative_folder.as_posix())
     return Path(rel_to).as_posix()
+
 
 def check_paths_relative(input_dict, relative_folder) -> bool:
     """
@@ -883,7 +885,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
         A dict describing an extactor obtained by BaseExtractor.to_dict()
     relative_folder: str or Path
         The folder to be relative to.
-    
+
     Returns
     -------
     relative_possible: bool
@@ -894,7 +896,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     for p in path_list:
         p = Path(p)
         # check path is not an URL
-        if 'http' in str(p):
+        if "http" in str(p):
             not_possible.append(p)
             continue
 
@@ -905,14 +907,14 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
             if p.resolve().absolute().drive != relative_folder.drive:
                 not_possible.append(p)
                 continue
-        
+
         # check relative is possible
         try:
             p2 = _relative_to(p, relative_folder)
         except ValueError:
             not_possible.append(p)
             continue
-    
+
     return len(not_possible) == 0
 
 

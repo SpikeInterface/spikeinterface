@@ -15,7 +15,14 @@ from copy import deepcopy
 import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, SIJsonEncoder, make_paths_relative, make_paths_absolute, check_paths_relative
+from .core_tools import (
+    check_json,
+    is_dict_extractor,
+    SIJsonEncoder,
+    make_paths_relative,
+    make_paths_absolute,
+    check_paths_relative,
+)
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -446,9 +453,8 @@ class BaseExtractor:
             else:
                 # A warning will be very annoying for end user.
                 # So let's switch back to absolute path, but silently!
-                # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
+                # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
                 dump_dict["relative_paths"] = False
-
 
         if folder_metadata is not None:
             if relative_to is not None:
@@ -1020,8 +1026,6 @@ class BaseExtractor:
         cached = read_zarr(zarr_path)
 
         return cached
-
-
 
 
 def _load_extractor_from_dict(dic) -> BaseExtractor:

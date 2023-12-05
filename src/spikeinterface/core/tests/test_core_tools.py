@@ -187,12 +187,11 @@ def test_path_utils_functions():
 
         d3 = make_paths_relative(d, Path("/yep"))
         assert d3["kwargs"]["path"] == "sub/path1"
-        assert d3["kwargs"]["recording"]["kwargs"]["path"]  == "sub/path2"
+        assert d3["kwargs"]["recording"]["kwargs"]["path"] == "sub/path2"
 
         d4 = make_paths_absolute(d3, "/yop")
         assert d4["kwargs"]["path"].startswith("/yop")
         assert d4["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
-
 
     if platform.system() == "Windows":
         # test for windows Path
@@ -212,7 +211,7 @@ def test_path_utils_functions():
         d2 = make_paths_relative(d, "c:\\yep")
         # the str be must unix like path even on windows for more portability
         assert d2["kwargs"]["path"] == "sub/path1"
-        assert d2["kwargs"]["recording"]["kwargs"]["path"]  == "sub/path2"
+        assert d2["kwargs"]["recording"]["kwargs"]["path"] == "sub/path2"
 
         # same drive
         assert check_paths_relative(d, r"c:\yep")
@@ -231,7 +230,6 @@ def test_path_utils_functions():
         assert check_paths_relative(d, r"\\host\share")
 
 
-
 if __name__ == "__main__":
     # Create a temporary folder using the standard library
     # import tempfile
@@ -239,6 +237,6 @@ if __name__ == "__main__":
     # with tempfile.TemporaryDirectory() as tmpdirname:
     #     tmp_path = Path(tmpdirname)
     #     test_write_binary_recording(tmp_path)
-        # test_write_memory_recording()
-    
+    # test_write_memory_recording()
+
     test_path_utils_functions()
