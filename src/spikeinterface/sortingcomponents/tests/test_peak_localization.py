@@ -25,7 +25,11 @@ def test_localize_peaks():
 
     peak_locations = localize_peaks(recording, peaks, method="grid_convolution", **job_kwargs)
     assert peaks.size == peak_locations.shape[0]
-    list_locations.append(("grid_convolution", peak_locations))
+    list_locations.append(("grid_convolution_2d", peak_locations))
+
+    peak_locations = localize_peaks(recording, peaks, method="grid_convolution", mode="3d", **job_kwargs)
+    assert peaks.size == peak_locations.shape[0]
+    list_locations.append(("grid_convolution_3d", peak_locations))
 
     peak_locations = localize_peaks(
         recording, peaks, method="monopolar_triangulation", optimizer="least_square", **job_kwargs
