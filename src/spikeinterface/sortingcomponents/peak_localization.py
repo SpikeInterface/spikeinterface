@@ -195,14 +195,16 @@ class LocalizeCenterOfMass(LocalizeBase):
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
             local_contact_locations = self.contact_locations[chan_inds, :]
 
+            wf = waveforms[idx][:, :, chan_inds]
+
             if self.feature == "ptp":
-                wf_data = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
+                wf_data = wf.ptp(axis=1)
             elif self.feature == "mean":
-                wf_data = (waveforms[idx][:, :, chan_inds]).mean(axis=1)
+                wf_data = wf.mean(axis=1)
             elif self.feature == "energy":
-                wf_data = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
+                wf_data = np.linalg.norm(wf, axis=1)
             elif self.feature == "peak_voltage":
-                wf_data = waveforms[idx][:, self.nbefore, chan_inds]
+                wf_data = wf[:, self.nbefore]
 
             coms = np.dot(wf_data, local_contact_locations) / (np.sum(wf_data, axis=1)[:, np.newaxis])
             peak_locations["x"][idx] = coms[:, 0]
@@ -318,7 +320,7 @@ class LocalizeGridConvolution(PipelineNode):
         Radius in um for channel sparsity.
     upsampling_um: float
         Upsampling resolution for the grid of templates
-    depth_um: np.array, default: np.linspace(5, 150.0, 10)
+    depth_um: np.array, default: np.linspace(5, 100.0, 5)
         Putative depth of the fake templates
     decay_power: float, default:1
         The decay power as function of the distances for the amplitudes
@@ -340,9 +342,9 @@ class LocalizeGridConvolution(PipelineNode):
         recording,
         return_output=True,
         parents=["extract_waveforms"],
-        radius_um=40.0,
+        radius_um=50.0,
         upsampling_um=5.0,
-        depth_um=np.linspace(5, 150.0, 10),
+        depth_um=np.linspace(5, 100.0, 5),
         decay_power=1,
         sigma_ms=0.25,
         margin_um=50.0,
@@ -430,50 +432,53 @@ class LocalizeGridConvolution(PipelineNode):
                 waveforms[idx, :, :][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
             ).sum(axis=1)
 
-            mid_depth = 0  # len(self.depth_um) // 2
-            dot_products = np.zeros((num_spikes, num_templates), dtype=np.float32)
-            w = self.weights[mid_depth, :, :][channel_mask, :][:, nearest_templates]
-            dot_products = np.dot(global_products, w)
+            dot_products = np.zeros((self.weights.shape[0], num_spikes, num_templates), dtype=np.float32)
+            w = self.weights[:, channel_mask, :][:, :, nearest_templates]
+            for count in range(self.weights.shape[0]):
+                dot_products[count] = np.dot(global_products, w[count])
 
             dot_products = np.maximum(0, dot_products)
             if self.percentile < 100:
-                thresholds = np.percentile(dot_products, self.percentile, axis=(1))
-                dot_products[dot_products < thresholds[:, np.newaxis]] = 0
+                thresholds = np.percentile(dot_products, self.percentile, axis=(0, 2))
+                dot_products[dot_products < thresholds[np.newaxis, :, np.newaxis]] = 0
 
-            scalar_products = dot_products.sum(1)
+            scalar_products = dot_products.sum(0).sum(1)
             found_positions = np.zeros((len(idx), ndim), dtype=np.float32)
-            found_positions[:, :2] = np.dot(dot_products, self.template_positions[nearest_templates, :])
+            found_positions[:, :2] = np.dot(dot_products.sum(0), self.template_positions[nearest_templates])
             found_positions /= scalar_products[:, np.newaxis]
             found_positions = np.nan_to_num(found_positions)
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
 
-            if self.mode == "3d":
-                d = sklearn.metrics.pairwise_distances(
-                    self.template_positions[nearest_templates], found_positions[:, :2]
-                )
-                best_templates = np.argmin(d, axis=0)
-                w = self.weights[:, channel_mask][:, :, nearest_templates]
+            found_positions[:, 2] = np.dot(self.depth_um, dot_products.sum(2))
+            found_positions[:, 2] /= scalar_products
+            peak_locations["z"][idx] = found_positions[:, 2]
 
-                dot_products = np.zeros((w.shape[0], len(idx)), dtype=np.float32)
-                # for i, t in enumerate(best_templates):
-                #     dot_products[:, i] = np.dot(w[:, :, t], global_products[i])
-                #     # dot_products = np.maximum(0, dot_products)
-                #     # if self.percentile < 100:
-                #     #     thresholds = np.percentile(dot_products, self.percentile)
-                #     #     dot_products[dot_products < thresholds] = 0
+            # if self.mode == "3d":
+            #     d = sklearn.metrics.pairwise_distances(self.template_positions[nearest_templates], found_positions[:, :2])
+            #     best_templates = np.argmin(d, axis=0)
+            #     w = self.weights[:, channel_mask][:, :, nearest_templates]
 
-                unique_templates, inverses = np.unique(best_templates, return_inverse=True)
-                reference_products = np.zeros((len(unique_templates), w.shape[0], len(idx)), dtype=np.float32)
-                global_products = global_products.T
+            #     dot_products = np.zeros((w.shape[0], len(idx)), dtype=np.float32)
+            #     # for i, t in enumerate(best_templates):
+            #     #     dot_products[:, i] = np.dot(w[:, :, t], global_products[i])
+            #     #     # dot_products = np.maximum(0, dot_products)
+            #     #     # if self.percentile < 100:
+            #     #     #     thresholds = np.percentile(dot_products, self.percentile)
+            #     #     #     dot_products[dot_products < thresholds] = 0
 
-                for i, t in enumerate(unique_templates):
-                    reference_products[i] = np.dot(w[:, :, t], global_products)
+            #     unique_templates, inverses = np.unique(best_templates, return_inverse=True)
+            #     reference_products = np.zeros((len(unique_templates), w.shape[0], len(idx)), dtype=np.float32)
+            #     global_products = global_products.T
 
-                for i, inv in enumerate(inverses):
-                    dot_products[:, i] = reference_products[inv, :, i]
+            #     for i, t in enumerate(unique_templates):
+            #         reference_products[i] = np.dot(w[:, :, t], global_products)
 
-                peak_locations["z"][idx] = np.dot(self.depth_um, dot_products) / dot_products.sum(0)
+            #     reference_products = np.maximum(0, reference_products)
+            #     for i, inv in enumerate(inverses):
+            #         dot_products[:, i] = reference_products[inv, :, i]
+
+            #     peak_locations["z"][idx] = np.dot(self.depth_um, dot_products) / dot_products.sum(0)
 
         return peak_locations
 
