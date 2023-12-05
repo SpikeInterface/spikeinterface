@@ -597,8 +597,10 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         The canonical waveform of action potentials
     rank : int (default 5)
         The rank for SVD convolution of spatiotemporal templates with the traces
-    sigma_um: float (default 25)
-        The spead, in um, of the decaying kernel for matched filters
+    depth_um: np.array, default: np.linspace(5, 150.0, 10)
+        Putative depth of the fake templates
+    decay_power: float, default:1
+        The decay power as function of the distances for the amplitudes
     """
     )
 
@@ -611,7 +613,8 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        sigma_um=[25],
+        depth_um=np.linspace(5, 150, 10),
+        decay_power=1,
         rank=5,
         noise_levels=None,
         random_chunk_kwargs={},
@@ -626,12 +629,12 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < radius_um
+        neighbours_mask = channel_distance <= radius_um
 
         idx = np.argmax(np.abs(prototype))
         if peak_sign == "neg":
             assert prototype[idx] < 0, "Prototype should have a negative peak"
-            prototype *= -1
+            peak_sign = 'pos'
         elif peak_sign == "pos":
             assert prototype[idx] > 0, "Prototype should have a positive peak"
         elif peak_sign == "both":
@@ -643,11 +646,18 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         nb_templates = len(contact_locations)
 
         dist = sklearn.metrics.pairwise_distances(contact_locations, contact_locations)
-        templates = np.zeros((nb_templates * len(sigma_um), len(prototype), len(contact_locations)), dtype=np.float32)
-
+        templates = np.zeros((nb_templates * len(depth_um), len(prototype), len(contact_locations)), dtype=np.float32)
         count = 0
-        for sigma in sigma_um:
-            weights = np.exp(-(dist**2) / (2 * (sigma**2)))
+
+        for depth in depth_um:
+            weights = 1 / (1 + np.sqrt(dist**2 + depth**2)) ** decay_power
+
+            # normalize
+            with np.errstate(divide="ignore", invalid="ignore"):
+                norm = np.sqrt(np.sum(weights**2, axis=0))[np.newaxis, :]
+                weights /= norm
+                weights[~np.isfinite(weights)] = 0.0
+
             for w in weights:
                 templates[count] = w * prototype[:, np.newaxis]
                 count += 1
@@ -680,16 +690,16 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
 
         num_channels = traces.shape[1]
         num_templates = temporal.shape[1]
-        num_sigma = num_templates // num_channels
+        num_depths = num_templates // num_channels
         num_timesteps, num_templates = len(traces), temporal.shape[1]
         scalar_products = np.zeros((num_templates, num_timesteps), dtype=np.float32)
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
         scaled_filtered_data = spatially_filtered_data * singular
         objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="same")
         scalar_products += np.sum(objective_by_rank, axis=0)
-        if num_sigma > 1:
-            scalar_products = scalar_products.reshape(num_sigma, num_channels, -1)
-            scalar_products = np.mean(scalar_products, axis=0)
+        if num_depths > 1:
+            scalar_products = scalar_products.reshape(num_depths, num_channels, -1)
+            scalar_products = np.max(scalar_products, axis=0)
         return scalar_products
 
     @classmethod
