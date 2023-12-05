@@ -418,7 +418,6 @@ class BaseExtractor:
             "module": module,
             "kwargs": kwargs,
             "version": module_version,
-            # "relative_paths": (relative_to is not None),
         }
 
         dump_dict["version"] = module_version  # Can be spikeinterface, spikeforest, etc.

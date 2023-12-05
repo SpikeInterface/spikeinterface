@@ -866,8 +866,8 @@ def _get_paths_list(d):
 def _relative_to(p, relative_folder):
     # custum os.path.relpath() with more checks
 
-    relative_folder = Path(relative_folder).resolve().absolute()
-    p = Path(p).resolve().absolute()
+    relative_folder = Path(relative_folder).resolve()
+    p = Path(p).resolve()
     # the as_posix transform \\ to / on window which make better json files
     rel_to = os.path.relpath(p.as_posix(), start=relative_folder.as_posix())
     return Path(rel_to).as_posix()
