@@ -634,7 +634,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         idx = np.argmax(np.abs(prototype))
         if peak_sign == "neg":
             assert prototype[idx] < 0, "Prototype should have a negative peak"
-            peak_sign = 'pos'
+            peak_sign = "pos"
         elif peak_sign == "pos":
             assert prototype[idx] > 0, "Prototype should have a positive peak"
         elif peak_sign == "both":
