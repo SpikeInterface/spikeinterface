@@ -251,12 +251,52 @@ def get_template_extremum_amplitude(
     return unit_amplitudes
 
 
-
-def move_templates(templates, motions, source_probe, ):
-    """
-    
-    """
+def move_templates():
     pass
+
+
+def move_dense_templates(templates, displacements, source_probe, dest_probe=None, interpolation_method="cubic"):
+    """
+    Move all templates given some displacements using spatial interpolation (cubic or linear).
+    Optionally can be remapped to another probe with a diffrents geometry.
+
+    This function operate on dense template.
+
+    Parameters
+    ----------
+    templates: np.array
+        A numpy array with dense templates.
+        shape = (num_template, num_sample, num_channel)
+    displacements: np.array
+        Displacement vector
+        shape: (num_displacement, 2)
+    source_probe: Probe
+        The Probe object on which templates are defined
+    dest_probe: Probe or None
+        The destination Probe. Can be different geometry than the original.
+        If None then the same probe  is used.
+    interpolation_method: str, default "cubic"
+        The interpolation method.
+    interpolation_method: str, default "cubic"
+        The interpolation method.
+    
+    Returns
+    -------
+    new_templates: np.array
+        shape = (num_displacement, num_template, num_sample, num_channel, )
+    """
+    assert displacements.ndim == 2
+    assert displacements.shape[1] == 2
+
+    if dest_probe is None:
+        dest_probe = source_probe
+    src_channel_locations = source_probe.contact_positions
+    dest_channel_locations = dest_probe.contact_positions
+    moved_locations = dest_channel_locations[np.newaxis, :, :] - displacements.reshape(-1, 1, 2)
+    templates_moved = interpolate_templates(templates, src_channel_locations, moved_locations)
+    return templates_moved
+
+
 
 
 
@@ -278,7 +318,6 @@ def interpolate_templates(templates, source_locations, dest_locations, interpola
     dest_locations: np.array
         The new channel position, if ndim == 3, then the interpolation is broadcated with last dim.
         shape = (num_channel, 2) or (num_motion, num_channel, 2)
-
     interpolation_method: str, default "cubic"
         The interpolation method.
     
