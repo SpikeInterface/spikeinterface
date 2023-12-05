@@ -2,7 +2,6 @@ import platform
 from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
 import importlib
-import pathlib
 import pytest
 import numpy as np
 

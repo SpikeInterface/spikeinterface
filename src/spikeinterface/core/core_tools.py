@@ -1,5 +1,4 @@
-from pathlib import Path
-import pathlib
+from pathlib import Path, WindowsPath
 from typing import Union
 import os
 import sys
@@ -900,7 +899,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
             continue
 
         # If windows path check have same drive
-        if isinstance(p, pathlib.WindowsPath) and isinstance(relative_folder, pathlib.WindowsPath):
+        if isinstance(p, WindowsPath) and isinstance(relative_folder, WindowsPath):
             # check that on same drive
             # important note : for UNC path on window the "//host/shared" is the drive
             if p.resolve().absolute().drive != relative_folder.drive:
