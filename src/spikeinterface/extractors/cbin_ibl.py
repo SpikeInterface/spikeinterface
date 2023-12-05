@@ -54,7 +54,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
         # explore files
         cbin_files = list(folder_path.glob(f"*{stream_name}.cbin"))
-        #snippets downloaded from IBL have the .stream.cbin suffix
+        # snippets downloaded from IBL have the .stream.cbin suffix
         cbin_stream_files = list(folder_path.glob(f"*.{stream_name}.stream.cbin"))
         curr_cbin_files = cbin_stream_files if len(cbin_stream_files) > len(cbin_files) else cbin_files
         assert len(curr_cbin_files) == 1
