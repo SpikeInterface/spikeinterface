@@ -613,7 +613,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        depth_um=np.linspace(5, 150, 10),
+        depth_um=np.linspace(5, 150, 3),
         decay_power=1,
         rank=5,
         noise_levels=None,
