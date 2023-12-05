@@ -320,7 +320,7 @@ class LocalizeGridConvolution(PipelineNode):
         Upsampling resolution for the grid of templates
     depth_um: np.array, default: np.linspace(5, 150.0, 10)
         Putative depth of the fake templates
-    decay_power: float, default:2
+    decay_power: float, default:1
         The decay power as function of the distances for the amplitudes
     sigma_ms: float
         The temporal decay of the fake templates
@@ -343,7 +343,7 @@ class LocalizeGridConvolution(PipelineNode):
         radius_um=40.0,
         upsampling_um=5.0,
         depth_um=np.linspace(5, 150.0, 10),
-        decay_power=2,
+        decay_power=1,
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
@@ -449,18 +449,29 @@ class LocalizeGridConvolution(PipelineNode):
             peak_locations["y"][idx] = found_positions[:, 1]
 
             if self.mode == "3d":
-                d = sklearn.metrics.pairwise_distances(self.template_positions, found_positions[:, :2])
+                d = sklearn.metrics.pairwise_distances(self.template_positions[nearest_templates], found_positions[:, :2])
                 best_templates = np.argmin(d, axis=0)
-                w = self.weights[:, channel_mask]
-                for i, t in enumerate(best_templates):
-                    dot_products = np.dot(w[:, :, t], global_products[i])
-                    # dot_products = np.maximum(0, dot_products)
-                    # if self.percentile < 100:
-                    #     thresholds = np.percentile(dot_products, self.percentile)
-                    #     dot_products[dot_products < thresholds] = 0
-                    found_positions[i, 2] = (dot_products * self.depth_um).sum() / dot_products.sum()
+                w = self.weights[:, channel_mask][:, :, nearest_templates]
 
-                peak_locations["z"][idx] = found_positions[:, 2]
+                dot_products = np.zeros((w.shape[0], len(idx)), dtype=np.float32)
+                # for i, t in enumerate(best_templates):
+                #     dot_products[:, i] = np.dot(w[:, :, t], global_products[i])
+                #     # dot_products = np.maximum(0, dot_products)
+                #     # if self.percentile < 100:
+                #     #     thresholds = np.percentile(dot_products, self.percentile)
+                #     #     dot_products[dot_products < thresholds] = 0
+
+                unique_templates, inverses = np.unique(best_templates, return_inverse=True)
+                reference_products = np.zeros((len(unique_templates), w.shape[0], len(idx)), dtype=np.float32)
+                global_products = global_products.T
+
+                for i, t in enumerate(unique_templates):
+                    reference_products[i] = np.dot(w[:, :, t], global_products)
+
+                for i, inv in enumerate(inverses):
+                    dot_products[:, i] = reference_products[inv, :, i]
+
+                peak_locations["z"][idx] = np.dot(self.depth_um, dot_products) / dot_products.sum(0)
 
         return peak_locations
 

@@ -374,7 +374,7 @@ def compute_grid_convolution(
     radius_um=40.0,
     upsampling_um=5,
     depth_um=np.linspace(5, 150.0, 10),
-    decay_power=2,
+    decay_power=1,
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
@@ -397,7 +397,7 @@ def compute_grid_convolution(
         Upsampling resolution for the grid of templates
     depth_um: np.array, default: np.linspace(5, 150.0, 10)
         Putative depth of the fake templates
-    decay_power: float, default: 2
+    decay_power: float, default: 1
         The decay power as function of the distances for the amplitudes
     sigma_ms: float, default: 0.25
         The temporal decay of the fake templates
@@ -470,8 +470,9 @@ def compute_grid_convolution(
         unit_location[i, :2] = np.dot(dot_products, template_positions[nearest_templates]) / dot_products.sum()
 
         if mode == "3d":
-            best_template = np.argmin(np.linalg.norm(template_positions - unit_location[i, :2], axis=1))
-            w = weights[:, channel_mask][:, :, best_template]
+            best_template = np.argmin(np.linalg.norm(template_positions[nearest_templates] - unit_location[i, :2], axis=1))
+            w = weights[:, channel_mask][:, :, nearest_templates]
+            w = w[:, :, best_template]
             dot_products = np.dot(w, global_products)
             # dot_products = np.maximum(0, dot_products)
             # if percentile < 100:
@@ -578,7 +579,7 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 
 def get_grid_convolution_templates_and_weights(
-    contact_locations, radius_um=50, upsampling_um=5, depth_um=np.linspace(5, 150.0, 10), margin_um=50, decay_power=2
+    contact_locations, radius_um=50, upsampling_um=5, depth_um=np.linspace(5, 150.0, 10), margin_um=50, decay_power=1
 ):
     import sklearn.metrics
 
