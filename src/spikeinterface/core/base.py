@@ -90,17 +90,27 @@ class BaseExtractor:
         else:
             return segment_index
 
-    def ids_to_indices(self, ids: Iterable, prefer_slice: bool = False) -> Union[np.ndarray, slice]:
+    def ids_to_indices(self, ids: list[str, int], prefer_slice: bool = False) -> Union[np.ndarray, slice]:
         """
-        Transform a ids list (aka channel_ids or unit_ids)
-        into a indices array.
-        Useful to manipulate:
-          * data
-          * properties
+        Convert a list of IDs into indices, either as an array or a slice.
 
-        "prefer_slice" is an efficient option that tries to make a slice object
-        when indices are consecutive.
+        This function is designed to transform a list of IDs (such as channel or unit IDs) into an array of indices.
+        These indices are useful for data manipulation and accessing properties. When `prefer_slice` is set to `True`,
+        the function tries to return a slice object if the indices are consecutive, which can be more efficient
+        (e.g. with hdf5 files and to avoid copying data in numpy).
 
+        Parameters
+        ----------
+        ids : list of str or int
+            The list of IDs to be converted into indices. If `None`, it generates indices based on the length of `_main_ids`.
+        prefer_slice : bool, optional
+            If `True`, the function will return a slice object when the indices are consecutive. Default is `False`.
+
+        Returns
+        -------
+        Union[np.ndarray, slice]
+            An array of indices corresponding to the input IDs. If `prefer_slice` is `True` and the indices are consecutive,
+            a slice object is returned instead.
         """
         if ids is None:
             if prefer_slice:
