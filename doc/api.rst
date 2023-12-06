@@ -365,10 +365,8 @@ Template Matching
 
     .. autofunction:: find_spikes_from_templates
 
-    
+
 spikeinterface.generation
 -------------------------
 
 .. automodule:: spikeinterface.generation
-
-
