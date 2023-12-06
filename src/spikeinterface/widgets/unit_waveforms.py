@@ -203,6 +203,8 @@ class UnitWaveformsWidget(BaseWidget):
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         for i, unit_id in enumerate(dp.unit_ids):
+
+            has_waveforms = len(dp.wfs_by_ids[unit_id]) > 0
             if dp.same_axis:
                 ax = self.ax
             else:
@@ -222,18 +224,19 @@ class UnitWaveformsWidget(BaseWidget):
                         random_idxs = np.random.permutation(len(wfs))[: dp.max_spikes_per_unit]
                         wfs = wfs[random_idxs]
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
-                wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
+                if has_waveforms:
+                    wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
+                
+                    if dp.x_offset_units:
+                        # 0.7 is to match spacing in xvect
+                        xvec = xvectors_flat + i * 0.7 * dp.delta_x
+                    else:
+                        xvec = xvectors_flat
 
-                if dp.x_offset_units:
-                    # 0.7 is to match spacing in xvect
-                    xvec = xvectors_flat + i * 0.7 * dp.delta_x
-                else:
-                    xvec = xvectors_flat
+                    ax.plot(xvec, wfs_flat, lw=dp.lw_waveforms, alpha=dp.alpha_waveforms, color=color)
 
-                ax.plot(xvec, wfs_flat, lw=dp.lw_waveforms, alpha=dp.alpha_waveforms, color=color)
-
-                if not dp.plot_templates:
-                    ax.get_lines()[-1].set_label(f"{unit_id}")
+                    if not dp.plot_templates:
+                        ax.get_lines()[-1].set_label(f"{unit_id}")
 
             # plot template
             if dp.plot_templates:
