@@ -353,7 +353,7 @@ class TransformSorting(BaseSorting):
         self.refractory_period_ms = refractory_period_ms
 
         self.added_spikes_from_existing_mask = np.zeros(len(self._cached_spike_vector), dtype=bool)
-        self.added_spikes_from_new = np.zeros(len(self._cached_spike_vector), dtype=bool)
+        self.added_spikes_from_new_mask = np.zeros(len(self._cached_spike_vector), dtype=bool)
 
         if added_spikes_existing_units is not None and len(added_spikes_existing_units) > 0:
             assert (
@@ -367,8 +367,8 @@ class TransformSorting(BaseSorting):
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_existing_units), dtype=bool))
             )
-            self.added_spikes_from_new = np.concatenate(
-                (self.added_spikes_from_new, np.zeros(len(added_spikes_existing_units), dtype=bool))
+            self.added_spikes_from_new_mask = np.concatenate(
+                (self.added_spikes_from_new_mask, np.zeros(len(added_spikes_existing_units), dtype=bool))
             )
 
         if added_spikes_new_units is not None and len(added_spikes_new_units) > 0:
@@ -379,15 +379,14 @@ class TransformSorting(BaseSorting):
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_new_units), dtype=bool))
             )
-            self.added_spikes_from_new = np.concatenate(
-                (self.added_spikes_from_new, np.ones(len(added_spikes_new_units), dtype=bool))
+            self.added_spikes_from_new_mask = np.concatenate(
+                (self.added_spikes_from_new_mask, np.ones(len(added_spikes_new_units), dtype=bool))
             )
 
         sort_idxs = np.lexsort([self._cached_spike_vector["sample_index"], self._cached_spike_vector["segment_index"]])
         self._cached_spike_vector = self._cached_spike_vector[sort_idxs]
         self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[sort_idxs]
-        self.added_spikes_from_new = self.added_spikes_from_new[sort_idxs]
-        self.added_spikes_mask = np.logical_or(self.added_spikes_from_existing_mask, self.added_spikes_from_new)
+        self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[sort_idxs]
 
         # We need to add the sorting segments
         for segment_index in range(sorting.get_num_segments()):
@@ -405,14 +404,18 @@ class TransformSorting(BaseSorting):
             refractory_period_ms=refractory_period_ms,
         )
 
-    def get_added_spike_indices(self):
+    @property
+    def added_spikes_mask(self):
+        return np.logical_or(self.added_spikes_from_existing_mask, self.added_spikes_from_new_mask)
+
+    def get_added_spikes_indices(self):
         return np.nonzero(self.added_spikes_mask)[0]
 
     def get_added_spikes_from_existing_indices(self):
         return np.nonzero(self.added_spikes_from_existing_mask)[0]
 
     def get_added_spikes_from_new_indices(self):
-        return np.nonzero(self.added_spikes_from_new)[0]
+        return np.nonzero(self.added_spikes_from_new_mask)[0]
 
     def get_added_units_inds(self):
         indices = self._cached_spike_vector["unit_index"][self.get_added_spikes_from_new_indices()]
@@ -549,7 +552,7 @@ class TransformSorting(BaseSorting):
 
         self._cached_spike_vector = self._cached_spike_vector[to_keep]
         self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[to_keep]
-        self.added_spikes_from_new = self.added_spikes_from_new[to_keep]
+        self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[to_keep]
 
 
 def create_sorting_npz(num_seg, file_path):

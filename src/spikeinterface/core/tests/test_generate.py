@@ -501,6 +501,9 @@ def test_transformsorting():
     transformed_2 = TransformSorting(sorting_1, transformed.to_spike_vector())
     assert len(transformed_2.to_spike_vector()) > len(transformed.to_spike_vector())
 
+    assert np.sum(transformed_2.get_added_spikes_indices()) >= np.sum(transformed_2.get_added_spikes_from_new_indices())
+    assert np.sum(transformed_2.get_added_spikes_indices()) >= np.sum(transformed_2.get_added_spikes_from_existing_indices())
+
 
 def test_generate_ground_truth_recording():
     rec, sorting = generate_ground_truth_recording(upsample_factor=None)
