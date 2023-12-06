@@ -9,4 +9,4 @@ The :py:mod:`spikeinterface.core.generate` already propose some functions but he
 machinery, for instance generation of drifting recordings.
 
 
- 
+
