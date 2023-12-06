@@ -252,6 +252,7 @@ class NwbRecordingExtractor(BaseRecording):
         stream_cache_path: str | Path | None = None,
         *,
         file: BinaryIO | None = None,  # file-like - provide either this or file_path
+        electrical_series_location: str | None = None,
     ):
         try:
             from pynwb import NWBHDF5IO, NWBFile
@@ -269,87 +270,97 @@ class NwbRecordingExtractor(BaseRecording):
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        self._nwbfile = read_nwbfile(
-            file_path=file_path, file=file, stream_mode=stream_mode, cache=cache, stream_cache_path=stream_cache_path
+        hdf5_file = _read_hdf5_file(
+            file_path=file_path,
+            file=file,
+            stream_mode=stream_mode,
+            cache=cache,
+            stream_cache_path=stream_cache_path,
         )
-        electrical_series = retrieve_electrical_series(self._nwbfile, electrical_series_name)
+
+        if electrical_series_location is None:
+            available_electrical_series = find_electrical_series(hdf5_file)
+            if electrical_series_name is None:
+                if len(available_electrical_series) == 1:
+                    electrical_series_name = list(available_electrical_series.keys())[0]
+                else:
+                    raise ValueError(
+                        "Multiple ElectricalSeries found in the file. "
+                        "Please specify the 'electrical_series_name' argument."
+                    )
+            else:
+                if electrical_series_name not in available_electrical_series:
+                    raise ValueError(
+                        f"'{electrical_series_name}' not found in the file. "
+                        f"Available options are: {list(available_electrical_series.keys())}"
+                    )
+            electrical_series_location = available_electrical_series[electrical_series_name]
+
+        self.electrical_series_location = electrical_series_location
+
         # The indices in the electrode table corresponding to this electrical series
-        electrodes_indices = electrical_series.electrodes.data[:]
+        electrical_series = hdf5_file[electrical_series_location]
+        electrodes_indices = electrical_series["electrodes"][:]
         # The table for all the electrodes in the nwbfile
-        electrodes_table = self._nwbfile.electrodes
+        electrodes_table = hdf5_file["/general/extracellular_ephys/electrodes"]
+        electrode_table_columns = electrodes_table.attrs["colnames"]
 
-        ###################
-        # Extract temporal information TODO: Should be a function
-        ###################
-        sampling_frequency = None
-        if hasattr(electrical_series, "rate"):
-            sampling_frequency = electrical_series.rate
-
-        if hasattr(electrical_series, "starting_time"):
-            t_start = electrical_series.starting_time
-        else:
-            t_start = None
-
-        timestamps = None
-        if hasattr(electrical_series, "timestamps"):
-            if electrical_series.timestamps is not None:
-                timestamps = electrical_series.timestamps
-                t_start = electrical_series.timestamps[0]
+        # Get sampling frequency
+        if "starting_time" in electrical_series.keys():
+            t_start = electrical_series["starting_time"][()]
+            sampling_frequency = electrical_series["starting_time"].attrs["rate"]
+        elif "timestamps" in electrical_series.keys():
+            t_start = electrical_series["timestamps"][0]
+            sampling_frequency = 1 / np.median(np.diff(electrical_series["timestamps"][:1000]))
 
         # TimeSeries need to have either timestamps or rate
         if sampling_frequency is None:
-            assert timestamps is not None, (
+            raise ValueError(
                 "Could not find rate information as both 'rate' and "
                 "'timestamps' are missing from the file. "
                 "Use the 'sampling_frequency' argument."
             )
-            sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
 
-        if load_time_vector and timestamps is not None:
-            times_kwargs = dict(time_vector=electrical_series.timestamps)
-        else:
-            times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
+        times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
 
         # Extractors channel groups must be integers, but Nwb electrodes group_name can be strings
-        if "group_name" in electrodes_table.colnames:
+        if "group_name" in electrode_table_columns:
             unique_electrode_group_names = list(np.unique(electrodes_table["group_name"][:]))
 
-        # Fill channel properties dictionary from electrodes table
-        if "channel_name" in electrodes_table.colnames:
-            channel_ids = [
-                electrical_series.electrodes["channel_name"][electrodes_index]
-                for electrodes_index in electrodes_indices
-            ]
-        else:
-            channel_ids = [electrical_series.electrodes.table.id[x] for x in electrodes_indices]
+        # If channel names are present, use them as channel_ids instead of the electrode ids
+        if "channel_name" in electrode_table_columns:
+            channel_names = electrodes_table["channel_name"]
+            channel_ids = channel_names[electrodes_indices]
+            # Decode if bytes with utf-8
+            channel_ids = [x.decode("utf-8") if isinstance(x, bytes) else x for x in channel_ids]
 
-        dtype = electrical_series.data.dtype
+        else:
+            channel_ids = [electrodes_table["id"][x] for x in electrodes_indices]
+
+        dtype = electrical_series["data"].dtype
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
-        num_frames = int(electrical_series.data.shape[0])
+        num_samples = int(electrical_series["data"].shape[0])
         recording_segment = NwbRecordingSegment(
-            nwbfile=self._nwbfile,
-            electrical_series_name=electrical_series_name,
-            num_frames=num_frames,
+            electrical_series=electrical_series,
+            num_samples=num_samples,
             times_kwargs=times_kwargs,
         )
         self.add_recording_segment(recording_segment)
 
-        #################
-        # Extract gains and offsets TODO: Should be a function
-        #################
-
         # Channels gains - for RecordingExtractor, these are values to cast traces to uV
-        gains = electrical_series.conversion * 1e6
-        if electrical_series.channel_conversion is not None:
-            gains = electrical_series.conversion * electrical_series.channel_conversion[:] * 1e6
+        data_attributes = electrical_series["data"].attrs
+        electrical_series_conversion = data_attributes["conversion"]
+        gains = electrical_series_conversion * 1e6
+        if "channel_conversion" in data_attributes:
+            gains *= electrical_series["channel_conversion"][:]
 
         # Set gains
         self.set_channel_gains(gains)
 
         # Set offsets
-        offset = electrical_series.offset if hasattr(electrical_series, "offset") else 0
-        if offset == 0 and "offset" in electrodes_table:
-            offset = electrodes_table["offset"].data[electrodes_indices]
+        offset = data_attributes["offset"] if "offset" in data_attributes else 0
+        if offset == 0 and "offset" in electrode_table_columns:
+            offset = electrodes_table["offset"][electrodes_indices]
 
         self.set_channel_offsets(offset * 1e6)
 
@@ -383,7 +394,7 @@ class NwbRecordingExtractor(BaseRecording):
         for electrical_series_index, (channel_id, electrode_table_index) in enumerate(
             zip(channel_ids, electrodes_indices)
         ):
-            for column in electrodes_table.colnames:
+            for column in electrode_table_columns:
                 if isinstance(electrodes_table[column][electrode_table_index], ElectrodeGroup):
                     continue
                 elif column == "channel_name":
@@ -423,15 +434,17 @@ class NwbRecordingExtractor(BaseRecording):
                     groups = values
                 self.set_channel_groups(groups)
             else:
+                # If any properties is bytes, decode with utf-8
+                values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in values]
                 self.set_property(property_name, values)
 
+        # Serializaiblity
         if stream_mode is None and file_path is not None:
             file_path = str(Path(file_path).resolve())
 
         if stream_mode == "fsspec" and stream_cache_path is not None:
             stream_cache_path = str(Path(self.stream_cache_path).absolute())
 
-        self.extra_requirements.extend(["pandas", "pynwb", "hdmf"])
         self._electrical_series = electrical_series
 
         # set serializability bools
@@ -448,16 +461,15 @@ class NwbRecordingExtractor(BaseRecording):
             "cache": cache,
             "stream_cache_path": stream_cache_path,
             "file": file,
+            "electrical_series_location": electrical_series_location,
         }
 
 
 class NwbRecordingSegment(BaseRecordingSegment):
-    def __init__(self, nwbfile, electrical_series_name, num_frames, times_kwargs):
+    def __init__(self, electrical_series, num_samples, times_kwargs):
         BaseRecordingSegment.__init__(self, **times_kwargs)
-        self._nwbfile = nwbfile
-        self._electrical_series_name = electrical_series_name
-        self.electrical_series = retrieve_electrical_series(self._nwbfile, self._electrical_series_name)
-        self._num_samples = num_frames
+        self.electrical_series = electrical_series
+        self._num_samples = num_samples
 
     def get_num_samples(self):
         """Returns the number of samples in this signal block
@@ -473,7 +485,7 @@ class NwbRecordingSegment(BaseRecordingSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        electrical_series_data = self.electrical_series.data
+        electrical_series_data = self.electrical_series["data"]
         if electrical_series_data.ndim == 1:
             traces = electrical_series_data[start_frame:end_frame][:, np.newaxis]
         elif isinstance(channel_indices, slice):
@@ -682,3 +694,24 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
         outputs = outputs[0]
 
     return outputs
+
+
+def find_electrical_series(group, path="", result=None):
+    """
+    Recursively searches for groups with neurodata_type 'ElectricalSeries' in the HDF5 group or file,
+    and returns a dictionary with their names and paths.
+    """
+    import h5py
+
+    if result is None:
+        result = {}
+
+    for key, value in group.items():
+        # Check if it's a group and if it has the 'ElectricalSeries' neurodata_type
+        if isinstance(value, h5py.Group):
+            current_path = f"{path}/{key}" if path else key
+            if value.attrs.get("neurodata_type") == "ElectricalSeries":
+                result[key] = current_path
+            find_electrical_series(value, current_path, result)  # Recursive call for sub-groups
+
+    return result

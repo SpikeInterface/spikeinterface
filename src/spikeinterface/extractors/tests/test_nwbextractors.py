@@ -98,8 +98,15 @@ def nwbfile_with_ecephys_content():
     rng = np.random.default_rng(0)
     data = rng.random(size=(num_frames, len(electrode_indices)))
     rate = 30_000.0
+    conversion = 5.0
+    a_different_offset = offset + 1.0
     electrical_series = ElectricalSeries(
-        name=electrical_series_name, data=data, electrodes=electrode_region, rate=rate, offset=offset + 1.0
+        name=electrical_series_name,
+        data=data,
+        electrodes=electrode_region,
+        rate=rate,
+        offset=a_different_offset,
+        conversion=conversion,
     )
     nwbfile.add_acquisition(electrical_series)
 
