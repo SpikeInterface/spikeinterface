@@ -635,7 +635,11 @@ class NwbRecordingExtractor(BaseRecording):
     file_path: str, Path, or None
         Path to NWB file or s3 url (or None if using file instead)
     electrical_series_name: str or None, default: None
-        The name of the ElectricalSeries. Used if multiple ElectricalSeries are present.
+        The name of the ElectricalSeries. Needed if there are multiple ElectricalSeries
+        for disambiguating which one to use.
+        When using fast_mode, it is preferable to use electrical_series_location instead. But
+        if the electrical_series_location is not specified, the extractor will search for the
+        ElectricalSeries using the electrical_series_name over all the groups in the hdf5 file.
     file: file-like object or None, default: None
         File-like object to read from (if None, file_path must be specified)
     load_time_vector: bool, default: False
@@ -972,12 +976,12 @@ def find_electrical_series(group, path="", result=None):
     if result is None:
         result = {}
 
-    for key, value in group.items():
+    for neurodata_name, value in group.items():
         # Check if it's a group and if it has the 'ElectricalSeries' neurodata_type
         if isinstance(value, h5py.Group):
-            current_path = f"{path}/{key}" if path else key
+            current_path = f"{path}/{neurodata_name}" if path else neurodata_name
             if value.attrs.get("neurodata_type") == "ElectricalSeries":
-                result[key] = current_path
+                result[neurodata_name] = current_path
             find_electrical_series(value, current_path, result)  # Recursive call for sub-groups
 
     return result
