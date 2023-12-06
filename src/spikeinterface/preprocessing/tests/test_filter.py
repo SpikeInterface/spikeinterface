@@ -19,7 +19,7 @@ set_global_tmp_folder(cache_folder)
 
 
 def test_filter():
-    rec = generate_recording()
+    rec = generate_recording(num_channels=84)
     rec = rec.save()
 
     rec2 = bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)

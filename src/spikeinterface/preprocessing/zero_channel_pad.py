@@ -211,9 +211,12 @@ class ZeroChannelPaddedRecordingSegment(BasePreprocessorSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
         traces = np.zeros((end_frame - start_frame, self.num_channels))
-        traces[:, self.channel_mapping] = self.parent_recording_segment.get_traces(
-            start_frame=start_frame, end_frame=end_frame, channel_indices=self.channel_mapping
-        )
+        try:
+            traces[:, self.channel_mapping] = self.parent_recording_segment.get_traces(
+                start_frame=start_frame, end_frame=end_frame, channel_indices=self.channel_mapping
+            )
+        except:
+            breakpoint()
         return traces[:, channel_indices]
 
 

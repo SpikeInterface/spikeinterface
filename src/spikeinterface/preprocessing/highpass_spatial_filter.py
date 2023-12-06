@@ -78,11 +78,14 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
 
         # Check single group
         channel_groups = recording.get_channel_groups()
-        assert len(np.unique(channel_groups)) == 1, (
-            "The recording contains multiple groups! It is recommended to apply spatial filtering "
-            "separately for each group. You can split by group with: "
-            ">>> recording_split = recording.split_by(property='group')"
-        )
+        # TODO: decide where to put this. Either
+        # 1) only throw a warning here
+        # 2) set a switch if recording is split, and assert if not set during `get_traces()`
+        #        assert len(np.unique(channel_groups)) == 1, (
+        #            "The recording contains multiple groups! It is recommended to apply spatial filtering "
+        #            "separately for each group. You can split by group with: "
+        #            ">>> recording_split = recording.split_by(property='group')"
+        #        )
         # If location are not sorted, estimate forward and reverse sorting
         channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
