@@ -511,10 +511,9 @@ class TransformSorting(BaseSorting):
         ## spikes in the original sorting. So if some RPV violation are present in this sorting,
         ## they will be left untouched
         unit_indices = np.unique(self._cached_spike_vector["unit_index"])
-        segment_indices = np.unique(self._cached_spike_vector["segment_index"])
         rpv = int(self.get_sampling_frequency() * self.refractory_period_ms / 1000)
         to_keep = ~self.added_spikes.copy()
-        for segment_index in segment_indices:
+        for segment_index in range(self.get_num_segments()):
             for unit_ind in unit_indices:
                 (indices,) = np.nonzero(
                     (self._cached_spike_vector["unit_index"] == unit_ind)
