@@ -1,4 +1,5 @@
 import math
+import re
 import warnings
 import numpy as np
 from typing import Union, Optional, List, Literal
@@ -231,7 +232,7 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
     return sorting
 
 
-def generate_injected_sorting(
+def generate_sorting_to_inject(
     sorting: BaseSorting,
     num_samples: List[int],
     max_injected_per_unit: int = 1000,
@@ -240,7 +241,8 @@ def generate_injected_sorting(
     seed=None,
 ) -> NumpySorting:
     """
-    Generates a sorting with spikes that are injected into the already existing sorting
+    Generates a sorting with spikes that are can be injected into the already existing sorting without violating
+    the refractory period.
 
     Parameters
     ----------
@@ -257,6 +259,11 @@ def generate_injected_sorting(
         The refractory period that should not be violated while injecting new spikes
     seed: int, default None
         The random seed
+
+    Returns
+    -------
+    sorting : NumpySorting
+        The sorting object with the spikes to inject
 
     """
 
@@ -315,6 +322,10 @@ class TransformSorting(BaseSorting):
         of spikes. Any spike times in added_spikes violating the refractory period will be
         discarded
 
+    Returns
+    -------
+    sorting : TransformSorting
+        The sorting object with the added spikes and/or units
     """
 
     def __init__(
@@ -322,8 +333,8 @@ class TransformSorting(BaseSorting):
         sorting: BaseSorting,
         added_spikes_existing_units=None,
         added_spikes_new_units=None,
-        new_unit_ids=None,
-        refractory_period_ms=None,
+        new_unit_ids: Optional[List[Union[str, int]]] = None,
+        refractory_period_ms: Optional[float] = None,
     ):
         sampling_frequency = sorting.get_sampling_frequency()
         unit_ids = list(sorting.get_unit_ids())
@@ -341,37 +352,42 @@ class TransformSorting(BaseSorting):
         self._cached_spike_vector = sorting.to_spike_vector().copy()
         self.refractory_period_ms = refractory_period_ms
 
-        if isinstance(sorting, TransformSorting):
-            self.added_spikes = sorting.added_spikes
-            self.added_units = sorting.added_units
-        else:
-            self.added_spikes = np.zeros(len(self._cached_spike_vector), dtype=bool)
-            self.added_units = np.zeros(len(self._cached_spike_vector), dtype=bool)
+        self.added_spikes_from_existing_mask = np.zeros(len(self._cached_spike_vector), dtype=bool)
+        self.added_spikes_from_new = np.zeros(len(self._cached_spike_vector), dtype=bool)
 
-        if added_spikes_existing_units is not None:
+        if added_spikes_existing_units is not None and len(added_spikes_existing_units) > 0:
             assert (
                 added_spikes_existing_units.dtype == minimum_spike_dtype
             ), "added_spikes_existing_units should be a spike vector"
+            added_unit_indices = np.unique(added_spikes_existing_units["unit_index"])
+            assert np.max(added_unit_indices) < len(
+                sorting.unit_ids
+            ), "`added_spikes_existing_units` should contain spikes from units already in sorting"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
-            self.added_spikes = np.concatenate(
-                (self.added_spikes, np.ones(len(added_spikes_existing_units), dtype=bool))
+            self.added_spikes_from_existing_mask = np.concatenate(
+                (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_existing_units), dtype=bool))
             )
-            self.added_units = np.concatenate(
-                (self.added_units, np.zeros(len(added_spikes_existing_units), dtype=bool))
+            self.added_spikes_from_new = np.concatenate(
+                (self.added_spikes_from_new, np.zeros(len(added_spikes_existing_units), dtype=bool))
             )
 
-        if added_spikes_new_units is not None:
+        if added_spikes_new_units is not None and len(added_spikes_new_units) > 0:
             assert (
                 added_spikes_new_units.dtype == minimum_spike_dtype
             ), "added_spikes_new_units should be a spike vector"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_new_units))
-            self.added_spikes = np.concatenate((self.added_spikes, np.ones(len(added_spikes_new_units), dtype=bool)))
-            self.added_units = np.concatenate((self.added_units, np.ones(len(added_spikes_new_units), dtype=bool)))
+            self.added_spikes_from_existing_mask = np.concatenate(
+                (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_new_units), dtype=bool))
+            )
+            self.added_spikes_from_new = np.concatenate(
+                (self.added_spikes_from_new, np.ones(len(added_spikes_new_units), dtype=bool))
+            )
 
         sort_idxs = np.lexsort([self._cached_spike_vector["sample_index"], self._cached_spike_vector["segment_index"]])
         self._cached_spike_vector = self._cached_spike_vector[sort_idxs]
-        self.added_spikes = self.added_spikes[sort_idxs]
-        self.added_units = self.added_units[sort_idxs]
+        self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[sort_idxs]
+        self.added_spikes_from_new = self.added_spikes_from_new[sort_idxs]
+        self.added_spikes_mask = np.logical_or(self.added_spikes_from_existing_mask, self.added_spikes_from_new)
 
         # We need to add the sorting segments
         for segment_index in range(sorting.get_num_segments()):
@@ -379,7 +395,7 @@ class TransformSorting(BaseSorting):
             self.add_sorting_segment(segment)
 
         if self.refractory_period_ms is not None:
-            self._check_rpv()
+            self.clean_refractory_period()
 
         self._kwargs = dict(
             sorting=sorting,
@@ -389,14 +405,17 @@ class TransformSorting(BaseSorting):
             refractory_period_ms=refractory_period_ms,
         )
 
-    def get_added_spikes_indices(self):
-        return np.nonzero(self.added_spikes)[0]
+    def get_added_spike_indices(self):
+        return np.nonzero(self.added_spikes_mask)[0]
 
-    def get_added_units_indices(self):
-        return np.nonzero(self.added_units)[0]
+    def get_added_spikes_from_existing_indices(self):
+        return np.nonzero(self.added_spikes_from_existing_mask)[0]
+
+    def get_added_spikes_from_new_indices(self):
+        return np.nonzero(self.added_spikes_from_new)[0]
 
     def get_added_units_inds(self):
-        indices = self._cached_spike_vector["unit_index"][self.get_added_units_indices()]
+        indices = self._cached_spike_vector["unit_index"][self.get_added_spikes_from_new_indices()]
         return np.unique(self.unit_ids[indices])
 
     @staticmethod
@@ -511,13 +530,13 @@ class TransformSorting(BaseSorting):
         sorting = TransformSorting.add_from_sorting(sorting1, sorting2, refractory_period_ms)
         return sorting
 
-    def _check_rpv(self):
+    def clean_refractory_period(self):
         ## This function will remove the added spikes that will violate RPV, but does not affect the
         ## spikes in the original sorting. So if some RPV violation are present in this sorting,
         ## they will be left untouched
         unit_indices = np.unique(self._cached_spike_vector["unit_index"])
         rpv = int(self.get_sampling_frequency() * self.refractory_period_ms / 1000)
-        to_keep = ~self.added_spikes.copy()
+        to_keep = ~self.added_spikes_from_existing_mask.copy()
         for segment_index in range(self.get_num_segments()):
             for unit_ind in unit_indices:
                 (indices,) = np.nonzero(
@@ -529,8 +548,8 @@ class TransformSorting(BaseSorting):
                 )
 
         self._cached_spike_vector = self._cached_spike_vector[to_keep]
-        self.added_spikes = self.added_spikes[to_keep]
-        self.added_units = self.added_units[to_keep]
+        self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[to_keep]
+        self.added_spikes_from_new = self.added_spikes_from_new[to_keep]
 
 
 def create_sorting_npz(num_seg, file_path):

@@ -90,6 +90,6 @@ def test_hybrid_spikes_recording():
 
 if __name__ == "__main__":
     setup_module()
-    test_generate_injected_sorting()
+    test_generate_sorting_to_inject()
     test_hybrid_units_recording()
     test_hybrid_spikes_recording()

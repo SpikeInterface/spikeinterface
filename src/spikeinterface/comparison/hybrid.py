@@ -12,7 +12,7 @@ from spikeinterface.core.generate import (
     generate_sorting,
     InjectTemplatesRecording,
     _ensure_seed,
-    generate_injected_sorting,
+    generate_sorting_to_inject,
 )
 
 
@@ -179,7 +179,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
             num_samples = [
                 target_recording.get_num_frames(seg_index) for seg_index in range(target_recording.get_num_segments())
             ]
-            self.injected_sorting = generate_injected_sorting(
+            self.injected_sorting = generate_sorting_to_inject(
                 target_sorting, num_samples, max_injected_per_unit, injected_rate, refractory_period_ms
             )
         else:
