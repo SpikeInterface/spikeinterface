@@ -112,10 +112,6 @@ def _read_hdf5_file(
         assert file_path is not None, "file_path must be specified when using stream_mode='remfile'"
         rfile = remfile.File(file_path)
         hdf5_file = h5py.File(rfile, "r")
-
-    elif file_path is not None:
-        file_path = str(Path(file_path).resolve())
-        hdf5_file = h5py.File(name=file_path, mode="r")
     else:
         assert file is not None, "Unexpected, file is None"
         hdf5_file = h5py.File(file, "r")
@@ -174,14 +170,20 @@ def read_nwbfile(
     if file_path is None and file is None:
         raise ValueError("Provide either file_path or file")
 
-    hdf5_file = _read_hdf5_file(
-        file_path=file_path,
-        file=file,
-        stream_mode=stream_mode,
-        cache=cache,
-        stream_cache_path=stream_cache_path,
-    )
-    io = NWBHDF5IO(file=hdf5_file, mode="r", load_namespaces=True)
+    if file_path is not None and stream_mode is None:
+        # local: use path argument of NWBHDF5IO
+        file_path = str(Path(file_path).resolve())
+        io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True)
+    else:
+        # remote or file mode: use file argument  of NWBHDF5IO
+        hdf5_file = _read_hdf5_file(
+            file_path=file_path,
+            file=file,
+            stream_mode=stream_mode,
+            cache=cache,
+            stream_cache_path=stream_cache_path,
+        )
+        io = NWBHDF5IO(file=hdf5_file, mode="r", load_namespaces=True)
     nwbfile = io.read()
     return nwbfile
 
