@@ -340,8 +340,13 @@ class TransformSorting(BaseSorting):
 
         self._cached_spike_vector = sorting.to_spike_vector().copy()
         self.refractory_period_ms = refractory_period_ms
-        self.added_spikes = np.zeros(len(self._cached_spike_vector), dtype=bool)
-        self.added_units = np.zeros(len(self._cached_spike_vector), dtype=bool)
+
+        if isinstance(sorting, TransformSorting):
+            self.added_spikes = sorting.added_spikes
+            self.added_units = sorting.added_units
+        else:
+            self.added_spikes = np.zeros(len(self._cached_spike_vector), dtype=bool)
+            self.added_units = np.zeros(len(self._cached_spike_vector), dtype=bool)
 
         if added_spikes_existing_units is not None:
             assert (
