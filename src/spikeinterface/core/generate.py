@@ -390,6 +390,10 @@ class TransformSorting(BaseSorting):
     def get_added_units_indices(self):
         return np.nonzero(self.added_units)[0]
 
+    def get_added_units_inds(self):
+        indices = self._cached_spike_vector["unit_index"][self.get_added_units_indices()]
+        return np.unique(self.unit_ids[indices])
+
     @staticmethod
     def add_from_sorting(sorting1: BaseSorting, sorting2: BaseSorting, refractory_period_ms=None) -> "TransformSorting":
         """

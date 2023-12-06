@@ -487,6 +487,7 @@ def test_transformsorting():
 
     assert transformed.get_added_spikes_indices().size == 3
     assert transformed.get_added_units_indices().size == 2
+    assert transformed.get_added_units_inds() == [3]
 
     transformed = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
 
