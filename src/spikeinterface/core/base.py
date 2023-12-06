@@ -95,7 +95,7 @@ class BaseExtractor:
         Convert a list of IDs into indices, either as an array or a slice.
 
         This function is designed to transform a list of IDs (such as channel or unit IDs) into an array of indices.
-        These indices are useful for data manipulation and accessing properties. When `prefer_slice` is set to `True`,
+        These indices are useful for interacting with data and accessing properties. When `prefer_slice` is set to `True`,
         the function tries to return a slice object if the indices are consecutive, which can be more efficient
         (e.g. with hdf5 files and to avoid copying data in numpy).
 
