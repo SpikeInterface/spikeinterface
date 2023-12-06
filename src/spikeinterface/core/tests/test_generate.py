@@ -485,6 +485,9 @@ def test_transformsorting():
     assert len(transformed.unit_ids) == 2
     assert np.all(np.array([k for k in transformed.get_total_num_spikes().values()]) == [2, 2])
 
+    assert transformed.get_added_spikes_indices().size == 3
+    assert transformed.get_added_units_indices().size == 2
+
     transformed = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
 
     sorting_1 = generate_sorting(seed=0)

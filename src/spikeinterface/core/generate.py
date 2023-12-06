@@ -384,6 +384,12 @@ class TransformSorting(BaseSorting):
             refractory_period_ms=refractory_period_ms,
         )
 
+    def get_added_spikes_indices(self):
+        return np.nonzero(self.added_spikes)[0]
+
+    def get_added_units_indices(self):
+        return np.nonzero(self.added_units)[0]
+
     @staticmethod
     def add_from_sorting(sorting1: BaseSorting, sorting2: BaseSorting, refractory_period_ms=None) -> "TransformSorting":
         """
