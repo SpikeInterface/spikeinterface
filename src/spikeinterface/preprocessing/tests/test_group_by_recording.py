@@ -11,39 +11,31 @@ from spikeinterface import aggregate_channels
 
 import spikeinterface.preprocessing as spre
 
-CANNOT_TEST = [
+WORKING_OUT_TESTS = [
     spre.DeepInterpolatedRecording,
-    spre.UnsignedToSignedRecording,  # TODO: have a function that manipulates depending on test.
+    spre.UnsignedToSignedRecording,
     spre.PhaseShiftRecording,
     # spre.ScaleRecording,
     spre.ZScoreRecording,
     spre.BlankSaturationRecording,
-    spre.InterpolateBadChannelsRecording,  # recording.get_property("contact_vector") is None:
+    spre.InterpolateBadChannelsRecording,
 ]
 
-# TODO: check WhitenRecording and HighpassSpatialFilterRecording play nice with splitting... something weird there
-# We might need to rearrange this error, either warn only or throw an error on get_traces?
 
-# TODO: check all passed kwargs to preprocessing are stored unchanged in kwargs.
-
-
-# WhitenRecording
-# HighpassSpatialFilterRecording
 class TestGroupByRecording:
     def set_properties_on_recording_for_preprocessor(self, recording, preprocessor):
         if preprocessor == spre.ScaleRecording:
-            breakpoint()
-            recording.set_property("gain", np.ones(recording.get_num_channels()) * 2)  # [np.newaxis, :]
+            recording.set_property("gain", np.ones(recording.get_num_channels()) * 2)
             recording.set_property("offset", np.ones(recording.get_num_channels()) * 2)
-            # recording.set_property("offset", 2)
 
         return recording
 
-    @pytest.mark.parametrize("preprocessor", [spre.ScaleRecording])  # [pp for pp in pp_list if pp not in CANNOT_TEST])
+    @pytest.mark.parametrize("preprocessor", [pp for pp in pp_list if pp not in WORKING_OUT_TESTS])
     def test_all_preprocessors(self, preprocessor):
         """
-        Perform a smoke test over all preprocessors to check
-        no preprocessors just crash with this function.
+        Perform preprocessing with new `group_preprocessing_by_property()
+        function then check it against manually, explicitly splitting
+        and re-aggregating.
         """
         num_channels = 84
         recording = generate_recording(num_channels=num_channels, set_probe=True)
@@ -62,24 +54,21 @@ class TestGroupByRecording:
         for segment_index in range(recording.get_num_segments()):
             split_recording_data = split_recording.get_traces(segment_index=segment_index)
 
-            explicitly_per_shank_rec_data = test_split_recording.get_traces(segment_index=segment_index)
+            test_split_recording_data = test_split_recording.get_traces(segment_index=segment_index)
 
-            assert np.array_equal(split_recording_data, explicitly_per_shank_rec_data)
-
-    # check once it is indeed changed.
+            assert np.array_equal(split_recording_data, test_split_recording_data)
 
     def manually_split_preprocess_aggregate(self, recording, preprocessor):
         """"""
-        explicitly_per_shank = []
+        per_shank = []
         explicitly_split_recording = recording.split_by("group")
 
         for shank_rec in explicitly_split_recording.values():
-            explicitly_per_shank.append(preprocessor(shank_rec, **self.get_preprocessing_kwargs(preprocessor)))
-        manually_split_rec = aggregate_channels(explicitly_per_shank)  # TODO: rename
+            per_shank.append(preprocessor(shank_rec, **self.get_preprocessing_kwargs(preprocessor)))
+        manually_split_rec = aggregate_channels(per_shank)  # TODO: rename
 
         return manually_split_rec
 
-    # Check errorsgg
     def get_preprocessing_kwargs(self, preprocessor):
         """"""
         kwarg_dict = {
@@ -97,9 +86,3 @@ class TestGroupByRecording:
             kwargs = {}
 
         return kwargs
-
-    # [PhaseShiftRecording] - AssertionError: 'inter_sample_shift' is not a property!
-    #
-    # Check more complex
-    # check preprocessing, split, then more preprocessing
-    # Check multiple complex chains of preprocessing
