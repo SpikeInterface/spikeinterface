@@ -103,7 +103,7 @@ class BaseExtractor:
         ----------
         ids : list of str or int
             The list of IDs to be converted into indices. If `None`, it generates indices based on the length of `_main_ids`.
-        prefer_slice : bool, optional
+        prefer_slice : bool, default: False
             If `True`, the function will return a slice object when the indices are consecutive. Default is `False`.
 
         Returns
