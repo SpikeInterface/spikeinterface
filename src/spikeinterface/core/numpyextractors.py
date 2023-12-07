@@ -328,6 +328,12 @@ class NumpySorting(BaseSorting):
         if unit_ids is None:
             unit_ids = np.unique(peaks["channel_index"])
 
+        # We need to remap the indices in the spikes
+        old_indices = spikes["unit_index"].copy()
+        for unit_index, i in enumerate(unit_ids):
+            mask = old_indices == i
+            spikes["unit_index"][mask] = unit_index
+
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
         return sorting
