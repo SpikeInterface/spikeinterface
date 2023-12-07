@@ -617,15 +617,15 @@ def get_grid_convolution_templates_and_weights(
         weights[count] = (
             1 / (1 + np.sqrt(dist**2 + depth**2)) ** decay_power
         )  ##np.exp(-(dist**2) / (2 * (sigma**2)))
-        weights[count] /= np.linalg.norm(weights[count])
+        #weights[count] /= np.linalg.norm(weights[count])
 
-    weights[~np.isfinite(weights)] = 0.0
+    #weights[~np.isfinite(weights)] = 0.0
 
-    # normalize
-    # with np.errstate(divide="ignore", invalid="ignore"):
-    #     norm = np.sqrt(np.sum(weights**2, axis=1))[:, np.newaxis, :]
-    #     weights /= norm
-    #     weights[~np.isfinite(weights)] = 0.0
+    #normalize
+    with np.errstate(divide="ignore", invalid="ignore"):
+        norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
+        weights /= norm
+        weights[~np.isfinite(weights)] = 0.0
 
     return template_positions, weights, nearest_template_mask
 

@@ -344,7 +344,7 @@ class LocalizeGridConvolution(PipelineNode):
         parents=["extract_waveforms"],
         radius_um=50.0,
         upsampling_um=5.0,
-        depth_um=np.linspace(5, 100.0, 5),
+        depth_um=np.linspace(5, 150.0, 10),
         decay_power=1,
         sigma_ms=0.25,
         margin_um=50.0,
@@ -419,18 +419,20 @@ class LocalizeGridConvolution(PipelineNode):
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
             num_spikes = len(idx)
-            if "amplitude" in peaks.dtype.names:
-                amplitudes = peaks["amplitude"][idx]
-            else:
-                amplitudes = waveforms[idx, self.nbefore, main_chan]
+            # if "amplitude" in peaks.dtype.names:
+            #     amplitudes = peaks["amplitude"][idx]
+            # else:
+            #     amplitudes = waveforms[idx, self.nbefore, main_chan]
 
             nearest_templates = self.nearest_template_mask[main_chan, :]
             num_templates = np.sum(nearest_templates)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
 
             global_products = (
-                waveforms[idx, :, :][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
+                waveforms[idx, :, :][:, :, channel_mask] * self.prototype
             ).sum(axis=1)
+
+            global_products /= np.linalg.norm(global_products, axis=0)
 
             dot_products = np.zeros((self.weights.shape[0], num_spikes, num_templates), dtype=np.float32)
             w = self.weights[:, channel_mask, :][:, :, nearest_templates]
@@ -449,7 +451,6 @@ class LocalizeGridConvolution(PipelineNode):
             found_positions = np.nan_to_num(found_positions)
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
-
             found_positions[:, 2] = np.dot(self.depth_um, dot_products.sum(2))
             found_positions[:, 2] /= scalar_products
             peak_locations["z"][idx] = found_positions[:, 2]
