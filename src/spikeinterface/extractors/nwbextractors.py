@@ -444,7 +444,7 @@ class _NWBHDF5RecordingExtractor(BaseRecording):
         # And returns a dictionary with the electrical_series_name as key and the location as value
         # If there is only one electrical series, the electrical_series_name is set to the name of the series
         if electrical_series_location is None:
-            available_electrical_series = find_electrical_series(hdf5_file)
+            available_electrical_series = _NWBHDF5RecordingExtractor.find_electrical_series(hdf5_file)
             if electrical_series_name is None:
                 if len(available_electrical_series) == 1:
                     electrical_series_name = list(available_electrical_series.keys())[0]
@@ -626,6 +626,29 @@ class _NWBHDF5RecordingExtractor(BaseRecording):
             "electrical_series_location": electrical_series_location,
         }
 
+    @staticmethod
+    def find_electrical_series(group, path="", result=None):
+        """
+        Recursively searches for groups with neurodata_type 'ElectricalSeries' in the HDF5 group or file,
+        and returns a dictionary with their names and paths.
+        """
+        import h5py
+
+        if result is None:
+            result = {}
+
+        for neurodata_name, value in group.items():
+            # Check if it's a group and if it has the 'ElectricalSeries' neurodata_type
+            if isinstance(value, h5py.Group):
+                current_path = f"{path}/{neurodata_name}" if path else neurodata_name
+                if value.attrs.get("neurodata_type") == "ElectricalSeries":
+                    result[neurodata_name] = current_path
+                _NWBHDF5RecordingExtractor.find_electrical_series(
+                    value, current_path, result
+                )  # Recursive call for sub-groups
+
+        return result
+
 
 class NwbRecordingExtractor(BaseRecording):
     """Load an NWBFile as a RecordingExtractor.
@@ -633,36 +656,51 @@ class NwbRecordingExtractor(BaseRecording):
     Parameters
     ----------
     file_path: str, Path, or None
-        Path to NWB file or s3 url (or None if using file instead)
+        Path to the NWB file or an s3 URL. Use this parameter to specify the file location
+        if not using the `file` parameter.
     electrical_series_name: str or None, default: None
-        The name of the ElectricalSeries. Needed if there are multiple ElectricalSeries
-        for disambiguating which one to use.
-        When using fast_mode, it is preferable to use electrical_series_location instead. But
-        if the electrical_series_location is not specified, the extractor will search for the
-        ElectricalSeries using the electrical_series_name over all the groups in the hdf5 file.
+        The name of the ElectricalSeries object within the NWB file. This parameter is crucial
+        when the NWB file contains multiple ElectricalSeries objects. It helps in identifying
+        which specific series to extract data from. If there is only one ElectricalSeries and
+        this parameter is not set, that unique series will be used by default.
     file: file-like object or None, default: None
-        File-like object to read from (if None, file_path must be specified)
+        A file-like object representing the NWB file. Use this parameter if you have an in-memory
+        representation of the NWB file instead of a file path.
     load_time_vector: bool, default: False
-        If True, the time vector is loaded to the recording object.
+        If set to True, the time vector is also loaded into the recording object. Useful for
+        cases where precise timing information is required.
     samples_for_rate_estimation: int, default: 100000
-        The number of timestamp samples to use to estimate the rate.
-        Used if "rate" is not specified in the ElectricalSeries.
-    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
-        The streaming mode to use. If None it assumes the file is on the local disk.
+        The number of timestamp samples used for estimating the sampling rate. This is relevant
+        when the 'rate' attribute is not available in the ElectricalSeries.
+    stream_mode : "fsspec", "ros3", "remfile", or None, default: None
+        Determines the streaming mode for reading the file. Use this for optimized reading from
+        different sources, such as local disk or remote servers.
     cache: bool, default: False
-        If True, the file is cached in the file passed to stream_cache_path
-        if False, the file is not cached.
-    stream_cache_path: str or Path or None, default: None
-        Local path for caching. If None it uses the current working directory (cwd)
-    fast_mode: bool, default: False
-        If True, the extractor will use the hdf5 API to extract the traces and metadata.
-        This should be faster as it avoids the pynwb validation overhead.
+        Indicates whether to cache the file locally when using streaming. Caching can improve performance for
+        remote files.
+    stream_cache_path: str, Path, or None, default: None
+        Specifies the local path for caching the file. Relevant only if `cache` is True.
+    io_backend: Literal["pynwb", "hdf5"], default: "pynwb"
+        Specifies the backend library used for data IO operations.
+        - "pynwb": Uses the PyNWB library, which provides comprehensive NWB file manipulation
+                   but might be slower due to validation overhead.
+        - "hdf5": Directly accesses the NWB file using HDF5 API, potentially offering faster
+                  read performance by bypassing some of the PyNWB validations.
+        This parameter allows users to balance between performance and the feature-rich
+        environment provided by PyNWB.
     electrical_series_location: str or None, default: None
-        Examples aquisition/ElectricalSeries
-        This is only used in fast_mode to avoid the lookup of the electrical series.
-        The location of the ElectricalSeries in the NWB file. If None, the extractor will
-        search for the ElectricalSeries using the electrical_series_name argument over
-        all the groups in the hdf5 file.
+        This parameter is only used with the `hdf5` io_backend.
+        Specifies the direct path to the ElectricalSeries object within the NWB file,
+        e.g., 'acquisition/ElectricalSeries/my_electrical_series'.
+
+        Precedence:
+        - If provided, this parameter directly locates the ElectricalSeries, enhancing
+        data loading speed.
+        - If absent but `electrical_series_name` is specified, the extractor searches
+        for an ElectricalSeries with the given name across the NWB file.
+        - If both this parameter and `electrical_series_name` are unspecified, and there
+        is only one ElectricalSeries in the file, that series is automatically selected
+        otherwise an error is raised.
 
     Returns
     -------
@@ -706,9 +744,9 @@ class NwbRecordingExtractor(BaseRecording):
         file: BinaryIO | None = None,  # file-like - provide either this or file_path
         electrical_series_location: str | None = None,
         cache: bool = False,
-        fast_mode: bool = False,
+        io_backend: Literal["pynwb", "hdf5"] = "pynwb",
     ):
-        if fast_mode:
+        if io_backend == "pynwb":
             extractor = _NWBHDF5RecordingExtractor(
                 file_path=file_path,
                 electrical_series_name=electrical_series_name,
@@ -720,7 +758,7 @@ class NwbRecordingExtractor(BaseRecording):
                 electrical_series_location=electrical_series_location,
                 cache=cache,
             )
-        else:
+        elif io_backend == "hdf5":
             extractor = _NwbPureRecordingExtractor(
                 file_path=file_path,
                 electrical_series_name=electrical_series_name,
@@ -731,6 +769,8 @@ class NwbRecordingExtractor(BaseRecording):
                 file=file,
                 cache=cache,
             )
+        else:
+            assert False, f"Invalid io_backend: {io_backend} use 'pynwb' or 'hdf5'"
 
         return extractor
 
@@ -964,24 +1004,3 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
         outputs = outputs[0]
 
     return outputs
-
-
-def find_electrical_series(group, path="", result=None):
-    """
-    Recursively searches for groups with neurodata_type 'ElectricalSeries' in the HDF5 group or file,
-    and returns a dictionary with their names and paths.
-    """
-    import h5py
-
-    if result is None:
-        result = {}
-
-    for neurodata_name, value in group.items():
-        # Check if it's a group and if it has the 'ElectricalSeries' neurodata_type
-        if isinstance(value, h5py.Group):
-            current_path = f"{path}/{neurodata_name}" if path else neurodata_name
-            if value.attrs.get("neurodata_type") == "ElectricalSeries":
-                result[neurodata_name] = current_path
-            find_electrical_series(value, current_path, result)  # Recursive call for sub-groups
-
-    return result
