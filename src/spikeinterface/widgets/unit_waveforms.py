@@ -203,7 +203,6 @@ class UnitWaveformsWidget(BaseWidget):
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         for i, unit_id in enumerate(dp.unit_ids):
-
             has_waveforms = len(dp.wfs_by_ids[unit_id]) > 0
             if dp.same_axis:
                 ax = self.ax
@@ -226,7 +225,7 @@ class UnitWaveformsWidget(BaseWidget):
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
                 if has_waveforms:
                     wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
-                
+
                     if dp.x_offset_units:
                         # 0.7 is to match spacing in xvect
                         xvec = xvectors_flat + i * 0.7 * dp.delta_x
