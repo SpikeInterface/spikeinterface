@@ -320,7 +320,7 @@ class LocalizeGridConvolution(PipelineNode):
         Radius in um for channel sparsity.
     upsampling_um: float
         Upsampling resolution for the grid of templates
-    depth_um: np.array, default: np.linspace(5, 100.0, 5)
+    depth_um: np.array, default: np.linspace(5, 100.0, 10)
         Putative depth of the fake templates
     decay_power: float, default:1
         The decay power as function of the distances for the amplitudes
@@ -330,10 +330,10 @@ class LocalizeGridConvolution(PipelineNode):
         The margin for the grid of fake templates
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float, default: 20
+    percentile: float, default: 5
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float, default: 0.01
+    sparsity_threshold: float, default: 0.05
         The sparsity threshold (in [0-1]) below which weights should be considered as 0
     """
 
@@ -342,7 +342,7 @@ class LocalizeGridConvolution(PipelineNode):
         recording,
         return_output=True,
         parents=["extract_waveforms"],
-        radius_um=50.0,
+        radius_um=40.0,
         upsampling_um=5.0,
         depth_um=np.linspace(5, 100.0, 10),
         decay_power=1,
@@ -425,7 +425,7 @@ class LocalizeGridConvolution(PipelineNode):
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
 
             global_products = (
-                waveforms[idx, :, :][:, :, channel_mask] * self.prototype
+                waveforms[idx][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
             ).sum(axis=1)
             # global_products /= np.linalg.norm(global_products, axis=0)
 

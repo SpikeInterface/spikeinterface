@@ -394,7 +394,7 @@ def compute_grid_convolution(
         Radius to consider for the fake templates
     upsampling_um: float, default: 5
         Upsampling resolution for the grid of templates
-    depth_um: np.array, default: np.linspace(5, 100.0, 5)
+    depth_um: np.array, default: np.linspace(5, 100.0, 10)
         Putative depth of the fake templates
     decay_power: float, default: 1
         The decay power as function of the distances for the amplitudes
@@ -404,10 +404,10 @@ def compute_grid_convolution(
         The margin for the grid of fake templates
     prototype: np.array or None, default: None
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float, default: 10
+    percentile: float, default: 5
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float, default: 0.01
+    sparsity_threshold: float, default: 0.05
         The sparsity threshold (in 0-1) below which weights should be considered as 0.
     Returns
     -------
