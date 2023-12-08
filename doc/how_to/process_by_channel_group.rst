@@ -1,128 +1,205 @@
-Processing a Recording by Channel Group (e.g. Shank)
-===========================================================
+Processing a Recording by Channel Group
+=======================================
 
-In this tutorial, we will walk through how to preprocess and sorting a recording
-per channel group. A channel group is a subset of channels grouped by some
-feature - a typical example is grouping channels by shank in a Neuropixels recording.
+In this tutorial, we will walk through how to preprocess and sort a recording
+separately for *channel groups*. A channel group is a subset of channels grouped by some
+feature - for example a multi-shank Neuropixels recording in which the channels
+are grouped by shank.
 
-First, we can check the channels on our recording are grouped as we expect. For example,
-in the below example we have a X-shank neuropixels recording. We can visualise the
-channel groupings with XXX.
+**Why preprocess by channel group?**
 
+Certain preprocessing steps depend on the spatial arrangement of the channels.
+For example, common average referencing (CAR) averages over channels (separately for each time point)
+and subtracts the average. In such a scenario it may make sense to group channels so that
+this averaging is performed only over spatially close channel groups.
 
-On our SpikeInterface recording, we can also access the channel groups per-channel
+**Why sort by channel group?**
 
-1) channel groups
-2) index channel ids by groups
+When sorting, we may want to completely separately channel groups so we can
+consider their signals in isolation. If recording from a long
+silicon probe, we might want to sort different brain areas separately,
+for example using a different sorter for the hippocampus, the thalamus, or the cerebellum.
 
-Why would you want to preprocess or sort by group?
-
-1)
-2)
-3)
 
 Splitting a Recording by Channel Group
 --------------------------------------
 
-We can split a recording into mutliply recordings, one for each channel group, with the `split_by` method.
+In this example, we create a 16-channel recording with 4 tetrodes. However this could
+be any recording in which the channel are grouped in some way, for example
+a 384 channel, 4 shank Neuropixels recording in which channel grouping represents the separate shanks.
 
-Here, we split a recording by channel group to get a `split_recording_dict`. This is a dictionary
-containing the recordings, split by channel group:
+First, let's import the parts of SpikeInterface we need into Python, and generate our toy recording:
 
-```
-split_recording_dict = recording.split_by("group")
-print(split_recording_dict)
-XXXXX
-```
+.. code-block:: python
 
-Now, we are ready to preprocess and sort by channel group.
+    import spikeinterface.extractors as se
+    import spikeinterface.preprocessing as spre
+    from spikeinterface import aggregate_channels
+    from probeinterface import generate_tetrode, ProbeGroup
+    import numpy as np
 
+    recording, _ = se.toy_example(duration=[10.], num_segments=1, num_channels=16)
+    print(recording.get_channel_groups())
+    # >>> [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] (here, all channels are in the same group)
+
+    # create 4 tetrodes as a 'probegroup'
+    probegroup = ProbeGroup()
+    for i in range(4):
+        tetrode = generate_tetrode()
+        tetrode.set_device_channel_indices(np.arange(4) + i * 4)
+        probegroup.add_probe(tetrode)
+
+    # set this to the recording
+    recording_4_tetrodes = recording.set_probegroup(probegroup, group_mode='by_probe')
+
+    print(recording_4_tetrodes.get_property('group'))
+    # >>> [0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3]  (now, channels are grouped by tetrode index)
+
+We can split a recording into multiple recordings, one for each channel group, with the :py:func:`~split_by` method.
+
+.. code-block:: python
+
+    split_recording_dict = recording.split_by("group")
+
+Splitting a recording by channel group returns a dictionary containing separate recordings, one for each channel group:
+
+.. code-block:: python
+
+    print(split_recording_dict)
+    # {0: ChannelSliceRecording: 4 channels - 30.0kHz - 1 segments - 300,000 samples - 10.00s
+    #                       float32 dtype - 4.58 MiB, 1: ChannelSliceRecording: 4 channels - 30.0kHz - 1 segments - 300,000 samples - 10.00s
+    #                       float32 dtype - 4.58 MiB, 2: ChannelSliceRecording: 4 channels - 30.0kHz - 1 segments - 300,000 samples - 10.00s
+    #                       float32 dtype - 4.58 MiB, 3: ChannelSliceRecording: 4 channels - 30.0kHz - 1 segments - 300,000 samples - 10.00s
+    #                       float32 dtype - 4.58 MiB}
 Preprocessing a Recording by Channel Group
 ------------------------------------------
 
-The essense of preprocessing by channel group is to first split the recording
+The essence of preprocessing by channel group is to first split the recording
 into separate recordings, perform the preprocessing steps, then aggregate
 the channels back together.
 
-Here, we loop over the split recordings, preprocessing each shank group
-individually. At the end, we use the `aggregate_channels` function
-to combine the per-shank recordings back together.
+In the below example, we loop over the split recordings, preprocessing each channel group
+individually. At the end, we use the :py:func:`~aggregate_channels` function
+to combine the separate channel group recordings back together.
 
-```
-preprocessed_recordings = []
-for recording in split_recordings_dict.values():
+.. code-block:: python
 
+    preprocessed_recordings = []
 
-    shifted_recording = spre.phase_shift(recording)
+   # loop over the recordings contained in the dictionary
+    for chan_group_rec in split_recordings_dict.values():
 
-    filtered_recording = spre.bandpass_filter(shifted_recording)
+        # Apply the preprocessing steps to the channel group in isolation
+        shifted_recording = spre.phase_shift(chan_group_rec)
 
-    referenced_recording = spre.common_reference(filtered_recording)
+        filtered_recording = spre.bandpass_filter(shifted_recording)
 
-    preprocessed_recordings.append(referenced_recording)
+        referenced_recording = spre.common_reference(filtered_recording)
 
-combined_preprocessed_recording = aggregate_channels(preprocessed_recordings)
+        preprocessed_recordings.append(referenced_recording)
 
-```
+    # Combine our preprocessed channel groups back together
+    combined_preprocessed_recording = aggregate_channels(preprocessed_recordings)
 
-It is strongly recommended to use the above structure to preprocess by group.
-A discussion of the subtleties of the approach may be found in the below
-Notes section for the interested reader.
+Now, when this recording is used in sorting, plotting, or whenever
+calling it's :py:func:`~get_traces` method, the data will have been
+preprocessed separately per-channel group (then concatenated
+back together under the hood).
 
-# Preprocessing channel in depth
+It is strongly recommended to use the above structure to preprocess by channel group.
+A discussion of the subtleties of the :py:func:`~aggregate_channels` may be found in
+the below  section for the interested reader.
 
-Preprocessing and aggregation of channels is very flexible. Under the hood,
-`aggregate_channels` keeps track of when a recording was split. When `get_traces()`
-is called, the preprocessing is still performed per-group, even though the
-recording is now aggregated.
-
-However, to ensure data is preprocessed by shank, the preprocessing step must be
-applied per-group. For example, the below example will NOT preprocess by shank:
-
-```
-split_recording = recording.split_by("group")
-split_recording_as_list = list(**split_recording.values())
-combined_recording = aggregate_channels(split_recording_as_list)
-
-# will NOT preprocess by channel group.
-filtered_recording = common_reference(combined_recording)
-
-```
-
-Similarly, in the below example the first preprocessing step (bandpass filter)
-would applied by group (although, this would have no effect in practice
-as this preprocessing step is always performed per channel). However,
-common referencing (which is effected by splitting by group) will
-not be applied per group:
-
-```
-split_recording = recording.split_by("group")
-
-filtered_recording = []
-for recording in split_recording.values()
-    filtered_recording.append(spre.bandpass_filtered(recording))
-
-combined_recording = aggregate_channels(filtered_recording)
-
-# As the recording has been combined, common referencing
-# will NOT be applied per channel group.
-referenced_recording = spre.common_reference(combined_recording).
-```
-
-Finally, it is not recommended to apply `aggregate_channels` more than once
-as this will slow down `get_traces()` and may result in unpredictable behaviour.
+.. warning::
+    It is not recommended to apply :py:func:`~aggregate_channels` more than once
+    as this will slow down :py:func:`~get_traces` calls and may result in unpredictable behaviour.
 
 
 Sorting a Recording by Channel Group
 ------------------------------------
 
-Sorting a recording can be performed in two ways. One, is to split the
-recording by group and use `run_sorter` (LINK) separately on each preprocessed
-channel group.
+We can also sort a recording for each channel group separately. It is not necessary to preprocess
+a recording by channel group in order to sort by channel group. We can perform sorting on a recording
+whichever way it was preprocessed.
 
-Altearntively, SpikeInterface proves a conveniecne function XXX
-to this.
+There are two ways to sort a recording by channel group. First, we can split the preprocessed
+recording (or, if it was already split during preprocessing as above, skip the :py:func:`~aggregate_channels` step
+directly use the :py:func:`~split_recording_dict`).
 
-Example
+**Option 1: Manual splitting**
 
-Done!
+In this example, similar to above we loop over all preprocessed recordings that
+are groups by channel, and apply the sorting separately. We store the
+sorting objects in a dictionary for later use.
+
+.. code-block:: python
+
+    split_preprocessed_recording = preprocessed_recording.split_by("group")
+
+    sortings = {}
+    for group, sub_recording in split_preprocessed_recording.items():
+        sorting = run_sorter(
+            sorter_name='kilosort2',
+            recording=split_preprocessed_recording,
+            output_folder=f"folder_KS2_group{group}"
+            )
+        sortings[group] = sorting
+
+**Option 2 : Automatic splitting**
+
+Alternatively, SpikeInterface provides a convenience function to sort the recording by property:
+
+.. code-block:: python
+
+     aggregate_sorting = run_sorter_by_property(
+        sorter_name='kilosort2',
+        recording=recording_4_tetrodes,
+        grouping_property='group',
+        working_folder='working_path'
+    )
+
+
+Further notes on preprocessing by channel group
+-----------------------------------------------
+
+.. note::
+
+    The splitting and aggregation of channels for preprocessing is flexible.
+    Under the hood, :py:func:`~aggregate_channels` keeps track of when a recording was split. When
+    :py:func:`~get_traces` is called, the preprocessing is still performed per-group,
+    even though the recording is now aggregated.
+
+    However, to ensure data is preprocessed by channel group, the preprocessing step must be
+    applied separately to each split channel group recording.
+    For example, the below example will NOT preprocess by shank:
+
+    .. code-block:: python
+
+        split_recording = recording.split_by("group")
+        split_recording_as_list = list(**split_recording.values())
+        combined_recording = aggregate_channels(split_recording_as_list)
+
+        # will NOT preprocess by channel group.
+        filtered_recording = common_reference(combined_recording)
+
+    Similarly, in the below example the first preprocessing step (bandpass filter)
+    would applied by group (although, this would have no effect in practice
+    as this preprocessing step is always separately for each individual channel).
+
+    However, in the below example common referencing (does operate across
+    separate channels) will not be applied per channel group:
+
+    .. code-block:: python
+
+        split_recording = recording.split_by("group")
+
+        filtered_recording = []
+        for recording in split_recording.values()
+            filtered_recording.append(spre.bandpass_filtered(recording))
+
+        combined_recording = aggregate_channels(filtered_recording)
+
+        # As the recording has been combined, common referencing
+        # will NOT be applied per channel group. But, the bandpass
+        # filter step will be applied per channel group.
+        referenced_recording = spre.common_reference(combined_recording).
