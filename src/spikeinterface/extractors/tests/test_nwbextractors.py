@@ -189,7 +189,8 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
 
 
-def test_sorting_extraction_of_ragged_arrays(tmp_path):
+@pytest.mark.parametrize("io_backend", ["pynwb", "hdf5"])
+def test_sorting_extraction_of_ragged_arrays(tmp_path, io_backend):
     nwbfile = mock_NWBFile()
 
     # Add the spikes
@@ -222,7 +223,7 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0)
+    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0, io_backend=io_backend)
 
     units_ids = sorting_extractor.get_unit_ids()
 
