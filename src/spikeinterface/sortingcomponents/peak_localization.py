@@ -348,7 +348,7 @@ class LocalizeGridConvolution(PipelineNode):
         margin_um=50.0,
         prototype=None,
         percentile=5.0,
-        sparsity_threshold=0.05
+        sparsity_threshold=0.05,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -380,8 +380,13 @@ class LocalizeGridConvolution(PipelineNode):
         self.prototype = self.prototype[:, np.newaxis]
 
         self.template_positions, self.weights, self.nearest_template_mask = get_grid_convolution_templates_and_weights(
-            contact_locations, self.radius_um, self.upsampling_um, self.depth_um, self.margin_um, self.decay_power,
-            self.sparsity_threshold
+            contact_locations,
+            self.radius_um,
+            self.upsampling_um,
+            self.depth_um,
+            self.margin_um,
+            self.decay_power,
+            self.sparsity_threshold,
         )
 
         self.weights_sparsity_mask = self.weights > 0
@@ -420,12 +425,12 @@ class LocalizeGridConvolution(PipelineNode):
             global_products = (
                 waveforms[idx, :, :][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
             ).sum(axis=1)
-            #global_products /= np.linalg.norm(global_products, axis=0)
+            # global_products /= np.linalg.norm(global_products, axis=0)
 
             dot_products = np.zeros((nb_weights, num_spikes, num_templates), dtype=np.float32)
             for count in range(nb_weights):
-                w = self.weights[count][channel_mask, :][:, nearest_templates]            
-                dot_products[count]= np.dot(global_products, w)
+                w = self.weights[count][channel_mask, :][:, nearest_templates]
+                dot_products[count] = np.dot(global_products, w)
 
             dot_products = np.maximum(0, dot_products)
             if self.percentile < 100:

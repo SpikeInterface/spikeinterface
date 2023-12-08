@@ -451,12 +451,12 @@ def compute_grid_convolution(
         channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
         num_templates = np.sum(nearest_templates)
         global_products = ((wf[:, channel_mask] / amplitude) * prototype).sum(axis=0)
-        #global_products /= np.linalg.norm(global_products)
+        # global_products /= np.linalg.norm(global_products)
 
         dot_products = np.zeros((nb_weights, num_templates), dtype=np.float32)
         for count in range(nb_weights):
-            w = weights[count][channel_mask, :][:, nearest_templates]            
-            dot_products[count]= np.dot(global_products, w)
+            w = weights[count][channel_mask, :][:, nearest_templates]
+            dot_products[count] = np.dot(global_products, w)
 
         dot_products = np.maximum(0, dot_products)
         if percentile < 100:
@@ -571,8 +571,13 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 
 def get_grid_convolution_templates_and_weights(
-    contact_locations, radius_um=50, upsampling_um=5, depth_um=np.linspace(5, 50.0, 5), margin_um=50, decay_power=1,
-    sparsity_threshold=0.05
+    contact_locations,
+    radius_um=50,
+    upsampling_um=5,
+    depth_um=np.linspace(5, 50.0, 5),
+    margin_um=50,
+    decay_power=1,
+    sparsity_threshold=0.05,
 ):
     import sklearn.metrics
 
@@ -606,11 +611,9 @@ def get_grid_convolution_templates_and_weights(
     weights = np.zeros((len(depth_um), len(contact_locations), nb_templates), dtype=np.float32)
 
     for count, depth in enumerate(depth_um):
-        weights[count] = (
-            1 / (1 + np.sqrt(dist**2 + depth**2)) ** decay_power
-        )
-        #weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
-        thresholds = np.percentile(weights[count] , 100*sparsity_threshold, axis=0)
+        weights[count] = 1 / (1 + np.sqrt(dist**2 + depth**2)) ** decay_power
+        # weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
+        thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
         weights[count][weights[count] < thresholds] = 0
 
     # normalize
