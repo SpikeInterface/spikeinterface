@@ -217,7 +217,7 @@ class CircusClustering:
             sorting,
             waveform_folder,
             return_scaled=False,
-            precompute_template=["average"],
+            precompute_template=["median"],
             mode=mode,
             **params["job_kwargs"],
             **params["waveforms"],
