@@ -15,7 +15,14 @@ from copy import deepcopy
 import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, SIJsonEncoder
+from .core_tools import (
+    check_json,
+    is_dict_extractor,
+    SIJsonEncoder,
+    make_paths_relative,
+    make_paths_absolute,
+    check_paths_relative,
+)
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -322,6 +329,9 @@ class BaseExtractor:
         to a dictionary. The resulting dictionary can be used to re-initialize the extractor
         through the `load_extractor_from_dict` function.
 
+        In some situations, 'relative_to' is not possible, (for instance different drives on Windows or url-like path), then
+        the relative will ignored and absolute (relative_to=None) will be done instead.
+
         Examples
         --------
         >>> dump_dict = original_extractor.to_dict()
@@ -383,7 +393,8 @@ class BaseExtractor:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
                 include_properties=include_properties,
-                relative_to=None,  # '_make_paths_relative' is already recursive!
+                # make_paths_relative() will make the recusrivity later:
+                relative_to=None,
                 folder_metadata=folder_metadata,
                 recursive=recursive,
             )
@@ -414,10 +425,9 @@ class BaseExtractor:
             "module": module,
             "kwargs": kwargs,
             "version": module_version,
-            "relative_paths": (relative_to is not None),
         }
 
-        dump_dict["version"] = module_version  # Can be spikeinterface, spikefores, etc.
+        dump_dict["version"] = module_version  # Can be spikeinterface, spikeforest, etc.
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations
@@ -431,10 +441,20 @@ class BaseExtractor:
             # include only main properties
             dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
-        if relative_to is not None:
+        if relative_to is None:
+            dump_dict["relative_paths"] = False
+        else:
             relative_to = Path(relative_to).resolve().absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
-            dump_dict = _make_paths_relative(dump_dict, relative_to)
+
+            if check_paths_relative(dump_dict, relative_to):
+                dump_dict["relative_paths"] = True
+                dump_dict = make_paths_relative(dump_dict, relative_to)
+            else:
+                # A warning will be very annoying for end user.
+                # So let's switch back to absolute path, but silently!
+                # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
+                dump_dict["relative_paths"] = False
 
         if folder_metadata is not None:
             if relative_to is not None:
@@ -463,7 +483,7 @@ class BaseExtractor:
         # for pickle dump relative_path was not in the dict, this ensure compatibility
         if dictionary.get("relative_paths", False):
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
-            dictionary = _make_paths_absolute(dictionary, base_folder)
+            dictionary = make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
         folder_metadata = dictionary.get("folder_metadata", None)
         if folder_metadata is not None:
@@ -1006,18 +1026,6 @@ class BaseExtractor:
         cached = read_zarr(zarr_path)
 
         return cached
-
-
-def _make_paths_relative(d, relative) -> dict:
-    relative = str(Path(relative).resolve().absolute())
-    func = lambda p: os.path.relpath(str(p), start=relative)
-    return recursive_path_modifier(d, func, target="path", copy=True)
-
-
-def _make_paths_absolute(d, base):
-    base = Path(base)
-    func = lambda p: str((base / p).resolve().absolute())
-    return recursive_path_modifier(d, func, target="path", copy=True)
 
 
 def _load_extractor_from_dict(dic) -> BaseExtractor:
