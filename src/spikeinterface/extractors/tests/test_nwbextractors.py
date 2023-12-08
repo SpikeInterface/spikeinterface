@@ -98,8 +98,15 @@ def nwbfile_with_ecephys_content():
     rng = np.random.default_rng(0)
     data = rng.random(size=(num_frames, len(electrode_indices)))
     rate = 30_000.0
+    conversion = 5.0
+    a_different_offset = offset + 1.0
     electrical_series = ElectricalSeries(
-        name=electrical_series_name, data=data, electrodes=electrode_region, rate=rate, offset=offset + 1.0
+        name=electrical_series_name,
+        data=data,
+        electrodes=electrode_region,
+        rate=rate,
+        offset=a_different_offset,
+        conversion=conversion,
     )
     nwbfile.add_acquisition(electrical_series)
 
@@ -144,7 +151,6 @@ def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_
     electrical_series_name_list = ["ElectricalSeries1", "ElectricalSeries2"]
     for electrical_series_name in electrical_series_name_list:
         recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
-
         nwbfile = nwbfile_with_ecephys_content
         electrical_series = nwbfile.acquisition[electrical_series_name]
         electrical_series_electrode_indices = electrical_series.electrodes.data[:]
@@ -160,7 +166,6 @@ def test_nwb_extractor_offset_from_electrodes_table(path_to_nwbfile, nwbfile_wit
     """Test that the offset is retrieved from the electrodes table if it is not present in the ElectricalSeries."""
     electrical_series_name = "ElectricalSeries1"
     recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
-
     nwbfile = nwbfile_with_ecephys_content
     electrical_series = nwbfile.acquisition[electrical_series_name]
     electrical_series_electrode_indices = electrical_series.electrodes.data[:]
@@ -176,7 +181,6 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     """Test that the offset is retrieved from the ElectricalSeries if it is present."""
     electrical_series_name = "ElectricalSeries2"
     recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
-
     nwbfile = nwbfile_with_ecephys_content
     electrical_series = nwbfile.acquisition[electrical_series_name]
     expected_offsets_uV = electrical_series.offset * 1e6
@@ -190,12 +194,14 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
 
     # Add the spikes
     nwbfile.add_unit_column(name="unit_name", description="the name of the unit")
-    spike_times1 = np.array([0.0, 1.0, 2.0])
-    nwbfile.add_unit(spike_times=spike_times1, unit_name="a")
-    spike_times2 = np.array([0.0, 1.0, 2.0, 3.0])
-    nwbfile.add_unit(spike_times=spike_times2, unit_name="b")
+    nwbfile.add_unit_column(name="a_property", description="a_cool_property")
 
-    ragged_array_bad = [[1, 2, 3], [1, 2, 3, 5]]
+    spike_times1 = np.array([0.0, 1.0, 2.0])
+    nwbfile.add_unit(spike_times=spike_times1, unit_name="a", a_property="a_property_value")
+    spike_times2 = np.array([0.0, 1.0, 2.0, 3.0])
+    nwbfile.add_unit(spike_times=spike_times2, unit_name="b", a_property="b_property_value")
+
+    ragged_array_bad = [[1, 2, 3, 8, 10], [1, 2, 3, 5]]
     nwbfile.add_unit_column(
         name="ragged_array_bad",
         description="an evill array that wants to destroy your test",
@@ -203,7 +209,7 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
         index=True,
     )
 
-    ragged_array_good = [[1, 2], [3, 4]]
+    ragged_array_good = [[1, 2, 3], [4, 5, 6]]
     nwbfile.add_unit_column(
         name="ragged_array_good",
         description="a good array that wants to help your test be nice to nice arrays",
@@ -218,10 +224,20 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
 
     sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0)
 
-    # Check that the bad array was not added
+    units_ids = sorting_extractor.get_unit_ids()
+
+    np.testing.assert_equal(units_ids, ["a", "b"])
+
     added_properties = sorting_extractor.get_property_keys()
     assert "ragged_array_bad" not in added_properties
     assert "ragged_array_good" in added_properties
+    assert "a_property" in added_properties
+
+    spike_train1 = sorting_extractor.get_unit_spike_train(unit_id="a", return_times=True)
+    np.testing.assert_allclose(spike_train1, spike_times1)
+
+    spike_train2 = sorting_extractor.get_unit_spike_train(unit_id="b", return_times=True)
+    np.testing.assert_allclose(spike_train2, spike_times2)
 
 
 if __name__ == "__main__":
