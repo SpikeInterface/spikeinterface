@@ -616,7 +616,7 @@ def get_grid_convolution_templates_and_weights(
         thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
         weights[count][weights[count] < thresholds] = 0
 
-    #normalize
+    # normalize
     with np.errstate(divide="ignore", invalid="ignore"):
         norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
         weights /= norm
