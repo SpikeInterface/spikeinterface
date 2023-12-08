@@ -466,7 +466,7 @@ def compute_grid_convolution(
         nearest_templates = template_positions[nearest_templates]
         for count in range(nb_weights):
             unit_location[i, :2] += np.dot(dot_products[count], nearest_templates)
-        
+
         scalar_products = dot_products.sum()
         unit_location[i, 2] = np.dot(depth_um, dot_products.sum(1))
         unit_location[i] /= scalar_products
@@ -617,7 +617,7 @@ def get_grid_convolution_templates_and_weights(
     with np.errstate(divide="ignore", invalid="ignore"):
         norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
         weights /= norm
-    
+
     weights[~np.isfinite(weights)] = 0.0
 
     return template_positions, weights, nearest_template_mask
