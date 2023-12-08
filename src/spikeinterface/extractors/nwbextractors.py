@@ -494,38 +494,10 @@ class NwbRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-class NwbSortingExtractor(BaseSorting):
-    """Load an NWBFile as a SortingExtractor.
-
-    Parameters
-    ----------
-    file_path: str or Path
-        Path to NWB file.
-    electrical_series_name: str or None, default: None
-        The name of the ElectricalSeries (if multiple ElectricalSeries are present).
-    sampling_frequency: float or None, default: None
-        The sampling frequency in Hz (required if no ElectricalSeries is available).
-    samples_for_rate_estimation: int, default: 100000
-        The number of timestamp samples to use to estimate the rate.
-        Used if "rate" is not specified in the ElectricalSeries.
-    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
-        The streaming mode to use. If None it assumes the file is on the local disk.
-    cache: bool, default: False
-        If True, the file is cached in the file passed to stream_cache_path
-        if False, the file is not cached.
-    stream_cache_path: str or Path or None, default: None
-        Local path for caching. If None it uses the system temporary directory.
-
-    Returns
-    -------
-    sorting: NwbSortingExtractor
-        The sorting extractor for the NWB file.
+class _NwbPynwbSortingExtractor(BaseSorting):
+    """A SortingExtractor for NWB files. This uses the NWB API to extract the traces and
+    the metadata and is called by the NwbSortingExtractor factory.
     """
-
-    extractor_name = "NwbSorting"
-    mode = "file"
-    installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
-    name = "nwb"
 
     def __init__(
         self,
@@ -534,15 +506,10 @@ class NwbSortingExtractor(BaseSorting):
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 100000,
         stream_mode: str | None = None,
-        cache: bool = False,
         stream_cache_path: str | Path | None = None,
+        *,
+        cache: bool = False,
     ):
-        try:
-            from pynwb import NWBHDF5IO, NWBFile
-            from pynwb.ecephys import ElectrodeGroup
-        except ImportError:
-            raise ImportError(self.installation_mesg)
-
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
         self._electrical_series_name = electrical_series_name
@@ -625,6 +592,172 @@ class NwbSortingExtractor(BaseSorting):
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
         }
+
+
+class _NwbHDF5SortingExtractor(BaseSorting):
+    def __init__(
+        self,
+        *,
+        file_path: str | Path,
+        electrical_series_name: str | None = None,
+        sampling_frequency: float | None = None,
+        samples_for_rate_estimation: int = 100000,
+        stream_mode: str | None = None,
+        stream_cache_path: str | Path | None = None,
+        cache: bool = False,
+    ):
+        self.stream_mode = stream_mode
+        self.stream_cache_path = stream_cache_path
+
+        hdf5_file = _read_hdf5_file(
+            file_path=file_path,
+            stream_mode=stream_mode,
+            cache=cache,
+            stream_cache_path=stream_cache_path,
+        )
+
+        if sampling_frequency is None:
+            raise KeyError("sampling_frequency must be specified when using io_backend='hdf5'")
+
+        units_table = hdf5_file["units"]
+        spike_times_data = units_table["spike_times"]
+        spike_times_index_data = units_table["spike_times_index"]
+
+        if "unit_name" in units_table:
+            unit_ids = units_table["unit_name"]
+        else:
+            unit_ids = units_table["id"]
+
+        decode_to_string = lambda x: x.decode("utf-8") if isinstance(x, bytes) else x
+        unit_ids = [decode_to_string(id) for id in unit_ids]
+        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
+
+        sorting_segment = NwbSortingSegment(
+            spike_times_data=spike_times_data,
+            spike_times_index_data=spike_times_index_data,
+            sampling_frequency=sampling_frequency,
+        )
+        self.add_sorting_segment(sorting_segment)
+
+        # Add properties
+        skip_properties = ["spike_times", "spike_times_index", "unit_name"]
+        properties_to_add = [name for name in units_table if name not in skip_properties]
+        # Filter indices
+        properties_to_add = [name for name in properties_to_add if "index" not in name]
+        for property_name in properties_to_add:
+            data = units_table[property_name]
+            corresponding_index_name = f"{property_name}_index"
+            not_ragged_array = corresponding_index_name not in units_table
+            if not_ragged_array:
+                values = data[:]
+            else:
+                data_index = units_table[corresponding_index_name][:]
+                index_spacing = np.diff(data_index, prepend=0)
+                all_index_spacing_are_the_same = np.unique(index_spacing).size == 1
+                if all_index_spacing_are_the_same:
+                    start_indices = [0] + list(data_index[:-1])
+                    end_indices = list(data_index)
+                    values = [data[start_index:end_index] for start_index, end_index in zip(start_indices, end_indices)]
+
+                else:
+                    warnings.warn(f"Skipping {property_name} because of unequal shapes across units")
+                    continue
+
+            decode_to_string = lambda x: x.decode("utf-8") if isinstance(x, bytes) else x
+            values = [decode_to_string(val) for val in values]
+            self.set_property(property_name, np.asarray(values))
+
+        if stream_mode is None and file_path is not None:
+            file_path = str(Path(file_path).resolve())
+
+        self._kwargs = {
+            "file_path": file_path,
+            "electrical_series_name": electrical_series_name,
+            "sampling_frequency": sampling_frequency,
+            "samples_for_rate_estimation": samples_for_rate_estimation,
+            "cache": cache,
+            "stream_mode": stream_mode,
+            "stream_cache_path": stream_cache_path,
+        }
+
+
+class NwbSortingExtractor(BaseSorting):
+    """Load an NWBFile as a SortingExtractor.
+
+    Parameters
+    ----------
+    file_path: str or Path
+        Path to NWB file.
+    electrical_series_name: str or None, default: None
+        The name of the ElectricalSeries (if multiple ElectricalSeries are present).
+    sampling_frequency: float or None, default: None
+        The sampling frequency in Hz (required if no ElectricalSeries is available).
+    samples_for_rate_estimation: int, default: 100000
+        The number of timestamp samples to use to estimate the rate.
+        Used if "rate" is not specified in the ElectricalSeries.
+    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
+        The streaming mode to use. If None it assumes the file is on the local disk.
+    cache: bool, default: False
+        If True, the file is cached in the file passed to stream_cache_path
+        if False, the file is not cached.
+    stream_cache_path: str or Path or None, default: None
+        Local path for caching. If None it uses the system temporary directory.
+    io_backend: Literal["pynwb", "hdf5"], default: "pynwb"
+        Specifies the backend library used for data IO operations.
+        - "pynwb": Uses the PyNWB library, which provides comprehensive NWB file manipulation
+                   but might be slower due to validation overhead.
+        - "hdf5": Directly accesses the NWB file using HDF5 API, potentially offering faster
+                  read performance by bypassing some of the PyNWB validations.
+        This parameter allows users to balance between performance and the feature-rich
+        environment provided by PyNWB.
+    Returns
+    -------
+    sorting: NwbSortingExtractor
+        The sorting extractor for the NWB file.
+    """
+
+    extractor_name = "NwbSorting"
+    mode = "file"
+    installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
+    name = "nwb"
+
+    def __new__(
+        self,
+        file_path: str | Path,
+        electrical_series_name: str | None = None,
+        sampling_frequency: float | None = None,
+        samples_for_rate_estimation: int = 100000,
+        stream_mode: str | None = None,
+        stream_cache_path: str | Path | None = None,
+        *,
+        cache: bool = False,
+        io_backend: Literal["pynwb", "hdf5"] = "pynwb",
+    ):
+        if io_backend == "pynwb":
+            extractor = _NwbPynwbSortingExtractor(
+                file_path=file_path,
+                electrical_series_name=electrical_series_name,
+                sampling_frequency=sampling_frequency,
+                samples_for_rate_estimation=samples_for_rate_estimation,
+                stream_mode=stream_mode,
+                stream_cache_path=stream_cache_path,
+                cache=cache,
+            )
+
+        elif io_backend == "hdf5":
+            extractor = _NwbHDF5SortingExtractor(
+                file_path=file_path,
+                electrical_series_name=electrical_series_name,
+                sampling_frequency=sampling_frequency,
+                samples_for_rate_estimation=samples_for_rate_estimation,
+                stream_mode=stream_mode,
+                stream_cache_path=stream_cache_path,
+                cache=cache,
+            )
+        else:
+            assert False, f"Invalid io_backend: {io_backend} use 'pynwb' or 'hdf5'"
+
+        return extractor
 
 
 class NwbSortingSegment(BaseSortingSegment):
