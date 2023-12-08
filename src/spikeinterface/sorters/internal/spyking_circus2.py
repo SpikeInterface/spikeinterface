@@ -125,7 +125,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             print("We found %d peaks in total" % len(peaks))
 
         if params["multi_units_only"]:
-            sorting = NumpySorting.from_peaks(peaks, sampling_frequency, unit_ids=np.arange(num_channels))
+            sorting = NumpySorting.from_peaks(peaks, sampling_frequency, unit_ids=recording_f.unit_ids)
         else:
             ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
             ## channels as flat as possible
