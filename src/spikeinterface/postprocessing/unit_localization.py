@@ -454,8 +454,8 @@ def compute_grid_convolution(
 
         dot_products = np.zeros((nb_weights, num_templates), dtype=np.float32)
         for count in range(nb_weights):
-            w = weights[count, :, :][channel_mask, :][:, nearest_templates]            
-            dot_products[count]= np.dot(global_products, w)
+            w = weights[count, :, :][channel_mask, :][:, nearest_templates]
+            dot_products[count] = np.dot(global_products, w)
 
         dot_products = np.maximum(0, dot_products)
         if percentile < 100:
@@ -465,7 +465,7 @@ def compute_grid_convolution(
         nearest_templates = template_positions[nearest_templates]
         for count in range(nb_weights):
             unit_location[i, :2] += np.dot(dot_products[count], nearest_templates)
-        
+
         scalar_products = dot_products.sum()
         unit_location[i, 2] = np.dot(depth_um, dot_products.sum(1))
         unit_location[i] /= scalar_products
@@ -604,17 +604,15 @@ def get_grid_convolution_templates_and_weights(
     weights = np.zeros((len(depth_um), len(contact_locations), nb_templates), dtype=np.float32)
 
     for count, depth in enumerate(depth_um):
-        weights[count] = (
-            1 / (1 + np.sqrt(dist**2 + depth**2)) ** decay_power
-        )
-        weights[count] *= (dist <= 2*radius_um)
-        #weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
+        weights[count] = 1 / (1 + np.sqrt(dist**2 + depth**2)) ** decay_power
+        weights[count] *= dist <= 2 * radius_um
+        # weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
 
     # normalize
     with np.errstate(divide="ignore", invalid="ignore"):
         norm = np.sqrt(np.sum(weights**2, axis=1))[:, np.newaxis, :]
         weights /= norm
-    
+
     weights[~np.isfinite(weights)] = 0.0
 
     return template_positions, weights, nearest_template_mask

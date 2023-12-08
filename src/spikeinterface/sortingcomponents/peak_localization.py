@@ -348,7 +348,7 @@ class LocalizeGridConvolution(PipelineNode):
         margin_um=50.0,
         prototype=None,
         percentile=20.0,
-        sparsity_threshold=0.01
+        sparsity_threshold=0.01,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -412,15 +412,13 @@ class LocalizeGridConvolution(PipelineNode):
             num_templates = np.sum(nearest_templates)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
 
-            global_products = (
-                waveforms[idx, :, :][:, :, channel_mask] * self.prototype
-            ).sum(axis=1)
+            global_products = (waveforms[idx, :, :][:, :, channel_mask] * self.prototype).sum(axis=1)
             global_products /= np.linalg.norm(global_products, axis=0)
 
             dot_products = np.zeros((nb_weights, num_spikes, num_templates), dtype=np.float32)
             for count in range(nb_weights):
-                w = self.weights[count, :, :][channel_mask, :][:, nearest_templates]            
-                dot_products[count]= np.dot(global_products, w)
+                w = self.weights[count, :, :][channel_mask, :][:, nearest_templates]
+                dot_products[count] = np.dot(global_products, w)
 
             dot_products = np.maximum(0, dot_products)
             if self.percentile < 100:
@@ -435,7 +433,7 @@ class LocalizeGridConvolution(PipelineNode):
 
             found_positions[:, 2] = np.dot(self.depth_um, dot_products.sum(2))
             found_positions /= scalar_products[:, np.newaxis]
-            
+
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
             peak_locations["z"][idx] = found_positions[:, 2]
