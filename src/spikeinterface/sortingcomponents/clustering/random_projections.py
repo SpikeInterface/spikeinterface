@@ -195,7 +195,7 @@ class RandomProjectionClustering:
             waveform_folder,
             return_scaled=False,
             mode=mode,
-            precompute_template=["average"],
+            precompute_template=["median"],
             **params["job_kwargs"],
             **params["waveforms"],
         )

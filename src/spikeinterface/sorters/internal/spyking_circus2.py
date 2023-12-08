@@ -201,7 +201,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting,
                 waveforms_folder,
                 return_scaled=False,
-                precompute_template=["average"],
+                precompute_template=["median"],
                 mode=mode,
                 **waveforms_params,
             )
@@ -212,7 +212,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_job_params = {}
             matching_job_params.update(job_kwargs)
             if matching_method == "wobble":
-                matching_params["templates"] = we.get_all_templates(mode="average")
+                matching_params["templates"] = we.get_all_templates(mode="median")
                 matching_params["nbefore"] = we.nbefore
                 matching_params["nafter"] = we.nafter
             else:
