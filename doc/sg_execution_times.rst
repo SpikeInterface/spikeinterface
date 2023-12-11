@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**00:04.653** total execution time for 16 files **from all galleries**:
+**00:03.838** total execution time for 16 files **from all galleries**:
 
 .. container::
 
@@ -33,22 +33,22 @@ Computation times
      - Time
      - Mem (MB)
    * - :ref:`sphx_glr_modules_gallery_core_plot_4_waveform_extractor.py` (``..\examples\modules_gallery\core\plot_4_waveform_extractor.py``)
-     - 00:02.203
-     - 0.0
-   * - :ref:`sphx_glr_modules_gallery_qualitymetrics_plot_4_curation.py` (``..\examples\modules_gallery\qualitymetrics\plot_4_curation.py``)
-     - 00:00.856
+     - 00:02.038
      - 0.0
    * - :ref:`sphx_glr_modules_gallery_extractors_plot_1_read_various_formats.py` (``..\examples\modules_gallery\extractors\plot_1_read_various_formats.py``)
-     - 00:00.675
-     - 0.0
-   * - :ref:`sphx_glr_modules_gallery_qualitymetrics_plot_3_quality_mertics.py` (``..\examples\modules_gallery\qualitymetrics\plot_3_quality_mertics.py``)
-     - 00:00.337
-     - 0.0
-   * - :ref:`sphx_glr_modules_gallery_widgets_plot_3_waveforms_gallery.py` (``..\examples\modules_gallery\widgets\plot_3_waveforms_gallery.py``)
-     - 00:00.335
+     - 00:00.640
      - 0.0
    * - :ref:`sphx_glr_modules_gallery_widgets_plot_4_peaks_gallery.py` (``..\examples\modules_gallery\widgets\plot_4_peaks_gallery.py``)
-     - 00:00.247
+     - 00:00.303
+     - 0.0
+   * - :ref:`sphx_glr_modules_gallery_qualitymetrics_plot_3_quality_mertics.py` (``..\examples\modules_gallery\qualitymetrics\plot_3_quality_mertics.py``)
+     - 00:00.301
+     - 0.0
+   * - :ref:`sphx_glr_modules_gallery_widgets_plot_3_waveforms_gallery.py` (``..\examples\modules_gallery\widgets\plot_3_waveforms_gallery.py``)
+     - 00:00.285
+     - 0.0
+   * - :ref:`sphx_glr_modules_gallery_qualitymetrics_plot_4_curation.py` (``..\examples\modules_gallery\qualitymetrics\plot_4_curation.py``)
+     - 00:00.271
      - 0.0
    * - :ref:`sphx_glr_modules_gallery_comparison_generate_erroneous_sorting.py` (``..\examples\modules_gallery\comparison\generate_erroneous_sorting.py``)
      - 00:00.000
