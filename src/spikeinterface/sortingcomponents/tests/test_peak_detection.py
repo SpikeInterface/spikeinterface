@@ -24,7 +24,7 @@ from spikeinterface.sortingcomponents.peak_detection import (
 )
 
 from spikeinterface.core.node_pipeline import run_node_pipeline
-from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
+from spikeinterface.sortingcomponents.tools import get_prototype_spike
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
@@ -314,22 +314,16 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
         assert len(peaks_local_numba) == len(peaks_local_cl)
 
 
-def test_detect_peaks_locally_exclusive_matched_filtering(recording, spike_trains, job_kwargs, torch_job_kwargs):
+def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs):
     peaks_by_channel_np = detect_peaks(
-        recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+        recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
     )
 
     ms_before = 1.0
     ms_after = 1.0
+    prototype = -get_prototype_spike(recording, peaks_by_channel_np, ms_before, ms_after, **job_kwargs)
 
-    few_peaks = select_peaks(peaks_by_channel_np, method="uniform", n_peaks=500)
-    few_wfs = extract_waveform_at_max_channel(recording, few_peaks, ms_before, ms_after, **job_kwargs)
-
-    nbefore = int(recording.get_sampling_frequency() * ms_before / 1000)
-    prototype = few_wfs[:, :, 0]
-    prototype = np.median(prototype, 0)
-
-    peaks_local_numba = detect_peaks(
+    peaks_local_mf_filtering = detect_peaks(
         recording,
         method="locally_exclusive_mf",
         peak_sign="neg",
@@ -338,7 +332,7 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, spike_train
         prototype=prototype,
         **job_kwargs,
     )
-    assert len(peaks_by_channel_np) > len(peaks_local_numba)
+    assert len(peaks_local_mf_filtering) > len(peaks_by_channel_np)
 
 
 detection_classes = [

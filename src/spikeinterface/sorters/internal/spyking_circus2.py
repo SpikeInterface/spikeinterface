@@ -15,7 +15,7 @@ from spikeinterface.core import (
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
 
-from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
+from spikeinterface.sortingcomponents.tools import get_prototype_spike
 
 try:
     import hdbscan
@@ -107,12 +107,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         peaks = detect_peaks(recording_f, "locally_exclusive", **detection_params, **job_kwargs)
 
         if params["matched_filtering"]:
-            few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
-            few_wfs = extract_waveform_at_max_channel(recording_f, few_peaks, ms_before, ms_after, **job_kwargs)
-
-            nbefore = int(sampling_rate * ms_before / 1000)
-            prototype = few_wfs[:, :, 0]
-            prototype = np.median(prototype, 0)
+            prototype = - get_prototype_spike(recording, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
             peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params, **job_kwargs)
 

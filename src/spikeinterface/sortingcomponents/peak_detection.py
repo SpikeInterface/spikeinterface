@@ -597,7 +597,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         The canonical waveform of action potentials
     rank : int (default 5)
         The rank for SVD convolution of spatiotemporal templates with the traces
-    depth_um: np.array, default: np.linspace(5, 150.0, 10)
+    depth_um: np.array, default: np.linspace(5, 100.0, 5)
         Putative depth of the fake templates
     decay_power: float, default:1
         The decay power as function of the distances for the amplitudes
@@ -613,7 +613,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        depth_um=np.linspace(5, 150, 3),
+        depth_um=np.linspace(5, 100, 5),
         decay_power=1,
         rank=5,
         noise_levels=None,
@@ -652,12 +652,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         for depth in depth_um:
             weights = 1 / (1 + np.sqrt(dist**2 + depth**2)) ** decay_power
 
-            # normalize
-            with np.errstate(divide="ignore", invalid="ignore"):
-                norm = np.sqrt(np.sum(weights**2, axis=0))[np.newaxis, :]
-                weights /= norm
-                weights[~np.isfinite(weights)] = 0.0
-
             for w in weights:
                 templates[count] = w * prototype[:, np.newaxis]
                 count += 1
@@ -681,8 +675,9 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         medians = medians[:, None]
         noise_levels = np.median(np.abs(random_data - medians), axis=1) / 0.6744897501960817
         abs_thresholds = noise_levels * detect_threshold
+        num_depths = len(depth_um)
 
-        return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular)
+        return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular, num_depths)
 
     @classmethod
     def get_convolved_traces(cls, traces, temporal, spatial, singular):
@@ -697,9 +692,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         scaled_filtered_data = spatially_filtered_data * singular
         objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="same")
         scalar_products += np.sum(objective_by_rank, axis=0)
-        if num_depths > 1:
-            scalar_products = scalar_products.reshape(num_depths, num_channels, -1)
-            scalar_products = np.max(scalar_products, axis=0)
         return scalar_products
 
     @classmethod
@@ -709,7 +701,8 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
 
     @classmethod
     def detect_peaks(
-        cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular
+        cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular, 
+        num_depths
     ):
         assert HAVE_NUMBA, "You need to install numba"
         traces = cls.get_convolved_traces(traces, temporal, spatial, singular)
@@ -717,16 +710,18 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
 
         if peak_sign in ("pos", "both"):
             peak_mask = traces_center > abs_thresholds[:, None]
-            peak_mask = _numba_detect_peak_pos_transposed(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
+            peak_mask = _numba_detect_peak_pos_matched_filtering(
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask,
+                num_depths
             )
 
         if peak_sign in ("neg", "both"):
             if peak_sign == "both":
                 peak_mask_pos = peak_mask.copy()
             peak_mask = traces_center < -abs_thresholds[:, None]
-            peak_mask = _numba_detect_peak_neg_transposed(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
+            peak_mask = _numba_detect_peak_neg_matched_filtering(
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, 
+                num_depths
             )
 
             if peak_sign == "both":
@@ -736,7 +731,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
         peak_sample_ind += exclude_sweep_size
 
-        return peak_sample_ind, peak_chan_ind
+        return peak_sample_ind, peak_chan_ind // num_depths
 
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
@@ -859,8 +854,8 @@ if HAVE_NUMBA:
         return peak_mask
 
     @numba.jit(nopython=True, parallel=False)
-    def _numba_detect_peak_pos_transposed(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
+    def _numba_detect_peak_pos_matched_filtering(
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_depths
     ):
         num_chans = traces_center.shape[0]
         for chan_ind in range(num_chans):
@@ -868,7 +863,7 @@ if HAVE_NUMBA:
                 if not peak_mask[chan_ind, s]:
                     continue
                 for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind, neighbour]:
+                    if not neighbours_mask[chan_ind//num_depths, neighbour//num_depths]:
                         continue
                     for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
@@ -884,8 +879,8 @@ if HAVE_NUMBA:
         return peak_mask
 
     @numba.jit(nopython=True, parallel=False)
-    def _numba_detect_peak_neg_transposed(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
+    def _numba_detect_peak_matched_filtering(
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_depths
     ):
         num_chans = traces_center.shape[0]
         for chan_ind in range(num_chans):
@@ -893,7 +888,7 @@ if HAVE_NUMBA:
                 if not peak_mask[chan_ind, s]:
                     continue
                 for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind, neighbour]:
+                    if not neighbours_mask[chan_ind//num_depths, neighbour//num_depths]:
                         continue
                     for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
