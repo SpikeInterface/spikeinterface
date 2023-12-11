@@ -36,7 +36,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "filtering": {"freq_min": 300.0, "freq_max": 12000.0},
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "features": {},
         "svd": {"n_components": 6},
         "clustering": {
             "split_radius_um": 40.0,
@@ -51,6 +50,20 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "job_kwargs": {"n_jobs": -1},
         "save_array": True,
     }
+
+    _params_description = {
+        "apply_preprocessing": "Apply internal preprocessing or not",
+        "waveforms": "A dictonary containing waveforms params: ms_before, ms_after, radius_um",
+        "filtering": "A dictonary containing filtering params: freq_min, freq_max", 
+        "detection": "A dictonary containing detection params: peak_sign, detect_threshold, exclude_sweep_ms, radius_um", 
+        "selection": "A dictonary containing selection params: n_peaks_per_channel, min_n_peaks", 
+        "svd": "A dictonary containing svd params: n_components", 
+        "clustering": "A dictonary containing clustering params: split_radius_um, merge_radius_um",
+        "templates": "A dictonary containing waveforms params for peeler: ms_before, ms_after",
+        "matching": "A dictonary containing matching params for matching: peak_shift_ms, radius_um",
+        "job_kwargs": "A dictionnary containing job kwargs",
+        "save_array": "Save or not intermediate arrays",
+     }
 
     handle_multi_segment = True
 
