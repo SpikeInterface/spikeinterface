@@ -38,22 +38,34 @@ First, let's import the parts of SpikeInterface we need into Python, and generat
     from probeinterface import generate_tetrode, ProbeGroup
     import numpy as np
 
-    recording, _ = se.toy_example(duration=[10.], num_segments=1, num_channels=16)
+    # Create a toy 384 channel recording with 4 shanks (each shank contain 96 channels)
+    recording, _ = se.toy_example(duration=[1.00], num_segments=1, num_channels=384)
+    four_shank_groupings = np.repeat([0, 1, 2, 3], 96)
+    recording.set_property("group", four_shank_groupings)
+
+    recording.get_property("location")
+
     print(recording.get_channel_groups())
-    # >>> [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] (here, all channels are in the same group)
-
-    # create 4 tetrodes as a 'probegroup'
-    probegroup = ProbeGroup()
-    for i in range(4):
-        tetrode = generate_tetrode()
-        tetrode.set_device_channel_indices(np.arange(4) + i * 4)
-        probegroup.add_probe(tetrode)
-
-    # set this to the recording
-    recording_4_tetrodes = recording.set_probegroup(probegroup, group_mode='by_probe')
-
-    print(recording_4_tetrodes.get_property('group'))
-    # >>> [0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3]  (now, channels are grouped by tetrode index)
+    """
+    array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2,
+           2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+           2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+           2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+           2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+           2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+           3, 3, 3, 3, 3, 3, 3, 3, 3, 3])
+    """
 
 We can split a recording into multiple recordings, one for each channel group, with the :py:func:`~split_by` method.
 
@@ -153,7 +165,7 @@ Alternatively, SpikeInterface provides a convenience function to sort the record
 
      aggregate_sorting = run_sorter_by_property(
         sorter_name='kilosort2',
-        recording=recording_4_tetrodes,
+        recording=preprocessed_recording,
         grouping_property='group',
         working_folder='working_path'
     )
