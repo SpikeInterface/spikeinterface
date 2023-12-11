@@ -24,9 +24,9 @@ for example using a different sorter for the hippocampus, the thalamus, or the c
 Splitting a Recording by Channel Group
 --------------------------------------
 
-In this example, we create a 16-channel recording with 4 tetrodes. However this could
+In this example, we create a 384-channel recording with 4 shanks. However this could
 be any recording in which the channel are grouped in some way, for example
-a 384 channel, 4 shank Neuropixels recording in which channel grouping represents the separate shanks.
+a multi-tetrode recording with channel groups representing the channels on each individual tetrodes.
 
 First, let's import the parts of SpikeInterface we need into Python, and generate our toy recording:
 
@@ -42,8 +42,6 @@ First, let's import the parts of SpikeInterface we need into Python, and generat
     recording, _ = se.toy_example(duration=[1.00], num_segments=1, num_channels=384)
     four_shank_groupings = np.repeat([0, 1, 2, 3], 96)
     recording.set_property("group", four_shank_groupings)
-
-    recording.get_property("location")
 
     print(recording.get_channel_groups())
     """
@@ -78,11 +76,13 @@ Splitting a recording by channel group returns a dictionary containing separate 
 .. code-block:: python
 
     print(split_recording_dict)
-    # {0: ChannelSliceRecording: 4 channels - 30.0kHz - 1 segments - 300,000 samples - 10.00s
-    #                       float32 dtype - 4.58 MiB, 1: ChannelSliceRecording: 4 channels - 30.0kHz - 1 segments - 300,000 samples - 10.00s
-    #                       float32 dtype - 4.58 MiB, 2: ChannelSliceRecording: 4 channels - 30.0kHz - 1 segments - 300,000 samples - 10.00s
-    #                       float32 dtype - 4.58 MiB, 3: ChannelSliceRecording: 4 channels - 30.0kHz - 1 segments - 300,000 samples - 10.00s
-    #                       float32 dtype - 4.58 MiB}
+    """
+    {0: ChannelSliceRecording: 96 channels - 30.0kHz - 1 segments - 30,000 samples - 1.00s - float32 dtype
+                           10.99 MiB, 1: ChannelSliceRecording: 96 channels - 30.0kHz - 1 segments - 30,000 samples - 1.00s - float32 dtype
+                           10.99 MiB, 2: ChannelSliceRecording: 96 channels - 30.0kHz - 1 segments - 30,000 samples - 1.00s - float32 dtype
+                           10.99 MiB, 3: ChannelSliceRecording: 96 channels - 30.0kHz - 1 segments - 30,000 samples - 1.00s - float32 dtype
+                           10.99 MiB}
+    """
 Preprocessing a Recording by Channel Group
 ------------------------------------------
 
@@ -120,19 +120,18 @@ back together under the hood).
 
 It is strongly recommended to use the above structure to preprocess by channel group.
 A discussion of the subtleties of the :py:func:`~aggregate_channels` may be found in
-the below  section for the interested reader.
+the end of this tutorial for the interested reader.
 
 .. warning::
-    It is not recommended to apply :py:func:`~aggregate_channels` more than once
-    as this will slow down :py:func:`~get_traces` calls and may result in unpredictable behaviour.
+    It is not recommended to apply :py:func:`~aggregate_channels` more than once.
+    This will slow down :py:func:`~get_traces` calls and may result in unpredictable behaviour.
 
 
 Sorting a Recording by Channel Group
 ------------------------------------
 
 We can also sort a recording for each channel group separately. It is not necessary to preprocess
-a recording by channel group in order to sort by channel group. We can perform sorting on a recording
-whichever way it was preprocessed.
+a recording by channel group in order to sort by channel group.
 
 There are two ways to sort a recording by channel group. First, we can split the preprocessed
 recording (or, if it was already split during preprocessing as above, skip the :py:func:`~aggregate_channels` step
@@ -141,7 +140,7 @@ directly use the :py:func:`~split_recording_dict`).
 **Option 1: Manual splitting**
 
 In this example, similar to above we loop over all preprocessed recordings that
-are groups by channel, and apply the sorting separately. We store the
+are grouped by channel, and apply the sorting separately. We store the
 sorting objects in a dictionary for later use.
 
 .. code-block:: python
@@ -181,9 +180,9 @@ Further notes on preprocessing by channel group
     :py:func:`~get_traces` is called, the preprocessing is still performed per-group,
     even though the recording is now aggregated.
 
-    However, to ensure data is preprocessed by channel group, the preprocessing step must be
+    To ensure data is preprocessed by channel group, the preprocessing step must be
     applied separately to each split channel group recording.
-    For example, the below example will NOT preprocess by shank:
+    For example, the below example will NOT preprocess by channel group:
 
     .. code-block:: python
 
@@ -194,11 +193,11 @@ Further notes on preprocessing by channel group
         # will NOT preprocess by channel group.
         filtered_recording = common_reference(combined_recording)
 
-    Similarly, in the below example the first preprocessing step (bandpass filter)
-    would applied by group (although, this would have no effect in practice
-    as this preprocessing step is always separately for each individual channel).
+    In the below example the first preprocessing step (bandpass filter)
+    would applied by channel group (although, in practice this would have no effect
+    as filtering is always applied separately to each individual channel).
 
-    However, in the below example common referencing (does operate across
+    However, common referencing (does operate across
     separate channels) will not be applied per channel group:
 
     .. code-block:: python
