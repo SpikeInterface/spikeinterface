@@ -701,8 +701,16 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
 
     @classmethod
     def detect_peaks(
-        cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular, 
-        num_depths
+        cls,
+        traces,
+        peak_sign,
+        abs_thresholds,
+        exclude_sweep_size,
+        neighbours_mask,
+        temporal,
+        spatial,
+        singular,
+        num_depths,
     ):
         assert HAVE_NUMBA, "You need to install numba"
         traces = cls.get_convolved_traces(traces, temporal, spatial, singular)
@@ -711,8 +719,14 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         if peak_sign in ("pos", "both"):
             peak_mask = traces_center > abs_thresholds[:, None]
             peak_mask = _numba_detect_peak_pos_matched_filtering(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask,
-                num_depths
+                traces,
+                traces_center,
+                peak_mask,
+                exclude_sweep_size,
+                abs_thresholds,
+                peak_sign,
+                neighbours_mask,
+                num_depths,
             )
 
         if peak_sign in ("neg", "both"):
@@ -720,8 +734,14 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
                 peak_mask_pos = peak_mask.copy()
             peak_mask = traces_center < -abs_thresholds[:, None]
             peak_mask = _numba_detect_peak_neg_matched_filtering(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, 
-                num_depths
+                traces,
+                traces_center,
+                peak_mask,
+                exclude_sweep_size,
+                abs_thresholds,
+                peak_sign,
+                neighbours_mask,
+                num_depths,
             )
 
             if peak_sign == "both":
@@ -863,7 +883,7 @@ if HAVE_NUMBA:
                 if not peak_mask[chan_ind, s]:
                     continue
                 for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind//num_depths, neighbour//num_depths]:
+                    if not neighbours_mask[chan_ind // num_depths, neighbour // num_depths]:
                         continue
                     for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
@@ -888,7 +908,7 @@ if HAVE_NUMBA:
                 if not peak_mask[chan_ind, s]:
                     continue
                 for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind//num_depths, neighbour//num_depths]:
+                    if not neighbours_mask[chan_ind // num_depths, neighbour // num_depths]:
                         continue
                     for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
