@@ -769,10 +769,19 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
 
         # Find peaks and correct for time shift
         peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
-        peak_sample_ind += exclude_sweep_size
-        depths_um = depth_um[peak_chan_ind // num_channels]
 
-        return peak_sample_ind, peak_chan_ind % num_channels, depths_um
+        peak_chan_ind = (peak_chan_ind % num_channels)
+        peak_sample_ind += exclude_sweep_size
+        
+        depths_um = depth_um[peak_chan_ind // num_channels]
+        # depths_um = np.zeros(len(peak_sample_ind), dtype=np.float32)
+        # for count in range(len(peak_chan_ind)):
+        #     channel = peak_chan_ind[count]
+        #     peak = peak_sample_ind[count]
+        #     data = traces[channel::num_channels, peak]
+        #     depths_um[count] = np.dot(data, depth_um)/data.sum()
+
+        return peak_sample_ind, peak_chan_ind, depths_um
 
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
