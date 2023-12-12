@@ -647,7 +647,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        depth_um=np.linspace(5, 100, 5),
+        depth_um=np.linspace(0, 50, 5),
         decay_power=1,
         rank=5,
         noise_levels=None,
@@ -684,7 +684,8 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         count = 0
 
         for depth in depth_um:
-            weights = 1 / (1 + np.sqrt(dist**2 + depth**2)) ** decay_power
+            weights = 1 / (0.1 + np.sqrt(dist**2 + depth**2)) ** decay_power
+            weights /= weights.max(0)
 
             for w in weights:
                 templates[count] = w * prototype[:, np.newaxis]
