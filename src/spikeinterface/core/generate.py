@@ -303,9 +303,9 @@ def generate_sorting_to_inject(
 class TransformSorting(BaseSorting):
     """
     Generates a sorting object keeping track of added spikes/units from an external spike_vector.
-    More precisely, the TransformSorting objects keeps two internal arrays added_spikes and added_spikes
-    as boolean mask to track (in the representation as a spike vector) where modifications have been
-    made
+    More precisely, the TransformSorting objects keeps two internal arrays added_spikes_existing_units and 
+    added_spikes_new_units as boolean mask to track (in the representation as a spike vector) where 
+    modifications have been made
 
     Parameters
     ----------
