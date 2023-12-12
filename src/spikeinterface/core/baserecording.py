@@ -1,6 +1,6 @@
+from __future__ import anntotations
 import warnings
 from pathlib import Path
-from typing import Iterable, List, Union
 from warnings import warn
 
 import numpy as np
@@ -36,12 +36,12 @@ class BaseRecording(BaseRecordingSnippets):
         "noise_level_mad_scaled",
     ]
 
-    def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
+    def __init__(self, sampling_frequency: float, channel_ids: list, dtype):
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
 
-        self._recording_segments: List[BaseRecordingSegment] = []
+        self._recording_segments: list[BaseRecordingSegment] = []
 
         # initialize main annotation and properties
         self.annotate(is_filtered=False)
@@ -766,20 +766,20 @@ class BaseRecordingSegment(BaseSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | np.array | None = None,
     ) -> np.ndarray:
         """
         Return the raw traces, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        start_frame: Union[int, None], default: None
+        start_frame: int | None, default: None
             start sample index, or zero if None
-        end_frame: Union[int, None], default: None
+        end_frame: int | None, default: None
             end_sample, or number of samples if None
-        channel_indices: Union[List, None], default: None
+        channel_indices: list | np.array | None, default: None
             Indices of channels to return, or all channels if None
         order: list or None, default: None
             The memory order of the returned array.
