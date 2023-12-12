@@ -18,7 +18,7 @@ class CrossCorrelogramsWidget(BaseWidget):
     unit_ids  list or None, default: None
         List of unit ids
     min_similarity_for_correlograms : float, default: 0.2
-        For sortingvoew backend. Threshold for computing pair-wise cross-correlograms.
+        For sortingview backend. Threshold for computing pair-wise cross-correlograms.
         If template similarity between two units is below this threshold, the cross-correlogram is not displayed
     window_ms : float, default: 100.0
         Window for CCGs in ms. If correlograms are already computed (e.g. with WaveformExtractor),
