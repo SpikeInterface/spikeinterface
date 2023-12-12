@@ -379,7 +379,7 @@ def compute_grid_convolution(
     margin_um=50,
     prototype=None,
     percentile=5,
-    sparsity_threshold=0.05,
+    sparsity_threshold=0.5,
 ):
     """
     Estimate the positions of the templates from a large grid of fake templates
@@ -577,7 +577,7 @@ def get_grid_convolution_templates_and_weights(
     depth_um=np.linspace(0, 50.0, 5),
     margin_um=50,
     decay_power=1,
-    sparsity_threshold=0.05,
+    sparsity_threshold=0.5,
 ):
     import sklearn.metrics
 
