@@ -316,6 +316,7 @@ class NumpySorting(BaseSorting):
             the sampling frequency in Hz
         unit_ids: np.array
             The unit_ids vector which is generally the channel_ids but can be different.
+
         Returns
         -------
         sorting
