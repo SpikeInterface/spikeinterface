@@ -661,7 +661,8 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         singular = singular[:, :rank]
         spatial = spatial[:, :rank, :]
         templates = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
-        norms = np.linalg.norm(templates, axis=(1, 2))
+        norms = (np.linalg.norm(templates, axis=(1, 2))**2)
+        
         temporal /= norms[:, np.newaxis, np.newaxis]
         temporal = np.flip(temporal, axis=1)
         spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
@@ -714,38 +715,20 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
     ):
         assert HAVE_NUMBA, "You need to install numba"
         traces = cls.get_convolved_traces(traces, temporal, spatial, singular)
+        traces /= abs_thresholds[:, None]
         traces_center = traces[:, exclude_sweep_size:-exclude_sweep_size]
 
-        if peak_sign in ("pos", "both"):
-            peak_mask = traces_center > abs_thresholds[:, None]
-            peak_mask = _numba_detect_peak_pos_matched_filtering(
-                traces,
-                traces_center,
-                peak_mask,
-                exclude_sweep_size,
-                abs_thresholds,
-                peak_sign,
-                neighbours_mask,
-                num_depths,
-            )
-
-        if peak_sign in ("neg", "both"):
-            if peak_sign == "both":
-                peak_mask_pos = peak_mask.copy()
-            peak_mask = traces_center < -abs_thresholds[:, None]
-            peak_mask = _numba_detect_peak_neg_matched_filtering(
-                traces,
-                traces_center,
-                peak_mask,
-                exclude_sweep_size,
-                abs_thresholds,
-                peak_sign,
-                neighbours_mask,
-                num_depths,
-            )
-
-            if peak_sign == "both":
-                peak_mask = peak_mask | peak_mask_pos
+        peak_mask = traces_center > 1
+        peak_mask = _numba_detect_peak_matched_filtering(
+            traces,
+            traces_center,
+            peak_mask,
+            exclude_sweep_size,
+            abs_thresholds,
+            peak_sign,
+            neighbours_mask,
+            num_depths,
+        )
 
         # Find peaks and correct for time shift
         peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
@@ -874,7 +857,7 @@ if HAVE_NUMBA:
         return peak_mask
 
     @numba.jit(nopython=True, parallel=False)
-    def _numba_detect_peak_pos_matched_filtering(
+    def _numba_detect_peak_matched_filtering(
         traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_depths
     ):
         num_chans = traces_center.shape[0]
@@ -891,31 +874,6 @@ if HAVE_NUMBA:
                         peak_mask[chan_ind, s] &= traces_center[chan_ind, s] > traces[neighbour, s + i]
                         peak_mask[chan_ind, s] &= (
                             traces_center[chan_ind, s] >= traces[neighbour, exclude_sweep_size + s + i + 1]
-                        )
-                        if not peak_mask[chan_ind, s]:
-                            break
-                    if not peak_mask[chan_ind, s]:
-                        break
-        return peak_mask
-
-    @numba.jit(nopython=True, parallel=False)
-    def _numba_detect_peak_matched_filtering(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_depths
-    ):
-        num_chans = traces_center.shape[0]
-        for chan_ind in range(num_chans):
-            for s in range(peak_mask.shape[1]):
-                if not peak_mask[chan_ind, s]:
-                    continue
-                for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind // num_depths, neighbour // num_depths]:
-                        continue
-                    for i in range(exclude_sweep_size):
-                        if chan_ind != neighbour:
-                            peak_mask[chan_ind, s] &= traces_center[chan_ind, s] <= traces_center[neighbour, s]
-                        peak_mask[chan_ind, s] &= traces_center[chan_ind, s] < traces[neighbour, s + i]
-                        peak_mask[chan_ind, s] &= (
-                            traces_center[chan_ind, s] <= traces[neighbour, exclude_sweep_size + s + i + 1]
                         )
                         if not peak_mask[chan_ind, s]:
                             break
