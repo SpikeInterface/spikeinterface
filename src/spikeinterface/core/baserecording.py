@@ -242,34 +242,34 @@ class BaseRecording(BaseRecordingSnippets):
 
     def get_traces(
         self,
-        segment_index: Union[int, None] = None,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_ids: Union[Iterable, None] = None,
-        order: Union[str, None] = None,
-        return_scaled=False,
-        cast_unsigned=False,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_ids: list | np.array | None = None,
+        order: "C" | "F" | None = None,
+        return_scaled: bool = False,
+        cast_unsigned: bool = False,
     ):
         """Returns traces from recording.
 
         Parameters
         ----------
-        segment_index : Union[int, None], default: None
+        segment_index : int | None, default: None
             The segment index to get traces from. If recording is multi-segment, it is required, default: None
-        start_frame : Union[int, None], default: None
+        start_frame : int | None, default: None
             The start frame. If None, 0 is used, default: None
-        end_frame : Union[int, None], default: None
+        end_frame : int | None, default: None
             The end frame. If None, the number of samples in the segment is used, default: None
-        channel_ids : Union[Iterable, None], default: None
+        channel_ids : list | np.array | None, default: None
             The channel ids. If None, all channels are used, default: None
-        order : Union[str, None], default: None
-            The order of the traces ("C" | "F"). If None, traces are returned as they are, default: None
-        return_scaled : bool, default: None
+        order : "C" | "F" | None, default: None
+            The order of the traces ("C" | "F"). If None, traces are returned as they are
+        return_scaled : bool, default: False
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-            traces are scaled to uV, default: False
-        cast_unsigned : bool, default: None
+            traces are scaled to uV
+        cast_unsigned : bool, default: False
             If True and the traces are unsigned, they are cast to integer and centered
-            (an offset of (2**nbits) is subtracted), default: False
+            (an offset of (2**nbits) is subtracted)
 
         Returns
         -------
@@ -321,7 +321,7 @@ class BaseRecording(BaseRecordingSnippets):
                 traces = traces.astype("float32") * gains + offsets
         return traces
 
-    def has_scaled_traces(self):
+    def has_scaled_traces(self) -> bool:
         """Checks if the recording has scaled traces
 
         Returns
@@ -613,9 +613,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         return SelectSegmentRecording(self, segment_indices=segment_indices)
 
-    def is_binary_compatible(self):
+    def is_binary_compatible(self) -> bool:
         """
-        Inform is this recording is "binary" compatible.
+        Checks if the recording is "binary" compatible.
         To be used before calling `rec.get_binary_description()`
 
         Returns
