@@ -128,7 +128,7 @@ def detect_peaks(
 
 
 expanded_base_peak_dtype = np.dtype(base_peak_dtype + [("iteration", "int8")])
-
+matched_base_peak_dtype = np.dtype(base_peak_dtype + [("depth_um", "float32")])
 
 class IterativePeakDetector(PeakDetector):
     """
@@ -351,6 +351,38 @@ class PeakDetectorWrapper(PeakDetector):
         local_peaks["channel_index"] = peak_chan_ind
         local_peaks["amplitude"] = peak_amplitude
         local_peaks["segment_index"] = segment_index
+
+        # return is always a tuple
+        return (local_peaks,)
+
+class MatchedPeakDetectorWrapper(PeakDetector):
+    # transitory class to maintain instance based and class method based
+    # TODO later when in main: refactor in every old detector class:
+    #    * check_params
+    #    * get_method_margin
+    #  and move the logic in the init
+    #  but keep the class method "detect_peaks()" because it is convinient in template matching
+    def __init__(self, recording, **params):
+        PeakDetector.__init__(self, recording, return_output=True)
+
+        self.params = params
+        self.args = self.check_params(recording, **params)
+
+    def get_trace_margin(self):
+        return self.get_method_margin(*self.args)
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+        peak_sample_ind, peak_chan_ind, depth_um = self.detect_peaks(traces, *self.args)
+        if peak_sample_ind.size == 0 or peak_chan_ind.size == 0:
+            return (np.zeros(0, dtype=matched_base_peak_dtype),)
+
+        peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+        local_peaks = np.zeros(peak_sample_ind.size, dtype=matched_base_peak_dtype)
+        local_peaks["sample_index"] = peak_sample_ind
+        local_peaks["channel_index"] = peak_chan_ind
+        local_peaks["amplitude"] = peak_amplitude
+        local_peaks["segment_index"] = segment_index
+        local_peaks["depth_um"] = depth_um
 
         # return is always a tuple
         return (local_peaks,)
@@ -582,7 +614,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         return peak_sample_ind, peak_chan_ind
 
 
-class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
+class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
     """Detect peaks using the 'locally exclusive' method."""
 
     name = "locally_exclusive_mf"
@@ -676,9 +708,11 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         medians = medians[:, None]
         noise_levels = np.median(np.abs(random_data - medians), axis=1) / 0.6744897501960817
         abs_thresholds = noise_levels * detect_threshold
-        num_depths = len(depth_um)
 
-        return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular, num_depths)
+        return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular, depth_um)
+
+    def get_dtype(self):
+        return matched_base_peak_dtype
 
     @classmethod
     def get_convolved_traces(cls, traces, temporal, spatial, singular):
@@ -711,12 +745,14 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         temporal,
         spatial,
         singular,
-        num_depths,
+        depth_um,
     ):
         assert HAVE_NUMBA, "You need to install numba"
         traces = cls.get_convolved_traces(traces, temporal, spatial, singular)
         traces /= abs_thresholds[:, None]
         traces_center = traces[:, exclude_sweep_size:-exclude_sweep_size]
+        num_depths = len(depth_um)
+        num_channels = traces.shape[0] // num_depths
 
         peak_mask = traces_center > 1
         peak_mask = _numba_detect_peak_matched_filtering(
@@ -733,8 +769,9 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         # Find peaks and correct for time shift
         peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
         peak_sample_ind += exclude_sweep_size
+        depths_um = depth_um[peak_chan_ind // num_channels]
 
-        return peak_sample_ind, peak_chan_ind // num_depths
+        return peak_sample_ind, peak_chan_ind % num_channels, depths_um
 
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
@@ -866,7 +903,7 @@ if HAVE_NUMBA:
                 if not peak_mask[chan_ind, s]:
                     continue
                 for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind // num_depths, neighbour // num_depths]:
+                    if not neighbours_mask[chan_ind % num_depths, neighbour % num_depths]:
                         continue
                     for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
