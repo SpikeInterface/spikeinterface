@@ -1,8 +1,10 @@
 import pytest
 import numpy as np
 
-from spikeinterface.generation import interpolate_templates, move_dense_templates
+from spikeinterface.generation import interpolate_templates, move_dense_templates, DriftingTemplates
 from spikeinterface.core.generate import generate_templates
+from spikeinterface.core import Templates
+
 
 from probeinterface import generate_multi_columns_probe
 
@@ -20,10 +22,10 @@ def make_some_templates():
         contact_shape_params={"width": 10},
     )
 
-    import matplotlib.pyplot as plt
-    from probeinterface.plotting import plot_probe
-    plot_probe(probe)
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # from probeinterface.plotting import plot_probe
+    # plot_probe(probe)
+    # plt.show()
 
 
 
@@ -59,43 +61,61 @@ def make_some_templates():
 
 
     )
-    templates = generate_templates(channel_locations, unit_locations, **generate_kwargs)
+    templates_array = generate_templates(channel_locations, unit_locations, **generate_kwargs)
+
+    templates = Templates(
+        templates_array=templates_array,
+        sampling_frequency=sampling_frequency,
+        nbefore=nbefore,
+        probe=probe,
+    )
 
 
-    return np_templates, probe
+    return templates
 
 
 def test_interpolate_templates():
-    np_templates, probe = make_some_templates()
-    source_locations = probe.contact_positions
+    templates = make_some_templates()
+
+    source_locations = templates.probe.contact_positions
     # small move on both x and y
     dest_locations = source_locations + np.array([2., 3])
-    interpolate_templates(np_templates, source_locations, dest_locations, interpolation_method="cubic")
+    interpolate_templates(templates.templates_array, source_locations, dest_locations, interpolation_method="cubic")
 
 def test_move_dense_templates():
-    np_templates, probe = make_some_templates()
+    templates = make_some_templates()
 
     num_move = 5
     amplitude_motion_um = 20
     displacements = np.zeros((num_move, 2))
     displacements[:, 1] = np.linspace(-amplitude_motion_um, amplitude_motion_um, num_move)
 
-    templates_moved = move_dense_templates(np_templates, displacements, probe)
-    assert templates_moved.shape ==(num_move, ) + np_templates.shape
+    templates_moved = move_dense_templates(templates.templates_array, displacements, templates.probe)
+    assert templates_moved.shape ==(num_move, ) + templates.templates_array.shape
 
 
-def test_move_templates():
-    pass
-    
-    
-    
 
+def test_DriftingTemplates():
+    static_templates = make_some_templates()
+    drifting_templates = DriftingTemplates.from_static(static_templates)
     
+    displacement = np.array([[5., 10.]])
+    unit_index = 0
+    moved_template_array = drifting_templates.move_one_template(unit_index, displacement)
+    print(moved_template_array.shape)
+
+
+    num_move = 5
+    amplitude_motion_um = 20
+    displacements = np.zeros((num_move, 2))
+    displacements[:, 1] = np.linspace(-amplitude_motion_um, amplitude_motion_um, num_move)
+    drifting_templates.precompute_displacements(displacements)
+    assert drifting_templates.template_array_moved.shape == (num_move, static_templates.num_units, static_templates.num_samples, static_templates.num_channels)
     
 
 if __name__ == "__main__":
-    test_interpolate_templates()
-    test_move_dense_templates()
-    # test_move_templates()
+    # test_interpolate_templates()
+    # test_move_dense_templates()
+    test_DriftingTemplates()
     
     

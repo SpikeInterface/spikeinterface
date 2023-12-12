@@ -18,7 +18,6 @@ def generate_test_template(template_type):
     nbefore = 2
 
     probe = generate_multi_columns_probe(num_columns=1, num_contact_per_column=[3])
-    print(probe)
 
     if template_type == "dense":
         return Templates(templates_array=templates_array, sampling_frequency=sampling_frequency, nbefore=nbefore)
