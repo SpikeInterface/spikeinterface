@@ -661,8 +661,8 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         singular = singular[:, :rank]
         spatial = spatial[:, :rank, :]
         templates = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
-        norms = (np.linalg.norm(templates, axis=(1, 2))**2)
-        
+        norms = np.linalg.norm(templates, axis=(1, 2)) ** 2
+
         temporal /= norms[:, np.newaxis, np.newaxis]
         temporal = np.flip(temporal, axis=1)
         spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
