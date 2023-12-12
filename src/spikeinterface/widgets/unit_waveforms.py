@@ -121,9 +121,10 @@ class UnitWaveformsWidget(BaseWidget):
             else:
                 # assert provided sparsity is sparser than the one in the waveform extractor
                 waveform_sparsity = we.sparsity
-                assert np.all(
-                    np.sum(waveform_sparsity.mask, 1) - np.sum(sparsity.mask, 1) > 0
-                ), "The provided sparsity needs to be sparser than the one in the waveform extractor!"
+                assert np.all(np.sum(waveform_sparsity.mask, 1) - np.sum(sparsity.mask, 1) > 0), (
+                    "The provided 'sparsity' needs to contain a lower or an equal number of channels for each unit "
+                    "than the sparsity used to extract waveforms (e.g., using a smaller 'radius_um')"
+                )
                 extra_sparsity = True
         else:
             if sparsity is None:
