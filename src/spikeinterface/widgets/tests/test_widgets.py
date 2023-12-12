@@ -108,6 +108,7 @@ class TestWidgets(unittest.TestCase):
 
         # make sparse waveforms
         cls.sparsity_radius = compute_sparsity(cls.we_dense, method="radius", radius_um=50)
+        cls.sparsity_strict = compute_sparsity(cls.we_dense, method="radius", radius_um=20)
         cls.sparsity_best = compute_sparsity(cls.we_dense, method="best_channels", num_channels=5)
         if (cache_folder / "we_sparse").is_dir():
             cls.we_sparse = load_waveforms(cache_folder / "we_sparse")
@@ -331,12 +332,30 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.CrossCorrelogramsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
+                sw.plot_crosscorrelograms(
+                    self.sorting,
+                    window_ms=500.0,
+                    bin_ms=20.0,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
                 unit_ids = self.sorting.unit_ids[:4]
                 sw.plot_crosscorrelograms(
                     self.sorting,
                     unit_ids=unit_ids,
                     window_ms=500.0,
                     bin_ms=20.0,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                sw.plot_crosscorrelograms(
+                    self.we_sparse,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                sw.plot_crosscorrelograms(
+                    self.we_sparse,
+                    min_similarity_for_correlograms=0.6,
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
@@ -456,6 +475,9 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 sw.plot_sorting_summary(self.we_dense, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_sorting_summary(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_sorting_summary(
+                    self.we_sparse, sparsity=self.sparsity_strict, backend=backend, **self.backend_kwargs[backend]
+                )
 
     def test_plot_agreement_matrix(self):
         possible_backends = list(sw.AgreementMatrixWidget.get_possible_backends())
@@ -529,7 +551,7 @@ if __name__ == "__main__":
     # mytest.test_plot_traces()
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
-    mytest.test_plot_unit_templates()
+    mytest.test_plot_crosscorrelogram()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()

@@ -106,18 +106,25 @@ class UnitWaveformsWidget(BaseWidget):
         sorting: BaseSorting = we.sorting
 
         if unit_ids is None:
-            unit_ids = sorting.get_unit_ids()
-        unit_ids = unit_ids
+            unit_ids = sorting.unit_ids
         if channel_ids is None:
             channel_ids = we.channel_ids
-
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
         channel_locations = we.get_channel_locations()[we.channel_ids_to_indices(channel_ids)]
 
+        extra_sparsity = False
         if waveform_extractor.is_sparse():
-            sparsity = waveform_extractor.sparsity
+            if sparsity is None:
+                sparsity = waveform_extractor.sparsity
+            else:
+                # assert provided sparsity is sparser than the one in the waveform extractor
+                waveform_sparsity = we.sparsity
+                assert np.all(
+                    np.sum(waveform_sparsity.mask, 1) - np.sum(sparsity.mask, 1) > 0
+                ), "The provided sparsity needs to be sparser than the one in the waveform extractor!"
+                extra_sparsity = True
         else:
             if sparsity is None:
                 # in this case, we construct a dense sparsity
@@ -139,10 +146,16 @@ class UnitWaveformsWidget(BaseWidget):
         wfs_by_ids = {}
         if plot_waveforms:
             for unit_id in unit_ids:
-                if waveform_extractor.is_sparse():
-                    wfs = we.get_waveforms(unit_id)
+                if not extra_sparsity:
+                    if waveform_extractor.is_sparse():
+                        wfs = we.get_waveforms(unit_id)
+                    else:
+                        wfs = we.get_waveforms(unit_id, sparsity=sparsity)
                 else:
-                    wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+                    unit_index = list(sorting.unit_ids).index(unit_id)
+                    wfs = we.get_waveforms(unit_id, force_dense=True)
+                    # apply extra sparsity
+                    wfs = wfs[:, :, sparsity.mask[unit_index]]
                 wfs_by_ids[unit_id] = wfs
 
         plot_data = dict(
