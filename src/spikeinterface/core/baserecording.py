@@ -1,4 +1,4 @@
-from __future__ import anntotations
+from __future__ import annotations
 import warnings
 from pathlib import Path
 from warnings import warn
