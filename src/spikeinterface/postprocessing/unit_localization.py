@@ -373,7 +373,7 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    depth_um=np.linspace(5, 100.0, 10),
+    depth_um=np.linspace(0, 50.0, 5),
     decay_power=1,
     sigma_ms=0.25,
     margin_um=50,
@@ -574,7 +574,7 @@ def get_grid_convolution_templates_and_weights(
     contact_locations,
     radius_um=50,
     upsampling_um=5,
-    depth_um=np.linspace(5, 50.0, 5),
+    depth_um=np.linspace(0, 50.0, 5),
     margin_um=50,
     decay_power=1,
     sparsity_threshold=0.05,
@@ -611,7 +611,8 @@ def get_grid_convolution_templates_and_weights(
     weights = np.zeros((len(depth_um), len(contact_locations), nb_templates), dtype=np.float32)
 
     for count, depth in enumerate(depth_um):
-        weights[count] = 1 / (1 + np.sqrt(dist**2 + depth**2)) ** decay_power
+        weights[count] = 1 / ((0.1 + np.sqrt(dist**2 + depth**2))) ** decay_power
+        weights[count] /= weights[count].max(axis=0)
         # weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
         thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
         weights[count][weights[count] < thresholds] = 0
