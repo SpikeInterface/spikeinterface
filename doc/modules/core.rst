@@ -93,9 +93,9 @@ with 16 channels:
     recording.set_times(timestamps, segment_index=0)
 
 **Note**:
-Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units, you can apply a gain and an offset.
+Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (uV), you can apply a gain and an offset.
 Many devices have their own gains and offsets necessary to convert their data and these values are handled by SpikeInterface for its extractors. This
-is triggered by the :code:`return_scaled` parameter in :code:`get_traces()`, (see above example).
+is triggered by the :code:`return_scaled` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV.
 
 
 Sorting
