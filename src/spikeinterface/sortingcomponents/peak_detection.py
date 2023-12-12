@@ -130,6 +130,7 @@ def detect_peaks(
 expanded_base_peak_dtype = np.dtype(base_peak_dtype + [("iteration", "int8")])
 matched_base_peak_dtype = np.dtype(base_peak_dtype + [("depth_um", "float32")])
 
+
 class IterativePeakDetector(PeakDetector):
     """
     A class that iteratively detects peaks in the recording by applying a peak detector, waveform extraction,
@@ -354,6 +355,7 @@ class PeakDetectorWrapper(PeakDetector):
 
         # return is always a tuple
         return (local_peaks,)
+
 
 class MatchedPeakDetectorWrapper(PeakDetector):
     # transitory class to maintain instance based and class method based
