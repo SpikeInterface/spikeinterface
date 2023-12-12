@@ -720,7 +720,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
 
         num_channels = traces.shape[1]
         num_templates = temporal.shape[1]
-        num_depths = num_templates // num_channels
         num_timesteps, num_templates = len(traces), temporal.shape[1]
         scalar_products = np.zeros((num_templates, num_timesteps), dtype=np.float32)
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
@@ -763,7 +762,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
             abs_thresholds,
             peak_sign,
             neighbours_mask,
-            num_depths,
+            num_channels,
         )
 
         # Find peaks and correct for time shift
@@ -895,7 +894,7 @@ if HAVE_NUMBA:
 
     @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_matched_filtering(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_depths
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_channels
     ):
         num_chans = traces_center.shape[0]
         for chan_ind in range(num_chans):
@@ -903,7 +902,7 @@ if HAVE_NUMBA:
                 if not peak_mask[chan_ind, s]:
                     continue
                 for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind % num_depths, neighbour % num_depths]:
+                    if not neighbours_mask[chan_ind % num_channels, neighbour % num_channels]:
                         continue
                     for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
