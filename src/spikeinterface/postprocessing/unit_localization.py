@@ -612,13 +612,13 @@ def get_grid_convolution_templates_and_weights(
 
     for count, depth in enumerate(depth_um):
         ### First attempt
-        #weights[count] = 1 / ((0.1 + np.sqrt(dist**2 + depth**2))) ** decay_power
-        #weights[count] /= weights[count].max(axis=0)
-        
+        # weights[count] = 1 / ((0.1 + np.sqrt(dist**2 + depth**2))) ** decay_power
+        # weights[count] /= weights[count].max(axis=0)
+
         # Kilosort
         # weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
 
-        weights[count] = np.exp(- np.sqrt(dist**2 + depth**2) / depth)
+        weights[count] = np.exp(-np.sqrt(dist**2 + depth**2) / depth)
 
         thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
         weights[count][weights[count] < thresholds] = 0
