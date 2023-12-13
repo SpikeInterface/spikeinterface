@@ -771,7 +771,7 @@ class NwbRecordingExtractor(BaseRecording):
                 cache=cache,
             )
         else:
-            assert False, f"Invalid io_backend: {io_backend} use 'pynwb' or 'hdf5'"
+            raise ValueError(f"Invalid io_backend: {io_backend} use 'pynwb' or 'hdf5'")
 
         return extractor
 
