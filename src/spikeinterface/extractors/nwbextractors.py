@@ -186,7 +186,7 @@ def read_nwbfile(
     return nwbfile
 
 
-class _NwbPureRecordingExtractor(BaseRecording):
+class _NwbPynwbRecordingExtractor(BaseRecording):
     """
     A RecordingExtractor for NWB files. This uses the NWB API to extract the traces and
     the metadata and is called by the NwbRecordingExtractor factory.
@@ -747,6 +747,17 @@ class NwbRecordingExtractor(BaseRecording):
         io_backend: Literal["pynwb", "hdf5"] = "pynwb",
     ):
         if io_backend == "pynwb":
+            extractor = _NwbPynwbRecordingExtractor(
+                file_path=file_path,
+                electrical_series_name=electrical_series_name,
+                load_time_vector=load_time_vector,
+                samples_for_rate_estimation=samples_for_rate_estimation,
+                stream_mode=stream_mode,
+                stream_cache_path=stream_cache_path,
+                file=file,
+                cache=cache,
+            )
+        elif io_backend == "hdf5":
             extractor = _NWBHDF5RecordingExtractor(
                 file_path=file_path,
                 electrical_series_name=electrical_series_name,
@@ -756,17 +767,6 @@ class NwbRecordingExtractor(BaseRecording):
                 stream_cache_path=stream_cache_path,
                 file=file,
                 electrical_series_location=electrical_series_location,
-                cache=cache,
-            )
-        elif io_backend == "hdf5":
-            extractor = _NwbPureRecordingExtractor(
-                file_path=file_path,
-                electrical_series_name=electrical_series_name,
-                load_time_vector=load_time_vector,
-                samples_for_rate_estimation=samples_for_rate_estimation,
-                stream_mode=stream_mode,
-                stream_cache_path=stream_cache_path,
-                file=file,
                 cache=cache,
             )
         else:
