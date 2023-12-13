@@ -633,8 +633,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         The rank for SVD convolution of spatiotemporal templates with the traces
     depth_um: np.array, default: np.linspace(5, 100.0, 5)
         Putative depth of the fake templates
-    decay_power: float, default:1
-        The decay power as function of the distances for the amplitudes
     """
     )
 
@@ -647,8 +645,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        depth_um=np.linspace(0, 50, 5),
-        decay_power=1,
+        depth_um=np.linspace(1, 50, 5),
         rank=5,
         noise_levels=None,
         random_chunk_kwargs={},
@@ -684,8 +681,10 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         count = 0
 
         for depth in depth_um:
-            weights = 1 / (0.1 + np.sqrt(dist**2 + depth**2)) ** decay_power
-            weights /= weights.max(0)
+            weights = np.exp(-dist/depth)
+            norm = np.linalg.norm(weights, axis=0)[np.newaxis, :]
+            weights /= norm
+            weights[~np.isfinite(weights)] = 0.0
 
             for w in weights:
                 templates[count] = w * prototype[:, np.newaxis]

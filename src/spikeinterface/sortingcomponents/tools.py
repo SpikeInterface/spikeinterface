@@ -66,8 +66,6 @@ def get_prototype_spike(recording, peaks, ms_before=0.5, ms_after=0.5, nb_peaks=
 
     waveforms = extract_waveform_at_max_channel(
         recording, some_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
-    )[:, :, 0]
-    amplitudes = waveforms[:, nbefore]
-
-    prototype = np.nanmedian(waveforms / amplitudes[:, np.newaxis], axis=0)
+    )
+    prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
     return prototype
