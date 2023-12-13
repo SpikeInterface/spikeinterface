@@ -451,13 +451,14 @@ class _NWBHDF5RecordingExtractor(BaseRecording):
                 else:
                     raise ValueError(
                         "Multiple ElectricalSeries found in the file. "
-                        "Please specify the 'electrical_series_name' argument."
+                        "Please specify the 'electrical_series_name' argument:"
+                        f"Available options are: {available_electrical_series}."
                     )
             else:
                 if electrical_series_name not in available_electrical_series:
                     raise ValueError(
                         f"'{electrical_series_name}' not found in the file. "
-                        f"Available options are: {list(available_electrical_series.keys())}"
+                        f"Available options are: {available_electrical_series}"
                     )
             electrical_series_location = available_electrical_series[electrical_series_name]
 
