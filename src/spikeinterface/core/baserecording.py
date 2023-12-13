@@ -245,7 +245,7 @@ class BaseRecording(BaseRecordingSnippets):
         segment_index: int | None = None,
         start_frame: int | None = None,
         end_frame: int | None = None,
-        channel_ids: list | np.array | None = None,
+        channel_ids: list | np.array | tuple | None = None,
         order: "C" | "F" | None = None,
         return_scaled: bool = False,
         cast_unsigned: bool = False,
@@ -260,7 +260,7 @@ class BaseRecording(BaseRecordingSnippets):
             The start frame. If None, 0 is used, default: None
         end_frame : int | None, default: None
             The end frame. If None, the number of samples in the segment is used, default: None
-        channel_ids : list | np.array | None, default: None
+        channel_ids : list | np.array | tuple | None, default: None
             The channel ids. If None, all channels are used, default: None
         order : "C" | "F" | None, default: None
             The order of the traces ("C" | "F"). If None, traces are returned as they are
@@ -781,9 +781,6 @@ class BaseRecordingSegment(BaseSegment):
             end_sample, or number of samples if None
         channel_indices: list | np.array | None, default: None
             Indices of channels to return, or all channels if None
-        order: list or None, default: None
-            The memory order of the returned array.
-            Use Order.C for C order, Order.F for Fortran order, or Order.K to keep the order of the underlying data
 
         Returns
         -------
