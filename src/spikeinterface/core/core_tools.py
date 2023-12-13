@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, WindowsPath
 from typing import Union
 import os
 import sys
@@ -204,43 +204,6 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
     return worker_ctx
 
 
-# used by write_binary_recording + ChunkRecordingExecutor
-def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    byte_offset = worker_ctx["byte_offset"]
-    cast_unsigned = worker_ctx["cast_unsigned"]
-    file = worker_ctx["file_dict"][segment_index]
-
-    # Open the memmap
-    # What we need is the file_path
-    num_channels = recording.get_num_channels()
-    num_frames = recording.get_num_frames(segment_index=segment_index)
-    shape = (num_frames, num_channels)
-    dtype_size_bytes = np.dtype(dtype).itemsize
-    data_size_bytes = dtype_size_bytes * num_frames * num_channels
-
-    # Offset (The offset needs to be multiple of the page size)
-    # The mmap offset is associated to be as big as possible but still a multiple of the page size
-    # The array offset takes care of the reminder
-    mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
-    mmmap_length = data_size_bytes + array_offset
-    memmap_obj = mmap.mmap(file.fileno(), length=mmmap_length, access=mmap.ACCESS_WRITE, offset=mmap_offset)
-
-    array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C", offset=array_offset)
-    # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
-    if traces.dtype != dtype:
-        traces = traces.astype(dtype)
-    array[start_frame:end_frame, :] = traces
-
-    # Close the memmap
-    memmap_obj.flush()
-
-
 def write_binary_recording(
     recording,
     file_paths,
@@ -310,6 +273,43 @@ def write_binary_recording(
         recording, func, init_func, init_args, job_name="write_binary_recording", **job_kwargs
     )
     executor.run()
+
+
+# used by write_binary_recording + ChunkRecordingExecutor
+def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    # recover variables of the worker
+    recording = worker_ctx["recording"]
+    dtype = worker_ctx["dtype"]
+    byte_offset = worker_ctx["byte_offset"]
+    cast_unsigned = worker_ctx["cast_unsigned"]
+    file = worker_ctx["file_dict"][segment_index]
+
+    # Open the memmap
+    # What we need is the file_path
+    num_channels = recording.get_num_channels()
+    num_frames = recording.get_num_frames(segment_index=segment_index)
+    shape = (num_frames, num_channels)
+    dtype_size_bytes = np.dtype(dtype).itemsize
+    data_size_bytes = dtype_size_bytes * num_frames * num_channels
+
+    # Offset (The offset needs to be multiple of the page size)
+    # The mmap offset is associated to be as big as possible but still a multiple of the page size
+    # The array offset takes care of the reminder
+    mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
+    mmmap_length = data_size_bytes + array_offset
+    memmap_obj = mmap.mmap(file.fileno(), length=mmmap_length, access=mmap.ACCESS_WRITE, offset=mmap_offset)
+
+    array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C", offset=array_offset)
+    # apply function
+    traces = recording.get_traces(
+        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
+    )
+    if traces.dtype != dtype:
+        traces = traces.astype(dtype)
+    array[start_frame:end_frame, :] = traces
+
+    # Close the memmap
+    memmap_obj.flush()
 
 
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
@@ -849,6 +849,118 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
                     dc[k] = [func(e) for e in v]
                 else:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
+
+
+def _get_paths_list(d):
+    # this explore a dict and get all paths flatten in a list
+    # the trick is to use a closure func called by recursive_path_modifier()
+    path_list = []
+
+    def append_to_path(p):
+        path_list.append(p)
+
+    recursive_path_modifier(d, append_to_path, target="path", copy=True)
+    return path_list
+
+
+def _relative_to(p, relative_folder):
+    # custum os.path.relpath() with more checks
+
+    relative_folder = Path(relative_folder).resolve()
+    p = Path(p).resolve()
+    # the as_posix transform \\ to / on window which make better json files
+    rel_to = os.path.relpath(p.as_posix(), start=relative_folder.as_posix())
+    return Path(rel_to).as_posix()
+
+
+def check_paths_relative(input_dict, relative_folder) -> bool:
+    """
+    Check if relative path is possible to be applied on a dict describing an BaseExtractor.
+
+    For instance on windows, if some data are on a drive "D:/" and the folder is on drive "C:/" it returns False.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    relative_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    relative_possible: bool
+    """
+    path_list = _get_paths_list(input_dict)
+    relative_folder = Path(relative_folder).resolve().absolute()
+    not_possible = []
+    for p in path_list:
+        p = Path(p)
+        # check path is not an URL
+        if "http" in str(p):
+            not_possible.append(p)
+            continue
+
+        # If windows path check have same drive
+        if isinstance(p, WindowsPath) and isinstance(relative_folder, WindowsPath):
+            # check that on same drive
+            # important note : for UNC path on window the "//host/shared" is the drive
+            if p.resolve().absolute().drive != relative_folder.drive:
+                not_possible.append(p)
+                continue
+
+        # check relative is possible
+        try:
+            p2 = _relative_to(p, relative_folder)
+        except ValueError:
+            not_possible.append(p)
+            continue
+
+    return len(not_possible) == 0
+
+
+def make_paths_relative(input_dict, relative_folder) -> dict:
+    """
+    Recursively transform a dict describing an BaseExtractor to make every path relative to a folder.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    relative_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    output_dict: dict
+        A copy of the input dict with modified paths.
+    """
+    relative_folder = Path(relative_folder).resolve().absolute()
+    func = lambda p: _relative_to(p, relative_folder)
+    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
+    return output_dict
+
+
+def make_paths_absolute(input_dict, base_folder):
+    """
+    Recursively transform a dict describing an BaseExtractor to make every path absolute given a base_folder.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    base_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    output_dict: dict
+        A copy of the input dict with modified paths.
+    """
+    base_folder = Path(base_folder)
+    # use as_posix instead of str to make the path unix like even on window
+    func = lambda p: (base_folder / p).resolve().absolute().as_posix()
+    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
+    return output_dict
 
 
 def recursive_key_finder(d, key):

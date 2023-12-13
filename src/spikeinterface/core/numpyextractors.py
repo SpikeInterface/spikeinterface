@@ -66,8 +66,8 @@ class NumpyRecording(BaseRecording):
             assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
             t_starts = [float(t_start) for t_start in t_starts]
 
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         for i, traces in enumerate(traces_list):
             if t_starts is None:
@@ -129,10 +129,10 @@ class NumpySorting(BaseSorting):
         """ """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self._serializablility["memory"] = True
-        self._serializablility["json"] = False
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
         # theorically this should be False but for simplicity make generators simples we still need this.
-        self._serializablility["pickle"] = True
+        self._serializability["pickle"] = True
 
         if spikes.size == 0:
             nseg = 1
@@ -148,14 +148,15 @@ class NumpySorting(BaseSorting):
         self._kwargs = dict(spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
     @staticmethod
-    def from_sorting(source_sorting: BaseSorting, with_metadata=False) -> "NumpySorting":
+    def from_sorting(source_sorting: BaseSorting, with_metadata=False, copy_spike_vector=False) -> "NumpySorting":
         """
         Create a numpy sorting from another sorting extractor
         """
 
-        sorting = NumpySorting(
-            source_sorting.to_spike_vector(), source_sorting.get_sampling_frequency(), source_sorting.unit_ids
-        )
+        spike_vector = source_sorting.to_spike_vector()
+        if copy_spike_vector:
+            spike_vector = spike_vector.copy()
+        sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids)
         if with_metadata:
             sorting.copy_metadata(source_sorting)
         return sorting
@@ -301,7 +302,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_peaks(peaks, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_peaks(peaks, sampling_frequency, unit_ids) -> "NumpySorting":
         """
         Construct a sorting from peaks returned by 'detect_peaks()' function.
         The unit ids correspond to the recording channel ids and spike trains are the
@@ -313,6 +314,8 @@ class NumpySorting(BaseSorting):
             Peaks array as returned by the 'detect_peaks()' function
         sampling_frequency : float
             the sampling frequency in Hz
+        unit_ids: np.array
+            The unit_ids vector which is generally the channel_ids but can be different.
 
         Returns
         -------
@@ -323,9 +326,6 @@ class NumpySorting(BaseSorting):
         spikes["sample_index"] = peaks["sample_index"]
         spikes["unit_index"] = peaks["channel_index"]
         spikes["segment_index"] = peaks["segment_index"]
-
-        if unit_ids is None:
-            unit_ids = np.unique(peaks["channel_index"])
 
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
@@ -347,13 +347,16 @@ class NumpySortingSegment(BaseSortingSegment):
             s0, s1 = np.searchsorted(self.spikes["segment_index"], [self.segment_index, self.segment_index + 1])
             self.spikes_in_seg = self.spikes[s0:s1]
 
-        unit_index = self.unit_ids.index(unit_id)
-        times = self.spikes_in_seg[self.spikes_in_seg["unit_index"] == unit_index]["sample_index"]
+        start = 0 if start_frame is None else np.searchsorted(self.spikes_in_seg["sample_index"], start_frame)
+        end = (
+            len(self.spikes_in_seg)
+            if end_frame is None
+            else np.searchsorted(self.spikes_in_seg["sample_index"], end_frame)
+        )
 
-        if start_frame is not None:
-            times = times[times >= start_frame]
-        if end_frame is not None:
-            times = times[times < end_frame]
+        unit_index = self.unit_ids.index(unit_id)
+        times = self.spikes_in_seg[start:end][self.spikes_in_seg[start:end]["unit_index"] == unit_index]["sample_index"]
+
         return times
 
 
@@ -364,9 +367,9 @@ class SharedMemorySorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self._serializablility["memory"] = True
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         self.shm = SharedMemory(shm_name, create=False)
         self.shm_spikes = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
@@ -524,9 +527,9 @@ class NumpySnippets(BaseSnippets):
             dtype=dtype,
         )
 
-        self._serializablility["memory"] = False
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        self._serializability["memory"] = False
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         for snippets, spikesframes in zip(snippets_list, spikesframes_list):
             snp_segment = NumpySnippetsSegment(snippets, spikesframes)

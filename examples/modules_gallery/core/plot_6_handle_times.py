@@ -10,16 +10,16 @@ This notebook shows how to handle time information in SpikeInterface recording a
 from spikeinterface.extractors import toy_example
 
 ##############################################################################
-# First let's generate toy example with a single segment:
+# First let's generate a toy example with a single segment:
 
 rec, sort = toy_example(num_segments=1)
 
 
 ##############################################################################
-# Generally, the time information would be automaticall loaded when reading a
+# Generally, the time information would be automatically loaded when reading a
 # recording.
 # However, sometimes we might need to add a time vector externally.
-# For example, now let's create a time vector by getting the default times and
+# For example, let's create a time vector by getting the default times and
 # adding 5 s:
 
 default_times = rec.get_times()

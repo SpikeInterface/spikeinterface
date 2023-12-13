@@ -22,7 +22,6 @@ classifiers = [
 dependencies = [
     "numpy",
     "neo>=0.12.0",
-    "joblib",
     "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.19",
@@ -80,6 +79,7 @@ streaming_extractors = [
     "aiohttp",
     "requests",
     "pynwb>=2.3.0",
+    "remfile"
 ]
 
 full = [
@@ -100,7 +100,7 @@ widgets = [
     "matplotlib",
     "ipympl",
     "ipywidgets",
-    "sortingview>=0.11.15",
+    "sortingview>=0.12.0",
 ]
 
 qualitymetrics = [
@@ -167,6 +167,14 @@ docs = [
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
+]
+
+dev = [
+    "spikeinterface[test]",
+    "spikeinterface[test_core]",
+    "spikeinterface[docs]",
+    "black",
+    "pre-commit",
 ]
 
 [tool.pytest.ini_options]

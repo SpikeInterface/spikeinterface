@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path
 import re
 from typing import Any, Iterable, List, Optional, Sequence, Union
@@ -15,7 +16,14 @@ from copy import deepcopy
 import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, SIJsonEncoder
+from .core_tools import (
+    check_json,
+    is_dict_extractor,
+    SIJsonEncoder,
+    make_paths_relative,
+    make_paths_absolute,
+    check_paths_relative,
+)
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -62,7 +70,7 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        self._serializablility = {"memory": True, "json": True, "pickle": True}
+        self._serializability = {"memory": True, "json": True, "pickle": True}
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
@@ -83,24 +91,36 @@ class BaseExtractor:
         else:
             return segment_index
 
-    def ids_to_indices(self, ids: Iterable, prefer_slice: bool = False) -> Union[np.ndarray, slice]:
+    def ids_to_indices(self, ids: list | np.ndarray | None = None, prefer_slice: bool = False) -> np.ndarray | slice:
         """
-        Transform a ids list (aka channel_ids or unit_ids)
-        into a indices array.
-        Useful to manipulate:
-          * data
-          * properties
+        Convert a list of IDs into indices, either as an array or a slice.
 
-        "prefer_slice" is an efficient option that tries to make a slice object
-        when indices are consecutive.
+        This function is designed to transform a list of IDs (such as channel or unit IDs) into an array of indices.
+        These indices are useful for interacting with data and accessing properties. When `prefer_slice` is set to `True`,
+        the function tries to return a slice object if the indices are consecutive, which can be more efficient
+        (e.g. with hdf5 files and to avoid copying data in numpy).
 
+        Parameters
+        ----------
+        ids : list or np.ndarray
+            The array of IDs to be converted into indices. If `None`, it generates indices based on the length of `_main_ids`.
+        prefer_slice : bool, default: False
+            If `True`, the function will return a slice object when the indices are consecutive. Default is `False`.
+
+        Returns
+        -------
+        np.ndarray or slice
+            An array of indices corresponding to the input IDs. If `prefer_slice` is `True` and the indices are consecutive,
+            a slice object is returned instead.
         """
+
         if ids is None:
             if prefer_slice:
                 indices = slice(None)
             else:
                 indices = np.arange(len(self._main_ids))
         else:
+            assert isinstance(ids, (list, np.ndarray)), "'ids' must be a list, np.ndarray"
             _main_ids = self._main_ids.tolist()
             indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
             if prefer_slice:
@@ -322,6 +342,9 @@ class BaseExtractor:
         to a dictionary. The resulting dictionary can be used to re-initialize the extractor
         through the `load_extractor_from_dict` function.
 
+        In some situations, 'relative_to' is not possible, (for instance different drives on Windows or url-like path), then
+        the relative will ignored and absolute (relative_to=None) will be done instead.
+
         Examples
         --------
         >>> dump_dict = original_extractor.to_dict()
@@ -383,7 +406,8 @@ class BaseExtractor:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
                 include_properties=include_properties,
-                relative_to=None,  # '_make_paths_relative' is already recursive!
+                # make_paths_relative() will make the recusrivity later:
+                relative_to=None,
                 folder_metadata=folder_metadata,
                 recursive=recursive,
             )
@@ -414,10 +438,9 @@ class BaseExtractor:
             "module": module,
             "kwargs": kwargs,
             "version": module_version,
-            "relative_paths": (relative_to is not None),
         }
 
-        dump_dict["version"] = module_version  # Can be spikeinterface, spikefores, etc.
+        dump_dict["version"] = module_version  # Can be spikeinterface, spikeforest, etc.
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations
@@ -431,10 +454,20 @@ class BaseExtractor:
             # include only main properties
             dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
-        if relative_to is not None:
+        if relative_to is None:
+            dump_dict["relative_paths"] = False
+        else:
             relative_to = Path(relative_to).resolve().absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
-            dump_dict = _make_paths_relative(dump_dict, relative_to)
+
+            if check_paths_relative(dump_dict, relative_to):
+                dump_dict["relative_paths"] = True
+                dump_dict = make_paths_relative(dump_dict, relative_to)
+            else:
+                # A warning will be very annoying for end user.
+                # So let's switch back to absolute path, but silently!
+                # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
+                dump_dict["relative_paths"] = False
 
         if folder_metadata is not None:
             if relative_to is not None:
@@ -463,7 +496,7 @@ class BaseExtractor:
         # for pickle dump relative_path was not in the dict, this ensure compatibility
         if dictionary.get("relative_paths", False):
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
-            dictionary = _make_paths_absolute(dictionary, base_folder)
+            dictionary = make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
         folder_metadata = dictionary.get("folder_metadata", None)
         if folder_metadata is not None:
@@ -507,22 +540,22 @@ class BaseExtractor:
         clone = BaseExtractor.from_dict(d)
         return clone
 
-    def check_serializablility(self, type):
+    def check_serializability(self, type):
         kwargs = self._kwargs
         for value in kwargs.values():
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
             if isinstance(value, BaseExtractor):
-                if not value.check_serializablility(type=type):
+                if not value.check_serializability(type=type):
                     return False
             elif isinstance(value, list):
                 for v in value:
-                    if isinstance(v, BaseExtractor) and not v.check_serializablility(type=type):
+                    if isinstance(v, BaseExtractor) and not v.check_serializability(type=type):
                         return False
             elif isinstance(value, dict):
                 for v in value.values():
-                    if isinstance(v, BaseExtractor) and not v.check_serializablility(type=type):
+                    if isinstance(v, BaseExtractor) and not v.check_serializability(type=type):
                         return False
-        return self._serializablility[type]
+        return self._serializability[type]
 
     def check_if_memory_serializable(self):
         """
@@ -533,7 +566,7 @@ class BaseExtractor:
         bool
             True if the object is memory serializable, False otherwise.
         """
-        return self.check_serializablility("memory")
+        return self.check_serializability("memory")
 
     def check_if_json_serializable(self):
         """
@@ -546,11 +579,11 @@ class BaseExtractor:
         """
         # we keep this for backward compatilibity or not ????
         # is this needed ??? I think no.
-        return self.check_serializablility("json")
+        return self.check_serializability("json")
 
     def check_if_pickle_serializable(self):
         # is this needed ??? I think no.
-        return self.check_serializablility("pickle")
+        return self.check_serializability("pickle")
 
     @staticmethod
     def _get_file_path(file_path: Union[str, Path], extensions: Sequence) -> Path:
@@ -623,7 +656,7 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties
         """
-        assert self.check_serializablility("json"), "The extractor is not json serializable"
+        assert self.check_serializability("json"), "The extractor is not json serializable"
 
         # Writing paths as relative_to requires recursively expanding the dict
         if relative_to:
@@ -882,7 +915,7 @@ class BaseExtractor:
 
         # dump provenance
         provenance_file = folder / f"provenance.json"
-        if self.check_serializablility("json"):
+        if self.check_serializability("json"):
             self.dump(provenance_file)
         else:
             provenance_file.write_text(
@@ -1006,18 +1039,6 @@ class BaseExtractor:
         cached = read_zarr(zarr_path)
 
         return cached
-
-
-def _make_paths_relative(d, relative) -> dict:
-    relative = str(Path(relative).resolve().absolute())
-    func = lambda p: os.path.relpath(str(p), start=relative)
-    return recursive_path_modifier(d, func, target="path", copy=True)
-
-
-def _make_paths_absolute(d, base):
-    base = Path(base)
-    func = lambda p: str((base / p).resolve().absolute())
-    return recursive_path_modifier(d, func, target="path", copy=True)
 
 
 def _load_extractor_from_dict(dic) -> BaseExtractor:

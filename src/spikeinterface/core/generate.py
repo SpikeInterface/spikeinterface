@@ -32,11 +32,10 @@ def generate_recording(
     set_probe: Optional[bool] = True,
     ndim: Optional[int] = 2,
     seed: Optional[int] = None,
-    mode: Literal["lazy", "legacy"] = "lazy",
 ) -> BaseRecording:
     """
-    Generate a recording object.
-    Useful for testing for testing API and algos.
+    Generate a lazy recording object.
+    Useful for testing API and algos.
 
     Parameters
     ----------
@@ -49,13 +48,9 @@ def generate_recording(
         Note that the number of segments is determined by the length of this list.
     set_probe: bool, default: True
     ndim : int, default: 2
-        The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probes.
+        The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probe.
     seed : Optional[int]
         A seed for the np.ramdom.default_rng function
-    mode: str ["lazy", "legacy"], default: "lazy".
-        "legacy": generate a NumpyRecording with white noise.
-                This mode is kept for backward compatibility and will be deprecated version 0.100.0.
-        "lazy": return a NoiseGeneratorRecording instance.
 
     Returns
     -------
@@ -64,26 +59,16 @@ def generate_recording(
     """
     seed = _ensure_seed(seed)
 
-    if mode == "legacy":
-        warnings.warn(
-            "generate_recording() : mode='legacy' will be deprecated in version 0.100.0. Use mode='lazy' instead.",
-            DeprecationWarning,
-        )
-        recording = _generate_recording_legacy(num_channels, sampling_frequency, durations, seed)
-    elif mode == "lazy":
-        recording = NoiseGeneratorRecording(
-            num_channels=num_channels,
-            sampling_frequency=sampling_frequency,
-            durations=durations,
-            dtype="float32",
-            seed=seed,
-            strategy="tile_pregenerated",
-            # block size is fixed to one second
-            noise_block_size=int(sampling_frequency),
-        )
-
-    else:
-        raise ValueError("generate_recording() : wrong mode")
+    recording = NoiseGeneratorRecording(
+        num_channels=num_channels,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        dtype="float32",
+        seed=seed,
+        strategy="tile_pregenerated",
+        # block size is fixed to one second
+        noise_block_size=int(sampling_frequency),
+    )
 
     recording.annotate(is_filtered=True)
 
@@ -93,24 +78,6 @@ def generate_recording(
             probe = probe.to_3d()
         probe.set_device_channel_indices(np.arange(num_channels))
         recording.set_probe(probe, in_place=True)
-
-    return recording
-
-
-def _generate_recording_legacy(num_channels, sampling_frequency, durations, seed):
-    # legacy code to generate recotrding with random noise
-    rng = np.random.default_rng(seed=seed)
-
-    num_segments = len(durations)
-    num_timepoints = [int(sampling_frequency * d) for d in durations]
-
-    traces_list = []
-    for i in range(num_segments):
-        traces = rng.random(size=(num_timepoints[i], num_channels), dtype=np.float32)
-        times = np.arange(num_timepoints[i]) / sampling_frequency
-        traces += np.sin(2 * np.pi * 50 * times)[:, None]
-        traces_list.append(traces)
-    recording = NumpyRecording(traces_list, sampling_frequency)
 
     return recording
 
@@ -1118,7 +1085,7 @@ class InjectTemplatesRecording(BaseRecording):
         dtype = parent_recording.dtype if parent_recording is not None else templates.dtype
         BaseRecording.__init__(self, sorting.get_sampling_frequency(), channel_ids, dtype)
 
-        # Important : self._serializablility is not change here because it will depend on the sorting parents itself.
+        # Important : self._serializability is not change here because it will depend on the sorting parents itself.
 
         n_units = len(sorting.unit_ids)
         assert len(templates) == n_units
