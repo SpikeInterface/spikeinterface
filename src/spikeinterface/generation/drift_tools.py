@@ -121,7 +121,7 @@ class DriftingTemplates(Templates):
         Templates.__init__(self, **kwargs)
         assert self.probe is not None, "DriftingTemplates need a Probe in the init"
 
-        self.all_templates_moved = None
+        self.templates_array_moved = None
         self.displacements = None
     
     @classmethod
@@ -156,10 +156,18 @@ class DriftingTemplates(Templates):
 
         dense_static_templates = self.get_dense_templates()
 
-        self.template_array_moved = move_dense_templates(dense_static_templates, displacements, self.probe, **interpolation_kwargs)
+        self.templates_array_moved = move_dense_templates(dense_static_templates, displacements, self.probe, **interpolation_kwargs)
         self.displacements = displacements
 
 
+def make_linear_displacement(start, stop, num_step=10):
+    """
+    start/stop are included.
+
+    displacements.shape = (num_step, 2)
+    """
+    displacements = (stop[np.newaxis, :] - start[np.newaxis, :]) / (num_step - 1) * np.arange(num_step)[:, np.newaxis] + start[np.newaxis, :]
+    return displacements
 
 
 
@@ -172,32 +180,37 @@ class InjectDriftingTemplatesRecording(BaseRecording):
     ----------
     sorting: BaseSorting
         Sorting object containing all the units and their spike train.
-    templates: np.ndarray[n_units, n_samples, n_channels] or np.ndarray[n_units, n_samples, n_oversampling]
-        Array containing the templates to inject for all the units.
-        Shape can be:
-            * (num_units, num_samples, num_channels): standard case
-            * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce sampling jitter.
-    nbefore: list[int] | int | None, default: None
-        Where is the center of the template for each unit?
-        If None, will default to the highest peak.
-    amplitude_factor: list[float] | float | None, default: None
-        The amplitude of each spike for each unit.
-        Can be None (no scaling).
-        Can be scalar all spikes have the same factor (certainly useless).
-        Can be a vector with same shape of spike_vector of the sorting.
+    drifting_templates: 
+
+    displacement_vectors: list of numpy array
+        The lenght of the list is the number of segment.
+        Per segment, the drift vector is a numpy array with shape (num_time, 2, num_motion)
+        num_motion is generally = 1 but can be > 1 in case of combining several drift
+    displacement_sampling_frequency: float
+        The sampling frequency of drift vector
+    displacement_unit_factor: numpy array | None
+        A array containing the factor per unit of the drift.
+        This is used to create non rigid with a factor gradient of depending on units position.
+        shape (num_unit, num_motion)
+        If None then all unit have the same factor (1) and the drift is rigid.
     parent_recording: BaseRecording | None
         The recording over which to add the templates.
         If None, will default to traces containing all 0.
     num_samples: list[int] | int | None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
+    amplitude_factor: list[float] | float | None, default: None
+        The amplitude of each spike for each unit.
+        Can be None (no scaling).
+        Can be scalar all spikes have the same factor (certainly useless).
+        Can be a vector with same shape of spike_vector of the sorting.
     upsample_vector: np.array or None, default: None.
         When templates is 4d we can simulate a jitter.
         Optional the upsample_vector is the jitter index with a number per spike in range 0-templates.sahpe[3]
 
     Returns
     -------
-    injected_recording: InjectTemplatesRecording
+    injected_recording: InjectDriftingTemplatesRecording
         The recording with the templates injected.
     """
 
@@ -206,11 +219,17 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         sorting: BaseSorting,
         parent_recording: Union[BaseRecording, None] = None,
         drifting_templates: DriftingTemplates=None,
+        displacement_vectors: Optional[List[List[float]]]=None,
+        displacement_sampling_frequency: float =None,
+        displacement_unit_factor: Optional[List[float]]=None,
         num_samples: Optional[List[int]] = None,
         amplitude_factor: Union[List[List[float]], List[float], float, None] = None,
         # TODO handle upsample vector
         # upsample_vector: Union[List[int], None] = None,
+        mode='precompute',
     ):
+        import scipy.spatial
+
         assert isinstance(drifting_templates, DriftingTemplates)
         self.drifting_templates = drifting_templates
 
@@ -219,11 +238,10 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             channel_ids = drifting_templates.channel_ids
         else:
             assert drifting_templates.sampling_frequency == parent_recording.sampling_frequency
-            assert np.array_equal(drifting_templates.probe.contact_positions, parent_recording.get_channel_locations)
             channel_ids = parent_recording.channel_ids
             
 
-        dtype = parent_recording.dtype if parent_recording is not None else self.drifting_templates_array.dtype
+        dtype = parent_recording.dtype if parent_recording is not None else self.drifting_templates.templates_array.dtype
         BaseRecording.__init__(self, sorting.get_sampling_frequency(), channel_ids, dtype)
 
         assert drifting_templates.num_units == sorting.unit_ids.size
@@ -255,10 +273,55 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             assert sorting.get_num_segments() == 1
             num_samples = [num_samples]
 
+        # check drift vector shape and length
+        assert len(displacement_vectors) == sorting.get_num_segments()
+        assert displacement_unit_factor.shape[0] == len(sorting.unit_ids)
+        # displacement_vectors_indices = []
+        for num_segment in range(sorting.get_num_segments()):
+            duration = displacement_vectors[num_segment].shape[0] / displacement_sampling_frequency
+            assert duration >= num_samples[num_segment] / sorting.get_sampling_frequency()
+            assert displacement_vectors[num_segment].shape[1] == displacement_unit_factor.shape[1] 
+        
+        # TODO SharedMemm for templates
+
+        if mode == 'precompute':
+            assert drifting_templates.templates_array_moved is not None
+            displacements = drifting_templates.displacements
+
+            # compute the displacement indicies
+            segment_slices = []
+            displacement_indices = np.zeros(self.spike_vector.size, dtype='int64')
+            for segment_index in range(sorting.get_num_segments()):
+                start = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="left")
+                end = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="right")
+                segment_slices.append((start, end))
+
+                spike_vector_seg = self.spike_vector[start:end]
+
+                displacement_vecs = displacement_vectors[segment_index]
+
+                # bin index in the displacement_vecs.shape[0] (time)
+                time_bin = (spike_vector_seg['sample_index'] / sorting.sampling_frequency * displacement_sampling_frequency).astype('int64')
+                
+                # each spike is the linear sum of several displacement
+                # this is (num_spike, 2)
+                factors = displacement_unit_factor[spike_vector_seg['unit_index']]
+                sumed_displacement = np.sum(displacement_vecs[time_bin] * factors[:, np.newaxis, :], axis=2)
+                
+                # we go to indices by the nearest precomputed displacements
+                # this is (num_spike, ) relate to indices
+                inds = np.argmin(scipy.spatial.distance.cdist(displacements, sumed_displacement), axis=0)
+                # just by paranoia
+                inds = np.clip(inds, 0, displacements.shape[0] - 1)
+                # this also cast to int64
+                displacement_indices[start:end] = inds
+
+        # recording segment
         for segment_index in range(sorting.get_num_segments()):
             start = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="left")
             end = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="right")
-            spikes = self.spike_vector[start:end]
+            start, end = segment_slices[segment_index]
+
             amplitude_vec = amplitude_vector[start:end] if amplitude_vector is not None else None
             # upsample_vec = upsample_vector[start:end] if upsample_vector is not None else None
 
@@ -267,14 +330,18 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             )
             recording_segment = InjectDriftingTemplatesRecordingSegment(
                 self.dtype,
-                spikes,
+                self.spike_vector[start:end],
                 drifting_templates,
                 amplitude_vec,
                 # upsample_vec,
                 parent_recording_segment,
                 num_samples[segment_index],
+                displacement_indices[start:end],
+                drifting_templates.templates_array_moved,
             )
             self.add_recording_segment(recording_segment)
+
+        self.set_probe(drifting_templates.probe, in_place=True)
 
         # self._kwargs = {
         #     "sorting": sorting,
@@ -301,6 +368,8 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         # upsample_vector: Union[List[float], None],
         parent_recording_segment: Union[BaseRecordingSegment, None] = None,
         num_samples: Union[int, None] = None,
+        displacement_indices: np.ndarray=None,
+        templates_array_moved: np.ndarray=None,
     ) -> None:
         BaseRecordingSegment.__init__(
             self,
@@ -313,10 +382,16 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         self.spike_vector = spike_vector
         self.drifting_templates = drifting_templates
         self.nbefore = drifting_templates.nbefore
+
         self.amplitude_vector = amplitude_vector
+        # TODO
         # self.upsample_vector = upsample_vector
+        self.upsample_vector = None
         self.parent_recording = parent_recording_segment
         self.num_samples = parent_recording_segment.get_num_frames() if num_samples is None else num_samples
+
+        self.displacement_indices = displacement_indices
+        self.templates_array_moved = templates_array_moved
 
     def get_traces(
         self,
@@ -328,9 +403,9 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         end_frame = self.num_samples if end_frame is None else end_frame
 
         if channel_indices is None:
-            n_channels = self.drifting_templates.shape[2]
+            n_channels = self.drifting_templates.num_channels
         elif isinstance(channel_indices, slice):
-            stop = channel_indices.stop if channel_indices.stop is not None else self.drifting_templates.shape[2]
+            stop = channel_indices.stop if channel_indices.stop is not None else self.drifting_templates.num_channels
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
             n_channels = math.ceil((stop - start) / step)
@@ -347,15 +422,17 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         end = np.searchsorted(self.spike_vector["sample_index"], end_frame + num_samples, side="right")
 
         for i in range(start, end):
+
             spike = self.spike_vector[i]
             t = spike["sample_index"]
-            unit_ind = spike["unit_index"]
-            if self.upsample_vector is None:
-                template = self.drifting_templates[unit_ind]
-            else:
-                upsample_ind = self.upsample_vector[i]
-                template = self.drifting_templates[unit_ind, :, :, upsample_ind]
+            unit_index = spike["unit_index"]
+            displacement_index = self.displacement_indices[i]
 
+            if self.upsample_vector is None:
+                template = self.templates_array_moved[displacement_index, unit_index, :, :]
+            else:
+                raise NotImplementedError
+            
             if channel_indices is not None:
                 template = template[:, channel_indices]
 
