@@ -350,7 +350,7 @@ class LocalizeGridConvolution(PipelineNode):
         prototype=None,
         percentile=5.0,
         peak_sign="neg",
-        sparsity_threshold=0.25,
+        sparsity_threshold=0.1,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
