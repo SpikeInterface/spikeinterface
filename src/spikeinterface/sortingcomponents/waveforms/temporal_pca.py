@@ -135,7 +135,7 @@ class TemporalPCBaseNode(WaveformsNode):
         peaks = select_peaks(peaks, **peak_selection_params)  # How to select n_peaks
 
         # Creates a numpy sorting object where the spike times are the peak times and the unit ids are the peak channel
-        sorting = NumpySorting.from_peaks(peaks, sampling_frequency=recording.sampling_frequency)
+        sorting = NumpySorting.from_peaks(peaks, recording.sampling_frequency, recording.channel_ids)
         # Create a waveform extractor
         we = extract_waveforms(
             recording,
