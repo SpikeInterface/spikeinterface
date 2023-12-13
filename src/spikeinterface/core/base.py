@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path
 import re
 from typing import Any, Iterable, List, Optional, Sequence, Union
@@ -90,24 +91,36 @@ class BaseExtractor:
         else:
             return segment_index
 
-    def ids_to_indices(self, ids: Iterable, prefer_slice: bool = False) -> Union[np.ndarray, slice]:
+    def ids_to_indices(self, ids: list | np.ndarray | None = None, prefer_slice: bool = False) -> np.ndarray | slice:
         """
-        Transform a ids list (aka channel_ids or unit_ids)
-        into a indices array.
-        Useful to manipulate:
-          * data
-          * properties
+        Convert a list of IDs into indices, either as an array or a slice.
 
-        "prefer_slice" is an efficient option that tries to make a slice object
-        when indices are consecutive.
+        This function is designed to transform a list of IDs (such as channel or unit IDs) into an array of indices.
+        These indices are useful for interacting with data and accessing properties. When `prefer_slice` is set to `True`,
+        the function tries to return a slice object if the indices are consecutive, which can be more efficient
+        (e.g. with hdf5 files and to avoid copying data in numpy).
 
+        Parameters
+        ----------
+        ids : list or np.ndarray
+            The array of IDs to be converted into indices. If `None`, it generates indices based on the length of `_main_ids`.
+        prefer_slice : bool, default: False
+            If `True`, the function will return a slice object when the indices are consecutive. Default is `False`.
+
+        Returns
+        -------
+        np.ndarray or slice
+            An array of indices corresponding to the input IDs. If `prefer_slice` is `True` and the indices are consecutive,
+            a slice object is returned instead.
         """
+
         if ids is None:
             if prefer_slice:
                 indices = slice(None)
             else:
                 indices = np.arange(len(self._main_ids))
         else:
+            assert isinstance(ids, (list, np.ndarray)), "'ids' must be a list, np.ndarray"
             _main_ids = self._main_ids.tolist()
             indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
             if prefer_slice:
