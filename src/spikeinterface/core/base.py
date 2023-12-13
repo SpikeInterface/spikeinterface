@@ -104,7 +104,7 @@ class BaseExtractor:
 
         Parameters
         ----------
-        ids : list or np.ndarray or tuple or None
+        ids : list | np.ndarray | tuple | None, default: None
             The array of IDs to be converted into indices. If `None`, it generates indices based on the length of `_main_ids`.
         prefer_slice : bool, default: False
             If `True`, the function will return a slice object when the indices are consecutive. Default is `False`.
