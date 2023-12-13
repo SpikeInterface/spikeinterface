@@ -681,7 +681,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         count = 0
 
         for depth in depth_um:
-            weights = np.exp(-dist/depth)
+            weights = np.exp(-dist / depth)
             norm = np.linalg.norm(weights, axis=0)[np.newaxis, :]
             weights /= norm
             weights[~np.isfinite(weights)] = 0.0
