@@ -9,12 +9,10 @@ from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, 
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import (
-    check_json,
     convert_bytes_to_str,
     convert_seconds_to_str,
     write_binary_recording,
     write_memory_recording,
-    write_traces_to_zarr,
 )
 from .job_tools import split_job_kwargs
 
