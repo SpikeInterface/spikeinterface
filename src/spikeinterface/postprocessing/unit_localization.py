@@ -616,7 +616,7 @@ def get_grid_convolution_templates_and_weights(
         # Kilosort
         # weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
 
-        weights[count] = np.exp(-np.sqrt(dist**2 + depth**2) / depth)
+        weights[count] = np.exp(-dist / depth)
 
         thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
         weights[count][weights[count] < thresholds] = 0
