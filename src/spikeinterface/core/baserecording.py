@@ -316,9 +316,9 @@ class BaseRecording(BaseRecordingSnippets):
             else:
                 gains = self.get_property("gain_to_uV")
                 offsets = self.get_property("offset_to_uV")
-                gains = gains[channel_indices].astype("float32")
-                offsets = offsets[channel_indices].astype("float32")
-                traces = traces.astype("float32") * gains + offsets
+                gains = gains[channel_indices].astype("float32", copy=False)
+                offsets = offsets[channel_indices].astype("float32", copy=False)
+                traces = traces.astype("float32", copy=False) * gains + offsets
         return traces
 
     def has_scaled_traces(self):
@@ -417,7 +417,7 @@ class BaseRecording(BaseRecordingSnippets):
         assert rs.get_num_samples() == times.shape[0], "times have wrong shape"
 
         rs.t_start = None
-        rs.time_vector = times.astype("float64")
+        rs.time_vector = times.astype("float64", copy=False)
 
         if with_warning:
             warn(
