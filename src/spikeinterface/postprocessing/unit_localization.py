@@ -373,8 +373,7 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    depth_um=np.linspace(0, 50.0, 5),
-    decay_power=1,
+    depth_um=np.linspace(1, 50.0, 5),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
@@ -396,8 +395,6 @@ def compute_grid_convolution(
         Upsampling resolution for the grid of templates
     depth_um: np.array, default: np.linspace(5, 100.0, 10)
         Putative depth of the fake templates
-    decay_power: float, default: 1
-        The decay power as function of the distances for the amplitudes
     sigma_ms: float, default: 0.25
         The temporal decay of the fake templates
     margin_um: float, default: 50
@@ -426,10 +423,13 @@ def compute_grid_convolution(
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
         prototype = np.exp(-(time_axis**2) / (2 * (sigma_ms**2)))
+        if peak_sign == "neg":
+            prototype *= -1
+
     prototype = prototype[:, np.newaxis]
 
     template_positions, weights, nearest_template_mask = get_grid_convolution_templates_and_weights(
-        contact_locations, radius_um, upsampling_um, depth_um, margin_um, decay_power, sparsity_threshold
+        contact_locations, radius_um, upsampling_um, depth_um, margin_um, sparsity_threshold
     )
 
     # print(template_positions.shape)
@@ -445,13 +445,12 @@ def compute_grid_convolution(
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]
         wf = templates[i, :, :]
-        amplitude = wf[nbefore, main_chan]
         nearest_templates = nearest_template_mask[main_chan, :]
 
         channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
         num_templates = np.sum(nearest_templates)
-        global_products = ((wf[:, channel_mask] / amplitude) * prototype).sum(axis=0)
-        # global_products /= np.linalg.norm(global_products)
+        global_products = (wf[:, channel_mask] * prototype).sum(axis=0)
+        global_products /= np.linalg.norm(global_products)
 
         dot_products = np.zeros((nb_weights, num_templates), dtype=np.float32)
         for count in range(nb_weights):
@@ -572,12 +571,11 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 def get_grid_convolution_templates_and_weights(
     contact_locations,
-    radius_um=50,
+    radius_um=40,
     upsampling_um=5,
-    depth_um=np.linspace(0, 50.0, 5),
+    depth_um=np.linspace(1, 50.0, 5),
     margin_um=50,
-    decay_power=1,
-    sparsity_threshold=0.5,
+    sparsity_threshold=0.25,
 ):
     import sklearn.metrics
 
@@ -611,9 +609,15 @@ def get_grid_convolution_templates_and_weights(
     weights = np.zeros((len(depth_um), len(contact_locations), nb_templates), dtype=np.float32)
 
     for count, depth in enumerate(depth_um):
-        weights[count] = 1 / ((0.1 + np.sqrt(dist**2 + depth**2))) ** decay_power
-        weights[count] /= weights[count].max(axis=0)
+        ### First attempt
+        # weights[count] = 1 / ((0.1 + np.sqrt(dist**2 + depth**2))) ** decay_power
+        # weights[count] /= weights[count].max(axis=0)
+
+        # Kilosort
         # weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
+
+        weights[count] = np.exp(-dist / depth)
+
         thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
         weights[count][weights[count] < thresholds] = 0
 

@@ -62,7 +62,7 @@ def _run_localization_from_peak_source(
         if "prototype" not in method_kwargs:
             assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
             method_kwargs["prototype"] = get_prototype_spike(
-                recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
+                recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
         extract_dense_waveforms = ExtractDenseWaveforms(
             recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
@@ -322,12 +322,12 @@ class LocalizeGridConvolution(PipelineNode):
         Upsampling resolution for the grid of templates
     depth_um: np.array, default: np.linspace(5, 100.0, 10)
         Putative depth of the fake templates
-    decay_power: float, default:1
-        The decay power as function of the distances for the amplitudes
     sigma_ms: float
         The temporal decay of the fake templates
     margin_um: float
         The margin for the grid of fake templates
+    peak_sign: "neg" | "pos", default: "neg"
+        Sign of the peak if no prototype are provided for the waveforms
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
     percentile: float, default: 5
@@ -344,13 +344,13 @@ class LocalizeGridConvolution(PipelineNode):
         parents=["extract_waveforms"],
         radius_um=40.0,
         upsampling_um=5.0,
-        depth_um=np.linspace(0, 50.0, 5),
-        decay_power=1,
+        depth_um=np.linspace(1, 50.0, 5),
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
         percentile=5.0,
-        sparsity_threshold=0.5,
+        peak_sign="neg",
+        sparsity_threshold=0.25,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -358,8 +358,8 @@ class LocalizeGridConvolution(PipelineNode):
         self.depth_um = depth_um
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
+        self.peak_sign = peak_sign
         self.percentile = 100 - percentile
-        self.decay_power = decay_power
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
         self.sparsity_threshold = sparsity_threshold
         assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
@@ -376,6 +376,8 @@ class LocalizeGridConvolution(PipelineNode):
         if prototype is None:
             time_axis = np.arange(-self.nbefore, self.nafter) * 1000 / fs
             self.prototype = np.exp(-(time_axis**2) / (2 * (sigma_ms**2)))
+            if self.peak_sign == "neg":
+                self.prototype *= -1
         else:
             self.prototype = prototype
 
@@ -387,7 +389,6 @@ class LocalizeGridConvolution(PipelineNode):
             self.upsampling_um,
             self.depth_um,
             self.margin_um,
-            self.decay_power,
             self.sparsity_threshold,
         )
 
@@ -402,6 +403,7 @@ class LocalizeGridConvolution(PipelineNode):
                 weights=self.weights,
                 nbefore=self.nbefore,
                 percentile=self.percentile,
+                peak_sign=self.peak_sign,
             )
         )
 
@@ -416,18 +418,13 @@ class LocalizeGridConvolution(PipelineNode):
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
             num_spikes = len(idx)
-            if "amplitude" in peaks.dtype.names:
-                amplitudes = peaks["amplitude"][idx]
-            else:
-                amplitudes = waveforms[idx, self.nbefore, main_chan]
             nearest_templates = self.nearest_template_mask[main_chan, :]
             num_templates = np.sum(nearest_templates)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
 
-            global_products = (
-                waveforms[idx][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
-            ).sum(axis=1)
-            # global_products /= np.linalg.norm(global_products, axis=0)
+            global_products = (waveforms[idx][:, :, channel_mask] * self.prototype).sum(axis=1)
+
+            global_products /= (np.linalg.norm(global_products, axis=1))[:, np.newaxis]
 
             dot_products = np.zeros((nb_weights, num_spikes, num_templates), dtype=np.float32)
             for count in range(nb_weights):
