@@ -109,6 +109,7 @@ class TestWidgets(unittest.TestCase):
         # make sparse waveforms
         cls.sparsity_radius = compute_sparsity(cls.we_dense, method="radius", radius_um=50)
         cls.sparsity_strict = compute_sparsity(cls.we_dense, method="radius", radius_um=20)
+        cls.sparsity_large = compute_sparsity(cls.we_dense, method="radius", radius_um=80)
         cls.sparsity_best = compute_sparsity(cls.we_dense, method="best_channels", num_channels=5)
         if (cache_folder / "we_sparse").is_dir():
             cls.we_sparse = load_waveforms(cache_folder / "we_sparse")
@@ -195,16 +196,33 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_unit_waveforms(
                     self.we_sparse, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
+                # extra sparsity
+                sw.plot_unit_waveforms(
+                    self.we_sparse,
+                    sparsity=self.sparsity_strict,
+                    unit_ids=unit_ids,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                # test "larger" sparsity
+                with self.assertRaises(AssertionError):
+                    sw.plot_unit_waveforms(
+                        self.we_sparse,
+                        sparsity=self.sparsity_large,
+                        unit_ids=unit_ids,
+                        backend=backend,
+                        **self.backend_kwargs[backend],
+                    )
 
     def test_plot_unit_templates(self):
         possible_backends = list(sw.UnitTemplatesWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 print(f"Testing backend {backend}")
-                sw.plot_unit_templates(
-                    self.we_dense, backend=backend, templates_percentile_shading=None, **self.backend_kwargs[backend]
-                )
+                print("Dense")
+                sw.plot_unit_templates(self.we_dense, backend=backend, **self.backend_kwargs[backend])
                 unit_ids = self.sorting.unit_ids[:6]
+                print("Dense + radius")
                 sw.plot_unit_templates(
                     self.we_dense,
                     sparsity=self.sparsity_radius,
@@ -212,54 +230,71 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
+                print("Dense + best")
+                sw.plot_unit_templates(
+                    self.we_dense,
+                    sparsity=self.sparsity_best,
+                    unit_ids=unit_ids,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
                 # test different shadings
+                print("Sparse")
                 sw.plot_unit_templates(
                     self.we_sparse,
-                    sparsity=self.sparsity_best,
                     unit_ids=unit_ids,
                     templates_percentile_shading=None,
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
+                print("Sparse2")
                 sw.plot_unit_templates(
                     self.we_sparse,
-                    sparsity=self.sparsity_best,
                     unit_ids=unit_ids,
-                    templates_percentile_shading=None,
+                    # templates_percentile_shading=None,
                     scale=10,
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
                 # test different shadings
+                print("Sparse3")
                 sw.plot_unit_templates(
                     self.we_sparse,
-                    sparsity=self.sparsity_best,
                     unit_ids=unit_ids,
                     backend=backend,
                     templates_percentile_shading=None,
                     shade_templates=False,
                     **self.backend_kwargs[backend],
                 )
+                print("Sparse4")
                 sw.plot_unit_templates(
                     self.we_sparse,
-                    sparsity=self.sparsity_best,
                     unit_ids=unit_ids,
-                    templates_percentile_shading=5,
+                    templates_percentile_shading=0.1,
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
+                print("Extra sparsity")
                 sw.plot_unit_templates(
                     self.we_sparse,
-                    sparsity=self.sparsity_best,
+                    sparsity=self.sparsity_strict,
                     unit_ids=unit_ids,
-                    templates_percentile_shading=[10, 90],
+                    templates_percentile_shading=[1, 10, 90, 99],
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
+                # test "larger" sparsity
+                with self.assertRaises(AssertionError):
+                    sw.plot_unit_templates(
+                        self.we_sparse,
+                        sparsity=self.sparsity_large,
+                        unit_ids=unit_ids,
+                        backend=backend,
+                        **self.backend_kwargs[backend],
+                    )
                 if backend != "sortingview":
                     sw.plot_unit_templates(
                         self.we_sparse,
-                        sparsity=self.sparsity_best,
                         unit_ids=unit_ids,
                         templates_percentile_shading=[1, 5, 25, 75, 95, 99],
                         backend=backend,
@@ -270,7 +305,6 @@ class TestWidgets(unittest.TestCase):
                     with self.assertRaises(AssertionError):
                         sw.plot_unit_templates(
                             self.we_sparse,
-                            sparsity=self.sparsity_best,
                             unit_ids=unit_ids,
                             templates_percentile_shading=[1, 5, 25, 75, 95, 99],
                             backend=backend,
@@ -551,7 +585,7 @@ if __name__ == "__main__":
     # mytest.test_plot_traces()
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
-    mytest.test_plot_crosscorrelogram()
+    mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
