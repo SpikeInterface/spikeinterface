@@ -257,7 +257,7 @@ def write_binary_recording(
     file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
     for segment_index, file_path in file_path_dict.items():
         num_frames = recording.get_num_frames(segment_index=segment_index)
-        data_size_bytes = dtype_size_bytes * num_frames * num_channels
+        data_size_bytes = np.int64(dtype_size_bytes) * num_frames * num_channels
         file_size_bytes = data_size_bytes + byte_offset
 
         file = open(file_path, "wb+")
@@ -290,7 +290,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     num_frames = recording.get_num_frames(segment_index=segment_index)
     shape = (num_frames, num_channels)
     dtype_size_bytes = np.dtype(dtype).itemsize
-    data_size_bytes = dtype_size_bytes * num_frames * num_channels
+    data_size_bytes = np.int64(dtype_size_bytes) * num_frames * num_channels
 
     # Offset (The offset needs to be multiple of the page size)
     # The mmap offset is associated to be as big as possible but still a multiple of the page size
