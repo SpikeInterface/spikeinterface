@@ -768,7 +768,7 @@ class BaseRecordingSegment(BaseSegment):
         self,
         start_frame: int | None = None,
         end_frame: int | None = None,
-        channel_indices: list | np.array | None = None,
+        channel_indices: list | np.array | tuple | None = None,
     ) -> np.ndarray:
         """
         Return the raw traces, optionally for a subset of samples and/or channels
@@ -779,7 +779,7 @@ class BaseRecordingSegment(BaseSegment):
             start sample index, or zero if None
         end_frame: int | None, default: None
             end_sample, or number of samples if None
-        channel_indices: list | np.array | None, default: None
+        channel_indices: list | np.array | tuple | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
