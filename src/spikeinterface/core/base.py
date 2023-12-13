@@ -91,7 +91,9 @@ class BaseExtractor:
         else:
             return segment_index
 
-    def ids_to_indices(self, ids: list | np.ndarray | tuple | None = None, prefer_slice: bool = False) -> np.ndarray | slice:
+    def ids_to_indices(
+        self, ids: list | np.ndarray | tuple | None = None, prefer_slice: bool = False
+    ) -> np.ndarray | slice:
         """
         Convert a list of IDs into indices, either as an array or a slice.
 
