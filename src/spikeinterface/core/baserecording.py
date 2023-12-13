@@ -152,7 +152,7 @@ class BaseRecording(BaseRecordingSnippets):
             The number of samples
         """
         segment_index = self._check_segment_index(segment_index)
-        return self._recording_segments[segment_index].get_num_samples()
+        return int(self._recording_segments[segment_index].get_num_samples())
 
     get_num_frames = get_num_samples
 
