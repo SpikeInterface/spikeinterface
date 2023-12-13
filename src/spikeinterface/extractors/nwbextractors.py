@@ -681,16 +681,11 @@ class NwbRecordingExtractor(BaseRecording):
         remote files.
     stream_cache_path: str, Path, or None, default: None
         Specifies the local path for caching the file. Relevant only if `cache` is True.
-    io_backend: Literal["pynwb", "hdf5"], default: "pynwb"
-        Specifies the backend library used for data IO operations.
-        - "pynwb": Uses the PyNWB library, which provides comprehensive NWB file manipulation
-                   but might be slower due to validation overhead.
-        - "hdf5": Directly accesses the NWB file using HDF5 API, potentially offering faster
-                  read performance by bypassing some of the PyNWB validations.
-        This parameter allows users to balance between performance and the feature-rich
-        environment provided by PyNWB.
+    use_pynwb: bool, default: False
+        Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
+        to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
     electrical_series_location: str or None, default: None
-        This parameter is only used with the `hdf5` io_backend.
+        This parameter is only used when `use_pynwb=False`.
         Specifies the direct path to the ElectricalSeries object within the NWB file,
         e.g., 'acquisition/ElectricalSeries/my_electrical_series'.
 
@@ -745,9 +740,9 @@ class NwbRecordingExtractor(BaseRecording):
         file: BinaryIO | None = None,  # file-like - provide either this or file_path
         electrical_series_location: str | None = None,
         cache: bool = False,
-        io_backend: Literal["pynwb", "hdf5"] = "pynwb",
+        use_pynwb: bool = False,
     ):
-        if io_backend == "pynwb":
+        if use_pynwb:
             extractor = _NwbPynwbRecordingExtractor(
                 file_path=file_path,
                 electrical_series_name=electrical_series_name,
@@ -758,7 +753,7 @@ class NwbRecordingExtractor(BaseRecording):
                 file=file,
                 cache=cache,
             )
-        elif io_backend == "hdf5":
+        else:
             extractor = _NWBHDF5RecordingExtractor(
                 file_path=file_path,
                 electrical_series_name=electrical_series_name,
@@ -770,8 +765,6 @@ class NwbRecordingExtractor(BaseRecording):
                 electrical_series_location=electrical_series_location,
                 cache=cache,
             )
-        else:
-            raise ValueError(f"Invalid io_backend: {io_backend} use 'pynwb' or 'hdf5'")
 
         return extractor
 
