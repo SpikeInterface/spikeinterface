@@ -1275,7 +1275,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
                 wf *= self.amplitude_vector[i]
             traces[start_traces:end_traces] += wf
 
-        return traces.astype(self.dtype)
+        return traces.astype(self.dtype, copy=False)
 
     def get_num_samples(self) -> int:
         return self.num_samples
