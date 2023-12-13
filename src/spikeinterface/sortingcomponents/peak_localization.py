@@ -322,8 +322,6 @@ class LocalizeGridConvolution(PipelineNode):
         Upsampling resolution for the grid of templates
     depth_um: np.array, default: np.linspace(5, 100.0, 10)
         Putative depth of the fake templates
-    decay_power: float, default:1
-        The decay power as function of the distances for the amplitudes
     sigma_ms: float
         The temporal decay of the fake templates
     margin_um: float
@@ -345,7 +343,6 @@ class LocalizeGridConvolution(PipelineNode):
         radius_um=40.0,
         upsampling_um=5.0,
         depth_um=np.linspace(1, 50.0, 5),
-        decay_power=1,
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
@@ -359,7 +356,6 @@ class LocalizeGridConvolution(PipelineNode):
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
         self.percentile = 100 - percentile
-        self.decay_power = decay_power
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
         self.sparsity_threshold = sparsity_threshold
         assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
@@ -387,7 +383,6 @@ class LocalizeGridConvolution(PipelineNode):
             self.upsampling_um,
             self.depth_um,
             self.margin_um,
-            self.decay_power,
             self.sparsity_threshold,
         )
 
