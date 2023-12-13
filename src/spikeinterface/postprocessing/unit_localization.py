@@ -423,7 +423,7 @@ def compute_grid_convolution(
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
         prototype = np.exp(-(time_axis**2) / (2 * (sigma_ms**2)))
-        if peak_sign == 'neg':
+        if peak_sign == "neg":
             prototype *= -1
 
     prototype = prototype[:, np.newaxis]

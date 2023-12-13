@@ -349,7 +349,7 @@ class LocalizeGridConvolution(PipelineNode):
         margin_um=50.0,
         prototype=None,
         percentile=5.0,
-        peak_sign='neg',
+        peak_sign="neg",
         sparsity_threshold=0.25,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
@@ -376,7 +376,7 @@ class LocalizeGridConvolution(PipelineNode):
         if prototype is None:
             time_axis = np.arange(-self.nbefore, self.nafter) * 1000 / fs
             self.prototype = np.exp(-(time_axis**2) / (2 * (sigma_ms**2)))
-            if self.peak_sign == 'neg':
+            if self.peak_sign == "neg":
                 self.prototype *= -1
         else:
             self.prototype = prototype
@@ -403,7 +403,7 @@ class LocalizeGridConvolution(PipelineNode):
                 weights=self.weights,
                 nbefore=self.nbefore,
                 percentile=self.percentile,
-                peak_sign=self.peak_sign
+                peak_sign=self.peak_sign,
             )
         )
 
@@ -422,9 +422,7 @@ class LocalizeGridConvolution(PipelineNode):
             num_templates = np.sum(nearest_templates)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
 
-            global_products = (
-                waveforms[idx][:, :, channel_mask] * self.prototype
-            ).sum(axis=1)
+            global_products = (waveforms[idx][:, :, channel_mask] * self.prototype).sum(axis=1)
 
             global_products /= (np.linalg.norm(global_products, axis=1))[:, np.newaxis]
 
