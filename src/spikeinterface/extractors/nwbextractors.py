@@ -2,6 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Union, List, Optional, Literal, Dict, BinaryIO
 import warnings
+import warnings
 
 import numpy as np
 
@@ -587,25 +588,48 @@ class NwbSortingExtractor(BaseSorting):
         if units_ids is None:
             units_ids = units_table["id"].data
 
+        units_table = self._nwbfile.units
+
+        name_to_column_data = {c.name: c for c in units_table.columns}
+        spike_times_data = name_to_column_data.pop("spike_times").data
+        spike_times_index_data = name_to_column_data.pop("spike_times_index").data
+
+        units_ids = name_to_column_data.pop("unit_name", None)
+        if units_ids is None:
+            units_ids = units_table["id"].data
+
+        units_table = self._nwbfile.units
+
+        name_to_column_data = {c.name: c for c in units_table.columns}
+        spike_times_data = name_to_column_data.pop("spike_times").data
+        spike_times_index_data = name_to_column_data.pop("spike_times_index").data
+
+        units_ids = name_to_column_data.pop("unit_name", None)
+        if units_ids is None:
+            units_ids = units_table["id"].data
+
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=units_ids)
 
         sorting_segment = NwbSortingSegment(
             spike_times_data=spike_times_data,
             spike_times_index_data=spike_times_index_data,
             sampling_frequency=sampling_frequency,
-            t_start=self.t_start,
         )
         self.add_sorting_segment(sorting_segment)
 
-        # Add properties
-        properties_to_add = [name for name in name_to_column_data if "index" not in name]
+        # Add only the columns that are not indices
+        index_columns = [name for name in name_to_column_data if name.endswith("_index")]
+        properties_to_add = [name for name in name_to_column_data if name not in index_columns]
+        # Filter those properties that are nested ragged arrays
+        properties_to_add = [name for name in properties_to_add if f"{name}_index_index" not in name_to_column_data]
+
         for property_name in properties_to_add:
             data = name_to_column_data.pop(property_name).data
             data_index = name_to_column_data.get(f"{property_name}_index", None)
             not_ragged_array = data_index is None
             if not_ragged_array:
                 values = data[:]
-            else:
+            else:  # TODO if we want we could make this recursive to handle nested ragged arrays
                 data_index = data_index.data
                 index_spacing = np.diff(data_index, prepend=0)
                 all_index_spacing_are_the_same = np.unique(index_spacing).size == 1
@@ -640,14 +664,16 @@ class NwbSortingSegment(BaseSortingSegment):
         BaseSortingSegment.__init__(self)
         self.spike_times_data = spike_times_data
         self.spike_times_index_data = spike_times_index_data
+        self.spike_times_data = spike_times_data
+        self.spike_times_index_data = spike_times_index_data
         self._sampling_frequency = sampling_frequency
         self._t_start = t_start
 
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: Optional[int] = None,
+        end_frame: Optional[int] = None,
     ) -> np.ndarray:
         # Extract the spike times for the unit
         unit_index = self.parent_extractor.id_to_index(unit_id)
@@ -664,8 +690,6 @@ class NwbSortingSegment(BaseSortingSegment):
         start_index = 0
         if start_frame is not None:
             start_index = np.searchsorted(frames, start_frame, side="left")
-        else:
-            start_index = 0
 
         if end_frame is not None:
             end_index = np.searchsorted(frames, end_frame, side="left")

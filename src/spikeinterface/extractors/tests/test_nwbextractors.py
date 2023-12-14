@@ -188,7 +188,7 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
 
 
-def test_sorting_extraction_of_ragged_arrays(tmp_path):
+def test_sorting_property_extraction(tmp_path):
     nwbfile = mock_NWBFile()
 
     # Add the spikes
@@ -200,20 +200,28 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     spike_times2 = np.array([0.0, 1.0, 2.0, 3.0])
     nwbfile.add_unit(spike_times=spike_times2, unit_name="b", a_property="b_property_value")
 
-    ragged_array_bad = [[1, 2, 3, 8, 10], [1, 2, 3, 5]]
+    non_uniform_ragged_array = [[1, 2, 3, 8, 10], [1, 2, 3, 5]]
     nwbfile.add_unit_column(
-        name="ragged_array_bad",
-        description="an evill array that wants to destroy your test",
-        data=ragged_array_bad,
+        name="non_uniform_ragged_array",
+        description="A non-uniform ragged array that can not be loaded by spikeinterface",
+        data=non_uniform_ragged_array,
         index=True,
     )
 
-    ragged_array_good = [[1, 2, 3], [4, 5, 6]]
+    uniform_ragged_array = [[1, 2, 3], [4, 5, 6]]
     nwbfile.add_unit_column(
-        name="ragged_array_good",
-        description="a good array that wants to help your test be nice to nice arrays",
-        data=ragged_array_good,
+        name="uniform_ragged_array",
+        description="A uniform ragged array that can be loaded into spikeinterface",
+        data=uniform_ragged_array,
         index=True,
+    )
+
+    doubled_ragged_array = [[[0, 1], [2, 3]], [[4, 5], [6, 7]]]
+    nwbfile.add_unit_column(
+        name="doubled_ragged_array",
+        description="A doubled ragged array that can not be loaded into spikeinterface",
+        data=doubled_ragged_array,
+        index=2,
     )
 
     file_path = tmp_path / "test.nwb"
@@ -227,9 +235,14 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
 
     np.testing.assert_equal(units_ids, ["a", "b"])
 
+    units_ids = sorting_extractor.get_unit_ids()
+
+    np.testing.assert_equal(units_ids, ["a", "b"])
+
     added_properties = sorting_extractor.get_property_keys()
-    assert "ragged_array_bad" not in added_properties
-    assert "ragged_array_good" in added_properties
+    assert "non_uniform_ragged_array" not in added_properties
+    assert "doubled_ragged_array" not in added_properties
+    assert "uniform_ragged_array" in added_properties
     assert "a_property" in added_properties
 
     spike_train1 = sorting_extractor.get_unit_spike_train(unit_id="a", return_times=True)
@@ -237,70 +250,6 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
 
     spike_train2 = sorting_extractor.get_unit_spike_train(unit_id="b", return_times=True)
     np.testing.assert_allclose(spike_train2, spike_times2)
-
-
-def test_sorting_extraction_start_time(tmp_path):
-    nwbfile = mock_NWBFile()
-
-    # Add the spikes
-    spike_times1 = np.array([0.0, 1.0, 2.0])
-    nwbfile.add_unit(spike_times=spike_times1)
-    spike_times2 = np.array([0.0, 1.0, 2.0, 3.0])
-    nwbfile.add_unit(spike_times=spike_times2)
-
-    file_path = tmp_path / "test.nwb"
-    # Write the nwbfile to a temporary file
-    with NWBHDF5IO(path=file_path, mode="w") as io:
-        io.write(nwbfile)
-
-    t_start = 10
-    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0, t_start=t_start)
-
-    extracted_spike_times1 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
-    expected_spike_times1 = spike_times1 + t_start
-    np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
-
-    extracted_spike_times2 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
-    expected_spike_times2 = spike_times2 + t_start
-    np.testing.assert_allclose(extracted_spike_times2, expected_spike_times2)
-
-
-def test_sorting_extraction_start_time_from_series(tmp_path):
-    nwbfile = mock_NWBFile()
-    electrical_series_name = "ElectricalSeries"
-    t_start = 10.0
-
-    n_electrodes = 5
-    electrodes = mock_electrodes(n_electrodes=n_electrodes, nwbfile=nwbfile)
-    electrical_series = ElectricalSeries(
-        name=electrical_series_name,
-        starting_time=t_start,
-        rate=1.0,
-        data=np.ones((10, 5)),
-        electrodes=electrodes,
-    )
-    nwbfile.add_acquisition(electrical_series)
-    # Add the spikes
-    spike_times1 = np.array([0.0, 1.0, 2.0]) + t_start
-    nwbfile.add_unit(spike_times=spike_times1)
-    spike_times2 = np.array([0.0, 1.0, 2.0, 3.0]) + t_start
-    nwbfile.add_unit(spike_times=spike_times2)
-
-    file_path = tmp_path / "test.nwb"
-    # Write the nwbfile to a temporary file
-    with NWBHDF5IO(path=file_path, mode="w") as io:
-        io.write(nwbfile)
-
-    t_start = 10
-    sorting_extractor = NwbSortingExtractor(file_path=file_path, electrical_series_name=electrical_series_name)
-
-    extracted_spike_times1 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
-    expected_spike_times1 = spike_times1 + t_start
-    np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
-
-    extracted_spike_times2 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
-    expected_spike_times2 = spike_times2 + t_start
-    np.testing.assert_allclose(extracted_spike_times2, expected_spike_times2)
 
 
 if __name__ == "__main__":
