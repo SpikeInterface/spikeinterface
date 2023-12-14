@@ -2,7 +2,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Union, List, Optional, Literal, Dict, BinaryIO
 import warnings
-import warnings
 
 import numpy as np
 
@@ -590,30 +589,13 @@ class NwbSortingExtractor(BaseSorting):
 
         units_table = self._nwbfile.units
 
-        name_to_column_data = {c.name: c for c in units_table.columns}
-        spike_times_data = name_to_column_data.pop("spike_times").data
-        spike_times_index_data = name_to_column_data.pop("spike_times_index").data
-
-        units_ids = name_to_column_data.pop("unit_name", None)
-        if units_ids is None:
-            units_ids = units_table["id"].data
-
-        units_table = self._nwbfile.units
-
-        name_to_column_data = {c.name: c for c in units_table.columns}
-        spike_times_data = name_to_column_data.pop("spike_times").data
-        spike_times_index_data = name_to_column_data.pop("spike_times_index").data
-
-        units_ids = name_to_column_data.pop("unit_name", None)
-        if units_ids is None:
-            units_ids = units_table["id"].data
-
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=units_ids)
 
         sorting_segment = NwbSortingSegment(
             spike_times_data=spike_times_data,
             spike_times_index_data=spike_times_index_data,
             sampling_frequency=sampling_frequency,
+            t_start=self.t_start,
         )
         self.add_sorting_segment(sorting_segment)
 
@@ -656,6 +638,7 @@ class NwbSortingExtractor(BaseSorting):
             "cache": cache,
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
+            "t_start": self.t_start,
         }
 
 
