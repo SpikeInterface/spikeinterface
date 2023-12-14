@@ -222,7 +222,7 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0, t_start=0)
+    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0)
 
     units_ids = sorting_extractor.get_unit_ids()
 

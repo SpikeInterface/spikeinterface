@@ -536,8 +536,6 @@ class NwbSortingExtractor(BaseSorting):
         stream_mode: str | None = None,
         cache: bool = False,
         stream_cache_path: str | Path | None = None,
-        *,
-        t_start: float | None = None,
     ):
         try:
             from pynwb import NWBHDF5IO, NWBFile
@@ -562,17 +560,15 @@ class NwbSortingExtractor(BaseSorting):
             # get rate
             if self.electrical_series.rate is not None:
                 sampling_frequency = self.electrical_series.rate
-                self.t_start = self.electrical_series.starting_time
             else:
                 if hasattr(self.electrical_series, "timestamps"):
                     if self.electrical_series.timestamps is not None:
                         timestamps = self.electrical_series.timestamps
                         sampling_frequency = 1 / np.median(np.diff(timestamps[samples_for_rate_estimation]))
-                        self.t_start = timestamps[0]
-        assert (
-            sampling_frequency is not None
-        ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
-        assert t_start is not None, "Couldn't load t_start. Please provide it with the 't_start' argument"
+
+        assert sampling_frequency is not None, (
+            "Couldn't load sampling frequency. Please provide it with the " "'sampling_frequency' argument"
+        )
 
         units_table = self._nwbfile.units
 
@@ -590,7 +586,6 @@ class NwbSortingExtractor(BaseSorting):
             spike_times_data=spike_times_data,
             spike_times_index_data=spike_times_index_data,
             sampling_frequency=sampling_frequency,
-            t_start=t_start,
         )
         self.add_sorting_segment(sorting_segment)
 
@@ -633,12 +628,11 @@ class NwbSortingExtractor(BaseSorting):
 
 
 class NwbSortingSegment(BaseSortingSegment):
-    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float):
+    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency):
         BaseSortingSegment.__init__(self)
         self.spike_times_data = spike_times_data
         self.spike_times_index_data = spike_times_index_data
         self._sampling_frequency = sampling_frequency
-        self._t_start = t_start
 
     def get_unit_spike_train(
         self,
