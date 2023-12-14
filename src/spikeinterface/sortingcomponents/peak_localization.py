@@ -333,8 +333,9 @@ class LocalizeGridConvolution(PipelineNode):
     percentile: float, default: 5
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float, default: 0.05
-        The sparsity threshold (in [0-1]) below which weights should be considered as 0
+    sparsity_threshold: float, default: None
+        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None,
+        automatically set to 1/sqrt(num_channels)
     """
 
     def __init__(
@@ -348,9 +349,9 @@ class LocalizeGridConvolution(PipelineNode):
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=5.0,
+        percentile=25.0,
         peak_sign="neg",
-        sparsity_threshold=0.1,
+        sparsity_threshold=None,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -360,9 +361,10 @@ class LocalizeGridConvolution(PipelineNode):
         self.upsampling_um = upsampling_um
         self.peak_sign = peak_sign
         self.percentile = 100 - percentile
-        assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
         self.sparsity_threshold = sparsity_threshold
-        assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
+        assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
+        if self.sparsity_threshold is not None:
+            assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
         contact_locations = recording.get_channel_locations()
         # Find waveform extractor in the parents
         waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
@@ -404,6 +406,7 @@ class LocalizeGridConvolution(PipelineNode):
                 nbefore=self.nbefore,
                 percentile=self.percentile,
                 peak_sign=self.peak_sign,
+                sparsity_threshold=self.sparsity_threshold,
             )
         )
 

@@ -377,8 +377,8 @@ def compute_grid_convolution(
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=5,
-    sparsity_threshold=0.1,
+    percentile=25,
+    sparsity_threshold=None,
 ):
     """
     Estimate the positions of the templates from a large grid of fake templates
@@ -404,8 +404,9 @@ def compute_grid_convolution(
     percentile: float, default: 5
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float, default: 0.05
-        The sparsity threshold (in 0-1) below which weights should be considered as 0.
+    sparsity_threshold: float, default: None
+        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None,
+        automatically set to 1/sqrt(num_channels)
     Returns
     -------
     unit_location: np.array
@@ -418,7 +419,8 @@ def compute_grid_convolution(
     fs = waveform_extractor.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
-    assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
+    if sparsity_threshold is not None:
+        assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
@@ -573,7 +575,7 @@ def get_grid_convolution_templates_and_weights(
     upsampling_um=5,
     depth_um=np.linspace(1, 50.0, 5),
     margin_um=50,
-    sparsity_threshold=0.1,
+    sparsity_threshold=None,
 ):
     import sklearn.metrics
 
@@ -611,7 +613,7 @@ def get_grid_convolution_templates_and_weights(
 def get_convolution_weights(
     distances,
     depth_um=np.linspace(1, 50.0, 5),
-    sparsity_threshold=0.1,
+    sparsity_threshold=None,
 ):
     weights = np.zeros((len(depth_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
 
@@ -621,8 +623,11 @@ def get_convolution_weights(
 
         weights[count] = np.exp(-distances / depth)
 
-        thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
-        weights[count][weights[count] < thresholds] = 0
+        # dist_with_depth = 1 + np.sqrt(distances**2 + depth**2)
+        # weights[count] = 1/(dist_with_depth)**2
+
+        # thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
+        # weights[count][weights[count] < thresholds] = 0
 
     # normalize
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -630,6 +635,9 @@ def get_convolution_weights(
         weights /= norm
 
     weights[~np.isfinite(weights)] = 0.0
+    if sparsity_threshold is None:
+        sparsity_threshold = 1 / np.sqrt(distances.shape[0])
+    weights[weights < sparsity_threshold] = 0
 
     return weights
 
