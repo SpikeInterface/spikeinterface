@@ -111,6 +111,10 @@ class ShellScript:
         for dirpath in self._dirs_to_remove:
             _rmdir_with_retries(str(dirpath), num_retries=5)
         if self._process is not None:
+            if self._process.stdout:
+                self._process.stdout.close()
+            if self._process.stderr:
+                self._process.stderr.close()
             self._process.kill()
 
     def stop(self) -> None:
