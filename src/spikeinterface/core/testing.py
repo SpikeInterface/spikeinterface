@@ -93,6 +93,7 @@ def check_sortings_equal(
             train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30))
             train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30))
             assert np.array_equal(train1, train2)
+            # test that slicing works correctly
             train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx, end_frame=max_spike_index - 30))
             train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx, end_frame=max_spike_index - 30))
             assert np.array_equal(train1, train2)
