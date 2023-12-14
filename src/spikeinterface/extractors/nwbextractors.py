@@ -864,13 +864,14 @@ class NwbSortingExtractor(BaseSorting):
             # get rate
             if self.electrical_series.rate is not None:
                 sampling_frequency = self.electrical_series.rate
+                t_start = self.electrical_series.t_start
             else:
                 if hasattr(self.electrical_series, "timestamps"):
                     if self.electrical_series.timestamps is not None:
                         timestamps = self.electrical_series.timestamps
                         sampling_frequency = 1 / np.median(np.diff(timestamps[samples_for_rate_estimation]))
 
-        assert sampling_frequency is not None, (
+        assert sampling_frequency is not None and t_start is not None, (
             "Couldn't load sampling frequency. Please provide it with the " "'sampling_frequency' argument"
         )
 

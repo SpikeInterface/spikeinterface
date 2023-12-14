@@ -118,6 +118,7 @@ test_core = [
 
 test = [
     "pytest",
+    "pytest-dependency",
     "pytest-cov",
 
     # zarr is needed for testing
