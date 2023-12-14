@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Union, List, Optional, Literal, Dict, BinaryIO
+import warnings
 
 import numpy as np
 
@@ -855,8 +856,6 @@ class NwbSortingExtractor(BaseSorting):
             file_path=file_path, stream_mode=stream_mode, cache=cache, stream_cache_path=stream_cache_path
         )
 
-        units_ids = list(self._nwbfile.units.id[:])
-
         timestamps = None
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
@@ -875,39 +874,52 @@ class NwbSortingExtractor(BaseSorting):
             "Couldn't load sampling frequency. Please provide it with the " "'sampling_frequency' argument"
         )
 
+        units_table = self._nwbfile.units
+
+        name_to_column_data = {c.name: c for c in units_table.columns}
+        spike_times_data = name_to_column_data.pop("spike_times").data
+        spike_times_index_data = name_to_column_data.pop("spike_times_index").data
+
+        units_ids = name_to_column_data.pop("unit_name", None)
+        if units_ids is None:
+            units_ids = units_table["id"].data
+
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=units_ids)
+
         sorting_segment = NwbSortingSegment(
-            nwbfile=self._nwbfile, sampling_frequency=sampling_frequency, timestamps=timestamps
+            spike_times_data=spike_times_data,
+            spike_times_index_data=spike_times_index_data,
+            sampling_frequency=sampling_frequency,
         )
         self.add_sorting_segment(sorting_segment)
 
-        # Add properties:
-        properties = dict()
-        import warnings
+        # Add only the columns that are not indices
+        index_columns = [name for name in name_to_column_data if name.endswith("_index")]
+        properties_to_add = [name for name in name_to_column_data if name not in index_columns]
+        # Filter those properties that are nested ragged arrays
+        properties_to_add = [name for name in properties_to_add if f"{name}_index_index" not in name_to_column_data]
 
-        for column in list(self._nwbfile.units.colnames):
-            if column == "spike_times":
-                continue
+        for property_name in properties_to_add:
+            data = name_to_column_data.pop(property_name).data
+            data_index = name_to_column_data.get(f"{property_name}_index", None)
+            not_ragged_array = data_index is None
+            if not_ragged_array:
+                values = data[:]
+            else:  # TODO if we want we could make this recursive to handle nested ragged arrays
+                data_index = data_index.data
+                index_spacing = np.diff(data_index, prepend=0)
+                all_index_spacing_are_the_same = np.unique(index_spacing).size == 1
+                if all_index_spacing_are_the_same:
+                    start_indices = [0] + list(data_index[:-1])
+                    end_indices = list(data_index)
+                    values = [data[start_index:end_index] for start_index, end_index in zip(start_indices, end_indices)]
+                    self.set_property(property_name, np.asarray(values))
 
-            # Note that this has a different behavior than self._nwbfile.units[column].data
-            property_values = self._nwbfile.units[column][:]
-
-            # Making this explicit because I am not sure this is the best test
-            is_raggged_array = isinstance(property_values, list)
-            if is_raggged_array:
-                all_values_have_equal_shape = np.all([p.shape == property_values[0].shape for p in property_values])
-                if all_values_have_equal_shape:
-                    properties[column] = property_values
                 else:
-                    warnings.warn(f"Skipping {column} because of unequal shapes across units")
+                    warnings.warn(f"Skipping {property_name} because of unequal shapes across units")
+                    continue
 
-                continue  # To next property
-
-            # The rest of the properties are added as they come
-            properties[column] = property_values
-
-        for prop_name, values in properties.items():
-            self.set_property(prop_name, np.array(values))
+            self.set_property(property_name, np.asarray(values))
 
         if stream_mode is None and file_path is not None:
             file_path = str(Path(file_path).resolve())
@@ -924,30 +936,42 @@ class NwbSortingExtractor(BaseSorting):
 
 
 class NwbSortingSegment(BaseSortingSegment):
-    def __init__(self, nwbfile, sampling_frequency, timestamps):
+    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency):
         BaseSortingSegment.__init__(self)
-        self._nwbfile = nwbfile
+        self.spike_times_data = spike_times_data
+        self.spike_times_index_data = spike_times_index_data
         self._sampling_frequency = sampling_frequency
-        self._timestamps = timestamps
 
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: Optional[int] = None,
+        end_frame: Optional[int] = None,
     ) -> np.ndarray:
-        # must be implemented in subclass
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = np.inf
-        spike_times = self._nwbfile.units["spike_times"][list(self._nwbfile.units.id[:]).index(unit_id)][:]
-
-        if self._timestamps is not None:
-            frames = np.searchsorted(spike_times, self.timestamps)
+        # Extract the spike times for the unit
+        unit_index = self.parent_extractor.id_to_index(unit_id)
+        if unit_index == 0:
+            start_index = 0
         else:
-            frames = np.round(spike_times * self._sampling_frequency)
-        return frames[(frames >= start_frame) & (frames < end_frame)].astype("int64", copy=False)
+            start_index = self.spike_times_index_data[unit_index - 1]
+        end_index = self.spike_times_index_data[unit_index]
+        spike_times = self.spike_times_data[start_index:end_index]
+
+        # Transform spike times to frames and subset
+        frames = np.round(spike_times * self._sampling_frequency)
+
+        start_index = 0
+        if start_frame is not None:
+            start_index = np.searchsorted(frames, start_frame, side="left")
+        else:
+            start_index = 0
+
+        if end_frame is not None:
+            end_index = np.searchsorted(frames, end_frame, side="left")
+        else:
+            end_index = frames.size
+
+        return frames[start_index:end_index].astype("int64", copy=False)
 
 
 read_nwb_recording = define_function_from_class(source_class=NwbRecordingExtractor, name="read_nwb_recording")
