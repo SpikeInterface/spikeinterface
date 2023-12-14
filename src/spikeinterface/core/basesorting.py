@@ -20,7 +20,7 @@ class BaseSorting(BaseExtractor):
 
     def __init__(self, sampling_frequency: float, unit_ids: List):
         BaseExtractor.__init__(self, unit_ids)
-        self._sampling_frequency = sampling_frequency
+        self._sampling_frequency = float(sampling_frequency)
         self._sorting_segments: List[BaseSortingSegment] = []
         # this weak link is to handle times from a recording object
         self._recording = None
@@ -125,7 +125,7 @@ class BaseSorting(BaseExtractor):
             if unit_id not in self._cached_spike_trains[segment_index]:
                 segment = self._sorting_segments[segment_index]
                 spike_frames = segment.get_unit_spike_train(unit_id=unit_id, start_frame=None, end_frame=None).astype(
-                    "int64"
+                    "int64", copy=False
                 )
                 self._cached_spike_trains[segment_index][unit_id] = spike_frames
             else:

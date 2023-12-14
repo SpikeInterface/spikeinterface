@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, WindowsPath
 from typing import Union
 import os
 import sys
@@ -305,7 +305,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
     )
     if traces.dtype != dtype:
-        traces = traces.astype(dtype)
+        traces = traces.astype(dtype, copy=False)
     array[start_frame:end_frame, :] = traces
 
     # Close the memmap
@@ -344,7 +344,7 @@ def write_binary_recording_file_handle(
         if time_axis == 1:
             traces = traces.T
         if dtype is not None:
-            traces = traces.astype(dtype)
+            traces = traces.astype(dtype, copy=False)
         traces.tofile(file_handle)
     else:
         num_frames = recording.get_num_samples(segment_index=0)
@@ -355,7 +355,7 @@ def write_binary_recording_file_handle(
             if time_axis == 1:
                 traces = traces.T
             if dtype is not None:
-                traces = traces.astype(dtype)
+                traces = traces.astype(dtype, copy=False)
             file_handle.write(traces.tobytes())
 
 
@@ -403,7 +403,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     traces = recording.get_traces(
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
     )
-    traces = traces.astype(dtype)
+    traces = traces.astype(dtype, copy=False)
     arr[start_frame:end_frame, :] = traces
 
 
@@ -580,7 +580,7 @@ def write_to_h5_dataset_format(
     if chunk_size is None:
         traces = recording.get_traces(cast_unsigned=cast_unsigned, return_scaled=return_scaled)
         if dtype is not None:
-            traces = traces.astype(dtype_file)
+            traces = traces.astype(dtype_file, copy=False)
         if time_axis == 1:
             traces = traces.T
         if single_axis:
@@ -607,7 +607,7 @@ def write_to_h5_dataset_format(
             )
             chunk_frames = traces.shape[0]
             if dtype is not None:
-                traces = traces.astype(dtype_file)
+                traces = traces.astype(dtype_file, copy=False)
             if single_axis:
                 dset[chunk_start : chunk_start + chunk_frames] = traces[:, 0]
             else:
@@ -756,7 +756,7 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     traces = recording.get_traces(
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
     )
-    traces = traces.astype(dtype)
+    traces = traces.astype(dtype, copy=False)
     zarr_dataset[start_frame:end_frame, :] = traces
 
     # fix memory leak by forcing garbage collection
@@ -849,6 +849,118 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
                     dc[k] = [func(e) for e in v]
                 else:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
+
+
+def _get_paths_list(d):
+    # this explore a dict and get all paths flatten in a list
+    # the trick is to use a closure func called by recursive_path_modifier()
+    path_list = []
+
+    def append_to_path(p):
+        path_list.append(p)
+
+    recursive_path_modifier(d, append_to_path, target="path", copy=True)
+    return path_list
+
+
+def _relative_to(p, relative_folder):
+    # custum os.path.relpath() with more checks
+
+    relative_folder = Path(relative_folder).resolve()
+    p = Path(p).resolve()
+    # the as_posix transform \\ to / on window which make better json files
+    rel_to = os.path.relpath(p.as_posix(), start=relative_folder.as_posix())
+    return Path(rel_to).as_posix()
+
+
+def check_paths_relative(input_dict, relative_folder) -> bool:
+    """
+    Check if relative path is possible to be applied on a dict describing an BaseExtractor.
+
+    For instance on windows, if some data are on a drive "D:/" and the folder is on drive "C:/" it returns False.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    relative_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    relative_possible: bool
+    """
+    path_list = _get_paths_list(input_dict)
+    relative_folder = Path(relative_folder).resolve().absolute()
+    not_possible = []
+    for p in path_list:
+        p = Path(p)
+        # check path is not an URL
+        if "http" in str(p):
+            not_possible.append(p)
+            continue
+
+        # If windows path check have same drive
+        if isinstance(p, WindowsPath) and isinstance(relative_folder, WindowsPath):
+            # check that on same drive
+            # important note : for UNC path on window the "//host/shared" is the drive
+            if p.resolve().absolute().drive != relative_folder.drive:
+                not_possible.append(p)
+                continue
+
+        # check relative is possible
+        try:
+            p2 = _relative_to(p, relative_folder)
+        except ValueError:
+            not_possible.append(p)
+            continue
+
+    return len(not_possible) == 0
+
+
+def make_paths_relative(input_dict, relative_folder) -> dict:
+    """
+    Recursively transform a dict describing an BaseExtractor to make every path relative to a folder.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    relative_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    output_dict: dict
+        A copy of the input dict with modified paths.
+    """
+    relative_folder = Path(relative_folder).resolve().absolute()
+    func = lambda p: _relative_to(p, relative_folder)
+    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
+    return output_dict
+
+
+def make_paths_absolute(input_dict, base_folder):
+    """
+    Recursively transform a dict describing an BaseExtractor to make every path absolute given a base_folder.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    base_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    output_dict: dict
+        A copy of the input dict with modified paths.
+    """
+    base_folder = Path(base_folder)
+    # use as_posix instead of str to make the path unix like even on window
+    func = lambda p: (base_folder / p).resolve().absolute().as_posix()
+    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
+    return output_dict
 
 
 def recursive_key_finder(d, key):

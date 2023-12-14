@@ -148,14 +148,15 @@ class NumpySorting(BaseSorting):
         self._kwargs = dict(spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
     @staticmethod
-    def from_sorting(source_sorting: BaseSorting, with_metadata=False) -> "NumpySorting":
+    def from_sorting(source_sorting: BaseSorting, with_metadata=False, copy_spike_vector=False) -> "NumpySorting":
         """
         Create a numpy sorting from another sorting extractor
         """
 
-        sorting = NumpySorting(
-            source_sorting.to_spike_vector(), source_sorting.get_sampling_frequency(), source_sorting.unit_ids
-        )
+        spike_vector = source_sorting.to_spike_vector()
+        if copy_spike_vector:
+            spike_vector = spike_vector.copy()
+        sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids)
         if with_metadata:
             sorting.copy_metadata(source_sorting)
         return sorting
@@ -293,7 +294,7 @@ class NumpySorting(BaseSorting):
             units_dict = {}
             for u, unit_id in enumerate(unit_ids):
                 st = neo_spiketrains[seg_index][u]
-                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64")
+                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64", copy=False)
             units_dict_list.append(units_dict)
 
         sorting = NumpySorting.from_unit_dict(units_dict_list, sampling_frequency)
@@ -301,7 +302,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_peaks(peaks, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_peaks(peaks, sampling_frequency, unit_ids) -> "NumpySorting":
         """
         Construct a sorting from peaks returned by 'detect_peaks()' function.
         The unit ids correspond to the recording channel ids and spike trains are the
@@ -313,6 +314,8 @@ class NumpySorting(BaseSorting):
             Peaks array as returned by the 'detect_peaks()' function
         sampling_frequency : float
             the sampling frequency in Hz
+        unit_ids: np.array
+            The unit_ids vector which is generally the channel_ids but can be different.
 
         Returns
         -------
@@ -323,9 +326,6 @@ class NumpySorting(BaseSorting):
         spikes["sample_index"] = peaks["sample_index"]
         spikes["unit_index"] = peaks["channel_index"]
         spikes["segment_index"] = peaks["segment_index"]
-
-        if unit_ids is None:
-            unit_ids = np.unique(peaks["channel_index"])
 
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 

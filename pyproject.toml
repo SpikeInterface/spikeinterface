@@ -79,6 +79,7 @@ streaming_extractors = [
     "aiohttp",
     "requests",
     "pynwb>=2.3.0",
+    "remfile"
 ]
 
 full = [
@@ -166,6 +167,14 @@ docs = [
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
+]
+
+dev = [
+    "spikeinterface[test]",
+    "spikeinterface[test_core]",
+    "spikeinterface[docs]",
+    "black",
+    "pre-commit",
 ]
 
 [tool.pytest.ini_options]

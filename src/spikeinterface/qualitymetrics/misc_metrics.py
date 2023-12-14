@@ -334,7 +334,7 @@ def compute_refrac_period_violations(
         The waveform extractor object
     refractory_period_ms : float, default: 1.0
         The period (in ms) where no 2 good spikes can occur.
-    censored_period_ùs : float, default: 0.0
+    censored_period_ms : float, default: 0.0
         The period (in ms) where no 2 spikes can occur (because they are not detected, or
         because they were removed by another mean).
     unit_ids : list or None
@@ -389,7 +389,10 @@ def compute_refrac_period_violations(
     nb_violations = {}
     rp_contamination = {}
 
-    for i, unit_id in enumerate(unit_ids):
+    for i, unit_id in enumerate(sorting.unit_ids):
+        if unit_id not in unit_ids:
+            continue
+
         nb_violations[unit_id] = n_v = nb_rp_violations[i]
         N = num_spikes[unit_id]
         if N == 0:
@@ -1402,7 +1405,7 @@ def compute_sd_ratio(
     num_spikes : dict
         The number of spikes, across all segments, for each unit ID.
     """
-
+    import numba
     from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
 
     censored_period = int(round(censored_period_ms * 1e-3 * wvf_extractor.sampling_frequency))
@@ -1416,7 +1419,7 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    if wvf_extractor.is_extension("spike_amplitudes"):
+    if wvf_extractor.has_extension("spike_amplitudes"):
         amplitudes_ext = wvf_extractor.load_extension("spike_amplitudes")
         spike_amplitudes = amplitudes_ext.get_data(outputs="by_unit")
     else:
@@ -1439,9 +1442,12 @@ def compute_sd_ratio(
 
         for segment_index in range(wvf_extractor.get_num_segments()):
             spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(
-                np.int64
+                np.int64, copy=False
             )
-            censored_indices = _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period)
+            censored_indices = _find_duplicated_spikes_keep_first_iterative(
+                spike_train,
+                censored_period,
+            )
             spk_amp.append(np.delete(spike_amplitudes[segment_index][unit_id], censored_indices))
         spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
 
