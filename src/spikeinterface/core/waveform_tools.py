@@ -8,6 +8,7 @@ It is a 2-step approach:
   2. extract and distribute snippets into buffers (optionally in parallel)
 
 """
+from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
