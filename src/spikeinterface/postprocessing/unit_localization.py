@@ -605,18 +605,24 @@ def get_grid_convolution_templates_and_weights(
     # mask to get nearest template given a channel
     dist = sklearn.metrics.pairwise_distances(contact_locations, template_positions)
     nearest_template_mask = dist <= radius_um
+    weights = get_convolution_weights(dist, depth_um, sparsity_threshold)
 
-    weights = np.zeros((len(depth_um), len(contact_locations), nb_templates), dtype=np.float32)
+    return template_positions, weights, nearest_template_mask
 
-    for count, depth in enumerate(depth_um):
-        ### First attempt
-        # weights[count] = 1 / ((0.1 + np.sqrt(dist**2 + depth**2))) ** decay_power
-        # weights[count] /= weights[count].max(axis=0)
 
+def get_convolution_weights(
+    distances,
+    depth_um=np.linspace(1, 50.0, 5),
+    sparsity_threshold=0.1,
+):
+
+    weights = np.zeros((len(depth_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
+
+    for count, depth in enumerate(depth_um):    
         # Kilosort
-        # weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
+        # weights[count] = np.exp(-(distances**2) / (2 * (depth**2)))
 
-        weights[count] = np.exp(-dist / depth)
+        weights[count] = np.exp(-distances / depth)
 
         thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
         weights[count][weights[count] < thresholds] = 0
@@ -628,7 +634,7 @@ def get_grid_convolution_templates_and_weights(
 
     weights[~np.isfinite(weights)] = 0.0
 
-    return template_positions, weights, nearest_template_mask
+    return weights
 
 
 if HAVE_NUMBA:
