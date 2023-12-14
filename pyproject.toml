@@ -169,6 +169,14 @@ docs = [
 
 ]
 
+dev = [
+    "spikeinterface[test]",
+    "spikeinterface[test_core]",
+    "spikeinterface[docs]",
+    "black",
+    "pre-commit",
+]
+
 [tool.pytest.ini_options]
 markers = [
     "core",
