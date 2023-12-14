@@ -202,7 +202,7 @@ class _NwbPynwbRecordingExtractor(BaseRecording):
         file_path: str | Path | None = None,  # provide either this or file
         electrical_series_name: str | None = None,
         load_time_vector: bool = False,
-        samples_for_rate_estimation: int = 100000,
+        samples_for_rate_estimation: int = 1000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -659,7 +659,7 @@ class NwbRecordingExtractor(BaseRecording):
     load_time_vector: bool, default: False
         If set to True, the time vector is also loaded into the recording object. Useful for
         cases where precise timing information is required.
-    samples_for_rate_estimation: int, default: 100000
+    samples_for_rate_estimation: int, default: 1000
         The number of timestamp samples used for estimating the sampling rate. This is relevant
         when the 'rate' attribute is not available in the ElectricalSeries.
     stream_mode : "fsspec", "ros3", "remfile", or None, default: None
@@ -722,7 +722,7 @@ class NwbRecordingExtractor(BaseRecording):
         file_path: str | Path | None = None,  # provide either this or file
         electrical_series_name: str | None = None,
         load_time_vector: bool = False,
-        samples_for_rate_estimation: int = 100000,
+        samples_for_rate_estimation: int = 1000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -809,7 +809,7 @@ class NwbSortingExtractor(BaseSorting):
         The name of the ElectricalSeries (if multiple ElectricalSeries are present).
     sampling_frequency: float or None, default: None
         The sampling frequency in Hz (required if no ElectricalSeries is available).
-    samples_for_rate_estimation: int, default: 100000
+    samples_for_rate_estimation: int, default: 1000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
     stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
@@ -836,7 +836,7 @@ class NwbSortingExtractor(BaseSorting):
         file_path: str | Path,
         electrical_series_name: str | None = None,
         sampling_frequency: float | None = None,
-        samples_for_rate_estimation: int = 100000,
+        samples_for_rate_estimation: int = 1000,
         stream_mode: str | None = None,
         cache: bool = False,
         stream_cache_path: str | Path | None = None,
