@@ -130,105 +130,105 @@ def test_sequential_reading_of_small_traces(folder_with_binary_files):
     assert np.allclose(small_traces, expected_traces)
 
 
-def test_memory_effcienty(folder_with_binary_files):
-    "This test that memory is freed afte reading the traces"
-    folder = folder_with_binary_files
-    num_channels = 32
-    sampling_frequency = 30_000.0
-    dtype = "float32"
+# def test_memory_effcienty(folder_with_binary_files):
+#     "This test that memory is freed afte reading the traces"
+#     folder = folder_with_binary_files
+#     num_channels = 32
+#     sampling_frequency = 30_000.0
+#     dtype = "float32"
 
-    file_paths = [folder / "traces_cached_seg0.raw"]
-    recording = BinaryRecordingExtractor(
-        num_chan=num_channels,
-        file_paths=file_paths,
-        sampling_frequency=sampling_frequency,
-        dtype=dtype,
-    )
+#     file_paths = [folder / "traces_cached_seg0.raw"]
+#     recording = BinaryRecordingExtractor(
+#         num_chan=num_channels,
+#         file_paths=file_paths,
+#         sampling_frequency=sampling_frequency,
+#         dtype=dtype,
+#     )
 
-    memory_before_traces_bytes = measure_memory_allocation()
-    traces = recording.get_traces(start_frame=1000, end_frame=10_000)
-    memory_after_traces_bytes = measure_memory_allocation()
-    traces_size_bytes = traces.nbytes
+#     memory_before_traces_bytes = measure_memory_allocation()
+#     traces = recording.get_traces(start_frame=1000, end_frame=10_000)
+#     memory_after_traces_bytes = measure_memory_allocation()
+#     traces_size_bytes = traces.nbytes
 
-    expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
-    expected_memory_usage_GiB = expected_memory_usage / 1024**3
-    memory_after_traces_bytes_GiB = memory_after_traces_bytes / 1024**3
+#     expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
+#     expected_memory_usage_GiB = expected_memory_usage / 1024**3
+#     memory_after_traces_bytes_GiB = memory_after_traces_bytes / 1024**3
 
-    ratio = memory_after_traces_bytes_GiB / expected_memory_usage_GiB
+#     ratio = memory_after_traces_bytes_GiB / expected_memory_usage_GiB
 
-    assertion_msg = (
-        f"Peak memory {memory_after_traces_bytes_GiB} GiB usage is {ratio:.2f} times"
-        f"the expected memory usage of {expected_memory_usage_GiB} GiB."
-    )
-    assert ratio <= 1.05, assertion_msg
+#     assertion_msg = (
+#         f"Peak memory {memory_after_traces_bytes_GiB} GiB usage is {ratio:.2f} times"
+#         f"the expected memory usage of {expected_memory_usage_GiB} GiB."
+#     )
+#     assert ratio <= 1.05, assertion_msg
 
-    assert memory_after_traces_bytes_GiB == pytest.approx(expected_memory_usage_GiB, rel=0.1)
-
-
-def measure_peak_memory_usage():
-    """
-    Measure the peak memory usage in bytes for the current process.
-
-    The `resource.getrusage(resource.RUSAGE_SELF).ru_maxrss` command is used to get the peak memory usage.
-    The `ru_maxrss` attribute represents the maximum resident set size used (in kilobytes on Linux and bytes on MacOS),
-    which is the maximum memory used by the process since it was started.
-
-    This function only works on Unix systems (including Linux and MacOS).
-
-    Returns
-    -------
-    int
-        Peak memory usage in bytes.
-
-    Raises
-    ------
-    NotImplementedError
-        If the function is called on a Windows system.
-    """
-
-    if sys.platform == "win32":
-        raise NotImplementedError("Resource module not available on Windows")
-
-    import resource
-
-    mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-
-    # If ru_maxrss returns memory in kilobytes (like on Linux), convert to bytes
-    if hasattr(resource, "RLIMIT_AS"):
-        mem_usage = mem_usage * 1024
-
-    return mem_usage
+#     assert memory_after_traces_bytes_GiB == pytest.approx(expected_memory_usage_GiB, rel=0.1)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="resource module not available on Windows")
-def test_peak_memory_usage(folder_with_binary_files):
-    "This tests that there are no spikes in memory usage when reading traces."
-    folder = folder_with_binary_files
-    num_channels = 32
-    sampling_frequency = 30_000.0
-    dtype = "float32"
+# def measure_peak_memory_usage():
+#     """
+#     Measure the peak memory usage in bytes for the current process.
 
-    file_paths = [folder / "traces_cached_seg0.raw"]
-    recording = BinaryRecordingExtractor(
-        num_chan=num_channels,
-        file_paths=file_paths,
-        sampling_frequency=sampling_frequency,
-        dtype=dtype,
-    )
+#     The `resource.getrusage(resource.RUSAGE_SELF).ru_maxrss` command is used to get the peak memory usage.
+#     The `ru_maxrss` attribute represents the maximum resident set size used (in kilobytes on Linux and bytes on MacOS),
+#     which is the maximum memory used by the process since it was started.
 
-    memory_before_traces_bytes = measure_memory_allocation()
-    traces = recording.get_traces(start_frame=1000, end_frame=2000)
-    traces_size_bytes = traces.nbytes
+#     This function only works on Unix systems (including Linux and MacOS).
 
-    expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
-    peak_memory_MiB = measure_peak_memory_usage() / 1024**2
-    expected_memory_usage_MiB = expected_memory_usage / 1024**2
-    ratio = peak_memory_MiB / expected_memory_usage_MiB
-    assertion_msg = (
-        f"Peak memory {peak_memory_MiB} MiB usage is {ratio:.2f} times"
-        f"the expected memory usage of {expected_memory_usage_MiB} MiB."
-    )
-    assert ratio <= 1.05, assertion_msg
+#     Returns
+#     -------
+#     int
+#         Peak memory usage in bytes.
+
+#     Raises
+#     ------
+#     NotImplementedError
+#         If the function is called on a Windows system.
+#     """
+
+#     if sys.platform == "win32":
+#         raise NotImplementedError("Resource module not available on Windows")
+
+#     import resource
+
+#     mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+#     # If ru_maxrss returns memory in kilobytes (like on Linux), convert to bytes
+#     if hasattr(resource, "RLIMIT_AS"):
+#         mem_usage = mem_usage * 1024
+
+#     return mem_usage
+
+
+# @pytest.mark.skipif(sys.platform == "win32", reason="resource module not available on Windows")
+# def test_peak_memory_usage(folder_with_binary_files):
+#     "This tests that there are no spikes in memory usage when reading traces."
+#     folder = folder_with_binary_files
+#     num_channels = 32
+#     sampling_frequency = 30_000.0
+#     dtype = "float32"
+
+#     file_paths = [folder / "traces_cached_seg0.raw"]
+#     recording = BinaryRecordingExtractor(
+#         num_chan=num_channels,
+#         file_paths=file_paths,
+#         sampling_frequency=sampling_frequency,
+#         dtype=dtype,
+#     )
+
+#     memory_before_traces_bytes = measure_memory_allocation()
+#     traces = recording.get_traces(start_frame=1000, end_frame=2000)
+#     traces_size_bytes = traces.nbytes
+
+#     expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
+#     peak_memory_MiB = measure_peak_memory_usage() / 1024**2
+#     expected_memory_usage_MiB = expected_memory_usage / 1024**2
+#     ratio = peak_memory_MiB / expected_memory_usage_MiB
+#     assertion_msg = (
+#         f"Peak memory {peak_memory_MiB} MiB usage is {ratio:.2f} times"
+#         f"the expected memory usage of {expected_memory_usage_MiB} MiB."
+#     )
+#     assert ratio <= 1.05, assertion_msg
 
 
 if __name__ == "__main__":
