@@ -15,6 +15,7 @@ from pynwb.testing.mock.ecephys import mock_ElectricalSeries, mock_ElectrodeGrou
 from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
+from spikeinterface.core.testing import check_recordings_equal
 
 
 class NwbRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -122,14 +123,19 @@ def path_to_nwbfile(nwbfile_with_ecephys_content, tmp_path_factory):
     return nwbfile_path
 
 
-def test_nwb_extractor_channel_ids_retrieval(path_to_nwbfile, nwbfile_with_ecephys_content):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_nwb_extractor_channel_ids_retrieval(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
     """
     Test that the channel_ids are retrieved from the electrodes table ONLY from the corresponding
     region of the electrical series
     """
     electrical_series_name_list = ["ElectricalSeries1", "ElectricalSeries2"]
     for electrical_series_name in electrical_series_name_list:
-        recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
+        recording_extractor = NwbRecordingExtractor(
+            path_to_nwbfile,
+            electrical_series_name=electrical_series_name,
+            use_pynwb=use_pynwb,
+        )
 
         nwbfile = nwbfile_with_ecephys_content
         electrical_series = nwbfile.acquisition[electrical_series_name]
@@ -142,7 +148,8 @@ def test_nwb_extractor_channel_ids_retrieval(path_to_nwbfile, nwbfile_with_eceph
         assert np.array_equal(extracted_channel_ids, expected_channel_ids)
 
 
-def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_content):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
     """
     Test that the property is retrieved from the electrodes table ONLY from the corresponding
     region of the electrical series
@@ -150,7 +157,11 @@ def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_
 
     electrical_series_name_list = ["ElectricalSeries1", "ElectricalSeries2"]
     for electrical_series_name in electrical_series_name_list:
-        recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
+        recording_extractor = NwbRecordingExtractor(
+            path_to_nwbfile,
+            electrical_series_name=electrical_series_name,
+            use_pynwb=use_pynwb,
+        )
         nwbfile = nwbfile_with_ecephys_content
         electrical_series = nwbfile.acquisition[electrical_series_name]
         electrical_series_electrode_indices = electrical_series.electrodes.data[:]
@@ -162,10 +173,15 @@ def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_
         assert np.array_equal(extracted_property, expected_property)
 
 
-def test_nwb_extractor_offset_from_electrodes_table(path_to_nwbfile, nwbfile_with_ecephys_content):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_nwb_extractor_offset_from_electrodes_table(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
     """Test that the offset is retrieved from the electrodes table if it is not present in the ElectricalSeries."""
     electrical_series_name = "ElectricalSeries1"
-    recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
+    recording_extractor = NwbRecordingExtractor(
+        path_to_nwbfile,
+        electrical_series_name=electrical_series_name,
+        use_pynwb=use_pynwb,
+    )
     nwbfile = nwbfile_with_ecephys_content
     electrical_series = nwbfile.acquisition[electrical_series_name]
     electrical_series_electrode_indices = electrical_series.electrodes.data[:]
@@ -177,10 +193,15 @@ def test_nwb_extractor_offset_from_electrodes_table(path_to_nwbfile, nwbfile_wit
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
 
 
-def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_content):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
     """Test that the offset is retrieved from the ElectricalSeries if it is present."""
     electrical_series_name = "ElectricalSeries2"
-    recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
+    recording_extractor = NwbRecordingExtractor(
+        path_to_nwbfile,
+        electrical_series_name=electrical_series_name,
+        use_pynwb=use_pynwb,
+    )
     nwbfile = nwbfile_with_ecephys_content
     electrical_series = nwbfile.acquisition[electrical_series_name]
     expected_offsets_uV = electrical_series.offset * 1e6
@@ -189,7 +210,24 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
 
 
-def test_sorting_property_extraction(tmp_path):
+@pytest.mark.parametrize("electrical_series_name", ["ElectricalSeries1", "ElectricalSeries2"])
+def test_that_hdf5_and_pynwb_extractors_return_the_same_data(path_to_nwbfile, electrical_series_name):
+    recording_extractor_hdf5 = NwbRecordingExtractor(
+        path_to_nwbfile,
+        electrical_series_name=electrical_series_name,
+        use_pynwb=False,
+    )
+
+    recording_extractor_pynwb = NwbRecordingExtractor(
+        path_to_nwbfile,
+        electrical_series_name=electrical_series_name,
+        use_pynwb=True,
+    )
+
+    check_recordings_equal(recording_extractor_hdf5, recording_extractor_pynwb)
+
+
+def test_sorting_extraction_of_ragged_arrays(tmp_path):
     nwbfile = mock_NWBFile()
 
     # Add the spikes
