@@ -91,7 +91,9 @@ class BaseExtractor:
         else:
             return segment_index
 
-    def ids_to_indices(self, ids: list | np.ndarray | None = None, prefer_slice: bool = False) -> np.ndarray | slice:
+    def ids_to_indices(
+        self, ids: list | np.ndarray | tuple | None = None, prefer_slice: bool = False
+    ) -> np.ndarray | slice:
         """
         Convert a list of IDs into indices, either as an array or a slice.
 
@@ -102,7 +104,7 @@ class BaseExtractor:
 
         Parameters
         ----------
-        ids : list or np.ndarray
+        ids : list | np.ndarray | tuple | None, default: None
             The array of IDs to be converted into indices. If `None`, it generates indices based on the length of `_main_ids`.
         prefer_slice : bool, default: False
             If `True`, the function will return a slice object when the indices are consecutive. Default is `False`.
@@ -120,7 +122,7 @@ class BaseExtractor:
             else:
                 indices = np.arange(len(self._main_ids))
         else:
-            assert isinstance(ids, (list, np.ndarray)), "'ids' must be a list, np.ndarray"
+            assert isinstance(ids, (list, np.ndarray, tuple)), "'ids' must be a list, np.ndarray or tuple"
             _main_ids = self._main_ids.tolist()
             indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
             if prefer_slice:
