@@ -421,13 +421,13 @@ class LocalizeGridConvolution(PipelineNode):
             nearest_templates = self.nearest_template_mask[main_chan, :]
             num_templates = np.sum(nearest_templates)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
+            sub_w = self.weights[:, channel_mask, :][:, :, nearest_templates]
 
             global_products = (waveforms[idx][:, :, channel_mask] * self.prototype).sum(axis=1)
 
             dot_products = np.zeros((nb_weights, num_spikes, num_templates), dtype=np.float32)
             for count in range(nb_weights):
-                w = self.weights[count][channel_mask, :][:, nearest_templates]
-                dot_products[count] = np.dot(global_products, w)
+                dot_products[count] = np.dot(global_products, sub_w[count])
 
             dot_products = np.maximum(0, dot_products)
             if self.percentile < 100:
