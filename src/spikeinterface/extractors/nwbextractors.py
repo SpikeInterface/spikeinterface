@@ -408,7 +408,7 @@ class _NWBHDF5RecordingExtractor(BaseRecording):
         file_path: str | Path | None = None,  # provide either this or file
         electrical_series_name: str | None = None,
         load_time_vector: bool = False,
-        samples_for_rate_estimation: int = 10_0000,
+        samples_for_rate_estimation: int = 1000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -909,7 +909,7 @@ class _NwbHDF5SortingExtractor(BaseSorting):
         file_path: str | Path,
         electrical_series_name: str | None = None,
         sampling_frequency: float | None = None,
-        samples_for_rate_estimation: int = 100000,
+        samples_for_rate_estimation: int = 1000,
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
         cache: bool = False,
@@ -947,11 +947,14 @@ class _NwbHDF5SortingExtractor(BaseSorting):
         )
         self.add_sorting_segment(sorting_segment)
 
-        # Add properties
-        skip_properties = ["spike_times", "spike_times_index", "unit_name"]
+        # Skip canonical properties and indices
+        caonical_properties = ["spike_times", "spike_times_index", "unit_name"]
+        index_properties = [name for name in units_table if name.endswith("_index")]
+        nested_ragged_array_properties = [name for name in units_table if f"{name}_index_index" in units_table]
+
+        skip_properties = caonical_properties + index_properties + nested_ragged_array_properties
         properties_to_add = [name for name in units_table if name not in skip_properties]
-        # Filter indices
-        properties_to_add = [name for name in properties_to_add if "index" not in name]
+
         for property_name in properties_to_add:
             data = units_table[property_name]
             corresponding_index_name = f"{property_name}_index"
@@ -1010,14 +1013,9 @@ class NwbSortingExtractor(BaseSorting):
         if False, the file is not cached.
     stream_cache_path: str or Path or None, default: None
         Local path for caching. If None it uses the system temporary directory.
-    io_backend: Literal["pynwb", "hdf5"], default: "pynwb"
-        Specifies the backend library used for data IO operations.
-        - "pynwb": Uses the PyNWB library, which provides comprehensive NWB file manipulation
-                   but might be slower due to validation overhead.
-        - "hdf5": Directly accesses the NWB file using HDF5 API, potentially offering faster
-                  read performance by bypassing some of the PyNWB validations.
-        This parameter allows users to balance between performance and the feature-rich
-        environment provided by PyNWB.
+    use_pynwb: bool, default: False
+        Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
+        to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
     Returns
     -------
     sorting: NwbSortingExtractor
@@ -1034,14 +1032,14 @@ class NwbSortingExtractor(BaseSorting):
         file_path: str | Path,
         electrical_series_name: str | None = None,
         sampling_frequency: float | None = None,
-        samples_for_rate_estimation: int = 100000,
+        samples_for_rate_estimation: int = 1000,
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
         *,
         cache: bool = False,
-        io_backend: Literal["pynwb", "hdf5"] = "pynwb",
+        use_pynwb: bool = False,
     ):
-        if io_backend == "pynwb":
+        if use_pynwb:
             extractor = _NwbPynwbSortingExtractor(
                 file_path=file_path,
                 electrical_series_name=electrical_series_name,
@@ -1052,7 +1050,7 @@ class NwbSortingExtractor(BaseSorting):
                 cache=cache,
             )
 
-        elif io_backend == "hdf5":
+        else:
             extractor = _NwbHDF5SortingExtractor(
                 file_path=file_path,
                 electrical_series_name=electrical_series_name,
@@ -1062,8 +1060,6 @@ class NwbSortingExtractor(BaseSorting):
                 stream_cache_path=stream_cache_path,
                 cache=cache,
             )
-        else:
-            assert False, f"Invalid io_backend: {io_backend} use 'pynwb' or 'hdf5'"
 
         return extractor
 

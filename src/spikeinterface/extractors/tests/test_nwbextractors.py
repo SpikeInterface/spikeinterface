@@ -227,7 +227,8 @@ def test_that_hdf5_and_pynwb_extractors_return_the_same_data(path_to_nwbfile, el
     check_recordings_equal(recording_extractor_hdf5, recording_extractor_pynwb)
 
 
-def test_sorting_extraction_of_ragged_arrays(tmp_path):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_extraction_of_ragged_arrays(tmp_path, use_pynwb):
     nwbfile = mock_NWBFile()
 
     # Add the spikes
@@ -268,7 +269,7 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0)
+    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0, use_pynwb=use_pynwb)
 
     units_ids = sorting_extractor.get_unit_ids()
 
