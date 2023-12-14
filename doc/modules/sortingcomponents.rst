@@ -15,7 +15,7 @@ Another advantage of *modularization* is that we can accurately benchmark every 
 For example, what is the performance of peak detection method 1 or 2, provided that the rest of the pipeline is the
 same?
 
-For now, we have methods for:
+Currently, we have methods for:
  * peak detection
  * peak localization
  * peak selection
@@ -24,7 +24,7 @@ For now, we have methods for:
  * clustering
  * template matching
 
-For some of theses steps, implementations are in a very early stage and are still a bit *drafty*.
+For some of these steps, implementations are in a very early stage and are still a bit *drafty*.
 Signature and behavior may change from time to time in this alpha period development.
 
 You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailed
@@ -47,7 +47,8 @@ follows:
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
     peaks = detect_peaks(
-        recording, method='by_channel',
+        recording=recording,
+        method='by_channel',
         peak_sign='neg',
         detect_threshold=5,
         exclude_sweep_ms=0.2,
@@ -75,7 +76,7 @@ Different methods are available with the :code:`method` argument:
 
 **NOTE**: the torch implementations give slightly different results due to a different implementation.
 
-Peak detection, as many sorting components, can be run in parallel.
+Peak detection, as many of the other sorting components, can be run in parallel.
 
 
 Peak localization
@@ -94,7 +95,7 @@ follows:
 
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
-    peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
+    peak_locations = localize_peaks(recording=recording, peaks=peaks, method='center_of_mass',
                                     radius_um=70., ms_before=0.3, ms_after=0.6,
                                     **job_kwargs)
 
@@ -104,8 +105,8 @@ Currently, the following methods are implemented:
   * 'center_of_mass'
   * 'monopolar_triangulation' with optimizer='least_square'
     This method is from Julien Boussard and Erdem Varol from the Paninski lab.
-    This has been presented at [NeurIPS](https://nips.cc/Conferences/2021/ScheduleMultitrack?event=26709)
-    see also [here](https://openreview.net/forum?id=ohfi44BZPC4)
+    This has been presented at `NeurIPS <https://nips.cc/Conferences/2021/ScheduleMultitrack?event=26709>`_
+    see also `here <https://openreview.net/forum?id=ohfi44BZPC4>`_
   * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
 
 These methods are the same as implemented in :py:mod:`spikeinterface.postprocessing.unit_localization`
@@ -122,7 +123,7 @@ For instance, the 'monopolar_triangulation' method will have:
 
 .. note::
 
-   By convention in SpikeInterface, when a probe is described in 2d
+   By convention in SpikeInterface, when a probe is described in 3d
      * **'x'** is the width of the probe
      * **'y'** is the depth
      * **'z'** is orthogonal to the probe plane
@@ -132,7 +133,7 @@ Peak selection
 --------------
 
 When too many peaks are detected a strategy can be used to select (or sub-sample) only some of them before clustering.
-This is the strategy used by spyking-circus or tridesclous, for instance.
+This is the strategy used by spyking-circus and tridesclous, for instance.
 Then, clustering is run on this subset of peaks, templates are extracted, and a template-matching step is run to find
 all spikes.
 
@@ -144,11 +145,11 @@ can be *hidden* by this process.
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-    many_peaks = detect_peaks(...)
+    many_peaks = detect_peaks(...) # as in above example
 
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
 
-    some_peaks = select_peaks(many_peaks, method='uniform', n_peaks=10000)
+    some_peaks = select_peaks(peaks=many_peaks, method='uniform', n_peaks=10000)
 
 Implemented methods are the following:
 
@@ -183,15 +184,15 @@ Here is an example with non-rigid motion estimation:
 .. code-block:: python
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-    peaks = detect_peaks(recording, ...)
+    peaks = detect_peaks(recording=recording, ...) # as in above example
 
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-    peak_locations = localize_peaks(recording, peaks, ...)
+    peak_locations = localize_peaks(recording=recording, peaks=peaks, ...) # as above
 
 
     from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
     motion, temporal_bins, spatial_bins,
-                extra_check = estimate_motion(recording, peaks, peak_locations=peak_locations,
+                extra_check = estimate_motion(recording=recording, peaks=peaks, peak_locations=peak_locations,
                                               direction='y', bin_duration_s=10., bin_um=10., margin_um=0.,
                                               method='decentralized_registration',
                                               rigid=False, win_shape='gaussian', win_step_um=50., win_sigma_um=150.,
@@ -217,23 +218,23 @@ Here is a short example that depends on the output of "Motion interpolation":
 
   from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 
-  recording_corrected = InterpolateMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins
-                                                   spatial_interpolation_method='kriging,
+  recording_corrected = InterpolateMotionRecording(recording=recording_with_drift, motion=motion, temporal_bins=temporal_bins, spatial_bins=spatial_bins
+                                                   spatial_interpolation_method='kriging',
                                                    border_mode='remove_channels')
 
 **Notes**:
   * :code:`spatial_interpolation_method` "kriging" or "iwd" do not play a big role.
-  * :code:`border_mode` is a very important parameter. It controls how to deal with the border because motion causes units on the
+  * :code:`border_mode` is a very important parameter. It controls dealing with the border because motion causes units on the
     border to not be present throughout the entire recording. We highly recommend the :code:`border_mode='remove_channels'`
     because this removes channels on the border that will be impacted by drift. Of course the larger the motion is
-    the more channels are removed.
+    the greater the number of channels that would be removed.
 
 
 Clustering
 ----------
 
 The clustering step remains the central step of spike sorting.
-Historically this step was separted into two distinct parts: feature reduction and clustering.
+Historically this step was separated into two distinct parts: feature reduction and clustering.
 In SpikeInterface, we decided to regroup these two steps into the same module.
 This allows one to compute feature reduction 'on-the-fly' and avoid long computations and storage of
 large features.
@@ -255,10 +256,10 @@ Different methods may need different inputs (for instance some of them require p
 .. code-block:: python
 
   from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-  peaks = detect_peaks(recording, ...)
+  peaks = detect_peaks(recording, ...) # as in above example
 
   from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-  labels, peak_labels = find_cluster_from_peaks(recording, peaks, method="sliding_hdbscan")
+  labels, peak_labels = find_cluster_from_peaks(recording=recording, peaks=peaks, method="sliding_hdbscan")
 
 
 * **labels** : contains all possible labels
@@ -278,7 +279,7 @@ At the moment, there are five methods implemented:
   * 'naive': a very naive implemenation used as a reference for benchmarks
   * 'tridesclous': the algorithm for template matching implemented in Tridesclous
   * 'circus': the algorithm for template matching implemented in SpyKING-Circus
-  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal macthing
+  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal matching
     pursuit)
   * 'wobble' : an algorithm loosely based on YASS that scales template amplitudes and shifts them in time
     to match detected spikes

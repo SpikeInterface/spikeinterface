@@ -9,17 +9,19 @@ from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline
 
 
 @pytest.fixture(scope="module")
-def extract_waveforms(mearec_recording):
+def extract_waveforms(generated_recording):
     # Parameters
     ms_before = 1.0
     ms_after = 1.0
 
     # Node initialization
-    return ExtractDenseWaveforms(recording=mearec_recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
+    return ExtractDenseWaveforms(
+        recording=generated_recording, ms_before=ms_before, ms_after=ms_after, return_output=True
+    )
 
 
-def test_waveform_thresholder_ptp(extract_waveforms, mearec_recording, detected_peaks, chunk_executor_kwargs):
-    recording = mearec_recording
+def test_waveform_thresholder_ptp(extract_waveforms, generated_recording, detected_peaks, chunk_executor_kwargs):
+    recording = generated_recording
     peaks = detected_peaks
 
     tresholded_waveforms_ptp = WaveformThresholder(
@@ -37,8 +39,8 @@ def test_waveform_thresholder_ptp(extract_waveforms, mearec_recording, detected_
     assert np.all(data[data != 0] > 3)
 
 
-def test_waveform_thresholder_mean(extract_waveforms, mearec_recording, detected_peaks, chunk_executor_kwargs):
-    recording = mearec_recording
+def test_waveform_thresholder_mean(extract_waveforms, generated_recording, detected_peaks, chunk_executor_kwargs):
+    recording = generated_recording
     peaks = detected_peaks
 
     tresholded_waveforms_mean = WaveformThresholder(
@@ -54,8 +56,8 @@ def test_waveform_thresholder_mean(extract_waveforms, mearec_recording, detected
     assert np.all(tresholded_waveforms.mean(axis=1) >= 0)
 
 
-def test_waveform_thresholder_energy(extract_waveforms, mearec_recording, detected_peaks, chunk_executor_kwargs):
-    recording = mearec_recording
+def test_waveform_thresholder_energy(extract_waveforms, generated_recording, detected_peaks, chunk_executor_kwargs):
+    recording = generated_recording
     peaks = detected_peaks
 
     tresholded_waveforms_energy = WaveformThresholder(
@@ -73,8 +75,8 @@ def test_waveform_thresholder_energy(extract_waveforms, mearec_recording, detect
     assert np.all(data[data != 0] > 3)
 
 
-def test_waveform_thresholder_operator(extract_waveforms, mearec_recording, detected_peaks, chunk_executor_kwargs):
-    recording = mearec_recording
+def test_waveform_thresholder_operator(extract_waveforms, generated_recording, detected_peaks, chunk_executor_kwargs):
+    recording = generated_recording
     peaks = detected_peaks
 
     import operator

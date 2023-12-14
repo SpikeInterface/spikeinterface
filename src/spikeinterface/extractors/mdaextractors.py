@@ -21,12 +21,12 @@ class MdaRecordingExtractor(BaseRecording):
     ----------
     folder_path : str or Path
         Path to the MDA folder.
-    raw_fname: str
-        File name of raw file. Defaults to 'raw.mda'.
-    params_fname: str
-        File name of params file. Defaults to 'params.json'.
-    geom_fname: str
-        File name of geom file. Defaults to 'geom.csv'.
+    raw_fname: str, default: "raw.mda"
+        File name of raw file
+    params_fname: str, default: "params.json"
+        File name of params file
+    geom_fname: str, default: "geom.csv"
+        File name of geom file
 
     Returns
     -------
@@ -87,13 +87,13 @@ class MdaRecordingExtractor(BaseRecording):
         params: dictionary
             Dictionary with optional parameters to save metadata.
             Sampling frequency is appended to this dictionary.
-        raw_fname: str
-            File name of raw file. Defaults to 'raw.mda'.
-        params_fname: str
-            File name of params file. Defaults to 'params.json'.
-        geom_fname: str
-            File name of geom file. Defaults to 'geom.csv'.
-        dtype: dtype
+        raw_fname: str, default: "raw.mda"
+            File name of raw file
+        params_fname: str, default: "params.json"
+            File name of params file
+        geom_fname: str, default: "geom.csv"
+            File name of geom file
+        dtype: dtype or None, default: None
             Data type to be used. If None dtype is same as recording traces.
         **job_kwargs:
             Use by job_tools modules to set:
@@ -216,10 +216,14 @@ class MdaSortingExtractor(BaseSorting):
         times_list = []
         labels_list = []
         primary_channels_list = []
-        for unit_id in unit_ids:
+        for unit_index, unit_id in enumerate(unit_ids):
             times = sorting.get_unit_spike_train(unit_id=unit_id)
             times_list.append(times)
-            labels_list.append(np.ones(times.shape) * unit_id)
+            # unit id may not be numeric
+            if unit_id.dtype.kind in "iu":
+                labels_list.append(np.ones(times.shape, dtype=unit_id.dtype) * unit_id)
+            else:
+                labels_list.append(np.ones(times.shape, dtype=int) * unit_index)
             if write_primary_channels:
                 if "max_channel" in sorting.get_unit_property_names(unit_id):
                     primary_channels_list.append([sorting.get_unit_property(unit_id, "max_channel")] * times.shape[0])
@@ -438,17 +442,21 @@ def is_url(path):
 
 
 def _download_bytes_to_tmpfile(url, start, end):
-    try:
-        import requests
-    except:
-        raise Exception("Unable to import module: requests")
-    headers = {"Range": "bytes={}-{}".format(start, end - 1)}
-    r = requests.get(url, headers=headers, stream=True)
-    fd, tmp_fname = tempfile.mkstemp()
-    with open(tmp_fname, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:
-                f.write(chunk)
+    import requests
+
+    headers = {"Range": f"bytes={start}-{end - 1}"}
+
+    with requests.get(url, headers=headers, stream=True) as r:
+        r.raise_for_status()  # Exposes HTTPError if one occurred
+
+        with tempfile.NamedTemporaryFile(delete=False, mode="wb") as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+
+            # Store the temp file name for return
+            tmp_fname = f.name
+
     return tmp_fname
 
 

@@ -30,16 +30,16 @@ def export_report(
         If WaveformExtractor is provide then the compute is faster otherwise
     output_folder: str
         The output folder where the report files are saved
-    remove_if_exists: bool
+    remove_if_exists: bool, default: False
         If True and the output folder exists, it is removed
-    format: str
-        'png' (default) or 'pdf' or any format handled by matplotlib
-    peak_sign: 'neg' or 'pos'
+    format: str, default: "png"
+        The output figure format (any format handled by matplotlib)
+    peak_sign: "neg" or "pos", default: "neg"
         used to compute amplitudes and metrics
-    show_figures: bool
-        If True, figures are shown. If False (default), figures are closed after saving.
-    force_computation:  bool default False
-        Force or not some heavy computaion before exporting.
+    show_figures: bool, default: False
+        If True, figures are shown. If False, figures are closed after saving
+    force_computation:  bool, default: False
+        Force or not some heavy computaion before exporting
     {}
     """
     import pandas as pd
@@ -51,7 +51,7 @@ def export_report(
     unit_ids = sorting.unit_ids
 
     # load or compute spike_amplitudes
-    if we.is_extension("spike_amplitudes"):
+    if we.has_extension("spike_amplitudes"):
         spike_amplitudes = we.load_extension("spike_amplitudes").get_data(outputs="by_unit")
     elif force_computation:
         spike_amplitudes = compute_spike_amplitudes(we, peak_sign=peak_sign, outputs="by_unit", **job_kwargs)
@@ -62,7 +62,7 @@ def export_report(
         )
 
     # load or compute quality_metrics
-    if we.is_extension("quality_metrics"):
+    if we.has_extension("quality_metrics"):
         metrics = we.load_extension("quality_metrics").get_data()
     elif force_computation:
         metrics = compute_quality_metrics(we)
@@ -73,7 +73,7 @@ def export_report(
         )
 
     # load or compute correlograms
-    if we.is_extension("correlograms"):
+    if we.has_extension("correlograms"):
         correlograms, bins = we.load_extension("correlograms").get_data()
     elif force_computation:
         correlograms, bins = compute_correlograms(we, window_ms=100.0, bin_ms=1.0)
@@ -84,7 +84,7 @@ def export_report(
         )
 
     # pre-compute unit locations if not done
-    if not we.is_extension("unit_locations"):
+    if not we.has_extension("unit_locations"):
         unit_locations = compute_unit_locations(we)
 
     output_folder = Path(output_folder).absolute()

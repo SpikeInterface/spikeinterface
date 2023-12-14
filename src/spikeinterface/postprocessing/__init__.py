@@ -1,16 +1,6 @@
-# This is kept in 0.97.0 and then will be removed
-from .template_tools import (
-    get_template_amplitudes,
-    get_template_extremum_channel,
-    get_template_extremum_channel_peak_shift,
-    get_template_extremum_amplitude,
-    get_template_channel_sparsity,
-)
-
 from .template_metrics import (
     TemplateMetricsCalculator,
     compute_template_metrics,
-    calculate_template_metrics,
     get_template_metric_names,
 )
 
@@ -39,7 +29,6 @@ from .correlograms import (
 
 from .isi import (
     ISIHistogramsCalculator,
-    compute_isi_histograms_from_spiketrain,
     compute_isi_histograms,
     compute_isi_histograms_numpy,
     compute_isi_histograms_numba,

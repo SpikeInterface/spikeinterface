@@ -2,10 +2,11 @@ import pytest
 import numpy as np
 import pandas as pd
 import shutil
+import platform
 from pathlib import Path
 
-from spikeinterface import extract_waveforms, load_extractor, compute_sparsity
-from spikeinterface.extractors import toy_example
+from spikeinterface import extract_waveforms, load_extractor, load_waveforms, compute_sparsity
+from spikeinterface.core.generate import generate_ground_truth_recording
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "postprocessing"
@@ -22,29 +23,59 @@ class WaveformExtensionCommonTestSuite:
     extension_data_names = []
     extension_function_kwargs_list = None
 
+    # this flag enables us to check that all backends have the same contents
+    exact_same_content = True
+
+    def _clean_all_folders(self):
+        for name in (
+            "toy_rec_1seg",
+            "toy_sorting_1seg",
+            "toy_waveforms_1seg",
+            "toy_rec_2seg",
+            "toy_sorting_2seg",
+            "toy_waveforms_2seg",
+            "toy_sorting_2seg.zarr",
+            "toy_sorting_2seg_sparse",
+        ):
+            if (cache_folder / name).is_dir():
+                shutil.rmtree(cache_folder / name)
+
+        for name in ("toy_waveforms_1seg", "toy_waveforms_2seg", "toy_sorting_2seg_sparse"):
+            for ext in self.extension_data_names:
+                folder = self.cache_folder / f"{name}_{ext}_selected"
+                if folder.exists():
+                    shutil.rmtree(folder)
+
     def setUp(self):
         self.cache_folder = cache_folder
+        self._clean_all_folders()
 
         # 1-segment
-        recording, sorting = toy_example(num_segments=1, num_units=10, num_channels=12)
+        recording, sorting = generate_ground_truth_recording(
+            durations=[10],
+            sampling_frequency=30000,
+            num_channels=12,
+            num_units=10,
+            dtype="float32",
+            seed=91,
+            generate_sorting_kwargs=dict(add_spikes_on_borders=True),
+            noise_kwargs=dict(noise_level=10.0, strategy="tile_pregenerated"),
+        )
+
+        # add gains and offsets and save
         gain = 0.1
         recording.set_channel_gains(gain)
         recording.set_channel_offsets(0)
-        if (cache_folder / "toy_rec_1seg").is_dir():
-            recording = load_extractor(cache_folder / "toy_rec_1seg")
-        else:
-            recording = recording.save(folder=cache_folder / "toy_rec_1seg")
-        if (cache_folder / "toy_sorting_1seg").is_dir():
-            sorting = load_extractor(cache_folder / "toy_sorting_1seg")
-        else:
-            sorting = sorting.save(folder=cache_folder / "toy_sorting_1seg")
+
+        recording = recording.save(folder=cache_folder / "toy_rec_1seg")
+        sorting = sorting.save(folder=cache_folder / "toy_sorting_1seg")
+
         we1 = extract_waveforms(
             recording,
             sorting,
             cache_folder / "toy_waveforms_1seg",
-            ms_before=3.0,
-            ms_after=4.0,
             max_spikes_per_unit=500,
+            sparse=False,
             n_jobs=1,
             chunk_size=30000,
             overwrite=True,
@@ -53,36 +84,48 @@ class WaveformExtensionCommonTestSuite:
         self.sparsity1 = compute_sparsity(we1, method="radius", radius_um=50)
 
         # 2-segments
-        recording, sorting = toy_example(num_segments=2, num_units=10)
+        recording, sorting = generate_ground_truth_recording(
+            durations=[10, 5],
+            sampling_frequency=30000,
+            num_channels=12,
+            num_units=10,
+            dtype="float32",
+            seed=91,
+            generate_sorting_kwargs=dict(add_spikes_on_borders=True),
+            noise_kwargs=dict(noise_level=10.0, strategy="tile_pregenerated"),
+        )
         recording.set_channel_gains(gain)
         recording.set_channel_offsets(0)
-        if (cache_folder / "toy_rec_2seg").is_dir():
-            recording = load_extractor(cache_folder / "toy_rec_2seg")
-        else:
-            recording = recording.save(folder=cache_folder / "toy_rec_2seg")
-        if (cache_folder / "toy_sorting_2seg").is_dir():
-            sorting = load_extractor(cache_folder / "toy_sorting_2seg")
-        else:
-            sorting = sorting.save(folder=cache_folder / "toy_sorting_2seg")
+        recording = recording.save(folder=cache_folder / "toy_rec_2seg")
+        sorting = sorting.save(folder=cache_folder / "toy_sorting_2seg")
+
         we2 = extract_waveforms(
             recording,
             sorting,
             cache_folder / "toy_waveforms_2seg",
-            ms_before=3.0,
-            ms_after=4.0,
             max_spikes_per_unit=500,
+            sparse=False,
             n_jobs=1,
             chunk_size=30000,
             overwrite=True,
         )
         self.we2 = we2
+
+        # make we read-only
+        if platform.system() != "Windows":
+            we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
+            if not we_ro_folder.is_dir():
+                shutil.copytree(we2.folder, we_ro_folder)
+            # change permissions (R+X)
+            we_ro_folder.chmod(0o555)
+            self.we_ro = load_waveforms(we_ro_folder)
+
         self.sparsity2 = compute_sparsity(we2, method="radius", radius_um=30)
         we_memory = extract_waveforms(
             recording,
             sorting,
             mode="memory",
-            ms_before=3.0,
-            ms_after=4.0,
+            sparse=False,
             max_spikes_per_unit=500,
             n_jobs=1,
             chunk_size=30000,
@@ -97,25 +140,38 @@ class WaveformExtensionCommonTestSuite:
             folder=cache_folder / "toy_sorting_2seg_sparse", format="binary", sparsity=sparsity, overwrite=True
         )
 
+    def tearDown(self):
+        # delete object to release memmap
+        del self.we1, self.we2, self.we_memory2, self.we_zarr2, self.we_sparse
+        if hasattr(self, "we_ro"):
+            del self.we_ro
+
+        # allow pytest to delete RO folder
+        if platform.system() != "Windows":
+            we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
+            we_ro_folder.chmod(0o777)
+
+        self._clean_all_folders()
+
     def _test_extension_folder(self, we, in_memory=False):
         if self.extension_function_kwargs_list is None:
             extension_function_kwargs_list = [dict()]
         else:
             extension_function_kwargs_list = self.extension_function_kwargs_list
-
         for ext_kwargs in extension_function_kwargs_list:
-            # print(ext_kwargs)
-            _ = self.extension_class.get_extension_function()(we, load_if_exists=False, **ext_kwargs)
+            compute_func = self.extension_class.get_extension_function()
+            _ = compute_func(we, load_if_exists=False, **ext_kwargs)
 
             # reload as an extension from we
             assert self.extension_class.extension_name in we.get_available_extension_names()
-            assert we.is_extension(self.extension_class.extension_name)
+            assert we.has_extension(self.extension_class.extension_name)
             ext = we.load_extension(self.extension_class.extension_name)
             assert isinstance(ext, self.extension_class)
             for ext_name in self.extension_data_names:
                 assert ext_name in ext._extension_data
+
             if not in_memory:
-                ext_loaded = self.extension_class.load(we.folder)
+                ext_loaded = self.extension_class.load(we.folder, we)
                 for ext_name in self.extension_data_names:
                     assert ext_name in ext_loaded._extension_data
 
@@ -127,7 +183,7 @@ class WaveformExtensionCommonTestSuite:
                     shutil.rmtree(new_folder)
                 we_new = we.select_units(
                     unit_ids=we.sorting.unit_ids[::2],
-                    new_folder=cache_folder / f"{we.folder.stem}_{self.extension_class.extension_name}_selected",
+                    new_folder=new_folder,
                 )
                 # check that extension is present after select_units()
                 assert self.extension_class.extension_name in we_new.get_available_extension_names()
@@ -136,14 +192,16 @@ class WaveformExtensionCommonTestSuite:
                 we_new = we.select_units(unit_ids=we.sorting.unit_ids[::2])
                 # check that extension is present after select_units()
                 assert self.extension_class.extension_name in we_new.get_available_extension_names()
-            else:
-                print("select_units() not supported for Zarr")
+            if we.format == "zarr":
+                # select_units() not supported for Zarr
+                pass
 
     def test_extension(self):
         print("Test extension", self.extension_class)
         # 1 segment
         print("1 segment", self.we1)
         self._test_extension_folder(self.we1)
+
         # 2 segment
         print("2 segment", self.we2)
         self._test_extension_folder(self.we2)
@@ -159,21 +217,31 @@ class WaveformExtensionCommonTestSuite:
         print("Sparse", self.we_sparse)
         self._test_extension_folder(self.we_sparse)
 
-        # test content of memory/content/zarr
-        for ext in self.we2.get_available_extension_names():
-            print(f"Testing data for {ext}")
-            ext_memory = self.we2.load_extension(ext)
-            ext_folder = self.we2.load_extension(ext)
-            ext_zarr = self.we2.load_extension(ext)
+        if self.exact_same_content:
+            # check content is the same across modes: memory/content/zarr
 
-            for ext_data_name, ext_data_mem in ext_memory._extension_data.items():
-                ext_data_folder = ext_folder._extension_data[ext_data_name]
-                ext_data_zarr = ext_zarr._extension_data[ext_data_name]
-                if isinstance(ext_data_mem, np.ndarray):
-                    np.testing.assert_array_equal(ext_data_mem, ext_data_folder)
-                    np.testing.assert_array_equal(ext_data_mem, ext_data_zarr)
-                elif isinstance(ext_data_mem, pd.DataFrame):
-                    assert ext_data_mem.equals(ext_data_folder)
-                    assert ext_data_mem.equals(ext_data_zarr)
-                else:
-                    print(f"{ext_data_name} of type {type(ext_data_mem)} not tested.")
+            for ext in self.we2.get_available_extension_names():
+                print(f"Testing data for {ext}")
+                ext_memory = self.we_memory2.load_extension(ext)
+                ext_folder = self.we2.load_extension(ext)
+                ext_zarr = self.we_zarr2.load_extension(ext)
+
+                for ext_data_name, ext_data_mem in ext_memory._extension_data.items():
+                    ext_data_folder = ext_folder._extension_data[ext_data_name]
+                    ext_data_zarr = ext_zarr._extension_data[ext_data_name]
+                    if isinstance(ext_data_mem, np.ndarray):
+                        np.testing.assert_array_equal(ext_data_mem, ext_data_folder)
+                        np.testing.assert_array_equal(ext_data_mem, ext_data_zarr)
+                    elif isinstance(ext_data_mem, pd.DataFrame):
+                        assert ext_data_mem.equals(ext_data_folder)
+                        assert ext_data_mem.equals(ext_data_zarr)
+                    else:
+                        print(f"{ext_data_name} of type {type(ext_data_mem)} not tested.")
+
+        # read-only - Extension is memory only
+        if platform.system() != "Windows":
+            _ = self.extension_class.get_extension_function()(self.we_ro, load_if_exists=False)
+            assert self.extension_class.extension_name in self.we_ro.get_available_extension_names()
+            ext_ro = self.we_ro.load_extension(self.extension_class.extension_name)
+            assert ext_ro.format == "memory"
+            assert ext_ro.extension_folder is None

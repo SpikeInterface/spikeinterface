@@ -12,6 +12,7 @@ from spikeinterface.postprocessing import (
     compute_principal_components,
     compute_spike_locations,
     compute_spike_amplitudes,
+    compute_amplitude_scalings,
 )
 
 from spikeinterface.qualitymetrics import (
@@ -31,6 +32,9 @@ from spikeinterface.qualitymetrics import (
     compute_drift_metrics,
     compute_amplitude_medians,
     compute_synchrony_metrics,
+    compute_firing_ranges,
+    compute_amplitude_cv_metrics,
+    compute_sd_ratio,
 )
 
 
@@ -67,7 +71,12 @@ def _simulated_data():
 
 
 def _waveform_extractor_simple():
-    recording, sorting = toy_example(duration=50, seed=10)
+    for name in ("rec1", "sort1", "waveform_folder1"):
+        if (cache_folder / name).exists():
+            shutil.rmtree(cache_folder / name)
+
+    recording, sorting = toy_example(duration=50, seed=10, firing_rate=6.0)
+
     recording = recording.save(folder=cache_folder / "rec1")
     sorting = sorting.save(folder=cache_folder / "sort1")
     folder = cache_folder / "waveform_folder1"
@@ -83,10 +92,15 @@ def _waveform_extractor_simple():
         overwrite=True,
     )
     _ = compute_principal_components(we, n_components=5, mode="by_channel_local")
+    _ = compute_spike_amplitudes(we, return_scaled=True)
     return we
 
 
 def _waveform_extractor_violations(data):
+    for name in ("rec2", "sort2", "waveform_folder2"):
+        if (cache_folder / name).exists():
+            shutil.rmtree(cache_folder / name)
+
     recording, sorting = toy_example(
         duration=[data["duration"]],
         spike_times=[data["times"]],
@@ -212,9 +226,19 @@ def test_calculate_firing_rate_num_spikes(waveform_extractor_simple):
     # np.testing.assert_array_equal(list(num_spikes_gt.values()), list(num_spikes.values()))
 
 
+def test_calculate_firing_range(waveform_extractor_simple):
+    we = waveform_extractor_simple
+    firing_ranges = compute_firing_ranges(we)
+    print(firing_ranges)
+
+    with pytest.warns(UserWarning) as w:
+        firing_ranges_nan = compute_firing_ranges(we, bin_size_s=we.get_total_duration() + 1)
+        assert np.all([np.isnan(f) for f in firing_ranges_nan.values()])
+
+
 def test_calculate_amplitude_cutoff(waveform_extractor_simple):
     we = waveform_extractor_simple
-    spike_amps = compute_spike_amplitudes(we)
+    spike_amps = we.load_extension("spike_amplitudes").get_data()
     amp_cuts = compute_amplitude_cutoffs(we, num_histogram_bins=10)
     print(amp_cuts)
 
@@ -225,13 +249,30 @@ def test_calculate_amplitude_cutoff(waveform_extractor_simple):
 
 def test_calculate_amplitude_median(waveform_extractor_simple):
     we = waveform_extractor_simple
-    spike_amps = compute_spike_amplitudes(we)
+    spike_amps = we.load_extension("spike_amplitudes").get_data()
     amp_medians = compute_amplitude_medians(we)
     print(spike_amps, amp_medians)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # amp_medians_gt = {0: 130.77323354628675, 1: 130.7461997791725, 2: 130.7461997791725}
     # assert np.allclose(list(amp_medians_gt.values()), list(amp_medians.values()), rtol=0.05)
+
+
+def test_calculate_amplitude_cv_metrics(waveform_extractor_simple):
+    we = waveform_extractor_simple
+    amp_cv_median, amp_cv_range = compute_amplitude_cv_metrics(we, average_num_spikes_per_bin=20)
+    print(amp_cv_median)
+    print(amp_cv_range)
+
+    amps_scalings = compute_amplitude_scalings(we)
+    amp_cv_median_scalings, amp_cv_range_scalings = compute_amplitude_cv_metrics(
+        we,
+        average_num_spikes_per_bin=20,
+        amplitude_extension="amplitude_scalings",
+        min_num_bins=5,
+    )
+    print(amp_cv_median_scalings)
+    print(amp_cv_range_scalings)
 
 
 def test_calculate_snrs(waveform_extractor_simple):
@@ -348,14 +389,29 @@ def test_calculate_drift_metrics(waveform_extractor_simple):
     # assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
 
 
+def test_calculate_sd_ratio(waveform_extractor_simple):
+    sd_ratio = compute_sd_ratio(
+        waveform_extractor_simple,
+    )
+
+    assert np.all(list(sd_ratio.keys()) == waveform_extractor_simple.unit_ids)
+    # assert np.allclose(list(sd_ratio.values()), 1, atol=0.2, rtol=0)
+
+
 if __name__ == "__main__":
     sim_data = _simulated_data()
     we = _waveform_extractor_simple()
+
     we_violations = _waveform_extractor_violations(sim_data)
-    # test_calculate_amplitude_cutoff(we)
-    # test_calculate_presence_ratio(we)
-    # test_calculate_amplitude_median(we)
-    # test_calculate_isi_violations(we)
-    # test_calculate_sliding_rp_violations(we)
-    # test_calculate_drift_metrics(we)
+    test_calculate_amplitude_cutoff(we)
+    test_calculate_presence_ratio(we)
+    test_calculate_amplitude_median(we)
+    test_calculate_isi_violations(we)
+    test_calculate_sliding_rp_violations(we)
+    test_calculate_drift_metrics(we)
     test_synchrony_metrics(we)
+    test_calculate_firing_range(we)
+    test_calculate_amplitude_cv_metrics(we)
+
+    # for windows we need an explicit del for closing the recording files
+    del we, we_violations

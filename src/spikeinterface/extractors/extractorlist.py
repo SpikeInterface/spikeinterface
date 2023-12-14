@@ -11,6 +11,9 @@ from spikeinterface.core import (
     NumpySorting,
     NpySnippetsExtractor,
     ZarrRecordingExtractor,
+    read_binary,
+    read_zarr,
+    read_npz_sorting,
 )
 
 # sorting/recording/event from neo

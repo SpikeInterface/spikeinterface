@@ -16,22 +16,22 @@ class CommonReferenceRecording(BasePreprocessor):
     ----------
     recording: RecordingExtractor
         The recording extractor to be re-referenced
-    reference: str 'global', 'single' or 'local'
-        If 'global' then CMR/CAR is used either by groups or all channel way.
-        If 'single', the selected channel(s) is remove from all channels. operator is no used in that case.
-        If 'local', an average CMR/CAR is implemented with only k channels selected the nearest outside of a radius around each channel
-    operator: str 'median' or 'average'
-        If 'median', common median reference (CMR) is implemented (the median of
+    reference: "global" | "single" | "local", default: "global"
+        If "global" then CMR/CAR is used either by groups or all channel way.
+        If "single", the selected channel(s) is remove from all channels. operator is no used in that case.
+        If "local", an average CMR/CAR is implemented with only k channels selected the nearest outside of a radius around each channel
+    operator: "median" | "average", default: "median"
+        If "median", common median reference (CMR) is implemented (the median of
             the selected channels is removed for each timestamp).
-        If 'average', common average reference (CAR) is implemented (the mean of the selected channels is removed
+        If "average", common average reference (CAR) is implemented (the mean of the selected channels is removed
             for each timestamp).
     groups: list
         List of lists containing the channel ids for splitting the reference. The CMR, CAR, or referencing with respect to
         single channels are applied group-wise. However, this is not applied for the local CAR.
         It is useful when dealing with different channel groups, e.g. multiple tetrodes.
     ref_channel_ids: list or int
-        If no 'groups' are specified, all channels are referenced to 'ref_channel_ids'. If 'groups' is provided, then a
-        list of channels to be applied to each group is expected. If 'single' reference, a list of one channel  or an
+        If no "groups" are specified, all channels are referenced to "ref_channel_ids". If "groups" is provided, then a
+        list of channels to be applied to each group is expected. If "single" reference, a list of one channel  or an
         int is expected.
     local_radius: tuple(int, int)
         Use in the local CAR implementation as the selecting annulus (exclude radius, include radius)
@@ -83,7 +83,7 @@ class CommonReferenceRecording(BasePreprocessor):
                 ref_channel_ids = np.asarray(ref_channel_ids)
                 assert np.all(
                     [ch in recording.get_channel_ids() for ch in ref_channel_ids]
-                ), "Some wrong 'ref_channel_ids'!"
+                ), "Some 'ref_channel_ids' are wrong!"
         elif reference == "local":
             assert groups is None, "With 'local' CAR, the group option should not be used."
             closest_inds, dist = get_closest_channels(recording)
@@ -98,7 +98,9 @@ class CommonReferenceRecording(BasePreprocessor):
 
         # tranforms groups (ids) to groups (indices)
         if groups is not None:
-            groups = [self.ids_to_indices(g) for g in groups]
+            group_indices = [self.ids_to_indices(g) for g in groups]
+        else:
+            group_indices = None
         if ref_channel_ids is not None:
             ref_channel_inds = self.ids_to_indices(ref_channel_ids)
         else:
@@ -106,7 +108,7 @@ class CommonReferenceRecording(BasePreprocessor):
 
         for parent_segment in recording._recording_segments:
             rec_segment = CommonReferenceRecordingSegment(
-                parent_segment, reference, operator, groups, ref_channel_inds, local_radius, neighbors, dtype_
+                parent_segment, reference, operator, group_indices, ref_channel_inds, local_radius, neighbors, dtype_
             )
             self.add_recording_segment(rec_segment)
 
@@ -123,13 +125,21 @@ class CommonReferenceRecording(BasePreprocessor):
 
 class CommonReferenceRecordingSegment(BasePreprocessorSegment):
     def __init__(
-        self, parent_recording_segment, reference, operator, groups, ref_channel_inds, local_radius, neighbors, dtype
+        self,
+        parent_recording_segment,
+        reference,
+        operator,
+        group_indices,
+        ref_channel_inds,
+        local_radius,
+        neighbors,
+        dtype,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.reference = reference
         self.operator = operator
-        self.groups = groups
+        self.group_indices = group_indices
         self.ref_channel_inds = ref_channel_inds
         self.local_radius = local_radius
         self.neighbors = neighbors
@@ -175,8 +185,8 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
     def _groups(self, channel_indices):
         selected_groups = []
         selected_channels = []
-        if self.groups:
-            for chan_inds in self.groups:
+        if self.group_indices:
+            for chan_inds in self.group_indices:
                 sel_inds = [ind for ind in channel_indices if ind in chan_inds]
                 # if no channels are in a group, do not return the group
                 if len(sel_inds) > 0:

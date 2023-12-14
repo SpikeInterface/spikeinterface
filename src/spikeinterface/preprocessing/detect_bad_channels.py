@@ -1,29 +1,32 @@
+from __future__ import annotations
 import warnings
 
 import numpy as np
+from typing import Literal
 
 from .filter import highpass_filter
-from ..core import get_random_data_chunks, order_channels_by_depth
+from ..core import get_random_data_chunks, order_channels_by_depth, BaseRecording
 
 
 def detect_bad_channels(
-    recording,
-    method="coherence+psd",
-    std_mad_threshold=5,
-    psd_hf_threshold=0.02,
-    dead_channel_threshold=-0.5,
-    noisy_channel_threshold=1.0,
-    outside_channel_threshold=-0.75,
-    n_neighbors=11,
-    nyquist_threshold=0.8,
-    direction="y",
-    chunk_duration_s=0.3,
-    num_random_chunks=10,
-    welch_window_ms=10.0,
-    highpass_filter_cutoff=300,
-    neighborhood_r2_threshold=0.9,
-    neighborhood_r2_radius_um=30.0,
-    seed=None,
+    recording: BaseRecording,
+    method: str = "coherence+psd",
+    std_mad_threshold: float = 5,
+    psd_hf_threshold: float = 0.02,
+    dead_channel_threshold: float = -0.5,
+    noisy_channel_threshold: float = 1.0,
+    outside_channel_threshold: float = -0.75,
+    outside_channels_location: Literal["top", "bottom", "both"] = "top",
+    n_neighbors: int = 11,
+    nyquist_threshold: float = 0.8,
+    direction: Literal["x", "y", "z"] = "y",
+    chunk_duration_s: float = 0.3,
+    num_random_chunks: int = 100,
+    welch_window_ms: float = 10.0,
+    highpass_filter_cutoff: float = 300,
+    neighborhood_r2_threshold: float = 0.9,
+    neighborhood_r2_radius_um: float = 30.0,
+    seed: int | None = None,
 ):
     """
     Perform bad channel detection.
@@ -50,48 +53,48 @@ def detect_bad_channels(
     ----------
     recording : BaseRecording
         The recording for which bad channels are detected
-    method : str
-        The method to be used:
-
-        * coeherence+psd (default, developed by IBL)
-        * mad
-        * std
-    std_mad_threshold (mstd) : float
-        (method std, mad)
+    method : "coeherence+psd" | "std" | "mad" | "neighborhood_r2", default: "coeherence+psd"
+        The method to be used for bad channel detection
+    std_mad_threshold : float, default: 5
         The standard deviation/mad multiplier threshold
-    psd_hf_threshold (coeherence+psd) : float
+    psd_hf_threshold (coeherence+psd) : float, default: 0.02
         An absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
         Channels with average power at >80% Nyquist larger than this threshold
-        will be labeled as noise, by default 0.02
-    dead_channel_threshold (coeherence+psd) : float, optional
-        Threshold for channel coherence below which channels are labeled as dead, by default -0.5
-    noisy_channel_threshold (coeherence+psd) : float
-        Threshold for channel coherence above which channels are labeled as noisy (together with psd condition),
-        by default 1
-    outside_channel_threshold (coeherence+psd) : float
+        will be labeled as noise
+    dead_channel_threshold (coeherence+psd) : float, default: -0.5
+        Threshold for channel coherence below which channels are labeled as dead
+    noisy_channel_threshold (coeherence+psd) : float, default: 1
+        Threshold for channel coherence above which channels are labeled as noisy (together with psd condition)
+    outside_channel_threshold (coeherence+psd) : float, default: -0.75
         Threshold for channel coherence above which channels at the edge of the recording are marked as outside
-        of the brain, by default -0.75
-    n_neighbors (coeherence+psd) : int
-        Number of channel neighbors to compute median filter (needs to be odd), by default 11
-    nyquist_threshold (coeherence+psd) : float
+        of the brain
+    outside_channels_location (coeherence+psd) : "top" | "bottom" | "both", default: "top"
+        Location of the outside channels. If "top", only the channels at the top of the probe can be
+        marked as outside channels. If "bottom", only the channels at the bottom of the probe can be
+        marked as outside channels. If "both", both the channels at the top and bottom of the probe can be
+        marked as outside channels
+    n_neighbors (coeherence+psd) : int, default: 11
+        Number of channel neighbors to compute median filter (needs to be odd)
+    nyquist_threshold (coeherence+psd) : float, default: 0.8
         Frequency with respect to Nyquist (Fn=1) above which the mean of the PSD is calculated and compared
-        with psd_hf_threshold, by default 0.8
-    direction (coeherence+psd): str
-        'x', 'y', 'z', the depth dimension, by default 'y'
-    highpass_filter_cutoff : float
-        If the recording is not filtered, the cutoff frequency of the highpass filter, by default 300
-    chunk_duration_s : float
-        Duration of each chunk, by default 0.3
-    num_random_chunks : int
-        Number of random chunks, by default 10
-    welch_window_ms : float
-        Window size for the scipy.signal.welch that will be converted to nperseg, by default 10ms
-    neighborhood_r2_threshold : float, default 0.95
+        with psd_hf_threshold
+    direction (coeherence+psd): "x" | "y" | "z", default: "y"
+        The depth dimension
+    highpass_filter_cutoff : float, default: 300
+        If the recording is not filtered, the cutoff frequency of the highpass filter
+    chunk_duration_s : float, default: 0.5
+        Duration of each chunk
+    num_random_chunks : int, default: 100
+        Number of random chunks
+        Having many chunks is important for reproducibility.
+    welch_window_ms : float, default: 10
+        Window size for the scipy.signal.welch that will be converted to nperseg
+    neighborhood_r2_threshold : float, default: 0.95
         R^2 threshold for the neighborhood_r2 method.
-    neighborhood_r2_radius_um : float, default 30
+    neighborhood_r2_radius_um : float, default: 30
         Spatial radius below which two channels are considered neighbors in the neighborhood_r2 method.
-    seed : int or None
-        The random seed to extract chunks, by default None
+    seed : int or None, default: None
+        The random seed to extract chunks
 
     Returns
     -------
@@ -174,20 +177,18 @@ def detect_bad_channels(
         channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
         assert dim < channel_locations.shape[1], f"Direction {direction} is wrong"
-        locs_depth = channel_locations[:, dim]
-        if np.array_equal(np.sort(locs_depth), locs_depth):
+        order_f, order_r = order_channels_by_depth(recording=recording, dimensions=("x", "y"))
+        if np.all(np.diff(order_f) == 1):
+            # already ordered
             order_f = None
             order_r = None
-        else:
-            # sort by x, y to avoid ambiguity
-            order_f, order_r = order_channels_by_depth(recording=recording, dimensions=("x", "y"))
 
         # Create empty channel labels and fill with bad-channel detection estimate for each chunk
         chunk_channel_labels = np.zeros((recording.get_num_channels(), len(random_data)), dtype=np.int8)
 
         for i, random_chunk in enumerate(random_data):
-            random_chunk_sorted = random_chunk[order_f] if order_f is not None else random_chunk
-            chunk_channel_labels[:, i] = detect_bad_channels_ibl(
+            random_chunk_sorted = random_chunk[:, order_f] if order_f is not None else random_chunk
+            chunk_labels = detect_bad_channels_ibl(
                 raw=random_chunk_sorted,
                 fs=recording.sampling_frequency,
                 psd_hf_threshold=psd_hf_threshold,
@@ -197,12 +198,12 @@ def detect_bad_channels(
                 n_neighbors=n_neighbors,
                 nyquist_threshold=nyquist_threshold,
                 welch_window_ms=welch_window_ms,
+                outside_channels_location=outside_channels_location,
             )
+            chunk_channel_labels[:, i] = chunk_labels[order_r] if order_r is not None else chunk_labels
 
         # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
         mode_channel_labels, _ = scipy.stats.mode(chunk_channel_labels, axis=1, keepdims=False)
-        if order_r is not None:
-            mode_channel_labels = mode_channel_labels[order_r]
 
         (bad_inds,) = np.where(mode_channel_labels != 0)
         bad_channel_ids = recording.channel_ids[bad_inds]
@@ -213,9 +214,9 @@ def detect_bad_channels(
 
         if bad_channel_ids.size > recording.get_num_channels() / 3:
             warnings.warn(
-                "Over 1/3 of channels are detected as bad. In the precense of a high"
+                "Over 1/3 of channels are detected as bad. In the presence of a high"
                 "number of dead / noisy channels, bad channel detection may fail "
-                "(erroneously label good channels as dead)."
+                "(good channels may be erroneously labeled as dead)."
             )
 
     elif method == "neighborhood_r2":
@@ -283,6 +284,7 @@ def detect_bad_channels_ibl(
     n_neighbors=11,
     nyquist_threshold=0.8,
     welch_window_ms=0.3,
+    outside_channels_location="top",
 ):
     """
     Bad channels detection for Neuropixel probes developed by IBL
@@ -296,19 +298,24 @@ def detect_bad_channels_ibl(
     psd_hf_threshold : float
         Threshold for high frequency PSD. If mean PSD above `nyquist_threshold` * fn is greater than this
         value, channels are flagged as noisy (together with channel coherence condition).
-    dead_channel_thr : float, optional
-        Threshold for channel coherence below which channels are labeled as dead, by default -0.5
-    noisy_channel_thr : float
-        Threshold for channel coherence above which channels are labeled as noisy (together with psd condition),
-        by default -0.5
-    outside_channel_thr : float
+    dead_channel_thr : float, default: -0.5
+        Threshold for channel coherence below which channels are labeled as dead
+    noisy_channel_thr : float, default: 1
+        Threshold for channel coherence above which channels are labeled as noisy (together with psd condition)
+    outside_channel_thr : float, default: -0.75
         Threshold for channel coherence above which channels
-    n_neighbors : int, optional
-        Number of neighbors to compute median fitler, by default 11
-    nyquist_threshold : float, optional
-        Threshold on Nyquist frequency to calculate HF noise band, by default 0.8
-    welch_window_ms: float
-        Window size for the scipy.signal.welch that will be converted to nperseg, by default 10ms
+    n_neighbors : int, default: 11
+        Number of neighbors to compute median fitler
+    nyquist_threshold : float, default: 0.8
+        Threshold on Nyquist frequency to calculate HF noise band
+    welch_window_ms: float, default: 0.3
+        Window size for the scipy.signal.welch that will be converted to nperseg
+    outside_channels_location : "top" | "bottom" | "both", default: "top"
+        Location of the outside channels. If "top", only the channels at the top of the probe can be
+        marked as outside channels. If "bottom", only the channels at the bottom of the probe can be
+        marked as outside channels. If "both", both the channels at the top and bottom of the probe can be
+        marked as outside channels
+
     Returns
     -------
     1d array
@@ -340,12 +347,24 @@ def detect_bad_channels_ibl(
     ichannels[inoisy] = 2
 
     # the channels outside of the brains are the contiguous channels below the threshold on the trend coherency
-    # the chanels outide need to be at either extremes of the probe
-    ioutside = np.where(xcorr_distant < outside_channel_thr)[0]
-    if ioutside.size > 0 and (ioutside[-1] == (nc - 1) or ioutside[0] == 0):
-        a = np.cumsum(np.r_[0, np.diff(ioutside) - 1])
-        ioutside = ioutside[a == np.max(a)]
-        ichannels[ioutside] = 3
+    # the chanels outside need to be at the extreme of the probe
+    (ioutside,) = np.where(xcorr_distant < outside_channel_thr)
+    a = np.cumsum(np.r_[0, np.diff(ioutside) - 1])
+    if ioutside.size > 0:
+        if outside_channels_location == "top":
+            # channels are sorted bottom to top, so the last channel needs to be (nc - 1)
+            if ioutside[-1] == (nc - 1):
+                ioutside = ioutside[(a == np.max(a)) & (a > 0)]
+                ichannels[ioutside] = 3
+        elif outside_channels_location == "bottom":
+            # outside channels are at the bottom of the probe, so the first channel needs to be 0
+            if ioutside[0] == 0:
+                ioutside = ioutside[(a == np.min(a)) & (a < np.max(a))]
+                ichannels[ioutside] = 3
+        else:  # both extremes are considered
+            if ioutside[-1] == (nc - 1) or ioutside[0] == 0:
+                ioutside = ioutside[(a == np.max(a)) | (a == np.min(a))]
+                ichannels[ioutside] = 3
 
     return ichannels
 

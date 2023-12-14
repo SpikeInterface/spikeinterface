@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional
 import numpy as np
 
@@ -9,9 +10,15 @@ try:
 except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
+_methods = ("keep_first", "random", "keep_last", "keep_first_iterative", "keep_last_iterative")
+_methods_numpy = ("keep_first", "random", "keep_last")
+
 
 def _find_duplicated_spikes_numpy(
-    spike_train: np.ndarray, censored_period: int, seed: Optional[int] = None, method: str = "keep_first"
+    spike_train: np.ndarray,
+    censored_period: int,
+    seed: Optional[int] = None,
+    method: "keep_first" | "random" | "keep_last" = "keep_first",
 ) -> np.ndarray:
     (indices_of_duplicates,) = np.where(np.diff(spike_train) <= censored_period)
 
@@ -29,7 +36,9 @@ def _find_duplicated_spikes_numpy(
 
         (indices_of_duplicates,) = np.where(~mask)
     elif method != "keep_last":
-        raise ValueError(f"Method '{method}' isn't a valid method for _find_duplicated_spikes_numpy.")
+        raise ValueError(
+            f"Method '{method}' isn't a valid method for _find_duplicated_spikes_numpy use one of {_methods_numpy}."
+        )
 
     return indices_of_duplicates
 
@@ -50,7 +59,7 @@ def _find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int
 
 if HAVE_NUMBA:
 
-    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    @numba.jit(nopython=True, nogil=True, cache=True)
     def _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period):
         indices_of_duplicates = numba.typed.List()
         N = len(spike_train)
@@ -66,7 +75,7 @@ if HAVE_NUMBA:
 
         return np.asarray(indices_of_duplicates)
 
-    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    @numba.jit(nopython=True, nogil=True, cache=True)
     def _find_duplicated_spikes_keep_last_iterative(spike_train, censored_period):
         indices_of_duplicates = numba.typed.List()
         N = len(spike_train)
@@ -84,7 +93,10 @@ if HAVE_NUMBA:
 
 
 def find_duplicated_spikes(
-    spike_train, censored_period: int, method: str = "random", seed: Optional[int] = None
+    spike_train,
+    censored_period: int,
+    method: "keep_first" | "keep_last" | "keep_first_iterative" | "keep_last_iterative" | "random" = "random",
+    seed: Optional[int] = None,
 ) -> np.ndarray:
     """
     Finds the indices where spikes should be considered duplicates.
@@ -97,7 +109,7 @@ def find_duplicated_spikes(
         The spike train on which to look for duplicated spikes.
     censored_period: int
         The censored period for duplicates (in sample time).
-    method: str in ("keep_first", "keep_last", "keep_first_iterative', 'keep_last_iterative", random")
+    method: "keep_first" |"keep_last" | "keep_first_iterative" | "keep_last_iterative" |random", default: "random"
         Method used to remove the duplicated spikes.
     seed: int | None
         The seed to use if method="random".
@@ -120,4 +132,4 @@ def find_duplicated_spikes(
         assert HAVE_NUMBA, "'keep_last' method requires numba. Install it with >>> pip install numba"
         return _find_duplicated_spikes_keep_last_iterative(spike_train.astype(np.int64), censored_period)
     else:
-        raise ValueError(f"Method '{method}' isn't a valid method for find_duplicated_spikes.")
+        raise ValueError(f"Method '{method}' isn't a valid method for find_duplicated_spikes. Use one of {_methods}")

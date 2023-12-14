@@ -1,8 +1,11 @@
 import pytest
+import psutil
 
 import numpy as np
 
 from spikeinterface.core import load_extractor, extract_waveforms
+
+from probeinterface import generate_multi_columns_probe
 from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
@@ -17,27 +20,81 @@ from spikeinterface.core.generate import (
 )
 
 
-from spikeinterface.core.core_tools import convert_bytes_to_str, measure_memory_allocation
+from spikeinterface.core.core_tools import convert_bytes_to_str
+
 from spikeinterface.core.testing import check_recordings_equal
 
 strategy_list = ["tile_pregenerated", "on_the_fly"]
 
 
 def test_generate_recording():
-    # TODO even this is extenssivly tested in all other function
+    # TODO even this is extensively tested in all other functions
     pass
 
 
 def test_generate_sorting():
-    # TODO even this is extenssivly tested in all other function
+    # TODO even this is extensively tested in all other functions
     pass
+
+
+def test_generate_sorting_with_spikes_on_borders():
+    num_spikes_on_borders = 10
+    border_size_samples = 10
+    segment_duration = 10
+    for nseg in [1, 2, 3]:
+        sorting = generate_sorting(
+            durations=[segment_duration] * nseg,
+            sampling_frequency=30000,
+            num_units=10,
+            add_spikes_on_borders=True,
+            num_spikes_per_border=num_spikes_on_borders,
+            border_size_samples=border_size_samples,
+        )
+        # check that segments are correctly sorted
+        all_spikes = sorting.to_spike_vector()
+        np.testing.assert_array_equal(all_spikes["segment_index"], np.sort(all_spikes["segment_index"]))
+
+        spikes = sorting.to_spike_vector(concatenated=False)
+        # at least num_border spikes at borders for all segments
+        for spikes_in_segment in spikes:
+            # check that sample indices are correctly sorted within segments
+            np.testing.assert_array_equal(spikes_in_segment["sample_index"], np.sort(spikes_in_segment["sample_index"]))
+            num_samples = int(segment_duration * 30000)
+            assert np.sum(spikes_in_segment["sample_index"] < border_size_samples) >= num_spikes_on_borders
+            assert (
+                np.sum(spikes_in_segment["sample_index"] >= num_samples - border_size_samples) >= num_spikes_on_borders
+            )
+
+
+def measure_memory_allocation(measure_in_process: bool = True) -> float:
+    """
+    A local utility to measure memory allocation at a specific point in time.
+    Can measure either the process resident memory or system wide memory available
+
+    Uses psutil package.
+
+    Parameters
+    ----------
+    measure_in_process : bool, True by default
+        Mesure memory allocation in the current process only, if false then measures at the system
+        level.
+    """
+
+    if measure_in_process:
+        process = psutil.Process()
+        memory = process.memory_info().rss
+    else:
+        mem_info = psutil.virtual_memory()
+        memory = mem_info.total - mem_info.available
+
+    return memory
 
 
 def test_noise_generator_memory():
     # Test that get_traces does not consume more memory than allocated.
 
     bytes_to_MiB_factor = 1024**2
-    relative_tolerance = 0.01  # relative tolerance of 5 per cent
+    relative_tolerance = 0.05  # relative tolerance of 5 per cent
 
     sampling_frequency = 30000  # Hz
     noise_block_size = 60_000
@@ -216,8 +273,7 @@ def test_noise_generator_consistency_after_dump(strategy, seed):
 
 def test_generate_recording():
     # check the high level function
-    rec = generate_recording(mode="lazy")
-    rec = generate_recording(mode="legacy")
+    rec = generate_recording()
 
 
 def test_generate_single_fake_waveform():
@@ -234,6 +290,40 @@ def test_generate_single_fake_waveform():
     # plt.show()
 
 
+def test_generate_unit_locations():
+    seed = 0
+
+    probe = generate_multi_columns_probe(num_columns=2, num_contact_per_column=20, xpitch=20, ypitch=20)
+    channel_locations = probe.contact_positions
+
+    num_units = 100
+    minimum_distance = 20.0
+    unit_locations = generate_unit_locations(
+        num_units,
+        channel_locations,
+        margin_um=20.0,
+        minimum_z=5.0,
+        maximum_z=40.0,
+        minimum_distance=minimum_distance,
+        max_iteration=500,
+        distance_strict=False,
+        seed=seed,
+    )
+    distances = np.linalg.norm(unit_locations[:, np.newaxis] - unit_locations[np.newaxis, :], axis=2)
+    dist_flat = np.triu(distances, k=1).flatten()
+    dist_flat = dist_flat[dist_flat > 0]
+    assert np.all(dist_flat > minimum_distance)
+
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # ax.hist(dist_flat, bins = np.arange(0, 400, 10))
+    # fig, ax = plt.subplots()
+    # from probeinterface.plotting import plot_probe
+    # plot_probe(probe, ax=ax)
+    # ax.scatter(unit_locations[:, 0], unit_locations[:,1], marker='*', s=20)
+    # plt.show()
+
+
 def test_generate_templates():
     seed = 0
 
@@ -242,7 +332,7 @@ def test_generate_templates():
     num_units = 10
     margin_um = 15.0
     channel_locations = generate_channel_locations(num_chans, num_columns, 20.0)
-    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
+    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um=margin_um, seed=seed)
 
     sampling_frequency = 30000.0
     ms_before = 1.0
@@ -314,7 +404,7 @@ def test_inject_templates():
 
     # generate some sutff
     rec_noise = generate_recording(
-        num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency, mode="lazy", seed=42
+        num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency, seed=42
     )
     channel_locations = rec_noise.get_channel_locations()
     sorting = generate_sorting(
@@ -373,7 +463,7 @@ def test_generate_ground_truth_recording():
 if __name__ == "__main__":
     strategy = "tile_pregenerated"
     # strategy = "on_the_fly"
-    test_noise_generator_memory()
+    # test_noise_generator_memory()
     # test_noise_generator_under_giga()
     # test_noise_generator_correct_shape(strategy)
     # test_noise_generator_consistency_across_calls(strategy, 0, 5)
@@ -381,6 +471,8 @@ if __name__ == "__main__":
     # test_noise_generator_consistency_after_dump(strategy, None)
     # test_generate_recording()
     # test_generate_single_fake_waveform()
+    test_generate_unit_locations()
     # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
+    # test_generate_sorting_with_spikes_on_borders()

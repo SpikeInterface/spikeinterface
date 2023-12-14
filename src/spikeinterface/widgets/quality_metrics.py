@@ -10,16 +10,16 @@ class QualityMetricsWidget(MetricsBaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The object to compute/get quality metrics from
-    unit_ids: list
-        List of unit ids, default None
-    include_metrics: list
-        If given, a list of quality metrics to include, default None
-    skip_metrics: list or None
-        If given, a list of quality metrics to skip, default None
-    unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values, default None
-    hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed, default False
+    unit_ids: list or None, default: None
+        List of unit ids
+    include_metrics: list or None, default: None
+        If given, a list of quality metrics to include
+    skip_metrics: list or None, default: None
+        If given, a list of quality metrics to skip
+    unit_colors : dict or None, default: None
+        If given, a dictionary with unit ids as keys and colors as values
+    hide_unit_selector : bool, default: False
+        For sortingview backend, if True the unit selector is not displayed
     """
 
     def __init__(

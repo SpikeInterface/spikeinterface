@@ -27,6 +27,9 @@ class NpySnippetsExtractor(BaseSnippets):
         num_segments = len(file_paths)
         data = np.load(file_paths[0], mmap_mode="r")
 
+        if channel_ids is None:
+            channel_ids = np.arange(data["snippet"].shape[2])
+
         BaseSnippets.__init__(
             self,
             sampling_frequency,
@@ -84,7 +87,7 @@ class NpySnippetsExtractor(BaseSnippets):
             arr = np.empty(n, dtype=snippets_t, order="F")
             arr["frame"] = snippets.get_frames(segment_index=i)
             arr["snippet"] = snippets.get_snippets(segment_index=i).astype(dtype, copy=False)
-
+            file_paths[i].parent.mkdir(parents=True, exist_ok=True)
             np.save(file_paths[i], arr)
 
 
@@ -106,12 +109,10 @@ class NpySnippetsSegment(BaseSnippetsSegment):
 
         Parameters
         ----------
-        indexes: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
-        channel_indices: (Union[List, None], optional)
-            Indices of channels to return, or all channels if None. Defaults to None.
+        indices: list[int]
+            Indices of the snippets to return, or all if None
+        channel_indices: Union[List, None], default: None
+            Indices of channels to return, or all channels if None
 
         Returns
         -------
@@ -131,10 +132,10 @@ class NpySnippetsSegment(BaseSnippetsSegment):
 
         Parameters
         ----------
-        start_frame: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
+        start_frame: Union[int, None], default: None
+            start sample index, or zero if None
+        end_frame: Union[int, None], default: None
+            end_sample, or number of samples if None
 
         Returns
         -------

@@ -1,9 +1,13 @@
+from __future__ import annotations
 import numpy as np
 
 from spikeinterface import WaveformExtractor
 
 from ..core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
 from ..postprocessing import align_sorting
+
+
+_remove_strategies = ("minimum_shift", "highest_amplitude", "max_spikes")
 
 
 def remove_redundant_units(
@@ -22,9 +26,9 @@ def remove_redundant_units(
 
     When a redundant pair is found, there are several strategies to choose which unit is the best:
 
-       * 'minimum_shift'
-       * 'highest_amplitude'
-       * 'max_spikes'
+       * "minimum_shift"
+       * "highest_amplitude"
+       * "max_spikes"
 
 
     Parameters
@@ -33,26 +37,26 @@ def remove_redundant_units(
         If WaveformExtractor, the spike trains can be optionally realigned using the peak shift in the
         template to improve the matching procedure.
         If BaseSorting, the spike trains are not aligned.
-    align : bool, optional
-        If True, spike trains are aligned (if a WaveformExtractor is used), by default False
-    delta_time : float, optional
-        The time in ms to consider matching spikes, by default 0.4
-    agreement_threshold : float, optional
-        Threshold on the agreement scores to flag possible redundant/duplicate units, by default 0.2
-    duplicate_threshold : float, optional
+    align : bool, default: False
+        If True, spike trains are aligned (if a WaveformExtractor is used)
+    delta_time : float, default: 0.4
+        The time in ms to consider matching spikes
+    agreement_threshold : float, default: 0.2
+        Threshold on the agreement scores to flag possible redundant/duplicate units
+    duplicate_threshold : float, default: 0.8
         Final threshold on the portion of coincident events over the number of spikes above which the
-        unit is removed, by default 0.8
-    remove_strategy: str
+        unit is removed
+    remove_strategy: "minimum_shift" | "highest_amplitude" | "max_spikes", default: "minimum_shift"
         Which strategy to remove one of the two duplicated units:
 
-            * 'minimum_shift': keep the unit with best peak alignment (minimum shift)
-                             If shifts are equal then the 'highest_amplitude' is used
-            * 'highest_amplitude': keep the unit with the best amplitude on unshifted max.
-            * 'max_spikes': keep the unit with more spikes
+            * "minimum_shift": keep the unit with best peak alignment (minimum shift)
+                             If shifts are equal then the "highest_amplitude" is used
+            * "highest_amplitude": keep the unit with the best amplitude on unshifted max.
+            * "max_spikes": keep the unit with more spikes
 
-    peak_sign: str  ('neg', 'pos', 'both')
-        Used when remove_strategy='highest_amplitude'
-    extra_outputs: bool
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Used when remove_strategy="highest_amplitude"
+    extra_outputs: bool, default: False
         If True, will return the redundant pairs.
 
     Returns
@@ -93,7 +97,7 @@ def remove_redundant_units(
         peak_values = {unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()}
 
     if remove_strategy == "minimum_shift":
-        assert align, "remove_strategy with minimum_shift need align=True"
+        assert align, "remove_strategy with minimum_shift needs align=True"
         for u1, u2 in redundant_unit_pairs:
             if np.abs(unit_peak_shifts[u1]) > np.abs(unit_peak_shifts[u2]):
                 remove_unit_ids.append(u1)
@@ -112,7 +116,7 @@ def remove_redundant_units(
             else:
                 remove_unit_ids.append(u2)
     elif remove_strategy == "max_spikes":
-        num_spikes = sorting.count_num_spikes_per_unit()
+        num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
         for u1, u2 in redundant_unit_pairs:
             if num_spikes[u1] < num_spikes[u2]:
                 remove_unit_ids.append(u1)
@@ -125,7 +129,7 @@ def remove_redundant_units(
         # this will be implemented in a futur PR by the first who need it!
         raise NotImplementedError()
     else:
-        raise ValueError(f"remove_strategy : {remove_strategy} is not implemented!")
+        raise ValueError(f"remove_strategy : {remove_strategy} is not implemented! Options are {_remove_strategies}")
 
     sorting_clean = sorting.remove_units(remove_unit_ids)
 
@@ -143,13 +147,13 @@ def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold=0
     ----------
     sorting : BaseSorting
         The input sorting object
-    delta_time : float, optional
-        The time in ms to consider matching spikes, by default 0.4
-    agreement_threshold : float, optional
-        Threshold on the agreement scores to flag possible redundant/duplicate units, by default 0.2
-    duplicate_threshold : float, optional
+    delta_time : float, default: 0.4
+        The time in ms to consider matching spikes
+    agreement_threshold : float, default: 0.2
+        Threshold on the agreement scores to flag possible redundant/duplicate units
+    duplicate_threshold : float, default: 0.8
         Final threshold on the portion of coincident events over the number of spikes above which the
-        unit is flagged as duplicate/redundant, by default 0.8
+        unit is flagged as duplicate/redundant
 
     Returns
     -------

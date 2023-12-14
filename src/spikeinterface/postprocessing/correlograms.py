@@ -68,7 +68,7 @@ WaveformExtractor.register_extension(CorrelogramsCalculator)
 
 
 def _make_bins(sorting, window_ms, bin_ms):
-    fs = sorting.get_sampling_frequency()
+    fs = sorting.sampling_frequency
 
     window_size = int(round(fs * window_ms / 2 * 1e-3))
     bin_size = int(round(fs * bin_ms * 1e-3))
@@ -137,8 +137,8 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
 def compute_correlograms(
     waveform_or_sorting_extractor,
     load_if_exists=False,
-    window_ms: float = 100.0,
-    bin_ms: float = 5.0,
+    window_ms: float = 50.0,
+    bin_ms: float = 1.0,
     method: str = "auto",
 ):
     """Compute auto and cross correlograms.
@@ -146,15 +146,15 @@ def compute_correlograms(
     Parameters
     ----------
     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-        If WaveformExtractor, the correlograms are saved as WaveformExtensions.
+        If WaveformExtractor, the correlograms are saved as WaveformExtensions
     load_if_exists : bool, default: False
-        Whether to load precomputed crosscorrelograms, if they already exist.
-    window_ms : float, optional
-        The window in ms, by default 100.0.
-    bin_ms : float, optional
-        The bin size in ms, by default 5.0.
-    method : str, optional
-        "auto" | "numpy" | "numba". If _auto" and numba is installed, numba is used, by default "auto"
+        Whether to load precomputed crosscorrelograms, if they already exist
+    window_ms : float, default: 100.0
+        The window in ms
+    bin_ms : float, default: 5
+        The bin size in ms
+    method : "auto" | "numpy" | "numba", default: "auto"
+         If "auto" and numba is installed, numba is used, otherwise numpy is used
 
     Returns
     -------

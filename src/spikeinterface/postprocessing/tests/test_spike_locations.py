@@ -10,7 +10,12 @@ class SpikeLocationsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     extension_class = SpikeLocationsCalculator
     extension_data_names = ["spike_locations"]
     extension_function_kwargs_list = [
-        dict(method="center_of_mass", chunk_size=10000, n_jobs=1),
+        dict(
+            method="center_of_mass", chunk_size=10000, n_jobs=1, spike_retriver_kwargs=dict(channel_from_template=True)
+        ),
+        dict(
+            method="center_of_mass", chunk_size=10000, n_jobs=1, spike_retriver_kwargs=dict(channel_from_template=False)
+        ),
         dict(method="center_of_mass", chunk_size=10000, n_jobs=1, outputs="by_unit"),
         dict(method="monopolar_triangulation", chunk_size=10000, n_jobs=1, outputs="by_unit"),
         dict(method="monopolar_triangulation", chunk_size=10000, n_jobs=1, outputs="by_unit"),

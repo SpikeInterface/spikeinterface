@@ -7,6 +7,7 @@ from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     find_parent_of_type,
     PeakRetriever,
+    SpikeRetriever,
     PipelineNode,
     WaveformsNode,
     ExtractDenseWaveforms,
@@ -25,6 +26,57 @@ from ..postprocessing.unit_localization import (
 )
 
 from .tools import get_prototype_spike
+
+
+def _run_localization_from_peak_source(
+    recording, peak_source, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs
+):
+    # use by localize_peaks() and compute_spike_locations()
+    assert (
+        method in possible_localization_methods
+    ), f"Method {method} is not supported. Choose from {possible_localization_methods}"
+
+    method_kwargs, job_kwargs = split_job_kwargs(kwargs)
+
+    if method == "center_of_mass":
+        extract_dense_waveforms = ExtractDenseWaveforms(
+            recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
+        )
+        pipeline_nodes = [
+            peak_source,
+            extract_dense_waveforms,
+            LocalizeCenterOfMass(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs),
+        ]
+    elif method == "monopolar_triangulation":
+        extract_dense_waveforms = ExtractDenseWaveforms(
+            recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
+        )
+        pipeline_nodes = [
+            peak_source,
+            extract_dense_waveforms,
+            LocalizeMonopolarTriangulation(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs),
+        ]
+    elif method == "peak_channel":
+        pipeline_nodes = [peak_source, LocalizePeakChannel(recording, parents=[peak_source], **method_kwargs)]
+    elif method == "grid_convolution":
+        if "prototype" not in method_kwargs:
+            assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
+            method_kwargs["prototype"] = get_prototype_spike(
+                recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
+            )
+        extract_dense_waveforms = ExtractDenseWaveforms(
+            recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
+        )
+        pipeline_nodes = [
+            peak_source,
+            extract_dense_waveforms,
+            LocalizeGridConvolution(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs),
+        ]
+
+    job_name = f"localize peaks using {method}"
+    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
+
+    return peak_locations
 
 
 def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs):
@@ -50,54 +102,12 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
     -------
     peak_locations: ndarray
         Array with estimated location for each spike.
-        The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
+        The dtype depends on the method. ("x", "y") or ("x", "y", "z", "alpha").
     """
-    assert (
-        method in possible_localization_methods
-    ), f"Method {method} is not supported. Choose from {possible_localization_methods}"
-
-    method_kwargs, job_kwargs = split_job_kwargs(kwargs)
-
     peak_retriever = PeakRetriever(recording, peaks)
-    if method == "center_of_mass":
-        extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-        pipeline_nodes = [
-            peak_retriever,
-            extract_dense_waveforms,
-            LocalizeCenterOfMass(recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs),
-        ]
-    elif method == "monopolar_triangulation":
-        extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-        pipeline_nodes = [
-            peak_retriever,
-            extract_dense_waveforms,
-            LocalizeMonopolarTriangulation(
-                recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs
-            ),
-        ]
-    elif method == "peak_channel":
-        pipeline_nodes = [peak_retriever, LocalizePeakChannel(recording, parents=[peak_retriever], **method_kwargs)]
-    elif method == "grid_convolution":
-        if "prototype" not in method_kwargs:
-            method_kwargs["prototype"] = get_prototype_spike(
-                recording, peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
-            )
-        extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-        pipeline_nodes = [
-            peak_retriever,
-            extract_dense_waveforms,
-            LocalizeGridConvolution(recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs),
-        ]
-
-    job_name = f"localize peaks using {method}"
-    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
-
+    peak_locations = _run_localization_from_peak_source(
+        recording, peak_retriever, method=method, ms_before=ms_before, ms_after=ms_after, **kwargs
+    )
     return peak_locations
 
 
@@ -155,8 +165,8 @@ class LocalizeCenterOfMass(LocalizeBase):
     params_doc = """
     radius_um: float
         Radius in um for channel sparsity.
-    feature: str ['ptp', 'mean', 'energy', 'peak_voltage']
-        Feature to consider for computation. Default is 'ptp'
+    feature: "ptp" | "mean" | "energy" | "peak_voltage", default: "ptp"
+        Feature to consider for computation
     """
 
     def __init__(self, recording, return_output=True, parents=["extract_waveforms"], radius_um=75.0, feature="ptp"):
@@ -217,12 +227,12 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
-    enforce_decrease : bool (default True)
+    enforce_decrease : bool, default: True
         Enforce spatial decreasingness for PTP vectors
-    feature: string in ['ptp', 'energy', 'peak_voltage']
+    feature: "ptp", "energy", "peak_voltage", default: "ptp"
         The available features to consider for estimating the position via
         monopolar triangulation are peak-to-peak amplitudes (ptp, default),
-        energy ('energy', as L2 norm) or voltages at the center of the waveform
+        energy ("energy", as L2 norm) or voltages at the center of the waveform
         (peak_voltage)
     """
 
@@ -316,11 +326,11 @@ class LocalizeGridConvolution(PipelineNode):
         The margin for the grid of fake templates
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float (default 10)
+    percentile: float, default: 5
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float (default 0.1)
-        The sparsity threshold (in 0-1) below which weights should be considered as 0.
+    sparsity_threshold: float, default: 0.01
+        The sparsity threshold (in [0-1]) below which weights should be considered as 0
     """
 
     def __init__(

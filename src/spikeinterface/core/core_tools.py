@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, WindowsPath
 from typing import Union
 import os
 import sys
@@ -172,10 +172,10 @@ def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
         Number of channels
     dtype: dtype
         dtype of the file
-    time_axis: 0 (default) or 1
+    time_axis: 0 or 1, default: 0
         If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
         If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
-    offset: int
+    offset: int, default: 0
         number of offset bytes
 
     """
@@ -204,46 +204,9 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
     return worker_ctx
 
 
-# used by write_binary_recording + ChunkRecordingExecutor
-def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    byte_offset = worker_ctx["byte_offset"]
-    cast_unsigned = worker_ctx["cast_unsigned"]
-    file = worker_ctx["file_dict"][segment_index]
-
-    # Open the memmap
-    # What we need is the file_path
-    num_channels = recording.get_num_channels()
-    num_frames = recording.get_num_frames(segment_index=segment_index)
-    shape = (num_frames, num_channels)
-    dtype_size_bytes = np.dtype(dtype).itemsize
-    data_size_bytes = dtype_size_bytes * num_frames * num_channels
-
-    # Offset (The offset needs to be multiple of the page size)
-    # The mmap offset is associated to be as big as possible but still a multiple of the page size
-    # The array offset takes care of the reminder
-    mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
-    mmmap_length = data_size_bytes + array_offset
-    memmap_obj = mmap.mmap(file.fileno(), length=mmmap_length, access=mmap.ACCESS_WRITE, offset=mmap_offset)
-
-    array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C", offset=array_offset)
-    # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
-    if traces.dtype != dtype:
-        traces = traces.astype(dtype)
-    array[start_frame:end_frame, :] = traces
-
-    # Close the memmap
-    memmap_obj.flush()
-
-
 def write_binary_recording(
     recording,
-    file_paths=None,
+    file_paths,
     dtype=None,
     add_file_extension=True,
     byte_offset=0,
@@ -261,19 +224,17 @@ def write_binary_recording(
     ----------
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
-    file_path: str
+    file_path: str or list[str]
         The path to the file.
-    dtype: dtype
-        Type of the saved data. Default float32.
-    add_file_extension: bool
-        If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
-    byte_offset: int
-        Offset in bytes (default 0) to for the binary file (e.g. to write a header)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    dtype: dtype or None, default: None
+        Type of the saved data
+        If True, file the ".raw" file extension is added if the file name is not a "raw", "bin", or "dat"
+    byte_offset: int, default: 0
+        Offset in bytes to for the binary file (e.g. to write a header)
+    auto_cast_uint: bool, default: True
+        If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """
-    assert file_paths is not None, "Provide 'file_path'"
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     file_path_list = [file_paths] if not isinstance(file_paths, list) else file_paths
@@ -314,6 +275,43 @@ def write_binary_recording(
     executor.run()
 
 
+# used by write_binary_recording + ChunkRecordingExecutor
+def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    # recover variables of the worker
+    recording = worker_ctx["recording"]
+    dtype = worker_ctx["dtype"]
+    byte_offset = worker_ctx["byte_offset"]
+    cast_unsigned = worker_ctx["cast_unsigned"]
+    file = worker_ctx["file_dict"][segment_index]
+
+    # Open the memmap
+    # What we need is the file_path
+    num_channels = recording.get_num_channels()
+    num_frames = recording.get_num_frames(segment_index=segment_index)
+    shape = (num_frames, num_channels)
+    dtype_size_bytes = np.dtype(dtype).itemsize
+    data_size_bytes = dtype_size_bytes * num_frames * num_channels
+
+    # Offset (The offset needs to be multiple of the page size)
+    # The mmap offset is associated to be as big as possible but still a multiple of the page size
+    # The array offset takes care of the reminder
+    mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
+    mmmap_length = data_size_bytes + array_offset
+    memmap_obj = mmap.mmap(file.fileno(), length=mmmap_length, access=mmap.ACCESS_WRITE, offset=mmap_offset)
+
+    array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C", offset=array_offset)
+    # apply function
+    traces = recording.get_traces(
+        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
+    )
+    if traces.dtype != dtype:
+        traces = traces.astype(dtype, copy=False)
+    array[start_frame:end_frame, :] = traces
+
+    # Close the memmap
+    memmap_obj.flush()
+
+
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
@@ -346,7 +344,7 @@ def write_binary_recording_file_handle(
         if time_axis == 1:
             traces = traces.T
         if dtype is not None:
-            traces = traces.astype(dtype)
+            traces = traces.astype(dtype, copy=False)
         traces.tofile(file_handle)
     else:
         num_frames = recording.get_num_samples(segment_index=0)
@@ -357,7 +355,7 @@ def write_binary_recording_file_handle(
             if time_axis == 1:
                 traces = traces.T
             if dtype is not None:
-                traces = traces.astype(dtype)
+                traces = traces.astype(dtype, copy=False)
             file_handle.write(traces.tobytes())
 
 
@@ -405,7 +403,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     traces = recording.get_traces(
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
     )
-    traces = traces.astype(dtype)
+    traces = traces.astype(dtype, copy=False)
     arr[start_frame:end_frame, :] = traces
 
 
@@ -430,12 +428,12 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     ----------
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
-    dtype: dtype
-        Type of the saved data. Default float32.
-    verbose: bool
+    dtype: dtype, default: None
+        Type of the saved data
+    verbose: bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    auto_cast_uint: bool, default: True
+        If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
 
     Returns
@@ -511,33 +509,33 @@ def write_to_h5_dataset_format(
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
     dataset_path: str
-        Path to dataset in h5 file (e.g. '/dataset')
+        Path to dataset in h5 file (e.g. "/dataset")
     segment_index: int
         index of segment
-    save_path: str
+    save_path: str, default: None
         The path to the file.
-    file_handle: file handle
+    file_handle: file handle, default: None
         The file handle to dump data. This can be used to append data to an header. In case file_handle is given,
         the file is NOT closed after writing the binary data.
-    time_axis: 0 (default) or 1
+    time_axis: 0 or 1, default: 0
         If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
         If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
-    single_axis: bool, default False
-        If True, a single-channel recording is saved as a one dimensional array.
-    dtype: dtype
-        Type of the saved data. Default float32.
-    chunk_size: None or int
+    single_axis: bool, default: False
+        If True, a single-channel recording is saved as a one dimensional array
+    dtype: dtype, default: None
+        Type of the saved data
+    chunk_size: None or int, default: None
         Number of chunks to save the file in. This avoid to much memory consumption for big files.
-        If None and 'chunk_memory' is given, the file is saved in chunks of 'chunk_memory' MB (default 500MB)
-    chunk_memory: None or str
-        Chunk size in bytes must endswith 'k', 'M' or 'G' (default '500M')
-    verbose: bool
+        If None and "chunk_memory" is given, the file is saved in chunks of "chunk_memory" MB
+    chunk_memory: None or str, default: "500M"
+        Chunk size in bytes must endswith "k", "M" or "G"
+    verbose: bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
-    return_scaled : bool, optional
+    auto_cast_uint: bool, default: True
+        If True, unsigned integers are automatically cast to int if the specified dtype is signed
+    return_scaled : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-        traces are dumped to uV, by default False
+        traces are dumped to uV
     """
     import h5py
 
@@ -582,7 +580,7 @@ def write_to_h5_dataset_format(
     if chunk_size is None:
         traces = recording.get_traces(cast_unsigned=cast_unsigned, return_scaled=return_scaled)
         if dtype is not None:
-            traces = traces.astype(dtype_file)
+            traces = traces.astype(dtype_file, copy=False)
         if time_axis == 1:
             traces = traces.T
         if single_axis:
@@ -609,7 +607,7 @@ def write_to_h5_dataset_format(
             )
             chunk_frames = traces.shape[0]
             if dtype is not None:
-                traces = traces.astype(dtype_file)
+                traces = traces.astype(dtype_file, copy=False)
             if single_axis:
                 dset[chunk_start : chunk_start + chunk_frames] = traces[:, 0]
             else:
@@ -655,18 +653,18 @@ def write_traces_to_zarr(
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
     dataset_paths: list
         List of paths to traces datasets in the zarr group
-    channel_chunk_size: int or None
-        Channels per chunk. Default None (chunking in time only)
-    dtype: dtype
-        Type of the saved data. Default float32.
-    compressor: zarr compressor or None
+    channel_chunk_size: int or None, default: None (chunking in time only)
+        Channels per chunk
+    dtype: dtype, default: None
+        Type of the saved data
+    compressor: zarr compressor or None, default: None
         Zarr compressor
-    filters: list
+    filters: list, default: None
         List of zarr filters
-    verbose: bool
+    verbose: bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    auto_cast_uint: bool, default: True
+        If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """
     assert dataset_paths is not None, "Provide 'file_path'"
@@ -758,7 +756,7 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     traces = recording.get_traces(
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
     )
-    traces = traces.astype(dtype)
+    traces = traces.astype(dtype, copy=False)
     zarr_dataset[start_frame:end_frame, :] = traces
 
     # fix memory leak by forcing garbage collection
@@ -804,10 +802,10 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
         Extractor dictionary
     func : function
         Function to apply to the path. It must take a path as input and return a path
-    target : str, optional
-        String to match to dictionary key, by default 'path'
-    copy : bool, optional
-        If True the original dictionary is deep copied, by default True (at first call)
+    target : str, default: "path"
+        String to match to dictionary key
+    copy : bool, default: True (at first call)
+        If True the original dictionary is deep copied
 
     Returns
     -------
@@ -853,6 +851,118 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
 
+def _get_paths_list(d):
+    # this explore a dict and get all paths flatten in a list
+    # the trick is to use a closure func called by recursive_path_modifier()
+    path_list = []
+
+    def append_to_path(p):
+        path_list.append(p)
+
+    recursive_path_modifier(d, append_to_path, target="path", copy=True)
+    return path_list
+
+
+def _relative_to(p, relative_folder):
+    # custum os.path.relpath() with more checks
+
+    relative_folder = Path(relative_folder).resolve()
+    p = Path(p).resolve()
+    # the as_posix transform \\ to / on window which make better json files
+    rel_to = os.path.relpath(p.as_posix(), start=relative_folder.as_posix())
+    return Path(rel_to).as_posix()
+
+
+def check_paths_relative(input_dict, relative_folder) -> bool:
+    """
+    Check if relative path is possible to be applied on a dict describing an BaseExtractor.
+
+    For instance on windows, if some data are on a drive "D:/" and the folder is on drive "C:/" it returns False.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    relative_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    relative_possible: bool
+    """
+    path_list = _get_paths_list(input_dict)
+    relative_folder = Path(relative_folder).resolve().absolute()
+    not_possible = []
+    for p in path_list:
+        p = Path(p)
+        # check path is not an URL
+        if "http" in str(p):
+            not_possible.append(p)
+            continue
+
+        # If windows path check have same drive
+        if isinstance(p, WindowsPath) and isinstance(relative_folder, WindowsPath):
+            # check that on same drive
+            # important note : for UNC path on window the "//host/shared" is the drive
+            if p.resolve().absolute().drive != relative_folder.drive:
+                not_possible.append(p)
+                continue
+
+        # check relative is possible
+        try:
+            p2 = _relative_to(p, relative_folder)
+        except ValueError:
+            not_possible.append(p)
+            continue
+
+    return len(not_possible) == 0
+
+
+def make_paths_relative(input_dict, relative_folder) -> dict:
+    """
+    Recursively transform a dict describing an BaseExtractor to make every path relative to a folder.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    relative_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    output_dict: dict
+        A copy of the input dict with modified paths.
+    """
+    relative_folder = Path(relative_folder).resolve().absolute()
+    func = lambda p: _relative_to(p, relative_folder)
+    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
+    return output_dict
+
+
+def make_paths_absolute(input_dict, base_folder):
+    """
+    Recursively transform a dict describing an BaseExtractor to make every path absolute given a base_folder.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    base_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    output_dict: dict
+        A copy of the input dict with modified paths.
+    """
+    base_folder = Path(base_folder)
+    # use as_posix instead of str to make the path unix like even on window
+    func = lambda p: (base_folder / p).resolve().absolute().as_posix()
+    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
+    return output_dict
+
+
 def recursive_key_finder(d, key):
     # Find all values for a key on a dictionary, even if nested
     for k, v in d.items():
@@ -870,7 +980,7 @@ def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
     ----------
     seconds : float
         The duration in seconds.
-    long_notation : bool, optional, default: True
+    long_notation : bool, default: True
         Whether to display the time with additional units (such as milliseconds, minutes,
         hours, or days). If set to True, the function will display a more detailed
         representation of the duration, including other units alongside the primary

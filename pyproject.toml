@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.99.0.dev0"
+version = "0.100.0.dev0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -22,10 +22,9 @@ classifiers = [
 dependencies = [
     "numpy",
     "neo>=0.12.0",
-    "joblib",
     "threadpoolctl",
     "tqdm",
-    "probeinterface>=0.2.17",
+    "probeinterface>=0.2.19",
 ]
 
 [build-system]
@@ -68,6 +67,7 @@ extractors = [
     "ONE-api>=1.19.1",
     "ibllib>=2.21.0",
     "pymatreader>=0.0.32", # For cell explorer matlab files
+    "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
@@ -79,6 +79,7 @@ streaming_extractors = [
     "aiohttp",
     "requests",
     "pynwb>=2.3.0",
+    "remfile"
 ]
 
 full = [
@@ -99,7 +100,14 @@ widgets = [
     "matplotlib",
     "ipympl",
     "ipywidgets",
-    "sortingview>=0.11.15",
+    "sortingview>=0.12.0",
+]
+
+qualitymetrics = [
+    "scikit-learn",
+    "scipy",
+    "pandas",
+    "numba",
 ]
 
 test_core = [
@@ -147,6 +155,7 @@ docs = [
     "sphinx_rtd_theme==1.0.0",
     "sphinx-gallery",
     "numpydoc",
+    "ipython",
 
     # for notebooks in the gallery
     "MEArec",   # Use as an example
@@ -158,6 +167,14 @@ docs = [
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
+]
+
+dev = [
+    "spikeinterface[test]",
+    "spikeinterface[test_core]",
+    "spikeinterface[docs]",
+    "black",
+    "pre-commit",
 ]
 
 [tool.pytest.ini_options]
@@ -176,6 +193,7 @@ markers = [
     "widgets",
     "sortingcomponents",
     "streaming_extractors: extractors that require streaming such as ross and fsspec",
+    "ros3_test"
 ]
 filterwarnings =[
     'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',

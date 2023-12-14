@@ -20,7 +20,7 @@ motion_options_preset = {
             exclude_sweep_ms=0.1,
             radius_um=50,
         ),
-        "select_kwargs": None,
+        "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="monopolar_triangulation",
             radius_um=75.0,
@@ -83,7 +83,7 @@ motion_options_preset = {
             exclude_sweep_ms=0.1,
             radius_um=50,
         ),
-        "select_kwargs": None,
+        "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="center_of_mass",
             radius_um=75.0,
@@ -111,7 +111,7 @@ motion_options_preset = {
             exclude_sweep_ms=0.1,
             radius_um=50,
         ),
-        "select_kwargs": None,
+        "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
             radius_um=40.0,
@@ -157,7 +157,7 @@ def correct_motion(
     folder=None,
     output_motion_info=False,
     detect_kwargs={},
-    select_kwargs=None,
+    select_kwargs={},
     localize_peaks_kwargs={},
     estimate_motion_kwargs={},
     interpolate_motion_kwargs={},
@@ -186,11 +186,12 @@ def correct_motion(
 
     Parameters for each step are handled as separate dictionaries.
     For more information please check the documentation of the following functions:
-      * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks'
-      * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks'
-      * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks'
-      * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion'
-      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion'
+
+      * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion`
 
 
     Possible presets: {}
@@ -199,14 +200,14 @@ def correct_motion(
     ----------
     recording: RecordingExtractor
         The recording extractor to be transformed
-    preset: str
-        The preset name. Default "nonrigid_accurate".
-    folder: Path str or None
-        If not None then intermediate motion info are saved into a folder. Default None
-    output_motion_info: bool
+    preset: str, default: "nonrigid_accurate"
+        The preset name
+    folder: Path str or None, default: None
+        If not None then intermediate motion info are saved into a folder
+    output_motion_info: bool, default: False
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
-        This dictionary is the same when reloaded from the folder. Default False
+        This dictionary is the same when reloaded from the folder
     detect_kwargs: dict
         Optional parameters to overwrite the ones in the preset for "detect" step.
     select_kwargs: dict
@@ -240,13 +241,22 @@ def correct_motion(
     # get preset params and update if necessary
     params = motion_options_preset[preset]
     detect_kwargs = dict(params["detect_kwargs"], **detect_kwargs)
-    if params["select_kwargs"] is None:
-        select_kwargs = None
-    else:
-        select_kwargs = dict(params["select_kwargs"], **select_kwargs)
+    select_kwargs = dict(params["select_kwargs"], **select_kwargs)
     localize_peaks_kwargs = dict(params["localize_peaks_kwargs"], **localize_peaks_kwargs)
     estimate_motion_kwargs = dict(params["estimate_motion_kwargs"], **estimate_motion_kwargs)
     interpolate_motion_kwargs = dict(params["interpolate_motion_kwargs"], **interpolate_motion_kwargs)
+    do_selection = len(select_kwargs) > 0
+
+    # params
+    parameters = dict(
+        detect_kwargs=detect_kwargs,
+        select_kwargs=select_kwargs,
+        localize_peaks_kwargs=localize_peaks_kwargs,
+        estimate_motion_kwargs=estimate_motion_kwargs,
+        interpolate_motion_kwargs=interpolate_motion_kwargs,
+        job_kwargs=job_kwargs,
+        sampling_frequency=recording.sampling_frequency,
+    )
 
     if output_motion_info:
         motion_info = {}
@@ -254,13 +264,19 @@ def correct_motion(
         motion_info = None
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
-    if select_kwargs is None:
-        # maybe do this directly in the folder when not None
-        gather_mode = "memory"
+    if folder is not None:
+        folder = Path(folder)
+        folder.mkdir(exist_ok=True, parents=True)
 
+        (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
+        if recording.check_serializability("json"):
+            recording.dump_to_json(folder / "recording.json")
+
+    if not do_selection:
+        # maybe do this directly in the folder when not None, but might be slow on external storage
+        gather_mode = "memory"
         # node detect
         method = detect_kwargs.pop("method", "locally_exclusive")
         method_class = detect_peak_methods[method]
@@ -280,6 +296,7 @@ def correct_motion(
             job_kwargs,
             job_name="detect and localize",
             gather_mode=gather_mode,
+            gather_kwargs=None,
             squeeze_output=False,
             folder=None,
             names=None,
@@ -306,6 +323,9 @@ def correct_motion(
             select_peaks=t2 - t1,
             localize_peaks=t3 - t2,
         )
+    if folder is not None:
+        np.save(folder / "peaks.npy", peaks)
+        np.save(folder / "peak_locations.npy", peak_locations)
 
     t0 = time.perf_counter()
     motion, temporal_bins, spatial_bins = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
@@ -317,29 +337,10 @@ def correct_motion(
     )
 
     if folder is not None:
-        folder = Path(folder)
-        folder.mkdir(exist_ok=True, parents=True)
-
-        # params and run times
-        parameters = dict(
-            detect_kwargs=detect_kwargs,
-            select_kwargs=select_kwargs,
-            localize_peaks_kwargs=localize_peaks_kwargs,
-            estimate_motion_kwargs=estimate_motion_kwargs,
-            interpolate_motion_kwargs=interpolate_motion_kwargs,
-            job_kwargs=job_kwargs,
-            sampling_frequency=recording.sampling_frequency,
-        )
-        (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-        if recording.check_if_json_serializable():
-            recording.dump_to_json(folder / "recording.json")
 
-        np.save(folder / "peaks.npy", peaks)
-        np.save(folder / "peak_locations.npy", peak_locations)
         np.save(folder / "temporal_bins.npy", temporal_bins)
         np.save(folder / "motion.npy", motion)
-        np.save(folder / "peak_locations.npy", peak_locations)
         if spatial_bins is not None:
             np.save(folder / "spatial_bins.npy", spatial_bins)
 

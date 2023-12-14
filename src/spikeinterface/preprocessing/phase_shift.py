@@ -23,12 +23,13 @@ class PhaseShiftRecording(BasePreprocessor):
     ----------
     recording: Recording
         The recording. It need to have  "inter_sample_shift" in properties.
-    margin_ms: float (default 40)
-        margin in ms for computation
+    margin_ms: float, default: 40.0
+        Margin in ms for computation.
         40ms ensure a very small error when doing chunk processing
-    inter_sample_shift: None or numpy array
-        If "inter_sample_shift" is not in recording.properties
-        we can externaly provide one.
+    inter_sample_shift: None or numpy array, default: None
+        If "inter_sample_shift" is not in recording properties,
+        we can externally provide one.
+
     Returns
     -------
     filter_recording: PhaseShiftRecording
@@ -42,7 +43,9 @@ class PhaseShiftRecording(BasePreprocessor):
             assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"
             sample_shifts = recording.get_property("inter_sample_shift")
         else:
-            assert len(inter_sample_shift) == recording.get_num_channels(), "sample "
+            assert (
+                len(inter_sample_shift) == recording.get_num_channels()
+            ), "the 'inter_sample_shift' must be same size at the num_channels "
             sample_shifts = np.asarray(inter_sample_shift)
 
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000.0)
@@ -100,6 +103,8 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
         if self.tmp_dtype is not None:
+            if np.issubdtype(self.dtype, np.integer):
+                traces_shift = traces_shift.round()
             traces_shift = traces_shift.astype(self.dtype)
 
         return traces_shift

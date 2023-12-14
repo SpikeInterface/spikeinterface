@@ -181,9 +181,10 @@ class OldToNewRecording(BaseRecording):
             dtype=oldapi_recording_extractor.get_dtype(return_scaled=False),
         )
 
-        # set _is_dumpable to False to use dumping mechanism of old extractor
-        self._is_dumpable = False
-        self._is_json_serializable = False
+        # set to False to use dumping mechanism of old extractor
+        self._serializability["memory"] = False
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         self.annotate(is_filtered=oldapi_recording_extractor.is_filtered)
 
@@ -268,8 +269,9 @@ class OldToNewSorting(BaseSorting):
         sorting_segment = OldToNewSortingSegment(oldapi_sorting_extractor)
         self.add_sorting_segment(sorting_segment)
 
-        self._is_dumpable = False
-        self._is_json_serializable = False
+        self._serializability["memory"] = False
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         # add old properties
         copy_properties(oldapi_extractor=oldapi_sorting_extractor, new_extractor=self)

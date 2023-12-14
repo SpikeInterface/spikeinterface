@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from probeinterface import read_prb, write_prb
+import probeinterface
 
 from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
@@ -69,7 +69,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         )
 
         # load probe file
-        probegroup = read_prb(params["probe"])
+        probegroup = probeinterface.read_prb(params["probe"])
         self.set_probegroup(probegroup, in_place=True)
         self._kwargs = {"file_path": str(Path(file_path).absolute())}
         self.extra_requirements.extend(["hybridizer", "pyyaml"])
@@ -81,14 +81,14 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         Parameters
         ----------
         recording: RecordingExtractor
-            The recording extractor to be converted and saved.
+            The recording extractor to be converted and saved
         save_path: str
-            Full path to desired target folder.
+            Full path to desired target folder
         initial_sorting_fn: str
             Full path to the initial sorting csv file (can also be generated
-            using write_sorting static method from the SHYBRIDSortingExtractor).
-        dtype: dtype
-            Type of the saved data. Default float32.
+            using write_sorting static method from the SHYBRIDSortingExtractor)
+        dtype: dtype, default: float32
+            Type of the saved data
         **write_binary_kwargs: keyword arguments for write_to_binary_dat_format() function
         """
         try:
@@ -119,7 +119,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         # write probe file
         probe_fn = (save_path / probe_name).absolute()
         probegroup = recording.get_probegroup()
-        write_prb(probe_fn, probegroup, total_nb_channels=recording.get_num_channels())
+        probeinterface.write_prb(probe_fn, probegroup, total_nb_channels=recording.get_num_channels())
 
         # create parameters file
         parameters = dict(

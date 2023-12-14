@@ -103,9 +103,10 @@ def interpolate_motion_on_traces(
         Dimension of shift in channel_locations.
     channel_inds: None or list
         If not None, interpolate only a subset of channels.
-    spatial_interpolation_method: str in ('idw', 'kriging')
-        * idw : Inverse Distance Weighing
-        * kriging : kilosort2.5 like
+    spatial_interpolation_method: "idw" | "kriging", default: "kriging"
+        The spatial interpolation method used to interpolate the channel locations:
+            * idw : Inverse Distance Weighing
+            * kriging : kilosort2.5 like
     spatial_interpolation_kwargs:
         * specific option for the interpolation method
 
@@ -130,7 +131,7 @@ def interpolate_motion_on_traces(
     # inperpolation kernel will be the same per temporal bin
     for bin_ind in np.unique(bin_inds):
         # Step 1 : channel motion
-        if spatial_bins.shape[0] == 0:
+        if spatial_bins.shape[0] == 1:
             # rigid motion : same motion for all channels
             channel_motions = motion[bin_ind, 0]
         else:
@@ -225,28 +226,28 @@ class InterpolateMotionRecording(BasePreprocessor):
         Temporal bins in second.
     spatial_bins: None or np.array
         Bins for non-rigid motion. If None, rigid motion is used
-    direction: int (0, 1, 2)
-        Dimension along which channel_locations are shifted (0 - x, 1 - y, 2 - z), by default 1
-    spatial_interpolation_method: str
-        'kriging' or 'idw' or 'nearest'.
+    direction: 0 | 1 | 2, default: 1
+        Dimension along which channel_locations are shifted (0 - x, 1 - y, 2 - z)
+    spatial_interpolation_method: "kriging" | "idw" | "nearest", default: "kriging"
+        The spatial interpolation method used to interpolate the channel locations.
         See `spikeinterface.preprocessing.get_spatial_interpolation_kernel()` for more details.
         Choice of the method:
 
-            * 'kriging' : the same one used in kilosort
-            * 'idw' : inverse  distance weighted
-            * 'nearest' : use nereast channel
-    sigma_um: float (default 20.)
-        Used in the 'kriging' formula
-    p: int (default 1)
-        Used in the 'kriging' formula
-    num_closest: int (default 3)
-        Number of closest channels used by 'idw' method for interpolation.
-    border_mode: str
+            * "kriging" : the same one used in kilosort
+            * "idw" : inverse  distance weighted
+            * "nearest" : use neareast channel
+    sigma_um: float, default: 20.0
+        Used in the "kriging" formula
+    p: int, default: 1
+        Used in the "kriging" formula
+    num_closest: int, default: 3
+        Number of closest channels used by "idw" method for interpolation.
+    border_mode: "remove_channels" | "force_extrapolate" | "force_zeros", default: "remove_channels"
         Control how channels are handled on border:
 
-        * 'remove_channels': remove channels on the border, the recording has less channels
-        * 'force_extrapolate': keep all channel and force extrapolation (can lead to strange signal)
-        * 'force_zeros': keep all channel but set zeros when outside (force_extrapolate=False)
+        * "remove_channels": remove channels on the border, the recording has less channels
+        * "force_extrapolate": keep all channel and force extrapolation (can lead to strange signal)
+        * "force_zeros": keep all channel but set zeros when outside (force_extrapolate=False)
 
     Returns
     -------
@@ -385,13 +386,18 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
                 "time_vector for InterpolateMotionRecording do not work because temporal_bins start from 0"
             )
             # times = np.asarray(self.time_vector[start_frame:end_frame])
-        else:
-            times = np.arange((end_frame or self.get_num_samples()) - (start_frame or 0), dtype="float64")
-            times /= self.sampling_frequency
-            t0 = start_frame / self.sampling_frequency
-            # if self.t_start is not None:
-            #     t0 = t0 + self.t_start
-            times += t0
+
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
+        times = np.arange(end_frame - start_frame, dtype="float64")
+        times /= self.sampling_frequency
+        t0 = start_frame / self.sampling_frequency
+        # if self.t_start is not None:
+        #     t0 = t0 + self.t_start
+        times += t0
 
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=slice(None))
 

@@ -1,10 +1,10 @@
-from typing import List, Union
-from pathlib import Path
+from __future__ import annotations
+
+from typing import Union
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
 from warnings import warn
-from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 # snippets segments?
 
@@ -19,7 +19,7 @@ class BaseSnippets(BaseRecordingSnippets):
     _main_features = []
 
     def __init__(
-        self, sampling_frequency: float, nbefore: Union[int, None], snippet_len: int, channel_ids: List, dtype
+        self, sampling_frequency: float, nbefore: Union[int, None], snippet_len: int, channel_ids: list, dtype
     ):
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
@@ -27,7 +27,7 @@ class BaseSnippets(BaseRecordingSnippets):
         self._nbefore = nbefore
         self._snippet_len = snippet_len
 
-        self._snippets_segments: List[BaseSnippetsSegment] = []
+        self._snippets_segments: list[BaseSnippetsSegment] = []
         # initialize main annotation and properties
 
     def __repr__(self):
@@ -92,7 +92,7 @@ class BaseSnippets(BaseRecordingSnippets):
         self,
         indices=None,
         segment_index: Union[int, None] = None,
-        channel_ids: Union[List, None] = None,
+        channel_ids: Union[list, None] = None,
         return_scaled=False,
     ):
         segment_index = self._check_segment_index(segment_index)
@@ -118,7 +118,7 @@ class BaseSnippets(BaseRecordingSnippets):
         segment_index: Union[int, None] = None,
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,
-        channel_ids: Union[List, None] = None,
+        channel_ids: Union[list, None] = None,
         return_scaled=False,
     ):
         segment_index = self._check_segment_index(segment_index)
@@ -139,7 +139,7 @@ class BaseSnippets(BaseRecordingSnippets):
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceSnippets
 
-        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
+        new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceSnippets(self, new_channel_ids)
         return sub_recording
 
@@ -153,7 +153,7 @@ class BaseSnippets(BaseRecordingSnippets):
 
     def _save(self, format="npy", **save_kwargs):
         """
-        At the moment only 'npy' and 'memory' avaiable:
+        At the moment only "npy" and "memory" avaiable:
         """
 
         if format == "npy":
@@ -222,18 +222,18 @@ class BaseSnippetsSegment(BaseSegment):
 
     def get_snippets(
         self,
-        indices=None,
-        channel_indices: Union[List, None] = None,
+        indices,
+        channel_indices: Union[list, None] = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        indexes: (Union[int, None], optional)
-            indices of the snippets to return, or all if None. Defaults to None.
-        channel_indices: (Union[List, None], optional)
-            Indices of channels to return, or all channels if None. Defaults to None.
+        indices: list[int]
+            Indices of the snippets to return
+        channel_indices: Union[list, None], default: None
+            Indices of channels to return, or all channels if None
 
         Returns
         -------
@@ -264,10 +264,10 @@ class BaseSnippetsSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
+        start_frame: Union[int, None], default: None
+            start sample index, or zero if None
+        end_frame: Union[int, None], default: None
+            end_sample, or number of samples if None
 
         Returns
         -------

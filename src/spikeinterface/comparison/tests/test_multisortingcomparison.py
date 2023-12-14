@@ -69,13 +69,6 @@ def test_compare_multiple_sorters():
 
     msc = MultiSortingComparison.load_from_folder(multicomparison_folder)
 
-    # import spikeinterface.widgets  as sw
-    # import matplotlib.pyplot as plt
-    # sw.plot_multicomp_graph(msc)
-    # sw.plot_multicomp_agreement(msc)
-    # sw.plot_multicomp_agreement_by_sorter(msc)
-    # plt.show()
-
 
 def test_compare_multi_segment():
     num_segments = 3
