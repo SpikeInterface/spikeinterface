@@ -555,6 +555,7 @@ class NwbSortingExtractor(BaseSorting):
         )
 
         timestamps = None
+        self.t_start = t_start
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
@@ -572,7 +573,9 @@ class NwbSortingExtractor(BaseSorting):
         assert (
             sampling_frequency is not None
         ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
-        assert t_start is not None, "Couldn't load t_start. Please provide it with the 't_start' argument"
+        assert (
+            self.t_start is not None
+        ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
         units_table = self._nwbfile.units
 
@@ -590,7 +593,7 @@ class NwbSortingExtractor(BaseSorting):
             spike_times_data=spike_times_data,
             spike_times_index_data=spike_times_index_data,
             sampling_frequency=sampling_frequency,
-            t_start=t_start,
+            t_start=self.t_start,
         )
         self.add_sorting_segment(sorting_segment)
 
