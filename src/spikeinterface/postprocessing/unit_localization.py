@@ -450,7 +450,6 @@ def compute_grid_convolution(
         channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
         num_templates = np.sum(nearest_templates)
         global_products = (wf[:, channel_mask] * prototype).sum(axis=0)
-        global_products /= np.linalg.norm(global_products)
 
         dot_products = np.zeros((nb_weights, num_templates), dtype=np.float32)
         for count in range(nb_weights):
