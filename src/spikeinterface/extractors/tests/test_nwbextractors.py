@@ -314,14 +314,14 @@ def test_sorting_extraction_start_time(tmp_path):
     expected_frames = ((spike_times1 - t_start) * sampling_frequency).astype("int64")
     np.testing.assert_allclose(extracted_frames1, expected_frames)
 
-    # # Test times
-    # extracted_spike_times0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
-    # expected_spike_times0 = spike_times0 + t_start
-    # np.testing.assert_allclose(extracted_spike_times0, expected_spike_times0)
+    # Test times
+    extracted_spike_times0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
+    expected_spike_times0 = spike_times0
+    np.testing.assert_allclose(extracted_spike_times0, expected_spike_times0)
 
-    # extracted_spike_times1 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
-    # expected_spike_times1 = spike_times1 + t_start
-    # np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
+    extracted_spike_times1 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
+    expected_spike_times1 = spike_times1
+    np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
 
 
 def test_sorting_extraction_start_time_from_series(tmp_path):
@@ -361,14 +361,14 @@ def test_sorting_extraction_start_time_from_series(tmp_path):
     expected_frames = ((spike_times1 - t_start) * sampling_frequency).astype("int64")
     np.testing.assert_allclose(extracted_frames1, expected_frames)
 
-    # # Test returned times
-    # extracted_spike_times0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
-    # expected_spike_times0 = spike_times1 + t_start
-    # np.testing.assert_allclose(extracted_spike_times0, expected_spike_times0)
+    # Test returned times
+    extracted_spike_times0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
+    expected_spike_times0 = spike_times0
+    np.testing.assert_allclose(extracted_spike_times0, expected_spike_times0)
 
-    # extracted_spike_times1 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
-    # expected_spike_times1 = spike_times1 + t_start
-    # np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
+    extracted_spike_times1 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
+    expected_spike_times1 = spike_times1
+    np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
 
 
 if __name__ == "__main__":
