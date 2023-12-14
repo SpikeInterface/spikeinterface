@@ -405,7 +405,7 @@ class _NwbPynwbRecordingExtractor(BaseRecording):
 class _NWBHDF5RecordingExtractor(BaseRecording):
     """
     A RecordingExtractor for NWB files. This uses the hdf5 API to extract the traces and
-    the metadata and is called by the NwbRecordingExtractor factory. This should be faster
+    the metadata and is called by the NwbRecordingExtractor factory. This is faster
     as it avoids the pynwb validation overhead.
     """
 
