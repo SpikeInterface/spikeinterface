@@ -334,7 +334,7 @@ class LocalizeGridConvolution(PipelineNode):
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
     sparsity_threshold: float, default: None
-        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None, 
+        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None,
         automatically set to 1/sqrt(num_channels)
     """
 
@@ -391,7 +391,7 @@ class LocalizeGridConvolution(PipelineNode):
             self.upsampling_um,
             self.depth_um,
             self.margin_um,
-            self.sparsity_threshold
+            self.sparsity_threshold,
         )
 
         self.weights_sparsity_mask = self.weights > 0
@@ -406,7 +406,7 @@ class LocalizeGridConvolution(PipelineNode):
                 nbefore=self.nbefore,
                 percentile=self.percentile,
                 peak_sign=self.peak_sign,
-                sparsity_threshold=self.sparsity_threshold
+                sparsity_threshold=self.sparsity_threshold,
             )
         )
 

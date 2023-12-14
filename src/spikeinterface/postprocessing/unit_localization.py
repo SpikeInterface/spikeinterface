@@ -405,7 +405,7 @@ def compute_grid_convolution(
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
     sparsity_threshold: float, default: None
-        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None, 
+        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None,
         automatically set to 1/sqrt(num_channels)
     Returns
     -------
@@ -623,11 +623,11 @@ def get_convolution_weights(
 
         weights[count] = np.exp(-distances / depth)
 
-        #dist_with_depth = 1 + np.sqrt(distances**2 + depth**2)
-        #weights[count] = 1/(dist_with_depth)**2
+        # dist_with_depth = 1 + np.sqrt(distances**2 + depth**2)
+        # weights[count] = 1/(dist_with_depth)**2
 
-        #thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
-        #weights[count][weights[count] < thresholds] = 0
+        # thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
+        # weights[count][weights[count] < thresholds] = 0
 
     # normalize
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -636,7 +636,7 @@ def get_convolution_weights(
 
     weights[~np.isfinite(weights)] = 0.0
     if sparsity_threshold is None:
-        sparsity_threshold = 1/np.sqrt(distances.shape[0])
+        sparsity_threshold = 1 / np.sqrt(distances.shape[0])
     weights[weights < sparsity_threshold] = 0
 
     return weights
