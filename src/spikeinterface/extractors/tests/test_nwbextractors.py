@@ -220,7 +220,7 @@ def test_sorting_property_extraction(tmp_path):
     doubled_ragged_array = [[[0, 1], [2, 3]], [[4, 5], [6, 7]]]
     nwbfile.add_unit_column(
         name="doubled_ragged_array",
-        description="A doubled ragged array that can be loaded into spikeinterface",
+        description="A doubled ragged array that can not be loaded into spikeinterface",
         data=doubled_ragged_array,
         index=2,
     )
