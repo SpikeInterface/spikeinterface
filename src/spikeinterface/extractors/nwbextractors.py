@@ -972,7 +972,7 @@ class NwbSortingSegment(BaseSortingSegment):
         spike_times = self.spike_times_data[start_index:end_index]
 
         # Transform spike times to frames and subset
-        frames = np.round(spike_times * self._sampling_frequency)
+        frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
 
         start_index = 0
         if start_frame is not None:
