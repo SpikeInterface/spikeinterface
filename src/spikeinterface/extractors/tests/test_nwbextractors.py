@@ -189,7 +189,7 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
 
 
-def test_sorting_extraction_of_ragged_arrays(tmp_path):
+def test_sorting_property_extraction(tmp_path):
     nwbfile = mock_NWBFile()
 
     # Add the spikes
@@ -201,20 +201,28 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     spike_times2 = np.array([0.0, 1.0, 2.0, 3.0])
     nwbfile.add_unit(spike_times=spike_times2, unit_name="b", a_property="b_property_value")
 
-    ragged_array_bad = [[1, 2, 3, 8, 10], [1, 2, 3, 5]]
+    non_uniform_ragged_array = [[1, 2, 3, 8, 10], [1, 2, 3, 5]]
     nwbfile.add_unit_column(
-        name="ragged_array_bad",
-        description="an evill array that wants to destroy your test",
-        data=ragged_array_bad,
+        name="non_uniform_ragged_array",
+        description="A non-uniform ragged array that can not be loaded by spikeinterface",
+        data=non_uniform_ragged_array,
         index=True,
     )
 
-    ragged_array_good = [[1, 2, 3], [4, 5, 6]]
+    uniform_ragged_array = [[1, 2, 3], [4, 5, 6]]
     nwbfile.add_unit_column(
-        name="ragged_array_good",
-        description="a good array that wants to help your test be nice to nice arrays",
-        data=ragged_array_good,
+        name="uniform_ragged_array",
+        description="A uniform ragged array that can be loaded into spikeinterface",
+        data=uniform_ragged_array,
         index=True,
+    )
+
+    doubled_ragged_array = [[[0, 1], [2, 3]], [[4, 5], [6, 7]]]
+    nwbfile.add_unit_column(
+        name="doubled_ragged_array",
+        description="A doubled ragged array that can be loaded into spikeinterface",
+        data=doubled_ragged_array,
+        index=2,
     )
 
     file_path = tmp_path / "test.nwb"
@@ -229,8 +237,9 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     np.testing.assert_equal(units_ids, ["a", "b"])
 
     added_properties = sorting_extractor.get_property_keys()
-    assert "ragged_array_bad" not in added_properties
-    assert "ragged_array_good" in added_properties
+    assert "non_uniform_ragged_array" not in added_properties
+    assert "doubled_ragged_array" not in added_properties
+    assert "uniform_ragged_array" in added_properties
     assert "a_property" in added_properties
 
     spike_train1 = sorting_extractor.get_unit_spike_train(unit_id="a", return_times=True)

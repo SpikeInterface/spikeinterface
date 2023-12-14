@@ -589,15 +589,19 @@ class NwbSortingExtractor(BaseSorting):
         )
         self.add_sorting_segment(sorting_segment)
 
-        # Add properties
-        properties_to_add = [name for name in name_to_column_data if "index" not in name]
+        # Add only the columns that are not indices
+        index_columns = [name for name in name_to_column_data if name.endswith("_index")]
+        properties_to_add = [name for name in name_to_column_data if name not in index_columns]
+        # Filter those properties that are nested ragged arrays
+        properties_to_add = [name for name in properties_to_add if f"{name}_index_index" not in name_to_column_data]
+
         for property_name in properties_to_add:
             data = name_to_column_data.pop(property_name).data
             data_index = name_to_column_data.get(f"{property_name}_index", None)
             not_ragged_array = data_index is None
             if not_ragged_array:
                 values = data[:]
-            else:
+            else:  # TODO if we want we could make this recursive to handle nested ragged arrays
                 data_index = data_index.data
                 index_spacing = np.diff(data_index, prepend=0)
                 all_index_spacing_are_the_same = np.unique(index_spacing).size == 1
@@ -637,8 +641,8 @@ class NwbSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: Optional[int] = None,
+        end_frame: Optional[int] = None,
     ) -> np.ndarray:
         # Extract the spike times for the unit
         unit_index = self.parent_extractor.id_to_index(unit_id)
