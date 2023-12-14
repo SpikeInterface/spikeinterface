@@ -615,10 +615,9 @@ def get_convolution_weights(
     depth_um=np.linspace(1, 50.0, 5),
     sparsity_threshold=0.1,
 ):
-
     weights = np.zeros((len(depth_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
 
-    for count, depth in enumerate(depth_um):    
+    for count, depth in enumerate(depth_um):
         # Kilosort
         # weights[count] = np.exp(-(distances**2) / (2 * (depth**2)))
 
