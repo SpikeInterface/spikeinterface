@@ -53,9 +53,14 @@ class CompressedBinaryIblExtractor(BaseRecording):
         assert stream_name in ["ap", "lp"], "stream_name must be one of: 'ap', 'lp'"
 
         # explore files
-        cbin_files = list(folder_path.glob(f"*.{stream_name}.cbin"))
-        assert len(cbin_files) == 1
-        cbin_file = cbin_files[0]
+        cbin_files = list(folder_path.glob(f"*{stream_name}.cbin"))
+        # snippets downloaded from IBL have the .stream.cbin suffix
+        cbin_stream_files = list(folder_path.glob(f"*.{stream_name}.stream.cbin"))
+        curr_cbin_files = cbin_stream_files if len(cbin_stream_files) > len(cbin_files) else cbin_files
+        assert (
+            len(curr_cbin_files) == 1
+        ), f"There should only be one `*.cbin` file in the folder, but {print(curr_cbin_files)} have been found"
+        cbin_file = curr_cbin_files[0]
         ch_file = cbin_file.with_suffix(".ch")
         meta_file = cbin_file.with_suffix(".meta")
 
