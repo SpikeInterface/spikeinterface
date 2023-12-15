@@ -202,7 +202,7 @@ class _NwbPynwbRecordingExtractor(BaseRecording):
         file_path: str | Path | None = None,  # provide either this or file
         electrical_series_name: str | None = None,
         load_time_vector: bool = False,
-        samples_for_rate_estimation: int = 1000,
+        samples_for_rate_estimation: int = 1_000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -399,7 +399,7 @@ class _NwbPynwbRecordingExtractor(BaseRecording):
 class _NWBHDF5RecordingExtractor(BaseRecording):
     """
     A RecordingExtractor for NWB files. This uses the hdf5 API to extract the traces and
-    the metadata and is called by the NwbRecordingExtractor factory. This is faster
+    the metadata and is called by the NwbRecordingExtractor factory. This should be faster
     as it avoids the pynwb validation overhead.
     """
 
@@ -408,7 +408,7 @@ class _NWBHDF5RecordingExtractor(BaseRecording):
         file_path: str | Path | None = None,  # provide either this or file
         electrical_series_name: str | None = None,
         load_time_vector: bool = False,
-        samples_for_rate_estimation: int = 10_0000,
+        samples_for_rate_estimation: int = 1_000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -798,32 +798,143 @@ class NwbRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-class NwbSortingExtractor(BaseSorting):
-    """Load an NWBFile as a SortingExtractor.
+class _NwbHDF5SortingExtractor(BaseSorting):
+    def __init__(
+        self,
+        *,
+        file_path: str | Path,
+        electrical_series_name: str | None = None,
+        sampling_frequency: float | None = None,
+        samples_for_rate_estimation: int = 1_000,
+        stream_mode: str | None = None,
+        stream_cache_path: str | Path | None = None,
+        cache: bool = False,
+        t_start: float | None = None,
+    ):
+        self.stream_mode = stream_mode
+        self.stream_cache_path = stream_cache_path
 
-    Parameters
-    ----------
-    file_path: str or Path
-        Path to NWB file.
-    electrical_series_name: str or None, default: None
-        The name of the ElectricalSeries (if multiple ElectricalSeries are present).
-    sampling_frequency: float or None, default: None
-        The sampling frequency in Hz (required if no ElectricalSeries is available).
-    samples_for_rate_estimation: int, default: 1000
-        The number of timestamp samples to use to estimate the rate.
-        Used if "rate" is not specified in the ElectricalSeries.
-    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
-        The streaming mode to use. If None it assumes the file is on the local disk.
-    cache: bool, default: False
-        If True, the file is cached in the file passed to stream_cache_path
-        if False, the file is not cached.
-    stream_cache_path: str or Path or None, default: None
-        Local path for caching. If None it uses the system temporary directory.
+        hdf5_file = _read_hdf5_file(
+            file_path=file_path,
+            stream_mode=stream_mode,
+            cache=cache,
+            stream_cache_path=stream_cache_path,
+        )
 
-    Returns
-    -------
-    sorting: NwbSortingExtractor
-        The sorting extractor for the NWB file.
+        timestamps = None
+        self.t_start = t_start
+
+        if sampling_frequency is None or t_start is None:
+            # defines the electrical series from where the sorting came from
+            # important to know the sampling_frequency
+            available_electrical_series = _NWBHDF5RecordingExtractor.find_electrical_series(hdf5_file)
+            if electrical_series_name is None:
+                if len(available_electrical_series) == 1:
+                    electrical_series_name = list(available_electrical_series.keys())[0]
+                else:
+                    raise ValueError(
+                        "Multiple ElectricalSeries found in the file. "
+                        "Please specify the 'electrical_series_name' argument:"
+                        f"Available options are: {available_electrical_series}."
+                    )
+            else:
+                if electrical_series_name not in available_electrical_series:
+                    raise ValueError(
+                        f"'{electrical_series_name}' not found in the file. "
+                        f"Available options are: {available_electrical_series}"
+                    )
+            self.electrical_series_location = available_electrical_series[electrical_series_name]
+            electrical_series = hdf5_file[self.electrical_series_location]
+
+            # Get sampling frequency
+            if "starting_time" in electrical_series.keys():
+                t_start = electrical_series["starting_time"][()]
+                sampling_frequency = electrical_series["starting_time"].attrs["rate"]
+            elif "timestamps" in electrical_series.keys():
+                timestamps = electrical_series["timestamps"][:]
+                t_start = timestamps[0]
+                sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
+
+            self.t_start = t_start
+
+        assert (
+            sampling_frequency is not None
+        ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
+        assert (
+            self.t_start is not None
+        ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
+
+        units_table = hdf5_file["units"]
+        spike_times_data = units_table["spike_times"]
+        spike_times_index_data = units_table["spike_times_index"]
+
+        if "unit_name" in units_table:
+            unit_ids = units_table["unit_name"]
+        else:
+            unit_ids = units_table["id"]
+
+        decode_to_string = lambda x: x.decode("utf-8") if isinstance(x, bytes) else x
+        unit_ids = [decode_to_string(id) for id in unit_ids]
+        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
+
+        sorting_segment = NwbSortingSegment(
+            spike_times_data=spike_times_data,
+            spike_times_index_data=spike_times_index_data,
+            sampling_frequency=sampling_frequency,
+            t_start=self.t_start,
+        )
+        self.add_sorting_segment(sorting_segment)
+
+        # Skip canonical properties and indices
+        caonical_properties = ["spike_times", "spike_times_index", "unit_name"]
+        index_properties = [name for name in units_table if name.endswith("_index")]
+        nested_ragged_array_properties = [name for name in units_table if f"{name}_index_index" in units_table]
+
+        skip_properties = caonical_properties + index_properties + nested_ragged_array_properties
+        properties_to_add = [name for name in units_table if name not in skip_properties]
+
+        for property_name in properties_to_add:
+            data = units_table[property_name]
+            corresponding_index_name = f"{property_name}_index"
+            not_ragged_array = corresponding_index_name not in units_table
+            if not_ragged_array:
+                values = data[:]
+            else:
+                data_index = units_table[corresponding_index_name][:]
+                index_spacing = np.diff(data_index, prepend=0)
+                all_index_spacing_are_the_same = np.unique(index_spacing).size == 1
+                if all_index_spacing_are_the_same:
+                    start_indices = [0] + list(data_index[:-1])
+                    end_indices = list(data_index)
+                    values = [data[start_index:end_index] for start_index, end_index in zip(start_indices, end_indices)]
+
+                else:
+                    warnings.warn(f"Skipping {property_name} because of unequal shapes across units")
+                    continue
+
+            decode_to_string = lambda x: x.decode("utf-8") if isinstance(x, bytes) else x
+            values = [decode_to_string(val) for val in values]
+            self.set_property(property_name, np.asarray(values))
+
+        if stream_mode is None and file_path is not None:
+            file_path = str(Path(file_path).resolve())
+
+        self._kwargs = {
+            "file_path": file_path,
+            "electrical_series_name": electrical_series_name,
+            "sampling_frequency": sampling_frequency,
+            "samples_for_rate_estimation": samples_for_rate_estimation,
+            "cache": cache,
+            "stream_mode": stream_mode,
+            "stream_cache_path": stream_cache_path,
+            "t_start": self.t_start,
+        }
+
+
+class _NwbPynwbSortingExtractor(BaseSorting):
+    """
+    A SortingExtractor for NWB files. This uses the NWB API to extract the traces and
+    the metadata and is called by the NwbSortingExtractor factory.
     """
 
     extractor_name = "NwbSorting"
@@ -838,8 +949,10 @@ class NwbSortingExtractor(BaseSorting):
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 1000,
         stream_mode: str | None = None,
-        cache: bool = False,
         stream_cache_path: str | Path | None = None,
+        *,
+        t_start: float | None = None,
+        cache: bool = False,
     ):
         try:
             from pynwb import NWBHDF5IO, NWBFile
@@ -857,6 +970,7 @@ class NwbSortingExtractor(BaseSorting):
         )
 
         timestamps = None
+        self.t_start = t_start
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
@@ -864,15 +978,19 @@ class NwbSortingExtractor(BaseSorting):
             # get rate
             if self.electrical_series.rate is not None:
                 sampling_frequency = self.electrical_series.rate
+                self.t_start = self.electrical_series.starting_time
             else:
                 if hasattr(self.electrical_series, "timestamps"):
                     if self.electrical_series.timestamps is not None:
                         timestamps = self.electrical_series.timestamps
                         sampling_frequency = 1 / np.median(np.diff(timestamps[samples_for_rate_estimation]))
-
-        assert sampling_frequency is not None, (
-            "Couldn't load sampling frequency. Please provide it with the " "'sampling_frequency' argument"
-        )
+                        self.t_start = timestamps[0]
+        assert (
+            sampling_frequency is not None
+        ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
+        assert (
+            self.t_start is not None
+        ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
         units_table = self._nwbfile.units
 
@@ -890,6 +1008,7 @@ class NwbSortingExtractor(BaseSorting):
             spike_times_data=spike_times_data,
             spike_times_index_data=spike_times_index_data,
             sampling_frequency=sampling_frequency,
+            t_start=self.t_start,
         )
         self.add_sorting_segment(sorting_segment)
 
@@ -932,15 +1051,106 @@ class NwbSortingExtractor(BaseSorting):
             "cache": cache,
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
+            "t_start": self.t_start,
         }
 
 
+class NwbSortingExtractor(BaseSorting):
+    """Load an NWBFile as a SortingExtractor.
+    Parameters
+    ----------
+    file_path: str or Path
+        Path to NWB file.
+    electrical_series_name: str or None, default: None
+        The name of the ElectricalSeries (if multiple ElectricalSeries are present).
+    sampling_frequency: float or None, default: None
+        The sampling frequency in Hz (required if no ElectricalSeries is available).
+    samples_for_rate_estimation: int, default: 100000
+        The number of timestamp samples to use to estimate the rate.
+        Used if "rate" is not specified in the ElectricalSeries.
+    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
+        The streaming mode to use. If None it assumes the file is on the local disk.
+    cache: bool, default: False
+        If True, the file is cached in the file passed to stream_cache_path
+        if False, the file is not cached.
+    stream_cache_path: str or Path or None, default: None
+        Local path for caching. If None it uses the system temporary directory.
+    t_start: float or None, default: None
+        This is the time at which the corresponding ElectricalSeries start. NWB stores its spikes as times
+        and the `t_start` is used to convert the times to seconds. Concrently, the returned frames are computed as:
+
+        `frames = (times - t_start) * sampling_frequency`.
+
+        As SpikeInterface always considers the first frame to be at the beginning of the recording independently
+        of the `t_start`.
+
+        When a `t_start` is not provided it will be inferred from the corresponding ElectricalSeries with name equal
+        to `electrical_series_name`. The `t_start` then will be either the `ElectricalSeries.starting_time` or the
+        first timestamp in the `ElectricalSeries.timestamps`.
+
+    use_pynwb: bool, default: False
+        Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
+        to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
+    Returns
+    -------
+    sorting: NwbSortingExtractor
+        The sorting extractor for the NWB file.
+    """
+
+    extractor_name = "NwbSorting"
+    mode = "file"
+    installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
+    name = "nwb"
+
+    def __new__(
+        self,
+        file_path: str | Path,
+        electrical_series_name: str | None = None,
+        sampling_frequency: float | None = None,
+        samples_for_rate_estimation: int = 1000,
+        stream_mode: str | None = None,
+        stream_cache_path: str | Path | None = None,
+        *,
+        t_start: float | None = None,
+        cache: bool = False,
+        use_pynwb: bool = False,
+    ):
+        if use_pynwb:
+            extractor = _NwbPynwbSortingExtractor(
+                file_path=file_path,
+                electrical_series_name=electrical_series_name,
+                sampling_frequency=sampling_frequency,
+                samples_for_rate_estimation=samples_for_rate_estimation,
+                stream_mode=stream_mode,
+                stream_cache_path=stream_cache_path,
+                cache=cache,
+                t_start=t_start,
+            )
+
+        else:
+            extractor = _NwbHDF5SortingExtractor(
+                file_path=file_path,
+                electrical_series_name=electrical_series_name,
+                sampling_frequency=sampling_frequency,
+                samples_for_rate_estimation=samples_for_rate_estimation,
+                stream_mode=stream_mode,
+                stream_cache_path=stream_cache_path,
+                cache=cache,
+                t_start=t_start,
+            )
+
+        return extractor
+
+
 class NwbSortingSegment(BaseSortingSegment):
-    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency):
+    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float):
         BaseSortingSegment.__init__(self)
         self.spike_times_data = spike_times_data
         self.spike_times_index_data = spike_times_index_data
+        self.spike_times_data = spike_times_data
+        self.spike_times_index_data = spike_times_index_data
         self._sampling_frequency = sampling_frequency
+        self._t_start = t_start
 
     def get_unit_spike_train(
         self,
@@ -958,13 +1168,11 @@ class NwbSortingSegment(BaseSortingSegment):
         spike_times = self.spike_times_data[start_index:end_index]
 
         # Transform spike times to frames and subset
-        frames = np.round(spike_times * self._sampling_frequency)
+        frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
 
         start_index = 0
         if start_frame is not None:
             start_index = np.searchsorted(frames, start_frame, side="left")
-        else:
-            start_index = 0
 
         if end_frame is not None:
             end_index = np.searchsorted(frames, end_frame, side="left")
