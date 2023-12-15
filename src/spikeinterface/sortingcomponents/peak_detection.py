@@ -646,7 +646,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        depth_um=np.linspace(1, 50, 5),
+        depth_um=np.linspace(1, 100, 5),
         rank=5,
         noise_levels=None,
         random_chunk_kwargs={},
@@ -672,7 +672,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         elif peak_sign == "both":
             raise NotImplementedError("Matched filtering not working with peak_sign=both yet!")
 
-        prototype = prototype[:, np.newaxis]
         import sklearn.metrics
 
         contact_locations = recording.get_channel_locations()
@@ -682,17 +681,14 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         dist = sklearn.metrics.pairwise_distances(contact_locations, contact_locations)
         weights = get_convolution_weights(dist, depth_um)
         weights = weights.reshape(num_templates, -1)
-        templates = np.zeros((num_templates, len(prototype), num_channels), dtype=np.float32)
-
-        for count, w in enumerate(weights):
-            templates[count] = w * prototype
+        templates = weights[:, None, :] * prototype[None, :, None]
 
         temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
         temporal = temporal[:, :, :rank]
         singular = singular[:, :rank]
         spatial = spatial[:, :rank, :]
         templates = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
-        norms = np.linalg.norm(templates, axis=(1, 2)) ** 2
+        norms = np.linalg.norm(templates, axis=(1, 2))
 
         temporal /= norms[:, np.newaxis, np.newaxis]
         temporal = np.flip(temporal, axis=1)
