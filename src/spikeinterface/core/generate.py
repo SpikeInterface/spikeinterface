@@ -359,8 +359,9 @@ def synthesize_random_firings(
             a = refractory_sample
             b = refractory_sample * 20
             shift = a + (b - a) * x**2
+            shift = shift.astype("int64")
             spike_times[some] += shift
-            times0 = times0[(0 <= times0) & (times0 < segment_size)]
+            spike_times = spike_times[(0 <= spike_times) & (spike_times < segment_size)]
 
         (violations,) = np.nonzero(np.diff(spike_times) < refractory_sample)
         spike_times = np.delete(spike_times, violations)
