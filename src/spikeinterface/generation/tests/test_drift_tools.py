@@ -3,7 +3,7 @@ import numpy as np
 
 from spikeinterface.generation import interpolate_templates, move_dense_templates, make_linear_displacement, DriftingTemplates, InjectDriftingTemplatesRecording
 from spikeinterface.core.generate import generate_templates, generate_sorting, NoiseGeneratorRecording
-from spikeinterface.core import Templates
+from spikeinterface.core import Templates, BaseRecording
 
 from probeinterface import generate_multi_columns_probe
 
@@ -20,6 +20,7 @@ def make_some_templates():
         contact_shapes="square",
         contact_shape_params={"width": 10},
     )
+    probe.set_device_channel_indices(np.arange(probe.contact_ids.size))
 
     # import matplotlib.pyplot as plt
     # from probeinterface.plotting import plot_probe
@@ -140,6 +141,8 @@ def test_InjectDriftingTemplatesRecording():
     
     
     # 2 drifts signal with diffarents factor for units
+    start = np.array([0, -15.])
+    stop = np.array([0, 12])
     mid = (start + stop) / 2
     freq0 = 0.1
     displacement_vector0 = np.sin(2 * np.pi * freq0 *times)[:, np.newaxis] * (start - stop) + mid
@@ -147,14 +150,12 @@ def test_InjectDriftingTemplatesRecording():
     displacement_vector1 = 0.2 * np.sin(2 * np.pi * freq1 *times)[:, np.newaxis] * (start - stop) + mid
     displacement_vectors = np.stack([displacement_vector0, displacement_vector1], axis=2)
 
-    displacement_unit_factor = np.zeros((num_units, num_motion))
+    displacement_unit_factor = np.zeros((num_units, 2))
     displacement_unit_factor[:, 0] = np.linspace(0.7, 0.9, num_units)
     displacement_unit_factor[:, 1] = 0.1
 
 
     # precompute discplacements
-    start = np.array([0, -15.])
-    stop = np.array([0, 12])
     displacements = make_linear_displacement(start, stop, num_step=num_motion)
     drifting_templates.precompute_displacements(displacements)
 
@@ -178,6 +179,10 @@ def test_InjectDriftingTemplatesRecording():
         num_samples=[int(duration*sampling_frequency)],
         amplitude_factor=None,
     )
+
+    # check serialibility
+    rec = BaseRecording.from_dict(rec.to_dict())
+    print(rec)
 
 
 

@@ -280,7 +280,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         for num_segment in range(sorting.get_num_segments()):
             duration = displacement_vectors[num_segment].shape[0] / displacement_sampling_frequency
             assert duration >= num_samples[num_segment] / sorting.get_sampling_frequency()
-            assert displacement_vectors[num_segment].shape[1] == displacement_unit_factor.shape[1] 
+            assert displacement_vectors[num_segment].shape[2] == displacement_unit_factor.shape[1]
         
         # TODO SharedMemm for templates
 
@@ -343,18 +343,19 @@ class InjectDriftingTemplatesRecording(BaseRecording):
 
         self.set_probe(drifting_templates.probe, in_place=True)
 
-        # self._kwargs = {
-        #     "sorting": sorting,
-        #     "templates": templates.tolist(),
-        #     "nbefore": nbefore,
-        #     "amplitude_factor": amplitude_factor,
-        #     "upsample_vector": upsample_vector,
-        #     "check_borders": check_borders,
-        # }
-        # if parent_recording is None:
-        #     self._kwargs["num_samples"] = num_samples
-        # else:
-        #     self._kwargs["parent_recording"] = parent_recording
+        self._kwargs = {
+            "sorting": sorting,
+            "drifting_templates": drifting_templates,
+            "displacement_vectors": displacement_vectors,
+            "displacement_sampling_frequency": displacement_sampling_frequency,
+            "displacement_unit_factor": displacement_unit_factor,
+            "amplitude_factor": amplitude_factor,
+            "mode": mode,
+        }
+        if parent_recording is None:
+            self._kwargs["num_samples"] = num_samples
+        else:
+            self._kwargs["parent_recording"] = parent_recording
 
 
 
