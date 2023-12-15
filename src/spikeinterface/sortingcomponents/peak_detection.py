@@ -712,6 +712,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
     @classmethod
     def get_convolved_traces(cls, traces, temporal, spatial, singular):
         import scipy.signal
+
         num_timesteps, num_templates = len(traces), temporal.shape[1]
         scalar_products = np.zeros((num_templates, num_timesteps), dtype=np.float32)
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
