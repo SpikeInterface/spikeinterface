@@ -292,7 +292,7 @@ def test_sorting_extraction_start_time(tmp_path):
     # Add the spikes
 
     t_start = 10
-    sampling_frequency = 1.0
+    sampling_frequency = 100.0
     spike_times0 = np.array([0.0, 1.0, 2.0]) + t_start
     nwbfile.add_unit(spike_times=spike_times0)
     spike_times1 = np.array([0.0, 1.0, 2.0, 3.0]) + t_start
@@ -328,7 +328,7 @@ def test_sorting_extraction_start_time_from_series(tmp_path):
     nwbfile = mock_NWBFile()
     electrical_series_name = "ElectricalSeries"
     t_start = 10.0
-    sampling_frequency = 1.0
+    sampling_frequency = 100.0
     n_electrodes = 5
     electrodes = mock_electrodes(n_electrodes=n_electrodes, nwbfile=nwbfile)
     electrical_series = ElectricalSeries(

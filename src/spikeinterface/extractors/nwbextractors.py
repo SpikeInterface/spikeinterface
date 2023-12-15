@@ -904,8 +904,6 @@ class NwbSortingExtractor(BaseSorting):
         if units_ids is None:
             units_ids = units_table["id"].data
 
-        units_table = self._nwbfile.units
-
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=units_ids)
 
         sorting_segment = NwbSortingSegment(
