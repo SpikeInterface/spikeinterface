@@ -1,10 +1,9 @@
 import pytest
 import numpy as np
 
-from spikeinterface.generation import interpolate_templates, move_dense_templates, DriftingTemplates
-from spikeinterface.core.generate import generate_templates
+from spikeinterface.generation import interpolate_templates, move_dense_templates, make_linear_displacement, DriftingTemplates, InjectDriftingTemplatesRecording
+from spikeinterface.core.generate import generate_templates, generate_sorting, NoiseGeneratorRecording
 from spikeinterface.core import Templates
-
 
 from probeinterface import generate_multi_columns_probe
 
@@ -111,11 +110,81 @@ def test_DriftingTemplates():
     displacements[:, 1] = np.linspace(-amplitude_motion_um, amplitude_motion_um, num_move)
     drifting_templates.precompute_displacements(displacements)
     assert drifting_templates.template_array_moved.shape == (num_move, static_templates.num_units, static_templates.num_samples, static_templates.num_channels)
+
+def test_InjectDriftingTemplatesRecording():
+    templates = make_some_templates()
+    probe = templates.probe
+
+    # drifting templates
+    drifting_templates = DriftingTemplates.from_static(templates)
+    channel_locations = probe.contact_positions
+
+    num_units = templates.unit_ids.size
+    sampling_frequency = templates.sampling_frequency
+
+
+    # spikes
+    duration = 125.5
+    sorting = generate_sorting(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations = [duration,],
+        firing_rates=25.)
+
+
+    # displacement vectors
+    displacement_sampling_frequency = 5.
+    times = np.arange(0, duration, 1 / displacement_sampling_frequency)
+
+    num_motion = 29
     
+    
+    # 2 drifts signal with diffarents factor for units
+    mid = (start + stop) / 2
+    freq0 = 0.1
+    displacement_vector0 = np.sin(2 * np.pi * freq0 *times)[:, np.newaxis] * (start - stop) + mid
+    freq1 = 0.01
+    displacement_vector1 = 0.2 * np.sin(2 * np.pi * freq1 *times)[:, np.newaxis] * (start - stop) + mid
+    displacement_vectors = np.stack([displacement_vector0, displacement_vector1], axis=2)
+
+    displacement_unit_factor = np.zeros((num_units, num_motion))
+    displacement_unit_factor[:, 0] = np.linspace(0.7, 0.9, num_units)
+    displacement_unit_factor[:, 1] = 0.1
+
+
+    # precompute discplacements
+    start = np.array([0, -15.])
+    stop = np.array([0, 12])
+    displacements = make_linear_displacement(start, stop, num_step=num_motion)
+    drifting_templates.precompute_displacements(displacements)
+
+
+    # recordings
+    noise = NoiseGeneratorRecording(
+        num_channels=probe.contact_ids.size,
+        sampling_frequency=sampling_frequency,
+        durations=[duration],
+        noise_level=1.,
+        dtype="float32",
+    )
+
+    rec = InjectDriftingTemplatesRecording(
+        sorting=sorting,
+        parent_recording=noise,
+        drifting_templates=drifting_templates,
+        displacement_vectors=[displacement_vectors],
+        displacement_sampling_frequency=displacement_sampling_frequency,
+        displacement_unit_factor=displacement_unit_factor,
+        num_samples=[int(duration*sampling_frequency)],
+        amplitude_factor=None,
+    )
+
+
 
 if __name__ == "__main__":
     # test_interpolate_templates()
     # test_move_dense_templates()
-    test_DriftingTemplates()
+    # test_DriftingTemplates()
+    test_InjectDriftingTemplatesRecording()
     
     
