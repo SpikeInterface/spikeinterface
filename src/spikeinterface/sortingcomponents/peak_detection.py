@@ -21,6 +21,7 @@ from spikeinterface.core.node_pipeline import (
     base_peak_dtype,
 )
 
+from spikeinterface.postprocessing.unit_localization import get_convolution_weights
 from ..core import get_chunk_with_margin
 
 from .tools import make_multi_method_doc
@@ -674,21 +675,16 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         import sklearn.metrics
 
         contact_locations = recording.get_channel_locations()
-        nb_templates = len(contact_locations)
+        num_channels = recording.get_num_channels()
+        num_templates = num_channels * len(depth_um)
 
         dist = sklearn.metrics.pairwise_distances(contact_locations, contact_locations)
-        templates = np.zeros((nb_templates * len(depth_um), len(prototype), len(contact_locations)), dtype=np.float32)
-        count = 0
+        weights = get_convolution_weights(dist, depth_um)
+        weights = weights.reshape(num_templates, -1)
+        templates = np.zeros((num_templates, len(prototype), num_channels), dtype=np.float32)
 
-        for depth in depth_um:
-            weights = np.exp(-dist / depth)
-            norm = np.linalg.norm(weights, axis=0)[np.newaxis, :]
-            weights /= norm
-            weights[~np.isfinite(weights)] = 0.0
-
-            for w in weights:
-                templates[count] = w * prototype[:, np.newaxis]
-                count += 1
+        for count, w in enumerate(weights):
+            templates[count] = w * prototype[:, np.newaxis]
 
         temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
         temporal = temporal[:, :, :rank]
@@ -773,13 +769,13 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         peak_chan_ind = peak_chan_ind % num_channels
         peak_sample_ind += exclude_sweep_size
 
-        depths_um = depth_um[peak_chan_ind // num_channels]
-        # depths_um = np.zeros(len(peak_sample_ind), dtype=np.float32)
-        # for count in range(len(peak_chan_ind)):
-        #     channel = peak_chan_ind[count]
-        #     peak = peak_sample_ind[count]
-        #     data = traces[channel::num_channels, peak]
-        #     depths_um[count] = np.dot(data, depth_um)/data.sum()
+        # depths_um = depth_um[peak_chan_ind // num_channels]
+        depths_um = np.zeros(len(peak_sample_ind), dtype=np.float32)
+        for count in range(len(peak_chan_ind)):
+            channel = peak_chan_ind[count]
+            peak = peak_sample_ind[count]
+            data = traces[channel::num_channels, peak]
+            depths_um[count] = np.dot(data, depth_um)/data.sum()
 
         return peak_sample_ind, peak_chan_ind, depths_um
 
