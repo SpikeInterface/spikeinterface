@@ -819,6 +819,19 @@ class NwbSortingExtractor(BaseSorting):
         if False, the file is not cached.
     stream_cache_path: str or Path or None, default: None
         Local path for caching. If None it uses the system temporary directory.
+    t_start: float or None, default: None
+        This is the time at which the corresponding ElectricalSeries start. NWB stores its spikes as times
+        and the `t_start` is used to convert the times to seconds. Concrently, the returned frames are computed as:
+
+        `frames = (times - t_start) * sampling_frequency`.
+
+        As SpikeInterface always considers the first frame to be at the beginning of the recording independently
+        of the `t_start`.
+
+        When a `t_start` is not provided it will be inferred from the corresponding ElectricalSeries with name equal
+        to `electrical_series_name`. The `t_start` then will be either the `ElectricalSeries.starting_time` or the
+        first timestamp in the `ElectricalSeries.timestamps`.
+
 
     Returns
     -------
@@ -838,8 +851,10 @@ class NwbSortingExtractor(BaseSorting):
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 1000,
         stream_mode: str | None = None,
-        cache: bool = False,
         stream_cache_path: str | Path | None = None,
+        *,
+        t_start: float | None = None,
+        cache: bool = False,
     ):
         try:
             from pynwb import NWBHDF5IO, NWBFile
@@ -857,6 +872,7 @@ class NwbSortingExtractor(BaseSorting):
         )
 
         timestamps = None
+        self.t_start = t_start
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
@@ -864,15 +880,19 @@ class NwbSortingExtractor(BaseSorting):
             # get rate
             if self.electrical_series.rate is not None:
                 sampling_frequency = self.electrical_series.rate
+                self.t_start = self.electrical_series.starting_time
             else:
                 if hasattr(self.electrical_series, "timestamps"):
                     if self.electrical_series.timestamps is not None:
                         timestamps = self.electrical_series.timestamps
                         sampling_frequency = 1 / np.median(np.diff(timestamps[samples_for_rate_estimation]))
-
-        assert sampling_frequency is not None, (
-            "Couldn't load sampling frequency. Please provide it with the " "'sampling_frequency' argument"
-        )
+                        self.t_start = timestamps[0]
+        assert (
+            sampling_frequency is not None
+        ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
+        assert (
+            self.t_start is not None
+        ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
         units_table = self._nwbfile.units
 
@@ -890,6 +910,7 @@ class NwbSortingExtractor(BaseSorting):
             spike_times_data=spike_times_data,
             spike_times_index_data=spike_times_index_data,
             sampling_frequency=sampling_frequency,
+            t_start=self.t_start,
         )
         self.add_sorting_segment(sorting_segment)
 
@@ -932,15 +953,19 @@ class NwbSortingExtractor(BaseSorting):
             "cache": cache,
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
+            "t_start": self.t_start,
         }
 
 
 class NwbSortingSegment(BaseSortingSegment):
-    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency):
+    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float):
         BaseSortingSegment.__init__(self)
         self.spike_times_data = spike_times_data
         self.spike_times_index_data = spike_times_index_data
+        self.spike_times_data = spike_times_data
+        self.spike_times_index_data = spike_times_index_data
         self._sampling_frequency = sampling_frequency
+        self._t_start = t_start
 
     def get_unit_spike_train(
         self,
@@ -958,13 +983,11 @@ class NwbSortingSegment(BaseSortingSegment):
         spike_times = self.spike_times_data[start_index:end_index]
 
         # Transform spike times to frames and subset
-        frames = np.round(spike_times * self._sampling_frequency)
+        frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
 
         start_index = 0
         if start_frame is not None:
             start_index = np.searchsorted(frames, start_frame, side="left")
-        else:
-            start_index = 0
 
         if end_frame is not None:
             end_index = np.searchsorted(frames, end_frame, side="left")
