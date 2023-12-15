@@ -377,7 +377,7 @@ def compute_grid_convolution(
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=25,
+    percentile=50,
     sparsity_threshold=None,
 ):
     """
@@ -405,7 +405,7 @@ def compute_grid_convolution(
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
     sparsity_threshold: float, default: None
-        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None, 
+        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None,
         automatically set to 1/sqrt(num_channels)
     Returns
     -------
@@ -458,9 +458,15 @@ def compute_grid_convolution(
             dot_products[count] = np.dot(global_products, sub_w[count])
 
         dot_products = np.maximum(0, dot_products)
-        if percentile < 100:
-            thresholds = np.percentile(dot_products, percentile)
+        if percentile > 0:
+            mask = dot_products == 0
+            dot_products[mask] = np.nan
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                thresholds = np.nanpercentile(dot_products, percentile)
+            thresholds = np.nan_to_num(thresholds)
             dot_products[dot_products < thresholds] = 0
+            dot_products[mask] = 0
 
         nearest_templates = template_positions[nearest_templates]
         for count in range(nb_weights):
@@ -623,21 +629,29 @@ def get_convolution_weights(
 
         weights[count] = np.exp(-distances / depth)
 
-        #dist_with_depth = 1 + np.sqrt(distances**2 + depth**2)
-        #weights[count] = 1/(dist_with_depth)**2
+        # dist_with_depth = 1 + np.sqrt(distances**2 + depth**2)
+        # weights[count] = 1/(dist_with_depth)**2
 
-        #thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
-        #weights[count][weights[count] < thresholds] = 0
+        # thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
+        # weights[count][weights[count] < thresholds] = 0
 
-    # normalize
+    # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
         norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
         weights /= norm
 
     weights[~np.isfinite(weights)] = 0.0
+
+    # If sparsity is None or non zero, we are pruning weights that are below the
+    # sparsification factor. This will speed up furter computations
     if sparsity_threshold is None:
-        sparsity_threshold = 1/np.sqrt(distances.shape[0])
+        sparsity_threshold = 1 / np.sqrt(distances.shape[0])
     weights[weights < sparsity_threshold] = 0
+
+    # re normalize to ensure we have unitary norms
+    with np.errstate(divide="ignore", invalid="ignore"):
+        norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
+        weights /= norm
 
     return weights
 
