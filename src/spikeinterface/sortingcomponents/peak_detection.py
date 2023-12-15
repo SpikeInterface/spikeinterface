@@ -775,7 +775,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
             channel = peak_chan_ind[count]
             peak = peak_sample_ind[count]
             data = traces[channel::num_channels, peak]
-            depths_um[count] = np.dot(data, depth_um)/data.sum()
+            depths_um[count] = np.dot(data, depth_um) / data.sum()
 
         return peak_sample_ind, peak_chan_ind, depths_um
 
