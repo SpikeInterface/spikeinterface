@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import List, Union
 
 from pathlib import Path
 from probeinterface import ProbeGroup
@@ -25,8 +24,8 @@ class ZarrRecordingExtractor(BaseRecording):
 
     Parameters
     ----------
-    root_path: str or Path
-        Path to the zarr root file
+    folder_path: str or Path
+        Path to the zarr root folder
     storage_options: dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
 
@@ -43,21 +42,12 @@ class ZarrRecordingExtractor(BaseRecording):
     installation_mesg = "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
     name = "zarr"
 
-    def __init__(self, root_path: Union[Path, str], storage_options: dict | None = None):
+    def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
         assert self.installed, self.installation_mesg
 
-        if storage_options is None:
-            if isinstance(root_path, str):
-                root_path_init = root_path
-                root_path = Path(root_path)
-            else:
-                root_path_init = str(root_path)
-            root_path_kwarg = str(Path(root_path).absolute())
-        else:
-            root_path_init = root_path
-            root_path_kwarg = root_path_init
+        folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        self._root = zarr.open(root_path_init, mode="r", storage_options=storage_options)
+        self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
 
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
@@ -130,13 +120,13 @@ class ZarrRecordingExtractor(BaseRecording):
         cr = total_nbytes / total_nbytes_stored
         self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
 
-        self._kwargs = {"root_path": root_path_kwarg, "storage_options": storage_options}
+        self._kwargs = {"folder_path": folder_path_kwarg, "storage_options": storage_options}
 
     @staticmethod
     def write_recording(
-        recording: BaseRecording, zarr_path: Union[str, Path], storage_options: dict | None = None, **kwargs
+        recording: BaseRecording, folder_path: str | Path, storage_options: dict | None = None, **kwargs
     ):
-        zarr_root = zarr.open(str(zarr_path), mode="w", storage_options=storage_options)
+        zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
         add_recording_to_zarr_group(recording, zarr_root, **kwargs)
 
 
@@ -155,9 +145,9 @@ class ZarrRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list[int | str] | None = None,
     ) -> np.ndarray:
         traces = self._timeseries[start_frame:end_frame]
         if channel_indices is not None:
@@ -189,21 +179,12 @@ class ZarrSortingExtractor(BaseSorting):
     installation_mesg = "To use the ZarrSortingExtractor install zarr: \n\n pip install zarr\n\n"
     name = "zarr"
 
-    def __init__(self, root_path: Union[Path, str], storage_options: dict | None = None):
+    def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
         assert self.installed, self.installation_mesg
 
-        if storage_options is None:
-            if isinstance(root_path, str):
-                root_path_init = root_path
-                root_path = Path(root_path)
-            else:
-                root_path_init = str(root_path)
-            root_path_kwarg = str(Path(root_path).absolute())
-        else:
-            root_path_init = root_path
-            root_path_kwarg = root_path_init
+        folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        self._root = zarr.open(root_path_init, mode="r", storage_options=storage_options)
+        self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
 
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
@@ -237,14 +218,14 @@ class ZarrSortingExtractor(BaseSorting):
         if annotations is not None:
             self.annotate(**annotations)
 
-        self._kwargs = {"root_path": root_path_kwarg, "storage_options": storage_options}
+        self._kwargs = {"root_path": folder_path_kwarg, "storage_options": storage_options}
 
     @staticmethod
-    def write_sorting(sorting: BaseSorting, zarr_path: Union[str, Path], storage_options: dict | None = None, **kwargs):
+    def write_sorting(sorting: BaseSorting, folder_path: str | Path, storage_options: dict | None = None, **kwargs):
         """
         Write a sorting extractor to zarr format.
         """
-        zarr_root = zarr.open(str(zarr_path), mode="w", storage_options=storage_options)
+        zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
         add_sorting_to_zarr_group(sorting, zarr_root, **kwargs)
 
 
@@ -258,8 +239,8 @@ class ZarrSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         start = 0 if start_frame is None else np.searchsorted(self._spikes_indices, start_frame)
         end = len(self._spikes_indices) if end_frame is None else np.searchsorted(self._spikes_indices, end_frame)
@@ -274,14 +255,14 @@ read_zarr_sorting = define_function_from_class(source_class=ZarrSortingExtractor
 
 
 def read_zarr(
-    root_path: Union[str, Path], storage_options: dict | None = None
-) -> Union[ZarrRecordingExtractor, ZarrSortingExtractor]:
+    folder_path: str | Path, storage_options: dict | None = None
+) -> ZarrRecordingExtractor | ZarrSortingExtractor:
     """
     Read recording or sorting from a zarr format
 
     Parameters
     ----------
-    root_path: str or Path
+    folder_path: str or Path
         Path to the zarr root file
     storage_options: dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
@@ -291,26 +272,33 @@ def read_zarr(
     extractor: ZarrExtractor
         The loaded extractor
     """
-    if storage_options is None:
-        if isinstance(root_path, str):
-            root_path_init = root_path
-            root_path = Path(root_path)
-        else:
-            root_path_init = str(root_path)
-    else:
-        root_path_init = root_path
-
-    root = zarr.open(root_path_init, mode="r", storage_options=storage_options)
+    root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
     if "channel_ids" in root.keys():
-        return read_zarr_recording(root_path, storage_options=storage_options)
+        return read_zarr_recording(folder_path, storage_options=storage_options)
     elif "unit_ids" in root.keys():
-        return read_zarr_sorting(root_path, storage_options=storage_options)
+        return read_zarr_sorting(folder_path, storage_options=storage_options)
     else:
         raise ValueError("Cannot find 'channel_ids' or 'unit_ids' in zarr root. Not a valid SpikeInterface zarr format")
 
 
 ### UTILITY FUNCTIONS ###
-def get_default_zarr_compressor(clevel=5):
+def resolve_zarr_path(folder_path: str | Path):
+    """
+    Resolve a path to a zarr folder.
+
+    Parameters
+    ----------
+    """
+    if str(folder_path).startswith("s3:") or str(folder_path).startswith("gcs:"):
+        # cloud location, no need to resolve
+        return folder_path, folder_path
+    else:
+        folder_path = Path(folder_path)
+        folder_path_kwarg = str(Path(folder_path).resolve())
+        return folder_path, folder_path_kwarg
+
+
+def get_default_zarr_compressor(clevel: int = 5):
     """
     Return default Zarr compressor object for good preformance in int16
     electrophysiology data.
@@ -337,16 +325,16 @@ def get_default_zarr_compressor(clevel=5):
 
 
 def add_properties_and_annotations(
-    zarr_root: zarr.hierarchy.Group, recording_or_sorting: Union[BaseRecording, BaseSorting]
+    zarr_group: zarr.hierarchy.Group, recording_or_sorting: Union[BaseRecording, BaseSorting]
 ):
     # save properties
-    prop_group = zarr_root.create_group("properties")
+    prop_group = zarr_group.create_group("properties")
     for key in recording_or_sorting.get_property_keys():
         values = recording_or_sorting.get_property(key)
         prop_group.create_dataset(name=key, data=values, compressor=None)
 
     # save annotations
-    zarr_root.attrs["annotations"] = check_json(recording_or_sorting._annotations)
+    zarr_group.attrs["annotations"] = check_json(recording_or_sorting._annotations)
 
 
 def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.Group, **kwargs):

@@ -159,7 +159,7 @@ def test_recording_s3_nwb_remfile_file_like(tmp_path):
 def test_sorting_s3_nwb_ros3(tmp_path):
     file_path = "https://dandiarchive.s3.amazonaws.com/blobs/84b/aa4/84baa446-cf19-43e8-bdeb-fc804852279b"
     # we provide the 'sampling_frequency' because the NWB file does not the electrical series
-    sort = NwbSortingExtractor(file_path, sampling_frequency=30000, stream_mode="ros3")
+    sort = NwbSortingExtractor(file_path, sampling_frequency=30000, stream_mode="ros3", t_start=0)
 
     start_frame = 0
     end_frame = 300
@@ -196,6 +196,7 @@ def test_sorting_s3_nwb_fsspec(tmp_path, cache):
         stream_mode="fsspec",
         cache=cache,
         stream_cache_path=tmp_path if cache else None,
+        t_start=0,
     )
 
     num_seg = sorting.get_num_segments()
@@ -228,6 +229,7 @@ def test_sorting_s3_nwb_remfile(tmp_path):
         file_path,
         sampling_frequency=30000.0,
         stream_mode="remfile",
+        t_start=0,
     )
 
     num_seg = sorting.get_num_segments()
