@@ -457,12 +457,12 @@ def compute_grid_convolution(
         for count in range(nb_weights):
             dot_products[count] = np.dot(global_products, sub_w[count])
 
-        dot_products = np.maximum(0, dot_products)    
+        dot_products = np.maximum(0, dot_products)
         if percentile > 0:
             mask = dot_products == 0
             dot_products[mask] = np.nan
             with warnings.catch_warnings():
-                warnings.filterwarnings('ignore')
+                warnings.filterwarnings("ignore")
                 thresholds = np.nanpercentile(dot_products, percentile)
             thresholds = np.nan_to_num(thresholds)
             dot_products[dot_products < thresholds] = 0
@@ -635,14 +635,14 @@ def get_convolution_weights(
         # thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
         # weights[count][weights[count] < thresholds] = 0
 
-    #normalize to get normalized values in [0, 1]
+    # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
         norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
         weights /= norm
 
     weights[~np.isfinite(weights)] = 0.0
 
-    # If sparsity is None or non zero, we are pruning weights that are below the 
+    # If sparsity is None or non zero, we are pruning weights that are below the
     # sparsification factor. This will speed up furter computations
     if sparsity_threshold is None:
         sparsity_threshold = 1 / np.sqrt(distances.shape[0])
