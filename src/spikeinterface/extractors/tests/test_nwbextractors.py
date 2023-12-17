@@ -10,8 +10,7 @@ from pynwb import NWBHDF5IO, NWBFile
 from pynwb.ecephys import ElectricalSeries
 from pynwb.testing.mock.file import mock_NWBFile
 from pynwb.testing.mock.device import mock_Device
-from pynwb.testing.mock.ecephys import mock_ElectricalSeries, mock_ElectrodeGroup
-
+from pynwb.testing.mock.ecephys import mock_ElectricalSeries, mock_ElectrodeGroup, mock_electrodes
 from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
@@ -227,17 +226,18 @@ def test_that_hdf5_and_pynwb_extractors_return_the_same_data(path_to_nwbfile, el
     check_recordings_equal(recording_extractor_hdf5, recording_extractor_pynwb)
 
 
-def test_sorting_extraction_of_ragged_arrays(tmp_path):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_extraction_of_ragged_arrays(tmp_path, use_pynwb):
     nwbfile = mock_NWBFile()
 
     # Add the spikes
     nwbfile.add_unit_column(name="unit_name", description="the name of the unit")
     nwbfile.add_unit_column(name="a_property", description="a_cool_property")
 
-    spike_times1 = np.array([0.0, 1.0, 2.0])
-    nwbfile.add_unit(spike_times=spike_times1, unit_name="a", a_property="a_property_value")
-    spike_times2 = np.array([0.0, 1.0, 2.0, 3.0])
-    nwbfile.add_unit(spike_times=spike_times2, unit_name="b", a_property="b_property_value")
+    spike_times_a = np.array([0.0, 1.0, 2.0])
+    nwbfile.add_unit(spike_times=spike_times_a, unit_name="a", a_property="a_property_value")
+    spike_times_b = np.array([0.0, 1.0, 2.0, 3.0])
+    nwbfile.add_unit(spike_times=spike_times_b, unit_name="b", a_property="b_property_value")
 
     non_uniform_ragged_array = [[1, 2, 3, 8, 10], [1, 2, 3, 5]]
     nwbfile.add_unit_column(
@@ -268,7 +268,12 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0)
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=10.0,
+        t_start=0,
+        use_pynwb=use_pynwb,
+    )
 
     units_ids = sorting_extractor.get_unit_ids()
 
@@ -280,11 +285,107 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     assert "uniform_ragged_array" in added_properties
     assert "a_property" in added_properties
 
-    spike_train1 = sorting_extractor.get_unit_spike_train(unit_id="a", return_times=True)
-    np.testing.assert_allclose(spike_train1, spike_times1)
+    extracted_spike_times_a = sorting_extractor.get_unit_spike_train(unit_id="a", return_times=True)
+    np.testing.assert_allclose(extracted_spike_times_a, spike_times_a)
 
-    spike_train2 = sorting_extractor.get_unit_spike_train(unit_id="b", return_times=True)
-    np.testing.assert_allclose(spike_train2, spike_times2)
+    extracted_spike_times_b = sorting_extractor.get_unit_spike_train(unit_id="b", return_times=True)
+    np.testing.assert_allclose(extracted_spike_times_b, spike_times_b)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_extraction_start_time(tmp_path, use_pynwb):
+    nwbfile = mock_NWBFile()
+
+    # Add the spikes
+
+    t_start = 10
+    sampling_frequency = 100.0
+    spike_times0 = np.array([0.0, 1.0, 2.0]) + t_start
+    nwbfile.add_unit(spike_times=spike_times0)
+    spike_times1 = np.array([0.0, 1.0, 2.0, 3.0]) + t_start
+    nwbfile.add_unit(spike_times=spike_times1)
+
+    file_path = tmp_path / "test.nwb"
+    # Write the nwbfile to a temporary file
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=sampling_frequency,
+        t_start=t_start,
+        use_pynwb=use_pynwb,
+    )
+
+    # Test frames
+    extracted_frames0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=False)
+    expected_frames = ((spike_times0 - t_start) * sampling_frequency).astype("int64")
+    np.testing.assert_allclose(extracted_frames0, expected_frames)
+
+    extracted_frames1 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=False)
+    expected_frames = ((spike_times1 - t_start) * sampling_frequency).astype("int64")
+    np.testing.assert_allclose(extracted_frames1, expected_frames)
+
+    # Test times
+    extracted_spike_times0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
+    expected_spike_times0 = spike_times0
+    np.testing.assert_allclose(extracted_spike_times0, expected_spike_times0)
+
+    extracted_spike_times1 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
+    expected_spike_times1 = spike_times1
+    np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
+    nwbfile = mock_NWBFile()
+    electrical_series_name = "ElectricalSeries"
+    t_start = 10.0
+    sampling_frequency = 100.0
+    n_electrodes = 5
+    electrodes = mock_electrodes(n_electrodes=n_electrodes, nwbfile=nwbfile)
+    electrical_series = ElectricalSeries(
+        name=electrical_series_name,
+        starting_time=t_start,
+        rate=sampling_frequency,
+        data=np.ones((10, 5)),
+        electrodes=electrodes,
+    )
+    nwbfile.add_acquisition(electrical_series)
+    # Add the spikes
+    spike_times0 = np.array([0.0, 1.0, 2.0]) + t_start
+    nwbfile.add_unit(spike_times=spike_times0)
+    spike_times1 = np.array([0.0, 1.0, 2.0, 3.0]) + t_start
+    nwbfile.add_unit(spike_times=spike_times1)
+
+    file_path = tmp_path / "test.nwb"
+    # Write the nwbfile to a temporary file
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        electrical_series_name=electrical_series_name,
+        use_pynwb=use_pynwb,
+    )
+
+    # Test frames
+    extracted_frames0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=False)
+    expected_frames = ((spike_times0 - t_start) * sampling_frequency).astype("int64")
+    np.testing.assert_allclose(extracted_frames0, expected_frames)
+
+    extracted_frames1 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=False)
+    expected_frames = ((spike_times1 - t_start) * sampling_frequency).astype("int64")
+    np.testing.assert_allclose(extracted_frames1, expected_frames)
+
+    # Test returned times
+    extracted_spike_times0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
+    expected_spike_times0 = spike_times0
+    np.testing.assert_allclose(extracted_spike_times0, expected_spike_times0)
+
+    extracted_spike_times1 = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
+    expected_spike_times1 = spike_times1
+    np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
 
 
 if __name__ == "__main__":
