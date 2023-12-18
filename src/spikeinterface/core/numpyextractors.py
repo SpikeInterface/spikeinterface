@@ -177,7 +177,6 @@ class SharedMemoryRecordingSegment(BaseRecordingSegment):
         self.num_samples = traces.shape[0]
         self.shm = SharedMemory(shm_name, create=False)
         self.main_shm_owner = main_shm_owner
-        print(self.shm)
 
     def __del__(self):
         self.shm.close()
