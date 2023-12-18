@@ -35,6 +35,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
+        "load_in_memory":False,
         "job_kwargs": {"n_jobs": -1},
         "debug": False,
     }
@@ -77,6 +78,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")
         noise_levels = np.ones(num_channels, dtype=np.float32)
+
+        if params["load_in_memory"]:
+            recording_f = recording_f.save(format='memory', **params['job_kwargs'])
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
