@@ -456,6 +456,8 @@ class LocalizeGridConvolution(PipelineNode):
             peak_locations["y"][idx] = found_positions[:, 1]
             peak_locations["z"][idx] = found_positions[:, 2]
 
+        peak_locations = np.nan_to_num(peak_locations)
+
         return peak_locations
 
 
