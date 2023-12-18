@@ -373,11 +373,11 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    depth_um=np.linspace(1, 50.0, 5),
+    depth_um=np.linspace(1, 150.0, 10),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=50,
+    percentile=5,
     sparsity_threshold=None,
 ):
     """
@@ -472,10 +472,9 @@ def compute_grid_convolution(
         for count in range(nb_weights):
             unit_location[i, :2] += np.dot(dot_products[count], nearest_templates)
 
-        scalar_products = dot_products.sum()
-        unit_location[i, 2] = np.dot(depth_um, dot_products.sum(1))
-        unit_location[i] /= scalar_products
-
+        scalar_products = dot_products.sum(1)
+        unit_location[i, 2] = np.dot(depth_um, scalar_products)
+        unit_location[i] /= scalar_products.sum()
     unit_location = np.nan_to_num(unit_location)
 
     return unit_location

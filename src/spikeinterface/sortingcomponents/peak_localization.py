@@ -346,11 +346,11 @@ class LocalizeGridConvolution(PipelineNode):
         parents=["extract_waveforms"],
         radius_um=40.0,
         upsampling_um=5.0,
-        depth_um=np.linspace(1, 50.0, 5),
+        depth_um=np.linspace(1, 150.0, 10),
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=50.0,
+        percentile=5.0,
         peak_sign="neg",
         sparsity_threshold=None,
     ):
@@ -444,19 +444,19 @@ class LocalizeGridConvolution(PipelineNode):
                 dot_products[dot_products < thresholds[np.newaxis, :, np.newaxis]] = 0
                 dot_products[mask] = 0
 
-            scalar_products = dot_products.sum(0).sum(1)
+            scalar_products = dot_products.sum(2)
             found_positions = np.zeros((num_spikes, 3), dtype=np.float32)
             nearest_templates = self.template_positions[nearest_templates]
             for count in range(nb_weights):
                 found_positions[:, :2] += np.dot(dot_products[count], nearest_templates)
 
-            found_positions[:, 2] = np.dot(self.depth_um, dot_products.sum(2))
-            found_positions /= scalar_products[:, np.newaxis]
+            found_positions[:, 2] = np.dot(self.depth_um, scalar_products)
+            scalar_products = (scalar_products.sum(0))[:, np.newaxis]
+            found_positions /= scalar_products
+            found_positions = np.nan_to_num(found_positions)
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
             peak_locations["z"][idx] = found_positions[:, 2]
-
-        peak_locations = np.nan_to_num(peak_locations)
 
         return peak_locations
 
