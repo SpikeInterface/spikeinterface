@@ -1,6 +1,6 @@
+from __future__ import annotations
 import warnings
 from pathlib import Path
-from typing import Iterable, List, Union
 from warnings import warn
 
 import numpy as np
@@ -36,12 +36,12 @@ class BaseRecording(BaseRecordingSnippets):
         "noise_level_mad_scaled",
     ]
 
-    def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
+    def __init__(self, sampling_frequency: float, channel_ids: list, dtype):
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
 
-        self._recording_segments: List[BaseRecordingSegment] = []
+        self._recording_segments: list[BaseRecordingSegment] = []
 
         # initialize main annotation and properties
         self.annotate(is_filtered=False)
@@ -242,34 +242,34 @@ class BaseRecording(BaseRecordingSnippets):
 
     def get_traces(
         self,
-        segment_index: Union[int, None] = None,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_ids: Union[Iterable, None] = None,
-        order: Union[str, None] = None,
-        return_scaled=False,
-        cast_unsigned=False,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_ids: list | np.array | tuple | None = None,
+        order: "C" | "F" | None = None,
+        return_scaled: bool = False,
+        cast_unsigned: bool = False,
     ):
         """Returns traces from recording.
 
         Parameters
         ----------
-        segment_index : Union[int, None], default: None
+        segment_index : int | None, default: None
             The segment index to get traces from. If recording is multi-segment, it is required, default: None
-        start_frame : Union[int, None], default: None
+        start_frame : int | None, default: None
             The start frame. If None, 0 is used, default: None
-        end_frame : Union[int, None], default: None
+        end_frame : int | None, default: None
             The end frame. If None, the number of samples in the segment is used, default: None
-        channel_ids : Union[Iterable, None], default: None
+        channel_ids : list | np.array | tuple | None, default: None
             The channel ids. If None, all channels are used, default: None
-        order : Union[str, None], default: None
-            The order of the traces ("C" | "F"). If None, traces are returned as they are, default: None
-        return_scaled : bool, default: None
+        order : "C" | "F" | None, default: None
+            The order of the traces ("C" | "F"). If None, traces are returned as they are
+        return_scaled : bool, default: False
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-            traces are scaled to uV, default: False
-        cast_unsigned : bool, default: None
+            traces are scaled to uV
+        cast_unsigned : bool, default: False
             If True and the traces are unsigned, they are cast to integer and centered
-            (an offset of (2**nbits) is subtracted), default: False
+            (an offset of (2**nbits) is subtracted)
 
         Returns
         -------
@@ -321,7 +321,7 @@ class BaseRecording(BaseRecordingSnippets):
                 traces = traces.astype("float32", copy=False) * gains + offsets
         return traces
 
-    def has_scaled_traces(self):
+    def has_scaled_traces(self) -> bool:
         """Checks if the recording has scaled traces
 
         Returns
@@ -613,9 +613,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         return SelectSegmentRecording(self, segment_indices=segment_indices)
 
-    def is_binary_compatible(self):
+    def is_binary_compatible(self) -> bool:
         """
-        Inform is this recording is "binary" compatible.
+        Checks if the recording is "binary" compatible.
         To be used before calling `rec.get_binary_description()`
 
         Returns
@@ -766,24 +766,21 @@ class BaseRecordingSegment(BaseSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | np.array | tuple | None = None,
     ) -> np.ndarray:
         """
         Return the raw traces, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        start_frame: Union[int, None], default: None
+        start_frame: int | None, default: None
             start sample index, or zero if None
-        end_frame: Union[int, None], default: None
+        end_frame: int | None, default: None
             end_sample, or number of samples if None
-        channel_indices: Union[List, None], default: None
+        channel_indices: list | np.array | tuple | None, default: None
             Indices of channels to return, or all channels if None
-        order: list or None, default: None
-            The memory order of the returned array.
-            Use Order.C for C order, Order.F for Fortran order, or Order.K to keep the order of the underlying data
 
         Returns
         -------

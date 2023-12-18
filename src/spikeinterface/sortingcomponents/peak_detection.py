@@ -21,6 +21,7 @@ from spikeinterface.core.node_pipeline import (
     base_peak_dtype,
 )
 
+from spikeinterface.postprocessing.unit_localization import get_convolution_weights
 from ..core import get_chunk_with_margin
 
 from .tools import make_multi_method_doc
@@ -645,7 +646,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        depth_um=np.linspace(1, 50, 5),
+        depth_um=np.linspace(1, 100, 5),
         rank=5,
         noise_levels=None,
         random_chunk_kwargs={},
@@ -674,28 +675,20 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         import sklearn.metrics
 
         contact_locations = recording.get_channel_locations()
-        nb_templates = len(contact_locations)
+        num_channels = recording.get_num_channels()
+        num_templates = num_channels * len(depth_um)
 
         dist = sklearn.metrics.pairwise_distances(contact_locations, contact_locations)
-        templates = np.zeros((nb_templates * len(depth_um), len(prototype), len(contact_locations)), dtype=np.float32)
-        count = 0
-
-        for depth in depth_um:
-            weights = np.exp(-dist / depth)
-            norm = np.linalg.norm(weights, axis=0)[np.newaxis, :]
-            weights /= norm
-            weights[~np.isfinite(weights)] = 0.0
-
-            for w in weights:
-                templates[count] = w * prototype[:, np.newaxis]
-                count += 1
+        weights = get_convolution_weights(dist, depth_um)
+        weights = weights.reshape(num_templates, -1)
+        templates = weights[:, None, :] * prototype[None, :, None]
 
         temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
         temporal = temporal[:, :, :rank]
         singular = singular[:, :rank]
         spatial = spatial[:, :rank, :]
         templates = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
-        norms = np.linalg.norm(templates, axis=(1, 2)) ** 2
+        norms = np.linalg.norm(templates, axis=(1, 2))
 
         temporal /= norms[:, np.newaxis, np.newaxis]
         temporal = np.flip(temporal, axis=1)
@@ -720,8 +713,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
     def get_convolved_traces(cls, traces, temporal, spatial, singular):
         import scipy.signal
 
-        num_channels = traces.shape[1]
-        num_templates = temporal.shape[1]
         num_timesteps, num_templates = len(traces), temporal.shape[1]
         scalar_products = np.zeros((num_templates, num_timesteps), dtype=np.float32)
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
@@ -770,9 +761,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         # Find peaks and correct for time shift
         peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
 
-        peak_chan_ind = peak_chan_ind % num_channels
-        peak_sample_ind += exclude_sweep_size
-
         depths_um = depth_um[peak_chan_ind // num_channels]
         # depths_um = np.zeros(len(peak_sample_ind), dtype=np.float32)
         # for count in range(len(peak_chan_ind)):
@@ -780,6 +768,9 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         #     peak = peak_sample_ind[count]
         #     data = traces[channel::num_channels, peak]
         #     depths_um[count] = np.dot(data, depth_um)/data.sum()
+
+        peak_chan_ind = peak_chan_ind % num_channels
+        peak_sample_ind += exclude_sweep_size
 
         return peak_sample_ind, peak_chan_ind, depths_um
 

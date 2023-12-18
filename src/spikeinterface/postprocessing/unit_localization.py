@@ -377,8 +377,8 @@ def compute_grid_convolution(
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=5,
-    sparsity_threshold=0.5,
+    percentile=50,
+    sparsity_threshold=None,
 ):
     """
     Estimate the positions of the templates from a large grid of fake templates
@@ -404,8 +404,9 @@ def compute_grid_convolution(
     percentile: float, default: 5
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float, default: 0.05
-        The sparsity threshold (in 0-1) below which weights should be considered as 0.
+    sparsity_threshold: float, default: None
+        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None,
+        automatically set to 1/sqrt(num_channels)
     Returns
     -------
     unit_location: np.array
@@ -418,7 +419,8 @@ def compute_grid_convolution(
     fs = waveform_extractor.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
-    assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
+    if sparsity_threshold is not None:
+        assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
@@ -446,21 +448,25 @@ def compute_grid_convolution(
         main_chan = peak_channels[unit_id]
         wf = templates[i, :, :]
         nearest_templates = nearest_template_mask[main_chan, :]
-
         channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
         num_templates = np.sum(nearest_templates)
+        sub_w = weights[:, channel_mask, :][:, :, nearest_templates]
         global_products = (wf[:, channel_mask] * prototype).sum(axis=0)
-        global_products /= np.linalg.norm(global_products)
 
         dot_products = np.zeros((nb_weights, num_templates), dtype=np.float32)
         for count in range(nb_weights):
-            w = weights[count][channel_mask, :][:, nearest_templates]
-            dot_products[count] = np.dot(global_products, w)
+            dot_products[count] = np.dot(global_products, sub_w[count])
 
         dot_products = np.maximum(0, dot_products)
-        if percentile < 100:
-            thresholds = np.percentile(dot_products, percentile)
+        if percentile > 0:
+            mask = dot_products == 0
+            dot_products[mask] = np.nan
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                thresholds = np.nanpercentile(dot_products, percentile)
+            thresholds = np.nan_to_num(thresholds)
             dot_products[dot_products < thresholds] = 0
+            dot_products[mask] = 0
 
         nearest_templates = template_positions[nearest_templates]
         for count in range(nb_weights):
@@ -575,7 +581,7 @@ def get_grid_convolution_templates_and_weights(
     upsampling_um=5,
     depth_um=np.linspace(1, 50.0, 5),
     margin_um=50,
-    sparsity_threshold=0.25,
+    sparsity_threshold=None,
 ):
     import sklearn.metrics
 
@@ -605,30 +611,49 @@ def get_grid_convolution_templates_and_weights(
     # mask to get nearest template given a channel
     dist = sklearn.metrics.pairwise_distances(contact_locations, template_positions)
     nearest_template_mask = dist <= radius_um
+    weights = get_convolution_weights(dist, depth_um, sparsity_threshold)
 
-    weights = np.zeros((len(depth_um), len(contact_locations), nb_templates), dtype=np.float32)
+    return template_positions, weights, nearest_template_mask
+
+
+def get_convolution_weights(
+    distances,
+    depth_um=np.linspace(1, 50.0, 5),
+    sparsity_threshold=None,
+):
+    weights = np.zeros((len(depth_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
 
     for count, depth in enumerate(depth_um):
-        ### First attempt
-        # weights[count] = 1 / ((0.1 + np.sqrt(dist**2 + depth**2))) ** decay_power
-        # weights[count] /= weights[count].max(axis=0)
-
         # Kilosort
-        # weights[count] = np.exp(-(dist**2) / (2 * (depth**2)))
+        # weights[count] = np.exp(-(distances**2) / (2 * (depth**2)))
 
-        weights[count] = np.exp(-dist / depth)
+        weights[count] = np.exp(-distances / depth)
 
-        thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
-        weights[count][weights[count] < thresholds] = 0
+        # dist_with_depth = 1 + np.sqrt(distances**2 + depth**2)
+        # weights[count] = 1/(dist_with_depth)**2
 
-    # normalize
+        # thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
+        # weights[count][weights[count] < thresholds] = 0
+
+    # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
         norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
         weights /= norm
 
     weights[~np.isfinite(weights)] = 0.0
 
-    return template_positions, weights, nearest_template_mask
+    # If sparsity is None or non zero, we are pruning weights that are below the
+    # sparsification factor. This will speed up furter computations
+    if sparsity_threshold is None:
+        sparsity_threshold = 1 / np.sqrt(distances.shape[0])
+    weights[weights < sparsity_threshold] = 0
+
+    # re normalize to ensure we have unitary norms
+    with np.errstate(divide="ignore", invalid="ignore"):
+        norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
+        weights /= norm
+
+    return weights
 
 
 if HAVE_NUMBA:

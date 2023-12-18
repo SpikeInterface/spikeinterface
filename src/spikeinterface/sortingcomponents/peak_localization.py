@@ -1,5 +1,6 @@
 """Sorting components: peak localization."""
 import numpy as np
+import warnings
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
 
@@ -333,8 +334,9 @@ class LocalizeGridConvolution(PipelineNode):
     percentile: float, default: 5
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float, default: 0.05
-        The sparsity threshold (in [0-1]) below which weights should be considered as 0
+    sparsity_threshold: float, default: None
+        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None,
+        automatically set to 1/sqrt(num_channels)
     """
 
     def __init__(
@@ -348,9 +350,9 @@ class LocalizeGridConvolution(PipelineNode):
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=5.0,
+        percentile=50.0,
         peak_sign="neg",
-        sparsity_threshold=0.25,
+        sparsity_threshold=None,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -360,9 +362,10 @@ class LocalizeGridConvolution(PipelineNode):
         self.upsampling_um = upsampling_um
         self.peak_sign = peak_sign
         self.percentile = 100 - percentile
-        assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
         self.sparsity_threshold = sparsity_threshold
-        assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
+        assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
+        if self.sparsity_threshold is not None:
+            assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
         contact_locations = recording.get_channel_locations()
         # Find waveform extractor in the parents
         waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
@@ -404,6 +407,7 @@ class LocalizeGridConvolution(PipelineNode):
                 nbefore=self.nbefore,
                 percentile=self.percentile,
                 peak_sign=self.peak_sign,
+                sparsity_threshold=self.sparsity_threshold,
             )
         )
 
@@ -421,32 +425,33 @@ class LocalizeGridConvolution(PipelineNode):
             nearest_templates = self.nearest_template_mask[main_chan, :]
             num_templates = np.sum(nearest_templates)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
+            sub_w = self.weights[:, channel_mask, :][:, :, nearest_templates]
 
             global_products = (waveforms[idx][:, :, channel_mask] * self.prototype).sum(axis=1)
 
-            global_products /= (np.linalg.norm(global_products, axis=1))[:, np.newaxis]
-
             dot_products = np.zeros((nb_weights, num_spikes, num_templates), dtype=np.float32)
             for count in range(nb_weights):
-                w = self.weights[count][channel_mask, :][:, nearest_templates]
-                dot_products[count] = np.dot(global_products, w)
+                dot_products[count] = np.dot(global_products, sub_w[count])
 
             dot_products = np.maximum(0, dot_products)
-            if self.percentile < 100:
-                thresholds = np.percentile(dot_products, self.percentile, axis=(0, 2))
+            if self.percentile > 0:
+                mask = dot_products == 0
+                dot_products[mask] = np.nan
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore")
+                    thresholds = np.nanpercentile(dot_products, self.percentile, axis=(0, 2))
+                thresholds = np.nan_to_num(thresholds)
                 dot_products[dot_products < thresholds[np.newaxis, :, np.newaxis]] = 0
+                dot_products[mask] = 0
 
-            scalar_products = np.zeros((num_spikes, num_templates), dtype=np.float32)
+            scalar_products = dot_products.sum(0).sum(1)
             found_positions = np.zeros((num_spikes, 3), dtype=np.float32)
             nearest_templates = self.template_positions[nearest_templates]
             for count in range(nb_weights):
-                scalar_products += dot_products[count]
                 found_positions[:, :2] += np.dot(dot_products[count], nearest_templates)
 
             found_positions[:, 2] = np.dot(self.depth_um, dot_products.sum(2))
-            scalar_products = scalar_products.sum(1)
             found_positions /= scalar_products[:, np.newaxis]
-            found_positions = np.nan_to_num(found_positions)
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
             peak_locations["z"][idx] = found_positions[:, 2]
