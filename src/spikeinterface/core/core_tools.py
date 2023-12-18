@@ -479,8 +479,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
         recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
     )
     executor.run()
-
-    return arrays
+    return arrays, shm_names
 
 
 write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_job_kwargs_doc)

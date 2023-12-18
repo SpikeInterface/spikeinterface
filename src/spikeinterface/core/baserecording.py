@@ -489,12 +489,19 @@ class BaseRecording(BaseRecordingSnippets):
             cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == "memory":
-            traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
-            from .numpyextractors import NumpyRecording
+            traces_list, shm_names = write_memory_recording(self, dtype=None, **job_kwargs)
+            
 
-            cached = NumpyRecording(
-                traces_list, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids
-            )
+            if len(shm_names) > 0:
+                from .numpyextractors import SharedMemoryRecording
+                cached = SharedMemoryRecording(
+                    traces_list, shm_names, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids
+                )
+            else:
+                from .numpyextractors import NumpyRecording
+                cached = NumpyRecording(
+                    traces_list, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids
+                )
 
         elif format == "zarr":
             from .zarrrecordingextractor import get_default_zarr_compressor, ZarrRecordingExtractor

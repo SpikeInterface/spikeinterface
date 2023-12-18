@@ -83,12 +83,106 @@ class NumpyRecording(BaseRecording):
             "sampling_frequency": sampling_frequency,
         }
 
-
 class NumpyRecordingSegment(BaseRecordingSegment):
     def __init__(self, traces, sampling_frequency, t_start):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self._traces = traces
         self.num_samples = traces.shape[0]
+
+    def get_num_samples(self):
+        return self.num_samples
+
+    def get_traces(self, start_frame, end_frame, channel_indices):
+        traces = self._traces[start_frame:end_frame, :]
+        if channel_indices is not None:
+            traces = traces[:, channel_indices]
+
+        return traces
+
+class SharedMemoryRecording(BaseRecording):
+    """
+    In memory recording.
+    Contrary to previous version this class does not handle npy files.
+
+    Parameters
+    ----------
+    traces_list:  list of array or array (if mono segment)
+        The traces to instantiate a mono or multisegment Recording
+    sampling_frequency: float
+        The sampling frequency in Hz
+    t_starts: None or list of float
+        Times in seconds of the first sample for each segment
+    channel_ids: list
+        An optional list of channel_ids. If None, linear channels are assumed
+    """
+
+    extractor_name = "Numpy"
+    mode = "shared_memory"
+    name = "numpy"
+
+    def __init__(self, traces_list, shm_names, sampling_frequency, t_starts=None, channel_ids=None, main_shm_owner=True):
+        if isinstance(traces_list, list):
+            all_elements_are_list = all(isinstance(e, list) for e in traces_list)
+            if all_elements_are_list:
+                traces_list = [np.array(trace) for trace in traces_list]
+            assert all(
+                isinstance(e, np.ndarray) for e in traces_list
+            ), f"must give a list of numpy array but gave {traces_list[0]}"
+        else:
+            assert isinstance(traces_list, np.ndarray), "must give a list of numpy array"
+            traces_list = [traces_list]
+
+        dtype = traces_list[0].dtype
+        assert all(dtype == trace.dtype for trace in traces_list)
+
+        if channel_ids is None:
+            channel_ids = np.arange(traces_list[0].shape[1])
+        else:
+            channel_ids = np.asarray(channel_ids)
+            assert channel_ids.size == traces_list[0].shape[1]
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
+
+        if t_starts is not None:
+            assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
+            t_starts = [float(t_start) for t_start in t_starts]
+
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
+
+        self.main_shm_owner = main_shm_owner
+
+        for i, (traces, shm_name) in enumerate(zip(traces_list, shm_names)):
+    
+            if t_starts is None:
+                t_start = None
+            else:
+                t_start = t_starts[i]
+            rec_segment = SharedMemoryRecordingSegment(traces, shm_name, sampling_frequency, t_start, self.main_shm_owner)
+            self.add_recording_segment(rec_segment)
+
+        self._kwargs = {
+            "traces_list": traces_list,
+            "t_starts": t_starts,
+            "sampling_frequency": sampling_frequency,
+            "shm_names" : shm_names,
+            "main_shm_owner" : False
+        }
+
+
+class SharedMemoryRecordingSegment(BaseRecordingSegment):
+    def __init__(self, traces, shm_name, sampling_frequency, t_start, main_shm_owner):
+        BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
+        self._traces = traces
+        self.num_samples = traces.shape[0]
+        self.shm = SharedMemory(shm_name, create=False)
+        self.main_shm_owner = main_shm_owner
+        print(self.shm)
+
+    def __del__(self):
+        self.shm.close()
+        if self.main_shm_owner:
+            self.shm.unlink()
 
     def get_num_samples(self):
         return self.num_samples
