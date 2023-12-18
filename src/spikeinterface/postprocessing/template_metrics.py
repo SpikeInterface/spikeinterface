@@ -908,7 +908,6 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs):
     template, channel_locations = sort_template_and_locations(template, channel_locations, depth_direction)
 
     MM = np.ptp(template, 0)
-    MM = MM / np.max(MM)
     channel_depths = channel_locations[:, depth_dim]
 
     if spread_smooth_um is not None and spread_smooth_um > 0:
@@ -917,12 +916,10 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs):
         spread_sigma = spread_smooth_um / np.median(np.diff(np.unique(channel_depths)))
         MM = gaussian_filter1d(MM, spread_sigma)
 
+    MM = MM / np.max(MM)
+
     channel_locations_above_threshold = channel_locations[MM > spread_threshold]
     channel_depth_above_threshold = channel_locations_above_threshold[:, depth_dim]
-
-    # protect against rare case where no channels are above threshold because all zeros
-    if len(channel_depth_above_threshold) == 0:
-        return np.nan
 
     spread = np.ptp(channel_depth_above_threshold)
 
