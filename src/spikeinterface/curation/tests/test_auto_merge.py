@@ -26,13 +26,14 @@ def test_get_auto_merge_list():
     num_unit_splited = 1
     num_split = 2
 
+    split_ids = sorting.unit_ids[:num_unit_splited]
     sorting_with_split, other_ids = inject_some_split_units(
-        sorting, split_ids=sorting.unit_ids[:num_unit_splited], num_split=num_split, output_ids=True, seed=42
+        sorting,
+        split_ids=split_ids,
+        num_split=num_split,
+        output_ids=True,
+        seed=42,
     )
-
-    print(sorting_with_split)
-    print(sorting_with_split.unit_ids)
-    print(other_ids)
 
     # rec = rec.save()
     # sorting_with_split = sorting_with_split.save()
@@ -42,7 +43,6 @@ def test_get_auto_merge_list():
     # we = extract_waveforms(rec, sorting_with_split, mode="folder", folder=wf_folder, n_jobs=1)
 
     we = extract_waveforms(rec, sorting_with_split, mode="memory", folder=None, n_jobs=1)
-    # print(we)
 
     potential_merges, outs = get_potential_auto_merge(
         we,
@@ -63,8 +63,6 @@ def test_get_auto_merge_list():
         firing_contamination_balance=1.5,
         extra_outputs=True,
     )
-    # print(potential_merges)
-    # print(num_unit_splited)
 
     assert len(potential_merges) == num_unit_splited
     for true_pair in other_ids.values():

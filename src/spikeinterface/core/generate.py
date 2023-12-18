@@ -1,3 +1,4 @@
+from __future__ import annotations
 import math
 import warnings
 import numpy as np
@@ -465,10 +466,9 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     return sorting_with_dup
 
 
-def inject_some_split_units(sorting, split_ids=None, num_split=2, output_ids=False, seed=None):
+def inject_some_split_units(sorting, split_ids: list, num_split=2, output_ids=False, seed=None):
     """ """
-    split_ids = split_ids or []
-    assert len(split_ids) > 0, "you need to provide some ids to split"
+
     unit_ids = sorting.unit_ids
     assert unit_ids.dtype.kind == "i"
 
