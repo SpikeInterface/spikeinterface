@@ -677,25 +677,40 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         contact_locations = recording.get_channel_locations()
         num_channels = recording.get_num_channels()
         num_templates = num_channels * len(depth_um)
+        num_samples = len(prototype)
+        #prototype = prototype[:, None]
 
         dist = sklearn.metrics.pairwise_distances(contact_locations, contact_locations)
         weights = get_convolution_weights(dist, depth_um)
         weights = weights.reshape(num_templates, -1)
-        templates = weights[:, None, :] * prototype[None, :, None]
 
+        # temporal = np.zeros((0, num_samples, rank), dtype=np.float32)
+        # singular = np.zeros((0, rank), dtype=np.float32)
+        # spatial = np.zeros((0, rank, num_channels), dtype=np.float32)
+        # norms = np.zeros(num_templates, dtype=np.float32)
+        # for count, w in enumerate(weights):
+        #     template = w[None, :] * prototype
+        #     a, b, c = np.linalg.svd(template, full_matrices=False)
+        #     temporal = np.concatenate((temporal, a[None, :,:rank]), axis=0)
+        #     singular = np.concatenate((singular, b[None, :rank]), axis=0)
+        #     spatial = np.concatenate((spatial, c[None, :rank, :]), axis=0)
+        #     template = np.matmul(temporal[-1] * singular[-1, np.newaxis, :], spatial[-1])
+        #     norms[count] = np.linalg.norm(template)
+
+        templates = weights[:, None, :] * prototype[None, :, None]
         temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
         temporal = temporal[:, :, :rank]
         singular = singular[:, :rank]
         spatial = spatial[:, :rank, :]
         templates = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
         norms = np.linalg.norm(templates, axis=(1, 2))
+        del templates
 
         temporal /= norms[:, np.newaxis, np.newaxis]
         temporal = np.flip(temporal, axis=1)
         spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
         temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
         singular = singular.T[:, :, np.newaxis]
-        del templates
 
         random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
         random_data = cls.get_convolved_traces(random_data, temporal, spatial, singular)
