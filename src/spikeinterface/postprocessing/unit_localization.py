@@ -373,11 +373,11 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    depth_um=np.linspace(1, 50.0, 5),
+    depth_um=np.linspace(1, 150.0, 10),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=25,
+    percentile=5,
     sparsity_threshold=None,
 ):
     """
@@ -458,17 +458,24 @@ def compute_grid_convolution(
             dot_products[count] = np.dot(global_products, sub_w[count])
 
         dot_products = np.maximum(0, dot_products)
-        if percentile < 100:
-            thresholds = np.percentile(dot_products, percentile)
+        if percentile > 0:
+            mask = dot_products == 0
+            dot_products[mask] = np.nan
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                thresholds = np.nanpercentile(dot_products, percentile)
+            thresholds = np.nan_to_num(thresholds)
             dot_products[dot_products < thresholds] = 0
+            dot_products[mask] = 0
 
         nearest_templates = template_positions[nearest_templates]
         for count in range(nb_weights):
             unit_location[i, :2] += np.dot(dot_products[count], nearest_templates)
 
-        scalar_products = dot_products.sum()
-        unit_location[i, 2] = np.dot(depth_um, dot_products.sum(1))
-        unit_location[i] /= scalar_products
+        scalar_products = dot_products.sum(1)
+        unit_location[i, 2] = np.dot(depth_um, scalar_products)
+        unit_location[i] /= scalar_products.sum()
+    unit_location = np.nan_to_num(unit_location)
 
     return unit_location
 
@@ -629,15 +636,23 @@ def get_convolution_weights(
         # thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
         # weights[count][weights[count] < thresholds] = 0
 
-    # normalize
+    # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
         norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
         weights /= norm
 
     weights[~np.isfinite(weights)] = 0.0
+
+    # If sparsity is None or non zero, we are pruning weights that are below the
+    # sparsification factor. This will speed up furter computations
     if sparsity_threshold is None:
         sparsity_threshold = 1 / np.sqrt(distances.shape[0])
     weights[weights < sparsity_threshold] = 0
+
+    # re normalize to ensure we have unitary norms
+    with np.errstate(divide="ignore", invalid="ignore"):
+        norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
+        weights /= norm
 
     return weights
 
