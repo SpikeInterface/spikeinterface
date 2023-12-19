@@ -340,6 +340,7 @@ class TransformSorting(BaseSorting):
         unit_ids = list(sorting.get_unit_ids())
 
         if new_unit_ids is not None:
+            new_unit_ids = list(new_unit_ids)
             assert ~np.any(
                 np.isin(new_unit_ids, sorting.unit_ids)
             ), "some units ids are already present. Consider using added_spikes_existing_units"
@@ -359,10 +360,7 @@ class TransformSorting(BaseSorting):
             assert (
                 added_spikes_existing_units.dtype == minimum_spike_dtype
             ), "added_spikes_existing_units should be a spike vector"
-            added_unit_indices = np.unique(added_spikes_existing_units["unit_index"])
-            assert np.max(added_unit_indices) < len(
-                sorting.unit_ids
-            ), "`added_spikes_existing_units` should contain spikes from units already in sorting"
+            added_unit_indices = np.arange(len(sorting.unit_ids))
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_existing_units), dtype=bool))
@@ -377,7 +375,7 @@ class TransformSorting(BaseSorting):
             ), "added_spikes_new_units should be a spike vector"
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_new_units))
             self.added_spikes_from_existing_mask = np.concatenate(
-                (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_new_units), dtype=bool))
+                (self.added_spikes_from_existing_mask, np.zeros(len(added_spikes_new_units), dtype=bool))
             )
             self.added_spikes_from_new_mask = np.concatenate(
                 (self.added_spikes_from_new_mask, np.ones(len(added_spikes_new_units), dtype=bool))
@@ -420,6 +418,7 @@ class TransformSorting(BaseSorting):
     def get_added_units_inds(self):
         indices = self._cached_spike_vector["unit_index"][self.get_added_spikes_from_new_indices()]
         return np.unique(self.unit_ids[indices])
+        #return self.unit_ids[len(sorting.unit_ids):]
 
     @staticmethod
     def add_from_sorting(sorting1: BaseSorting, sorting2: BaseSorting, refractory_period_ms=None) -> "TransformSorting":
@@ -471,6 +470,7 @@ class TransformSorting(BaseSorting):
                 mask = old_indices == j
                 not_common["unit_index"][mask] = i
 
+        print(exclusive_ids, common, not_common)
         sorting = TransformSorting(
             sorting1,
             added_spikes_existing_units=common,

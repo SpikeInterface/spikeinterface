@@ -483,9 +483,11 @@ def test_transformsorting():
     )
     transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
     assert len(transformed.unit_ids) == 2
-    assert np.all(np.array([k for k in transformed.count_num_spikes_per_unit(outputs="array")]) == [2, 2])
+    target_array = np.array([2, 2])
+    source_array = np.array([k for k in transformed.count_num_spikes_per_unit(outputs="array")])
+    assert np.array_equal(source_array, target_array)
 
-    assert transformed.get_added_spikes_from_existing_indices().size == 3
+    assert transformed.get_added_spikes_from_existing_indices().size == 1
     assert transformed.get_added_spikes_from_new_indices().size == 2
     assert transformed.get_added_units_inds() == [3]
 
