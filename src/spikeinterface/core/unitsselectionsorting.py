@@ -54,9 +54,12 @@ class UnitsSelectionSorting(BaseSorting):
                 return
 
         parent_spike_vector = self._parent_sorting._cached_spike_vector
-        mask = np.isin(parent_spike_vector["unit_index"], self._parent_sorting.ids_to_indices(self._unit_ids))
+        parent_unit_indices = self._parent_sorting.ids_to_indices(self._unit_ids)
+        mask = np.isin(parent_spike_vector["unit_index"], parent_unit_indices)
+        spike_vector = parent_spike_vector[mask]
+        spike_vector["unit_index"] = np.searchsorted(parent_unit_indices, spike_vector["unit_index"])
 
-        self._cached_spike_vector = parent_spike_vector[mask]
+        self._cached_spike_vector = spike_vector
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
