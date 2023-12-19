@@ -490,15 +490,20 @@ class BaseRecording(BaseRecordingSnippets):
 
         elif format == "memory":
             traces_list, shm_names = write_memory_recording(self, dtype=None, **job_kwargs)
-            
 
             if len(shm_names) > 0:
                 from .numpyextractors import SharedMemoryRecording
+
                 cached = SharedMemoryRecording(
-                    traces_list, shm_names, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids
+                    traces_list,
+                    shm_names,
+                    self.get_sampling_frequency(),
+                    t_starts=t_starts,
+                    channel_ids=self.channel_ids,
                 )
             else:
                 from .numpyextractors import NumpyRecording
+
                 cached = NumpyRecording(
                     traces_list, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids
                 )

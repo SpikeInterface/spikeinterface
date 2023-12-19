@@ -83,6 +83,7 @@ class NumpyRecording(BaseRecording):
             "sampling_frequency": sampling_frequency,
         }
 
+
 class NumpyRecordingSegment(BaseRecordingSegment):
     def __init__(self, traces, sampling_frequency, t_start):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
@@ -98,6 +99,7 @@ class NumpyRecordingSegment(BaseRecordingSegment):
             traces = traces[:, channel_indices]
 
         return traces
+
 
 class SharedMemoryRecording(BaseRecording):
     """
@@ -120,7 +122,9 @@ class SharedMemoryRecording(BaseRecording):
     mode = "shared_memory"
     name = "numpy"
 
-    def __init__(self, traces_list, shm_names, sampling_frequency, t_starts=None, channel_ids=None, main_shm_owner=True):
+    def __init__(
+        self, traces_list, shm_names, sampling_frequency, t_starts=None, channel_ids=None, main_shm_owner=True
+    ):
         if isinstance(traces_list, list):
             all_elements_are_list = all(isinstance(e, list) for e in traces_list)
             if all_elements_are_list:
@@ -153,20 +157,21 @@ class SharedMemoryRecording(BaseRecording):
         self.main_shm_owner = main_shm_owner
 
         for i, (traces, shm_name) in enumerate(zip(traces_list, shm_names)):
-    
             if t_starts is None:
                 t_start = None
             else:
                 t_start = t_starts[i]
-            rec_segment = SharedMemoryRecordingSegment(traces, shm_name, sampling_frequency, t_start, self.main_shm_owner)
+            rec_segment = SharedMemoryRecordingSegment(
+                traces, shm_name, sampling_frequency, t_start, self.main_shm_owner
+            )
             self.add_recording_segment(rec_segment)
 
         self._kwargs = {
             "traces_list": traces_list,
             "t_starts": t_starts,
             "sampling_frequency": sampling_frequency,
-            "shm_names" : shm_names,
-            "main_shm_owner" : False
+            "shm_names": shm_names,
+            "main_shm_owner": False,
         }
 
 
