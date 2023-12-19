@@ -41,7 +41,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "minfr_goodchannels": 0.1,
         "freq_min": 150,
         "sigmaMask": 30,
-        "lam": 10,
+        "lam": 10.0,
         "nPCs": 3,
         "ntbuff": 64,
         "nfilt_factor": 4,
