@@ -16,3 +16,4 @@ Modules documentation
     curation
     sortingcomponents
     motion_correction
+    generation
