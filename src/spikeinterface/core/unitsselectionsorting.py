@@ -46,9 +46,9 @@ class UnitsSelectionSorting(BaseSorting):
 
         self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
 
-    def _cache_spike_vector_from_parent(self) -> None:
+    def _custom_cache_spike_vector(self) -> None:
         if self._parent_sorting._cached_spike_vector is None:
-            self._parent_sorting._cache_spike_vector_from_parent()
+            self._parent_sorting._custom_cache_spike_vector()
 
             if self._parent_sorting._cached_spike_vector is None:
                 return

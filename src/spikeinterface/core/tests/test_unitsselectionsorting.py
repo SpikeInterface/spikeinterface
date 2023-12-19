@@ -38,14 +38,14 @@ def test_failure_with_non_unique_unit_ids():
         sorting2 = UnitsSelectionSorting(sorting, unit_ids=[0, 2], renamed_unit_ids=["a", "a"])
 
 
-def test_cache_spike_vector_from_parent():
+def test_custom_cache_spike_vector():
     sorting = generate_sorting(num_units=3, durations=[0.100, 0.100], sampling_frequency=30000.0)
 
     sub_sorting = UnitsSelectionSorting(sorting, unit_ids=[0, 2], renamed_unit_ids=["b", "a"])
     spike_vector = sub_sorting.to_spike_vector(use_cache=False)
 
     sorting.to_spike_vector(use_cache=True)
-    sub_sorting._cache_spike_vector_from_parent()
+    sub_sorting._custom_cache_spike_vector()
     assert np.all(spike_vector == sub_sorting._cached_spike_vector)
 
 
