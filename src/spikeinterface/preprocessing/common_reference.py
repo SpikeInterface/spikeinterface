@@ -73,14 +73,6 @@ class CommonReferenceRecording(BasePreprocessor):
     referenced_recording: CommonReferenceRecording
         The re-referenced recording extractor object
 
-
-    Notes
-    -----
-        Note that the references are calculated within a `get_traces` context. That is, the reference is calculated
-    for each chunk of traces that is requested. Which means that `get_traces(stat_frame=0, end_frame=10_000)`
-    will be different from `get_traces(start_frame=0, end_frame=20_000)[0:10_000]`. While in most cases the estimation
-    of the mean or median will be the same, it is important to keep this in mind when using this with small chunks.
-
     """
 
     name = "common_reference"
