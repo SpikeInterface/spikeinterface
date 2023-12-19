@@ -16,12 +16,8 @@ from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_editable_mode
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError, has_nvidia
+from .container_tools import find_recording_folders, path_to_unix, windows_extractor_dict_to_unix, ContainerClient, install_package_in_container
 
-try:
-    HAS_DOCKER = True
-    import docker
-except ModuleNotFoundError:
-    HAS_DOCKER = False
 
 REGISTRY = "spikeinterface"
 
@@ -194,154 +190,6 @@ def run_sorter_local(
 
     return sorting
 
-
-def find_recording_folders(d):
-    folders_to_mount = []
-
-    def append_parent_folder(p):
-        p = Path(p)
-        folders_to_mount.append(p.resolve().absolute().parent)
-        return p
-
-    _ = recursive_path_modifier(d, append_parent_folder, target="path", copy=True)
-
-    try:  # this will fail if on different drives (Windows)
-        base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
-    except ValueError:
-        base_folders_to_mount = folders_to_mount
-
-    # let's not mount root if dries are /home/..., /mnt1/...
-    if len(base_folders_to_mount) == 1:
-        if len(str(base_folders_to_mount[0])) == 1:
-            base_folders_to_mount = folders_to_mount
-
-    return base_folders_to_mount
-
-
-def path_to_unix(path):
-    path = Path(path)
-    if platform.system() == "Windows":
-        path = Path(str(path)[str(path).find(":") + 1 :])
-    return path.as_posix()
-
-
-def windows_extractor_dict_to_unix(d):
-    d = recursive_path_modifier(d, path_to_unix, target="path", copy=True)
-    return d
-
-
-class ContainerClient:
-    """
-    Small abstraction class to run commands in:
-      * docker with "docker" python package
-      * singularity with  "spython" python package
-    """
-
-    def __init__(self, mode, container_image, volumes, py_user_base, extra_kwargs):
-        """
-        Parameters
-        ----------
-        mode: "docker" | "singularity"
-            The container mode
-        container_image: str
-            container image name and tag
-        volumes: dict
-            dict of volumes to bind
-        py_user_base: str
-            Python user base folder to set as PYTHONUSERBASE env var in Singularity mode
-            Prevents from overwriting user's packages when running pip install
-        extra_kwargs: dict
-            Extra kwargs to start container
-        """
-        assert mode in ("docker", "singularity")
-        self.mode = mode
-        self.py_user_base = py_user_base
-        container_requires_gpu = extra_kwargs.get("container_requires_gpu", None)
-
-        if mode == "docker":
-            if not HAS_DOCKER:
-                raise ModuleNotFoundError("No module named 'docker'")
-            client = docker.from_env()
-            if container_requires_gpu is not None:
-                extra_kwargs.pop("container_requires_gpu")
-                extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])]
-
-            if self._get_docker_image(container_image) is None:
-                print(f"Docker: pulling image {container_image}")
-                client.images.pull(container_image)
-
-            self.docker_container = client.containers.create(container_image, tty=True, volumes=volumes, **extra_kwargs)
-
-        elif mode == "singularity":
-            assert self.py_user_base, "py_user_base folder must be set in singularity mode"
-            from spython.main import Client
-
-            # load local image file if it exists, otherwise search dockerhub
-            sif_file = Client._get_filename(container_image)
-            singularity_image = None
-            if Path(container_image).exists():
-                singularity_image = container_image
-            elif Path(sif_file).exists():
-                singularity_image = sif_file
-            else:
-                if HAS_DOCKER:
-                    docker_image = self._get_docker_image(container_image)
-                    if docker_image and len(docker_image.tags) > 0:
-                        tag = docker_image.tags[0]
-                        print(f"Building singularity image from local docker image: {tag}")
-                        singularity_image = Client.build(f"docker-daemon://{tag}", sif_file, sudo=False)
-                if not singularity_image:
-                    print(f"Singularity: pulling image {container_image}")
-                    singularity_image = Client.pull(f"docker://{container_image}")
-
-            if not Path(singularity_image).exists():
-                raise FileNotFoundError(f"Unable to locate container image {container_image}")
-
-            # bin options
-            singularity_bind = ",".join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
-            options = ["--bind", singularity_bind]
-
-            # gpu options
-            if container_requires_gpu:
-                # only nvidia at the moment
-                options += ["--nv"]
-
-            self.client_instance = Client.instance(singularity_image, start=False, options=options)
-
-    @staticmethod
-    def _get_docker_image(container_image):
-        docker_client = docker.from_env(timeout=300)
-        try:
-            docker_image = docker_client.images.get(container_image)
-        except docker.errors.ImageNotFound:
-            docker_image = None
-        return docker_image
-
-    def start(self):
-        if self.mode == "docker":
-            self.docker_container.start()
-        elif self.mode == "singularity":
-            self.client_instance.start()
-
-    def stop(self):
-        if self.mode == "docker":
-            self.docker_container.stop()
-            self.docker_container.remove(force=True)
-        elif self.mode == "singularity":
-            self.client_instance.stop()
-
-    def run_command(self, command):
-        if self.mode == "docker":
-            res = self.docker_container.exec_run(command)
-            return res.output.decode(encoding="utf-8", errors="ignore")
-        elif self.mode == "singularity":
-            from spython.main import Client
-
-            options = ["--cleanenv", "--env", f"PYTHONUSERBASE={self.py_user_base}"]
-            res = Client.execute(self.client_instance, command, options=options)
-            if isinstance(res, dict):
-                res = res["message"]
-            return res
 
 
 def run_sorter_container(
@@ -574,42 +422,31 @@ if __name__ == '__main__':
         res_output = container_client.run_command(cmd)
 
         if installation_mode == "pypi":
-            if verbose:
-                print(f"Installing spikeinterface=={si_version} with pypi in {container_image}")
+            install_package_in_container(container_client, "spikeinterface", installation_mode="pypi",
+                                         extra="[full]", version=si_version, verbose=verbose)
 
-            cmd = f"pip install --user --upgrade --no-input --no-build-isolation spikeinterface[full]=={si_version}"
-            res_output = container_client.run_command(cmd)
         elif installation_mode == "github":
-            if verbose:
-                print(f"Installing spikeinterface from github sources in {container_image}")
-
             if DEV_MODE:
-                # not released yet use main branchgit config pull.rebase false
-                cmd = "pip install --user --upgrade --no-input --no-build-isolation git+https://github.com/SpikeInterface/spikeinterface.git@main#egg=spikeinterface[full]"
-                res_output = container_client.run_command(cmd)
+                install_package_in_container(container_client, "spikeinterface", installation_mode="github",
+                                            github_url = "https://github.com/SpikeInterface/spikeinterface",
+                                            extra="[full]", tag="main", verbose=verbose)
             else:
-                # already released and has a tag 
-                cmd = f"pip install --user --upgrade --no-input --no-build-isolation https://github.com/SpikeInterface/spikeinterface/archive/{si_version}.tar.gz#egg=spikeinterface[full]"
-                res_output = container_client.run_command(cmd)
-
+                install_package_in_container(container_client, "spikeinterface", installation_mode="github",
+                                            github_url = "https://github.com/SpikeInterface/spikeinterface",
+                                            extra="[full]", version=si_version, verbose=verbose)
         elif host_folder_source is not None:
             # this is "dev" + "folder"
-            if verbose:
-                print(f"Installing spikeinterface from local sources in {container_image}")
-
-            # copy spikeinterface sources to avoid problems between host and containers
-            cmd = f"mkdir {container_folder_source}"
-            res_output = container_client.run_command(cmd)
-            cmd = f"cp -r {container_folder_source_ro} {container_folder_source}"
-            res_output = container_client.run_command(cmd)
-
-            cmd = f"pip install --user --no-input {container_folder_source}/spikeinterface[full]"
-            res_output = container_client.run_command(cmd)
+            install_package_in_container(container_client, "spikeinterface", installation_mode="folder",
+                                        extra="[full]", container_folder_source=container_folder_source_ro,
+                                        verbose=verbose)
 
         if installation_mode == "dev":
             # also install neo from github
-            cmd = "pip install --user --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
-            res_output = container_client.run_command(cmd)
+            # cmd = "pip install --user --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
+            # res_output = container_client.run_command(cmd)
+            install_package_in_container(container_client, "neo", installation_mode="github",
+                                         github_url="https://github.com/NeuralEnsemble/python-neo", tag="master")
+
 
 
     if hasattr(recording, "extra_requirements"):
@@ -617,10 +454,12 @@ if __name__ == '__main__':
 
     # install additional required dependencies
     if extra_requirements:
-        if verbose:
-            print(f"Installing extra requirements: {extra_requirements}")
-        cmd = f"pip install --user --upgrade --no-input {' '.join(extra_requirements)}"
+        # if verbose:
+        #     print(f"Installing extra requirements: {extra_requirements}")
+        # cmd = f"pip install --user --upgrade --no-input {' '.join(extra_requirements)}"
         res_output = container_client.run_command(cmd)
+        for package_name in extra_requirements:
+            install_package_in_container(container_client, package_name, installation_mode="pypi", verbose=verbose)
 
     # run sorter on folder
     if verbose:
