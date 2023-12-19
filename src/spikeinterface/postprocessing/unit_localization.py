@@ -627,7 +627,7 @@ def get_convolution_weights(
     for count, depth in enumerate(depth_um):
         dist_3d = np.sqrt(distances**2 + depth**2)
         alpha = 1e-3
-        weights[count] = 1 / (alpha + dist_3d)**2
+        weights[count] = 1 / (alpha + dist_3d) ** 2
 
     # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
