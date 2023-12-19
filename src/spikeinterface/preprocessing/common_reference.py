@@ -13,65 +13,65 @@ from .filter import fix_dtype
 
 class CommonReferenceRecording(BasePreprocessor):
     """
-    Re-references the recording extractor traces. That is, the value of the traces are
-    shifted so the there is a new zero (reference).
+     Re-references the recording extractor traces. That is, the value of the traces are
+     shifted so the there is a new zero (reference).
 
-    The new reference can be estimated either by using a common median reference (CMR) or
-   a common average reference (CAR).
+     The new reference can be estimated either by using a common median reference (CMR) or
+    a common average reference (CAR).
 
-    The new reference can be set three ways:
-        * "global": the median/average of all channels is set as the new reference.
-            In this case, the 'global' median/average is subtracted from all channels.
-        * "single": In the simplest case, a single channel from the recording is set as the new reference.
-            This channel is subtracted from all other channels. To use this option, the `ref_channel_ids` argument
-            is used with a single channel id. Note that this option will zero out the reference channel.
-            A collection of channels can also be used as the new reference. In this case, the median/average of the
-            selected channels is subtracted from all other channels. To use this option, pass the group of channels as
-            a list in `ref_channel_ids`.
-        * "local": the median/average within an annulus is set as the new reference. 
-                The parameters of the annulus are specified using the `local_radius` argument. With this option, both 
-                channels which are too close and channels which are too far are excluded from the median/average. Note 
-                that setting the `local_radius` to (0, exclude_radius)  will yield a simple circular local region.
+     The new reference can be set three ways:
+         * "global": the median/average of all channels is set as the new reference.
+             In this case, the 'global' median/average is subtracted from all channels.
+         * "single": In the simplest case, a single channel from the recording is set as the new reference.
+             This channel is subtracted from all other channels. To use this option, the `ref_channel_ids` argument
+             is used with a single channel id. Note that this option will zero out the reference channel.
+             A collection of channels can also be used as the new reference. In this case, the median/average of the
+             selected channels is subtracted from all other channels. To use this option, pass the group of channels as
+             a list in `ref_channel_ids`.
+         * "local": the median/average within an annulus is set as the new reference.
+                 The parameters of the annulus are specified using the `local_radius` argument. With this option, both
+                 channels which are too close and channels which are too far are excluded from the median/average. Note
+                 that setting the `local_radius` to (0, exclude_radius)  will yield a simple circular local region.
 
 
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor to be re-referenced
-    reference: "global" | "single" | "local", default: "global"
-        If "global" the reference is the average or median across all the channels.
-        If "single", the reference is a single channel or a list of channels that need to be set with the `ref_channel_ids`.
-        If "local", the reference is the set of channels within an annulus that must be set with the `local_radius` parameter.
-    operator: "median" | "average", default: "median"
-        If "median", common median reference (CMR) is implemented (the median of
-            the selected channels is removed for each timestamp).
-        If "average", common average reference (CAR) is implemented (the mean of the selected channels is removed
-            for each timestamp).
-    groups: list
-        List of lists containing the channel ids for splitting the reference. The CMR, CAR, or referencing with respect to
-        single channels are applied group-wise. However, this is not applied for the local CAR.
-        It is useful when dealing with different channel groups, e.g. multiple tetrodes.
-    ref_channel_ids: list or int
-        If no "groups" are specified, all channels are referenced to "ref_channel_ids". If "groups" is provided, then a
-        list of channels to be applied to each group is expected. If "single" reference, a list of one channel  or an
-        int is expected.
-    local_radius: tuple(int, int)
-        Use in the local CAR implementation as the selecting annulus with the following format:
+     Parameters
+     ----------
+     recording: RecordingExtractor
+         The recording extractor to be re-referenced
+     reference: "global" | "single" | "local", default: "global"
+         If "global" the reference is the average or median across all the channels.
+         If "single", the reference is a single channel or a list of channels that need to be set with the `ref_channel_ids`.
+         If "local", the reference is the set of channels within an annulus that must be set with the `local_radius` parameter.
+     operator: "median" | "average", default: "median"
+         If "median", common median reference (CMR) is implemented (the median of
+             the selected channels is removed for each timestamp).
+         If "average", common average reference (CAR) is implemented (the mean of the selected channels is removed
+             for each timestamp).
+     groups: list
+         List of lists containing the channel ids for splitting the reference. The CMR, CAR, or referencing with respect to
+         single channels are applied group-wise. However, this is not applied for the local CAR.
+         It is useful when dealing with different channel groups, e.g. multiple tetrodes.
+     ref_channel_ids: list or int
+         If no "groups" are specified, all channels are referenced to "ref_channel_ids". If "groups" is provided, then a
+         list of channels to be applied to each group is expected. If "single" reference, a list of one channel  or an
+         int is expected.
+     local_radius: tuple(int, int)
+         Use in the local CAR implementation as the selecting annulus with the following format:
 
-        `(exclude radius, include radius)`
+         `(exclude radius, include radius)`
 
-        Where the exlude radius is the inner radius of the annulus and the include radius is the outer radius of the
-        annulus. The exclude radius is used to exclude channels that are too close to the reference channel and the
-        include radius delineates the outer boundary of the annulus whose role is to exclude channels
-        that are too far away.
+         Where the exlude radius is the inner radius of the annulus and the include radius is the outer radius of the
+         annulus. The exclude radius is used to exclude channels that are too close to the reference channel and the
+         include radius delineates the outer boundary of the annulus whose role is to exclude channels
+         that are too far away.
 
-    dtype: None or dtype
-        If None the parent dtype is kept.
+     dtype: None or dtype
+         If None the parent dtype is kept.
 
-    Returns
-    -------
-    referenced_recording: CommonReferenceRecording
-        The re-referenced recording extractor object
+     Returns
+     -------
+     referenced_recording: CommonReferenceRecording
+         The re-referenced recording extractor object
 
     """
 
