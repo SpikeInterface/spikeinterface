@@ -145,7 +145,6 @@ class Templates:
 
     @classmethod
     def from_dict(cls, data):
-        
         return cls(
             templates_array=np.asarray(data["templates_array"]),
             sparsity_mask=None if data["sparsity_mask"] is None else np.asarray(data["sparsity_mask"]),
