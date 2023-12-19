@@ -111,11 +111,9 @@ class DriftingTemplates(Templates):
     This is usefull to generate drifting recording.
 
     This class support 2 differents strategies:
-      * move every templates on-the-fly, this lead toone interpolation per spike
+      * move every templates on-the-fly, this lead to one interpolation per spike
       * precompute some displacements for all templates and use a discreate interpolation, for instance by step of 1um
-        This is the same strategy used by MEArec
-
-    
+        This is the same strategy used by MEArec.
     """
     def __init__(self, **kwargs):
         Templates.__init__(self, **kwargs)
@@ -180,8 +178,8 @@ class InjectDriftingTemplatesRecording(BaseRecording):
     ----------
     sorting: BaseSorting
         Sorting object containing all the units and their spike train.
-    drifting_templates: 
-
+    drifting_templates: DriftingTemplates
+        The drifting template object.
     displacement_vectors: list of numpy array
         The lenght of the list is the number of segment.
         Per segment, the drift vector is a numpy array with shape (num_time, 2, num_motion)

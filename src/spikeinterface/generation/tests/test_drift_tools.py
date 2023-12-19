@@ -1,5 +1,7 @@
 import pytest
 import numpy as np
+from pathlib import Path
+import shutil
 
 from spikeinterface.generation import interpolate_templates, move_dense_templates, make_linear_displacement, DriftingTemplates, InjectDriftingTemplatesRecording
 from spikeinterface.core.generate import generate_templates, generate_sorting, NoiseGeneratorRecording
@@ -7,6 +9,11 @@ from spikeinterface.core import Templates, BaseRecording
 
 from probeinterface import generate_multi_columns_probe
 
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "generation"
+else:
+    cache_folder = Path("cache_folder") / "generation"
 
 
 
@@ -110,7 +117,7 @@ def test_DriftingTemplates():
     displacements = np.zeros((num_move, 2))
     displacements[:, 1] = np.linspace(-amplitude_motion_um, amplitude_motion_um, num_move)
     drifting_templates.precompute_displacements(displacements)
-    assert drifting_templates.template_array_moved.shape == (num_move, static_templates.num_units, static_templates.num_samples, static_templates.num_channels)
+    assert drifting_templates.templates_array_moved.shape == (num_move, static_templates.num_units, static_templates.num_samples, static_templates.num_channels)
 
 def test_InjectDriftingTemplatesRecording():
     templates = make_some_templates()
@@ -184,12 +191,17 @@ def test_InjectDriftingTemplatesRecording():
     rec = BaseRecording.from_dict(rec.to_dict())
     print(rec)
 
+    rec_folder = cache_folder / "rec"
+    if rec_folder.exists():
+        shutil.rmtree(rec_folder)
+    rec.save(folder=rec_folder, n_jobs=1)
+
 
 
 if __name__ == "__main__":
-    # test_interpolate_templates()
-    # test_move_dense_templates()
-    # test_DriftingTemplates()
+    test_interpolate_templates()
+    test_move_dense_templates()
+    test_DriftingTemplates()
     test_InjectDriftingTemplatesRecording()
     
     
