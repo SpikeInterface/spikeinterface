@@ -30,6 +30,7 @@ class RemoveExcessSpikesSorting(BaseSorting):
             sorting.get_num_segments() == recording.get_num_segments()
         ), "The sorting and recording objects must have the same number of samples!"
 
+        self._parent_sorting = sorting
         self._num_samples = np.empty(sorting.get_num_segments(), dtype=np.int64)
         for segment_index in range(sorting.get_num_segments()):
             sorting_segment = sorting._sorting_segments[segment_index]
