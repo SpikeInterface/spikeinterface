@@ -346,7 +346,7 @@ class LocalizeGridConvolution(PipelineNode):
         parents=["extract_waveforms"],
         radius_um=40.0,
         upsampling_um=5.0,
-        depth_um=np.linspace(0, 50.0, 10),
+        depth_um=np.linspace(0, 50.0, 5),
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,

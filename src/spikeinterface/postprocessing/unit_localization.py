@@ -373,7 +373,7 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    depth_um=np.linspace(0, 50.0, 100),
+    depth_um=np.linspace(0, 50.0, 5),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
@@ -580,7 +580,7 @@ def get_grid_convolution_templates_and_weights(
     contact_locations,
     radius_um=40,
     upsampling_um=5,
-    depth_um=np.linspace(1, 50.0, 5),
+    depth_um=np.linspace(0, 50.0, 5),
     margin_um=50,
     sparsity_threshold=None,
 ):
