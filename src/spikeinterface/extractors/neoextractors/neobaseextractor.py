@@ -462,7 +462,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 f"sampling_frequency = {sampling_frequency} \n"
                 "Corresponding to the following stream_id: \n"
                 f"stream_id = {stream_id} \n"
-                "To avoid this warning pass explicitly the sampling frequency or the stream_id"
+                "To avoid this warning pass explicitly the sampling frequency or the stream_id "
                 "when initializing the sorting extractor. \n"
                 "The following stream_ids with corresponding sampling frequencies were found: \n"
                 f"stream_id_to_sampling_frequencies = {stream_id_to_sampling_frequencies} \n"
@@ -472,8 +472,8 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
             instructions_for_user = (
                 "Multiple streams ids with different sampling frequencies found in the file: \n"
                 f"{stream_id_to_sampling_frequencies} \n"
-                f"Please specify one of the following sampling frequencies"
-                "When initializing the sorting extractor with the sampling frequency parameter."
+                f"Please specify one of the sampling frequencies above "
+                "when initializing the sorting extractor with the sampling frequency parameter."
             )
             raise ValueError(instructions_for_user)
 
@@ -546,7 +546,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 f"t_start = {t_start} \n"
                 "Corresponding to the following stream_id: \n"
                 f"stream_id = {stream_id} \n"
-                "To avoid this warning pass explicitly the stream_id"
+                "To avoid this warning pass explicitly the stream_id "
                 "when initializing the sorting extractor. \n"
                 "The following stream_ids with corresponding t_starts were found: \n"
                 f"{stream_id_to_t_start} \n"
