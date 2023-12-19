@@ -17,14 +17,15 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
         self.offset = offset
         self._dtype = dtype
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def get_traces(self, start_frame, end_frame, channel_indices) -> np.ndarray:
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices]
+        traces = np.multiply(traces, self.gain[:, channel_indices], out=traces)
+        traces = np.add(traces, self.offset[:, channel_indices], out=traces)
 
         if np.issubdtype(self._dtype, np.integer):
-            scaled_traces = scaled_traces.round()
+            traces = np.round(traces, out=traces)
 
-        return scaled_traces.astype(self._dtype)
+        return traces.astype(self._dtype, copy=False)
 
 
 class NormalizeByQuantileRecording(BasePreprocessor):
