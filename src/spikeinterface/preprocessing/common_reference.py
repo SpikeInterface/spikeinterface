@@ -43,7 +43,7 @@ class CommonReferenceRecording(BasePreprocessor):
         If "single", the reference is a single channel or a list of channels that need to be set with the `ref_channel_ids`.
         If "local", the reference is the set of channels within an annulus that must be set with the `local_radius` parameter.
     operator: "median" | "average", default: "median"
-        If "median", common median reference (CMR) is implemented (the median of
+        If "median", a common median reference (CMR) is implemented (the median of
             the selected channels is removed for each timestamp).
         If "average", common average reference (CAR) is implemented (the mean of the selected channels is removed
             for each timestamp).
