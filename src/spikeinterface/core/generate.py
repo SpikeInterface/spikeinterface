@@ -470,7 +470,6 @@ class TransformSorting(BaseSorting):
                 mask = old_indices == j
                 not_common["unit_index"][mask] = i
 
-        print(exclusive_ids, common, not_common)
         sorting = TransformSorting(
             sorting1,
             added_spikes_existing_units=common,
