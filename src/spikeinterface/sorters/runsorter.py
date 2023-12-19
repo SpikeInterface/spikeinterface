@@ -389,19 +389,19 @@ def run_sorter_container(
         If True, the container temporary files are deleted after the sorting is done
     extra_requirements: list, default: None
         List of extra requirements to install in the container
-    installation_mode: "auto" | "pypi" | "github" | "folder" | "dev" | "no-install"
+    installation_mode: "auto" | "pypi" | "github" | "folder" | "dev" | "no-install", default: "auto"
         How spikeinterface is installed in the container:
           * "auto": if host installation is release then use "github" with tag
                     if host is DEV_MODE=True then use "dev"
           * "pypi": use pypi with pip install spikeinterface
-          * "github": use github with 
+          * "github": use github with `pip install git+https`
           * "folder": mount a folder in container and install from this one.
-                      So the version in the container a different spikeinterface  version from host, usefull for
+                      So the version in the container is a different spikeinterface version from host, useful for
                       cross checks.
           * "dev": same as dev but the folder is the spikeinterface.__file__ to ensure same version as host.
-          * "no-install": do not install spikeinterface ine the container because it is already installed
-    spikeinterface_folder_source: None or Path
-        In case of installation_mode="folder", this must be contains the spikeinterface folder source.
+          * "no-install": do not install spikeinterface in the container because it is already installed
+    spikeinterface_folder_source: None or Path, default: None
+        In case of installation_mode="folder", this must be the spikeinterface folder source for the container.
         
     **sorter_params: keyword args for the sorter
 
@@ -443,7 +443,7 @@ def run_sorter_container(
     elif recording.check_serializability("pickle"):
         (parent_folder / "in_container_recording.pickle").write_bytes(pickle.dumps(rec_dict))
     else:
-        raise RuntimeError("To use run_sorter with container the recording must be serializable")
+        raise RuntimeError("To use run_sorter with a container the recording must be serializable")
 
     # need to share specific parameters
     (parent_folder / "in_container_params.json").write_text(
@@ -507,10 +507,10 @@ if __name__ == '__main__':
         else:
             installation_mode = "github"
         if verbose:
-            print(f"installation_mode='auto' is switch to '{installation_mode}'")
+            print(f"installation_mode='auto' switching to installation_mode: '{installation_mode}'")
 
     if installation_mode == "folder":
-        assert spikeinterface_folder_source is not None, "for installation_mode='folder', spikeinterface_folder_source must provided"
+        assert spikeinterface_folder_source is not None, "for installation_mode='folder', spikeinterface_folder_source must be provided"
         host_folder_source = Path(spikeinterface_folder_source)
 
     if installation_mode == "dev":
@@ -584,12 +584,11 @@ if __name__ == '__main__':
                 print(f"Installing spikeinterface from github sources in {container_image}")
 
             if DEV_MODE:
-                # not released yet use main branch
+                # not released yet use main branchgit config pull.rebase false
                 cmd = "pip install --user --upgrade --no-input --no-build-isolation git+https://github.com/SpikeInterface/spikeinterface.git@main#egg=spikeinterface[full]"
                 res_output = container_client.run_command(cmd)
             else:
                 # already released and has a tag 
-                si_version = '0.99.1'
                 cmd = f"pip install --user --upgrade --no-input --no-build-isolation https://github.com/SpikeInterface/spikeinterface/archive/{si_version}.tar.gz#egg=spikeinterface[full]"
                 res_output = container_client.run_command(cmd)
 
