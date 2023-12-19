@@ -394,7 +394,7 @@ def run_sorter_container(
           * "auto": if host installation is release then use "github" with tag
                     if host is DEV_MODE=True then use "dev"
           * "pypi": use pypi with pip install spikeinterface
-          * "github": use github with 
+          * "github": use github with `pip install git+https`
           * "folder": mount a folder in container and install from this one.
                       So the version in the container is a different spikeinterface version from host, useful for
                       cross checks.
@@ -589,7 +589,6 @@ if __name__ == '__main__':
                 res_output = container_client.run_command(cmd)
             else:
                 # already released and has a tag 
-                si_version = '0.99.1'
                 cmd = f"pip install --user --upgrade --no-input --no-build-isolation https://github.com/SpikeInterface/spikeinterface/archive/{si_version}.tar.gz#egg=spikeinterface[full]"
                 res_output = container_client.run_command(cmd)
 
