@@ -49,6 +49,5 @@ def test_cache_spike_vector_from_parent():
     assert np.all(spike_vector == sub_sorting._cached_spike_vector)
 
 
-
 if __name__ == "__main__":
     test_basic_functions()
