@@ -140,7 +140,7 @@ class Templates:
             "unit_ids": self.unit_ids,
             "sampling_frequency": self.sampling_frequency,
             "nbefore": self.nbefore,
-            "probe": self.probe.to_dict(),
+            "probe": self.probe.to_dict() if self.probe is not None else None,
         }
 
     @classmethod
