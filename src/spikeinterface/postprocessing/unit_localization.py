@@ -373,11 +373,7 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-<<<<<<< Updated upstream
-    depth_um=np.linspace(1, 150.0, 10),
-=======
     depth_um=np.linspace(0, 50.0, 100),
->>>>>>> Stashed changes
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
@@ -629,22 +625,9 @@ def get_convolution_weights(
     weights = np.zeros((len(depth_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
 
     for count, depth in enumerate(depth_um):
-<<<<<<< Updated upstream
-        # Kilosort
-        # weights[count] = np.exp(-(distances**2) / (2 * (depth**2)))
-
-        weights[count] = np.exp(-distances / depth)
-
-        # dist_with_depth = 1 + np.sqrt(distances**2 + depth**2)
-        # weights[count] = 1/(dist_with_depth)**2
-
-        # thresholds = np.percentile(weights[count], 100 * sparsity_threshold, axis=0)
-        # weights[count][weights[count] < thresholds] = 0
-=======
         dist_3d = np.sqrt(distances**2 + depth**2)
         alpha = 1e-3
         weights[count] = 1 / (alpha + dist_3d)**2
->>>>>>> Stashed changes
 
     # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
