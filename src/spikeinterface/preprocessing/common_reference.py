@@ -16,22 +16,22 @@ class CommonReferenceRecording(BasePreprocessor):
     Re-references the recording extractor traces. That is, the value of the traces are
     shifted so the there is a new zero (reference).
 
-    The new reference can be estimated either by using common median reference (CMR) or
-    common average reference (CAR).
+    The new reference can be estimated either by using a common median reference (CMR) or
+   a common average reference (CAR).
 
     The new reference can be set three ways:
         * "global": the median/average of all channels is set as the new reference.
-        That is, the median/average is subtracted from all channels.
+            In this case, the 'global' median/average is subtracted from all channels.
         * "single": In the simplest case, a single channel from the recording is set as the new reference.
-        That is, the channel is subtracted from all other channels. To use this option, the `ref_channel_ids` argument
-        is used with a single channel id. Note that this option will zero out the reference channel.
-        A collection of channels can also be used as the new reference. In this case, the median/average of the
-        selected channels is subtracted from all other channels. To use this option, pass the group of channels as
-        a list in `ref_channel_ids`.
-        * "local": the median/average within an annulus is set as the new reference. The parameters
-        of the annulus are specified using the `local_radius` argument. With this option, both close channels and
-        far channels are excluded from the median/average. Note that setting the `local_radius` to (0, exclude_radius)
-        will yield a simple circular local region.
+            This channel is subtracted from all other channels. To use this option, the `ref_channel_ids` argument
+            is used with a single channel id. Note that this option will zero out the reference channel.
+            A collection of channels can also be used as the new reference. In this case, the median/average of the
+            selected channels is subtracted from all other channels. To use this option, pass the group of channels as
+            a list in `ref_channel_ids`.
+        * "local": the median/average within an annulus is set as the new reference. 
+                The parameters of the annulus are specified using the `local_radius` argument. With this option, both 
+                channels which are too close and channels which are too far are excluded from the median/average. Note 
+                that setting the `local_radius` to (0, exclude_radius)  will yield a simple circular local region.
 
 
     Parameters
@@ -39,9 +39,9 @@ class CommonReferenceRecording(BasePreprocessor):
     recording: RecordingExtractor
         The recording extractor to be re-referenced
     reference: "global" | "single" | "local", default: "global"
-        If "global" the reference is the average or mean across all the channels.
-        If "single", the reference is a single channel or a list of them that need to be set with the `ref_channel_ids`.
-        If "local", the reference are the channels within an annulus that need to be set with the `local_radius`.
+        If "global" the reference is the average or median across all the channels.
+        If "single", the reference is a single channel or a list of channels that need to be set with the `ref_channel_ids`.
+        If "local", the reference is the set of channels within an annulus that must be set with the `local_radius` parameter.
     operator: "median" | "average", default: "median"
         If "median", common median reference (CMR) is implemented (the median of
             the selected channels is removed for each timestamp).
@@ -62,7 +62,7 @@ class CommonReferenceRecording(BasePreprocessor):
 
         Where the exlude radius is the inner radius of the annulus and the include radius is the outer radius of the
         annulus. The exclude radius is used to exclude channels that are too close to the reference channel and the
-        include radius delintes the outer boundary of the annulus whose role is to exclude channels
+        include radius delineates the outer boundary of the annulus whose role is to exclude channels
         that are too far away.
 
     dtype: None or dtype
