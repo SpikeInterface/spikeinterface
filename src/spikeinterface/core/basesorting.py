@@ -496,6 +496,12 @@ class BaseSorting(BaseExtractor):
                 for unit_id in unit_ids:
                     self.get_unit_spike_train(unit_id, segment_index=segment_index, use_cache=True)
 
+    def _cache_spike_vector_from_parent(self) -> None:
+        """
+        TODO
+        """
+        pass  # To be implemented by some sorting children.
+
     def to_spike_vector(self, concatenated=True, extremum_channel_inds=None, use_cache=True):
         """
         Construct a unique structured numpy vector concatenating all spikes
@@ -528,6 +534,9 @@ class BaseSorting(BaseExtractor):
         if extremum_channel_inds is not None:
             spike_dtype = spike_dtype + [("channel_index", "int64")]
             ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
+
+        if use_cache and self._cached_spike_vector is None:
+            self._cache_spike_vector_from_parent()
 
         if use_cache and self._cached_spike_vector is not None:
             # the cache already exists

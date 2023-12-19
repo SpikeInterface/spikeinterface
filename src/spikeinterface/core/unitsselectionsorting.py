@@ -46,6 +46,18 @@ class UnitsSelectionSorting(BaseSorting):
 
         self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
 
+    def _cache_spike_vector_from_parent(self) -> None:
+        if self._parent_sorting._cached_spike_vector is None:
+            self._parent_sorting._cache_spike_vector_from_parent()
+
+            if self._parent_sorting._cached_spike_vector is None:
+                return
+
+        parent_spike_vector = self._parent_sorting._cached_spike_vector
+        mask = np.isin(parent_spike_vector['unit_index'], self._parent_sorting.ids_to_indices(self._unit_ids))
+
+        self._cached_spike_vector = parent_spike_vector[mask]
+
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
     def __init__(self, parent_segment, ids_conversion):
