@@ -82,8 +82,11 @@ def test_zscore():
 def test_zscore_int():
     "I think this is a bad test https://github.com/SpikeInterface/spikeinterface/issues/1972"
     seed = 1
+    from spikeinterface.preprocessing import astype
+
     rec = generate_recording(seed=seed)
-    rec_int = scale(rec, dtype="int16", gain=100)
+    rec_with_sign = astype(rec, dtype="int16")
+    rec_int = scale(rec_with_sign, gain=100)
     with pytest.raises(AssertionError):
         zscore(rec_int, dtype=None)
 
