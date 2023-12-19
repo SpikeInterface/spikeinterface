@@ -56,8 +56,8 @@ class UnitsSelectionSorting(BaseSorting):
         parent_spike_vector = self._parent_sorting._cached_spike_vector
         parent_unit_indices = self._parent_sorting.ids_to_indices(self._unit_ids)
         mask = np.isin(parent_spike_vector["unit_index"], parent_unit_indices)
-        spike_vector = parent_spike_vector[mask]
-        spike_vector["unit_index"] = np.searchsorted(parent_unit_indices, spike_vector["unit_index"])
+        spike_vector = np.array(parent_spike_vector[mask])  # np.array() necessary to fix 'read-only' crash with memmaps.
+        spike_vector["unit_index"] = np.searchsorted(parent_unit_indices, spike_vector["unit_index"])  # Trick to make sure that the new indices are correct.
 
         self._cached_spike_vector = spike_vector
 
