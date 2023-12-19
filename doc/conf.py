@@ -130,7 +130,7 @@ sphinx_gallery_conf = {
 }
 
 intersphinx_mapping = {
-    "neo": ("https://neo.readthedocs.io/en/stable/", None),
+    "neo": ("https://neo.readthedocs.io/en/latest/", None),
     "probeinterface": ("https://probeinterface.readthedocs.io/en/stable/", None),
 }
 
