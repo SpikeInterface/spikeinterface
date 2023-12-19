@@ -345,7 +345,7 @@ class TransformSorting(BaseSorting):
             ), "some units ids are already present. Consider using added_spikes_existing_units"
             if len(new_unit_ids) > 0:
                 assert type(unit_ids[0]) == type(new_unit_ids[0]), "unit_ids should have the same type"
-                unit_ids += list(new_unit_ids)
+                unit_ids = unit_ids + list(new_unit_ids)
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
