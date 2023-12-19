@@ -10,7 +10,7 @@ from spikeinterface.core import load_extractor
 
 # from spikeinterface.extractors import toy_example
 from spikeinterface import generate_ground_truth_recording
-from spikeinterface.sorters import run_sorter_jobs, run_sorters, run_sorter_by_property
+from spikeinterface.sorters import run_sorter_jobs, run_sorter_by_property
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -171,67 +171,6 @@ def test_run_sorter_by_property():
     assert all([g in group_names1 for g in sorting1.get_property("group")])
 
 
-# run_sorters is deprecated
-# This will test will be removed in next release
-def test_run_sorters_with_list():
-    working_folder = cache_folder / "test_run_sorters_list"
-    if working_folder.is_dir():
-        shutil.rmtree(working_folder)
-
-    # make serializable
-    rec0 = load_extractor(cache_folder / "toy_rec_0")
-    rec1 = load_extractor(cache_folder / "toy_rec_1")
-
-    recording_list = [rec0, rec1]
-    sorter_list = ["tridesclous2"]
-
-    run_sorters(sorter_list, recording_list, working_folder, engine="loop", verbose=False, with_output=False)
-
-
-# run_sorters is deprecated
-# This will test will be removed in next release
-def test_run_sorters_with_dict():
-    working_folder = cache_folder / "test_run_sorters_dict"
-    if working_folder.is_dir():
-        shutil.rmtree(working_folder)
-
-    rec0 = load_extractor(cache_folder / "toy_rec_0")
-    rec1 = load_extractor(cache_folder / "toy_rec_1")
-
-    recording_dict = {"toy_tetrode": rec0, "toy_octotrode": rec1}
-
-    sorter_list = ["tridesclous2"]
-
-    sorter_params = {"tridesclous2": dict()}
-
-    # simple loop
-    t0 = time.perf_counter()
-    results = run_sorters(
-        sorter_list,
-        recording_dict,
-        working_folder,
-        engine="loop",
-        sorter_params=sorter_params,
-        with_output=True,
-        mode_if_folder_exists="raise",
-    )
-
-    t1 = time.perf_counter()
-    print(t1 - t0)
-    print(results)
-
-    shutil.rmtree(working_folder / "toy_tetrode" / "tridesclous2")
-    run_sorters(
-        sorter_list,
-        recording_dict,
-        working_folder / "by_dict",
-        engine="loop",
-        sorter_params=sorter_params,
-        with_output=False,
-        mode_if_folder_exists="keep",
-    )
-
-
 if __name__ == "__main__":
     setup_module()
     job_list = get_job_list()
@@ -244,7 +183,3 @@ if __name__ == "__main__":
     # test_run_sorter_jobs_slurm(job_list)
 
     # test_run_sorter_by_property()
-
-    # this deprecated
-    # test_run_sorters_with_list()
-    # test_run_sorters_with_dict()
