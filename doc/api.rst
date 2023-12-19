@@ -218,7 +218,6 @@ spikeinterface.sorters
     .. autofunction:: get_sorter_description
     .. autofunction:: run_sorter
     .. autofunction:: run_sorter_jobs
-    .. autofunction:: run_sorters
     .. autofunction:: run_sorter_by_property
     .. autofunction:: read_sorter_folder
 

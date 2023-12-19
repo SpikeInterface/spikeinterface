@@ -93,4 +93,5 @@ def test_initialization_fail_with_dense_templates():
 
 
 if __name__ == "__main__":
-    test_json_serialization("sparse")
+    # test_json_serialization("sparse")
+    test_json_serialization("dense")

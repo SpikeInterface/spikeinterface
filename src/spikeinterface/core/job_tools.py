@@ -142,6 +142,10 @@ def ensure_n_jobs(recording, n_jobs=1):
     elif n_jobs is None:
         n_jobs = 1
 
+    # ProcessPoolExecutor has a hard limit of 61 for Windows
+    if platform.system() == "Windows" and n_jobs > 61:
+        n_jobs = 61
+
     version = sys.version_info
 
     if (n_jobs != 1) and not (version.major >= 3 and version.minor >= 7):

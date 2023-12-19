@@ -25,7 +25,7 @@ class Templates:
         Array of channel IDs. If `None`, defaults to an array of increasing integers.
     unit_ids : np.ndarray, optional default: None
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
-    probe: Probe , optional default: None
+    probe: Probe, default: None
         A probeinterface.probe object
     check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
@@ -151,12 +151,11 @@ class Templates:
             "unit_ids": self.unit_ids,
             "sampling_frequency": self.sampling_frequency,
             "nbefore": self.nbefore,
-            "probe": self.probe.to_dict(),
+            "probe": self.probe.to_dict() if self.probe is not None else None,
         }
 
     @classmethod
     def from_dict(cls, data):
-        
         return cls(
             templates_array=np.asarray(data["templates_array"]),
             sparsity_mask=None if data["sparsity_mask"] is None else np.asarray(data["sparsity_mask"]),
