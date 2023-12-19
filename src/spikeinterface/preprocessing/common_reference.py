@@ -22,9 +22,9 @@ class CommonReferenceRecording(BasePreprocessor):
     The new reference can be set three ways:
         * "global": the median/average of all channels is set as the new reference.
         That is, the median/average is subtracted from all channels.
-        * "single": In the simplest case, a single channel from the recorder is set as the new reference.
+        * "single": In the simplest case, a single channel from the recording is set as the new reference.
         That is, the channel is subtracted from all other channels. To use this option, the `ref_channel_ids` argument
-        is used with a single channel id.
+        is used with a single channel id. Note that this option will zero out the reference channel.
         A collection of channels can also be used as the new reference. In this case, the median/average of the
         selected channels is subtracted from all other channels. To use this option, pass the group of channels as
         a list in `ref_channel_ids`.
