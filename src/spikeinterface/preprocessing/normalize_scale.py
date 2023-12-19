@@ -19,8 +19,8 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices) -> np.ndarray:
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        traces = np.multiply(traces, self.gain[:, channel_indices], out=traces)
-        traces = np.add(traces, self.offset[:, channel_indices], out=traces)
+        traces = np.multiply(traces, self.gain[:, channel_indices], out=traces, casting="unsafe")
+        traces = np.add(traces, self.offset[:, channel_indices], out=traces, casting="unsafe")
 
         if np.issubdtype(self._dtype, np.integer):
             traces = np.round(traces, out=traces)
