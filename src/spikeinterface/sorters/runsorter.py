@@ -443,7 +443,7 @@ def run_sorter_container(
     elif recording.check_serializability("pickle"):
         (parent_folder / "in_container_recording.pickle").write_bytes(pickle.dumps(rec_dict))
     else:
-        raise RuntimeError("To use run_sorter with container the recording must serializable")
+        raise RuntimeError("To use run_sorter with container the recording must be serializable")
 
     # need to share specific parameters
     (parent_folder / "in_container_params.json").write_text(

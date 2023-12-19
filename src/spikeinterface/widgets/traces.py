@@ -120,6 +120,12 @@ class TracesWidget(BaseWidget):
         if time_range is None:
             time_range = (0, 1.0)
         time_range = np.array(time_range)
+        if time_range[1] > rec0.get_duration(segment_index=segment_index):
+            warnings.warn(
+                "You have selected a time after the end of the segment. The range will be clipped to "
+                f"{rec0.get_duration(segment_index=segment_index)}"
+            )
+            time_range[1] = rec0.get_duration(segment_index=segment_index)
 
         assert mode in ("auto", "line", "map"), 'Mode must be one of "auto","line", "map"'
         if mode == "auto":
@@ -545,7 +551,7 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
         assert all(
             rec.has_scaled() for rec in recordings.values()
         ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
-    frame_range = (time_range * fs).astype("int64")
+    frame_range = (time_range * fs).astype("int64", copy=False)
     a_max = rec0.get_num_frames(segment_index=segment_index)
     frame_range = np.clip(frame_range, 0, a_max)
     time_range = frame_range / fs
