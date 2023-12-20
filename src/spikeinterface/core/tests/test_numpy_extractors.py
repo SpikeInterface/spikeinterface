@@ -4,9 +4,9 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core import NumpyRecording, NumpySorting, SharedMemorySorting, NumpyEvent
-from spikeinterface.core import create_sorting_npz, load_extractor
-from spikeinterface.core import NpzSortingExtractor
+from spikeinterface.core import (BaseRecording, NumpyRecording, SharedMemoryRecording, NumpySorting, SharedMemorySorting,
+NumpyEvent, create_sorting_npz, load_extractor, NpzSortingExtractor, generate_recording)
+
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
 if hasattr(pytest, "global_test_folder"):
@@ -28,6 +28,23 @@ def test_NumpyRecording():
     times1 = rec.get_times(1)
 
     rec.save(folder=cache_folder / "test_NumpyRecording")
+
+def test_SharedMemoryRecording():
+    rec0 = generate_recording(num_channels=2, durations=[4., 3.])
+    print(rec0)
+    job_kwargs = dict(n_jobs=1, progress_bar=True)
+    rec = SharedMemoryRecording.from_recording(rec0, **job_kwargs)
+    
+    d = rec.to_dict()
+    rec_clone = load_extractor(d)
+    traces = rec_clone.get_traces(start_frame=0, end_frame=30000, segment_index=0)
+
+
+    assert rec.shms[0].name == rec_clone.shms[0].name
+
+    del traces
+    del rec_clone
+    del rec
 
 
 def test_NumpySorting():
@@ -132,6 +149,7 @@ def test_NumpyEvent():
 
 if __name__ == "__main__":
     # test_NumpyRecording()
-    test_NumpySorting()
+    test_SharedMemoryRecording()
+    # test_NumpySorting()
     # test_SharedMemorySorting()
     # test_NumpyEvent()

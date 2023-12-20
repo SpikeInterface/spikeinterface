@@ -13,8 +13,9 @@ from spikeinterface.core import (
 )
 from .basesorting import minimum_spike_dtype
 from .core_tools import make_shared_array
-
+from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
+
 
 from typing import Union
 
@@ -99,6 +100,113 @@ class NumpyRecordingSegment(BaseRecordingSegment):
             traces = traces[:, channel_indices]
 
         return traces
+    
+
+
+class SharedMemoryRecording(BaseRecording):
+    """
+    In memory recording with shared memmory buffer.
+    
+
+    Parameters
+    ----------
+    shm_names: list
+        List of sharedmem names.
+    shape_list: list
+
+    sampling_frequency: float
+        The sampling frequency in Hz
+    t_starts: None or list of float
+        Times in seconds of the first sample for each segment
+    channel_ids: list
+        An optional list of channel_ids. If None, linear channels are assumed
+    """
+    
+    extractor_name = "SharedMemory"
+    mode = "memory"
+    name = "SharedMemory"
+
+    def __init__(
+        self, shm_names, shape_list, dtype, sampling_frequency, channel_ids=None, t_starts=None, main_shm_owner=True
+    ):
+        
+        
+        assert len(shape_list) == len(shm_names)
+        assert all(shape_list[0][1] == shape[1] for shape in shape_list)
+
+        # create traces from shraedmem names
+        self.shms = []
+        traces_list = []
+        for shm_name, shape in zip(shm_names, shape_list):
+            shm = SharedMemory(shm_name, create=False)
+            self.shms.append(shm)
+            traces = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+            traces_list.append(traces)
+
+        if channel_ids is None:
+            channel_ids = np.arange(traces_list[0].shape[1])
+        else:
+            channel_ids = np.asarray(channel_ids)
+            assert channel_ids.size == traces_list[0].shape[1]
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
+
+        if t_starts is not None:
+            assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
+            t_starts = [float(t_start) for t_start in t_starts]
+
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
+
+        # this is important so that the main owner can unlink the share mem buffer :
+        self.main_shm_owner = main_shm_owner
+
+        for i, traces,  in enumerate(traces_list):
+            if t_starts is None:
+                t_start = None
+            else:
+                t_start = t_starts[i]
+            rec_segment = NumpyRecordingSegment(traces, sampling_frequency, t_start)
+
+            self.add_recording_segment(rec_segment)
+
+        self._kwargs = {
+            "shm_names": shm_names,
+            "shape_list": shape_list,
+            "dtype": dtype,
+            "sampling_frequency": sampling_frequency,
+            "channel_ids": channel_ids,
+            "t_starts": t_starts,
+            # this is important so that clone of this will not try to unlink the share mem buffer :
+            "main_shm_owner": False,
+        }
+
+
+    def __del__(self):
+        self._recording_segments =[]
+        for shm in self.shms:
+            shm.close()
+            if self.main_shm_owner:
+                shm.unlink()
+
+    @staticmethod
+    def from_recording(source_recording, **job_kwargs):
+        traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
+
+        recording = SharedMemoryRecording(
+            shm_names=[shm.name for shm in shms],
+            shape_list = [traces.shape for traces in traces_list],
+            dtype=source_recording.dtype,
+            sampling_frequency=source_recording.sampling_frequency,
+            channel_ids=source_recording.channel_ids,
+            t_starts=None,
+            main_shm_owner=True            
+        )
+
+        for shm in shms:
+            # the sharedmem are handle by the new SharedMemoryRecording
+            shm.close()
+        return recording
 
 
 class NumpySorting(BaseSorting):

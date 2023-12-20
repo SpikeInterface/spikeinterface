@@ -490,7 +490,7 @@ class BaseRecording(BaseRecordingSnippets):
             cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == "memory":
-            traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
+            traces_list, shms = write_memory_recording(self, dtype=None, **job_kwargs)
             from .numpyextractors import NumpyRecording
 
             cached = NumpyRecording(
