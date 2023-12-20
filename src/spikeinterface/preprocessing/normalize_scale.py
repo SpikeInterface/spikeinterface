@@ -18,7 +18,9 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
         self._dtype = dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices) -> np.ndarray:
-        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
+        # TODO when we are sure that BaseExtractors get_traces allocate their own buffer instead of just passing
+        # It along we should remove copies in preprocessors including the one in the next line
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices).copy()
         traces = np.multiply(traces, self.gain[:, channel_indices], out=traces, casting="unsafe")
         traces = np.add(traces, self.offset[:, channel_indices], out=traces, casting="unsafe")
 
