@@ -305,8 +305,6 @@ if __name__ == "__main__":
         test_write_binary_recording(tmp_path)
     test_write_memory_recording()
 
-
-
     test_get_random_data_chunks()
     test_get_closest_channels()
     test_get_noise_levels()

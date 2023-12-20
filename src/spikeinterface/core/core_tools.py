@@ -8,7 +8,6 @@ import json
 from copy import deepcopy
 
 
-
 import numpy as np
 from tqdm import tqdm
 
@@ -160,10 +159,6 @@ def add_suffix(file_path, possible_suffix):
     return file_path
 
 
-
-
-
-
 def make_shared_array(shape, dtype):
     from multiprocessing.shared_memory import SharedMemory
 
@@ -174,12 +169,6 @@ def make_shared_array(shape, dtype):
     arr[:] = 0
 
     return arr, shm
-
-
-
-
-
-
 
 
 def is_dict_extractor(d):

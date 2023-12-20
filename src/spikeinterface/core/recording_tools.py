@@ -21,7 +21,6 @@ from .job_tools import (
 )
 
 
-
 def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
     """
     Read binary .bin or .dat file.
@@ -270,7 +269,6 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     arr[start_frame:end_frame, :] = traces
 
 
-
 def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=True, **job_kwargs):
     """
     Save the traces into numpy arrays (memory).
@@ -336,7 +334,6 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
 
 
 write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_job_kwargs_doc)
-
 
 
 def write_to_h5_dataset_format(

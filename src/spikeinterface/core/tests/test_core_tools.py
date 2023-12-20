@@ -88,5 +88,4 @@ def test_path_utils_functions():
 
 
 if __name__ == "__main__":
-
     test_path_utils_functions()

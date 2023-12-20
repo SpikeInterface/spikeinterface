@@ -4,7 +4,13 @@ import numpy as np
 
 import probeinterface
 
-from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment, write_binary_recording
+from spikeinterface.core import (
+    BinaryRecordingExtractor,
+    BaseRecordingSegment,
+    BaseSorting,
+    BaseSortingSegment,
+    write_binary_recording,
+)
 from spikeinterface.core.core_tools import define_function_from_class
 
 
