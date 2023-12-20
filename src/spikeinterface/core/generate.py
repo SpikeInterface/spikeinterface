@@ -1,12 +1,11 @@
 import math
-import re
 import warnings
 import numpy as np
 from typing import Union, Optional, List, Literal
 import warnings
 
-
-from .numpyextractors import NumpyRecording, NumpySorting, NumpySortingSegment
+from .basesorting import SpikeVectorSortingSegment
+from .numpyextractors import NumpySorting
 from .basesorting import minimum_spike_dtype
 
 from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
@@ -389,7 +388,7 @@ class TransformSorting(BaseSorting):
 
         # We need to add the sorting segments
         for segment_index in range(sorting.get_num_segments()):
-            segment = NumpySortingSegment(self._cached_spike_vector, segment_index, unit_ids=self.unit_ids)
+            segment = SpikeVectorSortingSegment(self._cached_spike_vector, segment_index, unit_ids=self.unit_ids)
             self.add_sorting_segment(segment)
 
         if self.refractory_period_ms is not None:
