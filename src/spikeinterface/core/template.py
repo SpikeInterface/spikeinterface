@@ -1,6 +1,7 @@
 import numpy as np
 import json
 from dataclasses import dataclass, field, astuple
+from probeinterface import Probe
 from .sparsity import ChannelSparsity
 
 
@@ -24,6 +25,8 @@ class Templates:
         Array of channel IDs. If `None`, defaults to an array of increasing integers.
     unit_ids : np.ndarray, optional default: None
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
+    probe: Probe, default: None
+        A `probeinterface.Probe` object
     check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
         structure fo the sparsity_masl.
@@ -56,6 +59,8 @@ class Templates:
     sparsity_mask: np.ndarray = None
     channel_ids: np.ndarray = None
     unit_ids: np.ndarray = None
+
+    probe: Probe = None
 
     check_for_consistent_sparsity: bool = True
 
@@ -135,6 +140,7 @@ class Templates:
             "unit_ids": self.unit_ids,
             "sampling_frequency": self.sampling_frequency,
             "nbefore": self.nbefore,
+            "probe": self.probe.to_dict() if self.probe is not None else None,
         }
 
     @classmethod
@@ -146,6 +152,7 @@ class Templates:
             unit_ids=np.asarray(data["unit_ids"]),
             sampling_frequency=data["sampling_frequency"],
             nbefore=data["nbefore"],
+            probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
 
     def to_json(self):
@@ -189,6 +196,9 @@ class Templates:
                     return False
                 if not np.array_equal(s_field.channel_ids, o_field.channel_ids):
                     return False
+            elif isinstance(s_field, Probe):
+                # TODO implement __eq__ in probeinterface...
+                pass
             else:
                 if s_field != o_field:
                     return False
