@@ -417,7 +417,7 @@ class TransformSorting(BaseSorting):
         return np.nonzero(self.added_spikes_from_new_mask)[0]
 
     def get_added_units_inds(self):
-        return self.unit_ids[len(self.parent_unit_ids):]
+        return self.unit_ids[len(self.parent_unit_ids) :]
 
     @staticmethod
     def add_from_sorting(sorting1: BaseSorting, sorting2: BaseSorting, refractory_period_ms=None) -> "TransformSorting":
