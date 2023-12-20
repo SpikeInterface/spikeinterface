@@ -79,14 +79,14 @@ from .globals import (
 
 # tools
 from .core_tools import (
-    write_binary_recording,
-    write_to_h5_dataset_format,
-    write_binary_recording,
     read_python,
     write_python,
 )
 from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
 from .recording_tools import (
+    write_binary_recording,
+    write_to_h5_dataset_format,
+    write_binary_recording,
     get_random_data_chunks,
     get_channel_distances,
     get_closest_channels,
