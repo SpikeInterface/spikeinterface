@@ -548,6 +548,23 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
+    def rename_channels(self, new_channel_ids: list | np.array | tuple):
+        """
+        Returns a new recording object with renamed channel ids.
+
+        Parameters
+        ----------
+        new_channel_ids : list or np.array or tuple
+            The new channel ids. They are mapped possitionally to the old channel ids.
+        """
+        from .channelslice import ChannelSliceRecording
+
+        assert len(new_channel_ids) == self.get_num_channels(), (
+            "new_channel_ids must have the same length as the " "number of channels in the recording"
+        )
+
+        return ChannelSliceRecording(self, renamed_channel_ids=new_channel_ids)
+
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceRecording
 
