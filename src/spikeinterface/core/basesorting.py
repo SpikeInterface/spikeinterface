@@ -240,6 +240,18 @@ class BaseSorting(BaseExtractor):
                 warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
 
+        elif format == "zarr":
+            from .zarrextractors import ZarrSortingExtractor
+
+            zarr_path = save_kwargs.pop("zarr_path")
+            storage_options = save_kwargs.pop("storage_options")
+            ZarrSortingExtractor.write_sorting(self, zarr_path, storage_options, **save_kwargs)
+            cached = ZarrSortingExtractor(zarr_path, storage_options)
+
+            if self.has_recording():
+                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
+                cached.register_recording(self._recording)
+
         elif format == "npz_folder":
             from .sortingfolder import NpzFolderSorting
 
@@ -496,7 +508,9 @@ class BaseSorting(BaseExtractor):
                 for unit_id in unit_ids:
                     self.get_unit_spike_train(unit_id, segment_index=segment_index, use_cache=True)
 
-    def to_spike_vector(self, concatenated=True, extremum_channel_inds=None, use_cache=True):
+    def to_spike_vector(
+        self, concatenated=True, extremum_channel_inds=None, use_cache=True
+    ) -> np.ndarray | list[np.ndarray]:
         """
         Construct a unique structured numpy vector concatenating all spikes
         with several fields: sample_index, unit_index, segment_index.
@@ -678,3 +692,35 @@ class BaseSortingSegment(BaseSegment):
         """
         # must be implemented in subclass
         raise NotImplementedError
+
+
+class SpikeVectorSortingSegment(BaseSortingSegment):
+    """
+    A sorting segment that stores spike times as a spike vector.
+    """
+
+    def __init__(self, spikes, segment_index, unit_ids):
+        BaseSortingSegment.__init__(self)
+        self.spikes = spikes
+        self.segment_index = segment_index
+        self.unit_ids = list(unit_ids)
+        self.spikes_in_seg = None
+
+    def get_unit_spike_train(self, unit_id, start_frame, end_frame):
+        if self.spikes_in_seg is None:
+            # the slicing of segment is done only once the first time
+            # this fasten the constructor a lot
+            s0, s1 = np.searchsorted(self.spikes["segment_index"], [self.segment_index, self.segment_index + 1])
+            self.spikes_in_seg = self.spikes[s0:s1]
+
+        start = 0 if start_frame is None else np.searchsorted(self.spikes_in_seg["sample_index"], start_frame)
+        end = (
+            len(self.spikes_in_seg)
+            if end_frame is None
+            else np.searchsorted(self.spikes_in_seg["sample_index"], end_frame)
+        )
+
+        unit_index = self.unit_ids.index(unit_id)
+        times = self.spikes_in_seg[start:end][self.spikes_in_seg[start:end]["unit_index"] == unit_index]["sample_index"]
+
+        return times

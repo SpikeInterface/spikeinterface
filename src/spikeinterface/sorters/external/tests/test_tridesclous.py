@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 from spikeinterface.extractors import toy_example
-from spikeinterface.sorters import TridesclousSorter, run_tridesclous
+from spikeinterface.sorters import TridesclousSorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
 
