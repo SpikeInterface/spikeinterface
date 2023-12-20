@@ -60,6 +60,7 @@ def test_find_recording_folders():
     # in this case the paths are in 3 separate drives
     assert len(f3) == 3
 
+
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
 def test_ContainerClient():
     mode = "docker"
@@ -80,46 +81,47 @@ def test_ContainerClient():
 
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
 def test_install_package_in_container():
-
     host_spikeinterface_source = Path(__file__).parents[4].as_posix()
-
 
     mode = "docker"
     container_image = "spikeinterface/tridesclous-base"
-    volumes = {
-        host_spikeinterface_source: {"bind": "/spikeinterface_container_sources", "mode": "ro"}
-    }
+    volumes = {host_spikeinterface_source: {"bind": "/spikeinterface_container_sources", "mode": "ro"}}
     py_user_base = None
     extra_kwargs = {}
 
     container_client = ContainerClient(mode, container_image, volumes, py_user_base, extra_kwargs)
     container_client.start()
-    
+
     txt = container_client.run_command("pip install --user --upgrade pip")
-    
+
     # # pypi installation
-    txt = install_package_in_container(container_client, "neo",  installation_mode="pypi", version="0.11.0")
+    txt = install_package_in_container(container_client, "neo", installation_mode="pypi", version="0.11.0")
     # print(txt)
     txt = container_client.run_command("pip list")
     # print(txt)
 
     # # github installation
-    txt = install_package_in_container(container_client, "spikeinterface", extra="[full]", installation_mode="github", version="0.99.0")
+    txt = install_package_in_container(
+        container_client, "spikeinterface", extra="[full]", installation_mode="github", version="0.99.0"
+    )
     # print(txt)
     txt = container_client.run_command("pip list")
     # print(txt)
 
     # folder installation
-    txt = install_package_in_container(container_client, "spikeinterface", extra="[full]",
-                                installation_mode="folder", container_folder_source="/spikeinterface_container_sources")
+    txt = install_package_in_container(
+        container_client,
+        "spikeinterface",
+        extra="[full]",
+        installation_mode="folder",
+        container_folder_source="/spikeinterface_container_sources",
+    )
     # print(txt)
 
     txt = container_client.run_command("pip list")
     # print(txt)
 
-
     container_client.stop()
-
 
 
 if __name__ == "__main__":

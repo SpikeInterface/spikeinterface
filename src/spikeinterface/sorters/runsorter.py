@@ -16,7 +16,13 @@ from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_editable_mode
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError, has_nvidia
-from .container_tools import find_recording_folders, path_to_unix, windows_extractor_dict_to_unix, ContainerClient, install_package_in_container
+from .container_tools import (
+    find_recording_folders,
+    path_to_unix,
+    windows_extractor_dict_to_unix,
+    ContainerClient,
+    install_package_in_container,
+)
 
 
 REGISTRY = "spikeinterface"
@@ -191,7 +197,6 @@ def run_sorter_local(
     return sorting
 
 
-
 def run_sorter_container(
     sorter_name: str,
     recording: BaseRecording,
@@ -250,7 +255,7 @@ def run_sorter_container(
           * "no-install": do not install spikeinterface in the container because it is already installed
     spikeinterface_folder_source: None or Path, default: None
         In case of installation_mode="folder", this must be the spikeinterface folder source for the container.
-        
+
     **sorter_params: keyword args for the sorter
 
     """
@@ -358,7 +363,9 @@ if __name__ == '__main__':
             print(f"installation_mode='auto' switching to installation_mode: '{installation_mode}'")
 
     if installation_mode == "folder":
-        assert spikeinterface_folder_source is not None, "for installation_mode='folder', spikeinterface_folder_source must be provided"
+        assert (
+            spikeinterface_folder_source is not None
+        ), "for installation_mode='folder', spikeinterface_folder_source must be provided"
         host_folder_source = Path(spikeinterface_folder_source)
 
     if installation_mode == "dev":
@@ -367,7 +374,7 @@ if __name__ == '__main__':
     if host_folder_source is not None:
         host_folder_source = host_folder_source.resolve()
         # this bind is read only  and will be copy later
-        container_folder_source_ro = '/spikeinterface'
+        container_folder_source_ro = "/spikeinterface"
         volumes[str(host_folder_source)] = {"bind": container_folder_source_ro, "mode": "ro"}
 
     extra_kwargs = {}
@@ -422,32 +429,58 @@ if __name__ == '__main__':
         res_output = container_client.run_command(cmd)
 
         if installation_mode == "pypi":
-            install_package_in_container(container_client, "spikeinterface", installation_mode="pypi",
-                                         extra="[full]", version=si_version, verbose=verbose)
+            install_package_in_container(
+                container_client,
+                "spikeinterface",
+                installation_mode="pypi",
+                extra="[full]",
+                version=si_version,
+                verbose=verbose,
+            )
 
         elif installation_mode == "github":
             if DEV_MODE:
-                install_package_in_container(container_client, "spikeinterface", installation_mode="github",
-                                            github_url = "https://github.com/SpikeInterface/spikeinterface",
-                                            extra="[full]", tag="main", verbose=verbose)
+                install_package_in_container(
+                    container_client,
+                    "spikeinterface",
+                    installation_mode="github",
+                    github_url="https://github.com/SpikeInterface/spikeinterface",
+                    extra="[full]",
+                    tag="main",
+                    verbose=verbose,
+                )
             else:
-                install_package_in_container(container_client, "spikeinterface", installation_mode="github",
-                                            github_url = "https://github.com/SpikeInterface/spikeinterface",
-                                            extra="[full]", version=si_version, verbose=verbose)
+                install_package_in_container(
+                    container_client,
+                    "spikeinterface",
+                    installation_mode="github",
+                    github_url="https://github.com/SpikeInterface/spikeinterface",
+                    extra="[full]",
+                    version=si_version,
+                    verbose=verbose,
+                )
         elif host_folder_source is not None:
             # this is "dev" + "folder"
-            install_package_in_container(container_client, "spikeinterface", installation_mode="folder",
-                                        extra="[full]", container_folder_source=container_folder_source_ro,
-                                        verbose=verbose)
+            install_package_in_container(
+                container_client,
+                "spikeinterface",
+                installation_mode="folder",
+                extra="[full]",
+                container_folder_source=container_folder_source_ro,
+                verbose=verbose,
+            )
 
         if installation_mode == "dev":
             # also install neo from github
             # cmd = "pip install --user --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
             # res_output = container_client.run_command(cmd)
-            install_package_in_container(container_client, "neo", installation_mode="github",
-                                         github_url="https://github.com/NeuralEnsemble/python-neo", tag="master")
-
-
+            install_package_in_container(
+                container_client,
+                "neo",
+                installation_mode="github",
+                github_url="https://github.com/NeuralEnsemble/python-neo",
+                tag="master",
+            )
 
     if hasattr(recording, "extra_requirements"):
         extra_requirements.extend(recording.extra_requirements)

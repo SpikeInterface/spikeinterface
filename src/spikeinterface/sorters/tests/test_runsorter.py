@@ -18,6 +18,7 @@ else:
 
 rec_folder = cache_folder / "recording"
 
+
 def setup_module():
     if rec_folder.exists():
         shutil.rmtree(rec_folder)
@@ -29,7 +30,6 @@ def test_run_sorter_local():
     # local_path = download_dataset(remote_path="mearec/mearec_test_10s.h5")
     # recording, sorting_true = read_mearec(local_path)
     recording = load_extractor(rec_folder)
-
 
     sorter_params = {"detect_threshold": 4.9}
 
@@ -86,7 +86,7 @@ def test_run_sorter_singularity():
     # recording, sorting_true = read_mearec(mearec_filename)
 
     output_folder = cache_folder / "sorting_tdc_singularity"
-    
+
     recording = load_extractor(rec_folder)
 
     sorter_params = {"detect_threshold": 4.9}

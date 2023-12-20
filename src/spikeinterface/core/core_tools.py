@@ -1047,10 +1047,12 @@ def convert_bytes_to_str(byte_value: int) -> str:
         i += 1
     return f"{byte_value:.2f} {suffixes[i]}"
 
+
 def is_editable_mode() -> bool:
     """
     Check if spikeinterface is installed in editable mode
     pip install -e .
     """
     import spikeinterface
+
     return (Path(spikeinterface.__file__).parents[2] / "README.md").exists()

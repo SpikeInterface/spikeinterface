@@ -37,6 +37,7 @@ def find_recording_folders(d):
 
     return base_folders_to_mount
 
+
 def path_to_unix(path):
     path = Path(path)
     if platform.system() == "Windows":
@@ -163,11 +164,17 @@ class ContainerClient:
             return res
 
 
-def install_package_in_container(container_client, package_name, 
-                                installation_mode="pypi", extra=None, version=None, tag=None,
-                                github_url=None,
-                                container_folder_source=None, verbose=False,
-                                ):
+def install_package_in_container(
+    container_client,
+    package_name,
+    installation_mode="pypi",
+    extra=None,
+    version=None,
+    tag=None,
+    github_url=None,
+    container_folder_source=None,
+    verbose=False,
+):
     assert installation_mode in ("pypi", "github", "folder")
 
     if "[" in package_name:
@@ -189,7 +196,7 @@ def install_package_in_container(container_client, package_name,
         if version is not None:
             cmd += f"=={version}"
         res_output = container_client.run_command(cmd)
-                
+
     elif installation_mode == "github":
         if version is None and tag is None:
             tag_or_version = "main"
@@ -197,7 +204,7 @@ def install_package_in_container(container_client, package_name,
             tag_or_version = tag
         elif version is not None:
             tag_or_version = version
-        
+
         if github_url is None:
             github_url = "https://github.com/SpikeInterface/spikeinterface"
 
