@@ -603,7 +603,7 @@ _single_channel_metric_name_to_func = {
 
 def transform_column_range(template, channel_locations, column_range, depth_direction="y"):
     """
-    Transform template anch channel locations based on column range.
+    Transform template and channel locations based on column range.
     """
     column_dim = 0 if depth_direction == "y" else 1
     if column_range is None:
@@ -682,15 +682,20 @@ def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs
 
     channels_above = channel_locations[:, depth_dim] >= max_channel_location[depth_dim]
 
-    # we only consider samples forward in time with respect to the max channel
-    # TODO: not sure
-    # template_above = template[max_sample_idx:, channels_above]
+    # if not enough channels return NaN
+    if np.sum(channels_above) < min_channels_for_velocity:
+        return np.nan
+
     template_above = template[:, channels_above]
     channel_locations_above = channel_locations[channels_above]
 
     peak_times_ms_above = np.argmin(template_above, 0) / sampling_frequency * 1000 - max_peak_time
     distances_um_above = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations_above])
     velocity_above, intercept, score = fit_velocity(peak_times_ms_above, distances_um_above)
+
+    # if r2 score is to low return NaN
+    if score < min_r2_velocity:
+        return np.nan
 
     # if DEBUG:
     #     import matplotlib.pyplot as plt
@@ -712,9 +717,6 @@ def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs
     #         f"Velocity above: {velocity_above:.2f} um/ms - score {score:.2f} - channels: {np.sum(channels_above)}"
     #     )
     #     plt.show()
-
-    if np.sum(channels_above) < min_channels_for_velocity or score < min_r2_velocity:
-        velocity_above = np.nan
 
     return velocity_above
 
@@ -758,14 +760,20 @@ def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs
 
     channels_below = channel_locations[:, depth_dim] <= max_channel_location[depth_dim]
 
-    # we only consider samples forward in time with respect to the max channel
-    # template_below = template[max_sample_idx:, channels_below]
+    # if not enough channels return NaN
+    if np.sum(channels_below) < min_channels_for_velocity:
+        return np.nan
+
     template_below = template[:, channels_below]
     channel_locations_below = channel_locations[channels_below]
 
     peak_times_ms_below = np.argmin(template_below, 0) / sampling_frequency * 1000 - max_peak_time
     distances_um_below = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations_below])
     velocity_below, intercept, score = fit_velocity(peak_times_ms_below, distances_um_below)
+
+    # if r2 score is to low return NaN
+    if score < min_r2_velocity:
+        return np.nan
 
     # if DEBUG:
     #     import matplotlib.pyplot as plt
@@ -787,9 +795,6 @@ def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs
     #         f"Velocity below: {np.round(velocity_below, 3)} um/ms - score {score:.2f} - channels: {np.sum(channels_below)}"
     #     )
     #     plt.show()
-
-    if np.sum(channels_below) < min_channels_for_velocity or score < min_r2_velocity:
-        velocity_below = np.nan
 
     return velocity_below
 
@@ -903,7 +908,6 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs):
     template, channel_locations = sort_template_and_locations(template, channel_locations, depth_direction)
 
     MM = np.ptp(template, 0)
-    MM = MM / np.max(MM)
     channel_depths = channel_locations[:, depth_dim]
 
     if spread_smooth_um is not None and spread_smooth_um > 0:
@@ -912,9 +916,12 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs):
         spread_sigma = spread_smooth_um / np.median(np.diff(np.unique(channel_depths)))
         MM = gaussian_filter1d(MM, spread_sigma)
 
-    channel_locations_above_theshold = channel_locations[MM > spread_threshold]
-    channel_depth_above_theshold = channel_locations_above_theshold[:, depth_dim]
-    spread = np.ptp(channel_depth_above_theshold)
+    MM = MM / np.max(MM)
+
+    channel_locations_above_threshold = channel_locations[MM > spread_threshold]
+    channel_depth_above_threshold = channel_locations_above_threshold[:, depth_dim]
+
+    spread = np.ptp(channel_depth_above_threshold)
 
     # if DEBUG:
     #     import matplotlib.pyplot as plt

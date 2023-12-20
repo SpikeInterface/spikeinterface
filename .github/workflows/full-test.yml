@@ -123,6 +123,10 @@ jobs:
               echo "Sortingcomponents changed"
               echo "SORTINGCOMPONENTS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
+            if [[ $file == *"/generation/"* ]]; then
+              echo "Generation changed"
+              echo "GENERATION_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
           done
       - name: Set execute permissions on run_tests.sh
         run: chmod +x .github/run_tests.sh
@@ -149,7 +153,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh sorters
       - name: Test comparison
-        if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.GENERATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh comparison
       - name: Test curation
         if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
@@ -166,3 +170,6 @@ jobs:
       - name: Test internal sorters
         if: ${{ steps.modules-changed.outputs.SORTERS_INTERNAL_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh sorters_internal
+      - name: Test generation
+        if: ${{ steps.modules-changed.outputs.GENERATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        run: ./.github/run_tests.sh generation
