@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from probeinterface import ProbeGroup
-
 import numpy as np
+import zarr
+
+from probeinterface import ProbeGroup
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
-
-try:
-    import zarr
-
-    HAVE_ZARR = True
-except ImportError:
-    HAVE_ZARR = False
 
 
 class ZarrRecordingExtractor(BaseRecording):
@@ -36,10 +30,9 @@ class ZarrRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "ZarrRecording"
-    installed = HAVE_ZARR  # check at class level if installed or not
-    mode = "file"
-    # error message when not installed
-    installation_mesg = "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
+    installed = True
+    mode = "folder"
+    installation_mesg = ""
     name = "zarr"
 
     def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
@@ -173,10 +166,9 @@ class ZarrSortingExtractor(BaseSorting):
     """
 
     extractor_name = "ZarrSorting"
-    installed = HAVE_ZARR  # check at class level if installed or not
-    mode = "file"
-    # error message when not installed
-    installation_mesg = "To use the ZarrSortingExtractor install zarr: \n\n pip install zarr\n\n"
+    installed = True
+    mode = "folder"
+    installation_mesg = ""
     name = "zarr"
 
     def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
