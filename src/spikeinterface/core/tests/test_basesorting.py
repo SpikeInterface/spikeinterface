@@ -130,6 +130,17 @@ def test_BaseSorting():
     del sorting6
     del sorting5
 
+    # test save to zarr
+    # compressor = get_default_zarr_compressor()
+    sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting")
+    sorting_zarr_loaded = load_extractor(cache_folder / "sorting.zarr")
+    # annotations is False because Zarr adds compression ratios
+    check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
+    check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
+    for annotation_name in sorting.get_annotation_keys():
+        assert sorting.get_annotation(annotation_name) == sorting_zarr.get_annotation(annotation_name)
+        assert sorting.get_annotation(annotation_name) == sorting_zarr_loaded.get_annotation(annotation_name)
+
 
 def test_npy_sorting():
     sfreq = 10
