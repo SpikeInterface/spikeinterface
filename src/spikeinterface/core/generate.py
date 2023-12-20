@@ -350,6 +350,7 @@ class TransformSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
+        self.parent_unit_ids = sorting.unit_ids
         self._cached_spike_vector = sorting.to_spike_vector().copy()
         self.refractory_period_ms = refractory_period_ms
 
@@ -360,7 +361,7 @@ class TransformSorting(BaseSorting):
             assert (
                 added_spikes_existing_units.dtype == minimum_spike_dtype
             ), "added_spikes_existing_units should be a spike vector"
-            added_unit_indices = np.arange(len(sorting.unit_ids))
+            added_unit_indices = np.arange(len(self.parent_unit_ids))
             self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_existing_units), dtype=bool))
@@ -416,9 +417,7 @@ class TransformSorting(BaseSorting):
         return np.nonzero(self.added_spikes_from_new_mask)[0]
 
     def get_added_units_inds(self):
-        indices = self._cached_spike_vector["unit_index"][self.get_added_spikes_from_new_indices()]
-        return np.unique(self.unit_ids[indices])
-        #return self.unit_ids[len(sorting.unit_ids):]
+        return self.unit_ids[len(self.parent_unit_ids):]
 
     @staticmethod
     def add_from_sorting(sorting1: BaseSorting, sorting2: BaseSorting, refractory_period_ms=None) -> "TransformSorting":
