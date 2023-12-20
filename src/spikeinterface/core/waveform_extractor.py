@@ -4,7 +4,7 @@ import math
 import pickle
 from pathlib import Path
 import shutil
-from typing import Iterable, Literal, Optional
+from typing import Literal, Optional
 import json
 import os
 import weakref
@@ -1242,7 +1242,9 @@ class WaveformExtractor:
                 template_file = self.folder / f"templates_{mode_names[mode]}.npy"
                 np.save(template_file, templates)
 
-    def get_all_templates(self, unit_ids: Optional[Iterable] = None, mode="average", percentile: float | None = None):
+    def get_all_templates(
+        self, unit_ids: list | np.array | tuple | None = None, mode="average", percentile: float | None = None
+    ):
         """
         Return templates (average waveforms) for multiple units.
 

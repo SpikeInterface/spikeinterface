@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 import warnings
 
@@ -49,7 +50,7 @@ class FrameSliceSorting(BaseSorting):
                 end_frame = parent_n_samples
             assert (
                 end_frame <= parent_n_samples
-            ), "`end_frame` should be smaller than the sortings' total number of samples."
+            ), f"`end_frame` should be smaller than the sortings' total number of samples {parent_n_samples}."
             assert (
                 start_frame <= parent_n_samples
             ), "`start_frame` should be smaller than the sortings' total number of samples."
