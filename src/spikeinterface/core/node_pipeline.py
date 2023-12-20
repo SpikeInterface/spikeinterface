@@ -49,23 +49,20 @@ class PipelineNode:
         parents: Optional[list[Type["PipelineNode"]]] = None,
     ):
         """
-                This is a generic object that will make some computation on peaks given a buffer of traces.
-                Typically used for exctrating features (amplitudes, localization, ...)
+        This is a generic object that will make some computation on peaks given a buffer of traces.
+        Typically used for exctrating features (amplitudes, localization, ...)
 
-                A Node can optionally connect to other nodes with the parents and receive inputs from them.
+        A Node can optionally connect to other nodes with the parents and receive inputs from them.
 
-                Parameters
-                ----------
-                recording : BaseRecording
-                    The recording object.
-                return_output : bool or tuple[bool], default: True
-                    Whether or not the output of the node is returned by the pipeline.
-                    When a Node have several toutputs then this can be a tuple of bool
-                parents : Optional[list[PipelineNode]], default: None
-                    Pass parents nodes to perform a previous computation
-        .
-
-
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording object.
+        return_output : bool or tuple[bool], default: True
+            Whether or not the output of the node is returned by the pipeline.
+            When a Node have several toutputs then this can be a tuple of bool
+        parents : Optional[list[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation.
         """
 
         self.recording = recording
