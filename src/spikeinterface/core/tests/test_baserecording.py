@@ -163,14 +163,20 @@ def test_BaseRecording():
 
     # cache to memory
     rec4 = rec3.save(format="memory")
-
     traces4 = rec4.get_traces(segment_index=0)
     traces = rec.get_traces(segment_index=0)
     assert np.array_equal(traces4, traces)
 
+    # cache to sharedmemory
+    rec5 = rec3.save(format="sharedmemory")
+    traces5 = rec5.get_traces(segment_index=0)
+    traces = rec.get_traces(segment_index=0)
+    assert np.array_equal(traces5, traces)
+
+
     # cache joblib several jobs
     folder = cache_folder / "simple_recording2"
-    rec2 = rec.save(folder=folder, chunk_size=10, n_jobs=4)
+    rec2 = rec.save(format="binary", folder=folder, chunk_size=10, n_jobs=4)
     traces2 = rec2.get_traces(segment_index=0)
 
     # set/get Probe only 2 channels
