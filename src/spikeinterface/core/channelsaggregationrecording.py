@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 
 import numpy as np
 
@@ -121,9 +121,9 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         return_all_channels = False
         if channel_indices is None:

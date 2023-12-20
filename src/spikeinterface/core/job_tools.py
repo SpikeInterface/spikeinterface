@@ -1,6 +1,7 @@
 """
 Some utils to handle parallel jobs on top of job and/or loky
 """
+from __future__ import annotations
 from pathlib import Path
 import numpy as np
 import platform

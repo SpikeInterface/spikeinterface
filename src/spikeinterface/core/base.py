@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-import re
+import shutil
 from typing import Any, Iterable, List, Optional, Sequence, Union
 import importlib
 import warnings
@@ -761,7 +761,7 @@ class BaseExtractor:
             file = None
 
             if folder.suffix == ".zarr":
-                from .zarrrecordingextractor import read_zarr
+                from .zarrextractors import read_zarr
 
                 extractor = read_zarr(folder)
             else:
@@ -942,52 +942,41 @@ class BaseExtractor:
         self,
         name=None,
         folder=None,
+        overwrite=False,
         storage_options=None,
         channel_chunk_size=None,
         verbose=True,
-        zarr_path=None,
         **save_kwargs,
     ):
         """
         Save extractor to zarr.
 
-        The save consist of:
-            * extracting traces by calling get_trace() method in chunks
-            * saving data into a zarr file
-            * dumping the original extractor for provenance in attributes
-
         Parameters
         ----------
         name: str or None, default: None
             Name of the subfolder in get_global_tmp_folder()
-            If "name" is given, "folder" must be None.
+            If "name" is given, "folder" must be None
         folder: str, Path, or None, default: None
             The folder used to save the zarr output. If the folder does not have a ".zarr" suffix,
-            it will be automatically appended.
+            it will be automatically appended
+        overwrite: bool, default: False
+            If True, the folder is removed if it already exists
         storage_options: dict or None, default: None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
         channel_chunk_size: int or None, default: None
-            Channels per chunk
+            Channels per chunk (only for BaseRecording)
         verbose: bool, default: True
             If True, the output is verbose
-        zarr_path: str, Path, or None, default: None
-            (Deprecated) Name of the zarr folder (.zarr)
-        **save_kwargs: Keyword arguments for saving.
+        **save_kwargs: Keyword arguments for saving to zarr
 
         Returns
         -------
-        cached: ZarrRecordingExtractor
+        cached: ZarrExtractor
             Saved copy of the extractor.
         """
         import zarr
-        from .zarrrecordingextractor import read_zarr
-
-        if zarr_path is not None:
-            warnings.warn(
-                "The 'zarr_path' argument is deprecated. " "Use 'folder' instead", DeprecationWarning, stacklevel=2
-            )
-            folder = zarr_path
+        from .zarrextractors import read_zarr
 
         if folder is None:
             cache_folder = get_global_tmp_folder()
@@ -1006,38 +995,18 @@ class BaseExtractor:
                 folder = Path(folder)
                 if folder.suffix != ".zarr":
                     folder = folder.parent / f"{folder.stem}.zarr"
+                if folder.is_dir() and overwrite:
+                    shutil.rmtree(folder)
                 zarr_path = folder
-                zarr_path_init = str(zarr_path)
             else:
                 zarr_path = folder
-                zarr_path_init = zarr_path
 
         if isinstance(zarr_path, Path):
             assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
-
-        zarr_root = zarr.open(zarr_path_init, mode="w", storage_options=storage_options)
-
-        if self.check_if_json_serializable():
-            zarr_root.attrs["provenance"] = check_json(self.to_dict())
-        else:
-            zarr_root.attrs["provenance"] = None
-
-        # save data (done the subclass)
-        save_kwargs["zarr_root"] = zarr_root
         save_kwargs["zarr_path"] = zarr_path
         save_kwargs["storage_options"] = storage_options
         save_kwargs["channel_chunk_size"] = channel_chunk_size
         cached = self._save(verbose=verbose, **save_kwargs)
-
-        # save properties
-        prop_group = zarr_root.create_group("properties")
-        for key in self.get_property_keys():
-            values = self.get_property(key)
-            prop_group.create_dataset(name=key, data=values, compressor=None)
-
-        # save annotations
-        zarr_root.attrs["annotations"] = check_json(self._annotations)
-
         cached = read_zarr(zarr_path)
 
         return cached

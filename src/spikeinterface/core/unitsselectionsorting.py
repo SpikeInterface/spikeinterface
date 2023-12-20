@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 
 import numpy as np
 
@@ -56,8 +56,8 @@ class UnitsSelectionSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         unit_id_parent = self._ids_conversion[unit_id]
         times = self._parent_segment.get_unit_spike_train(unit_id_parent, start_frame, end_frame)

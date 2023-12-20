@@ -7,6 +7,3 @@ This module proposes several approaches for this including purely synthetic reco
 
 The :py:mod:`spikeinterface.core.generate` already provides functions for generating synthetic data but this module will supply an extended and more complex
 machinery, for instance generating recordings that possess various types of drift.
-
-
-
