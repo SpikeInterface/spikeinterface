@@ -180,34 +180,60 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
             self.operator_func = lambda x: np.mean(x, axis=1, out=self.temp)[:, None]
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        # need input trace
-        all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
-        all_traces = all_traces.astype(self.dtype)
-        self.temp = np.zeros((all_traces.shape[0],), dtype=all_traces.dtype)
-        _channel_indices = np.arange(all_traces.shape[1])
-        if channel_indices is not None:
-            _channel_indices = _channel_indices[channel_indices]
+        # Let's do the case with group_indices equal None as that is easy
+        if self.group_indices is None:
+            operator = np.mean if self.operator == "average" else np.median
 
-        out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=self.dtype)
+            # We need all the channels to calculate the reference
+            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
 
-        if self.reference == "global":
-            for chan_inds, chan_group_inds in self._groups(_channel_indices):
-                out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
-                out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(all_traces[:, chan_group_inds])
+            if self.reference == "global":
+                shift = operator(traces, axis=1, keepdims=True)
+                re_referenced_traces = traces[:, channel_indices] - shift[:, channel_indices]
+            elif self.reference == "single":
+                shift = operator(traces[:, self.ref_channel_indices], axis=1, keepdims=True)
+                re_referenced_traces = traces[:, channel_indices] - shift[:, channel_indices]
+            elif self.reference == "local":
+                re_referenced_traces = np.zeros_like(traces[:, channel_indices])
+                for channel_index, channel_neighbords in self.neighbors.items():
+                    channel_shift = operator(traces[:, channel_neighbords], axis=1)
+                    re_referenced_traces[:, channel_index] = traces[:, channel_index] - channel_shift
 
-        elif self.reference == "single":
-            for i, (chan_inds, _) in enumerate(self._groups(_channel_indices)):
-                out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
-                out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(
-                    all_traces[:, [self.ref_channel_indices[i]]]
-                )
+            return re_referenced_traces.astype(self.dtype, copy=False)
 
-        elif self.reference == "local":
-            for i, chan_ind in enumerate(_channel_indices):
-                out_traces[:, [i]] = all_traces[:, [chan_ind]] - self.operator_func(
-                    all_traces[:, self.neighbors[chan_ind]]
-                )
-        return out_traces
+        # Then the old implementation for backwards compatibility that supports grouping
+        else:
+            # need input trace
+            all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
+            all_traces = all_traces.astype(self.dtype)
+
+            self.temp = np.zeros((all_traces.shape[0],), dtype=all_traces.dtype)
+            _channel_indices = np.arange(all_traces.shape[1])
+            if channel_indices is not None:
+                _channel_indices = _channel_indices[channel_indices]
+
+            out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=self.dtype)
+
+            if self.reference == "global":
+                for chan_inds, chan_group_inds in self._groups(_channel_indices):
+                    out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
+                    out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(
+                        all_traces[:, chan_group_inds]
+                    )
+
+            elif self.reference == "single":
+                for i, (chan_inds, _) in enumerate(self._groups(_channel_indices)):
+                    out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
+                    out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(
+                        all_traces[:, [self.ref_channel_indices[i]]]
+                    )
+
+            elif self.reference == "local":
+                for i, chan_ind in enumerate(_channel_indices):
+                    out_traces[:, [i]] = all_traces[:, [chan_ind]] - self.operator_func(
+                        all_traces[:, self.neighbors[chan_ind]]
+                    )
+            return out_traces
 
     def _groups(self, channel_indices):
         selected_groups = []
