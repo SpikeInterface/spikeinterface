@@ -10,10 +10,12 @@ from typing import Optional, Union
 from spikeinterface import DEV_MODE
 import spikeinterface
 
-from ..core import BaseRecording, NumpySorting
+
 from .. import __version__ as si_version
-from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
-from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_editable_mode
+
+
+from ..core import BaseRecording, NumpySorting, load_extractor
+from ..core.core_tools import check_json, is_editable_mode
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError, has_nvidia
 from .container_tools import (
@@ -211,6 +213,7 @@ def run_sorter_container(
     delete_container_files: bool = True,
     extra_requirements=None,
     installation_mode="auto",
+    spikeinterface_version=None,
     spikeinterface_folder_source=None,
     **sorter_params,
 ):
@@ -253,6 +256,8 @@ def run_sorter_container(
                       cross checks.
           * "dev": same as dev but the folder is the spikeinterface.__file__ to ensure same version as host.
           * "no-install": do not install spikeinterface in the container because it is already installed
+    spikeinterface_version: str, default: None
+        The spikeinterface version to install in the container. If None, the current version is used.
     spikeinterface_folder_source: None or Path, default: None
         In case of installation_mode="folder", this must be the spikeinterface folder source for the container.
 
@@ -261,6 +266,7 @@ def run_sorter_container(
     """
 
     assert installation_mode in ("auto", "pypi", "github", "folder", "dev", "no-install")
+    spikeinterface_version = spikeinterface_version or si_version
 
     if extra_requirements is None:
         extra_requirements = []
@@ -303,13 +309,13 @@ def run_sorter_container(
         json.dumps(check_json(sorter_params), indent=4), encoding="utf8"
     )
 
-    npz_sorting_path = output_folder / "in_container_sorting"
+    in_container_sorting_folder = output_folder / "in_container_sorting"
 
     # if in Windows, skip C:
     parent_folder_unix = path_to_unix(parent_folder)
     output_folder_unix = path_to_unix(output_folder)
     recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
-    npz_sorting_path_unix = path_to_unix(npz_sorting_path)
+    in_container_sorting_folder_unix = path_to_unix(in_container_sorting_folder)
 
     # the py script
     py_script = f"""
@@ -339,7 +345,7 @@ if __name__ == '__main__':
         remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
         verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
-    sorting.save_to_folder(folder='{npz_sorting_path_unix}')
+    sorting.save(folder='{in_container_sorting_folder_unix}')
 """
     (parent_folder / "in_container_sorter_script.py").write_text(py_script, encoding="utf8")
 
@@ -404,9 +410,6 @@ if __name__ == '__main__':
         py_user_base_folder = parent_folder / "in_container_python_base"
         py_user_base_folder.mkdir(parents=True, exist_ok=True)
         py_user_base_unix = path_to_unix(py_user_base_folder)
-        container_folder_source = f"{py_user_base_unix}/sources"
-    else:
-        container_folder_source = "/sources"
 
     container_client = ContainerClient(mode, container_image, volumes, py_user_base_unix, extra_kwargs)
     if verbose:
@@ -434,7 +437,7 @@ if __name__ == '__main__':
                 "spikeinterface",
                 installation_mode="pypi",
                 extra="[full]",
-                version=si_version,
+                version=spikeinterface_version,
                 verbose=verbose,
             )
 
@@ -456,7 +459,7 @@ if __name__ == '__main__':
                     installation_mode="github",
                     github_url="https://github.com/SpikeInterface/spikeinterface",
                     extra="[full]",
-                    version=si_version,
+                    version=spikeinterface_version,
                     verbose=verbose,
                 )
         elif host_folder_source is not None:
@@ -552,14 +555,8 @@ if __name__ == '__main__':
             try:
                 sorting = SorterClass.get_result_from_folder(output_folder)
             except Exception as e:
-                if verbose:
-                    print(
-                        "Failed to get result with sorter specific extractor.\n"
-                        f"Error Message: {e}\n"
-                        "Getting result from in-container saved NpzSortingExtractor"
-                    )
                 try:
-                    sorting = NpzSortingExtractor.load_from_folder(npz_sorting_path)
+                    sorting = load_extractor(in_container_sorting_folder)
                 except FileNotFoundError:
                     SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 
@@ -568,14 +565,6 @@ if __name__ == '__main__':
         shutil.rmtree(sorter_output_folder)
 
     return sorting
-
-
-_common_run_doc = (
-    """
-    Runs {} sorter
-    """
-    + _common_param_doc
-)
 
 
 def read_sorter_folder(output_folder, register_recording=True, sorting_info=True, raise_error=True):

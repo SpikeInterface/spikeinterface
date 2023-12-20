@@ -217,7 +217,7 @@ def install_package_in_container(
         assert tag is None
 
         if container_client.mode == "singularity":
-            folder_copy = f"{container_client.py_user_base_unix}/sources/"
+            folder_copy = f"{container_client.py_user_base}/sources/"
         else:
             folder_copy = "/sources/"
 
