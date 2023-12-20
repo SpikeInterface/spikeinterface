@@ -1,6 +1,6 @@
 from .base import load_extractor  # , load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .basesorting import BaseSorting, BaseSortingSegment
+from .basesorting import BaseSorting, BaseSortingSegment, SpikeVectorSortingSegment
 from .baseevent import BaseEvent, BaseEventSegment
 from .basesnippets import BaseSnippets, BaseSnippetsSegment
 from .baserecordingsnippets import BaseRecordingSnippets

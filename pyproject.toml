@@ -21,9 +21,10 @@ classifiers = [
 
 dependencies = [
     "numpy",
-    "neo>=0.12.0",
     "threadpoolctl",
     "tqdm",
+    "zarr",
+    "neo>=0.12.0",
     "probeinterface>=0.2.19",
 ]
 
@@ -83,7 +84,6 @@ streaming_extractors = [
 ]
 
 full = [
-    "zarr",
     "h5py",
     "pandas",
     "xarray",
@@ -112,7 +112,6 @@ qualitymetrics = [
 
 test_core = [
     "pytest",
-    "zarr",
     "psutil",
 ]
 
@@ -121,8 +120,6 @@ test = [
     "pytest-dependency",
     "pytest-cov",
 
-    # zarr is needed for testing
-    "zarr",
     "xarray",
     "huggingface_hub",
 

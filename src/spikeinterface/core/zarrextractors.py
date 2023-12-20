@@ -6,7 +6,7 @@ from probeinterface import ProbeGroup
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .basesorting import BaseSorting, BaseSortingSegment
+from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
 
@@ -198,12 +198,17 @@ class ZarrSortingExtractor(BaseSorting):
         assert "spikes" in self._root.keys(), "'spikes' dataset not found!"
         spikes_group = self._root["spikes"]
         segment_slices_list = spikes_group["segment_slices"][:]
-        segment_slices = [slice(s[0], s[1]) for s in segment_slices_list]
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
+        spikes = np.zeros(len(spikes_group["sample_index"]), dtype=minimum_spike_dtype)
+        spikes["sample_index"] = spikes_group["sample_index"][:]
+        spikes["unit_index"] = spikes_group["unit_index"][:]
+        for i, (start, end) in enumerate(segment_slices_list):
+            spikes["segment_index"][start:end] = i
+
         for segment_index in range(num_segments):
-            soring_segment = ZarrSortingSegment(spikes_group, segment_slices[segment_index], unit_ids)
+            soring_segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids)
             self.add_sorting_segment(soring_segment)
 
         # load properties
@@ -227,27 +232,6 @@ class ZarrSortingExtractor(BaseSorting):
         """
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
         add_sorting_to_zarr_group(sorting, zarr_root, **kwargs)
-
-
-class ZarrSortingSegment(BaseSortingSegment):
-    def __init__(self, spikes_dset, segment_slice, unit_ids):
-        BaseSortingSegment.__init__(self)
-        self._spikes_indices = spikes_dset["sample_index"][segment_slice]
-        self._unit_indices = spikes_dset["unit_index"][segment_slice]
-        self._unit_ids = list(unit_ids)
-
-    def get_unit_spike_train(
-        self,
-        unit_id,
-        start_frame: int | None = None,
-        end_frame: int | None = None,
-    ) -> np.ndarray:
-        start = 0 if start_frame is None else np.searchsorted(self._spikes_indices, start_frame)
-        end = len(self._spikes_indices) if end_frame is None else np.searchsorted(self._spikes_indices, end_frame)
-        sample_indices = self._spikes_indices[start:end]
-        unit_indices = self._unit_indices[start:end]
-        unit_index = self._unit_ids.index(unit_id)
-        return sample_indices[unit_indices == unit_index]
 
 
 read_zarr_recording = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr_recording")
