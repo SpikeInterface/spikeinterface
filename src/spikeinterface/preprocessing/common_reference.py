@@ -1,27 +1,49 @@
+from __future__ import annotations
 import numpy as np
+from typing import Optional, Literal
 
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import get_closest_channels
+from spikeinterface.core.baserecording import BaseRecording
 
 from .filter import fix_dtype
 
 
 class CommonReferenceRecording(BasePreprocessor):
     """
-    Re-references the recording extractor traces.
+    Re-references the recording extractor traces. That is, the value of the traces are
+    shifted so the there is a new zero (reference).
+
+    The new reference can be estimated either by using a common median reference (CMR) or
+    a common average reference (CAR).
+
+    The new reference can be set three ways:
+         * "global": the median/average of all channels is set as the new reference.
+            In this case, the 'global' median/average is subtracted from all channels.
+         * "single": In the simplest case, a single channel from the recording is set as the new reference.
+            This channel is subtracted from all other channels. To use this option, the `ref_channel_ids` argument
+            is used with a single channel id. Note that this option will zero out the reference channel.
+            A collection of channels can also be used as the new reference. In this case, the median/average of the
+            selected channels is subtracted from all other channels. To use this option, pass the group of channels as
+            a list in `ref_channel_ids`.
+         * "local": the median/average within an annulus is set as the new reference.
+            The parameters of the annulus are specified using the `local_radius` argument. With this option, both
+            channels which are too close and channels which are too far are excluded from the median/average. Note
+            that setting the `local_radius` to (0, exclude_radius)  will yield a simple circular local region.
+
 
     Parameters
     ----------
     recording: RecordingExtractor
         The recording extractor to be re-referenced
     reference: "global" | "single" | "local", default: "global"
-        If "global" then CMR/CAR is used either by groups or all channel way.
-        If "single", the selected channel(s) is remove from all channels. operator is no used in that case.
-        If "local", an average CMR/CAR is implemented with only k channels selected the nearest outside of a radius around each channel
+        If "global" the reference is the average or median across all the channels.
+        If "single", the reference is a single channel or a list of channels that need to be set with the `ref_channel_ids`.
+        If "local", the reference is the set of channels within an annulus that must be set with the `local_radius` parameter.
     operator: "median" | "average", default: "median"
-        If "median", common median reference (CMR) is implemented (the median of
+        If "median", a common median reference (CMR) is implemented (the median of
             the selected channels is removed for each timestamp).
         If "average", common average reference (CAR) is implemented (the mean of the selected channels is removed
             for each timestamp).
@@ -34,9 +56,15 @@ class CommonReferenceRecording(BasePreprocessor):
         list of channels to be applied to each group is expected. If "single" reference, a list of one channel  or an
         int is expected.
     local_radius: tuple(int, int)
-        Use in the local CAR implementation as the selecting annulus (exclude radius, include radius)
-    verbose: bool
-        If True, output is verbose
+        Use in the local CAR implementation as the selecting annulus with the following format:
+
+        `(exclude radius, include radius)`
+
+        Where the exlude radius is the inner radius of the annulus and the include radius is the outer radius of the
+        annulus. The exclude radius is used to exclude channels that are too close to the reference channel and the
+        include radius delineates the outer boundary of the annulus whose role is to exclude channels
+        that are too far away.
+
     dtype: None or dtype
         If None the parent dtype is kept.
 
@@ -44,19 +72,19 @@ class CommonReferenceRecording(BasePreprocessor):
     -------
     referenced_recording: CommonReferenceRecording
         The re-referenced recording extractor object
+
     """
 
     name = "common_reference"
 
     def __init__(
         self,
-        recording,
-        reference="global",
-        operator="median",
+        recording: BaseRecording,
+        reference: Literal["global", "single", "global"] = "global",
+        operator: Literal["median", "average"] = "median",
         groups=None,
         ref_channel_ids=None,
         local_radius=(30, 55),
-        verbose=False,
         dtype=None,
     ):
         num_chans = recording.get_num_channels()
@@ -102,13 +130,13 @@ class CommonReferenceRecording(BasePreprocessor):
         else:
             group_indices = None
         if ref_channel_ids is not None:
-            ref_channel_inds = self.ids_to_indices(ref_channel_ids)
+            ref_channel_indices = self.ids_to_indices(ref_channel_ids)
         else:
-            ref_channel_inds = None
+            ref_channel_indices = None
 
         for parent_segment in recording._recording_segments:
             rec_segment = CommonReferenceRecordingSegment(
-                parent_segment, reference, operator, group_indices, ref_channel_inds, local_radius, neighbors, dtype_
+                parent_segment, reference, operator, group_indices, ref_channel_indices, local_radius, neighbors, dtype_
             )
             self.add_recording_segment(rec_segment)
 
@@ -130,7 +158,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         reference,
         operator,
         group_indices,
-        ref_channel_inds,
+        ref_channel_indices,
         local_radius,
         neighbors,
         dtype,
@@ -140,7 +168,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.reference = reference
         self.operator = operator
         self.group_indices = group_indices
-        self.ref_channel_inds = ref_channel_inds
+        self.ref_channel_indices = ref_channel_indices
         self.local_radius = local_radius
         self.neighbors = neighbors
         self.temp = None
@@ -160,22 +188,21 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         if channel_indices is not None:
             _channel_indices = _channel_indices[channel_indices]
 
+        out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=self.dtype)
+
         if self.reference == "global":
-            out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=self.dtype)
             for chan_inds, chan_group_inds in self._groups(_channel_indices):
                 out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
                 out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(all_traces[:, chan_group_inds])
 
         elif self.reference == "single":
-            out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=self.dtype)
             for i, (chan_inds, _) in enumerate(self._groups(_channel_indices)):
                 out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
                 out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(
-                    all_traces[:, [self.ref_channel_inds[i]]]
+                    all_traces[:, [self.ref_channel_indices[i]]]
                 )
 
         elif self.reference == "local":
-            out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=self.dtype)
             for i, chan_ind in enumerate(_channel_indices):
                 out_traces[:, [i]] = all_traces[:, [chan_ind]] - self.operator_func(
                     all_traces[:, self.neighbors[chan_ind]]
