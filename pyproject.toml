@@ -178,6 +178,7 @@ dev = [
 [tool.pytest.ini_options]
 markers = [
     "core",
+    "generation",
     "extractors",
     "preprocessing",
     "postprocessing",
