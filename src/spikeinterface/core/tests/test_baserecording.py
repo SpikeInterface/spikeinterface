@@ -345,5 +345,12 @@ def test_BaseRecording():
     assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
 
 
+def test_rename_channels():
+    recording = generate_recording(durations=[1.0], num_channels=3)
+    renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])
+    renamed_channel_ids = renamed_recording.get_channel_ids()
+    assert np.array_equal(renamed_channel_ids, ["a", "b", "c"])
+
+
 if __name__ == "__main__":
     test_BaseRecording()

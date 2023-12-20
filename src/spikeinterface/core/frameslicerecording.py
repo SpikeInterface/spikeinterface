@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
@@ -13,11 +14,11 @@ class FrameSliceRecording(BaseRecording):
     Parameters
     ----------
     parent_recording: BaseRecording
-    start_frame: None or int
+    start_frame: None or int, default: None
         Earliest included frame in the parent recording.
         Times are re-referenced to start_frame in the
         sliced object. Set to 0 by default.
-    end_frame: None or int
+    end_frame: None or int, default: None
         Latest frame in the parent recording. As for usual
         python slicing, the end frame is excluded.
         Set to the recording's total number of samples by
@@ -38,7 +39,9 @@ class FrameSliceRecording(BaseRecording):
         if end_frame is None:
             end_frame = parent_size
         else:
-            assert 0 < end_frame <= parent_size
+            assert (
+                0 < end_frame <= parent_size
+            ), f"'end_frame' must be fewer than number of samples in parent: {parent_size}"
 
         assert end_frame > start_frame, "'start_frame' must be smaller than 'end_frame'!"
 
