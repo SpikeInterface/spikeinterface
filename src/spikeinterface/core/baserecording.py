@@ -555,7 +555,7 @@ class BaseRecording(BaseRecordingSnippets):
         Parameters
         ----------
         new_channel_ids : list or np.array or tuple
-            The new channel ids. They are mapped possitionally to the old channel ids.
+            The new channel ids. They are mapped positionally to the old channel ids.
         """
         from .channelslice import ChannelSliceRecording
 
