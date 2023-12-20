@@ -11,7 +11,7 @@ ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 mark_names = ["core", "extractors", "preprocessing", "postprocessing",
               "sorters_external", "sorters_internal", "sorters",
               "qualitymetrics", "comparison", "curation",
-              "widgets", "exporters", "sortingcomponents"]
+              "widgets", "exporters", "sortingcomponents", "generation"]
 
 
 # define global test folder

@@ -363,3 +363,9 @@ Template Matching
 .. automodule:: spikeinterface.sortingcomponents.matching
 
     .. autofunction:: find_spikes_from_templates
+
+
+spikeinterface.generation
+-------------------------
+
+.. automodule:: spikeinterface.generation
