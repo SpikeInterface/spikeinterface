@@ -39,7 +39,9 @@ class RecordingCommonTestSuite(CommonTestSuite):
             # test streams and blocks retrieval
             full_path = self.get_full_path(path)
             rec = self.ExtractorClass(full_path, **kwargs)
+            from spikeinterface.preprocessing import scale
 
+            rec == scale(recording=rec, gain=rec.get_channel_gains(), offset=rec.get_channel_offsets())
             assert hasattr(rec, "extra_requirements")
 
             num_seg = rec.get_num_segments()
