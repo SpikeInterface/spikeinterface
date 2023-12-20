@@ -20,7 +20,6 @@ set_global_tmp_folder(cache_folder)
 def test_common_reference():
     rec = generate_recording(durations=[5.0], num_channels=4)
     rec._main_ids = np.array(["a", "b", "c", "d"])
-    rec = rec.save()
 
     # no groups
     rec_cmr = common_reference(rec, reference="global", operator="median")

@@ -1,6 +1,6 @@
 from .base import load_extractor  # , load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .basesorting import BaseSorting, BaseSortingSegment
+from .basesorting import BaseSorting, BaseSortingSegment, SpikeVectorSortingSegment
 from .baseevent import BaseEvent, BaseEventSegment
 from .basesnippets import BaseSnippets, BaseSnippetsSegment
 from .baserecordingsnippets import BaseRecordingSnippets
@@ -9,7 +9,7 @@ from .baserecordingsnippets import BaseRecordingSnippets
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
 from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
 from .numpyextractors import NumpyRecording, NumpySorting, SharedMemorySorting, NumpyEvent, NumpySnippets
-from .zarrrecordingextractor import ZarrRecordingExtractor, read_zarr, get_default_zarr_compressor
+from .zarrextractors import ZarrRecordingExtractor, ZarrSortingExtractor, read_zarr, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .sortingfolder import NumpyFolderSorting, NpzFolderSorting, read_numpy_sorting_folder, read_npz_folder
 from .npysnippetsextractor import NpySnippetsExtractor, read_npy_snippets

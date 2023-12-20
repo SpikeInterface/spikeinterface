@@ -4,6 +4,8 @@ import pickle
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import ChannelSparsity
 
+from probeinterface import generate_multi_columns_probe
+
 
 def generate_test_template(template_type):
     num_units = 2
@@ -14,6 +16,8 @@ def generate_test_template(template_type):
 
     sampling_frequency = 30_000
     nbefore = 2
+
+    probe = generate_multi_columns_probe(num_columns=1, num_contact_per_column=[3])
 
     if template_type == "dense":
         return Templates(templates_array=templates_array, sampling_frequency=sampling_frequency, nbefore=nbefore)
@@ -35,6 +39,7 @@ def generate_test_template(template_type):
             sparsity_mask=sparsity_mask,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
+            probe=probe,
         )
 
     elif template_type == "sparse_with_dense_templates":  # sparse with dense templates
@@ -45,6 +50,7 @@ def generate_test_template(template_type):
             sparsity_mask=sparsity_mask,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
+            probe=probe,
         )
 
 
@@ -84,3 +90,8 @@ def test_get_dense_templates(template_type):
 def test_initialization_fail_with_dense_templates():
     with pytest.raises(ValueError, match="Sparsity mask passed but the templates are not sparse"):
         template = generate_test_template(template_type="sparse_with_dense_templates")
+
+
+if __name__ == "__main__":
+    # test_json_serialization("sparse")
+    test_json_serialization("dense")
