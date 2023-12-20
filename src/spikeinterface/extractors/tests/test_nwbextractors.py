@@ -226,7 +226,8 @@ def test_that_hdf5_and_pynwb_extractors_return_the_same_data(path_to_nwbfile, el
     check_recordings_equal(recording_extractor_hdf5, recording_extractor_pynwb)
 
 
-def test_sorting_extraction_of_ragged_arrays(tmp_path):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_extraction_of_ragged_arrays(tmp_path, use_pynwb):
     nwbfile = mock_NWBFile()
 
     # Add the spikes
@@ -267,7 +268,12 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=10.0, t_start=0)
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=10.0,
+        t_start=0,
+        use_pynwb=use_pynwb,
+    )
 
     units_ids = sorting_extractor.get_unit_ids()
 
@@ -286,7 +292,8 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path):
     np.testing.assert_allclose(extracted_spike_times_b, spike_times_b)
 
 
-def test_sorting_extraction_start_time(tmp_path):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_extraction_start_time(tmp_path, use_pynwb):
     nwbfile = mock_NWBFile()
 
     # Add the spikes
@@ -303,7 +310,12 @@ def test_sorting_extraction_start_time(tmp_path):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    sorting_extractor = NwbSortingExtractor(file_path=file_path, sampling_frequency=sampling_frequency, t_start=t_start)
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=sampling_frequency,
+        t_start=t_start,
+        use_pynwb=use_pynwb,
+    )
 
     # Test frames
     extracted_frames0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=False)
@@ -324,7 +336,8 @@ def test_sorting_extraction_start_time(tmp_path):
     np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
 
 
-def test_sorting_extraction_start_time_from_series(tmp_path):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
     nwbfile = mock_NWBFile()
     electrical_series_name = "ElectricalSeries"
     t_start = 10.0
@@ -350,7 +363,11 @@ def test_sorting_extraction_start_time_from_series(tmp_path):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    sorting_extractor = NwbSortingExtractor(file_path=file_path, electrical_series_name=electrical_series_name)
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        electrical_series_name=electrical_series_name,
+        use_pynwb=use_pynwb,
+    )
 
     # Test frames
     extracted_frames0 = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=False)
