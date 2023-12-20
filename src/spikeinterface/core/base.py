@@ -849,6 +849,8 @@ class BaseExtractor:
 
     def save_to_memory(self, **kwargs) -> "BaseExtractor":
         # used only by recording at the moment
+        if "format" not in kwargs:
+            kwargs["format"] = "memory"
         cached = self._save(**kwargs)
         self.copy_metadata(cached)
         return cached
