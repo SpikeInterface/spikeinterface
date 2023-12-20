@@ -969,7 +969,7 @@ class WaveformExtractor:
                     np.save(waveform_folder / f"sampled_index_{unit_id}.npy", sampled_indices)
         elif format == "zarr":
             import zarr
-            from .zarrrecordingextractor import get_default_zarr_compressor
+            from .zarrextractors import get_default_zarr_compressor
 
             if folder.suffix != ".zarr":
                 folder = folder.parent / f"{folder.stem}.zarr"
@@ -2044,7 +2044,7 @@ class BaseWaveformExtractorExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-            from .zarrrecordingextractor import get_default_zarr_compressor
+            from .zarrextractors import get_default_zarr_compressor
             import pandas as pd
             import numcodecs
 
