@@ -9,12 +9,10 @@ from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, 
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import (
-    check_json,
     convert_bytes_to_str,
     convert_seconds_to_str,
     write_binary_recording,
     write_memory_recording,
-    write_traces_to_zarr,
 )
 from .job_tools import split_job_kwargs
 
@@ -497,51 +495,12 @@ class BaseRecording(BaseRecordingSnippets):
             )
 
         elif format == "zarr":
-            from .zarrrecordingextractor import get_default_zarr_compressor, ZarrRecordingExtractor
+            from .zarrextractors import ZarrRecordingExtractor
 
-            zarr_kwargs = kwargs.copy()
-
-            zarr_root = zarr_kwargs["zarr_root"]
-            zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
-            zarr_root.attrs["num_segments"] = int(self.get_num_segments())
-            zarr_root.create_dataset(name="channel_ids", data=self.get_channel_ids(), compressor=None)
-
-            zarr_kwargs["dataset_paths"] = [f"traces_seg{i}" for i in range(self.get_num_segments())]
-            zarr_kwargs["dtype"] = kwargs.get("dtype", None) or self.get_dtype()
-
-            if "compressor" not in zarr_kwargs:
-                zarr_kwargs["compressor"] = compressor = get_default_zarr_compressor()
-                print(
-                    f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
-                    f"'compressor' argument"
-                )
-
-            write_traces_to_zarr(self, **zarr_kwargs, **job_kwargs)
-
-            # save probe
-            if self.get_property("contact_vector") is not None:
-                probegroup = self.get_probegroup()
-                zarr_root.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
-
-            # save time vector if any
-            t_starts = np.zeros(self.get_num_segments(), dtype="float64") * np.nan
-            for segment_index, rs in enumerate(self._recording_segments):
-                d = rs.get_times_kwargs()
-                time_vector = d["time_vector"]
-                if time_vector is not None:
-                    _ = zarr_root.create_dataset(
-                        name=f"times_seg{segment_index}",
-                        data=time_vector,
-                        filters=zarr_kwargs.get("filters", None),
-                        compressor=zarr_kwargs["compressor"],
-                    )
-                elif d["t_start"] is not None:
-                    t_starts[segment_index] = d["t_start"]
-
-            if np.any(~np.isnan(t_starts)):
-                zarr_root.create_dataset(name="t_starts", data=t_starts, compressor=None)
-
-            cached = ZarrRecordingExtractor(zarr_kwargs["zarr_path"], zarr_kwargs["storage_options"])
+            zarr_path = kwargs.pop("zarr_path")
+            storage_options = kwargs.pop("storage_options")
+            ZarrRecordingExtractor.write_recording(self, zarr_path, storage_options, **kwargs)
+            cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
         elif format == "nwb":
             # TODO implement a format based on zarr
@@ -588,6 +547,23 @@ class BaseRecording(BaseRecordingSnippets):
             time_vector = d["time_vector"]
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+
+    def rename_channels(self, new_channel_ids: list | np.array | tuple):
+        """
+        Returns a new recording object with renamed channel ids.
+
+        Parameters
+        ----------
+        new_channel_ids : list or np.array or tuple
+            The new channel ids. They are mapped positionally to the old channel ids.
+        """
+        from .channelslice import ChannelSliceRecording
+
+        assert len(new_channel_ids) == self.get_num_channels(), (
+            "new_channel_ids must have the same length as the " "number of channels in the recording"
+        )
+
+        return ChannelSliceRecording(self, renamed_channel_ids=new_channel_ids)
 
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceRecording

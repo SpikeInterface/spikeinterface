@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path, WindowsPath
 from typing import Union
 import os
@@ -5,9 +6,7 @@ import sys
 import datetime
 import json
 from copy import deepcopy
-import gc
 import mmap
-import inspect
 
 import numpy as np
 from tqdm import tqdm
@@ -621,147 +620,6 @@ def write_to_h5_dataset_format(
     if save_path is not None:
         file_handle.close()
     return save_path
-
-
-def write_traces_to_zarr(
-    recording,
-    zarr_root,
-    zarr_path,
-    storage_options,
-    dataset_paths,
-    channel_chunk_size=None,
-    dtype=None,
-    compressor=None,
-    filters=None,
-    verbose=False,
-    auto_cast_uint=True,
-    **job_kwargs,
-):
-    """
-    Save the trace of a recording extractor in several zarr format.
-
-
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor object to be saved in .dat format
-    zarr_root: zarr.Group
-        The zarr root
-    zarr_path: str or Path
-        The path to the zarr file
-    storage_options: dict or None
-        Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
-    dataset_paths: list
-        List of paths to traces datasets in the zarr group
-    channel_chunk_size: int or None, default: None (chunking in time only)
-        Channels per chunk
-    dtype: dtype, default: None
-        Type of the saved data
-    compressor: zarr compressor or None, default: None
-        Zarr compressor
-    filters: list, default: None
-        List of zarr filters
-    verbose: bool, default: False
-        If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool, default: True
-        If True, unsigned integers are automatically cast to int if the specified dtype is signed
-    {}
-    """
-    assert dataset_paths is not None, "Provide 'file_path'"
-
-    if not isinstance(dataset_paths, list):
-        dataset_paths = [dataset_paths]
-    assert len(dataset_paths) == recording.get_num_segments()
-
-    if dtype is None:
-        dtype = recording.get_dtype()
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-    else:
-        cast_unsigned = False
-
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
-
-    # create zarr datasets files
-    for segment_index in range(recording.get_num_segments()):
-        num_frames = recording.get_num_samples(segment_index)
-        num_channels = recording.get_num_channels()
-        dset_name = dataset_paths[segment_index]
-        shape = (num_frames, num_channels)
-        _ = zarr_root.create_dataset(
-            name=dset_name,
-            shape=shape,
-            chunks=(chunk_size, channel_chunk_size),
-            dtype=dtype,
-            filters=filters,
-            compressor=compressor,
-        )
-        # synchronizer=zarr.ThreadSynchronizer())
-
-    # use executor (loop or workers)
-    func = _write_zarr_chunk
-    init_func = _init_zarr_worker
-    init_args = (recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
-    )
-    executor.run()
-
-
-# used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned):
-    import zarr
-
-    # create a local dict per worker
-    worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-
-        worker_ctx["recording"] = load_extractor(recording)
-    else:
-        worker_ctx["recording"] = recording
-
-    # reload root and datasets
-    if storage_options is None:
-        if isinstance(zarr_path, str):
-            zarr_path_init = zarr_path
-            zarr_path = Path(zarr_path)
-        else:
-            zarr_path_init = str(zarr_path)
-    else:
-        zarr_path_init = zarr_path
-
-    root = zarr.open(zarr_path_init, mode="r+", storage_options=storage_options)
-    zarr_datasets = []
-    for dset_name in dataset_paths:
-        z = root[dset_name]
-        zarr_datasets.append(z)
-    worker_ctx["zarr_datasets"] = zarr_datasets
-    worker_ctx["dtype"] = np.dtype(dtype)
-    worker_ctx["cast_unsigned"] = cast_unsigned
-
-    return worker_ctx
-
-
-# used by write_zarr_recording + ChunkRecordingExecutor
-def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    zarr_dataset = worker_ctx["zarr_datasets"][segment_index]
-    cast_unsigned = worker_ctx["cast_unsigned"]
-
-    # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
-    traces = traces.astype(dtype, copy=False)
-    zarr_dataset[start_frame:end_frame, :] = traces
-
-    # fix memory leak by forcing garbage collection
-    del traces
-    gc.collect()
 
 
 def determine_cast_unsigned(recording, dtype):
