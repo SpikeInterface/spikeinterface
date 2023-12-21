@@ -377,7 +377,7 @@ def compute_grid_convolution(
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=20,
+    percentile=10,
     sparsity_threshold=None,
 ):
     """
@@ -625,9 +625,10 @@ def get_convolution_weights(
     weights = np.zeros((len(depth_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
 
     for count, depth in enumerate(depth_um):
-        dist_3d = np.sqrt(distances**2 + depth**2)
-        alpha = 1e-3
-        weights[count] = 1 / (alpha + dist_3d) ** 2
+        # dist_3d = np.sqrt(distances**2 + depth**2)
+        # alpha = 1e-3
+        # weights[count] = 1 / (alpha + dist_3d) ** 2
+        weights[count] = np.exp(-distances / (1 + depth))
 
     # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
