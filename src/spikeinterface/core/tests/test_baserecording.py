@@ -162,13 +162,13 @@ def test_BaseRecording():
     rec3 = BaseExtractor.load(cache_folder / "simple_recording")
 
     # cache to memory
-    rec4 = rec3.save(format="memory")
+    rec4 = rec3.save(format="memory", sahred=False)
     traces4 = rec4.get_traces(segment_index=0)
     traces = rec.get_traces(segment_index=0)
     assert np.array_equal(traces4, traces)
 
     # cache to sharedmemory
-    rec5 = rec3.save(format="sharedmemory")
+    rec5 = rec3.save(format="memory", sahred=True)
     traces5 = rec5.get_traces(segment_index=0)
     traces = rec.get_traces(segment_index=0)
     assert np.array_equal(traces5, traces)
