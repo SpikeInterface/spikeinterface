@@ -1994,6 +1994,9 @@ class BaseWaveformExtractorExtension:
                     ext_data = pd.read_csv(ext_data_file, index_col=0)
                 elif ext_data_file.suffix == ".pkl":
                     ext_data = pickle.load(ext_data_file.open("rb"))
+                else:
+                    print({} "not created by spikeinterface, skipping this file".format(ext_data_file.name))
+                    continue
                 self._extension_data[ext_data_name] = ext_data
         elif self.format == "zarr":
             for ext_data_name in self.extension_group.keys():
