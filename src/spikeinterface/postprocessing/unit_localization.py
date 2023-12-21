@@ -377,7 +377,7 @@ def compute_grid_convolution(
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=5,
+    percentile=20,
     sparsity_threshold=None,
 ):
     """
@@ -619,7 +619,7 @@ def get_grid_convolution_templates_and_weights(
 
 def get_convolution_weights(
     distances,
-    depth_um=np.linspace(1, 50.0, 5),
+    depth_um=np.linspace(0, 50.0, 5),
     sparsity_threshold=None,
 ):
     weights = np.zeros((len(depth_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
