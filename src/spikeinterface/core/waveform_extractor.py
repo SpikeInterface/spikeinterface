@@ -800,6 +800,9 @@ class WaveformExtractor:
 
                 if self.has_recording():
                     self.recording.dump(new_folder / "recording.json", relative_to=relative_to)
+                else:
+                    shutil.copytree(self.folder / "recording_info", new_folder / "recording_info")
+
                 sorting.dump(new_folder / "sorting.json", relative_to=relative_to)
 
                 # create and populate waveforms folder
@@ -824,7 +827,8 @@ class WaveformExtractor:
                     with (new_folder / "sparsity.json").open("w") as f:
                         json.dump(check_json(new_sparsity.to_dict()), f)
 
-                we = WaveformExtractor.load(new_folder)
+                we = WaveformExtractor.load(new_folder, with_recording=self.has_recording())
+
             elif self.format == "zarr":
                 raise NotImplementedError(
                     "For zarr format, `select_units()` to a folder is not supported yet. "
