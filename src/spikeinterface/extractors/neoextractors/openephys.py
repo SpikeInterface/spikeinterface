@@ -242,6 +242,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 load_sync_channel=load_sync_channel,
                 load_sync_timestamps=load_sync_timestamps,
                 experiment_names=experiment_names,
+                stream_folder=stream_folder,
             )
         )
 
