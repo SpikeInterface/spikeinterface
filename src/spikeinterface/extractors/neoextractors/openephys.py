@@ -242,9 +242,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 load_sync_channel=load_sync_channel,
                 load_sync_timestamps=load_sync_timestamps,
                 experiment_names=experiment_names,
-                stream_folder=stream_folder,
             )
         )
+        self._stream_folder = stream_folder
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False, experiment_names=None):
