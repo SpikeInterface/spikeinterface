@@ -264,14 +264,12 @@ class BaseSorting(BaseExtractor):
                 cached.register_recording(self._recording)
 
         elif format == "memory":
-            from .numpyextractors import NumpySorting
-
-            cached = NumpySorting.from_sorting(self)
-        
-        elif format == "sharedmemory":
-            from .numpyextractors import SharedMemorySorting
-            cached = SharedMemorySorting.from_sorting(self)
-
+            if save_kwargs.get("sharedmem", True):
+                from .numpyextractors import SharedMemorySorting
+                cached = SharedMemorySorting.from_sorting(self)
+            else:
+                from .numpyextractors import NumpySorting
+                cached = NumpySorting.from_sorting(self)
         else:
             raise ValueError(f"format {format} not supported")
         return cached

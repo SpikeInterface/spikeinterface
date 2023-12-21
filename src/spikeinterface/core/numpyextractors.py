@@ -84,6 +84,22 @@ class NumpyRecording(BaseRecording):
             "sampling_frequency": sampling_frequency,
         }
 
+    @staticmethod
+    def from_recording(source_recording, **job_kwargs):
+        traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
+        if shms[0] is not None:
+            # if the computation was done in parrralel then traces_list is shared array
+            # this can lead to problem
+            # we need to copy back to a standard numpy array and unlink the shared buffer
+            traces_list = [np.array(traces, copy=True) for traces in traces_list]
+            for shm in shms:
+                shm.close()
+                shm.unlink()
+        # TODO later : propagte t_starts ?
+        recording = NumpyRecording(traces_list, source_recording.get_sampling_frequency(),
+                                   t_starts=None, channel_ids=source_recording.channel_ids)
+
+
 
 class NumpyRecordingSegment(BaseRecordingSegment):
     def __init__(self, traces, sampling_frequency, t_start):
@@ -193,6 +209,8 @@ class SharedMemoryRecording(BaseRecording):
     def from_recording(source_recording, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
 
+        # TODO later : propagte t_starts ?
+        
         recording = SharedMemoryRecording(
             shm_names=[shm.name for shm in shms],
             shape_list = [traces.shape for traces in traces_list],

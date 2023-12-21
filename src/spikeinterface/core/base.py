@@ -839,8 +839,6 @@ class BaseExtractor:
         format = kwargs.get("format", None)
         if format == "memory":
             loaded_extractor = self.save_to_memory(**kwargs)
-        elif format == "sharedmemory":
-            loaded_extractor = self.save_to_sharedmemory(**kwargs)
         elif format == "zarr":
             loaded_extractor = self.save_to_zarr(**kwargs)
         else:
@@ -849,17 +847,11 @@ class BaseExtractor:
 
     save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
-    def save_to_memory(self, **kwargs) -> "BaseExtractor":
+    def save_to_memory(self, sharedmem=True, **save_kwargs) -> "BaseExtractor":
         
-        kwargs.pop("format", None)
+        save_kwargs.pop("format", None)
 
-        cached = self._save(format="memory", **kwargs)
-        self.copy_metadata(cached)
-        return cached
-
-    def save_to_sharedmemory(self, **kwargs) -> "BaseExtractor":
-        kwargs.pop("format", None)
-        cached = self._save(format="sharedmemory", **kwargs)
+        cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)
         self.copy_metadata(cached)
         return cached
 

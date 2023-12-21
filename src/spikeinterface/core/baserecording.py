@@ -485,24 +485,11 @@ class BaseRecording(BaseRecordingSnippets):
             cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == "memory":
-            traces_list, shms = write_memory_recording(self, dtype=None, **job_kwargs)
-            if shms[0] is not None:
-                # if the computation was done in parrralel then traces_list is shared array
-                # this can lead to problem
-                # we need to copy back to a standard numpy array and unlink the shared buffer
-                traces_list = [np.array(traces, copy=True) for traces in traces_list]
-                for shm in shms:
-                    shm.close()
-                    shm.unlink()
-
-            from .numpyextractors import NumpyRecording
-            cached = NumpyRecording(
-                traces_list, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids
-            )
-
-        elif format == "sharedmemory":
-            from .numpyextractors import SharedMemoryRecording
-            cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
+            if kwargs.get("sharedmem", True):
+                from .numpyextractors import SharedMemoryRecording
+                cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
+            else:
+                cached = NumpyRecording.from_recording(self, **job_kwargs)
 
         elif format == "zarr":
             from .zarrextractors import ZarrRecordingExtractor
