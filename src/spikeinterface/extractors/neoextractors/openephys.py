@@ -236,6 +236,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 except AssertionError:
                     warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
 
+        self._stream_folder = stream_folder
+
         self._kwargs.update(
             dict(
                 folder_path=str(Path(folder_path).absolute()),
@@ -244,7 +246,6 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 experiment_names=experiment_names,
             )
         )
-        self._stream_folder = stream_folder
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False, experiment_names=None):
