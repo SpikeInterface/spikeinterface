@@ -457,6 +457,8 @@ def compute_grid_convolution(
         if percentile > 0:
             mask = dot_products == 0
             dot_products[mask] = np.nan
+            ## We need to catch warnings because some line can have only NaN, and
+            ## if so the nanpercentile function throws a warning
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore")
                 thresholds = np.nanpercentile(dot_products, percentile)
