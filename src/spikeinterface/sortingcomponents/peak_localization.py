@@ -348,7 +348,7 @@ class LocalizeGridConvolution(PipelineNode):
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=20.0,
+        percentile=10.0,
         peak_sign="neg",
         weight_method={}
     ):
