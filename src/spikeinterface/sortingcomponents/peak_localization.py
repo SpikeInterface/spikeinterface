@@ -321,8 +321,6 @@ class LocalizeGridConvolution(PipelineNode):
         Radius in um for channel sparsity.
     upsampling_um: float
         Upsampling resolution for the grid of templates
-    depth_um: np.array, default: np.linspace(5, 100.0, 10)
-        Putative depth of the fake templates
     sigma_ms: float
         The temporal decay of the fake templates
     margin_um: float
@@ -334,9 +332,10 @@ class LocalizeGridConvolution(PipelineNode):
     percentile: float, default: 5
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float, default: None
-        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None,
-        automatically set to 1/sqrt(num_channels)
+    weight_method: dict
+        Parameter that should be provided to the get_convolution_weights() function
+        in order to know how to estimate the positions. One argument is mode that could
+        be either gaussian_2d (KS like) or exponential_3d (default)
     """
 
     def __init__(
@@ -346,26 +345,21 @@ class LocalizeGridConvolution(PipelineNode):
         parents=["extract_waveforms"],
         radius_um=40.0,
         upsampling_um=5.0,
-        depth_um=np.linspace(0, 50.0, 5),
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
         percentile=20.0,
         peak_sign="neg",
-        sparsity_threshold=None,
+        weight_method={}
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.radius_um = radius_um
-        self.depth_um = depth_um
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
         self.peak_sign = peak_sign
         self.percentile = 100 - percentile
-        self.sparsity_threshold = sparsity_threshold
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
-        if self.sparsity_threshold is not None:
-            assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
         contact_locations = recording.get_channel_locations()
         # Find waveform extractor in the parents
         waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
@@ -374,6 +368,7 @@ class LocalizeGridConvolution(PipelineNode):
 
         self.nbefore = waveform_extractor.nbefore
         self.nafter = waveform_extractor.nafter
+        self.weight_method = weight_method
         fs = self.recording.get_sampling_frequency()
 
         if prototype is None:
@@ -386,13 +381,12 @@ class LocalizeGridConvolution(PipelineNode):
 
         self.prototype = self.prototype[:, np.newaxis]
 
-        self.template_positions, self.weights, self.nearest_template_mask = get_grid_convolution_templates_and_weights(
+        self.template_positions, self.weights, self.nearest_template_mask, self.z_factors = get_grid_convolution_templates_and_weights(
             contact_locations,
             self.radius_um,
             self.upsampling_um,
-            self.depth_um,
             self.margin_um,
-            self.sparsity_threshold,
+            self.weight_method,
         )
 
         self.weights_sparsity_mask = self.weights > 0
@@ -407,7 +401,8 @@ class LocalizeGridConvolution(PipelineNode):
                 nbefore=self.nbefore,
                 percentile=self.percentile,
                 peak_sign=self.peak_sign,
-                sparsity_threshold=self.sparsity_threshold,
+                weight_method=self.weight_method,
+                z_factors=self.z_factors
             )
         )
 
@@ -450,7 +445,8 @@ class LocalizeGridConvolution(PipelineNode):
             for count in range(nb_weights):
                 found_positions[:, :2] += np.dot(dot_products[count], nearest_templates)
 
-            found_positions[:, 2] = np.dot(self.depth_um, scalar_products)
+            ## Now we need to compute a putative depth given the z_factors
+            found_positions[:, 2] = np.dot(self.z_factors, scalar_products)
             scalar_products = (scalar_products.sum(0))[:, np.newaxis]
             found_positions /= scalar_products
             found_positions = np.nan_to_num(found_positions)
