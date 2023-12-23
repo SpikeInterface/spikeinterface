@@ -350,7 +350,7 @@ class LocalizeGridConvolution(PipelineNode):
         prototype=None,
         percentile=10.0,
         peak_sign="neg",
-        weight_method={}
+        weight_method={},
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -381,7 +381,12 @@ class LocalizeGridConvolution(PipelineNode):
 
         self.prototype = self.prototype[:, np.newaxis]
 
-        self.template_positions, self.weights, self.nearest_template_mask, self.z_factors = get_grid_convolution_templates_and_weights(
+        (
+            self.template_positions,
+            self.weights,
+            self.nearest_template_mask,
+            self.z_factors,
+        ) = get_grid_convolution_templates_and_weights(
             contact_locations,
             self.radius_um,
             self.upsampling_um,
@@ -402,7 +407,7 @@ class LocalizeGridConvolution(PipelineNode):
                 percentile=self.percentile,
                 peak_sign=self.peak_sign,
                 weight_method=self.weight_method,
-                z_factors=self.z_factors
+                z_factors=self.z_factors,
             )
         )
 

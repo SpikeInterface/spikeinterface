@@ -377,7 +377,7 @@ def compute_grid_convolution(
     margin_um=50,
     prototype=None,
     percentile=20,
-    weight_method = {},
+    weight_method={},
 ):
     """
     Estimate the positions of the templates from a large grid of fake templates
@@ -575,11 +575,7 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 
 def get_grid_convolution_templates_and_weights(
-    contact_locations,
-    radius_um=40,
-    upsampling_um=5,
-    margin_um=50,
-    weight_method = {'mode' : 'exponential_3d'}
+    contact_locations, radius_um=40, upsampling_um=5, margin_um=50, weight_method={"mode": "exponential_3d"}
 ):
     """Get a upsampled grid of artificial templates given a particular probe layout
 
@@ -650,9 +646,8 @@ def get_convolution_weights(
     sigma_list_um=np.linspace(5, 25, 5),
     sparsity_threshold=None,
     sigma_3d=2.5,
-    mode = 'exponential_3d'
+    mode="exponential_3d",
 ):
-
     """Get normalized weights for creating artificial templates, given some precomputed distances
 
     Parameters
@@ -685,19 +680,19 @@ def get_convolution_weights(
     if sparsity_threshold is not None:
         assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
-    if mode == 'exponential_3d':
+    if mode == "exponential_3d":
         weights = np.zeros((len(z_list_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
         for count, z in enumerate(z_list_um):
             dist_3d = np.sqrt(distances**2 + z**2)
-            weights[count] = np.exp(-dist_3d/sigma_3d)
+            weights[count] = np.exp(-dist_3d / sigma_3d)
         z_factors = z_list_um
-    elif mode == 'gaussian_2d':
+    elif mode == "gaussian_2d":
         weights = np.zeros((len(sigma_list_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
         for count, sigma in enumerate(sigma_list_um):
-            alpha = 2*(sigma**2)
-            weights[count] = np.exp(-distances**2 / alpha)
+            alpha = 2 * (sigma**2)
+            weights[count] = np.exp(-(distances**2) / alpha)
         z_factors = sigma_list_um
-        
+
     # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
         norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
