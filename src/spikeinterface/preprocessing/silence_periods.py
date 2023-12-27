@@ -40,7 +40,6 @@ class SilencedPeriodsRecording(BasePreprocessor):
     name = "silence_periods"
 
     def __init__(self, recording, list_periods, mode="zeros", **random_chunk_kwargs):
-
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
 
@@ -79,9 +78,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
             rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_levels)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(
-            recording=recording, list_periods=list_periods, mode=mode, noise_levels=noise_levels
-        )
+        self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode, noise_levels=noise_levels)
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
