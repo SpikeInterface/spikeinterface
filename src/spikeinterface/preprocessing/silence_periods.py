@@ -40,7 +40,6 @@ class SilencedPeriodsRecording(BasePreprocessor):
     name = "silence_periods"
 
     def __init__(self, recording, list_periods, mode="zeros", **random_chunk_kwargs):
-        import scipy.interpolate
 
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
@@ -71,6 +70,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         else:
             noise_levels = None
 
+        self.noise_levels = noise_levels
         BasePreprocessor.__init__(self, recording)
         for seg_index, parent_segment in enumerate(recording._recording_segments):
             periods = list_periods[seg_index]
@@ -80,7 +80,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(
-            recording=recording.to_dict(), list_periods=list_periods, mode=mode, noise_levels=noise_levels
+            recording=recording, list_periods=list_periods, mode=mode, noise_levels=noise_levels
         )
 
 
