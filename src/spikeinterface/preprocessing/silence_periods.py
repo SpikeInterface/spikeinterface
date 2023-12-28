@@ -66,7 +66,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 ), "Intervals should not overlap"
 
         if mode in ["noise"]:
-            noise_levels = get_noise_levels(recording, return_scaled=False, concatenated=True, **random_chunk_kwargs)
+            if noise_levels is None:
+                noise_levels = get_noise_levels(recording, return_scaled=False, concatenated=True, **random_chunk_kwargs)
         else:
             noise_levels = None
 
