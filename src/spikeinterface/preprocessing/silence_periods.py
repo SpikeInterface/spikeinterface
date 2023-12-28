@@ -68,7 +68,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
         if mode in ["noise"]:
             if noise_levels is None:
-                noise_levels = get_noise_levels(recording, return_scaled=False, concatenated=True, **random_chunk_kwargs)
+                noise_levels = get_noise_levels(
+                    recording, return_scaled=False, concatenated=True, **random_chunk_kwargs
+                )
         else:
             noise_levels = None
 
