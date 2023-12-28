@@ -20,6 +20,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
         The recording extractor to silance periods
     list_periods: list of lists/arrays
         One list per segment of tuples (start_frame, end_frame) to silence
+    noise_levels: array
+        Noise levels if already computed
 
     mode: "zeros" | "noise, default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
@@ -39,7 +41,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
     name = "silence_periods"
 
-    def __init__(self, recording, list_periods, mode="zeros", **random_chunk_kwargs):
+    def __init__(self, recording, list_periods, mode="zeros", noise_levels=None, **random_chunk_kwargs):
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
 
