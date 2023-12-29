@@ -55,7 +55,7 @@ class CommonReferenceRecording(BasePreprocessor):
         If no "groups" are specified, all channels are referenced to "ref_channel_ids". If "groups" is provided, then a
         list of channels to be applied to each group is expected. If "single" reference, a list of one channel  or an
         int is expected.
-    local_radius: tuple(int, int)
+    local_radius: tuple(int, int), default: (30, 55)
         Use in the local CAR implementation as the selecting annulus with the following format:
 
         `(exclude radius, include radius)`
