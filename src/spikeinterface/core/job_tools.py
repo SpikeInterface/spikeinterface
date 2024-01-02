@@ -344,11 +344,12 @@ class ChunkRecordingExecutor:
         if verbose:
             print(self.job_name, "with n_jobs =", self.n_jobs, "and chunk_size =", self.chunk_size)
 
-    def run(self):
+    def run(self, all_chunks=None):
         """
         Runs the defined jobs.
         """
-        all_chunks = divide_recording_into_chunks(self.recording, self.chunk_size)
+        if all_chunks is None:
+            all_chunks = divide_recording_into_chunks(self.recording, self.chunk_size)
 
         if self.handle_returns:
             returns = []

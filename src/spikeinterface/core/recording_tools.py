@@ -14,6 +14,7 @@ def get_random_data_chunks(
     concatenated=True,
     seed=0,
     margin_frames=0,
+    job_kwargs={}
 ):
     """
     Extract random chunks across segments
@@ -46,41 +47,20 @@ def get_random_data_chunks(
     # Should be done by changing kwargs with total_num_chunks=XXX and total_duration=YYYY
     # And randomize the number of chunk per segment weighted by segment duration
 
-    # check chunk size
-    num_segments = recording.get_num_segments()
-    for segment_index in range(num_segments):
-        if chunk_size > recording.get_num_frames(segment_index) - 2 * margin_frames:
-            error_message = (
-                f"chunk_size is greater than the number "
-                f"of samples for segment index {segment_index}. "
-                f"Use a smaller chunk_size!"
-            )
-            raise ValueError(error_message)
+    from .node_pipeline import run_traces_pipeline
+    from .job_tools import divide_segment_into_chunks
 
+    all_chunks = []
     rng = np.random.default_rng(seed)
-    chunk_list = []
-    low = margin_frames
-    size = num_chunks_per_segment
-    for segment_index in range(num_segments):
-        num_frames = recording.get_num_frames(segment_index)
-        high = num_frames - chunk_size - margin_frames
-        random_starts = rng.integers(low=low, high=high, size=size)
-        segment_trace_chunk = [
-            recording.get_traces(
-                start_frame=start_frame,
-                end_frame=(start_frame + chunk_size),
-                segment_index=segment_index,
-                return_scaled=return_scaled,
-            )
-            for start_frame in random_starts
-        ]
+    for segment_index in range(recording.get_num_segments()):
+        num_frames = recording.get_num_samples(segment_index)
+        chunks = divide_segment_into_chunks(num_frames, chunk_size)
+        indices = np.random.permutation(np.arange(len(chunks)))[:num_chunks_per_segment]
+        for i in indices:
+            frame_start, frame_stop = chunks[i]
+            all_chunks += [(segment_index, frame_start, frame_stop)]
 
-        chunk_list.extend(segment_trace_chunk)
-
-    if concatenated:
-        return np.concatenate(chunk_list, axis=0)
-    else:
-        return chunk_list
+    return run_traces_pipeline(recording, job_kwargs, all_chunks=all_chunks, squeeze_output=concatenated)
 
 
 def get_channel_distances(recording):
@@ -135,6 +115,7 @@ def get_noise_levels(
     return_scaled: bool = True,
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
+    job_kwargs={},
     **random_chunk_kwargs,
 ):
     """
@@ -172,7 +153,7 @@ def get_noise_levels(
     if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
-        random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
+        random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, job_kwargs=job_kwargs, **random_chunk_kwargs)
 
         if method == "mad":
             med = np.median(random_chunks, axis=0, keepdims=True)

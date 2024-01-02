@@ -411,7 +411,7 @@ def check_graph(nodes):
     node0 = nodes[0]
     if not isinstance(node0, PeakSource):
         raise ValueError(
-            "Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever"
+            "Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever)"
         )
 
     for i, node in enumerate(nodes):
@@ -547,6 +547,56 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
         pipeline_outputs_tuple[0]["sample_index"] += start_frame - left_margin
 
     return pipeline_outputs_tuple
+
+
+def run_traces_pipeline(
+    recording,
+    job_kwargs,
+    job_name="get_traces",
+    squeeze_output=True,
+    all_chunks=None
+):
+    """
+    Common function to run pipeline and extract traces in parallel.
+    """
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    gather_func = GatherToMemory()
+    init_args = (recording, )
+
+    processor = ChunkRecordingExecutor(
+        recording,
+        _compute_traces_pipeline_chunk,
+        _init_traces_pipeline,
+        init_args,
+        gather_func=gather_func,
+        job_name=job_name,
+        **job_kwargs,
+    )
+
+    processor.run(all_chunks)
+
+    outs = gather_func.finalize_buffers(squeeze_output=squeeze_output)
+    return outs
+
+
+def _init_traces_pipeline(recording):
+    # create a local dict per worker
+    worker_ctx = {}
+    worker_ctx["recording"] = recording
+    worker_ctx["max_margin"] = 0
+    return worker_ctx
+
+
+def _compute_traces_pipeline_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    recording = worker_ctx["recording"]
+    max_margin = worker_ctx["max_margin"]
+    recording_segment = recording._recording_segments[segment_index]
+    traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+        recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
+    )
+    return traces_chunk
+
 
 
 class GatherToMemory:
