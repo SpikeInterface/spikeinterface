@@ -760,7 +760,7 @@ if HAVE_TORCH:
 
         # -- unravel the spike index
         # (right now the indices are into flattened recording)
-        peak_indices = window_fmax_indices[crossings]
+        peak_indices = window_max_indices[crossings]
         sample_indices = torch.div(peak_indices, num_channels, rounding_mode="floor")
         channel_indices = peak_indices % num_channels
         amplitudes = max_amplitudes_at_indices[crossings]
