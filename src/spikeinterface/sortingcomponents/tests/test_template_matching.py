@@ -4,7 +4,6 @@ from pathlib import Path
 
 from spikeinterface import NumpySorting
 from spikeinterface import extract_waveforms
-from spikeinterface.core import get_noise_levels
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods
 
@@ -42,7 +41,7 @@ def test_find_spikes_from_templates(method, waveform_extractor):
     waveform = waveform_extractor.get_waveforms(waveform_extractor.unit_ids[0])
     num_waveforms, _, _ = waveform.shape
     assert num_waveforms != 0
-    method_kwargs_all = {"waveform_extractor": waveform_extractor, "noise_levels": get_noise_levels(recording)}
+    method_kwargs_all = {"waveform_extractor": waveform_extractor}
     method_kwargs = {}
     method_kwargs["wobble"] = {
         "templates": waveform_extractor.get_all_templates(),

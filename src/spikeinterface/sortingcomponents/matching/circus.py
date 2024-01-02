@@ -181,9 +181,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         (Minimal, Maximal) amplitudes allowed for every template
     omp_min_sps: float
         Stopping criteria of the OMP algorithm, in percentage of the norm
-    noise_levels: array
-        The noise levels, for every channels. If None, they will be automatically
-        computed
     random_chunk_kwargs: dict
         Parameters for computing noise levels, if not provided (sub optimal)
     sparse_kwargs: dict
@@ -200,7 +197,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         "overlaps": None,
         "norms": None,
         "random_chunk_kwargs": {},
-        "noise_levels": None,
         "sparse_kwargs": {"method": "ptp", "threshold": 1},
         "ignored_ids": [],
         "vicinity": 0,
@@ -247,9 +243,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d["sampling_frequency"] = d["waveform_extractor"].recording.get_sampling_frequency()
         d["vicinity"] *= d["num_samples"]
 
-        if d["noise_levels"] is None:
-            print("CircusOMPPeeler : noise should be computed outside")
-            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
+        d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
 
         if d["templates"] is None:
             d = cls._prepare_templates(d)
@@ -883,8 +877,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         matches
     detect_threshold: int
         The detection threshold
-    noise_levels: array
-        The noise levels, for every channels
     random_chunk_kwargs: dict
         Parameters for computing noise levels, if not provided (sub optimal)
     max_amplitude: float
@@ -907,7 +899,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         "exclude_sweep_ms": 0.1,
         "jitter_ms": 0.1,
         "detect_threshold": 5,
-        "noise_levels": None,
         "random_chunk_kwargs": {},
         "max_amplitude": 1.5,
         "min_amplitude": 0.5,
@@ -1025,11 +1016,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         default_parameters["num_samples"] = default_parameters["waveform_extractor"].nsamples
         default_parameters["num_templates"] = len(default_parameters["waveform_extractor"].sorting.unit_ids)
 
-        if default_parameters["noise_levels"] is None:
-            print("CircusPeeler : noise should be computed outside")
-            default_parameters["noise_levels"] = get_noise_levels(
-                recording, **default_parameters["random_chunk_kwargs"], return_scaled=False
-            )
+        default_parameters["noise_levels"] = get_noise_levels(
+            recording, **default_parameters["random_chunk_kwargs"], return_scaled=False
+        )
 
         default_parameters["abs_threholds"] = (
             default_parameters["noise_levels"] * default_parameters["detect_threshold"]

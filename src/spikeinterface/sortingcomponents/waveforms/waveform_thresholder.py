@@ -31,8 +31,6 @@ class WaveformThresholder(WaveformsNode):
         The feature to be considered for thresholding . Features are normalized with the channel noise levels.
     threshold: float, default: 2
         The threshold value for the selected feature
-    noise_levels: array of None, default: None
-        The noise levels to determine the thresholds
     random_chunk_kwargs: dict, default: dict()
         Parameters for computing noise levels, if not provided (sub optimal)
     operator: callable, default: operator.le (less or equal)
@@ -46,7 +44,6 @@ class WaveformThresholder(WaveformsNode):
         parents: Optional[List[PipelineNode]] = None,
         feature: Literal["ptp", "mean", "energy", "peak_voltage"] = "ptp",
         threshold: float = 2,
-        noise_levels: Optional[np.array] = None,
         random_chunk_kwargs: dict = {},
         operator: callable = operator.le,
     ):
@@ -68,10 +65,7 @@ class WaveformThresholder(WaveformsNode):
         self.threshold = threshold
         self.feature = feature
         self.operator = operator
-
-        self.noise_levels = noise_levels
-        if self.noise_levels is None:
-            self.noise_levels = get_noise_levels(self.recording, **random_chunk_kwargs, return_scaled=False)
+        self.noise_levels = get_noise_levels(self.recording, **random_chunk_kwargs, return_scaled=False)
 
         self._kwargs.update(
             dict(feature=feature, threshold=threshold, operator=operator, noise_levels=self.noise_levels)

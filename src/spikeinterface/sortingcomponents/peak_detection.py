@@ -371,9 +371,6 @@ class DetectPeakByChannel(PeakDetectorWrapper):
         Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
         For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
         and no larger peaks are located during the 0.1ms preceding and following the peak
-    noise_levels: array or None, default: None
-        Estimated noise levels to use, if already computed
-        If not provide then it is estimated from a random snippet of the data
     random_chunk_kwargs: dict, default: dict()
         A dict that contain option to randomize chunk for get_noise_levels().
         Only used if noise_levels is None
@@ -386,13 +383,11 @@ class DetectPeakByChannel(PeakDetectorWrapper):
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
-        noise_levels=None,
         random_chunk_kwargs={},
     ):
         assert peak_sign in ("both", "neg", "pos")
 
-        if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+        noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
         abs_threholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -453,9 +448,6 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
         Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
         For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
         and no larger peaks are located during the 0.1ms preceding and following the peak
-    noise_levels: array or None, default: None
-        Estimated noise levels to use, if already computed.
-        If not provide then it is estimated from a random snippet of the data
     device : str or None, default: None
             "cpu", "cuda", or None. If None and cuda is available, "cuda" is selected
     return_tensor : bool, default: False
@@ -472,7 +464,6 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
-        noise_levels=None,
         device=None,
         return_tensor=False,
         random_chunk_kwargs={},
@@ -483,8 +474,7 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+        noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
         abs_threholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -526,7 +516,6 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        noise_levels=None,
         random_chunk_kwargs={},
     ):
         if not HAVE_NUMBA:
@@ -537,7 +526,6 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
             peak_sign=peak_sign,
             detect_threshold=detect_threshold,
             exclude_sweep_ms=exclude_sweep_ms,
-            noise_levels=noise_levels,
             random_chunk_kwargs=random_chunk_kwargs,
         )
 
@@ -601,7 +589,6 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
-        noise_levels=None,
         device=None,
         radius_um=50,
         return_tensor=False,
@@ -614,7 +601,6 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
             peak_sign=peak_sign,
             detect_threshold=detect_threshold,
             exclude_sweep_ms=exclude_sweep_ms,
-            noise_levels=noise_levels,
             device=device,
             return_tensor=return_tensor,
             random_chunk_kwargs=random_chunk_kwargs,
@@ -774,7 +760,7 @@ if HAVE_TORCH:
 
         # -- unravel the spike index
         # (right now the indices are into flattened recording)
-        peak_indices = window_max_indices[crossings]
+        peak_indices = window_fmax_indices[crossings]
         sample_indices = torch.div(peak_indices, num_channels, rounding_mode="floor")
         channel_indices = peak_indices % num_channels
         amplitudes = max_amplitudes_at_indices[crossings]
@@ -846,13 +832,11 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        noise_levels=None,
         random_chunk_kwargs={},
     ):
         # TODO refactor with other classes
         assert peak_sign in ("both", "neg", "pos")
-        if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+        noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
         abs_threholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)

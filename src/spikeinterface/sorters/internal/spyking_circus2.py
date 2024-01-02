@@ -116,7 +116,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(dict(shared_memory=params["shared_memory"]))
         clustering_params["job_kwargs"] = job_kwargs
         clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
-        clustering_params.update({"noise_levels": noise_levels})
 
         if "legacy" in clustering_params:
             legacy = clustering_params.pop("legacy")

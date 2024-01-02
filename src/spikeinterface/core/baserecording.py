@@ -24,7 +24,11 @@ class BaseRecording(BaseRecordingSnippets):
     """
 
     _main_annotations = ["is_filtered"]
-    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
+    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV",  
+                        "noise_level_std_raw",
+                        "noise_level_std_scaled",
+                        "noise_level_mad_raw",
+                        "noise_level_mad_scaled"]
     _main_features = []  # recording do not handle features
 
     _skip_properties = [

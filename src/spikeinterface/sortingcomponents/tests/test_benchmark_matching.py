@@ -21,9 +21,8 @@ def benchmark_and_kwargs(tmp_path_factory):
     sorting = se.NpzSortingExtractor(sort_path)
     we = sc.extract_waveforms(recording, sorting, we_path, overwrite=True)
     templates = we.get_all_templates()
-    noise_levels = sc.get_noise_levels(recording, return_scaled=False)
     methods_kwargs = {
-        "tridesclous": dict(waveform_extractor=we, noise_levels=noise_levels),
+        "tridesclous": dict(waveform_extractor=we),
         "wobble": dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter, parameters={"approx_rank": 2}),
     }
     methods = list(methods_kwargs.keys())

@@ -102,7 +102,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         # detection
         detection_params = params["detection"].copy()
-        detection_params["noise_levels"] = noise_levels
         all_peaks = detect_peaks(recording, method="locally_exclusive", **detection_params, **job_kwargs)
 
         if verbose:
@@ -298,7 +297,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         matching_params = params["matching"].copy()
         matching_params["waveform_extractor"] = we
-        matching_params["noise_levels"] = noise_levels
         matching_params["peak_sign"] = params["detection"]["peak_sign"]
         matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
         matching_params["radius_um"] = params["detection"]["radius_um"]
