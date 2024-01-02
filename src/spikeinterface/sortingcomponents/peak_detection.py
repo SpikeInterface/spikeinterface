@@ -686,7 +686,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         weights = weights.reshape(num_templates, -1)
 
         # Mode with less memory consumption?
-        # prototype = prototype[:, None]        
+        # prototype = prototype[:, None]
         # temporal = np.zeros((0, num_samples, rank), dtype=np.float32)
         # singular = np.zeros((0, rank), dtype=np.float32)
         # spatial = np.zeros((0, rank, num_channels), dtype=np.float32)
