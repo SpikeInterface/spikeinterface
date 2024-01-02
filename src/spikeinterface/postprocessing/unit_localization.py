@@ -398,7 +398,7 @@ def compute_grid_convolution(
         The margin for the grid of fake templates
     prototype: np.array or None, default: None
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float, default: 5
+    percentile: float, default: 10
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
     weight_method: dict
