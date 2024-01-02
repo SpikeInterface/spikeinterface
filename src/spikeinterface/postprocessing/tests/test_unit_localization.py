@@ -12,7 +12,7 @@ class UnitLocationsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Test
         dict(method="center_of_mass", radius_um=100),
         dict(method="center_of_mass", radius_um=100, outputs="by_unit"),
         dict(method="grid_convolution", radius_um=50, outputs="by_unit"),
-        dict(method="grid_convolution", radius_um=150, outputs="by_unit", mode="3d"),
+        dict(method="grid_convolution", radius_um=150, outputs="by_unit"),
         dict(method="monopolar_triangulation", radius_um=150),
         dict(method="monopolar_triangulation", radius_um=150, outputs="by_unit"),
         dict(
