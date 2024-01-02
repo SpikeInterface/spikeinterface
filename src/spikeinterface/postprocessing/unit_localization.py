@@ -376,7 +376,7 @@ def compute_grid_convolution(
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=20,
+    percentile=10,
     weight_method={},
 ):
     """
