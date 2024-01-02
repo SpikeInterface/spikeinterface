@@ -650,7 +650,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         radius_um=50,
         rank=5,
         noise_levels=None,
-        random_chunk_kwargs={'num_chunks_per_segment' : 5},
+        random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
     ):
         if not HAVE_NUMBA:
@@ -792,7 +792,6 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         #     data = traces[channel::num_channels, peak]
         #     z[count] = np.dot(data, z_factors)/data.sum()
 
-        
         peak_sample_ind += exclude_sweep_size
 
         return peak_sample_ind, peak_chan_ind, z
