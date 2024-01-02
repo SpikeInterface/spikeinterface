@@ -1,3 +1,4 @@
+from __future__ import annotations
 from copy import deepcopy
 from typing import Literal
 import warnings
@@ -294,7 +295,7 @@ def get_chunk_with_margin(
             elif add_reflect_padding:
                 # in this case, we don't want to taper
                 traces_chunk = np.pad(
-                    traces_chunk.astype(dtype),
+                    traces_chunk.astype(dtype, copy=False),
                     [(left_pad, right_pad), (0, 0)],
                     mode="reflect",
                 )

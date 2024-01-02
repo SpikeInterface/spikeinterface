@@ -2,6 +2,7 @@ import shutil
 import os
 from pathlib import Path
 import json
+import pickle
 import platform
 from warnings import warn
 from typing import Optional, Union
@@ -414,9 +415,15 @@ def run_sorter_container(
 
     # create 3 files for communication with container
     # recording dict inside
-    (parent_folder / "in_container_recording.json").write_text(
-        json.dumps(check_json(rec_dict), indent=4), encoding="utf8"
-    )
+    if recording.check_serializability("json"):
+        (parent_folder / "in_container_recording.json").write_text(
+            json.dumps(check_json(rec_dict), indent=4), encoding="utf8"
+        )
+    elif recording.check_serializability("pickle"):
+        (parent_folder / "in_container_recording.pickle").write_bytes(pickle.dumps(rec_dict))
+    else:
+        raise RuntimeError("To use run_sorter with container the recording must be serializable")
+
     # need to share specific parameters
     (parent_folder / "in_container_params.json").write_text(
         json.dumps(check_json(sorter_params), indent=4), encoding="utf8"
@@ -433,13 +440,19 @@ def run_sorter_container(
     # the py script
     py_script = f"""
 import json
+from pathlib import Path
 from spikeinterface import load_extractor
 from spikeinterface.sorters import run_sorter_local
 
 if __name__ == '__main__':
     # this __name__ protection help in some case with multiprocessing (for instance HS2)
     # load recording in container
-    recording = load_extractor('{parent_folder_unix}/in_container_recording.json')
+    json_rec = Path('{parent_folder_unix}/in_container_recording.json')
+    pickle_rec = Path('{parent_folder_unix}/in_container_recording.pickle')
+    if json_rec.exists():
+        recording = load_extractor(json_rec)
+    else:
+        recording = load_extractor(pickle_rec)
 
     # load params in container
     with open('{parent_folder_unix}/in_container_params.json', encoding='utf8', mode='r') as f:
@@ -593,7 +606,10 @@ if __name__ == '__main__':
 
     # clean useless files
     if delete_container_files:
-        os.remove(parent_folder / "in_container_recording.json")
+        if (parent_folder / "in_container_recording.json").exists():
+            os.remove(parent_folder / "in_container_recording.json")
+        if (parent_folder / "in_container_recording.pickle").exists():
+            os.remove(parent_folder / "in_container_recording.pickle")
         os.remove(parent_folder / "in_container_params.json")
         os.remove(parent_folder / "in_container_sorter_script.py")
         if mode == "singularity":
@@ -681,204 +697,3 @@ def read_sorter_folder(output_folder, register_recording=True, sorting_info=True
         output_folder, register_recording=register_recording, sorting_info=sorting_info
     )
     return sorting
-
-
-def run_hdsort(*args, **kwargs):
-    warn(
-        "run_hdsort is deprecated. Use run_sorter(sorter_name='hdsort') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("hdsort", *args, **kwargs)
-
-
-run_hdsort.__doc__ = _common_run_doc.format("hdsort")
-
-
-def run_klusta(*args, **kwargs):
-    warn(
-        "run_klusta is deprecated. Use run_sorter(sorter_name='klusta') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("klusta", *args, **kwargs)
-
-
-run_klusta.__doc__ = _common_run_doc.format("klusta")
-
-
-def run_tridesclous(*args, **kwargs):
-    warn(
-        "run_tridesclous is deprecated. Use run_sorter(sorter_name='tridesclous') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("tridesclous", *args, **kwargs)
-
-
-run_tridesclous.__doc__ = _common_run_doc.format("tridesclous")
-
-
-def run_mountainsort4(*args, **kwargs):
-    warn(
-        "run_mountainsort4 is deprecated. Use run_sorter(sorter_name='mountainsort4') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("mountainsort4", *args, **kwargs)
-
-
-run_mountainsort4.__doc__ = _common_run_doc.format("mountainsort4")
-
-
-def run_mountainsort5(*args, **kwargs):
-    warn(
-        "run_mountainsort5 is deprecated. Use run_sorter(sorter_name='mountainsort5') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("mountainsort5", *args, **kwargs)
-
-
-run_mountainsort5.__doc__ = _common_run_doc.format("mountainsort5")
-
-
-def run_ironclust(*args, **kwargs):
-    warn(
-        "run_ironclust is deprecated. Use run_sorter(sorter_name='ironclust') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("ironclust", *args, **kwargs)
-
-
-run_ironclust.__doc__ = _common_run_doc.format("ironclust")
-
-
-def run_kilosort(*args, **kwargs):
-    warn(
-        "run_kilosort is deprecated. Use run_sorter(sorter_name='kilosort') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("kilosort", *args, **kwargs)
-
-
-run_kilosort.__doc__ = _common_run_doc.format("kilosort")
-
-
-def run_kilosort2(*args, **kwargs):
-    warn(
-        "run_kilosort2 is deprecated. Use run_sorter(sorter_name='kilosort2') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("kilosort2", *args, **kwargs)
-
-
-run_kilosort2.__doc__ = _common_run_doc.format("kilosort2")
-
-
-def run_kilosort2_5(*args, **kwargs):
-    warn(
-        "run_kilosort2_5 is deprecated. Use run_sorter(sorter_name='kilosort2_5') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("kilosort2_5", *args, **kwargs)
-
-
-run_kilosort2_5.__doc__ = _common_run_doc.format("kilosort2_5")
-
-
-def run_kilosort3(*args, **kwargs):
-    warn(
-        "run_kilosort3 is deprecated. Use run_sorter(sorter_name='kilosort3') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("kilosort3", *args, **kwargs)
-
-
-run_kilosort3.__doc__ = _common_run_doc.format("kilosort3")
-
-
-def run_spykingcircus(*args, **kwargs):
-    warn(
-        "run_spykingcircus is deprecated. Use run_sorter(sorter_name='spykingcircus') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("spykingcircus", *args, **kwargs)
-
-
-run_spykingcircus.__doc__ = _common_run_doc.format("spykingcircus")
-
-
-def run_herdingspikes(*args, **kwargs):
-    warn(
-        "run_herdingspikes is deprecated. Use run_sorter(sorter_name='herdingspikes') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("herdingspikes", *args, **kwargs)
-
-
-run_herdingspikes.__doc__ = _common_run_doc.format("herdingspikes")
-
-
-def run_waveclus(*args, **kwargs):
-    warn(
-        "run_waveclus is deprecated. Use run_sorter(sorter_name='waveclus') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("waveclus", *args, **kwargs)
-
-
-run_waveclus.__doc__ = _common_run_doc.format("waveclus")
-
-
-def run_waveclus_snippets(*args, **kwargs):
-    warn(
-        "run_waveclus_snippets is deprecated. Use run_sorter(sorter_name='waveclus_snippets') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("waveclus_snippets", *args, **kwargs)
-
-
-def run_combinato(*args, **kwargs):
-    warn(
-        "run_combinato is deprecated. Use run_sorter(sorter_name='combinato') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("combinato", *args, **kwargs)
-
-
-run_combinato.__doc__ = _common_run_doc.format("combinato")
-
-
-def run_yass(*args, **kwargs):
-    warn(
-        "run_yass is deprecated. Use run_sorter(sorter_name='yass') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("yass", *args, **kwargs)
-
-
-run_yass.__doc__ = _common_run_doc.format("yass")
-
-
-def run_pykilosort(*args, **kwargs):
-    warn(
-        "run_pykilosort is deprecated. Use run_sorter(sorter_name='pykilosort') instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return run_sorter("pykilosort", *args, **kwargs)
-
-
-run_pykilosort.__doc__ = _common_run_doc.format("pykilosort")

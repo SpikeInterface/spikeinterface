@@ -1,11 +1,10 @@
+from __future__ import annotations
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
 from .core_tools import define_function_from_class
-
-from typing import List, Union
 
 
 def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_diff):
@@ -226,11 +225,11 @@ class SelectSegmentRecording(BaseRecording):
     ----------
     recording : BaseRecording
         The multi-segment recording
-    segment_indices : list of int
+    segment_indices : int | list[int]
         The segment indices to select
     """
 
-    def __init__(self, recording: BaseRecording, segment_indices: Union[int, List[int]]):
+    def __init__(self, recording: BaseRecording, segment_indices: int | list[int]):
         BaseRecording.__init__(self, recording.get_sampling_frequency(), recording.channel_ids, recording.get_dtype())
         recording.copy_metadata(self)
 
@@ -581,11 +580,11 @@ class SelectSegmentSorting(BaseSorting):
     ----------
     sorting : BaseSorting
         The multi-segment sorting
-    segment_indices : list of int
+    segment_indices : int | list[int]
         The segment indices to select
     """
 
-    def __init__(self, sorting: BaseSorting, segment_indices: Union[int, List[int]]):
+    def __init__(self, sorting: BaseSorting, segment_indices: int | list[int]):
         BaseSorting.__init__(self, sorting.get_sampling_frequency(), sorting.unit_ids)
         sorting.copy_metadata(self)
 

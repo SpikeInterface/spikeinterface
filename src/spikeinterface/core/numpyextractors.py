@@ -5,7 +5,7 @@ from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
     BaseRecordingSegment,
-    BaseSortingSegment,
+    SpikeVectorSortingSegment,
     BaseEvent,
     BaseEventSegment,
     BaseSnippets,
@@ -140,7 +140,7 @@ class NumpySorting(BaseSorting):
             nseg = spikes[-1]["segment_index"] + 1
 
         for segment_index in range(nseg):
-            self.add_sorting_segment(NumpySortingSegment(spikes, segment_index, unit_ids))
+            self.add_sorting_segment(SpikeVectorSortingSegment(spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = spikes
@@ -294,7 +294,7 @@ class NumpySorting(BaseSorting):
             units_dict = {}
             for u, unit_id in enumerate(unit_ids):
                 st = neo_spiketrains[seg_index][u]
-                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64")
+                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64", copy=False)
             units_dict_list.append(units_dict)
 
         sorting = NumpySorting.from_unit_dict(units_dict_list, sampling_frequency)
@@ -302,7 +302,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_peaks(peaks, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_peaks(peaks, sampling_frequency, unit_ids) -> "NumpySorting":
         """
         Construct a sorting from peaks returned by 'detect_peaks()' function.
         The unit ids correspond to the recording channel ids and spike trains are the
@@ -314,6 +314,8 @@ class NumpySorting(BaseSorting):
             Peaks array as returned by the 'detect_peaks()' function
         sampling_frequency : float
             the sampling frequency in Hz
+        unit_ids: np.array
+            The unit_ids vector which is generally the channel_ids but can be different.
 
         Returns
         -------
@@ -325,40 +327,9 @@ class NumpySorting(BaseSorting):
         spikes["unit_index"] = peaks["channel_index"]
         spikes["segment_index"] = peaks["segment_index"]
 
-        if unit_ids is None:
-            unit_ids = np.unique(peaks["channel_index"])
-
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
         return sorting
-
-
-class NumpySortingSegment(BaseSortingSegment):
-    def __init__(self, spikes, segment_index, unit_ids):
-        BaseSortingSegment.__init__(self)
-        self.spikes = spikes
-        self.segment_index = segment_index
-        self.unit_ids = list(unit_ids)
-        self.spikes_in_seg = None
-
-    def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        if self.spikes_in_seg is None:
-            # the slicing of segment is done only once the first time
-            # this fasten the constructor a lot
-            s0, s1 = np.searchsorted(self.spikes["segment_index"], [self.segment_index, self.segment_index + 1])
-            self.spikes_in_seg = self.spikes[s0:s1]
-
-        start = 0 if start_frame is None else np.searchsorted(self.spikes_in_seg["sample_index"], start_frame)
-        end = (
-            len(self.spikes_in_seg)
-            if end_frame is None
-            else np.searchsorted(self.spikes_in_seg["sample_index"], end_frame)
-        )
-
-        unit_index = self.unit_ids.index(unit_id)
-        times = self.spikes_in_seg[start:end][self.spikes_in_seg[start:end]["unit_index"] == unit_index]["sample_index"]
-
-        return times
 
 
 class SharedMemorySorting(BaseSorting):
@@ -377,7 +348,7 @@ class SharedMemorySorting(BaseSorting):
 
         nseg = self.shm_spikes[-1]["segment_index"] + 1
         for segment_index in range(nseg):
-            self.add_sorting_segment(NumpySortingSegment(self.shm_spikes, segment_index, unit_ids))
+            self.add_sorting_segment(SpikeVectorSortingSegment(self.shm_spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.shm_spikes
