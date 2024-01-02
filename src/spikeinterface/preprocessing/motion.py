@@ -121,7 +121,6 @@ motion_options_preset = {
             margin_um=30.0,
             prototype=None,
             percentile=10.0,
-            ,
         ),
         "estimate_motion_kwargs": dict(
             method="iterative_template",
