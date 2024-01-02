@@ -650,7 +650,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         radius_um=50,
         rank=5,
         noise_levels=None,
-        random_chunk_kwargs={},
+        random_chunk_kwargs={'num_chunks_per_segment' : 5},
         weight_method={},
     ):
         if not HAVE_NUMBA:
@@ -779,7 +779,12 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         # Find peaks and correct for time shift
         peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
 
+        # If we do not want to estimate the z accurately
         z = z_factors[peak_chan_ind // num_channels]
+        peak_chan_ind = peak_chan_ind % num_channels
+
+        # If we want to estimate z
+        # peak_chan_ind = peak_chan_ind % num_channels
         # z = np.zeros(len(peak_sample_ind), dtype=np.float32)
         # for count in range(len(peak_chan_ind)):
         #     channel = peak_chan_ind[count]
@@ -787,7 +792,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         #     data = traces[channel::num_channels, peak]
         #     z[count] = np.dot(data, z_factors)/data.sum()
 
-        peak_chan_ind = peak_chan_ind % num_channels
+        
         peak_sample_ind += exclude_sweep_size
 
         return peak_sample_ind, peak_chan_ind, z
