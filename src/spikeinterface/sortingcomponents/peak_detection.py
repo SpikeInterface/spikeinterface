@@ -129,7 +129,7 @@ def detect_peaks(
 
 
 expanded_base_peak_dtype = np.dtype(base_peak_dtype + [("iteration", "int8")])
-matched_base_peak_dtype = np.dtype(base_peak_dtype + [("depth_um", "float32")])
+matched_base_peak_dtype = np.dtype(base_peak_dtype + [("z", "float32")])
 
 
 class IterativePeakDetector(PeakDetector):
@@ -375,7 +375,7 @@ class MatchedPeakDetectorWrapper(PeakDetector):
         return self.get_method_margin(*self.args)
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-        peak_sample_ind, peak_chan_ind, depth_um = self.detect_peaks(traces, *self.args)
+        peak_sample_ind, peak_chan_ind, z = self.detect_peaks(traces, *self.args)
         if peak_sample_ind.size == 0 or peak_chan_ind.size == 0:
             return (np.zeros(0, dtype=matched_base_peak_dtype),)
 
@@ -385,7 +385,7 @@ class MatchedPeakDetectorWrapper(PeakDetector):
         local_peaks["channel_index"] = peak_chan_ind
         local_peaks["amplitude"] = peak_amplitude
         local_peaks["segment_index"] = segment_index
-        local_peaks["depth_um"] = depth_um
+        local_peaks["z"] = z
 
         # return is always a tuple
         return (local_peaks,)
@@ -632,8 +632,10 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         The canonical waveform of action potentials
     rank : int (default 5)
         The rank for SVD convolution of spatiotemporal templates with the traces
-    depth_um: np.array, default: np.linspace(5, 100.0, 5)
-        Putative depth of the fake templates
+    weight_method: dict
+        Parameter that should be provided to the get_convolution_weights() function
+        in order to know how to estimate the positions. One argument is mode that could
+        be either gaussian_2d (KS like) or exponential_3d (default)
     """
     )
 
@@ -646,10 +648,10 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        depth_um=np.linspace(0, 50, 5),
         rank=5,
         noise_levels=None,
         random_chunk_kwargs={},
+        weight_method={},
     ):
         if not HAVE_NUMBA:
             raise ModuleNotFoundError('"locally_exclusive" needs numba which is not installed')
@@ -675,15 +677,16 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         import sklearn.metrics
 
         contact_locations = recording.get_channel_locations()
-        num_channels = recording.get_num_channels()
-        num_templates = num_channels * len(depth_um)
-        num_samples = len(prototype)
-        #prototype = prototype[:, None]
-
         dist = sklearn.metrics.pairwise_distances(contact_locations, contact_locations)
-        weights = get_convolution_weights(dist, depth_um)
+        weights, z_factors = get_convolution_weights(dist, **weight_method)
+
+        num_channels = recording.get_num_channels()
+        num_templates = num_channels * len(z_factors)
+        num_samples = len(prototype)
         weights = weights.reshape(num_templates, -1)
 
+        # Mode with less memory consumption?
+        # prototype = prototype[:, None]        
         # temporal = np.zeros((0, num_samples, rank), dtype=np.float32)
         # singular = np.zeros((0, rank), dtype=np.float32)
         # spatial = np.zeros((0, rank, num_channels), dtype=np.float32)
@@ -719,7 +722,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         noise_levels = np.median(np.abs(random_data - medians), axis=1) / 0.6744897501960817
         abs_thresholds = noise_levels * detect_threshold
 
-        return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular, depth_um)
+        return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular, z_factors)
 
     def get_dtype(self):
         return matched_base_peak_dtype
@@ -752,14 +755,14 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         temporal,
         spatial,
         singular,
-        depth_um,
+        z_factors,
     ):
         assert HAVE_NUMBA, "You need to install numba"
         traces = cls.get_convolved_traces(traces, temporal, spatial, singular)
         traces /= abs_thresholds[:, None]
         traces_center = traces[:, exclude_sweep_size:-exclude_sweep_size]
-        num_depths = len(depth_um)
-        num_channels = traces.shape[0] // num_depths
+        num_z_factors = len(z_factors)
+        num_channels = traces.shape[0] // num_z_factors
 
         peak_mask = traces_center > 1
         peak_mask = _numba_detect_peak_matched_filtering(
@@ -776,18 +779,18 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         # Find peaks and correct for time shift
         peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
 
-        depths_um = depth_um[peak_chan_ind // num_channels]
-        # depths_um = np.zeros(len(peak_sample_ind), dtype=np.float32)
+        z = z_factors[peak_chan_ind // num_channels]
+        # z = np.zeros(len(peak_sample_ind), dtype=np.float32)
         # for count in range(len(peak_chan_ind)):
         #     channel = peak_chan_ind[count]
         #     peak = peak_sample_ind[count]
         #     data = traces[channel::num_channels, peak]
-        #     depths_um[count] = np.dot(data, depth_um)/data.sum()
+        #     z[count] = np.dot(data, z_factors)/data.sum()
 
         peak_chan_ind = peak_chan_ind % num_channels
         peak_sample_ind += exclude_sweep_size
 
-        return peak_sample_ind, peak_chan_ind, depths_um
+        return peak_sample_ind, peak_chan_ind, z
 
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
