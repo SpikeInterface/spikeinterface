@@ -373,12 +373,11 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    depth_um=np.linspace(0, 50.0, 5),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
     percentile=10,
-    sparsity_threshold=None,
+    weight_method={},
 ):
     """
     Estimate the positions of the templates from a large grid of fake templates
@@ -393,8 +392,6 @@ def compute_grid_convolution(
         Radius to consider for the fake templates
     upsampling_um: float, default: 5
         Upsampling resolution for the grid of templates
-    depth_um: np.array, default: np.linspace(5, 100.0, 10)
-        Putative depth of the fake templates
     sigma_ms: float, default: 0.25
         The temporal decay of the fake templates
     margin_um: float, default: 50
@@ -404,9 +401,10 @@ def compute_grid_convolution(
     percentile: float, default: 5
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float, default: None
-        The sparsity threshold (in 0-1) below which weights should be considered as 0. If None,
-        automatically set to 1/sqrt(num_channels)
+    weight_method: dict
+        Parameter that should be provided to the get_convolution_weights() function
+        in order to know how to estimate the positions. One argument is mode that could
+        be either gaussian_2d (KS like) or exponential_3d (default)
     Returns
     -------
     unit_location: np.array
@@ -419,8 +417,6 @@ def compute_grid_convolution(
     fs = waveform_extractor.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
-    if sparsity_threshold is not None:
-        assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
@@ -430,8 +426,8 @@ def compute_grid_convolution(
 
     prototype = prototype[:, np.newaxis]
 
-    template_positions, weights, nearest_template_mask = get_grid_convolution_templates_and_weights(
-        contact_locations, radius_um, upsampling_um, depth_um, margin_um, sparsity_threshold
+    template_positions, weights, nearest_template_mask, z_factors = get_grid_convolution_templates_and_weights(
+        contact_locations, radius_um, upsampling_um, margin_um, weight_method
     )
 
     # print(template_positions.shape)
@@ -461,6 +457,8 @@ def compute_grid_convolution(
         if percentile > 0:
             mask = dot_products == 0
             dot_products[mask] = np.nan
+            ## We need to catch warnings because some line can have only NaN, and
+            ## if so the nanpercentile function throws a warning
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore")
                 thresholds = np.nanpercentile(dot_products, percentile)
@@ -473,7 +471,7 @@ def compute_grid_convolution(
             unit_location[i, :2] += np.dot(dot_products[count], nearest_templates)
 
         scalar_products = dot_products.sum(1)
-        unit_location[i, 2] = np.dot(depth_um, scalar_products)
+        unit_location[i, 2] = np.dot(z_factors, scalar_products)
         unit_location[i] /= scalar_products.sum()
     unit_location = np.nan_to_num(unit_location)
 
@@ -577,13 +575,38 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 
 def get_grid_convolution_templates_and_weights(
-    contact_locations,
-    radius_um=40,
-    upsampling_um=5,
-    depth_um=np.linspace(0, 50.0, 5),
-    margin_um=50,
-    sparsity_threshold=None,
+    contact_locations, radius_um=40, upsampling_um=5, margin_um=50, weight_method={"mode": "exponential_3d"}
 ):
+    """Get a upsampled grid of artificial templates given a particular probe layout
+
+    Parameters
+    ----------
+    contact_locations: array
+        The positions of the channels
+    radius_um: float
+        Radius in um for channel sparsity.
+    upsampling_um: float
+        Upsampling resolution for the grid of templates
+    margin_um: float
+        The margin for the grid of fake templates
+    weight_method: dict
+        Parameter that should be provided to the get_convolution_weights() function
+        in order to know how to estimate the positions. One argument is mode that could
+        be either gaussian_2d (KS like) or exponential_3d (default)
+
+    Returns
+    -------
+    template_positions: array
+        The positions of the upsampled templates
+    weights:
+        The weights of the templates, on a per channel basis
+    nearest_template_mask: array
+        A sparsity mask to to know which template is close to the contact locations, given
+        the radius_um parameter
+    z_factors: array
+        The z_factors that have been used to generate the weights along the third dimension
+    """
+
     import sklearn.metrics
 
     x_min, x_max = contact_locations[:, 0].min(), contact_locations[:, 0].max()
@@ -612,23 +635,63 @@ def get_grid_convolution_templates_and_weights(
     # mask to get nearest template given a channel
     dist = sklearn.metrics.pairwise_distances(contact_locations, template_positions)
     nearest_template_mask = dist <= radius_um
-    weights = get_convolution_weights(dist, depth_um, sparsity_threshold)
+    weights, z_factors = get_convolution_weights(dist, **weight_method)
 
-    return template_positions, weights, nearest_template_mask
+    return template_positions, weights, nearest_template_mask, z_factors
 
 
 def get_convolution_weights(
     distances,
-    depth_um=np.linspace(0, 50.0, 5),
+    z_list_um=np.linspace(0, 120.0, 5),
+    sigma_list_um=np.linspace(5, 25, 5),
     sparsity_threshold=None,
+    sigma_3d=2.5,
+    mode="exponential_3d",
 ):
-    weights = np.zeros((len(depth_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
+    """Get normalized weights for creating artificial templates, given some precomputed distances
 
-    for count, depth in enumerate(depth_um):
-        # dist_3d = np.sqrt(distances**2 + depth**2)
-        # alpha = 1e-3
-        # weights[count] = 1 / (alpha + dist_3d) ** 2
-        weights[count] = np.exp(-distances / (1 + depth))
+    Parameters
+    ----------
+    distances: 2D array
+        The distances between the source channels (real ones) and the upsampled one (virual ones)
+    sparsity_threshold: float, default None
+        The sparsity_threshold below which weights are set to 0 (speeding up computations). If None,
+        then a default value of 0.5/sqrt(distances.shape[0]) is set
+    mode: exponential_3d | gaussian_2d
+        The inference scheme to be used to get the convolution weights
+        Keyword arguments for the chosen method:
+            "gaussian_2d" (similar to KiloSort):
+                * sigma_list_um: array, default np.linspace(5, 25, 5)
+                    The list of sigma to consider for decaying exponentials
+            "exponential_3d" (default):
+                * z_list_um: array, default np.linspace(0, 120.0, 5)
+                    The list of z to consider for putative depth of the sources
+                * sigma_3d: float, default 2.5
+                    The scaling factor controling the decay of the exponential
+
+    Returns
+    -------
+    weights:
+        The weights of the templates, on a per channel basis
+    z_factors: array
+        The z_factors that have been used to generate the weights along the third dimension
+    """
+
+    if sparsity_threshold is not None:
+        assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
+
+    if mode == "exponential_3d":
+        weights = np.zeros((len(z_list_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
+        for count, z in enumerate(z_list_um):
+            dist_3d = np.sqrt(distances**2 + z**2)
+            weights[count] = np.exp(-dist_3d / sigma_3d)
+        z_factors = z_list_um
+    elif mode == "gaussian_2d":
+        weights = np.zeros((len(sigma_list_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
+        for count, sigma in enumerate(sigma_list_um):
+            alpha = 2 * (sigma**2)
+            weights[count] = np.exp(-(distances**2) / alpha)
+        z_factors = sigma_list_um
 
     # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -648,7 +711,7 @@ def get_convolution_weights(
         norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
         weights /= norm
 
-    return weights
+    return weights, z_factors
 
 
 if HAVE_NUMBA:
