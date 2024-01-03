@@ -451,7 +451,7 @@ def run_node_pipeline(
     squeeze_output=True,
     folder=None,
     names=None,
-    seed=None
+    seed=None,
 ):
     """
     Common function to run pipeline with peak detector or already detected peak.
@@ -525,7 +525,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
         traces_loaded = True
     else:
         peak_output = np.zeros(0, base_peak_dtype)
-        waveform_output, left_margin, right_margin = np.zeros((0,0), dtype=recording.dtype), 0, 0
+        waveform_output, left_margin, right_margin = np.zeros((0, 0), dtype=recording.dtype), 0, 0
         traces_loaded = False
 
     # compute the graph
