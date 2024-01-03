@@ -88,6 +88,7 @@ def get_random_data_chunks(
 
 get_random_data_chunks.__doc__ = get_random_data_chunks.__doc__.format(_shared_job_kwargs_doc)
 
+
 def get_channel_distances(recording):
     """
     Distance between channel pairs
@@ -192,7 +193,9 @@ def get_noise_levels(
 
     return noise_levels
 
+
 get_noise_levels.__doc__ = get_noise_levels.__doc__.format(_shared_job_kwargs_doc)
+
 
 def get_chunk_with_margin(
     rec_segment,
