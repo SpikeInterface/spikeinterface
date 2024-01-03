@@ -2,6 +2,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Literal
 import warnings
+from .job_tools import _shared_job_kwargs_doc
 
 import numpy as np
 
@@ -37,6 +38,9 @@ def get_random_data_chunks(
         Random seed
     margin_frames: int, default: 0
         Margin in number of frames to avoid edge effects
+
+    job kwargs:
+    {}
 
     Returns
     -------
@@ -81,6 +85,8 @@ def get_random_data_chunks(
         num_chunks = recording.get_num_segments() * num_chunks_per_segment
         return np.split(data, chunk_size * np.arange(1, num_chunks))
 
+
+get_random_data_chunks.__doc__ = get_random_data_chunks.__doc__.format(_shared_job_kwargs_doc)
 
 def get_channel_distances(recording):
     """
@@ -157,6 +163,9 @@ def get_noise_levels(
     random_chunk_kwargs: dict
         Kwargs for get_random_data_chunks
 
+    job kwargs:
+    {}
+
     Returns
     -------
     noise_levels: array
@@ -183,6 +192,7 @@ def get_noise_levels(
 
     return noise_levels
 
+get_noise_levels.__doc__ = get_noise_levels.__doc__.format(_shared_job_kwargs_doc)
 
 def get_chunk_with_margin(
     rec_segment,
