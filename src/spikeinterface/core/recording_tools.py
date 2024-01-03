@@ -78,8 +78,8 @@ def get_random_data_chunks(
     if concatenated:
         return data
     else:
-        num_chunks = recording.get_num_segments()*num_chunks_per_segment
-        return np.split(data, np.arange(chunk_size, chunk_size*num_chunks, chunk_size))
+        num_chunks = recording.get_num_segments() * num_chunks_per_segment
+        return np.split(data, np.arange(chunk_size, chunk_size * num_chunks, chunk_size))
 
 
 def get_channel_distances(recording):
