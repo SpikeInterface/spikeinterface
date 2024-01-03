@@ -50,15 +50,27 @@ def get_random_data_chunks(
     from .node_pipeline import run_traces_pipeline
     from .job_tools import divide_segment_into_chunks
 
-    all_chunks = []
     rng = np.random.default_rng(seed)
+    all_chunks = []
+    
+    ### What seems to be a correct implementation, with no overlapping chunks. Cons:
+    ### margin is not taken into account, and we can have less samples than what is requested
+    # for segment_index in range(recording.get_num_segments()):
+    #     num_frames = recording.get_num_samples(segment_index)
+    #     chunks = divide_segment_into_chunks(num_frames, chunk_size)
+    #     indices = np.random.permutation(np.arange(len(chunks)))[:num_chunks_per_segment]
+    #     for i in indices:
+    #         frame_start, frame_stop = chunks[i]
+    #         all_chunks += [(segment_index, frame_start, frame_stop)]
+
+    ### Former implementation. Cons: overlapping chunks can be drawn
+    low = margin_frames
     for segment_index in range(recording.get_num_segments()):
-        num_frames = recording.get_num_samples(segment_index)
-        chunks = divide_segment_into_chunks(num_frames, chunk_size)
-        indices = np.random.permutation(np.arange(len(chunks)))[:num_chunks_per_segment]
-        for i in indices:
-            frame_start, frame_stop = chunks[i]
-            all_chunks += [(segment_index, frame_start, frame_stop)]
+        num_frames = recording.get_num_frames(segment_index)
+        high = num_frames - chunk_size - margin_frames
+        random_starts = rng.integers(low=low, high=high, size=num_chunks_per_segment)
+        for start_frame in random_starts:
+            all_chunks += [(segment_index, start_frame, start_frame + chunk_size)]
 
     return run_traces_pipeline(
         recording, job_kwargs, all_chunks=all_chunks, return_scaled=return_scaled, squeeze_output=concatenated
