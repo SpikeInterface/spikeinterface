@@ -553,6 +553,7 @@ def run_traces_pipeline(
     recording,
     job_kwargs,
     job_name="get_traces",
+    return_scaled=False,
     squeeze_output=True,
     all_chunks=None
 ):
@@ -562,7 +563,7 @@ def run_traces_pipeline(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     gather_func = GatherToMemory()
-    init_args = (recording, )
+    init_args = (recording, return_scaled)
 
     processor = ChunkRecordingExecutor(
         recording,
@@ -580,23 +581,24 @@ def run_traces_pipeline(
     return outs
 
 
-def _init_traces_pipeline(recording):
+def _init_traces_pipeline(recording, return_scaled):
     # create a local dict per worker
     worker_ctx = {}
+    worker_ctx["return_scaled"] = return_scaled
     worker_ctx["recording"] = recording
-    worker_ctx["max_margin"] = 0
     return worker_ctx
 
 
 def _compute_traces_pipeline_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx["recording"]
-    max_margin = worker_ctx["max_margin"]
-    recording_segment = recording._recording_segments[segment_index]
-    traces_chunk, left_margin, right_margin = get_chunk_with_margin(
-        recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
-    )
-    return traces_chunk
-
+    return_scaled = worker_ctx["return_scaled"]
+    traces = recording.get_traces(
+                start_frame=start_frame,
+                end_frame=end_frame,
+                segment_index=segment_index,
+                return_scaled=return_scaled,
+            )
+    return traces
 
 
 class GatherToMemory:
