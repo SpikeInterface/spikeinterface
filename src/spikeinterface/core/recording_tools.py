@@ -14,7 +14,7 @@ def get_random_data_chunks(
     concatenated=True,
     seed=0,
     margin_frames=0,
-    job_kwargs={}
+    job_kwargs={},
 ):
     """
     Extract random chunks across segments
@@ -60,7 +60,7 @@ def get_random_data_chunks(
             frame_start, frame_stop = chunks[i]
             all_chunks += [(segment_index, frame_start, frame_stop)]
 
-    return run_traces_pipeline(recording, job_kwargs, all_chunks=all_chunks, squeeze_output=concatenated)
+    return run_traces_pipeline(recording, job_kwargs, all_chunks=all_chunks, return_scaled=return_scaled, squeeze_output=concatenated)
 
 
 def get_channel_distances(recording):
@@ -153,7 +153,9 @@ def get_noise_levels(
     if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
-        random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, job_kwargs=job_kwargs, **random_chunk_kwargs)
+        random_chunks = get_random_data_chunks(
+            recording, return_scaled=return_scaled, job_kwargs=job_kwargs, **random_chunk_kwargs
+        )
 
         if method == "mad":
             med = np.median(random_chunks, axis=0, keepdims=True)

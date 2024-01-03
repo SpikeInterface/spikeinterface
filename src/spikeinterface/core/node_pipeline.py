@@ -600,7 +600,6 @@ def _compute_traces_pipeline_chunk(segment_index, start_frame, end_frame, worker
             )
     return traces
 
-
 class GatherToMemory:
     """
     Gather output of nodes into list and then demultiplex and np.concatenate
