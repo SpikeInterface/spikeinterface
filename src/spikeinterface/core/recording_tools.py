@@ -14,7 +14,7 @@ def get_random_data_chunks(
     concatenated=True,
     seed=0,
     margin_frames=0,
-    job_kwargs={}
+    **job_kwargs
 ):
     """
     Extract random chunks across segments
@@ -117,7 +117,6 @@ def get_noise_levels(
     return_scaled: bool = True,
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
-    job_kwargs={},
     **random_chunk_kwargs,
 ):
     """
@@ -156,7 +155,7 @@ def get_noise_levels(
         noise_levels = recording.get_property(key=key)
     else:
         random_chunks = get_random_data_chunks(
-            recording, return_scaled=return_scaled, job_kwargs=job_kwargs, **random_chunk_kwargs
+            recording, return_scaled=return_scaled, **random_chunk_kwargs
         )
 
         if method == "mad":
