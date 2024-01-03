@@ -14,7 +14,7 @@ def get_random_data_chunks(
     concatenated=True,
     seed=0,
     margin_frames=0,
-    job_kwargs={},
+    job_kwargs={}
 ):
     """
     Extract random chunks across segments
