@@ -14,7 +14,7 @@ def get_random_data_chunks(
     concatenated=True,
     seed=0,
     margin_frames=0,
-    **job_kwargs
+    **job_kwargs,
 ):
     """
     Extract random chunks across segments
@@ -154,9 +154,7 @@ def get_noise_levels(
     if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
-        random_chunks = get_random_data_chunks(
-            recording, return_scaled=return_scaled, **random_chunk_kwargs
-        )
+        random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
 
         if method == "mad":
             med = np.median(random_chunks, axis=0, keepdims=True)
