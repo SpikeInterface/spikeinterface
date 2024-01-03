@@ -52,7 +52,7 @@ def get_random_data_chunks(
 
     rng = np.random.default_rng(seed)
     all_chunks = []
-    
+
     ### What seems to be a correct implementation, with no overlapping chunks. Cons:
     ### margin is not taken into account, and we can have less samples than what is requested
     # for segment_index in range(recording.get_num_segments()):
