@@ -58,7 +58,7 @@ jobs:
         uses: ./.github/actions/show-test-environment
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v41
       - name: Module changes
         id: modules-changed
         run: |
