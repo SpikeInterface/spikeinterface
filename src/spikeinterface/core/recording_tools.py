@@ -72,9 +72,14 @@ def get_random_data_chunks(
         for start_frame in random_starts:
             all_chunks += [(segment_index, start_frame, start_frame + chunk_size)]
 
-    return run_traces_pipeline(
-        recording, job_kwargs, all_chunks=all_chunks, return_scaled=return_scaled, squeeze_output=concatenated
+    data = run_traces_pipeline(
+        recording, job_kwargs, all_chunks=all_chunks, return_scaled=return_scaled, squeeze_output=True
     )
+    if concatenated:
+        return data
+    else:
+        num_chunks = recording.get_num_segments()*num_chunks_per_segment
+        return np.split(data, np.arange(chunk_size, chunk_size*num_chunks, chunk_size))
 
 
 def get_channel_distances(recording):
