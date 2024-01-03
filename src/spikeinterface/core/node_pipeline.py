@@ -550,12 +550,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
 
 
 def run_traces_pipeline(
-    recording,
-    job_kwargs,
-    job_name="get_traces",
-    return_scaled=False,
-    squeeze_output=True,
-    all_chunks=None
+    recording, job_kwargs, job_name="get_traces", return_scaled=False, squeeze_output=True, all_chunks=None
 ):
     """
     Common function to run pipeline and extract traces in parallel.
@@ -593,12 +588,13 @@ def _compute_traces_pipeline_chunk(segment_index, start_frame, end_frame, worker
     recording = worker_ctx["recording"]
     return_scaled = worker_ctx["return_scaled"]
     traces = recording.get_traces(
-                start_frame=start_frame,
-                end_frame=end_frame,
-                segment_index=segment_index,
-                return_scaled=return_scaled,
-            )
+        start_frame=start_frame,
+        end_frame=end_frame,
+        segment_index=segment_index,
+        return_scaled=return_scaled,
+    )
     return traces
+
 
 class GatherToMemory:
     """

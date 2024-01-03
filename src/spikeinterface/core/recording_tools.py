@@ -60,7 +60,9 @@ def get_random_data_chunks(
             frame_start, frame_stop = chunks[i]
             all_chunks += [(segment_index, frame_start, frame_stop)]
 
-    return run_traces_pipeline(recording, job_kwargs, all_chunks=all_chunks, return_scaled=return_scaled, squeeze_output=concatenated)
+    return run_traces_pipeline(
+        recording, job_kwargs, all_chunks=all_chunks, return_scaled=return_scaled, squeeze_output=concatenated
+    )
 
 
 def get_channel_distances(recording):
