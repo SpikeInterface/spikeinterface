@@ -190,6 +190,7 @@ def get_noise_levels(
 
     return noise_levels
 
+
 def get_chunk_with_margin(
     rec_segment,
     start_frame,
