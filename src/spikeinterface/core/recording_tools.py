@@ -164,9 +164,6 @@ def get_noise_levels(
     random_chunk_kwargs: dict
         Kwargs for get_random_data_chunks
 
-    job kwargs:
-    {}
-
     Returns
     -------
     noise_levels: array
@@ -192,10 +189,6 @@ def get_noise_levels(
         recording.set_property(key, noise_levels)
 
     return noise_levels
-
-
-get_noise_levels.__doc__ = get_noise_levels.__doc__.format(_shared_job_kwargs_doc)
-
 
 def get_chunk_with_margin(
     rec_segment,
