@@ -329,7 +329,7 @@ class LocalizeGridConvolution(PipelineNode):
         Sign of the peak if no prototype are provided for the waveforms
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float, default: 10
+    percentile: float, default: 5
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
     weight_method: dict
@@ -348,7 +348,7 @@ class LocalizeGridConvolution(PipelineNode):
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=10.0,
+        percentile=5.0,
         peak_sign="neg",
         weight_method={},
     ):
