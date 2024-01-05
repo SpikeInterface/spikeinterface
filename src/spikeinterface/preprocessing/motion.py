@@ -103,7 +103,7 @@ motion_options_preset = {
     },
     # This preset try to mimic kilosort2.5 motion estimator
     "kilosort_like": {
-        "doc": "Mimic the drift correction of kilosrt (grid_convolution + iterative_template)",
+        "doc": "Mimic the drift correction of kilosort (grid_convolution + iterative_template)",
         "detect_kwargs": dict(
             method="locally_exclusive",
             peak_sign="neg",
@@ -116,12 +116,11 @@ motion_options_preset = {
             method="grid_convolution",
             radius_um=40.0,
             upsampling_um=5.0,
-            sigma_um=np.linspace(5.0, 25.0, 5),
+            weight_method={"mode": "gaussian_2d", "sigma_list_um": np.linspace(5, 25, 5)},
             sigma_ms=0.25,
             margin_um=30.0,
             prototype=None,
             percentile=10.0,
-            sparsity_threshold=0.01,
         ),
         "estimate_motion_kwargs": dict(
             method="iterative_template",

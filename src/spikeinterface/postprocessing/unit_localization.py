@@ -376,7 +376,7 @@ def compute_grid_convolution(
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=10,
+    percentile=5,
     weight_method={},
 ):
     """
@@ -453,9 +453,8 @@ def compute_grid_convolution(
         for count in range(nb_weights):
             dot_products[count] = np.dot(global_products, sub_w[count])
 
-        dot_products = np.maximum(0, dot_products)
+        mask = dot_products < 0
         if percentile > 0:
-            mask = dot_products == 0
             dot_products[mask] = np.nan
             ## We need to catch warnings because some line can have only NaN, and
             ## if so the nanpercentile function throws a warning
@@ -464,7 +463,7 @@ def compute_grid_convolution(
                 thresholds = np.nanpercentile(dot_products, percentile)
             thresholds = np.nan_to_num(thresholds)
             dot_products[dot_products < thresholds] = 0
-            dot_products[mask] = 0
+        dot_products[mask] = 0
 
         nearest_templates = template_positions[nearest_templates]
         for count in range(nb_weights):
