@@ -40,6 +40,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
         "apply_preprocessing": True,
         "shared_memory": True,
+        "preload_in_memory": (True, 0.5),
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
@@ -63,6 +64,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + zscore",
         "shared_memory": "Boolean to specify if the code should, as much as possible, use an internal data structure in memory (faster)",
+        "preload_in_memory": "Tuple to specify if the preprocessed recording is preloaded in memory (faster) and the percentage of available memory\
+                              that should be used. Default is (True, 0.8)",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "debug": "Boolean to specify if the internal data structure should be kept for debugging",
@@ -109,6 +112,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")
         noise_levels = np.ones(num_channels, dtype=np.float32)
+
+        if params["preload_in_memory"][0]:
+            assert 0 < params["preload_in_memory"][1] < 1
+            memory_usage = params["preload_in_memory"][1] * psutil.virtual_memory()[4]
+            if recording_f.get_memory_size() < memory_usage:
+                recording_f = recording_f.save(format='memory', shared=True, **params['job_kwargs'])
+            else:
+                if verbose:
+                    print('Recording too large to be preloaded in RAM...')
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
