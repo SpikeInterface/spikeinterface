@@ -63,6 +63,7 @@ class DecimateRecording(BasePreprocessor):
                 DecimateRecordingSegment(
                     parent_segment,
                     resample_rate,
+                    self._orig_samp_freq,
                     decimation_frame_step,
                     decimation_frame_start,
                     dtype,
@@ -81,15 +82,17 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         self,
         parent_recording_segment,
         resample_rate,
+        parent_rate,
         decimation_frame_step,
         decimation_frame_start,
         dtype,
     ):
+        new_t_start = parent_recording_segment + decimation_frame_start / parent_rate
         # Do not use BasePreprocessorSegment bcause we have to reset the sampling rate!
         BaseRecordingSegment.__init__(
             self,
             sampling_frequency=resample_rate,
-            t_start=parent_recording_segment.t_start,
+            t_start=new_t_start,
         )
         self._parent_segment = parent_recording_segment
         self._decimation_frame_step = decimation_frame_step
