@@ -1828,6 +1828,7 @@ def generate_ground_truth_recording(
             dtype=dtype,
             **generate_templates_kwargs,
         )
+        sorting.set_property("unit_locations", unit_locations)
     else:
         assert templates.shape[0] == num_units
 
@@ -1864,6 +1865,6 @@ def generate_ground_truth_recording(
     recording.set_probe(probe, in_place=True)
     recording.set_channel_gains(1.0)
     recording.set_channel_offsets(0.0)
-    sorting.set_property("unit_locations", unit_locations)
+    
 
     return recording, sorting
