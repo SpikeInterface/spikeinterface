@@ -87,7 +87,11 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         decimation_frame_start,
         dtype,
     ):
-        new_t_start = parent_recording_segment + decimation_frame_start / parent_rate
+        if parent_recording_segment.t_start is None:
+            new_t_start = None
+        else:
+            new_t_start = parent_recording_segment.t_start + decimation_frame_start / parent_rate
+
         # Do not use BasePreprocessorSegment bcause we have to reset the sampling rate!
         BaseRecordingSegment.__init__(
             self,
