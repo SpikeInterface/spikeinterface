@@ -23,7 +23,7 @@ class GaussianBandpassFilterRecording(BasePreprocessor):
         The lower frequency cutoff for the bandpass filter.
     freq_max: float
         The higher frequency cutoff for the bandpass filter.
-    margin_sd: float, default: 6.0
+    margin_sd: float, default: 5.0
         The number of standard deviation to take for margins.
 
     Returns
