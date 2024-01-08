@@ -186,15 +186,17 @@ def get_noise_levels(
 
 
 def get_chunk_with_margin(
-    rec_segment,
+    recording,
+    segment_index,
     start_frame,
     end_frame,
-    channel_indices,
+    channel_inds,
     margin,
     add_zeros=False,
     add_reflect_padding=False,
     window_on_margin=False,
     dtype=None,
+    return_scaled=False
 ):
     """
     Helper to get chunk with margin
@@ -205,10 +207,11 @@ def get_chunk_with_margin(
     case zero padding is used, in the second case np.pad is called
     with mod="reflect".
     """
+    rec_segment = recording._recording_segments[segment_index]
     length = rec_segment.get_num_samples()
 
-    if channel_indices is None:
-        channel_indices = slice(None)
+    if channel_inds is None:
+        channel_inds = recording.channel_ids
 
     if not (add_zeros or add_reflect_padding):
         if window_on_margin and not add_zeros:
@@ -230,10 +233,12 @@ def get_chunk_with_margin(
         else:
             right_margin = margin
 
-        traces_chunk = rec_segment.get_traces(
+        traces_chunk = recording.get_traces(
+            segment_index,
             start_frame - left_margin,
             end_frame + right_margin,
-            channel_indices,
+            channel_inds,
+            return_scaled=return_scaled
         )
 
     else:
@@ -260,7 +265,7 @@ def get_chunk_with_margin(
             end_frame2 = end_frame + margin
             right_pad = 0
 
-        traces_chunk = rec_segment.get_traces(start_frame2, end_frame2, channel_indices)
+        traces_chunk = recording.get_traces(segment_index, start_frame2, end_frame2, channel_inds, return_scaled=return_scaled)
 
         if dtype is not None or window_on_margin or left_pad > 0 or right_pad > 0:
             need_copy = True
