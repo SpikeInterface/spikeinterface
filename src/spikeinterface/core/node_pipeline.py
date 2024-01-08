@@ -491,8 +491,8 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     nodes = worker_ctx["nodes"]
     return_scaled = worker_ctx["return_scaled"]
 
-    traces_chunk, left_margin, right_margin = get_chunk_with_margin(recording, 
-        segment_index, start_frame, end_frame, None, max_margin, add_zeros=True, return_scaled=return_scaled
+    traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+        recording, segment_index, start_frame, end_frame, None, max_margin, add_zeros=True, return_scaled=return_scaled
     )
 
     # compute the graph
