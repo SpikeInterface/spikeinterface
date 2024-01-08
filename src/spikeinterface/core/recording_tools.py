@@ -359,6 +359,7 @@ def get_traces_with_margin(
             start_frame - left_margin,
             end_frame + right_margin,
             channel_inds,
+            return_scaled=return_scaled
         )
 
     else:
@@ -385,7 +386,7 @@ def get_traces_with_margin(
             end_frame2 = end_frame + margin
             right_pad = 0
 
-        traces_chunk = recording.get_traces(segment_index, start_frame2, end_frame2, channel_inds)
+        traces_chunk = recording.get_traces(segment_index, start_frame2, end_frame2, channel_inds, return_scaled=return_scaled)
 
         if dtype is not None or window_on_margin or left_pad > 0 or right_pad > 0:
             need_copy = True
