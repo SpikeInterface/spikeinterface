@@ -29,6 +29,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
+from spikeinterface.core.recording_tools import get_traces_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
 
@@ -491,7 +492,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     nodes = worker_ctx["nodes"]
     return_scaled = worker_ctx["return_scaled"]
 
-    traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+    traces_chunk, left_margin, right_margin = get_traces_with_margin(
         recording, segment_index, start_frame, end_frame, None, max_margin, add_zeros=True, return_scaled=return_scaled
     )
 
