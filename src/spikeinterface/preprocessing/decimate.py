@@ -19,9 +19,11 @@ class DecimateRecording(BasePreprocessor):
     Parameters
     ----------
     recording : Recording
-        The recording extractor to be re-referenced
+        The recording extractor to be decimated.
     decimation_frame_step : int
-    decimation_frame_start : int, default 0
+        Step between successive frames sampled from the parent recording.
+    decimation_frame_start : int, default: 0
+        Index of first frame sampled from the parent recording.
 
     Returns
     -------
