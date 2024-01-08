@@ -34,7 +34,9 @@ class GaussianBandpassFilterRecording(BasePreprocessor):
 
     name = "gaussian_bandpass_filter"
 
-    def __init__(self, recording: BaseRecording, freq_min: float = 300.0, freq_max: float = 5000.0, margin_sd: float = 5.0):
+    def __init__(
+        self, recording: BaseRecording, freq_min: float = 300.0, freq_max: float = 5000.0, margin_sd: float = 5.0
+    ):
         sf = recording.sampling_frequency
         BasePreprocessor.__init__(self, recording)
         self.annotate(is_filtered=True)
@@ -46,7 +48,9 @@ class GaussianBandpassFilterRecording(BasePreprocessor):
 
 
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment: BaseRecordingSegment, freq_min: float, freq_max: float, margin_sd: float = 5.0):
+    def __init__(
+        self, parent_recording_segment: BaseRecordingSegment, freq_min: float, freq_max: float, margin_sd: float = 5.0
+    ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.freq_min = freq_min
