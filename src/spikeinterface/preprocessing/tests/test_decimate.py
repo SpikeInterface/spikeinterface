@@ -16,7 +16,7 @@ def test_decimate(decimation_frame_start, decimation_frame_step, start_frame, en
     rec = generate_recording()
 
     N = 101
-    rec = NumpyRecording([np.arange(N).reshape(N,1)], 1)
+    rec = NumpyRecording([np.arange(N).reshape(N, 1)], 1)
     parent_traces = rec.get_traces()
 
     decimated_rec = DecimateRecording(rec, decimation_frame_step, decimation_frame_start=decimation_frame_start)
@@ -25,9 +25,7 @@ def test_decimate(decimation_frame_start, decimation_frame_step, start_frame, en
     if start_frame is None:
         start_frame = len(decimated_parent_traces)
 
-    assert np.all(
-        decimated_rec.get_traces(0, start_frame, end_frame) == decimated_parent_traces[start_frame:end_frame]
-    )
+    assert np.all(decimated_rec.get_traces(0, start_frame, end_frame) == decimated_parent_traces[start_frame:end_frame])
 
 
 if __name__ == "__main__":
