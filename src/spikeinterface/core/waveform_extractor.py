@@ -1995,7 +1995,6 @@ class BaseWaveformExtractorExtension:
                 elif ext_data_file.suffix == ".pkl":
                     ext_data = pickle.load(ext_data_file.open("rb"))
                 else:
-                    print(f"{ext_data_file.name} not created by spikeinterface, skipping this file")
                     continue
                 self._extension_data[ext_data_name] = ext_data
         elif self.format == "zarr":
