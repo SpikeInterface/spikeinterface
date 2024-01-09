@@ -32,6 +32,7 @@ def test_decimate(decimation_offset, decimation_factor, start_frame, end_frame):
     if end_frame is None:
         end_frame = decimated_rec.get_num_samples()
 
+    assert decimated_rec.get_num_samples() == decimated_parent_traces.shape[0]
     assert np.all(decimated_rec.get_traces(0, start_frame, end_frame) == decimated_parent_traces[start_frame:end_frame])
 
 

@@ -112,7 +112,9 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         self._dtype = dtype
 
     def get_num_samples(self):
-        return len(range(self._decimation_offset, self._parent_segment.get_num_samples(), self._decimation_factor))
+        parent_n_samp = self._parent_segment.get_num_samples()
+        assert self._decimation_offset < parent_n_samp  # Sanity check (already enforced). Formula changes otherwise
+        return np.ceil((parent_n_samp - self._decimation_offset) / self._decimation_factor)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
