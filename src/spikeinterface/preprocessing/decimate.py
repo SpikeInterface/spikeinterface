@@ -51,11 +51,8 @@ class DecimateRecording(BasePreprocessor):
             raise ValueError(f"Expecting positive integer for `decimation_frame_step` arg")
         self._decimation_frame_start = decimation_frame_start
         resample_rate = self._orig_samp_freq / self._decimation_frame_step
-        self._sampling_frequency = resample_rate
-        # fix_dtype not always returns the str, make sure it does
-        dtype = fix_dtype(recording, None).str
 
-        BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate, dtype=dtype)
+        BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate)
 
         # in case there was a time_vector, it will be dropped for sanity.
         # This is not necessary but consistent with ResampleRecording
@@ -68,7 +65,7 @@ class DecimateRecording(BasePreprocessor):
                     self._orig_samp_freq,
                     decimation_frame_step,
                     decimation_frame_start,
-                    dtype,
+                    self._dtype,
                 )
             )
 
