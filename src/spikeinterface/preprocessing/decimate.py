@@ -121,6 +121,8 @@ class DecimateRecordingSegment(BaseRecordingSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
+        end_frame = min(end_frame, self.get_num_samples())
+        start_frame = min(start_frame, self.get_num_samples())
 
         # Account for offset and end when querying parent traces
         parent_start_frame = self._decimation_offset + start_frame * self._decimation_factor
