@@ -24,6 +24,9 @@ class DecimateRecording(BasePreprocessor):
         Step between successive frames sampled from the parent recording.
     decimation_offset : int, default: 0
         Index of first frame sampled from the parent recording.
+        Expecting `decimation_offset` < `decimation_factor`, and `decimation_offset` < parent_recording.get_num_samples()
+        to ensure that the decimated recording has at least one frame. Consider combining DecimateRecording
+        with FrameSliceRecording for fine control on the recording start and end frames.
 
     Returns
     -------
@@ -44,11 +47,17 @@ class DecimateRecording(BasePreprocessor):
     ):
         # Original sampling frequency
         self._orig_samp_freq = recording.get_sampling_frequency()
+        parent_nsamp = recording.get_num_samples()
         if not isinstance(decimation_factor, int) or decimation_factor <= 0:
             raise ValueError(f"Expecting strictly positive integer for `decimation_factor` arg")
         self._decimation_factor = decimation_factor
         if not isinstance(decimation_offset, int) or decimation_factor < 0:
             raise ValueError(f"Expecting positive integer for `decimation_factor` arg")
+        if decimation_offset >= decimation_factor or decimation_offset >= parent_nsamp:
+            raise ValueError(
+                f"Expecting `decimation_offset` < `decimation_factor` and `decimation_offset` < recording.get_num_samples(). "
+                f"Consider combining DecimateRecording with FrameSliceRecording for fine control on the recording start/end frames."
+            )
         self._decimation_offset = decimation_offset
         resample_rate = self._orig_samp_freq / self._decimation_factor
 

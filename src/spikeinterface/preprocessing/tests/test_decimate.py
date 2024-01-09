@@ -8,8 +8,8 @@ from spikeinterface.preprocessing.decimate import DecimateRecording
 import numpy as np
 
 
-@pytest.mark.parametrize("decimation_offset", [0, 1, 9, 10, 11, 200])
-@pytest.mark.parametrize("decimation_factor", [1, 9, 10, 11, 200])
+@pytest.mark.parametrize("decimation_offset", [0, 1, 9, 10, 11, 100, 101])
+@pytest.mark.parametrize("decimation_factor", [1, 9, 10, 11, 100, 101])
 @pytest.mark.parametrize("start_frame", [0, 1, 5, 20])
 @pytest.mark.parametrize("end_frame", [None, 1, 5, 20])
 def test_decimate(decimation_offset, decimation_factor, start_frame, end_frame):
@@ -18,6 +18,11 @@ def test_decimate(decimation_offset, decimation_factor, start_frame, end_frame):
     N = 101
     rec = NumpyRecording([np.arange(N).reshape(N, 1)], 1)
     parent_traces = rec.get_traces()
+
+    if decimation_offset >= N or decimation_offset >= decimation_factor:
+        with pytest.raises(ValueError):
+            decimated_rec = DecimateRecording(rec, decimation_factor, decimation_offset=decimation_offset)
+        return
 
     decimated_rec = DecimateRecording(rec, decimation_factor, decimation_offset=decimation_offset)
     decimated_parent_traces = parent_traces[decimation_offset::decimation_factor]
