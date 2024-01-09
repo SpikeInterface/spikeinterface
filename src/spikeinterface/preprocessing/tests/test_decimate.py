@@ -11,7 +11,7 @@ import numpy as np
 @pytest.mark.parametrize("decimation_offset", [0, 1, 9, 10, 11, 100, 101])
 @pytest.mark.parametrize("decimation_factor", [1, 9, 10, 11, 100, 101])
 @pytest.mark.parametrize("start_frame", [0, 1, 5, None, 1000])
-@pytest.mark.parametrize("end_frame", [None, 1, 5, 20])
+@pytest.mark.parametrize("end_frame", [0, 1, 5, None, 1000])
 def test_decimate(decimation_offset, decimation_factor, start_frame, end_frame):
     rec = generate_recording()
 
@@ -29,6 +29,8 @@ def test_decimate(decimation_offset, decimation_factor, start_frame, end_frame):
 
     if start_frame is None:
         start_frame = decimated_rec.get_num_samples()
+    if end_frame is None:
+        end_frame = decimated_rec.get_num_samples()
 
     assert np.all(decimated_rec.get_traces(0, start_frame, end_frame) == decimated_parent_traces[start_frame:end_frame])
 
