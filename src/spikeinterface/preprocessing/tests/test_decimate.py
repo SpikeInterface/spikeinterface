@@ -16,7 +16,7 @@ def test_decimate(decimation_offset, decimation_factor, start_frame, end_frame):
     rec = generate_recording()
 
     N = 101
-    rec = NumpyRecording([np.arange(N).reshape(N, 1)], 1)
+    rec = NumpyRecording([np.arange(2 * N).reshape(N, 2)], 1)
     parent_traces = rec.get_traces()
 
     if decimation_offset >= N or decimation_offset >= decimation_factor:
