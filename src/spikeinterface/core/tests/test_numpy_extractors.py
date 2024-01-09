@@ -23,7 +23,7 @@ def test_NumpyRecording():
         timeseries_list.append(traces)
 
     rec = NumpyRecording(timeseries_list, sampling_frequency)
-    print(rec)
+    # print(rec)
 
     times1 = rec.get_times(1)
 
@@ -31,7 +31,7 @@ def test_NumpyRecording():
 
 def test_SharedMemoryRecording():
     rec0 = generate_recording(num_channels=2, durations=[4., 3.])
-    print(rec0)
+    # print(rec0)
     job_kwargs = dict(n_jobs=1, progress_bar=True)
     rec = SharedMemoryRecording.from_recording(rec0, **job_kwargs)
     
@@ -63,7 +63,7 @@ def test_NumpySorting():
     labels[1::3] = 1
     labels[2::3] = 2
     sorting = NumpySorting.from_times_labels(times, labels, sampling_frequency)
-    print(sorting)
+    # print(sorting)
     assert sorting.get_num_segments() == 1
 
     sorting = NumpySorting.from_times_labels([times] * 3, [labels] * 3, sampling_frequency)
@@ -93,7 +93,7 @@ def test_SharedMemorySorting():
     spikes["unit_index"][1::3] = 1
     spikes["unit_index"][2::3] = 2
     np_sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
-    print(np_sorting)
+    # print(np_sorting)
 
     sorting = SharedMemorySorting.from_sorting(np_sorting)
     # print(sorting)
