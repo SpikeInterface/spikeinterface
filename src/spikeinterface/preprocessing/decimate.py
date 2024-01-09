@@ -20,9 +20,9 @@ class DecimateRecording(BasePreprocessor):
     ----------
     recording : Recording
         The recording extractor to be decimated.
-    decimation_frame_step : int
+    decimation_factor : int
         Step between successive frames sampled from the parent recording.
-    decimation_frame_start : int, default: 0
+    decimation_offset : int, default: 0
         Index of first frame sampled from the parent recording.
 
     Returns
@@ -30,7 +30,7 @@ class DecimateRecording(BasePreprocessor):
     decimate_recording: DecimateRecording
         The decimated recording extractor object. The full traces of the child recording correspond
         to the parent traces as follows:
-            ```<decimated_traces> = <parent_traces>[<decimation_frame_start>::<decimation_frame_step>]```
+            ```<decimated_traces> = <parent_traces>[<decimation_offset>::<decimation_factor>]```
 
     """
 
@@ -39,18 +39,18 @@ class DecimateRecording(BasePreprocessor):
     def __init__(
         self,
         recording,
-        decimation_frame_step,
-        decimation_frame_start=0,
+        decimation_factor,
+        decimation_offset=0,
     ):
         # Original sampling frequency
         self._orig_samp_freq = recording.get_sampling_frequency()
-        if not isinstance(decimation_frame_step, int) or decimation_frame_step <= 0:
-            raise ValueError(f"Expecting strictly positive integer for `decimation_frame_step` arg")
-        self._decimation_frame_step = decimation_frame_step
-        if not isinstance(decimation_frame_start, int) or decimation_frame_step < 0:
-            raise ValueError(f"Expecting positive integer for `decimation_frame_step` arg")
-        self._decimation_frame_start = decimation_frame_start
-        resample_rate = self._orig_samp_freq / self._decimation_frame_step
+        if not isinstance(decimation_factor, int) or decimation_factor <= 0:
+            raise ValueError(f"Expecting strictly positive integer for `decimation_factor` arg")
+        self._decimation_factor = decimation_factor
+        if not isinstance(decimation_offset, int) or decimation_factor < 0:
+            raise ValueError(f"Expecting positive integer for `decimation_factor` arg")
+        self._decimation_offset = decimation_offset
+        resample_rate = self._orig_samp_freq / self._decimation_factor
 
         BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate)
 
@@ -63,16 +63,16 @@ class DecimateRecording(BasePreprocessor):
                     parent_segment,
                     resample_rate,
                     self._orig_samp_freq,
-                    decimation_frame_step,
-                    decimation_frame_start,
+                    decimation_factor,
+                    decimation_offset,
                     self._dtype,
                 )
             )
 
         self._kwargs = dict(
             recording=recording,
-            decimation_frame_step=decimation_frame_step,
-            decimation_frame_start=decimation_frame_start,
+            decimation_factor=decimation_factor,
+            decimation_offset=decimation_offset,
         )
 
 
@@ -82,14 +82,14 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         parent_recording_segment,
         resample_rate,
         parent_rate,
-        decimation_frame_step,
-        decimation_frame_start,
+        decimation_factor,
+        decimation_offset,
         dtype,
     ):
         if parent_recording_segment.t_start is None:
             new_t_start = None
         else:
-            new_t_start = parent_recording_segment.t_start + decimation_frame_start / parent_rate
+            new_t_start = parent_recording_segment.t_start + decimation_offset / parent_rate
 
         # Do not use BasePreprocessorSegment bcause we have to reset the sampling rate!
         BaseRecordingSegment.__init__(
@@ -98,14 +98,12 @@ class DecimateRecordingSegment(BaseRecordingSegment):
             t_start=new_t_start,
         )
         self._parent_segment = parent_recording_segment
-        self._decimation_frame_step = decimation_frame_step
-        self._decimation_frame_start = decimation_frame_start
+        self._decimation_factor = decimation_factor
+        self._decimation_offset = decimation_offset
         self._dtype = dtype
 
     def get_num_samples(self):
-        return len(
-            range(self._decimation_frame_start, self._parent_segment.get_num_samples(), self._decimation_frame_step)
-        )
+        return len(range(self._decimation_offset, self._parent_segment.get_num_samples(), self._decimation_factor))
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -114,8 +112,8 @@ class DecimateRecordingSegment(BaseRecordingSegment):
             end_frame = self.get_num_samples()
 
         # Account for offset and end when querying parent traces
-        parent_start_frame = self._decimation_frame_start + start_frame * self._decimation_frame_step
-        parent_end_frame = parent_start_frame + (end_frame - start_frame) * self._decimation_frame_step
+        parent_start_frame = self._decimation_offset + start_frame * self._decimation_factor
+        parent_end_frame = parent_start_frame + (end_frame - start_frame) * self._decimation_factor
 
         # And now we can decimate without offsetting
         return self._parent_segment.get_traces(
@@ -123,7 +121,7 @@ class DecimateRecordingSegment(BaseRecordingSegment):
             parent_end_frame,
             channel_indices,
         )[
-            :: self._decimation_frame_step
+            :: self._decimation_factor
         ].astype(self._dtype)
 
 
