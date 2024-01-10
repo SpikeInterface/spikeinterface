@@ -104,7 +104,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         filtering_params = params["filtering"].copy()
         if params["apply_preprocessing"]:
             recording_f = highpass_filter(recording, **filtering_params)
-            recording_f = common_reference(recording_f)
+            if num_channels > 1:
+                recording_f = common_reference(recording_f)
         else:
             recording_f = recording
             recording_f.annotate(is_filtered=True)
