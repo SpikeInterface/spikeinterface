@@ -321,14 +321,14 @@ def get_traces_with_margin(
 ):
     rec_segment = recording._recording_segments[segment_index]
     traces_chunk, left_margin, right_margin = get_chunk_with_margin(rec_segment, 
-            start_frame,
-            end_frame,
-            channel_indices,
-            margin,
-            add_zeros,
-            add_reflect_padding,
-            window_on_margin,
-            dtype,)
+        start_frame,
+        end_frame,
+        channel_indices,
+        margin,
+        add_zeros,
+        add_reflect_padding,
+        window_on_margin,
+        dtype,)
 
     if return_scaled:
         traces_chunk = recording._scale_traces(traces_chunk, channel_indices)
