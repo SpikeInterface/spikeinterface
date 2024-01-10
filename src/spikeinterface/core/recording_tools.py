@@ -325,10 +325,10 @@ def get_traces_with_margin(
             end_frame,
             channel_indices,
             margin,
-            add_zeros=False,
-            add_reflect_padding=False,
-            window_on_margin=False,
-            dtype=None,)
+            add_zeros,
+            add_reflect_padding,
+            window_on_margin,
+            dtype,)
 
     if return_scaled:
         traces_chunk = recording._scale_traces(traces_chunk, channel_indices)
