@@ -441,7 +441,6 @@ class BaseRecording(BaseRecordingSnippets):
         return rs.time_to_sample_index(time_s)
 
     def _save(self, format="binary", **save_kwargs):
-
         # handle t_starts
         t_starts = []
         has_time_vectors = []
@@ -487,6 +486,7 @@ class BaseRecording(BaseRecordingSnippets):
         elif format == "memory":
             if kwargs.get("sharedmem", True):
                 from .numpyextractors import SharedMemoryRecording
+
                 cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
             else:
                 cached = NumpyRecording.from_recording(self, **job_kwargs)

@@ -119,10 +119,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             assert 0 < params["preload_in_memory"][1] < 1
             memory_usage = params["preload_in_memory"][1] * psutil.virtual_memory()[4]
             if recording_f.get_memory_size() < memory_usage:
-                recording_f = recording_f.save(format='memory', shared=True, **params['job_kwargs'])
+                recording_f = recording_f.save(format="memory", shared=True, **params["job_kwargs"])
             else:
                 if verbose:
-                    print('Recording too large to be preloaded in RAM...')
+                    print("Recording too large to be preloaded in RAM...")
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
