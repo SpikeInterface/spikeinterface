@@ -26,7 +26,7 @@ class Templates:
     unit_ids : np.ndarray, optional default: None
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
     probe: Probe, default: None
-        A probeinterface.probe object
+        A `probeinterface.Probe` object
     check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
         structure fo the sparsity_masl.
