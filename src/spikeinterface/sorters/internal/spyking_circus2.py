@@ -2,6 +2,7 @@ from .si_based import ComponentsBasedSorter
 
 import os
 import shutil
+import psutil
 import numpy as np
 
 from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms
