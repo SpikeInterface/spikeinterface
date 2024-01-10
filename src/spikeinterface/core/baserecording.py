@@ -238,6 +238,28 @@ class BaseRecording(BaseRecordingSnippets):
         memory_per_segment = (self.get_memory_size(segment_index) for segment_index in range(self.get_num_segments()))
         return sum(memory_per_segment)
 
+
+    def _scale_traces(self, traces, channel_indices):
+        if hasattr(self, "NeoRawIOClass"):
+            if self.has_non_standard_units:
+                message = (
+                    f"This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)"
+                )
+                warnings.warn(message)
+
+        if not self.has_scaled():
+            raise ValueError(
+                "This recording does not support return_scaled=True (need gain_to_uV and offset_"
+                "to_uV properties)"
+            )
+        else:
+            gains = self.get_property("gain_to_uV")
+            offsets = self.get_property("offset_to_uV")
+            gains = gains[channel_indices].astype("float32", copy=False)
+            offsets = offsets[channel_indices].astype("float32", copy=False)
+            traces = traces.astype("float32", copy=False) * gains + offsets
+        return traces
+
     def get_traces(
         self,
         segment_index: int | None = None,
@@ -299,24 +321,8 @@ class BaseRecording(BaseRecordingSnippets):
                 traces = traces.astype(f"int{dtype.itemsize * 8}")
 
         if return_scaled:
-            if hasattr(self, "NeoRawIOClass"):
-                if self.has_non_standard_units:
-                    message = (
-                        f"This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)"
-                    )
-                    warnings.warn(message)
+            traces = self._scale_traces(traces, channel_indices)
 
-            if not self.has_scaled():
-                raise ValueError(
-                    "This recording does not support return_scaled=True (need gain_to_uV and offset_"
-                    "to_uV properties)"
-                )
-            else:
-                gains = self.get_property("gain_to_uV")
-                offsets = self.get_property("offset_to_uV")
-                gains = gains[channel_indices].astype("float32", copy=False)
-                offsets = offsets[channel_indices].astype("float32", copy=False)
-                traces = traces.astype("float32", copy=False) * gains + offsets
         return traces
 
     def has_scaled_traces(self) -> bool:

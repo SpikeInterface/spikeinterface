@@ -180,6 +180,9 @@ def test_run_node_pipeline():
             pickled_node = pickle.dumps(node)
             unpickled_node = pickle.loads(pickled_node)
 
+        # Test the scaling
+        output = run_node_pipeline(recording, nodes, job_kwargs, gather_mode="memory", return_scaled=True)
+
 
 if __name__ == "__main__":
     test_run_node_pipeline()
