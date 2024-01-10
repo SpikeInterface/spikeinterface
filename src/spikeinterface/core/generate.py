@@ -1828,6 +1828,7 @@ def generate_ground_truth_recording(
             dtype=dtype,
             **generate_templates_kwargs,
         )
+        sorting.set_property("gt_unit_locations", unit_locations)
     else:
         assert templates.shape[0] == num_units
 
