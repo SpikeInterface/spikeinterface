@@ -8,6 +8,7 @@ import numpy as np
 from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
+from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_preprocessing
 
 try:
     import hdbscan
@@ -41,7 +42,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
         "apply_preprocessing": True,
         "shared_memory": True,
-        "preload_in_memory": (True, 0.5),
+        "cache_preprocessing": {"mode" : "folder", "max_ram_limit" : 0.5, "keep_cache_afterwards" : False},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
@@ -65,8 +66,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + zscore",
         "shared_memory": "Boolean to specify if the code should, as much as possible, use an internal data structure in memory (faster)",
-        "preload_in_memory": "Tuple to specify if the preprocessed recording is preloaded in memory (faster) and the percentage of available memory\
-                              that should be used. Default is (True, 0.8)",
+        "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory, \
+                         max_ram_limit will control how much RAM can be used. In case of files, keep_cache_afterwards controls if cache is cleaned after sorting",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "debug": "Boolean to specify if the internal data structure should be kept for debugging",
@@ -115,14 +116,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         recording_f = zscore(recording_f, dtype="float32")
         noise_levels = np.ones(num_channels, dtype=np.float32)
 
-        if params["preload_in_memory"][0]:
-            assert 0 < params["preload_in_memory"][1] < 1
-            memory_usage = params["preload_in_memory"][1] * psutil.virtual_memory()[4]
-            if recording_f.get_memory_size() < memory_usage:
-                recording_f = recording_f.save(format="memory", shared=True, **params["job_kwargs"])
-            else:
-                if verbose:
-                    print("Recording too large to be preloaded in RAM...")
+        recording_f = cache_preprocessing(recording_f, **params["job_kwargs"], **params["cache_preprocessing"])
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
@@ -259,6 +253,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if sorting_folder.exists():
             shutil.rmtree(sorting_folder)
 
+        clean_preprocessing(recording_f, **params["cache_preprocessing"])
         sorting = sorting.save(folder=sorting_folder)
 
         return sorting

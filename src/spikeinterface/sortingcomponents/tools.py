@@ -1,7 +1,9 @@
 import numpy as np
+import psutil
 
 from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
+from spikeinterface.core.job_tools import split_job_kwargs
 
 
 def make_multi_method_doc(methods, ident="    "):
@@ -69,3 +71,36 @@ def get_prototype_spike(recording, peaks, job_kwargs, nb_peaks=1000, ms_before=0
     )
     prototype = np.median(waveforms[:, :, 0] / (waveforms[:, nbefore, 0][:, np.newaxis]), axis=0)
     return prototype
+
+
+def cache_preprocessing(recording, mode="memory", max_ram_limit=0.5, keep_cache_afterwards=False, **extra_kwargs):
+
+    assert mode in ["memory", "zarr", "folder"]
+    save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+    
+    if mode == "memory":
+        assert 0 < max_ram_limit < 1
+        memory_usage = max_ram_limit * psutil.virtual_memory()[4]
+        if recording.get_total_memory_size() < memory_usage:
+            recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+        else:
+            print("Recording too large to be preloaded in RAM...")
+    elif mode == "folder":
+        recording = recording.save_to_folder(**extra_kwargs)
+    elif mode == "zarr":
+        recording = recording.save_to_zarr(**extra_kwargs)
+
+    return recording
+
+
+def clean_preprocessing(recording, mode="memory", keep_cache_afterwards=False, **extra_kwargs):
+
+    assert mode in ["memory", "zarr", "folder"]
+
+    if mode == "memory":
+        del recording
+    elif mode in ["folder", "zarr"]:
+        if not keep_cache_afterwards:
+            import shutil
+            shutil.rmtree(recording._kwargs['folder_path'])
+    return
