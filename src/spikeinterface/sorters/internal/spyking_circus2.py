@@ -117,7 +117,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         recording_f = zscore(recording_f, dtype="float32")
         noise_levels = np.ones(num_channels, dtype=np.float32)
 
-        recording_f = cache_preprocessing(recording_f, **params["job_kwargs"], **params["cache_preprocessing"])
+        recording_f = cache_preprocessing(recording_f, **job_kwargs, **params["cache_preprocessing"])
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
