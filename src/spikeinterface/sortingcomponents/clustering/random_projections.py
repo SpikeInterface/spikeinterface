@@ -99,7 +99,7 @@ class RandomProjectionClustering:
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
 
-        num_projections = min(num_chans, d['nb_projections'])
+        num_projections = min(num_chans, d["nb_projections"])
         projections = np.random.randn(num_chans, num_projections)
         if num_chans > 1:
             projections -= projections.mean(0)
