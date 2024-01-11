@@ -42,7 +42,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
         "apply_preprocessing": True,
         "shared_memory": True,
-        "cache_preprocessing": {"mode" : "memory", "memory_limit" : 0.5, "delete_cache" : True},
+        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
