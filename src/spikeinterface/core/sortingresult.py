@@ -340,7 +340,7 @@ class SortingResult:
         # recording attributes
         rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
         if not rec_attributes_file.exists():
-            raise ValueError("This folder is not a SortingResult folder")
+            raise ValueError("This folder is not a SortingResult with format='binary_folder'")
         with open(rec_attributes_file, "r") as f:
             rec_attributes = json.load(f)
         # the probe is handle ouside the main json
@@ -1062,6 +1062,4 @@ class ResultExtension:
             param_file.write_text(json.dumps(check_json(params_to_save), indent=4), encoding="utf8")
         elif self.format == "zarr":
             self.extension_group.attrs["params"] = check_json(params_to_save)
-
-
 

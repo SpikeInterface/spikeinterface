@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 
 from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.core import SortingResult
+from spikeinterface.core import SortingResult, start_sorting_result, load_sorting_result
 from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
 
 import numpy as np
@@ -28,30 +28,35 @@ def get_dataset():
 
 def test_SortingResult_memory():
     recording, sorting = get_dataset()
-    sortres = SortingResult.create(sorting, recording, format="memory", sparsity=None)
-
+    sortres = start_sorting_result(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_results(sortres, sorting)
 
 
-    # save to zarr: not done yet!!!
-    # folder = cache_folder / "test_SortingResult_saved_zarr.zarr"
-    # if folder.exists():
-    #     shutil.rmtree(folder)
-    # sortres2 = sortres.save_as(format="zarr", folder=folder)
-    # _check_sorting_results(sortres2, sorting)
-
-
-
-def test_SortingResult_folder():
+def test_SortingResult_binary_folder():
     recording, sorting = get_dataset()
 
-    folder = cache_folder / "test_SortingResult_folder"
+    folder = cache_folder / "test_SortingResult_binary_folder"
     if folder.exists():
         shutil.rmtree(folder)
 
-    sortres = SortingResult.create(sorting, recording, format="binary_folder", folder=folder, sparsity=None)
-    sortres = SortingResult.load(folder)
+    sortres = start_sorting_result(sorting, recording, format="binary_folder", folder=folder,  sparse=False, sparsity=None)
+    sortres = load_sorting_result(folder, format="auto")
+
     _check_sorting_results(sortres, sorting)
+
+
+# def test_SortingResult_zarr():
+#     recording, sorting = get_dataset()
+
+#     folder = cache_folder / "test_SortingResult_zarr.zarr"
+#     if folder.exists():
+#         shutil.rmtree(folder)
+
+#     sortres = start_sorting_result(sorting, recording, format="zarr", folder=folder,  sparse=False, sparsity=None)
+#     sortres = load_sorting_result(folder, format="auto")
+
+#     _check_sorting_results(sortres, sorting)
+
 
 
 def _check_sorting_results(sortres, original_sorting):
@@ -168,7 +173,6 @@ def test_extension():
 
 if __name__ == "__main__":
     test_SortingResult_memory()
-
-    test_SortingResult_folder()
-
+    test_SortingResult_binary_folder()
+    # test_SortingResult_zarr()
     test_extension()
