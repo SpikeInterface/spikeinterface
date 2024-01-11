@@ -183,7 +183,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             labeled_peaks = np.zeros(np.sum(mask), dtype=spike_dtype)
             labeled_peaks["sample_index"] = selected_peaks[mask]["sample_index"]
             labeled_peaks["segment_index"] = selected_peaks[mask]["segment_index"]
-            labeled_peaks["unit_index"] = peak_labels[mask]
+            for count, l in enumerate(labels):
+                sub_mask = peak_labels[mask] == l
+                labeled_peaks["unit_index"][sub_mask] = count
             unit_ids = np.arange(len(np.unique(labeled_peaks["unit_index"])))
             sorting = NumpySorting(labeled_peaks, sampling_frequency, unit_ids=unit_ids)
 
