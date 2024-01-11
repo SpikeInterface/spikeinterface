@@ -178,7 +178,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ## We get the labels for our peaks
             mask = peak_labels > -1
             labeled_peaks = selected_peaks[mask].copy()
-            labeled_peaks['channel_index'] = peak_labels[mask]
+            labeled_peaks["channel_index"] = peak_labels[mask]
             sorting = NumpySorting.from_peaks(labeled_peaks, sampling_frequency, unit_ids=labels)
 
             clustering_folder = sorter_output_folder / "clustering"
