@@ -42,7 +42,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
         "apply_preprocessing": True,
         "shared_memory": True,
-        "cache_preprocessing": {"mode" : "folder", "max_ram_limit" : 0.5, "keep_cache_afterwards" : False},
+        "cache_preprocessing": {"mode" : "memory", "max_ram_limit" : 0.5, "keep_cache_afterwards" : False},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
@@ -66,8 +66,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + zscore",
         "shared_memory": "Boolean to specify if the code should, as much as possible, use an internal data structure in memory (faster)",
-        "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory, \
-                         max_ram_limit will control how much RAM can be used. In case of files, keep_cache_afterwards controls if cache is cleaned after sorting",
+        "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
+                         max_ram_limit will control how much RAM can be used. In case of folder or zarr, keep_cache_afterwards controls if cache is cleaned after sorting",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "debug": "Boolean to specify if the internal data structure should be kept for debugging",
