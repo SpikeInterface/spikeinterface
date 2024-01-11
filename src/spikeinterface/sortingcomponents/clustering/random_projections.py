@@ -70,7 +70,7 @@ class RandomProjectionClustering:
         d = params
         verbose = d["job_kwargs"]["verbose"]
 
-        peak_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+        spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
 
         fs = recording.get_sampling_frequency()
         nbefore = int(params["ms_before"] * fs / 1000.0)
@@ -99,9 +99,11 @@ class RandomProjectionClustering:
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
 
-        projections = np.random.randn(num_chans, d["nb_projections"])
-        projections -= projections.mean(0)
-        projections /= projections.std(0)
+        num_projections = min(num_chans, d['nb_projections'])
+        projections = np.random.randn(num_chans, num_projections)
+        if num_chans > 1:
+            projections -= projections.mean(0)
+            projections /= projections.std(0)
 
         nbefore = int(params["ms_before"] * fs / 1000)
         nafter = int(params["ms_after"] * fs / 1000)
@@ -161,7 +163,7 @@ class RandomProjectionClustering:
                 best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[:max_spikes]
             nb_spikes += best_spikes[unit_ind].size
 
-        spikes = np.zeros(nb_spikes, dtype=peak_dtype)
+        spikes = np.zeros(nb_spikes, dtype=spike_dtype)
 
         mask = np.zeros(0, dtype=np.int32)
         for unit_ind in labels:

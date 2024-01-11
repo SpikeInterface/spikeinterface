@@ -17,6 +17,7 @@ try:
 except:
     HAVE_HDBSCAN = False
 
+spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
@@ -177,9 +178,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             ## We get the labels for our peaks
             mask = peak_labels > -1
-            labeled_peaks = selected_peaks[mask].copy()
-            labeled_peaks["channel_index"] = peak_labels[mask]
-            sorting = NumpySorting.from_peaks(labeled_peaks, sampling_frequency, unit_ids=labels)
+
+            labeled_peaks = np.zeros(np.sum(mask), dtype=spike_dtype)
+            labeled_peaks["sample_index"] = selected_peaks[mask]["sample_index"]
+            labeled_peaks["segment_index"] = selected_peaks[mask]["segment_index"]
+            labeled_peaks["unit_index"] = peak_labels[mask]
+            unit_ids = np.arange(len(np.unique(labeled_peaks["unit_index"])))
+            sorting = NumpySorting(labeled_peaks, sampling_frequency, unit_ids=unit_ids)
 
             clustering_folder = sorter_output_folder / "clustering"
             clustering_folder.mkdir(parents=True, exist_ok=True)
@@ -246,7 +251,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 print("We found %d spikes" % len(spikes))
 
             ## And this is it! We have a spyking circus
-            sorting = NumpySorting(spikes, sampling_frequency, labels)
+            sorting = NumpySorting(spikes, sampling_frequency, unit_ids=unit_ids)
 
         sorting_folder = sorter_output_folder / "sorting"
         if sorting_folder.exists():
