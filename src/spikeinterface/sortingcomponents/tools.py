@@ -74,10 +74,9 @@ def get_prototype_spike(recording, peaks, job_kwargs, nb_peaks=1000, ms_before=0
 
 
 def cache_preprocessing(recording, mode="memory", max_ram_limit=0.5, keep_cache_afterwards=False, **extra_kwargs):
-
     assert mode in ["memory", "zarr", "folder"]
     save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
-    
+
     if mode == "memory":
         assert 0 < max_ram_limit < 1
         memory_usage = max_ram_limit * psutil.virtual_memory()[4]
@@ -94,7 +93,6 @@ def cache_preprocessing(recording, mode="memory", max_ram_limit=0.5, keep_cache_
 
 
 def clean_preprocessing(recording, mode="memory", keep_cache_afterwards=False, **extra_kwargs):
-
     assert mode in ["memory", "zarr", "folder"]
 
     if mode == "memory":
@@ -102,5 +100,6 @@ def clean_preprocessing(recording, mode="memory", keep_cache_afterwards=False, *
     elif mode in ["folder", "zarr"]:
         if not keep_cache_afterwards:
             import shutil
-            shutil.rmtree(recording._kwargs['folder_path'])
+
+            shutil.rmtree(recording._kwargs["folder_path"])
     return
