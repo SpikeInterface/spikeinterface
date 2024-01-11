@@ -499,7 +499,7 @@ class BaseRecording(BaseRecordingSnippets):
 
             zarr_path = kwargs.pop("zarr_path")
             storage_options = kwargs.pop("storage_options")
-            ZarrRecordingExtractor.write_recording(self, zarr_path, storage_options, **kwargs)
+            ZarrRecordingExtractor.write_recording(self, zarr_path, storage_options, **kwargs, **job_kwargs)
             cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
         elif format == "nwb":
