@@ -73,13 +73,13 @@ def get_prototype_spike(recording, peaks, job_kwargs, nb_peaks=1000, ms_before=0
     return prototype
 
 
-def cache_preprocessing(recording, mode="memory", max_ram_limit=0.5, keep_cache_afterwards=False, **extra_kwargs):
+def cache_preprocessing(recording, mode="memory", memory_limit=0.5, keep_cache_afterwards=False, **extra_kwargs):
     assert mode in ["memory", "zarr", "folder"]
     save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
 
     if mode == "memory":
-        assert 0 < max_ram_limit < 1
-        memory_usage = max_ram_limit * psutil.virtual_memory()[4]
+        assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
+        memory_usage = memory_limit * psutil.virtual_memory()[4]
         if recording.get_total_memory_size() < memory_usage:
             recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
         else:
