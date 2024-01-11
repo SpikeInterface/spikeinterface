@@ -92,8 +92,20 @@ def start_sorting_result(sorting, recording, format="memory", folder=None,
     >>> # Extract dense waveforms and save to disk with binary_folder format.
     >>> sortres = si.start_sorting_result(sorting, recording, format="binary_folder", folder="/path/to_my/result")
 
-    """
+    >>> # Can be reload
+    >>> sortres = si.load_sorting_result(folder="/path/to_my/result")
 
+    >>> # Can run extension
+    >>> sortres = si.compute("unit_locations", ...)
+
+    >>> # Can be copy to another format (extensions are propagated)
+    >>> sortres2 = sortres.save_as(format="memory")
+    >>> sortres3 = sortres.save_as(format="zarr", folder="/path/to_my/result.zarr")
+
+    >>> # Can make a copy with a subset of units (extensions are propagated for the unit subset)
+    >>> sortres4 = sortres.select_units(unit_ids=sorting.units_ids[:5], format="memory")
+    >>> sortres5 = sortres.select_units(unit_ids=sorting.units_ids[:5], format="binary_folder", folder="/result_5units")
+    """
 
     # handle sparsity
     if sparsity is not None:
@@ -158,6 +170,7 @@ class SortingResult:
     This internaly maintain a list of computed ResultExtention (waveform, pca, unit position, spike poisition, ...).
 
     This can live in memory and/or can be be persistent to disk in 2 internal formats (folder/json/npz or zarr).
+    A SortingResult can be transfer to another format using `save_as()`
 
     This handle unit sparsity that can be propagated to ResultExtention.
 
@@ -196,11 +209,7 @@ class SortingResult:
         check_probe_do_not_overlap(all_probes)
 
         if format == "memory":
-            rec_attributes = get_rec_attributes(recording)
-            rec_attributes["probegroup"] = recording.get_probegroup()
-            # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
-            sorting_copy = SharedMemorySorting.from_sorting(sorting)
-            sortres = SortingResult(sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes, format=format, sparsity=sparsity)
+            sortres = cls.create_memory(sorting, recording, sparsity, rec_attributes=None)
         elif format == "binary_folder":
             cls.create_binary_folder(folder, sorting, recording, sparsity, rec_attributes=None)
             sortres = cls.load_from_binary_folder(folder, recording=recording)
@@ -242,8 +251,26 @@ class SortingResult:
         return sortres
 
     @classmethod
+    def create_memory(cls, sorting, recording, sparsity, rec_attributes):
+        # used by create and save_as
+
+        if rec_attributes is None:
+            assert recording is not None
+            rec_attributes = get_rec_attributes(recording)
+            rec_attributes["probegroup"] = recording.get_probegroup()
+        else:
+            # a copy is done to avoid shared dict between instances (which can block garbage collector)
+            rec_attributes = rec_attributes.copy()
+
+        # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
+        sorting_copy = SharedMemorySorting.from_sorting(sorting)
+        sortres = SortingResult(sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes,
+                                format="memory", sparsity=sparsity)
+        return sortres
+
+    @classmethod
     def create_binary_folder(cls, folder, sorting, recording, sparsity, rec_attributes):
-        # used by create and save
+        # used by create and save_as
 
         folder = Path(folder)
         if folder.is_dir():
@@ -318,7 +345,7 @@ class SortingResult:
             rec_attributes = json.load(f)
         # the probe is handle ouside the main json
         probegroup_file = folder / "recording_info" / "probegroup.json"
-        print(probegroup_file, probegroup_file.is_file())
+
         if probegroup_file.is_file():
             rec_attributes["probegroup"] = probeinterface.read_probeinterface(probegroup_file)
         else:
@@ -355,9 +382,51 @@ class SortingResult:
         raise NotImplementedError
 
 
-    def save_as(
-        self, folder=None, format="binary_folder",
-    ) -> "SortingResult":
+    def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingResult":
+        """
+        Internal used by both save_as(), copy() and select_units() which are more or less the same.
+        """
+
+        if self.has_recording():
+            recording = self.recording
+        else:
+            recording = None
+        
+        # Note that the sorting is a copy we need to go back to the orginal sorting (if available)
+        sorting_provenance = self.get_sorting_provenance()
+        if sorting_provenance is None:
+            # if the original sorting objetc is not available anymore (kilosort folder deleted, ....), take the copy
+            sorting_provenance = self.sorting
+        
+        if unit_ids is not None:
+            # when only some unit_ids then the sorting must be sliced
+            sorting_provenance = sorting_provenance.select_units(unit_ids)
+
+        if format == "memory":
+            # This make a copy of actual SortingResult
+            new_sortres = SortingResult.create_memory(sorting_provenance, recording, self.sparsity, self.rec_attributes)
+
+        elif format == "binary_folder":
+            # create  a new folder
+            assert folder is not None, "For format='binary_folder' folder must be provided"
+            SortingResult.create_binary_folder(folder, sorting_provenance, recording, self.sparsity, self.rec_attributes)
+            new_sortres = SortingResult.load_from_binary_folder(folder)
+            new_sortres.folder = folder
+
+        elif format == "zarr":
+            assert folder is not None, "For format='zarr' folder must be provided"
+            raise NotImplementedError
+        else:
+            raise ValueError("SortingResult.save: wrong format")
+
+        # make a copy of extensions
+        # note that the copy of extension handle itself the slicing of units when necessary
+        for extension_name, extension in self.extensions.items():
+            new_sortres.extensions[extension_name] = extension.copy(new_sortres, unit_ids=unit_ids)
+
+        return new_sortres
+
+    def save_as(self, format="binary_folder", folder=None) -> "SortingResult":
         """
         Save SortingResult object into another format.
         Uselfull for memory to zarr or memory to binray.
@@ -373,40 +442,36 @@ class SortingResult:
         format : "binary_folder" | "zarr", default: "binary_folder"
             The backend to use for saving the waveforms
         """
+        return self._save_or_select(format=format, folder=folder, unit_ids=None)
 
-        if self.has_recording():
-            recording = self.recording
-        else:
-            recording = None
-        
-        # Note that the sorting is a copy we need to go back to the orginal sorting (if available)
-        sorting_provenance = self.get_sorting_provenance()
-        if sorting_provenance is None:
-            # if the original sorting objetc is not available anymore (kilosort folder deleted, ....), take the copy
-            sorting_provenance = self.sorting
 
-        if format == "memory":
-            # This make a copy of actual SortingResult
-            # TODO
-            raise NotImplementedError
-        elif format == "binary_folder":
-            # create  a new folder
-            SortingResult.create_binary_folder(folder, sorting_provenance, recording, self.sparsity, self.rec_attributes)
-            new_sortres = SortingResult.load_from_binary_folder(folder)
-            new_sortres.folder = folder
+    def select_units(self, unit_ids, folder=None, format="binary_folder") -> "SortingResult":
+        """
+        This method is equivalent to `save_as()`but with a subset of units.
+        Filters units by creating a new waveform extractor object in a new folder.
 
-        elif format == "zarr":
-            # TODO
-            raise NotImplementedError
-        else:
-            raise ValueError("SortingResult.save: wrong format")
+        Extensions are also updated to filter the selected unit ids.
 
-        # make a copy of extensions
-        for extension_name, extension in self.extensions.items():
-            new_sortres.extensions[extension_name] = extension.copy(new_sortres)
+        Parameters
+        ----------
+        unit_ids : list or array
+            The unit ids to keep in the new WaveformExtractor object
+        folder : Path or None
+            The new folder where selected waveforms are copied
+        format: 
+        a
+        Returns
+        -------
+        we :  WaveformExtractor
+            The newly create waveform extractor with the selected units
+        """
+        return self._save_or_select(format=format, folder=folder, unit_ids=unit_ids)
 
-        return new_sortres
-
+    def copy(self):
+        """
+        Create a a copy of SortingResult with format "memory".
+        """
+        return self._save_or_select(format="binary_folder", folder=None, unit_ids=None)
 
     def is_read_only(self) -> bool:
         if self.format == "memory":
@@ -451,12 +516,14 @@ class SortingResult:
         elif self.format == "binary_folder":
             for type in ("json", "pickle"):
                 filename = self.folder / f"sorting_provenance.{type}"
+                sorting_provenance = None
                 if filename.exists():
                     try:
                         sorting_provenance = load_extractor(filename, base_folder=self.folder)
                         break
                     except:
-                        sorting_provenance = None
+                        pass
+                        # sorting_provenance = None
 
         elif self.format == "zarr":
             # TODO
@@ -574,8 +641,9 @@ class SortingResult:
     def get_extension(self, extension_name: str):
         """
         Get a ResultExtension.
-        If not loaded then load it before.
+        If not loaded then load is automatic.
 
+        Return None if the extension is not computed yet (this avoid the use of has_extension() and then get it)
         
         """
         if extension_name in self.extensions:
@@ -607,7 +675,7 @@ class SortingResult:
         extension_class = get_extension_class(extension_name)
 
         extension_instance = extension_class(self)
-        extension_instance.load_prams()
+        extension_instance.load_params()
         extension_instance.load_data()
 
         return extension_instance
@@ -623,7 +691,15 @@ class SortingResult:
         """
         Delete the extension from the dict and also in the persistent zarr or folder.
         """
-        pass
+
+        # delete from folder or zarr
+        if self.format != "memory" and self.has_extension(extension_name):
+            # need a reload to reset the folder
+            ext = self.load_extension(extension_name)
+            ext.reset()
+
+        # remove from dict
+        self.extensions.pop(extension_name, None)
 
     def get_loaded_extension_names(self):
         """
@@ -634,11 +710,11 @@ class SortingResult:
     def has_extension(self, extension_name: str) -> bool:
         """
         Check if the extension exists in memory (dict) or in the folder or in zarr.
-
-        If force_load=True (the default) then the extension is automatically loaded if available.
         """
         if extension_name in self.extensions:
             return True
+        elif self.format == "memory":
+            return False
         elif extension_name in self.get_saved_extension_names():
             return True
         else:
@@ -711,7 +787,7 @@ class ResultExtension:
     An extension needs to inherit from this class and implement some abstract methods:
       * _set_params
       * _run
-      * 
+      * _select_extension_data
 
     The subclass must also set an `extension_name` class attribute which is not None by default.
 
@@ -722,8 +798,27 @@ class ResultExtension:
     def __init__(self, sorting_result):
         self._sorting_result = weakref.ref(sorting_result)
 
-        self._params = None
-        self._data = dict()
+        self.params = None
+        self.data = dict()
+
+    #######
+    # This 3 methods must be implemented in the subclass!!!
+    # See DummyResultExtension in test_sortingresult.py as a simple example
+    def _run(self, **kwargs):
+        # must be implemented in subclass
+        # must populate the self.data dictionary
+        raise NotImplementedError
+
+    def _set_params(self, **params):
+        # must be implemented in subclass
+        # must return a cleaned version of params dict
+        raise NotImplementedError
+
+    def _select_extension_data(self, unit_ids):
+        # must be implemented in subclass
+        raise NotImplementedError
+    # 
+    #######
 
     @property
     def sorting_result(self):
@@ -784,12 +879,12 @@ class ResultExtension:
             assert "params" in extension_group.attrs, f"No params file in extension {self.extension_name} folder"
             params = extension_group.attrs["params"]
 
-        self._params = params
+        self.params = params
 
     def load_data(self):
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
-            for ext_data_file in extension_folder:
+            for ext_data_file in extension_folder.iterdir():
                 if ext_data_file.name == "params.json":
                     continue
                 ext_data_name = ext_data_file.stem
@@ -808,7 +903,7 @@ class ResultExtension:
                     ext_data = pickle.load(ext_data_file.open("rb"))
                 else:
                     continue
-                self._data[ext_data_name] = ext_data
+                self.data[ext_data_name] = ext_data
         
         elif self.format == "zarr":
             raise NotImplementedError
@@ -826,23 +921,23 @@ class ResultExtension:
             #         ext_data.index.rename("", inplace=True)
             #     else:
             #         ext_data = ext_data_
-            #     self._data[ext_data_name] = ext_data
+            #     self.data[ext_data_name] = ext_data
 
-    def copy(self, new_sorting_result):
+    def copy(self, new_sorting_result, unit_ids=None):
+        # alessio : please note that this also replace the old BaseWaveformExtractorExtension.select_units!!!
         new_extension = self.__class__(new_sorting_result)
-        new_extension._params = self._params.copy()
-        new_extension._data = self._data
+        new_extension.params = self.params.copy()
+        if unit_ids is None:
+            new_extension.data = self.data
+        else:
+            new_extension.data = self._select_extension_data(unit_ids)
         new_extension._save()
+        return new_extension
 
     def run(self, **kwargs):
         self._run(**kwargs)
         if not self.sorting_result.is_read_only():
             self._save(**kwargs)
-
-    def _run(self, **kwargs):
-        # must be implemented in subclass
-        # must populate the self._data dictionary
-        raise NotImplementedError
 
     def save(self, **kwargs):
         self._save(**kwargs)
@@ -864,7 +959,7 @@ class ResultExtension:
 
             extension_folder = self._get_binary_extension_folder()
 
-            for ext_data_name, ext_data in self._data.items():
+            for ext_data_name, ext_data in self.data.items():
                 if isinstance(ext_data, dict):
                     with (extension_folder / f"{ext_data_name}.json").open("w") as f:
                         json.dump(ext_data, f)
@@ -889,7 +984,7 @@ class ResultExtension:
             if compressor is None:
                 compressor = get_default_zarr_compressor()
             
-            for ext_data_name, ext_data in self._data.items():
+            for ext_data_name, ext_data in self.data.items():
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, dict):
@@ -936,12 +1031,9 @@ class ResultExtension:
         Delete the sub folder and create a new empty one.
         """
         self._reset_folder()
-        self._params = None
-        self._data = dict()
+        self.params = None
+        self.data = dict()
 
-    def _select_extension_data(self, unit_ids):
-        # must be implemented in subclass
-        raise NotImplementedError
 
     def set_params(self, **params):
         """
@@ -949,16 +1041,15 @@ class ResultExtension:
         make it persistent in json.
         """
         params = self._set_params(**params)
-        self._params = params
+        self.params = params
 
-        print(self.sorting_result.is_read_only())
         if self.sorting_result.is_read_only():
             return
 
         self._save_params()
 
     def _save_params(self):
-        params_to_save = self._params.copy()
+        params_to_save = self.params.copy()
         if "sparsity" in params_to_save and params_to_save["sparsity"] is not None:
             assert isinstance(
                 params_to_save["sparsity"], ChannelSparsity
@@ -966,14 +1057,11 @@ class ResultExtension:
             params_to_save["sparsity"] = params_to_save["sparsity"].to_dict()
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
-            extension_folder.mkdir(exist_ok=True)
+            extension_folder.mkdir(exist_ok=True, parents=True)
             param_file = extension_folder / "params.json"
             param_file.write_text(json.dumps(check_json(params_to_save), indent=4), encoding="utf8")
         elif self.format == "zarr":
             self.extension_group.attrs["params"] = check_json(params_to_save)
 
-    def _set_params(self, **params):
-        # must be implemented in subclass
-        # must return a cleaned version of params dict
-        raise NotImplementedError
+
 
