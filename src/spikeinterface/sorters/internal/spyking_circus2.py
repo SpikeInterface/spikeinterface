@@ -253,12 +253,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 print("We found %d spikes" % len(spikes))
 
             ## And this is it! We have a spyking circus
-            final_sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
-            final_sorting["sample_index"] = spikes["sample_index"]
-            final_sorting["unit_index"] = spikes["cluster_index"]
-            final_sorting["segment_index"] = spikes["segment_index"]
-
-        final_sorting = NumpySorting(final_sorting, sampling_frequency, unit_ids)
+            sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+            sorting["sample_index"] = spikes["sample_index"]
+            sorting["unit_index"] = spikes["cluster_index"]
+            sorting["segment_index"] = spikes["segment_index"]
+            sorting = NumpySorting(sorting, sampling_frequency, unit_ids)
 
         sorting_folder = sorter_output_folder / "sorting"
         if sorting_folder.exists():
