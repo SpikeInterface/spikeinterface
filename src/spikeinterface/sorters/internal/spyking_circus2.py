@@ -18,6 +18,7 @@ try:
 except:
     HAVE_HDBSCAN = False
 
+
 class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
