@@ -9,6 +9,7 @@ from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
 from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_preprocessing
+from spikeinterface.core.basesorting import minimum_spike_dtype
 
 try:
     import hdbscan
@@ -16,9 +17,6 @@ try:
     HAVE_HDBSCAN = True
 except:
     HAVE_HDBSCAN = False
-
-spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
-
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
@@ -180,7 +178,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ## We get the labels for our peaks
             mask = peak_labels > -1
 
-            labeled_peaks = np.zeros(np.sum(mask), dtype=spike_dtype)
+            labeled_peaks = np.zeros(np.sum(mask), dtype=minimum_spike_dtype)
             labeled_peaks["sample_index"] = selected_peaks[mask]["sample_index"]
             labeled_peaks["segment_index"] = selected_peaks[mask]["segment_index"]
             for count, l in enumerate(labels):
@@ -254,7 +252,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 print("We found %d spikes" % len(spikes))
 
             ## And this is it! We have a spyking circus
-            sorting = NumpySorting(spikes, sampling_frequency, unit_ids=unit_ids)
+            final_sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+            final_sorting["sample_index"] = spikes["sample_index"]
+            final_sorting["unit_index"] = spikes["cluster_index"]
+            final_sorting["segment_index"] = spikes["segment_index"]
+
+        final_sorting = NumpySorting(final_sorting, sampling_frequency, unit_ids)
 
         sorting_folder = sorter_output_folder / "sorting"
         if sorting_folder.exists():

@@ -12,6 +12,7 @@ except:
     HAVE_HDBSCAN = False
 
 import random, string, os
+from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core import get_global_tmp_folder, get_channel_distances, get_random_data_chunks
 from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
@@ -69,8 +70,6 @@ class RandomProjectionClustering:
 
         d = params
         verbose = d["job_kwargs"]["verbose"]
-
-        spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
 
         fs = recording.get_sampling_frequency()
         nbefore = int(params["ms_before"] * fs / 1000.0)
@@ -163,7 +162,7 @@ class RandomProjectionClustering:
                 best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[:max_spikes]
             nb_spikes += best_spikes[unit_ind].size
 
-        spikes = np.zeros(nb_spikes, dtype=spike_dtype)
+        spikes = np.zeros(nb_spikes, dtype=minimum_spike_dtype)
 
         mask = np.zeros(0, dtype=np.int32)
         for unit_ind in labels:
