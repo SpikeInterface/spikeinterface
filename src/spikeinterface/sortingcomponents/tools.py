@@ -97,9 +97,7 @@ def clean_preprocessing(recording, mode="memory", delete_cache=True, **extra_kwa
 
     if mode == "memory":
         del recording
-    elif mode in ["folder", "zarr"]:
-        if not delete_cache:
-            import shutil
-
-            shutil.rmtree(recording._kwargs["folder_path"])
+    elif mode in ["folder", "zarr"] and delete_cache:
+        import shutil
+        shutil.rmtree(recording._kwargs["folder_path"])
     return
