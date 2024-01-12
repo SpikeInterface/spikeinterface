@@ -10,6 +10,7 @@ from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
+from .recording_tools import determine_cast_unsigned
 
 
 class ZarrRecordingExtractor(BaseRecording):
@@ -452,7 +453,6 @@ def add_traces_to_zarr(
         fix_job_kwargs,
         ChunkRecordingExecutor,
     )
-    from .core_tools import determine_cast_unsigned
 
     assert dataset_paths is not None, "Provide 'file_path'"
 

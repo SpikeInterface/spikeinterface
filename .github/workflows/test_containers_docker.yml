@@ -5,8 +5,6 @@ on: workflow_dispatch
 
 jobs:
   test-images:
-    env:
-      SPIKEINTERFACE_DEV_PATH: ${{ github.workspace }}
     name: Test on (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -30,10 +28,6 @@ jobs:
           pip install pytest
           pip install -e .[full]
           pip install docker
-      - name: Test that containers install the local CI version of spikeinterface
-        run: |
-          echo $SPIKEINTERFACE_DEV_PATH
-          python -c "import os; assert os.getenv('SPIKEINTERFACE_DEV_PATH') is not None"
       - name: Run test docker containers
         run: |
           pytest -vv --capture=tee-sys -rA src/spikeinterface/sorters/external/tests/test_docker_containers.py

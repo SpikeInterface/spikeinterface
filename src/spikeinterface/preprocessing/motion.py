@@ -142,7 +142,7 @@ motion_options_preset = {
     # empty preset
     "": {
         "detect_kwargs": {},
-        "select_kwargs": None,
+        "select_kwargs": {},
         "localize_peaks_kwargs": {},
         "estimate_motion_kwargs": {},
         "interpolate_motion_kwargs": {},
