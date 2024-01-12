@@ -140,6 +140,7 @@ def start_sorting_result(sorting, recording, format="memory", folder=None,
 
     return sorting_result
 
+
 def load_sorting_result(folder, load_extensions=True, format="auto"):
     """
     Load a SortingResult object from disk.
@@ -214,9 +215,11 @@ class SortingResult:
         elif format == "binary_folder":
             cls.create_binary_folder(folder, sorting, recording, sparsity, rec_attributes=None)
             sortres = cls.load_from_binary_folder(folder, recording=recording)
+            sortres.folder = folder
         elif format == "zarr":
             cls.create_zarr(folder, sorting, recording, sparsity, rec_attributes=None)
             sortres = cls.load_from_zarr(folder, recording=recording)
+            sortres.folder = folder
         else:
             raise ValueError("SortingResult.create: wrong format")
 
@@ -272,6 +275,10 @@ class SortingResult:
     @classmethod
     def create_binary_folder(cls, folder, sorting, recording, sparsity, rec_attributes):
         # used by create and save_as
+
+        # TODO add a spikeinterface_info.json folder with SI version  and object type
+
+        assert recording is not None, "To create a SortingResult you need recording not None"
 
         folder = Path(folder)
         if folder.is_dir():
@@ -378,8 +385,9 @@ class SortingResult:
     def create_zarr(cls, folder, sorting, recording, sparsity, rec_attributes):
         # used by create and save_as
         import zarr
+        import numcodecs
 
-        
+        # TODO add an attribute with SI version  and object type
 
         folder = Path(folder)
         # force zarr sufix
@@ -389,21 +397,32 @@ class SortingResult:
         if folder.is_dir():
             raise ValueError(f"Folder already exists {folder}")
 
-
-        
-
         zarr_root = zarr.open(folder, mode="w")
         
-        # the recording and sorting provenance can be used only if compatible with json
+        # the recording
+        rec_dict = recording.to_dict(relative_to=folder, recursive=True)
+        zarr_rec = np.array([rec_dict], dtype=object)
         if recording.check_serializability("json"):
-            rec_dict = recording.to_dict(relative_to=folder, recursive=True)
-            zarr_root.attrs["recording"] = check_json(rec_dict)
+            # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
+            zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
+        elif recording.check_serializability("pickle"):
+            # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
+            zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
         else:
             warnings.warn("SortingResult with zarr : the Recording is not json serializable, the recording link will be lost for futur load")
+        
 
+        # sorting provenance
+        sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
         if sorting.check_serializability("json"):
-            sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
-            zarr_root.attrs["sorting_provenance"] = check_json(sort_dict)
+            # zarr_root.attrs["sorting_provenance"] = check_json(sort_dict)
+            zarr_sort = np.array([sort_dict], dtype=object)
+            zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
+        elif sorting.check_serializability("pickle"):
+            # zarr_root.create_dataset("sorting_provenance", data=sort_dict, object_codec=numcodecs.Pickle())
+            zarr_sort = np.array([sort_dict], dtype=object)
+            zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.Pickle())
+
         # else:
         #     warnings.warn("SortingResult with zarr : the sorting provenance is not json serializable, the sorting provenance link will be lost for futur load")
 
@@ -414,15 +433,19 @@ class SortingResult:
             rec_attributes = get_rec_attributes(recording)
             probegroup = recording.get_probegroup()
         else:
-            rec_attributes_copy = rec_attributes.copy()
-            probegroup = rec_attributes_copy.pop("probegroup")
+            rec_attributes = rec_attributes.copy()
+            probegroup = rec_attributes.pop("probegroup")
+        
         recording_info.attrs["recording_attributes"] = check_json(rec_attributes)
+        # recording_info.create_dataset("recording_attributes", data=check_json(rec_attributes), object_codec=numcodecs.JSON())
 
         if probegroup is not None:
             recording_info.attrs["probegroup"] = check_json(probegroup.to_dict())
+            # recording_info.create_dataset("probegroup", data=check_json(probegroup.to_dict()), object_codec=numcodecs.JSON())
 
         if sparsity is not None:
             zarr_root.attrs["sparsity"] = check_json(sparsity.to_dict())
+            # zarr_root.create_dataset("sparsity", data=check_json(sparsity.to_dict()), object_codec=numcodecs.JSON())
 
         # write sorting copy
         from .zarrextractors import add_sorting_to_zarr_group
@@ -430,6 +453,8 @@ class SortingResult:
         # kwargs = dict(compressor=...)
         zarr_kwargs = dict()
         add_sorting_to_zarr_group(sorting, zarr_root.create_group("sorting"), **zarr_kwargs)
+
+        recording_info = zarr_root.create_group("extensions")
 
 
     @classmethod
@@ -440,15 +465,16 @@ class SortingResult:
 
         zarr_root = zarr.open(folder, mode="r")
 
-        # load internal sorting copy and make it sharedmem
-        # TODO
-        # sorting = ZarrSortingExtractor...
-        sorting = SharedMemorySorting.from_sorting(NumpyFolderSorting(folder / "sorting"))
+        # load internal sorting and make it sharedmem
+        # TODO propagate storage_options
+        sorting = SharedMemorySorting.from_sorting(ZarrSortingExtractor(folder, zarr_group="sorting"))
         
         # load recording if possible
         if recording is None:
+            rec_dict = zarr_root["recording"][0]
             try:
-                recording = load_extractor(zarr_root.attrs["recording"], base_folder=folder)
+                
+                recording = load_extractor(rec_dict, base_folder=folder)
             except:
                 recording = None
         else:
@@ -457,16 +483,19 @@ class SortingResult:
             pass
 
         # recording attributes
-        rec_attributes = zarr_root.require_group("recording_info").attrs["recording_attributes"]
-        if "probegroup" in zarr_root.require_group("recording_info").attrs:
-            probegroup_dict = zarr_root.require_group("recording_info").attrs["probegroup"]
-            rec_attributes["probegroup"] = probeinterface.Probe.from_dict(probegroup_dict)
+        rec_attributes = zarr_root["recording_info"].attrs["recording_attributes"]
+        # rec_attributes = zarr_root["recording_info"]["recording_attributes"]
+        if "probegroup" in zarr_root["recording_info"].attrs:
+            probegroup_dict = zarr_root["recording_info"].attrs["probegroup"]
+            # probegroup_dict = zarr_root["recording_info"]["probegroup"]
+            rec_attributes["probegroup"] = probeinterface.ProbeGroup.from_dict(probegroup_dict)
         else:
             rec_attributes["probegroup"] = None
 
         # sparsity
         if "sparsity" in zarr_root.attrs:
-            sparsity = zarr_root.attrs["sparsity"]
+            # sparsity = zarr_root.attrs["sparsity"]
+            sparsity = zarr_root["sparsity"]
         else:
             sparsity = None
 
@@ -508,12 +537,14 @@ class SortingResult:
             # create  a new folder
             assert folder is not None, "For format='binary_folder' folder must be provided"
             SortingResult.create_binary_folder(folder, sorting_provenance, recording, self.sparsity, self.rec_attributes)
-            new_sortres = SortingResult.load_from_binary_folder(folder)
+            new_sortres = SortingResult.load_from_binary_folder(folder, recording=recording)
             new_sortres.folder = folder
 
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
-            raise NotImplementedError
+            SortingResult.create_zarr(folder, sorting_provenance, recording, self.sparsity, self.rec_attributes)
+            new_sortres = SortingResult.load_from_zarr(folder, recording=recording)
+            new_sortres.folder = folder
         else:
             raise ValueError("SortingResult.save: wrong format")
 
@@ -624,8 +655,12 @@ class SortingResult:
                         # sorting_provenance = None
 
         elif self.format == "zarr":
-            # TODO
-            raise NotImplementedError
+            zarr_root = self._get_zarr_root(mode="r")
+            if "sorting_provenance" in zarr_root.keys():
+                sort_dict = zarr_root["sorting_provenance"][0]
+                sorting_provenance = load_extractor(sort_dict, base_folder=self.folder)
+            else:
+                sorting_provenance = None
 
         return sorting_provenance
 
@@ -721,17 +756,27 @@ class SortingResult:
         assert self.format != "memory"
         global _possible_extensions
 
+        if self.format == "zarr":
+            zarr_root = self._get_zarr_root(mode="r")
+            if "extensions" in zarr_root.keys():
+                extension_group = zarr_root["extensions"]
+            else:
+                extension_group = None
+
         saved_extension_names = []
         for extension_class in _possible_extensions:
             extension_name = extension_class.extension_name
             if self.format == "binary_folder":
                 is_saved = (self.folder / extension_name).is_dir() and (self.folder / extension_name / "params.json").is_file()
             elif self.format == "zarr":
-                zarr_root = self._get_zarr_root(mode="r")
-                is_saved = extension_name in zarr_root.keys() and "params" in zarr_root[extension_name].attrs.keys()
+                if extension_group is not None:
+                    is_saved = extension_name in extension_group.keys() and "params" in extension_group[extension_name].attrs.keys()
+                else:
+                    is_saved = False
             if is_saved:
                 saved_extension_names.append(extension_class.extension_name)
-            return saved_extension_names
+
+        return saved_extension_names
 
     def get_extension(self, extension_name: str):
         """
@@ -947,12 +992,8 @@ class ResultExtension:
 
     def _get_zarr_extension_group(self, mode='r+'):
         zarr_root = self.sorting_result._get_zarr_root(mode=mode)
-        assert self.extension_name in zarr_root.keys(), (
-            f"SortingResult: extension {self.extension_name} " f"is not in folder {self.folder}"
-        )
-        extension_group = zarr_root[self.extension_name]
+        extension_group = zarr_root["extensions"][self.extension_name]
         return extension_group
-    
 
     @classmethod
     def load(cls, sorting_result):
@@ -1001,22 +1042,24 @@ class ResultExtension:
                 self.data[ext_data_name] = ext_data
         
         elif self.format == "zarr":
-            raise NotImplementedError
-            # TODO: decide if we make a copy or not
-            # extension_group = self._get_zarr_extension_group(mode='r')
-            # for ext_data_name in extension_group.keys():
-            #     ext_data_ = extension_group[ext_data_name]
-            #     if "dict" in ext_data_.attrs:
-            #         ext_data = ext_data_[0]
-            #     elif "dataframe" in ext_data_.attrs:
-            #         import xarray
-            #         ext_data = xarray.open_zarr(
-            #             ext_data_.store, group=f"{extension_group.name}/{ext_data_name}"
-            #         ).to_pandas()
-            #         ext_data.index.rename("", inplace=True)
-            #     else:
-            #         ext_data = ext_data_
-            #     self.data[ext_data_name] = ext_data
+            # Alessio
+            # TODO: we need decide if we make a copy to memory or keep the lazy loading. For binary_folder it used to be lazy with memmap
+            # but this make the garbage complicated when a data is hold by a plot but the o SortingResult is delete
+            # lets talk
+            extension_group = self._get_zarr_extension_group(mode='r')
+            for ext_data_name in extension_group.keys():
+                ext_data_ = extension_group[ext_data_name]
+                if "dict" in ext_data_.attrs:
+                    ext_data = ext_data_[0]
+                elif "dataframe" in ext_data_.attrs:
+                    import xarray
+                    ext_data = xarray.open_zarr(
+                        ext_data_.store, group=f"{extension_group.name}/{ext_data_name}"
+                    ).to_pandas()
+                    ext_data.index.rename("", inplace=True)
+                else:
+                    ext_data = ext_data_
+                self.data[ext_data_name] = ext_data
 
     def copy(self, new_sorting_result, unit_ids=None):
         # alessio : please note that this also replace the old BaseWaveformExtractorExtension.select_units!!!
@@ -1042,12 +1085,11 @@ class ResultExtension:
             return
 
         if self.sorting_result.is_read_only():
-            raise ValueError("The SortingResult is read only save is not possible")
+            raise ValueError(f"The SortingResult is read only save extension {self.extension_name} is not possible")
         
         # delete already saved
-        self._reset_folder()
+        self._reset_extension_folder()
         self._save_params()
-
 
         if self.format == "binary_folder":
             import pandas as pd
@@ -1104,7 +1146,7 @@ class ResultExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
 
-    def _reset_folder(self):
+    def _reset_extension_folder(self):
         """
         Delete the extension in folder (binary or zarr) and create an empty one.
         """
@@ -1116,16 +1158,15 @@ class ResultExtension:
 
         elif self.format == "zarr":
             import zarr
-
             zarr_root = zarr.open(self.folder, mode="r+")
-            self.extension_group = zarr_root.create_group(self.extension_name, overwrite=True)
+            extension_group = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
 
     def reset(self):
         """
         Reset the waveform extension.
         Delete the sub folder and create a new empty one.
         """
-        self._reset_folder()
+        self._reset_extension_folder()
         self.params = None
         self.data = dict()
 
@@ -1135,6 +1176,10 @@ class ResultExtension:
         Set parameters for the extension and
         make it persistent in json.
         """
+        # this ensure data is also deleted and corresponf to params
+        # this also ensure the group is created
+        self._reset_extension_folder()
+
         params = self._set_params(**params)
         self.params = params
 
@@ -1150,11 +1195,14 @@ class ResultExtension:
                 params_to_save["sparsity"], ChannelSparsity
             ), "'sparsity' parameter must be a ChannelSparsity object!"
             params_to_save["sparsity"] = params_to_save["sparsity"].to_dict()
+
+
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             extension_folder.mkdir(exist_ok=True, parents=True)
             param_file = extension_folder / "params.json"
             param_file.write_text(json.dumps(check_json(params_to_save), indent=4), encoding="utf8")
         elif self.format == "zarr":
-            self.extension_group.attrs["params"] = check_json(params_to_save)
+            extension_group = self._get_zarr_extension_group(mode="r+")
+            extension_group.attrs["params"] = check_json(params_to_save)
 

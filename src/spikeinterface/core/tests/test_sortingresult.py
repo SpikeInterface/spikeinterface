@@ -53,8 +53,7 @@ def test_SortingResult_zarr():
         shutil.rmtree(folder)
 
     sortres = start_sorting_result(sorting, recording, format="zarr", folder=folder,  sparse=False, sparsity=None)
-    # sortres = load_sorting_result(folder, format="auto")
-
+    sortres = load_sorting_result(folder, format="auto")
     # _check_sorting_results(sortres, sorting)
 
 
@@ -85,11 +84,15 @@ def _check_sorting_results(sortres, original_sorting):
     ext = sortres.get_extension("dummy")
     assert ext is None
 
+    assert sortres.has_recording()
 
     # save to several format
-    for format in ("memory", "binary_folder", ): # "zarr"
+    for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
-            folder = cache_folder / f"test_SortingResult_save_as_{format}"
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingResult_save_as_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingResult_save_as_{format}"
             if folder.exists():
                 shutil.rmtree(folder)
         else:
@@ -99,6 +102,7 @@ def _check_sorting_results(sortres, original_sorting):
         sortres.compute("dummy")
 
         sortres2 = sortres.save_as(format=format, folder=folder)
+        print(sortres2.recording)
         ext = sortres2.get_extension("dummy")
         assert ext is not None
         
@@ -107,9 +111,12 @@ def _check_sorting_results(sortres, original_sorting):
         assert data["result_two"].size == original_sorting.to_spike_vector().size
 
     # select unit_ids to several format
-    for format in ("memory", "binary_folder", ): # "zarr"
+    for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
-            folder = cache_folder / f"test_SortingResult_select_units_with{format}"
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingResult_select_units_with_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingResult_select_units_with_{format}"
             if folder.exists():
                 shutil.rmtree(folder)
         else:
