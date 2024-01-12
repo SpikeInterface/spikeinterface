@@ -173,7 +173,6 @@ def test_BaseRecording():
     traces = rec.get_traces(segment_index=0)
     assert np.array_equal(traces5, traces)
 
-
     # cache joblib several jobs
     folder = cache_folder / "simple_recording2"
     rec2 = rec.save(format="binary", folder=folder, chunk_size=10, n_jobs=4)

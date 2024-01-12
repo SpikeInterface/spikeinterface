@@ -266,9 +266,11 @@ class BaseSorting(BaseExtractor):
         elif format == "memory":
             if save_kwargs.get("sharedmem", True):
                 from .numpyextractors import SharedMemorySorting
+
                 cached = SharedMemorySorting.from_sorting(self)
             else:
                 from .numpyextractors import NumpySorting
+
                 cached = NumpySorting.from_sorting(self)
         else:
             raise ValueError(f"format {format} not supported")
