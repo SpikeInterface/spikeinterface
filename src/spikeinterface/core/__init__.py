@@ -133,4 +133,9 @@ from .template_tools import (
 # channel sparsity
 from .sparsity import ChannelSparsity, compute_sparsity
 
-from .sortingresult import SortingResult, start_sorting_result, load_sorting_result
+# SortingResult and 
+from .sortingresult import SortingResult, ResultExtension, start_sorting_result, load_sorting_result
+from .result_core import (
+    ComputeWaveforms, compute_waveforms,
+    ComputTemplates, compute_templates
+)

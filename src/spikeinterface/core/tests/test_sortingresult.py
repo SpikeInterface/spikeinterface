@@ -54,7 +54,7 @@ def test_SortingResult_zarr():
 
     sortres = start_sorting_result(sorting, recording, format="zarr", folder=folder,  sparse=False, sparsity=None)
     sortres = load_sorting_result(folder, format="auto")
-    # _check_sorting_results(sortres, sorting)
+    _check_sorting_results(sortres, sorting)
 
 
 
@@ -71,12 +71,15 @@ def _check_sorting_results(sortres, original_sorting):
 
     probe = sortres.get_probe()
     sparsity = sortres.sparsity
-
+    
     # compute
     sortres.compute("dummy", param1=5.5)
+    # equivalent
+    compute_dummy(sortres, param1=5.5)
     ext = sortres.get_extension("dummy")
     assert ext is not None
     assert ext.params["param1"] == 5.5
+    print(sortres)
     # recompute
     sortres.compute("dummy", param1=5.5)
     # and delete
@@ -85,7 +88,7 @@ def _check_sorting_results(sortres, original_sorting):
     assert ext is None
 
     assert sortres.has_recording()
-
+    
     # save to several format
     for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
@@ -102,7 +105,6 @@ def _check_sorting_results(sortres, original_sorting):
         sortres.compute("dummy")
 
         sortres2 = sortres.save_as(format=format, folder=folder)
-        print(sortres2.recording)
         ext = sortres2.get_extension("dummy")
         assert ext is not None
         
@@ -131,11 +133,14 @@ def _check_sorting_results(sortres, original_sorting):
         data = sortres2.get_extension("dummy").data
         assert data["result_one"] == sortres.get_extension("dummy").data["result_one"]
         # unit 1, 3, ... should be removed
-        assert np.all(~np.isin(data["result_two"], [-1, -3]))
+        assert np.all(~np.isin(data["result_two"], [1, 3]))
 
 
 class DummyResultExtension(ResultExtension):
     extension_name = "dummy"
+    depend_on = []
+    need_recording = False
+    use_nodepiepline = False
 
     def _set_params(self, param0="yep", param1=1.2, param2=[1,2, 3.]):
         params = dict(param0=param0, param1=param1, param2=param2)
@@ -148,7 +153,7 @@ class DummyResultExtension(ResultExtension):
         # the result two has the same size of the spike vector!!
         # and represent nothing (the trick is to use unit_index for testing slice)
         spikes = self.sorting_result.sorting.to_spike_vector()
-        self.data["result_two"] = spikes["unit_index"] * -1
+        self.data["result_two"] = spikes["unit_index"].copy()
     
     def _select_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
@@ -162,6 +167,8 @@ class DummyResultExtension(ResultExtension):
         new_data["result_two"] = self.data["result_two"][keep_spike_mask]
 
         return new_data
+
+compute_dummy = DummyResultExtension.function_factory()
 
 
 class DummyResultExtension2(ResultExtension):

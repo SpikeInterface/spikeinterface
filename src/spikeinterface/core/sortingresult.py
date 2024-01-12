@@ -713,6 +713,10 @@ class SortingResult:
         txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
         if self.is_sparse():
             txt += " - sparse"
+        if self.has_recording():
+            txt += " - has recording"
+        ext_txt = f"Load extenstions [{len(self.extensions)}]: " + ", ".join(self.extensions.keys())
+        txt += "\n" + ext_txt
         return txt
 
     ## extensions zone
@@ -738,16 +742,27 @@ class SortingResult:
         >>> unit_location = extension.get_data()
         
         """
-        # TODO check extension dependency
+        
 
         extension_class = get_extension_class(extension_name)
+
+        # check dependencies
+        if extension_class.need_recording:
+            assert self.has_recording(), f"Extension {extension_name} need the recording"
+        for dependency_name in extension_class.depend_on:
+            ext = self.get_extension(dependency_name)
+            assert ext is not None, f"Extension {extension_name} need {dependency_name} to be computed first"
+        
         extension_instance = extension_class(self)
         extension_instance.set_params(**params)
         extension_instance.run()
         
         self.extensions[extension_name] = extension_instance
 
+        # TODO : need discussion
         return extension_instance
+        # OR
+        return extension_instance.data
 
     def get_saved_extension_names(self):
         """
@@ -924,16 +939,29 @@ class ResultExtension:
     Possible extension can be register on the fly at import time with register_result_extension() mechanism.
     It also enables any custum computation on top on SortingResult to be implemented by the user.
 
-    An extension needs to inherit from this class and implement some abstract methods:
-      * _set_params
-      * _run
-      * _select_extension_data
+    An extension needs to inherit from this class and implement some attributes and abstract methods:
+      * extension_name
+      * depend_on
+      * need_recording
+      * use_nodepiepline
+      * _set_params()
+      * _run()
+      * _select_extension_data()
 
     The subclass must also set an `extension_name` class attribute which is not None by default.
 
-    The subclass must also hanle an attribute `__data` which is a dict contain the results after the `run()`.
+    The subclass must also hanle an attribute `data` which is a dict contain the results after the `run()`.
+
+    All ResultExtension will have a function associate for instance (this use the function_factory):
+    comptute_unit_location(sorting_result, ...) will be equivalent to sorting_result.compute("unit_location", ...)
+    
+
     """    
+    
     extension_name = None
+    depend_on = []
+    need_recording = False
+    use_nodepiepline = False
 
     def __init__(self, sorting_result):
         self._sorting_result = weakref.ref(sorting_result)
@@ -959,6 +987,20 @@ class ResultExtension:
         raise NotImplementedError
     # 
     #######
+
+    @classmethod
+    def function_factory(cls):
+        # make equivalent
+        # comptute_unit_location(sorting_result, ...) <> sorting_result.compute("unit_location", ...)
+        class FuncWrapper:
+            def __init__(self, extension_name):
+                self.extension_name = extension_name
+            def __call__(self, sorting_result, *args, **kwargs):
+                return sorting_result.compute(self.extension_name, *args, **kwargs)
+        func = FuncWrapper(cls.extension_name)
+        # TODO : make docstring from class docstring
+        # TODO: add load_if_exists
+        return func
 
     @property
     def sorting_result(self):
@@ -1057,6 +1099,8 @@ class ResultExtension:
                         ext_data_.store, group=f"{extension_group.name}/{ext_data_name}"
                     ).to_pandas()
                     ext_data.index.rename("", inplace=True)
+                elif "object" in ext_data_.attrs:
+                    ext_data = ext_data_[0]
                 else:
                     ext_data = ext_data_
                 self.data[ext_data_name] = ext_data
@@ -1095,7 +1139,6 @@ class ResultExtension:
             import pandas as pd
 
             extension_folder = self._get_binary_extension_folder()
-
             for ext_data_name, ext_data in self.data.items():
                 if isinstance(ext_data, dict):
                     with (extension_folder / f"{ext_data_name}.json").open("w") as f:
@@ -1126,9 +1169,8 @@ class ResultExtension:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, dict):
                     extension_group.create_dataset(
-                        name=ext_data_name, data=[ext_data], object_codec=numcodecs.JSON()
+                        name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.JSON()
                     )
-                    extension_group[ext_data_name].attrs["dict"] = True
                 elif isinstance(ext_data, np.ndarray):
                     extension_group.create_dataset(name=ext_data_name, data=ext_data, compressor=compressor)
                 elif isinstance(ext_data, pd.DataFrame):
@@ -1139,12 +1181,14 @@ class ResultExtension:
                     )
                     extension_group[ext_data_name].attrs["dataframe"] = True
                 else:
+                    # any object
                     try:
                         extension_group.create_dataset(
-                            name=ext_data_name, data=ext_data, object_codec=numcodecs.Pickle()
+                            name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.Pickle()
                         )
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
+                    extension_group[ext_data_name].attrs["object"] = True
 
     def _reset_extension_folder(self):
         """
@@ -1205,4 +1249,9 @@ class ResultExtension:
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["params"] = check_json(params_to_save)
+
+
+
+
+
 
