@@ -1,4 +1,4 @@
-name: CI-Test in AWS for GPU
+name: Test GPU sorter images in singularity on AWS
 
 on:
   workflow_dispatch:
