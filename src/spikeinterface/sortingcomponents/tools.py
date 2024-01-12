@@ -1,5 +1,9 @@
 import numpy as np
-import psutil
+try:
+    import psutil
+    HAVE_PSUTIL = True
+except:
+    HAVE_PSUTIL = False
 
 from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
@@ -77,12 +81,15 @@ def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache
     save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
 
     if mode == "memory":
-        assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
-        memory_usage = memory_limit * psutil.virtual_memory()[4]
-        if recording.get_total_memory_size() < memory_usage:
-            recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+        if HAVE_PSUTIL:
+            assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
+            memory_usage = memory_limit * psutil.virtual_memory()[4]
+            if recording.get_total_memory_size() < memory_usage:
+                recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+            else:
+                print("Recording too large to be preloaded in RAM...")
         else:
-            print("Recording too large to be preloaded in RAM...")
+            print("psutil is required to preload in memory")
     elif mode == "folder":
         recording = recording.save_to_folder(**extra_kwargs)
     elif mode == "zarr":
