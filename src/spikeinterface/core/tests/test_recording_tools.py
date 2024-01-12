@@ -149,16 +149,18 @@ def test_write_memory_recording():
     recording = recording.save()
 
     # write with loop
-    write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1)
+    traces_list, shms = write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1)
 
-    write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1, chunk_memory="100k", progress_bar=True)
+    traces_list, shms = write_memory_recording(
+        recording, dtype=None, verbose=True, n_jobs=1, chunk_memory="100k", progress_bar=True
+    )
 
-    if platform.system() != "Windows":
-        # write parrallel
-        write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, chunk_memory="100k")
-
-        # write parrallel
-        write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, total_memory="200k", progress_bar=True)
+    # write parallel
+    traces_list, shms = write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, chunk_memory="100k")
+    # need to clean the buffer
+    del traces_list
+    for shm in shms:
+        shm.unlink()
 
 
 def test_get_random_data_chunks():

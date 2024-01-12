@@ -847,9 +847,10 @@ class BaseExtractor:
 
     save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
-    def save_to_memory(self, **kwargs) -> "BaseExtractor":
-        # used only by recording at the moment
-        cached = self._save(**kwargs)
+    def save_to_memory(self, sharedmem=True, **save_kwargs) -> "BaseExtractor":
+        save_kwargs.pop("format", None)
+
+        cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)
         self.copy_metadata(cached)
         return cached
 
@@ -978,6 +979,8 @@ class BaseExtractor:
         import zarr
         from .zarrextractors import read_zarr
 
+        save_kwargs.pop("format", None)
+
         if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
@@ -1006,7 +1009,7 @@ class BaseExtractor:
         save_kwargs["zarr_path"] = zarr_path
         save_kwargs["storage_options"] = storage_options
         save_kwargs["channel_chunk_size"] = channel_chunk_size
-        cached = self._save(verbose=verbose, **save_kwargs)
+        cached = self._save(format="zarr", verbose=verbose, **save_kwargs)
         cached = read_zarr(zarr_path)
 
         return cached
