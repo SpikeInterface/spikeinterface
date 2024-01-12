@@ -96,9 +96,12 @@ class NumpyRecording(BaseRecording):
                 shm.close()
                 shm.unlink()
         # TODO later : propagte t_starts ?
-        recording = NumpyRecording(traces_list, source_recording.get_sampling_frequency(),
-                                   t_starts=None, channel_ids=source_recording.channel_ids)
-
+        recording = NumpyRecording(
+            traces_list,
+            source_recording.get_sampling_frequency(),
+            t_starts=None,
+            channel_ids=source_recording.channel_ids,
+        )
 
 
 class NumpyRecordingSegment(BaseRecordingSegment):
@@ -116,28 +119,30 @@ class NumpyRecordingSegment(BaseRecordingSegment):
             traces = traces[:, channel_indices]
 
         return traces
-    
 
 
 class SharedMemoryRecording(BaseRecording):
     """
     In memory recording with shared memmory buffer.
-    
 
     Parameters
     ----------
     shm_names: list
-        List of sharedmem names.
+        List of sharedmem names for each segment
     shape_list: list
-
+        List of shape of sharedmem buffer for each segment
+        The first dimension is the number of samples, the second is the number of channels.
+        Note that the number of channels must be the same for all segments
     sampling_frequency: float
         The sampling frequency in Hz
     t_starts: None or list of float
         Times in seconds of the first sample for each segment
     channel_ids: list
         An optional list of channel_ids. If None, linear channels are assumed
+    main_shm_owner: bool, default: True
+        If True, the main instance will unlink the sharedmem buffer when deleted
     """
-    
+
     extractor_name = "SharedMemory"
     mode = "memory"
     name = "SharedMemory"
@@ -145,8 +150,6 @@ class SharedMemoryRecording(BaseRecording):
     def __init__(
         self, shm_names, shape_list, dtype, sampling_frequency, channel_ids=None, t_starts=None, main_shm_owner=True
     ):
-        
-        
         assert len(shape_list) == len(shm_names)
         assert all(shape_list[0][1] == shape[1] for shape in shape_list)
 
@@ -177,7 +180,10 @@ class SharedMemoryRecording(BaseRecording):
         # this is important so that the main owner can unlink the share mem buffer :
         self.main_shm_owner = main_shm_owner
 
-        for i, traces,  in enumerate(traces_list):
+        for (
+            i,
+            traces,
+        ) in enumerate(traces_list):
             if t_starts is None:
                 t_start = None
             else:
@@ -197,9 +203,8 @@ class SharedMemoryRecording(BaseRecording):
             "main_shm_owner": False,
         }
 
-
     def __del__(self):
-        self._recording_segments =[]
+        self._recording_segments = []
         for shm in self.shms:
             shm.close()
             if self.main_shm_owner:
@@ -210,15 +215,15 @@ class SharedMemoryRecording(BaseRecording):
         traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
 
         # TODO later : propagte t_starts ?
-        
+
         recording = SharedMemoryRecording(
             shm_names=[shm.name for shm in shms],
-            shape_list = [traces.shape for traces in traces_list],
+            shape_list=[traces.shape for traces in traces_list],
             dtype=source_recording.dtype,
             sampling_frequency=source_recording.sampling_frequency,
             channel_ids=source_recording.channel_ids,
             t_starts=None,
-            main_shm_owner=True            
+            main_shm_owner=True,
         )
 
         for shm in shms:
