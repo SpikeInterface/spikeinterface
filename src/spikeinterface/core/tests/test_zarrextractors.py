@@ -20,9 +20,8 @@ else:
 
 
 def test_ZarrSortingExtractor():
-
     np_sorting = generate_sorting()
-    
+
     # store in root standard normal way
     folder = cache_folder / "zarr_sorting"
     if folder.is_dir():
@@ -41,9 +40,6 @@ def test_ZarrSortingExtractor():
     sorting = ZarrSortingExtractor(folder, zarr_group="sorting")
     # and reaload
     sorting = load_extractor(sorting.to_dict())
-
-
-
 
 
 if __name__ == "__main__":

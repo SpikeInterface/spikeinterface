@@ -184,7 +184,6 @@ class ZarrSortingExtractor(BaseSorting):
         else:
             self._root = zarr_root[zarr_group]
 
-
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
         assert "unit_ids" in self._root.keys(), "'unit_ids' dataset not found!"
