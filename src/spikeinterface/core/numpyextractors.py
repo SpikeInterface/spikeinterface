@@ -13,8 +13,9 @@ from spikeinterface.core import (
 )
 from .basesorting import minimum_spike_dtype
 from .core_tools import make_shared_array
-
+from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
+
 
 from typing import Union
 
@@ -83,6 +84,25 @@ class NumpyRecording(BaseRecording):
             "sampling_frequency": sampling_frequency,
         }
 
+    @staticmethod
+    def from_recording(source_recording, **job_kwargs):
+        traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
+        if shms[0] is not None:
+            # if the computation was done in parallel then traces_list is shared array
+            # this can lead to problem
+            # we need to copy back to a standard numpy array and unlink the shared buffer
+            traces_list = [np.array(traces, copy=True) for traces in traces_list]
+            for shm in shms:
+                shm.close()
+                shm.unlink()
+        # TODO later : propagte t_starts ?
+        recording = NumpyRecording(
+            traces_list,
+            source_recording.get_sampling_frequency(),
+            t_starts=None,
+            channel_ids=source_recording.channel_ids,
+        )
+
 
 class NumpyRecordingSegment(BaseRecordingSegment):
     def __init__(self, traces, sampling_frequency, t_start):
@@ -99,6 +119,117 @@ class NumpyRecordingSegment(BaseRecordingSegment):
             traces = traces[:, channel_indices]
 
         return traces
+
+
+class SharedMemoryRecording(BaseRecording):
+    """
+    In memory recording with shared memmory buffer.
+
+    Parameters
+    ----------
+    shm_names: list
+        List of sharedmem names for each segment
+    shape_list: list
+        List of shape of sharedmem buffer for each segment
+        The first dimension is the number of samples, the second is the number of channels.
+        Note that the number of channels must be the same for all segments
+    sampling_frequency: float
+        The sampling frequency in Hz
+    t_starts: None or list of float
+        Times in seconds of the first sample for each segment
+    channel_ids: list
+        An optional list of channel_ids. If None, linear channels are assumed
+    main_shm_owner: bool, default: True
+        If True, the main instance will unlink the sharedmem buffer when deleted
+    """
+
+    extractor_name = "SharedMemory"
+    mode = "memory"
+    name = "SharedMemory"
+
+    def __init__(
+        self, shm_names, shape_list, dtype, sampling_frequency, channel_ids=None, t_starts=None, main_shm_owner=True
+    ):
+        assert len(shape_list) == len(shm_names), "Each shm_name in `shm_names` must have a shape in `shape_list`"
+        assert all(shape_list[0][1] == shape[1] for shape in shape_list)
+
+        # create traces from sharedmem names
+        self.shms = []
+        traces_list = []
+        for shm_name, shape in zip(shm_names, shape_list):
+            shm = SharedMemory(shm_name, create=False)
+            self.shms.append(shm)
+            traces = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+            traces_list.append(traces)
+
+        if channel_ids is None:
+            channel_ids = np.arange(traces_list[0].shape[1])
+        else:
+            channel_ids = np.asarray(channel_ids)
+            assert channel_ids.size == traces_list[0].shape[1]
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
+
+        if t_starts is not None:
+            assert len(t_starts) == len(traces_list), "t_starts must be a list of same size as traces_list"
+            t_starts = [float(t_start) for t_start in t_starts]
+
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
+
+        # this is important so that the main owner can unlink the share mem buffer :
+        self.main_shm_owner = main_shm_owner
+
+        for (
+            i,
+            traces,
+        ) in enumerate(traces_list):
+            if t_starts is None:
+                t_start = None
+            else:
+                t_start = t_starts[i]
+            rec_segment = NumpyRecordingSegment(traces, sampling_frequency, t_start)
+
+            self.add_recording_segment(rec_segment)
+
+        self._kwargs = {
+            "shm_names": shm_names,
+            "shape_list": shape_list,
+            "dtype": dtype,
+            "sampling_frequency": sampling_frequency,
+            "channel_ids": channel_ids,
+            "t_starts": t_starts,
+            # this is important so that clone of this will not try to unlink the share mem buffer :
+            "main_shm_owner": False,
+        }
+
+    def __del__(self):
+        self._recording_segments = []
+        for shm in self.shms:
+            shm.close()
+            if self.main_shm_owner:
+                shm.unlink()
+
+    @staticmethod
+    def from_recording(source_recording, **job_kwargs):
+        traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
+
+        # TODO later : propagte t_starts ?
+
+        recording = SharedMemoryRecording(
+            shm_names=[shm.name for shm in shms],
+            shape_list=[traces.shape for traces in traces_list],
+            dtype=source_recording.dtype,
+            sampling_frequency=source_recording.sampling_frequency,
+            channel_ids=source_recording.channel_ids,
+            t_starts=None,
+            main_shm_owner=True,
+        )
+
+        for shm in shms:
+            # the sharedmem are handle by the new SharedMemoryRecording
+            shm.close()
+        return recording
 
 
 class NumpySorting(BaseSorting):

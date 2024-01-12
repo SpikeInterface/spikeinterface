@@ -8,7 +8,14 @@ from .baserecordingsnippets import BaseRecordingSnippets
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
 from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
-from .numpyextractors import NumpyRecording, NumpySorting, SharedMemorySorting, NumpyEvent, NumpySnippets
+from .numpyextractors import (
+    NumpyRecording,
+    SharedMemoryRecording,
+    NumpySorting,
+    SharedMemorySorting,
+    NumpyEvent,
+    NumpySnippets,
+)
 from .zarrextractors import ZarrRecordingExtractor, ZarrSortingExtractor, read_zarr, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .sortingfolder import NumpyFolderSorting, NpzFolderSorting, read_numpy_sorting_folder, read_npz_folder
