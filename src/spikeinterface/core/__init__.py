@@ -132,3 +132,5 @@ from .template_tools import (
 
 # channel sparsity
 from .sparsity import ChannelSparsity, compute_sparsity
+
+from .template import Templates
