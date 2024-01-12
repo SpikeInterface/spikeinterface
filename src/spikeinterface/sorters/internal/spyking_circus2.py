@@ -268,8 +268,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(sorting_folder)
 
         folder_to_delete = None
-        cache_mode = params['cache_preprocessing']['mode']
-        delete_cache = params['cache_preprocessing']['delete_cache']
+        cache_mode = params["cache_preprocessing"]["mode"]
+        delete_cache = params["cache_preprocessing"]["delete_cache"]
         if cache_mode in ["folder", "zarr"] and delete_cache:
             folder_to_delete = recording_f._kwargs["folder_path"]
 
