@@ -1,6 +1,8 @@
 import numpy as np
+
 try:
     import psutil
+
     HAVE_PSUTIL = True
 except:
     HAVE_PSUTIL = False
