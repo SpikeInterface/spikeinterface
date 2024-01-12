@@ -108,9 +108,8 @@ class Templates:
         else:
             sparse_template = self.templates_array[unit_index, :, :]
             template = self.sparsity.densify_waveforms(waveforms=sparse_template, unit_id=self.unit_ids[unit_index])
-            # dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+            # dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
         return template
-
 
     def get_dense_templates(self) -> np.ndarray:
         # Assumes and object without a sparsity mask already has dense templates

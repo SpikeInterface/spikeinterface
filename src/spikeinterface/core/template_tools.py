@@ -6,7 +6,6 @@ from .sparsity import compute_sparsity, _sparsity_doc
 from .recording_tools import get_channel_distances, get_noise_levels
 
 
-
 def get_template_amplitudes(
     waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum"
 ):
@@ -249,4 +248,3 @@ def get_template_extremum_amplitude(
         unit_amplitudes[unit_id] = extremum_amplitudes[unit_id][best_channel]
 
     return unit_amplitudes
-
