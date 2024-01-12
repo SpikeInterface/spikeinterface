@@ -455,7 +455,6 @@ def add_traces_to_zarr(
         fix_job_kwargs,
         ChunkRecordingExecutor,
     )
-    
 
     assert dataset_paths is not None, "Provide 'file_path'"
 
