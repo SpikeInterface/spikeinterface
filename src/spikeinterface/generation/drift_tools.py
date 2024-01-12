@@ -200,7 +200,7 @@ def make_linear_displacement(start, stop, num_step=10):
     Returns
     -------
     displacements: np.array
-        The displacements with shpe (num_step, 2)
+        The displacements with shape (num_step, 2)
     """
     displacements = (stop[np.newaxis, :] - start[np.newaxis, :]) / (num_step - 1) * np.arange(num_step)[
         :, np.newaxis
@@ -225,8 +225,6 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
     displacement_sampling_frequency: float
         The sampling frequency of drift vector
-    parent_recording: BaseRecording or None, default: None
-        The recording over which to add the templates
     displacement_unit_factor: numpy array or None, default: None
         A array containing the factor per unit of the drift.
         This is used to create non rigid with a factor gradient of depending on units position.
