@@ -390,50 +390,72 @@ def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
 def test_multiple_unit_tables(tmp_path, use_pynwb):
+    from pynwb.misc import Units
+
     nwbfile = mock_NWBFile()
 
-    # Add the spikes
+    # Add the spikes to the first unit table
     nwbfile.add_unit_column(name="unit_name", description="the name of the unit")
     nwbfile.add_unit_column(name="a_property", description="a_cool_property")
-
     spike_times_a = np.array([0.0, 1.0, 2.0])
     nwbfile.add_unit(spike_times=spike_times_a, unit_name="a", a_property="a_property_value")
     spike_times_b = np.array([0.0, 1.0, 2.0, 3.0])
     nwbfile.add_unit(spike_times=spike_times_b, unit_name="b", a_property="b_property_value")
 
-    # Add a second unit table
-    second_units_table = nwbfile.units
+    # Add the spikes to the second unit tabl
+
+    # Add a second unit table to first NWBFile
+    second_units_table = Units(
+        name="units_raw",
+        description="test units table",
+        columns=[
+            dict(name="unit_name", description="unit name"),
+            dict(name="a_second_property", description="test property"),
+        ],
+    )
+    spike_times_a1 = np.array([0.0, 1.0, 2.0, 3.0])
+    second_units_table.add_unit(spike_times=spike_times_a1, unit_name="a1", a_second_property="a1_property_value")
+    spike_times_b1 = np.array([0.0, 1.0, 2.0])
+    second_units_table.add_unit(spike_times=spike_times_b1, unit_name="b1", a_second_property="b1_property_value")
     processing = nwbfile.create_processing_module(name="ecephys", description="test processing module")
     processing.add(second_units_table)
 
-    file_path = "test.nwb"
+    file_path = tmp_path / "test.nwb"
+    print(file_path)
     # Write the nwbfile to a temporary file
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    # with pytest.raises(ValueError):
-    sorting_extractor = NwbSortingExtractor(
+    # not passing unit_table_path will result in an error
+    with pytest.raises(ValueError):
+        sorting_extractor = NwbSortingExtractor(
+            file_path=file_path,
+            sampling_frequency=10.0,
+            t_start=0,
+            use_pynwb=use_pynwb,
+        )
+
+    sorting_extractor_main = NwbSortingExtractor(
         file_path=file_path,
         sampling_frequency=10.0,
         t_start=0,
         use_pynwb=use_pynwb,
-        unit_table_path="processing/ecephys/units",
+        unit_table_path="units",
     )
+    assert np.array_equal(sorting_extractor_main.unit_ids, ["a", "b"])
+    assert "a_property" in sorting_extractor_main.get_property_keys()
+    assert "a_second_property" not in sorting_extractor_main.get_property_keys()
 
-    # sorting_extractor = NwbSortingExtractor(
-    #     file_path=file_path,
-    #     sampling_frequency=10.0,
-    #     t_start=0,
-    #     use_pynwb=use_pynwb,
-    #     unit
-    # )
-
-    # units_ids = sorting_extractor.get_unit_ids()
-
-    # np.testing.assert_equal(units_ids, ["a", "b"])
-
-    # added_properties = sorting_extractor.get_property_keys()
-    # assert "a_property" in added_properties
+    sorting_extractor_processing = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=10.0,
+        t_start=0,
+        use_pynwb=use_pynwb,
+        unit_table_path="processing/ecephys/units_raw",
+    )
+    assert np.array_equal(sorting_extractor_processing.unit_ids, ["a1", "b1"])
+    assert "a_property" not in sorting_extractor_processing.get_property_keys()
+    assert "a_second_property" in sorting_extractor_processing.get_property_keys()
 
 
 if __name__ == "__main__":

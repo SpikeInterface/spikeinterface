@@ -108,10 +108,8 @@ def retrieve_unit_table(nwbfile: NWBFile, unit_table_path: Optional[str] = None)
     unit_table_dict.update(unit_table_dict_processing)
 
     if unit_table_path is not None:
-        # TODO note that this case does not handle repetitions of the same name
         if unit_table_path not in unit_table_dict:
             raise ValueError(f"{unit_table_path} not found in the NWBFile. ")
-        # TODO: load the unit table
         unit_table = unit_table_dict[unit_table_path]
     else:
         unit_table_list: List[Units] = list(unit_table_dict.keys())
@@ -123,8 +121,7 @@ def retrieve_unit_table(nwbfile: NWBFile, unit_table_path: Optional[str] = None)
             )
         if len(unit_table_list) == 0:
             raise ValueError("No unit table found in the .nwb file.")
-        # LOAD THE UNIT TABLE
-        unit_table = unit_table_dict.values()[0]
+        unit_table = list(unit_table_dict.values())[0]
 
     return unit_table
 
@@ -941,7 +938,7 @@ class _NwbHDF5SortingExtractor(BaseSorting):
                     f"'{unit_table_path}' not found in the file. "
                     f"Available options are: {available_unit_table_paths}"
                 )
-        self.unit_table_location = available_unit_table_paths
+        self.unit_table_location = unit_table_path
         units_table = hdf5_file[self.unit_table_location]
 
         spike_times_data = units_table["spike_times"]
