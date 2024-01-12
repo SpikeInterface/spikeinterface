@@ -275,7 +275,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         del recording_f
         if folder_to_delete is not None:
-            import shutil
             shutil.rmtree(folder_to_delete)
 
         sorting = sorting.save(folder=sorting_folder)
