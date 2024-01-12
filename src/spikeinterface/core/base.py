@@ -848,7 +848,6 @@ class BaseExtractor:
     save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
     def save_to_memory(self, sharedmem=True, **save_kwargs) -> "BaseExtractor":
-        
         save_kwargs.pop("format", None)
 
         cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)

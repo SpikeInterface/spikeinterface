@@ -151,9 +151,11 @@ def test_write_memory_recording():
     # write with loop
     traces_list, shms = write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1)
 
-    traces_list, shms = write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1, chunk_memory="100k", progress_bar=True)
+    traces_list, shms = write_memory_recording(
+        recording, dtype=None, verbose=True, n_jobs=1, chunk_memory="100k", progress_bar=True
+    )
 
-    # write parrallel
+    # write parallel
     traces_list, shms = write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, chunk_memory="100k")
     # need to clean the buffer
     del traces_list
