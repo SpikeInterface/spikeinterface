@@ -147,7 +147,7 @@ class SharedMemoryRecording(BaseRecording):
     def __init__(
         self, shm_names, shape_list, dtype, sampling_frequency, channel_ids=None, t_starts=None, main_shm_owner=True
     ):
-        assert len(shape_list) == len(shm_names), 'Each shm_name in `shm_names` must have a shape in `shape_list`'
+        assert len(shape_list) == len(shm_names), "Each shm_name in `shm_names` must have a shape in `shape_list`"
         assert all(shape_list[0][1] == shape[1] for shape in shape_list)
 
         # create traces from sharedmem names
