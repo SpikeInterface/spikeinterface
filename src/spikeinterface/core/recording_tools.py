@@ -269,7 +269,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     arr[start_frame:end_frame, :] = traces
 
 
-def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=True, **job_kwargs):
+def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=True, buffer_type="auto", **job_kwargs):
     """
     Save the traces into numpy arrays (memory).
     try to use the SharedMemory introduce in py3.8 if n_jobs > 1
@@ -284,6 +284,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
         If True, output is verbose (when chunks are used)
     auto_cast_uint: bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
+    buffer_type: "auto" | "numpy" | "sharedmem"
     {}
 
     Returns
@@ -302,19 +303,28 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     # create sharedmmep
     arrays = []
     shm_names = []
+    shms = []
     shapes = []
 
     n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get("n_jobs", 1))
+    if buffer_type == "auto":
+        if n_jobs > 1:
+            buffer_type = "sharedmem"
+        else:
+            buffer_type = "numpy"
+
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         num_channels = recording.get_num_channels()
         shape = (num_frames, num_channels)
         shapes.append(shape)
-        if n_jobs > 1:
+        if buffer_type == "sharedmem":
             arr, shm = make_shared_array(shape, dtype)
             shm_names.append(shm.name)
+            shms.append(shm)
         else:
             arr = np.zeros(shape, dtype=dtype)
+            shms.append(None)
         arrays.append(arr)
 
     # use executor (loop or workers)
@@ -330,7 +340,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     )
     executor.run()
 
-    return arrays
+    return arrays, shms
 
 
 write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_job_kwargs_doc)
