@@ -88,7 +88,7 @@ class NumpyRecording(BaseRecording):
     def from_recording(source_recording, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
         if shms[0] is not None:
-            # if the computation was done in parrralel then traces_list is shared array
+            # if the computation was done in parallel then traces_list is shared array
             # this can lead to problem
             # we need to copy back to a standard numpy array and unlink the shared buffer
             traces_list = [np.array(traces, copy=True) for traces in traces_list]
@@ -147,10 +147,10 @@ class SharedMemoryRecording(BaseRecording):
     def __init__(
         self, shm_names, shape_list, dtype, sampling_frequency, channel_ids=None, t_starts=None, main_shm_owner=True
     ):
-        assert len(shape_list) == len(shm_names)
+        assert len(shape_list) == len(shm_names), 'Each shm_name in `shm_names` must have a shape in `shape_list`'
         assert all(shape_list[0][1] == shape[1] for shape in shape_list)
 
-        # create traces from shraedmem names
+        # create traces from sharedmem names
         self.shms = []
         traces_list = []
         for shm_name, shape in zip(shm_names, shape_list):
@@ -167,7 +167,7 @@ class SharedMemoryRecording(BaseRecording):
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
         if t_starts is not None:
-            assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
+            assert len(t_starts) == len(traces_list), "t_starts must be a list of same size as traces_list"
             t_starts = [float(t_start) for t_start in t_starts]
 
         self._serializability["memory"] = True
