@@ -16,6 +16,7 @@ from spikeinterface.core.core_tools import recursive_path_modifier
 
 
 def find_recording_folders(d):
+    """Finds all recording folders 'paths' in a dict"""
     folders_to_mount = []
 
     def append_parent_folder(p):
@@ -39,6 +40,7 @@ def find_recording_folders(d):
 
 
 def path_to_unix(path):
+    """Convert a Windows path to unix format"""
     path = Path(path)
     if platform.system() == "Windows":
         path = Path(str(path)[str(path).find(":") + 1 :])
@@ -175,14 +177,46 @@ def install_package_in_container(
     container_folder_source=None,
     verbose=False,
 ):
+    """
+    Install a package in a container with different modes:
+
+    * pypi: pip install package_name
+    * github: pip install {github_url}/archive/{tag/version}.tar.gz#egg=package_name
+    * folder: pip install folder
+
+    Parameters
+    ----------
+    container_client: ContainerClient
+        The container client
+    package_name: str
+        The package name
+    installation_mode: str
+        The installation mode
+    extra: str
+        Extra pip install arguments, e.g. [full]
+    version: str
+        The package version to install
+    tag: str
+        The github tag to install
+    github_url: str
+        The github url to install (needed for github mode)
+    container_folder_source: str
+        The container folder source (needed for folder mode)
+    verbose: bool
+        If True, print output of pip install command
+
+    Returns
+    -------
+    res_output: str
+        The output of the pip install command
+    """
     assert installation_mode in ("pypi", "github", "folder")
 
     if "[" in package_name:
         raise ValueError("Extra pip install should not be in package_name but like this extra='[full]'")
 
     if extra is not None:
-        assert extra[0] == "["
-        assert extra[-1] == "]"
+        assert extra[0] == "[" and extra[-1] == "]", "extra should be like this: '[full]'"
 
     if verbose:
         print(f"Installing {package_name} with {installation_mode} in container")
