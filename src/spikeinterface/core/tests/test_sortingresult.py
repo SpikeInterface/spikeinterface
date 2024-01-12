@@ -45,17 +45,17 @@ def test_SortingResult_binary_folder():
     _check_sorting_results(sortres, sorting)
 
 
-# def test_SortingResult_zarr():
-#     recording, sorting = get_dataset()
+def test_SortingResult_zarr():
+    recording, sorting = get_dataset()
 
-#     folder = cache_folder / "test_SortingResult_zarr.zarr"
-#     if folder.exists():
-#         shutil.rmtree(folder)
+    folder = cache_folder / "test_SortingResult_zarr.zarr"
+    if folder.exists():
+        shutil.rmtree(folder)
 
-#     sortres = start_sorting_result(sorting, recording, format="zarr", folder=folder,  sparse=False, sparsity=None)
-#     sortres = load_sorting_result(folder, format="auto")
+    sortres = start_sorting_result(sorting, recording, format="zarr", folder=folder,  sparse=False, sparsity=None)
+    # sortres = load_sorting_result(folder, format="auto")
 
-#     _check_sorting_results(sortres, sorting)
+    # _check_sorting_results(sortres, sorting)
 
 
 
@@ -172,7 +172,7 @@ def test_extension():
 
 
 if __name__ == "__main__":
-    test_SortingResult_memory()
-    test_SortingResult_binary_folder()
-    # test_SortingResult_zarr()
-    test_extension()
+    # test_SortingResult_memory()
+    # test_SortingResult_binary_folder()
+    test_SortingResult_zarr()
+    # test_extension()

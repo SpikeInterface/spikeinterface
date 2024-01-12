@@ -133,4 +133,4 @@ from .template_tools import (
 # channel sparsity
 from .sparsity import ChannelSparsity, compute_sparsity
 
-from .sortingresult import SortingResult
+from .sortingresult import SortingResult, start_sorting_result, load_sorting_result

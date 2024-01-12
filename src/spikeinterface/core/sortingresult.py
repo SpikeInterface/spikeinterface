@@ -7,6 +7,7 @@ import json
 import pickle
 import weakref
 import shutil
+import warnings
 
 import numpy as np
 
@@ -21,7 +22,7 @@ from .core_tools import check_json
 from .numpyextractors import SharedMemorySorting
 from .sparsity import ChannelSparsity
 from .sortingfolder import NumpyFolderSorting
-
+from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
 
 # TODO
 #  * make info.json that contain some version info of spikeinterface
@@ -367,7 +368,7 @@ class SortingResult:
             sparsity=sparsity)
 
         return sortres
-
+    
     def _get_zarr_root(self, mode="r+"):
         import zarr
         zarr_root = zarr.open(self.folder, mode=mode)
@@ -375,11 +376,108 @@ class SortingResult:
 
     @classmethod
     def create_zarr(cls, folder, sorting, recording, sparsity, rec_attributes):
-        raise NotImplementedError
+        # used by create and save_as
+        import zarr
+
+        
+
+        folder = Path(folder)
+        # force zarr sufix
+        if folder.suffix != ".zarr":
+            folder = folder.parent / f"{folder.stem}.zarr"
+
+        if folder.is_dir():
+            raise ValueError(f"Folder already exists {folder}")
+
+
+        
+
+        zarr_root = zarr.open(folder, mode="w")
+        
+        # the recording and sorting provenance can be used only if compatible with json
+        if recording.check_serializability("json"):
+            rec_dict = recording.to_dict(relative_to=folder, recursive=True)
+            zarr_root.attrs["recording"] = check_json(rec_dict)
+        else:
+            warnings.warn("SortingResult with zarr : the Recording is not json serializable, the recording link will be lost for futur load")
+
+        if sorting.check_serializability("json"):
+            sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
+            zarr_root.attrs["sorting_provenance"] = check_json(sort_dict)
+        # else:
+        #     warnings.warn("SortingResult with zarr : the sorting provenance is not json serializable, the sorting provenance link will be lost for futur load")
+
+        recording_info = zarr_root.create_group("recording_info")
+
+        if rec_attributes is None:
+            assert recording is not None
+            rec_attributes = get_rec_attributes(recording)
+            probegroup = recording.get_probegroup()
+        else:
+            rec_attributes_copy = rec_attributes.copy()
+            probegroup = rec_attributes_copy.pop("probegroup")
+        recording_info.attrs["recording_attributes"] = check_json(rec_attributes)
+
+        if probegroup is not None:
+            recording_info.attrs["probegroup"] = check_json(probegroup.to_dict())
+
+        if sparsity is not None:
+            zarr_root.attrs["sparsity"] = check_json(sparsity.to_dict())
+
+        # write sorting copy
+        from .zarrextractors import add_sorting_to_zarr_group
+        # Alessio : we need to find a way to propagate compressor for all steps.
+        # kwargs = dict(compressor=...)
+        zarr_kwargs = dict()
+        add_sorting_to_zarr_group(sorting, zarr_root.create_group("sorting"), **zarr_kwargs)
+
 
     @classmethod
     def load_from_zarr(cls, folder, recording=None):
-        raise NotImplementedError
+        import zarr
+        folder = Path(folder)
+        assert folder.is_dir(), f"This folder does not exists {folder}"
+
+        zarr_root = zarr.open(folder, mode="r")
+
+        # load internal sorting copy and make it sharedmem
+        # TODO
+        # sorting = ZarrSortingExtractor...
+        sorting = SharedMemorySorting.from_sorting(NumpyFolderSorting(folder / "sorting"))
+        
+        # load recording if possible
+        if recording is None:
+            try:
+                recording = load_extractor(zarr_root.attrs["recording"], base_folder=folder)
+            except:
+                recording = None
+        else:
+            # TODO maybe maybe not??? : do we need to check  attributes match internal rec_attributes
+            # Note this will make the loading too slow
+            pass
+
+        # recording attributes
+        rec_attributes = zarr_root.require_group("recording_info").attrs["recording_attributes"]
+        if "probegroup" in zarr_root.require_group("recording_info").attrs:
+            probegroup_dict = zarr_root.require_group("recording_info").attrs["probegroup"]
+            rec_attributes["probegroup"] = probeinterface.Probe.from_dict(probegroup_dict)
+        else:
+            rec_attributes["probegroup"] = None
+
+        # sparsity
+        if "sparsity" in zarr_root.attrs:
+            sparsity = zarr_root.attrs["sparsity"]
+        else:
+            sparsity = None
+
+        sortres = SortingResult(
+            sorting=sorting,
+            recording=recording,
+            rec_attributes=rec_attributes,
+            format="zarr",
+            sparsity=sparsity)
+
+        return sortres
 
 
     def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingResult":
@@ -530,9 +628,6 @@ class SortingResult:
             raise NotImplementedError
 
         return sorting_provenance
-
-    # def is_read_only(self) -> bool:
-    #     return self._is_read_only
 
     def get_num_samples(self, segment_index: Optional[int] = None) -> int:
         # we use self.sorting to check segment_index
@@ -974,7 +1069,7 @@ class ResultExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-            from .zarrextractors import get_default_zarr_compressor
+            
             import pandas as pd
             import numcodecs
             
