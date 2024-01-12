@@ -116,10 +116,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         recording_f = zscore(recording_f, dtype="float32")
         noise_levels = np.ones(num_channels, dtype=np.float32)
 
-        if recording.check_serializability("json"):
-            recording.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
-        elif recording.check_serializability("pickle"):
-            recording.dump(sorter_output_folder / "preprocessed_recording.pickle", relative_to=None)
+        if recording_f.check_serializability("json"):
+            recording_f.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
+        elif recording_f.check_serializability("pickle"):
+            recording_f.dump(sorter_output_folder / "preprocessed_recording.pickle", relative_to=None)
 
         recording_f = cache_preprocessing(recording_f, **job_kwargs, **params["cache_preprocessing"])
 
