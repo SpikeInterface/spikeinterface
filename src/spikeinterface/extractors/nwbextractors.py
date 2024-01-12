@@ -15,6 +15,7 @@ def import_lazily():
     global NWBFile, ElectricalSeries, NWBHDF5IO
     from pynwb import NWBFile
     from pynwb.ecephys import ElectricalSeries
+    from pynwb.misc import Units
     from pynwb import NWBHDF5IO
 
 
@@ -67,6 +68,65 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
         electrical_series = electrical_series_list[0]
 
     return electrical_series
+
+
+def retrieve_unit_table(nwbfile: NWBFile, unit_table_path: Optional[str] = None) -> Units:
+    """
+    Get an Units object from an NWBFile.
+
+    Parameters
+    ----------
+    nwbfile : NWBFile
+        The NWBFile object from which to extract the Units.
+    unit_table_path : str, default: None
+        The path of the Units to extract. If not specified, it will return the first found Units
+        if there's only one; otherwise, it raises an error.
+
+    Returns
+    -------
+    Units
+        The requested Units object.
+
+    Raises
+    ------
+    ValueError
+        If no unit tables are found in the NWBFile or if multiple unit tables are found but no unit_table_path
+        is provided.
+    AssertionError
+        If the specified unit_table_path is not present in the NWBFile.
+    """
+    from pynwb.misc import Units
+
+    unit_table_dict: Dict[str:Units] = {
+        unit_table.name: unit_table for unit_table in nwbfile.all_children() if isinstance(unit_table, Units)
+    }
+    unit_table_dict_processing: Dict[str:Units] = {}
+    for processing_name, processing in nwbfile.processing.items():
+        for interface_name, interface in processing.data_interfaces.items():
+            if isinstance(interface, Units):
+                unit_table_dict_processing[f"processing/{processing_name}/{interface_name}"] = interface
+    unit_table_dict.update(unit_table_dict_processing)
+
+    if unit_table_path is not None:
+        # TODO note that this case does not handle repetitions of the same name
+        if unit_table_path not in unit_table_dict:
+            raise ValueError(f"{unit_table_path} not found in the NWBFile. ")
+        # TODO: load the unit table
+        unit_table = unit_table_dict[unit_table_path]
+    else:
+        unit_table_list: List[Units] = list(unit_table_dict.keys())
+
+        if len(unit_table_list) > 1:
+            raise ValueError(
+                f"More than one unit table found! You must specify 'unit_table_list_name'. \n"
+                f"Options in current file are: {[e for e in unit_table_list]}"
+            )
+        if len(unit_table_list) == 0:
+            raise ValueError("No unit table found in the .nwb file.")
+        # LOAD THE UNIT TABLE
+        unit_table = unit_table_dict.values()[0]
+
+    return unit_table
 
 
 def _read_hdf5_file(
@@ -396,7 +456,7 @@ class _NwbPynwbRecordingExtractor(BaseRecording):
         }
 
 
-class _NWBHDF5RecordingExtractor(BaseRecording):
+class _NwbHDF5RecordingExtractor(BaseRecording):
     """
     A RecordingExtractor for NWB files. This uses the hdf5 API to extract the traces and
     the metadata and is called by the NwbRecordingExtractor factory. This should be faster
@@ -438,7 +498,7 @@ class _NWBHDF5RecordingExtractor(BaseRecording):
         # And returns a dictionary with the electrical_series_name as key and the location as value
         # If there is only one electrical series, the electrical_series_name is set to the name of the series
         if electrical_series_location is None:
-            available_electrical_series = _NWBHDF5RecordingExtractor.find_electrical_series(hdf5_file)
+            available_electrical_series = _NwbHDF5RecordingExtractor.find_electrical_series(hdf5_file)
             if electrical_series_name is None:
                 if len(available_electrical_series) == 1:
                     electrical_series_name = list(available_electrical_series.keys())[0]
@@ -633,7 +693,7 @@ class _NWBHDF5RecordingExtractor(BaseRecording):
                 current_path = f"{path}/{neurodata_name}" if path else neurodata_name
                 if value.attrs.get("neurodata_type") == "ElectricalSeries":
                     result[neurodata_name] = current_path
-                _NWBHDF5RecordingExtractor.find_electrical_series(
+                _NwbHDF5RecordingExtractor.find_electrical_series(
                     value, current_path, result
                 )  # Recursive call for sub-groups
 
@@ -743,7 +803,7 @@ class NwbRecordingExtractor(BaseRecording):
                 cache=cache,
             )
         else:
-            extractor = _NWBHDF5RecordingExtractor(
+            extractor = _NwbHDF5RecordingExtractor(
                 file_path=file_path,
                 electrical_series_name=electrical_series_name,
                 load_time_vector=load_time_vector,
@@ -808,6 +868,7 @@ class _NwbHDF5SortingExtractor(BaseSorting):
         samples_for_rate_estimation: int = 1_000,
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
+        unit_table_path: str | None = None,
         cache: bool = False,
         t_start: float | None = None,
     ):
@@ -827,7 +888,7 @@ class _NwbHDF5SortingExtractor(BaseSorting):
         if sampling_frequency is None or t_start is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
-            available_electrical_series = _NWBHDF5RecordingExtractor.find_electrical_series(hdf5_file)
+            available_electrical_series = _NwbHDF5RecordingExtractor.find_electrical_series(hdf5_file)
             if electrical_series_name is None:
                 if len(available_electrical_series) == 1:
                     electrical_series_name = list(available_electrical_series.keys())[0]
@@ -864,7 +925,25 @@ class _NwbHDF5SortingExtractor(BaseSorting):
             self.t_start is not None
         ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
-        units_table = hdf5_file["units"]
+        available_unit_table_paths = _NwbHDF5SortingExtractor.find_unit_tables(hdf5_file)
+        if unit_table_path is None:
+            if len(available_unit_table_paths) == 1:
+                unit_table_path = available_unit_table_paths[0]
+            else:
+                raise ValueError(
+                    "Multiple Units tables found in the file. "
+                    "Please specify the 'unit_table_path' argument:"
+                    f"Available options are: {available_unit_table_paths}."
+                )
+        else:
+            if unit_table_path not in available_unit_table_paths:
+                raise ValueError(
+                    f"'{unit_table_path}' not found in the file. "
+                    f"Available options are: {available_unit_table_paths}"
+                )
+        self.unit_table_location = available_unit_table_paths
+        units_table = hdf5_file[self.unit_table_location]
+
         spike_times_data = units_table["spike_times"]
         spike_times_index_data = units_table["spike_times_index"]
 
@@ -930,6 +1009,26 @@ class _NwbHDF5SortingExtractor(BaseSorting):
             "t_start": self.t_start,
         }
 
+    @staticmethod
+    def find_unit_tables(group, path="", result=None):
+        """
+        Recursively searches for groups with neurodata_type 'ElectricalSeries' in the HDF5 group or file,
+        and returns a list with their paths.
+        """
+        import h5py
+
+        if result is None:
+            result = []
+
+        for neurodata_name, value in group.items():
+            # Check if it's a group and if it has the 'ElectricalSeries' neurodata_type
+            if isinstance(value, h5py.Group):
+                current_path = f"{path}/{neurodata_name}" if path else neurodata_name
+                if value.attrs.get("neurodata_type") == "Units":
+                    result.append(current_path)
+                _NwbHDF5SortingExtractor.find_unit_tables(value, current_path, result)  # Recursive call for sub-groups
+        return result
+
 
 class _NwbPynwbSortingExtractor(BaseSorting):
     """
@@ -948,6 +1047,7 @@ class _NwbPynwbSortingExtractor(BaseSorting):
         electrical_series_name: str | None = None,
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 1000,
+        unit_table_path: str | None = None,
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -992,7 +1092,7 @@ class _NwbPynwbSortingExtractor(BaseSorting):
             self.t_start is not None
         ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
-        units_table = self._nwbfile.units
+        units_table = retrieve_unit_table(self._nwbfile, unit_table_path=unit_table_path)
 
         name_to_column_data = {c.name: c for c in units_table.columns}
         spike_times_data = name_to_column_data.pop("spike_times").data
@@ -1065,6 +1165,8 @@ class NwbSortingExtractor(BaseSorting):
         The name of the ElectricalSeries (if multiple ElectricalSeries are present).
     sampling_frequency: float or None, default: None
         The sampling frequency in Hz (required if no ElectricalSeries is available).
+    unit_table_path: str or None, default: None
+        The path of the unit table in the NWB file.
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
@@ -1108,6 +1210,7 @@ class NwbSortingExtractor(BaseSorting):
         electrical_series_name: str | None = None,
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 1000,
+        unit_table_path: str | None = None,
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -1121,6 +1224,7 @@ class NwbSortingExtractor(BaseSorting):
                 electrical_series_name=electrical_series_name,
                 sampling_frequency=sampling_frequency,
                 samples_for_rate_estimation=samples_for_rate_estimation,
+                unit_table_path=unit_table_path,
                 stream_mode=stream_mode,
                 stream_cache_path=stream_cache_path,
                 cache=cache,
@@ -1133,6 +1237,7 @@ class NwbSortingExtractor(BaseSorting):
                 electrical_series_name=electrical_series_name,
                 sampling_frequency=sampling_frequency,
                 samples_for_rate_estimation=samples_for_rate_estimation,
+                unit_table_path=unit_table_path,
                 stream_mode=stream_mode,
                 stream_cache_path=stream_cache_path,
                 cache=cache,

@@ -388,5 +388,53 @@ def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
     np.testing.assert_allclose(extracted_spike_times1, expected_spike_times1)
 
 
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_multiple_unit_tables(tmp_path, use_pynwb):
+    nwbfile = mock_NWBFile()
+
+    # Add the spikes
+    nwbfile.add_unit_column(name="unit_name", description="the name of the unit")
+    nwbfile.add_unit_column(name="a_property", description="a_cool_property")
+
+    spike_times_a = np.array([0.0, 1.0, 2.0])
+    nwbfile.add_unit(spike_times=spike_times_a, unit_name="a", a_property="a_property_value")
+    spike_times_b = np.array([0.0, 1.0, 2.0, 3.0])
+    nwbfile.add_unit(spike_times=spike_times_b, unit_name="b", a_property="b_property_value")
+
+    # Add a second unit table
+    second_units_table = nwbfile.units
+    processing = nwbfile.create_processing_module(name="ecephys", description="test processing module")
+    processing.add(second_units_table)
+
+    file_path = "test.nwb"
+    # Write the nwbfile to a temporary file
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    # with pytest.raises(ValueError):
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=10.0,
+        t_start=0,
+        use_pynwb=use_pynwb,
+        unit_table_path="processing/ecephys/units",
+    )
+
+    # sorting_extractor = NwbSortingExtractor(
+    #     file_path=file_path,
+    #     sampling_frequency=10.0,
+    #     t_start=0,
+    #     use_pynwb=use_pynwb,
+    #     unit
+    # )
+
+    # units_ids = sorting_extractor.get_unit_ids()
+
+    # np.testing.assert_equal(units_ids, ["a", "b"])
+
+    # added_properties = sorting_extractor.get_property_keys()
+    # assert "a_property" in added_properties
+
+
 if __name__ == "__main__":
     test = NwbRecordingTest()
