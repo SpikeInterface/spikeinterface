@@ -359,7 +359,7 @@ def write_to_h5_dataset_format(
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
     dataset_path: str
-        Path to dataset in h5 file (e.g. "/dataset")
+        Path to dataset in the h5 file (e.g. "/dataset")
     segment_index: int
         index of segment
     save_path: str, default: None
