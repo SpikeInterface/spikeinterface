@@ -499,7 +499,7 @@ class BaseRecording(BaseRecordingSnippets):
 
             zarr_path = kwargs.pop("zarr_path")
             storage_options = kwargs.pop("storage_options")
-            ZarrRecordingExtractor.write_recording(self, zarr_path, storage_options, **kwargs)
+            ZarrRecordingExtractor.write_recording(self, zarr_path, storage_options, **kwargs, **job_kwargs)
             cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
         elif format == "nwb":
@@ -547,6 +547,23 @@ class BaseRecording(BaseRecordingSnippets):
             time_vector = d["time_vector"]
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+
+    def rename_channels(self, new_channel_ids: list | np.array | tuple):
+        """
+        Returns a new recording object with renamed channel ids.
+
+        Parameters
+        ----------
+        new_channel_ids : list or np.array or tuple
+            The new channel ids. They are mapped positionally to the old channel ids.
+        """
+        from .channelslice import ChannelSliceRecording
+
+        assert len(new_channel_ids) == self.get_num_channels(), (
+            "new_channel_ids must have the same length as the " "number of channels in the recording"
+        )
+
+        return ChannelSliceRecording(self, renamed_channel_ids=new_channel_ids)
 
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceRecording
