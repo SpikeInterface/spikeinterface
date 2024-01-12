@@ -92,7 +92,7 @@ def write_binary_recording(
         Type of the saved data
         If True, file the ".raw" file extension is added if the file name is not a "raw", "bin", or "dat"
     byte_offset: int, default: 0
-        Offset in bytes to for the binary file (e.g. to write a header)
+        Offset in bytes for the binary file (e.g. to write a header)
     auto_cast_uint: bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
@@ -289,7 +289,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
 
     Returns
     ---------
-    arrays: one arrays per segment
+    arrays: one array per segment
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -369,7 +369,7 @@ def write_to_h5_dataset_format(
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
     dataset_path: str
-        Path to dataset in h5 file (e.g. "/dataset")
+        Path to dataset in the h5 file (e.g. "/dataset")
     segment_index: int
         index of segment
     save_path: str, default: None
@@ -385,10 +385,10 @@ def write_to_h5_dataset_format(
     dtype: dtype, default: None
         Type of the saved data
     chunk_size: None or int, default: None
-        Number of chunks to save the file in. This avoid to much memory consumption for big files.
+        Number of chunks to save the file in. This avoids too much memory consumption for big files.
         If None and "chunk_memory" is given, the file is saved in chunks of "chunk_memory" MB
     chunk_memory: None or str, default: "500M"
-        Chunk size in bytes must endswith "k", "M" or "G"
+        Chunk size in bytes must end with "k", "M" or "G"
     verbose: bool, default: False
         If True, output is verbose (when chunks are used)
     auto_cast_uint: bool, default: True
