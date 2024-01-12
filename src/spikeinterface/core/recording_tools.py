@@ -319,6 +319,17 @@ def get_traces_with_margin(
     window_on_margin=False,
     dtype=None,
 ):
+    """
+    Helper to get traces (i.e. with proper scaling) with margin
+
+    The margin is extracted from the recording when possible. If
+    at the edge of the recording, no margin is used unless one
+    of `add_zeros` or `add_reflect_padding` is True. In the first
+    case zero padding is used, in the second case np.pad is called
+    with mod="reflect". This function is very similar to get_chunk_with_margin
+    (and rely on it), but it adds the possibility to scale the final results.
+    By doing so, the node pipeline can work on scaled traces
+    """
     rec_segment = recording._recording_segments[segment_index]
     traces_chunk, left_margin, right_margin = get_chunk_with_margin(
         rec_segment,

@@ -239,6 +239,14 @@ class BaseRecording(BaseRecordingSnippets):
         return sum(memory_per_segment)
 
     def _scale_traces(self, traces, channel_indices):
+        """
+        Returns the scaled traces for a list of channel indices
+
+        Returns
+        -------
+        array
+            The scaled traces
+        """
         if hasattr(self, "NeoRawIOClass"):
             if self.has_non_standard_units:
                 message = f"This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)"
