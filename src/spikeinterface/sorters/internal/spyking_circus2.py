@@ -2,7 +2,6 @@ from .si_based import ComponentsBasedSorter
 
 import os
 import shutil
-import psutil
 import numpy as np
 
 from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms
@@ -116,6 +115,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")
         noise_levels = np.ones(num_channels, dtype=np.float32)
+
+        #recording_f.dump(sorter_output_folder / 'preprocessed_recording.json')
 
         recording_f = cache_preprocessing(recording_f, **job_kwargs, **params["cache_preprocessing"])
 
@@ -263,7 +264,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if sorting_folder.exists():
             shutil.rmtree(sorting_folder)
 
-        clean_preprocessing(recording_f, **params["cache_preprocessing"])
+        folder_to_delete = None
+        cache_mode = params['cache_preprocessing']['mode']
+        delete_cache = params['cache_preprocessing']['delete_cache']
+        if cache_mode in ["folder", "zarr"] and delete_cache:
+            folder_to_delete = recording_f._kwargs["folder_path"]
+
+        del recording_f
+        if folder_to_delete is not None:
+            import shutil
+            shutil.rmtree(folder_to_delete)
+
         sorting = sorting.save(folder=sorting_folder)
 
         return sorting
