@@ -182,7 +182,7 @@ class SortingResult:
     the SortingResult object can be reload even if references to the original sorting and/or to the original recording
     are lost.
     """
-    def __init__(self, sorting=None, recording=None, rec_attributes=None, format=None, sparsity=None):
+    def __init__(self, sorting=None, recording=None, rec_attributes=None, format=None, sparsity=None, random_spikes_indices=None):
         # very fast init because checks are done in load and create
         self.sorting = sorting
         # self.recorsding will be a property
@@ -190,6 +190,7 @@ class SortingResult:
         self.rec_attributes = rec_attributes
         self.format = format
         self.sparsity = sparsity
+        self.random_spikes_indices = random_spikes_indices
 
         # extensions are not loaded at init
         self.extensions = dict()
@@ -367,12 +368,19 @@ class SortingResult:
         else:
             sparsity = None
 
+        selected_spike_file = folder / "random_spikes_indices.npy"
+        if sparsity_file.is_file():
+            random_spikes_indices = np.load(selected_spike_file)
+        else:
+            random_spikes_indices = None
+
         sortres = SortingResult(
             sorting=sorting,
             recording=recording,
             rec_attributes=rec_attributes,
             format="binary_folder",
-            sparsity=sparsity)
+            sparsity=sparsity,
+            random_spikes_indices=random_spikes_indices)
 
         return sortres
     
@@ -499,12 +507,18 @@ class SortingResult:
         else:
             sparsity = None
 
+        if "random_spikes_indices" in zarr_root.keys():
+            random_spikes_indices = zarr_root["random_spikes_indices"]
+        else:
+            random_spikes_indices = None
+
         sortres = SortingResult(
             sorting=sorting,
             recording=recording,
             rec_attributes=rec_attributes,
             format="zarr",
-            sparsity=sparsity)
+            sparsity=sparsity,
+            random_spikes_indices=random_spikes_indices)
 
         return sortres
 
@@ -874,6 +888,19 @@ class SortingResult:
             return True
         else:
             return False
+
+    ## random_spikes_selection zone
+    def select_random_spikes(self, **random_kwargs):
+
+        assert self.random_spikes_indices is None, "select random spikes is already computed"
+
+        self.random_spikes_indices = random_spikes_selection(self.sorting, self.rec_attributes["num_samples"], **random_kwargs)
+
+        if self.format == "binary_folder":
+            np.save(self.folder / "random_spikes_indices.npy", self.random_spikes_indices)
+        elif self.format == "zarr":
+            zarr_root = self._get_zarr_root()
+            zarr_root.create_dataset("random_spikes_indices", data=self.random_spikes_indices)
 
 
 global _possible_extensions
@@ -1250,6 +1277,73 @@ class ResultExtension:
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["params"] = check_json(params_to_save)
 
+
+
+# TODO implement other method like "maximum_rate", "by_percent", ...
+def random_spikes_selection(sorting, num_samples,
+                            method="uniform", max_spikes_per_unit=500,
+                            margin_size=None,
+                            seed=None):
+    """
+    This replace `select_random_spikes_uniformly()`.
+
+    Random spikes selection of spike across per units.
+
+    Can optionaly avoid spikes on segment borders.
+    If nbefore and nafter
+
+    Parameters
+    ----------
+    recording
+    
+    sorting
+    
+    max_spikes_per_unit
+
+    method: "uniform"
+
+    margin_size
+    
+    seed=None
+
+    Returns
+    -------
+    random_spikes_indices
+        Selected spike indicies corespond to the sorting spike vector.
+    """
+
+    rng =np.random.default_rng(seed=seed)
+    spikes = sorting.to_spike_vector()
+
+    random_spikes_indices = []
+    for unit_index, unit_id in enumerate(sorting.unit_ids):
+        all_unit_indices = np.flatnonzero(unit_index == spikes["unit_index"])
+
+        if method == "uniform":
+            selected_unit_indices = rng.choice(all_unit_indices, size=min(max_spikes_per_unit, all_unit_indices.size),
+                                               replace=False, shuffle=False)
+        else:
+            raise ValueError(f"random_spikes_selection wring method {method}")
+        
+        if margin_size is not None:
+            margin_size = int(margin_size)
+            keep = np.ones(selected_unit_indices.size, dtype=bool)
+            # left margin
+            keep[selected_unit_indices < margin_size] = False
+            # right margin
+            for segment_index in range(sorting.get_num_segments()):
+                remove_mask = np.flatnonzero((spikes[selected_unit_indices]["segment_index"] == segment_index) 
+                                             &(spikes[selected_unit_indices]["sample_index"] >= (num_samples[segment_index] - margin_size))
+                                            )
+                keep[remove_mask] = False
+            selected_unit_indices = selected_unit_indices[keep]
+        
+        random_spikes_indices.append(selected_unit_indices)
+
+    random_spikes_indices = np.concatenate(random_spikes_indices)
+    random_spikes_indices = np.sort(random_spikes_indices)
+
+    return random_spikes_indices
 
 
 

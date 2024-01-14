@@ -37,12 +37,11 @@ def test_ComputeWaveforms(format="memory"):
     if folder and folder.exists():
         shutil.rmtree(folder)
         
-
-
     recording, sorting = get_dataset()
     sortres = start_sorting_result(sorting, recording, format=format, folder=folder, sparse=False, sparsity=None)
     print(sortres)
 
+    sortres.select_random_spikes(max_spikes_per_unit=50, seed=2205)
     ext = sortres.compute("waveforms")
     wfs = ext.data["all_waveforms"]
 

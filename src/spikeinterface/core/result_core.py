@@ -21,6 +21,11 @@ class ComputeWaveforms(ResultExtension):
     def _run(self, **kwargs):
         self.data.clear()
 
+        if self.sorting_result.random_spikes_indices is None:
+            raise ValueError("compute_waveforms need SortingResult.select_random_spikes() need to be run first")
+
+
+
         recording = self.sorting_result.recording
         sorting = self.sorting_result.sorting
         # TODO handle sampling
@@ -51,9 +56,11 @@ class ComputeWaveforms(ResultExtension):
         # TODO propagate some job_kwargs
         job_kwargs = dict(n_jobs=-1)
 
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+
         all_waveforms = extract_waveforms_to_single_buffer(
             recording,
-            spikes,
+            some_spikes,
             unit_ids,
             nbefore,
             nafter,
