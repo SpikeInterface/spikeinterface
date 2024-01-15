@@ -155,11 +155,12 @@ class ZarrSortingExtractor(BaseSorting):
 
     Parameters
     ----------
-    root_path: str or Path
+    folder_path: str or Path
         Path to the zarr root file
     storage_options: dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
-
+    zarr_group: str or None, default: None
+        Optional zarr group path to load the sorting from. This can be used when the sorting is not stored at the root, but in sub group.
     Returns
     -------
     sorting: ZarrSortingExtractor
@@ -172,12 +173,16 @@ class ZarrSortingExtractor(BaseSorting):
     installation_mesg = ""
     name = "zarr"
 
-    def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
+    def __init__(self, folder_path: Path | str, storage_options: dict | None = None, zarr_group: str | None = None):
         assert self.installed, self.installation_mesg
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        zarr_root = self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        if zarr_group is None:
+            self._root = zarr_root
+        else:
+            self._root = zarr_root[zarr_group]
 
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
@@ -216,7 +221,7 @@ class ZarrSortingExtractor(BaseSorting):
         if annotations is not None:
             self.annotate(**annotations)
 
-        self._kwargs = {"root_path": folder_path_kwarg, "storage_options": storage_options}
+        self._kwargs = {"folder_path": folder_path_kwarg, "storage_options": storage_options, "zarr_group": zarr_group}
 
     @staticmethod
     def write_sorting(sorting: BaseSorting, folder_path: str | Path, storage_options: dict | None = None, **kwargs):
