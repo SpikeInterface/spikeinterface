@@ -710,6 +710,8 @@ def get_convolution_weights(
         norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
         weights /= norm
 
+    weights[~np.isfinite(weights)] = 0.0
+
     return weights, z_factors
 
 
