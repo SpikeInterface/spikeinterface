@@ -41,31 +41,32 @@ def run_kwargs():
 
 def test_kilosort2(run_kwargs):
     clean_singularity_cache()
-    sorting = ss.run_kilosort2(output_folder="kilosort2", **run_kwargs)
+    sorting = ss.run_sorter(sorter_name="kilosort2", output_folder="kilosort2", **run_kwargs)
     print(sorting)
 
 
 def test_kilosort2_5(run_kwargs):
     clean_singularity_cache()
-    sorting = ss.run_kilosort2_5(output_folder="kilosort2_5", **run_kwargs)
+    sorting = ss.run_sorter(sorter_name="kilosort2_5", output_folder="kilosort2_5", **run_kwargs)
     print(sorting)
 
 
 def test_kilosort3(run_kwargs):
     clean_singularity_cache()
-    sorting = ss.run_kilosort3(output_folder="kilosort3", **run_kwargs)
-    print(sorting)
-
-
-def test_yass(run_kwargs):
-    clean_singularity_cache()
-    sorting = ss.run_yass(output_folder="yass", **run_kwargs)
+    sorting = ss.run_sorter(sorter_name="kilosort3", output_folder="kilosort3", **run_kwargs)
     print(sorting)
 
 
 def test_pykilosort(run_kwargs):
     clean_singularity_cache()
-    sorting = ss.run_pykilosort(output_folder="pykilosort", **run_kwargs)
+    sorting = ss.run_sorter(sorter_name="pykilosort", output_folder="pykilosort", **run_kwargs)
+    print(sorting)
+
+
+@pytest.mark.skip("YASS is not supported anymore for Python>=3.8")
+def test_yass(run_kwargs):
+    clean_singularity_cache()
+    sorting = ss.run_sorter(sorter_name="yass", output_folder="yass", **run_kwargs)
     print(sorting)
 
 
