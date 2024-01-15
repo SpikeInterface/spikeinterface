@@ -569,7 +569,7 @@ class SortingResult:
 
         return new_sortres
 
-    def save_as(self, format="binary_folder", folder=None) -> "SortingResult":
+    def save_as(self, format="memory", folder=None) -> "SortingResult":
         """
         Save SortingResult object into another format.
         Uselfull for memory to zarr or memory to binray.
@@ -588,7 +588,7 @@ class SortingResult:
         return self._save_or_select(format=format, folder=folder, unit_ids=None)
 
 
-    def select_units(self, unit_ids, folder=None, format="binary_folder") -> "SortingResult":
+    def select_units(self, unit_ids, format="memory", folder=None) -> "SortingResult":
         """
         This method is equivalent to `save_as()`but with a subset of units.
         Filters units by creating a new waveform extractor object in a new folder.
@@ -1173,12 +1173,11 @@ class ResultExtension:
                     with (extension_folder / f"{ext_data_name}.json").open("w") as f:
                         json.dump(ext_data, f)
                 elif isinstance(ext_data, np.ndarray):
-                    # important some SortingResult like ComputeWaveforms already run the computation with memmap
-                    # so no need to save theses array
                     data_file = extension_folder / f"{ext_data_name}.npy"
                     if isinstance(ext_data, np.memmap) and data_file.exists():
+                        # important some SortingResult like ComputeWaveforms already run the computation with memmap
+                        # so no need to save theses array
                         pass
-                        print("no save")
                     else:
                         np.save(data_file, ext_data)
                 elif isinstance(ext_data, pd.DataFrame):

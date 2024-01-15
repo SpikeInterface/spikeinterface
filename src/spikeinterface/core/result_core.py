@@ -1,7 +1,7 @@
 """
 Implement ResultExtension that are essential and imported in core
   * ComputeWaveforms
-  * ComputTemplates
+  * ComputeTemplates
 
 Theses two classes replace the WaveformExtractor
 
@@ -24,20 +24,17 @@ class ComputeWaveforms(ResultExtension):
         if self.sorting_result.random_spikes_indices is None:
             raise ValueError("compute_waveforms need SortingResult.select_random_spikes() need to be run first")
 
-
-
         recording = self.sorting_result.recording
         sorting = self.sorting_result.sorting
-        # TODO handle sampling
-        spikes = sorting.to_spike_vector()
         unit_ids = sorting.unit_ids
 
+        # retrieve spike vector and the sampling
+        spikes = sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        
         nbefore = int(self.params["ms_before"] * sorting.sampling_frequency / 1000.0)
         nafter = int(self.params["ms_after"] * sorting.sampling_frequency / 1000.0)
 
-
-        # TODO find a solution maybe using node pipeline : here the waveforms is directly written to memamap 
-        # the save will delete the memmap write it again!! this will not work on window.
         if self.format == "binary_folder":
             # in that case waveforms are extacted directly in files
             file_path = self._get_binary_extension_folder() / "waveforms.npy"
@@ -55,8 +52,6 @@ class ComputeWaveforms(ResultExtension):
 
         # TODO propagate some job_kwargs
         job_kwargs = dict(n_jobs=-1)
-
-        some_spikes = spikes[self.sorting_result.random_spikes_indices]
 
         all_waveforms = extract_waveforms_to_single_buffer(
             recording,
@@ -111,12 +106,15 @@ class ComputeWaveforms(ResultExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
-        # must be implemented in subclass
-        raise NotImplementedError
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
+        spikes = self.sorting_result.sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
-        # keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
-        # spikes = self.sorting_result.sorting.to_spike_vector()
-        # keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
+        new_data = dict()
+        new_data["waveforms"] = self.data["waveforms"][keep_spike_mask, :, :]
+
+        return new_data
 
 
 
@@ -124,25 +122,89 @@ class ComputeWaveforms(ResultExtension):
 compute_waveforms = ComputeWaveforms.function_factory()
 register_result_extension(ComputeWaveforms)
 
-class ComputTemplates(ResultExtension):
+class ComputeTemplates(ResultExtension):
     extension_name = "templates"
     depend_on = ["waveforms"]
     need_recording = False
     use_nodepiepline = False
 
     def _run(self, **kwargs):
-        # must be implemented in subclass
-        # must populate the self.data dictionary
-        raise NotImplementedError
+        
+        
+        if self.sparsity is not None:
+            # TODO handle sparsity
+            raise NotImplementedError
 
-    def _set_params(self, **params):
-        # must be implemented in subclass
-        # must return a cleaned version of params dict
-        raise NotImplementedError
+        unit_ids = self.sorting_result.sorting.unit_ids
+        waveforms_extension = self.sorting_result.get_extension("waveforms")
+        waveforms = waveforms_extension.data["waveforms"]
+        
+        num_samples = waveforms.shape[1]
+        # channel can be sparse or not
+        num_channels = waveforms.shape[2]
+
+        
+        for operator in self.params["operators"]:
+            if isinstance(operator, str) and operator in ("average", "std", "median"):
+                key = operator
+            elif isinstance(operator, (list, tuple)):
+                operator, percentile = operator
+                assert operator == "percentile"
+                key = f"pencentile_{percentile}"
+            else:
+                raise ValueError(f"ComputeTemplates: wrong operator {operator}")
+            self.data[key] = np.zeros((unit_ids.size, num_samples, num_channels))
+
+        spikes = self.sorting_result.sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        for unit_index, unit_id in enumerate(unit_ids):
+            spike_mask = some_spikes["unit_index"] == unit_index
+            wfs = waveforms[spike_mask, :, :]
+            if wfs.shape[0] == 0:
+                continue
+            
+            for operator in self.params["operators"]:
+                if operator == "average":
+                    arr = np.average(wfs, axis=0)
+                    key = operator
+                elif operator == "std":
+                    arr = np.std(wfs, axis=0)
+                    key = operator
+                elif operator == "median":
+                    arr = np.median(wfs, axis=0)
+                    key = operator
+                elif isinstance(operator, (list, tuple)):
+                    operator, percentile = operator
+                    arr = np.percentile(wfs, percentile, axis=0)
+                    key = f"pencentile_{percentile}"
+            
+                self.data[key][unit_index, :, :] = arr
+
+
+    def _set_params(self, operators = ["average", "std"]):
+        assert isinstance(operators, list)
+        for operator in operators:
+            if isinstance(operator, str):
+                assert operator in ("average", "std", "median", "mad")
+            else:
+                assert isinstance(operator, (list, tuple))
+                assert len(operator) == 2
+                assert operator[0] == "percentile"
+
+        params = dict(operators=operators)
+        return params
 
     def _select_extension_data(self, unit_ids):
-        # must be implemented in subclass
-        raise NotImplementedError
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
 
-compute_templates = ComputTemplates.function_factory()
-register_result_extension(ComputTemplates)
+        new_data = dict()
+        for key, arr in self.data.items():
+            new_data[key] = arr[keep_unit_indices, :, :]
+
+        return new_data
+
+        
+
+
+compute_templates = ComputeTemplates.function_factory()
+register_result_extension(ComputeTemplates)
