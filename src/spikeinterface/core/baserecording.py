@@ -11,9 +11,12 @@ from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import (
     convert_bytes_to_str,
     convert_seconds_to_str,
+)
+from .recording_tools import (
     write_binary_recording,
     write_memory_recording,
 )
+
 from .job_tools import split_job_kwargs
 
 
@@ -438,12 +441,6 @@ class BaseRecording(BaseRecordingSnippets):
         return rs.time_to_sample_index(time_s)
 
     def _save(self, format="binary", **save_kwargs):
-        """
-        This function replaces the old CacheRecordingExtractor, but enables more engines
-        for caching a results. At the moment only "binary" with memmap is supported.
-        We plan to add other engines, such as zarr and NWB.
-        """
-
         # handle t_starts
         t_starts = []
         has_time_vectors = []
@@ -487,12 +484,12 @@ class BaseRecording(BaseRecordingSnippets):
             cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == "memory":
-            traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
-            from .numpyextractors import NumpyRecording
+            if kwargs.get("sharedmem", True):
+                from .numpyextractors import SharedMemoryRecording
 
-            cached = NumpyRecording(
-                traces_list, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids
-            )
+                cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
+            else:
+                cached = NumpyRecording.from_recording(self, **job_kwargs)
 
         elif format == "zarr":
             from .zarrextractors import ZarrRecordingExtractor
