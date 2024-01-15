@@ -27,7 +27,6 @@ from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
 # TODO
 #  * make info.json that contain some version info of spikeinterface
 #  * same for zarr
-#  * sample spikes and propagate in compute with option
 
 
 
@@ -533,6 +532,11 @@ class SortingResult:
         else:
             recording = None
         
+        if self.sparsity is not None:
+            # handle sparsity propagation and slicing
+            raise NotImplementedError
+        sparsity = None
+        
         # Note that the sorting is a copy we need to go back to the orginal sorting (if available)
         sorting_provenance = self.get_sorting_provenance()
         if sorting_provenance is None:
@@ -545,18 +549,18 @@ class SortingResult:
 
         if format == "memory":
             # This make a copy of actual SortingResult
-            new_sortres = SortingResult.create_memory(sorting_provenance, recording, self.sparsity, self.rec_attributes)
+            new_sortres = SortingResult.create_memory(sorting_provenance, recording, sparsity, self.rec_attributes)
 
         elif format == "binary_folder":
             # create  a new folder
             assert folder is not None, "For format='binary_folder' folder must be provided"
-            SortingResult.create_binary_folder(folder, sorting_provenance, recording, self.sparsity, self.rec_attributes)
+            SortingResult.create_binary_folder(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
             new_sortres = SortingResult.load_from_binary_folder(folder, recording=recording)
             new_sortres.folder = folder
 
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
-            SortingResult.create_zarr(folder, sorting_provenance, recording, self.sparsity, self.rec_attributes)
+            SortingResult.create_zarr(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
             new_sortres = SortingResult.load_from_zarr(folder, recording=recording)
             new_sortres.folder = folder
         else:
@@ -614,7 +618,7 @@ class SortingResult:
         """
         Create a a copy of SortingResult with format "memory".
         """
-        return self._save_or_select(format="binary_folder", folder=None, unit_ids=None)
+        return self._save_or_select(format="memory", folder=None, unit_ids=None)
 
     def is_read_only(self) -> bool:
         if self.format == "memory":
