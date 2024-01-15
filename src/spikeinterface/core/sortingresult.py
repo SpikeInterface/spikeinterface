@@ -1140,28 +1140,30 @@ class ResultExtension:
             new_extension.data = self.data
         else:
             new_extension.data = self._select_extension_data(unit_ids)
-        new_extension._save()
+        new_extension.save()
         return new_extension
 
     def run(self, **kwargs):
-        self._run(**kwargs)
         if not self.sorting_result.is_read_only():
-            self._save(**kwargs)
+            # this also reset the folder or zarr group
+            self._save_params()
+
+        self._run(**kwargs)
+
+        if not self.sorting_result.is_read_only():
+            self._save_data(**kwargs)
 
     def save(self, **kwargs):
-        self._save(**kwargs)
+        self._save_params()
+        self._save_data(**kwargs)
 
-    def _save(self, **kwargs):
+    def _save_data(self, **kwargs):
         if self.format == "memory":
             return
 
         if self.sorting_result.is_read_only():
             raise ValueError(f"The SortingResult is read only save extension {self.extension_name} is not possible")
         
-        # delete already saved
-        self._reset_extension_folder()
-        self._save_params()
-
         if self.format == "binary_folder":
             import pandas as pd
 
@@ -1171,7 +1173,14 @@ class ResultExtension:
                     with (extension_folder / f"{ext_data_name}.json").open("w") as f:
                         json.dump(ext_data, f)
                 elif isinstance(ext_data, np.ndarray):
-                    np.save(extension_folder / f"{ext_data_name}.npy", ext_data)
+                    # important some SortingResult like ComputeWaveforms already run the computation with memmap
+                    # so no need to save theses array
+                    data_file = extension_folder / f"{ext_data_name}.npy"
+                    if isinstance(ext_data, np.memmap) and data_file.exists():
+                        pass
+                        print("no save")
+                    else:
+                        np.save(data_file, ext_data)
                 elif isinstance(ext_data, pd.DataFrame):
                     ext_data.to_csv(extension_folder / f"{ext_data_name}.csv", index=True)
                 else:
@@ -1257,15 +1266,20 @@ class ResultExtension:
         if self.sorting_result.is_read_only():
             return
 
+        
         self._save_params()
 
     def _save_params(self):
         params_to_save = self.params.copy()
-        if "sparsity" in params_to_save and params_to_save["sparsity"] is not None:
-            assert isinstance(
-                params_to_save["sparsity"], ChannelSparsity
-            ), "'sparsity' parameter must be a ChannelSparsity object!"
-            params_to_save["sparsity"] = params_to_save["sparsity"].to_dict()
+
+        self._reset_extension_folder()
+
+        # TODO make sparsity local Result specific
+        # if "sparsity" in params_to_save and params_to_save["sparsity"] is not None:
+        #     assert isinstance(
+        #         params_to_save["sparsity"], ChannelSparsity
+        #     ), "'sparsity' parameter must be a ChannelSparsity object!"
+        #     params_to_save["sparsity"] = params_to_save["sparsity"].to_dict()
 
 
         if self.format == "binary_folder":

@@ -40,7 +40,7 @@ class ComputeWaveforms(ResultExtension):
         # the save will delete the memmap write it again!! this will not work on window.
         if self.format == "binary_folder":
             # in that case waveforms are extacted directly in files
-            file_path = self._get_binary_extension_folder() / "waveforms"
+            file_path = self._get_binary_extension_folder() / "waveforms.npy"
             mode = "memmap"
             copy = False
         else:
@@ -74,7 +74,7 @@ class ComputeWaveforms(ResultExtension):
             **job_kwargs,
         )
 
-        self.data["all_waveforms"] = all_waveforms
+        self.data["waveforms"] = all_waveforms
 
     def _set_params(self, 
             ms_before: float = 1.0,

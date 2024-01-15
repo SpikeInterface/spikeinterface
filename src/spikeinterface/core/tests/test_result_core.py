@@ -43,16 +43,17 @@ def test_ComputeWaveforms(format="memory"):
 
     sortres.select_random_spikes(max_spikes_per_unit=50, seed=2205)
     ext = sortres.compute("waveforms")
-    wfs = ext.data["all_waveforms"]
+    wfs = ext.data["waveforms"]
 
     print(wfs.shape)
+    print(sortres)
 
 
 def test_ComputTemplates():
     pass
 
 if __name__ == '__main__':
-    test_ComputeWaveforms(format="memory")
-    # test_ComputeWaveforms(format="binary_folder")
+    # test_ComputeWaveforms(format="memory")
+    test_ComputeWaveforms(format="binary_folder")
     # test_ComputeWaveforms(format="zarr")
     # test_ComputTemplates()
