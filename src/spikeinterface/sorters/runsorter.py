@@ -7,18 +7,25 @@ import platform
 from warnings import warn
 from typing import Optional, Union
 
-from ..core import BaseRecording, NumpySorting
+from spikeinterface import DEV_MODE
+import spikeinterface
+
+
 from .. import __version__ as si_version
-from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
-from spikeinterface.core.core_tools import check_json, recursive_path_modifier
+
+
+from ..core import BaseRecording, NumpySorting, load_extractor
+from ..core.core_tools import check_json, is_editable_mode
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError, has_nvidia
+from .container_tools import (
+    find_recording_folders,
+    path_to_unix,
+    windows_extractor_dict_to_unix,
+    ContainerClient,
+    install_package_in_container,
+)
 
-try:
-    HAS_DOCKER = True
-    import docker
-except ModuleNotFoundError:
-    HAS_DOCKER = False
 
 REGISTRY = "spikeinterface"
 
@@ -73,17 +80,34 @@ _common_param_doc = """
         If True, pull the default docker container for the sorter and run the sorter in that container using
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled
         from Docker Hub. If False, the sorter is run locally
-    delete_container_files: bool, default: True
-        If True, the container temporary files are deleted after the sorting is done
     with_output: bool, default: True
         If True, the output Sorting is returned as a Sorting
+    delete_container_files: bool, default: True
+        If True, the container temporary files are deleted after the sorting is done
+    extra_requirements: list, default: None
+        List of extra requirements to install in the container
+    installation_mode: "auto" | "pypi" | "github" | "folder" | "dev" | "no-install", default: "auto"
+        How spikeinterface is installed in the container:
+          * "auto": if host installation is a pip release then use "github" with tag
+                    if host installation is DEV_MODE=True then use "dev"
+          * "pypi": use pypi with pip install spikeinterface
+          * "github": use github with `pip install git+https`
+          * "folder": mount a folder in container and install from this one.
+                      So the version in the container is a different spikeinterface version from host, useful for
+                      cross checks
+          * "dev": same as "folder", but the folder is the spikeinterface.__file__ to ensure same version as host
+          * "no-install": do not install spikeinterface in the container because it is already installed
+    spikeinterface_version: str, default: None
+        The spikeinterface version to install in the container. If None, the current version is used
+    spikeinterface_folder_source: Path or None, default: None
+        In case of installation_mode="folder", the spikeinterface folder source to use to install in the container
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
     Returns
     -------
-    sortingextractor: SortingExtractor
-        The spike sorted data
+    BaseSorting | None
+        The spike sorted data (it `with_output` is True) or None (if `with_output` is False)
     """
 
 
@@ -162,6 +186,30 @@ def run_sorter_local(
     with_output=True,
     **sorter_params,
 ):
+    """
+    Runs a sorter locally.
+
+    Parameters
+    ----------
+    sorter_name: str
+        The sorter name
+    recording: RecordingExtractor
+        The recording extractor to be spike sorted
+    output_folder: str or Path
+        Path to output folder. If None, a folder is created in the current directory
+    remove_existing_folder: bool, default: True
+        If True and output_folder exists yet then delete
+    delete_output_folder: bool, default: False
+        If True, output folder is deleted
+    verbose: bool, default: False
+        If True, output is verbose
+    raise_error: bool, default: True
+        If True, an error is raised if spike sorting fails.
+        If False, the process continues and the error is logged in the log file
+    with_output: bool, default: True
+        If True, the output Sorting is returned as a Sorting
+    **sorter_params: keyword args
+    """
     if isinstance(recording, list):
         raise Exception("If you want to run several sorters/recordings use run_sorter_jobs(...)")
 
@@ -192,155 +240,6 @@ def run_sorter_local(
     return sorting
 
 
-def find_recording_folders(d):
-    folders_to_mount = []
-
-    def append_parent_folder(p):
-        p = Path(p)
-        folders_to_mount.append(p.resolve().absolute().parent)
-        return p
-
-    _ = recursive_path_modifier(d, append_parent_folder, target="path", copy=True)
-
-    try:  # this will fail if on different drives (Windows)
-        base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
-    except ValueError:
-        base_folders_to_mount = folders_to_mount
-
-    # let's not mount root if dries are /home/..., /mnt1/...
-    if len(base_folders_to_mount) == 1:
-        if len(str(base_folders_to_mount[0])) == 1:
-            base_folders_to_mount = folders_to_mount
-
-    return base_folders_to_mount
-
-
-def path_to_unix(path):
-    path = Path(path)
-    if platform.system() == "Windows":
-        path = Path(str(path)[str(path).find(":") + 1 :])
-    return path.as_posix()
-
-
-def windows_extractor_dict_to_unix(d):
-    d = recursive_path_modifier(d, path_to_unix, target="path", copy=True)
-    return d
-
-
-class ContainerClient:
-    """
-    Small abstraction class to run commands in:
-      * docker with "docker" python package
-      * singularity with  "spython" python package
-    """
-
-    def __init__(self, mode, container_image, volumes, py_user_base, extra_kwargs):
-        """
-        Parameters
-        ----------
-        mode: "docker" | "singularity"
-            The container mode
-        container_image: str
-            container image name and tag
-        volumes: dict
-            dict of volumes to bind
-        py_user_base: str
-            Python user base folder to set as PYTHONUSERBASE env var in Singularity mode
-            Prevents from overwriting user's packages when running pip install
-        extra_kwargs: dict
-            Extra kwargs to start container
-        """
-        assert mode in ("docker", "singularity")
-        self.mode = mode
-        self.py_user_base = py_user_base
-        container_requires_gpu = extra_kwargs.get("container_requires_gpu", None)
-
-        if mode == "docker":
-            if not HAS_DOCKER:
-                raise ModuleNotFoundError("No module named 'docker'")
-            client = docker.from_env()
-            if container_requires_gpu is not None:
-                extra_kwargs.pop("container_requires_gpu")
-                extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])]
-
-            if self._get_docker_image(container_image) is None:
-                print(f"Docker: pulling image {container_image}")
-                client.images.pull(container_image)
-
-            self.docker_container = client.containers.create(container_image, tty=True, volumes=volumes, **extra_kwargs)
-
-        elif mode == "singularity":
-            assert self.py_user_base, "py_user_base folder must be set in singularity mode"
-            from spython.main import Client
-
-            # load local image file if it exists, otherwise search dockerhub
-            sif_file = Client._get_filename(container_image)
-            singularity_image = None
-            if Path(container_image).exists():
-                singularity_image = container_image
-            elif Path(sif_file).exists():
-                singularity_image = sif_file
-            else:
-                if HAS_DOCKER:
-                    docker_image = self._get_docker_image(container_image)
-                    if docker_image and len(docker_image.tags) > 0:
-                        tag = docker_image.tags[0]
-                        print(f"Building singularity image from local docker image: {tag}")
-                        singularity_image = Client.build(f"docker-daemon://{tag}", sif_file, sudo=False)
-                if not singularity_image:
-                    print(f"Singularity: pulling image {container_image}")
-                    singularity_image = Client.pull(f"docker://{container_image}")
-
-            if not Path(singularity_image).exists():
-                raise FileNotFoundError(f"Unable to locate container image {container_image}")
-
-            # bin options
-            singularity_bind = ",".join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
-            options = ["--bind", singularity_bind]
-
-            # gpu options
-            if container_requires_gpu:
-                # only nvidia at the moment
-                options += ["--nv"]
-
-            self.client_instance = Client.instance(singularity_image, start=False, options=options)
-
-    @staticmethod
-    def _get_docker_image(container_image):
-        docker_client = docker.from_env(timeout=300)
-        try:
-            docker_image = docker_client.images.get(container_image)
-        except docker.errors.ImageNotFound:
-            docker_image = None
-        return docker_image
-
-    def start(self):
-        if self.mode == "docker":
-            self.docker_container.start()
-        elif self.mode == "singularity":
-            self.client_instance.start()
-
-    def stop(self):
-        if self.mode == "docker":
-            self.docker_container.stop()
-            self.docker_container.remove(force=True)
-        elif self.mode == "singularity":
-            self.client_instance.stop()
-
-    def run_command(self, command):
-        if self.mode == "docker":
-            res = self.docker_container.exec_run(command)
-            return res.output.decode(encoding="utf-8", errors="ignore")
-        elif self.mode == "singularity":
-            from spython.main import Client
-
-            options = ["--cleanenv", "--env", f"PYTHONUSERBASE={self.py_user_base}"]
-            res = Client.execute(self.client_instance, command, options=options)
-            if isinstance(res, dict):
-                res = res["message"]
-            return res
-
-
 def run_sorter_container(
     sorter_name: str,
     recording: BaseRecording,
@@ -354,6 +253,9 @@ def run_sorter_container(
     with_output: bool = True,
     delete_container_files: bool = True,
     extra_requirements=None,
+    installation_mode="auto",
+    spikeinterface_version=None,
+    spikeinterface_folder_source=None,
     **sorter_params,
 ):
     """
@@ -384,9 +286,27 @@ def run_sorter_container(
         If True, the container temporary files are deleted after the sorting is done
     extra_requirements: list, default: None
         List of extra requirements to install in the container
+    installation_mode: "auto" | "pypi" | "github" | "folder" | "dev" | "no-install", default: "auto"
+        How spikeinterface is installed in the container:
+          * "auto": if host installation is a pip release then use "github" with tag
+                    if host installation is DEV_MODE=True then use "dev"
+          * "pypi": use pypi with pip install spikeinterface
+          * "github": use github with `pip install git+https`
+          * "folder": mount a folder in container and install from this one.
+                      So the version in the container is a different spikeinterface version from host, useful for
+                      cross checks
+          * "dev": same as "folder", but the folder is the spikeinterface.__file__ to ensure same version as host
+          * "no-install": do not install spikeinterface in the container because it is already installed
+    spikeinterface_version: str, default: None
+        The spikeinterface version to install in the container. If None, the current version is used
+    spikeinterface_folder_source: Path or None, default: None
+        In case of installation_mode="folder", the spikeinterface folder source to use to install in the container
     **sorter_params: keyword args for the sorter
 
     """
+
+    assert installation_mode in ("auto", "pypi", "github", "folder", "dev", "no-install")
+    spikeinterface_version = spikeinterface_version or si_version
 
     if extra_requirements is None:
         extra_requirements = []
@@ -422,20 +342,20 @@ def run_sorter_container(
     elif recording.check_serializability("pickle"):
         (parent_folder / "in_container_recording.pickle").write_bytes(pickle.dumps(rec_dict))
     else:
-        raise RuntimeError("To use run_sorter with container the recording must be serializable")
+        raise RuntimeError("To use run_sorter with a container the recording must be serializable")
 
     # need to share specific parameters
     (parent_folder / "in_container_params.json").write_text(
         json.dumps(check_json(sorter_params), indent=4), encoding="utf8"
     )
 
-    npz_sorting_path = output_folder / "in_container_sorting"
+    in_container_sorting_folder = output_folder / "in_container_sorting"
 
     # if in Windows, skip C:
     parent_folder_unix = path_to_unix(parent_folder)
     output_folder_unix = path_to_unix(output_folder)
     recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
-    npz_sorting_path_unix = path_to_unix(npz_sorting_path)
+    in_container_sorting_folder_unix = path_to_unix(in_container_sorting_folder)
 
     # the py script
     py_script = f"""
@@ -465,7 +385,7 @@ if __name__ == '__main__':
         remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
         verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
-    sorting.save_to_folder(folder='{npz_sorting_path_unix}')
+    sorting.save(folder='{in_container_sorting_folder_unix}')
 """
     (parent_folder / "in_container_sorter_script.py").write_text(py_script, encoding="utf8")
 
@@ -476,15 +396,32 @@ if __name__ == '__main__':
             volumes[str(recording_folder)] = {"bind": str(recording_folder_unix), "mode": "ro"}
     volumes[str(parent_folder)] = {"bind": str(parent_folder_unix), "mode": "rw"}
 
-    si_dev_path = os.getenv("SPIKEINTERFACE_DEV_PATH", None)
+    host_folder_source = None
+    if installation_mode == "auto":
+        if DEV_MODE:
+            if is_editable_mode():
+                installation_mode = "dev"
+            else:
+                installation_mode = "github"
+        else:
+            installation_mode = "github"
+        if verbose:
+            print(f"installation_mode='auto' switching to installation_mode: '{installation_mode}'")
 
-    install_si_from_source = False
-    if "dev" in si_version and si_dev_path is not None:
-        install_si_from_source = True
-        # Making sure to get rid of last / or \
-        si_dev_path = str(Path(si_dev_path).absolute().resolve())
-        si_dev_path_unix = path_to_unix(si_dev_path)
-        volumes[si_dev_path] = {"bind": si_dev_path_unix, "mode": "ro"}
+    if installation_mode == "folder":
+        assert (
+            spikeinterface_folder_source is not None
+        ), "for installation_mode='folder', spikeinterface_folder_source must be provided"
+        host_folder_source = Path(spikeinterface_folder_source)
+
+    if installation_mode == "dev":
+        host_folder_source = Path(spikeinterface.__file__).parents[2]
+
+    if host_folder_source is not None:
+        host_folder_source = host_folder_source.resolve()
+        # this bind is read only  and will be copy later
+        container_folder_source_ro = "/spikeinterface"
+        volumes[str(host_folder_source)] = {"bind": container_folder_source_ro, "mode": "ro"}
 
     extra_kwargs = {}
 
@@ -513,68 +450,92 @@ if __name__ == '__main__':
         py_user_base_folder = parent_folder / "in_container_python_base"
         py_user_base_folder.mkdir(parents=True, exist_ok=True)
         py_user_base_unix = path_to_unix(py_user_base_folder)
-        si_source_folder = f"{py_user_base_unix}/sources"
-    else:
-        si_source_folder = "/sources"
+
     container_client = ContainerClient(mode, container_image, volumes, py_user_base_unix, extra_kwargs)
     if verbose:
         print("Starting container")
     container_client.start()
 
-    if verbose and install_si_from_source:
-        print("******")
-        print("Container started with the following paths")
-        print(si_dev_path_unix, si_source_folder)
-
-    # check if container contains spikeinterface already
-    cmd_1 = ["python", "-c", "import spikeinterface; print(spikeinterface.__version__)"]
-    cmd_2 = ["python", "-c", "from spikeinterface.sorters import run_sorter_local"]
-    res_output = ""
-    for cmd in [cmd_1, cmd_2]:
-        res_output += str(container_client.run_command(cmd))
-    need_si_install = "ModuleNotFoundError" in res_output
+    if installation_mode == "no-install":
+        need_si_install = False
+    else:
+        cmd_1 = ["python", "-c", "import spikeinterface; print(spikeinterface.__version__)"]
+        cmd_2 = ["python", "-c", "from spikeinterface.sorters import run_sorter_local"]
+        res_output = ""
+        for cmd in [cmd_1, cmd_2]:
+            res_output += str(container_client.run_command(cmd))
+        need_si_install = "ModuleNotFoundError" in res_output
 
     if need_si_install:
-        if "dev" in si_version:
-            if verbose:
-                print(f"Installing spikeinterface from sources in {container_image}")
+        # update pip in container
+        cmd = f"pip install --user --upgrade pip"
+        res_output = container_client.run_command(cmd)
 
-            # TODO later check output
-            if install_si_from_source:
-                si_source = "local machine"
-                # install in local copy of host SI folder in sources/spikeinterface to avoid permission errors
-                cmd = f"mkdir {si_source_folder}"
-                res_output = container_client.run_command(cmd)
-                cmd = f"cp -r {si_dev_path_unix} {si_source_folder}"
-                res_output = container_client.run_command(cmd)
-                cmd = f"pip install --user {si_source_folder}/spikeinterface[full]"
+        if installation_mode == "pypi":
+            install_package_in_container(
+                container_client,
+                "spikeinterface",
+                installation_mode="pypi",
+                extra="[full]",
+                version=spikeinterface_version,
+                verbose=verbose,
+            )
+
+        elif installation_mode == "github":
+            if DEV_MODE:
+                install_package_in_container(
+                    container_client,
+                    "spikeinterface",
+                    installation_mode="github",
+                    github_url="https://github.com/SpikeInterface/spikeinterface",
+                    extra="[full]",
+                    tag="main",
+                    verbose=verbose,
+                )
             else:
-                si_source = "remote repository"
-                cmd = "pip install --user --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]"
-            if verbose:
-                print(f"Installing dev spikeinterface from {si_source}")
-            res_output = container_client.run_command(cmd)
-            cmd = "pip install --user --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
-            res_output = container_client.run_command(cmd)
-        else:
-            if verbose:
-                print(f"Installing spikeinterface=={si_version} in {container_image}")
-            cmd = f"pip install --user --upgrade --no-input spikeinterface[full]=={si_version}"
-            res_output = container_client.run_command(cmd)
-    else:
-        # TODO version checking
-        if verbose:
-            print(f"spikeinterface is already installed in {container_image}")
+                install_package_in_container(
+                    container_client,
+                    "spikeinterface",
+                    installation_mode="github",
+                    github_url="https://github.com/SpikeInterface/spikeinterface",
+                    extra="[full]",
+                    version=spikeinterface_version,
+                    verbose=verbose,
+                )
+        elif host_folder_source is not None:
+            # this is "dev" + "folder"
+            install_package_in_container(
+                container_client,
+                "spikeinterface",
+                installation_mode="folder",
+                extra="[full]",
+                container_folder_source=container_folder_source_ro,
+                verbose=verbose,
+            )
+
+        if installation_mode == "dev":
+            # also install neo from github
+            # cmd = "pip install --user --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
+            # res_output = container_client.run_command(cmd)
+            install_package_in_container(
+                container_client,
+                "neo",
+                installation_mode="github",
+                github_url="https://github.com/NeuralEnsemble/python-neo",
+                tag="master",
+            )
 
     if hasattr(recording, "extra_requirements"):
         extra_requirements.extend(recording.extra_requirements)
 
     # install additional required dependencies
     if extra_requirements:
-        if verbose:
-            print(f"Installing extra requirements: {extra_requirements}")
-        cmd = f"pip install --user --upgrade --no-input {' '.join(extra_requirements)}"
+        # if verbose:
+        #     print(f"Installing extra requirements: {extra_requirements}")
+        # cmd = f"pip install --user --upgrade --no-input {' '.join(extra_requirements)}"
         res_output = container_client.run_command(cmd)
+        for package_name in extra_requirements:
+            install_package_in_container(container_client, package_name, installation_mode="pypi", verbose=verbose)
 
     # run sorter on folder
     if verbose:
@@ -634,14 +595,8 @@ if __name__ == '__main__':
             try:
                 sorting = SorterClass.get_result_from_folder(output_folder)
             except Exception as e:
-                if verbose:
-                    print(
-                        "Failed to get result with sorter specific extractor.\n"
-                        f"Error Message: {e}\n"
-                        "Getting result from in-container saved NpzSortingExtractor"
-                    )
                 try:
-                    sorting = NpzSortingExtractor.load_from_folder(npz_sorting_path)
+                    sorting = load_extractor(in_container_sorting_folder)
                 except FileNotFoundError:
                     SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 
@@ -650,14 +605,6 @@ if __name__ == '__main__':
         shutil.rmtree(sorter_output_folder)
 
     return sorting
-
-
-_common_run_doc = (
-    """
-    Runs {} sorter
-    """
-    + _common_param_doc
-)
 
 
 def read_sorter_folder(output_folder, register_recording=True, sorting_info=True, raise_error=True):
