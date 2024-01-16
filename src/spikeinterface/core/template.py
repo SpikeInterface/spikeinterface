@@ -1,6 +1,7 @@
 import numpy as np
 import json
 from dataclasses import dataclass, field, astuple
+from probeinterface import Probe
 from .sparsity import ChannelSparsity
 
 
@@ -24,6 +25,8 @@ class Templates:
         Array of channel IDs. If `None`, defaults to an array of increasing integers.
     unit_ids : np.ndarray, optional default: None
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
+    probe: Probe, default: None
+        A `probeinterface.Probe` object
     check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
         structure fo the sparsity_masl.
@@ -56,6 +59,8 @@ class Templates:
     sparsity_mask: np.ndarray = None
     channel_ids: np.ndarray = None
     unit_ids: np.ndarray = None
+
+    probe: Probe = None
 
     check_for_consistent_sparsity: bool = True
 
@@ -97,6 +102,15 @@ class Templates:
                 if not self._are_passed_templates_sparse():
                     raise ValueError("Sparsity mask passed but the templates are not sparse")
 
+    def get_one_template_dense(self, unit_index):
+        if self.sparsity is None:
+            template = self.templates_array[unit_index, :, :]
+        else:
+            sparse_template = self.templates_array[unit_index, :, :]
+            template = self.sparsity.densify_waveforms(waveforms=sparse_template, unit_id=self.unit_ids[unit_index])
+            # dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+        return template
+
     def get_dense_templates(self) -> np.ndarray:
         # Assumes and object without a sparsity mask already has dense templates
         if self.sparsity is None:
@@ -106,8 +120,9 @@ class Templates:
         dense_waveforms = np.zeros(shape=densified_shape, dtype=self.templates_array.dtype)
 
         for unit_index, unit_id in enumerate(self.unit_ids):
-            waveforms = self.templates_array[unit_index, ...]
-            dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+            # waveforms = self.templates_array[unit_index, ...]
+            # dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+            dense_waveforms[unit_index, ...] = self.get_one_template_dense(unit_index)
 
         return dense_waveforms
 
@@ -135,6 +150,7 @@ class Templates:
             "unit_ids": self.unit_ids,
             "sampling_frequency": self.sampling_frequency,
             "nbefore": self.nbefore,
+            "probe": self.probe.to_dict() if self.probe is not None else None,
         }
 
     @classmethod
@@ -146,6 +162,7 @@ class Templates:
             unit_ids=np.asarray(data["unit_ids"]),
             sampling_frequency=data["sampling_frequency"],
             nbefore=data["nbefore"],
+            probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
 
     def to_json(self):
@@ -189,6 +206,9 @@ class Templates:
                     return False
                 if not np.array_equal(s_field.channel_ids, o_field.channel_ids):
                     return False
+            elif isinstance(s_field, Probe):
+                # TODO implement __eq__ in probeinterface...
+                pass
             else:
                 if s_field != o_field:
                     return False

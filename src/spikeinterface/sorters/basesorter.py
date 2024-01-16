@@ -361,7 +361,6 @@ class BaseSorter:
         """
         shell_script = ShellScript(shell_cmd)
         shell_script.start()
-        shell_script.wait()
         retcode = shell_script.wait()
         if retcode != 0:
             return False

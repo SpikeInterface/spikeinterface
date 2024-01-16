@@ -106,18 +106,26 @@ class UnitWaveformsWidget(BaseWidget):
         sorting: BaseSorting = we.sorting
 
         if unit_ids is None:
-            unit_ids = sorting.get_unit_ids()
-        unit_ids = unit_ids
+            unit_ids = sorting.unit_ids
         if channel_ids is None:
             channel_ids = we.channel_ids
-
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
         channel_locations = we.get_channel_locations()[we.channel_ids_to_indices(channel_ids)]
 
+        extra_sparsity = False
         if waveform_extractor.is_sparse():
-            sparsity = waveform_extractor.sparsity
+            if sparsity is None:
+                sparsity = waveform_extractor.sparsity
+            else:
+                # assert provided sparsity is a subset of waveform sparsity
+                combined_mask = np.logical_or(we.sparsity.mask, sparsity.mask)
+                assert np.all(np.sum(combined_mask, 1) - np.sum(we.sparsity.mask, 1) == 0), (
+                    "The provided 'sparsity' needs to include only the sparse channels "
+                    "used to extract waveforms (for example, by using a smaller 'radius_um')."
+                )
+                extra_sparsity = True
         else:
             if sparsity is None:
                 # in this case, we construct a dense sparsity
@@ -139,10 +147,22 @@ class UnitWaveformsWidget(BaseWidget):
         wfs_by_ids = {}
         if plot_waveforms:
             for unit_id in unit_ids:
-                if waveform_extractor.is_sparse():
-                    wfs = we.get_waveforms(unit_id)
+                if not extra_sparsity:
+                    if waveform_extractor.is_sparse():
+                        wfs = we.get_waveforms(unit_id)
+                    else:
+                        wfs = we.get_waveforms(unit_id, sparsity=sparsity)
                 else:
-                    wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+                    # in this case we have to slice the waveform sparsity based on the extra sparsity
+                    unit_index = list(sorting.unit_ids).index(unit_id)
+                    # first get the sparse waveforms
+                    wfs = we.get_waveforms(unit_id)
+                    # find additional slice to apply to sparse waveforms
+                    (wfs_sparse_indices,) = np.nonzero(waveform_extractor.sparsity.mask[unit_index])
+                    (extra_sparse_indices,) = np.nonzero(sparsity.mask[unit_index])
+                    (extra_slice,) = np.nonzero(np.isin(wfs_sparse_indices, extra_sparse_indices))
+                    # apply extra sparsity
+                    wfs = wfs[:, :, extra_slice]
                 wfs_by_ids[unit_id] = wfs
 
         plot_data = dict(
