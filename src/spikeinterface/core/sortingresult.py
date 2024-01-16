@@ -318,8 +318,9 @@ class SortingResult:
             probeinterface.write_probeinterface(probegroup_file, probegroup)
 
         if sparsity is not None:
-            with open(folder / "sparsity.json", mode="w") as f:
-                json.dump(check_json(sparsity.to_dict()), f)
+            np.save(folder / "sparsity_mask.npy", sparsity.mask)
+            # with open(folder / "sparsity.json", mode="w") as f:
+            #     json.dump(check_json(sparsity.to_dict()), f)
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None):
@@ -360,10 +361,13 @@ class SortingResult:
             rec_attributes["probegroup"] = None
         
         # sparsity
-        sparsity_file = folder / "sparsity.json"
+        # sparsity_file = folder / "sparsity.json"
+        sparsity_file = folder / "sparsity_mask.npy"
         if sparsity_file.is_file():
-            with open(sparsity_file, mode="r") as f:
-                sparsity = ChannelSparsity.from_dict(json.load(f))
+            sparsity_mask = np.load(sparsity_file)
+            # with open(sparsity_file, mode="r") as f:
+            #     sparsity = ChannelSparsity.from_dict(json.load(f))
+            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], rec_attributes["unit_ids"], rec_attributes["channel_ids"])
         else:
             sparsity = None
 
@@ -451,8 +455,9 @@ class SortingResult:
             # recording_info.create_dataset("probegroup", data=check_json(probegroup.to_dict()), object_codec=numcodecs.JSON())
 
         if sparsity is not None:
-            zarr_root.attrs["sparsity"] = check_json(sparsity.to_dict())
+            # zarr_root.attrs["sparsity"] = check_json(sparsity.to_dict())
             # zarr_root.create_dataset("sparsity", data=check_json(sparsity.to_dict()), object_codec=numcodecs.JSON())
+            zarr_root.create_dataset("sparsity_mask", data=sparsity.mask)
 
         # write sorting copy
         from .zarrextractors import add_sorting_to_zarr_group
@@ -500,9 +505,9 @@ class SortingResult:
             rec_attributes["probegroup"] = None
 
         # sparsity
-        if "sparsity" in zarr_root.attrs:
+        if "sparsity_mask" in zarr_root.attrs:
             # sparsity = zarr_root.attrs["sparsity"]
-            sparsity = zarr_root["sparsity"]
+            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], rec_attributes["unit_ids"], rec_attributes["channel_ids"])
         else:
             sparsity = None
 
