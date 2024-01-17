@@ -145,7 +145,8 @@ from .template import Templates
 from .sortingresult import SortingResult, ResultExtension, start_sorting_result, load_sorting_result
 from .result_core import (
     ComputeWaveforms, compute_waveforms,
-    ComputeTemplates, compute_templates
+    ComputeTemplates, compute_templates,
+    ComputeFastTemplates, compute_fast_templates,
 )
 
 

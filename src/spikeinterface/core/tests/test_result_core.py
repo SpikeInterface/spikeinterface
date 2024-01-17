@@ -46,8 +46,6 @@ def get_sorting_result(format="memory", sparse=True):
 
 
 def _check_result_extension(sortres, extension_name):
-
-
     # select unit_ids to several format
     for format in ("memory", "binary_folder", "zarr"):
     # for format in ("memory", ):
@@ -103,16 +101,52 @@ def test_ComputeTemplates(format, sparse):
         assert data[k].shape[2] == sortres.channel_ids.size
         assert np.any(data[k] > 0)
 
-    # import matplotlib.pyplot as plt
-    # for unit_index, unit_id in enumerate(sortres.unit_ids):
-    #     fig, ax = plt.subplots()
-    #     for k in data.keys():
-    #         wf0 = data[k][unit_index, :, :]
-    #         ax.plot(wf0.T.flatten(), label=k)
-    #     ax.legend()
+    import matplotlib.pyplot as plt
+    for unit_index, unit_id in enumerate(sortres.unit_ids):
+        fig, ax = plt.subplots()
+        for k in data.keys():
+            wf0 = data[k][unit_index, :, :]
+            ax.plot(wf0.T.flatten(), label=k)
+        ax.legend()
     # plt.show()
 
     _check_result_extension(sortres, "templates")
+
+
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("sparse", [True, False])
+def test_ComputeFastTemplates(format, sparse):
+    sortres = get_sorting_result(format=format, sparse=sparse)
+
+    ms_before=1.0
+    ms_after=2.5
+
+    sortres.select_random_spikes(max_spikes_per_unit=20, seed=2205)
+    sortres.compute("fast_templates", ms_before=ms_before, ms_after=ms_after, return_scaled=True)
+
+    _check_result_extension(sortres, "fast_templates")
+
+    # compare ComputeTemplates with dense and ComputeFastTemplates: should give the same on "average"
+    other_sortres = get_sorting_result(format=format, sparse=False)
+    other_sortres.select_random_spikes(max_spikes_per_unit=20, seed=2205)
+    other_sortres.compute("waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True)
+    other_sortres.compute("templates", operators=["average",])
+
+    templates0 = sortres.get_extension("fast_templates").data["average"]
+    templates1 = other_sortres.get_extension("templates").data["average"]
+    np.testing.assert_almost_equal(templates0, templates1)
+
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # for unit_index, unit_id in enumerate(sortres.unit_ids):
+    #     wf0 = templates0[unit_index, :, :]
+    #     ax.plot(wf0.T.flatten(), label=f"{unit_id}")
+    #     wf1 = templates1[unit_index, :, :]
+    #     ax.plot(wf1.T.flatten(), ls='--', color='k')
+    # ax.legend()
+    # plt.show()
+
+
 
 if __name__ == '__main__':
     # test_ComputeWaveforms(format="memory", sparse=True)
@@ -124,5 +158,7 @@ if __name__ == '__main__':
 
     # test_ComputeTemplates(format="memory", sparse=True)
     # test_ComputeTemplates(format="memory", sparse=False)
-    test_ComputeTemplates(format="binary_folder", sparse=True)
+    # test_ComputeTemplates(format="binary_folder", sparse=True)
     # test_ComputeTemplates(format="zarr", sparse=True)
+
+    test_ComputeFastTemplates(format="memory", sparse=True)

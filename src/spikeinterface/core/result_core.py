@@ -10,9 +10,14 @@ Theses two classes replace the WaveformExtractor
 import numpy as np
 
 from .sortingresult import ResultExtension, register_result_extension
-from .waveform_tools import extract_waveforms_to_single_buffer
+from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates
 
 class ComputeWaveforms(ResultExtension):
+    """
+    ResultExtension that extract some waveforms of each units.
+
+    The sparsity is controlled by the SortingResult sparsity.
+    """
     extension_name = "waveforms"
     depend_on = []
     need_recording = True
@@ -74,8 +79,7 @@ class ComputeWaveforms(ResultExtension):
     def _set_params(self, 
             ms_before: float = 1.0,
             ms_after: float = 2.0,
-            max_spikes_per_unit: int = 500,
-            return_scaled: bool = False,
+            return_scaled: bool = True,
             dtype=None,
         ):
         recording = self.sorting_result.recording
@@ -93,13 +97,9 @@ class ComputeWaveforms(ResultExtension):
 
         dtype = np.dtype(dtype)
 
-        if max_spikes_per_unit is not None:
-            max_spikes_per_unit = int(max_spikes_per_unit)
-
         params = dict(
             ms_before=float(ms_before),
             ms_after=float(ms_after),
-            max_spikes_per_unit=max_spikes_per_unit,
             return_scaled=return_scaled,
             dtype=dtype.str,
         )
@@ -122,7 +122,15 @@ class ComputeWaveforms(ResultExtension):
 compute_waveforms = ComputeWaveforms.function_factory()
 register_result_extension(ComputeWaveforms)
 
+
 class ComputeTemplates(ResultExtension):
+    """
+    ResultExtension that compute templates (average, str, median, percentile, ...)
+    
+    This must be run after "waveforms" extension (`SortingResult.compute("waveforms")`)
+
+    Note that when "waveforms" is already done, then the recording is not needed anymore for this extension.
+    """
     extension_name = "templates"
     depend_on = ["waveforms"]
     need_recording = False
@@ -199,8 +207,63 @@ class ComputeTemplates(ResultExtension):
 
         return new_data
 
-        
-
-
 compute_templates = ComputeTemplates.function_factory()
 register_result_extension(ComputeTemplates)
+
+
+class ComputeFastTemplates(ResultExtension):
+    """
+    ResultExtension which is similar to the extension "templates" (ComputeTemplates) **but only for average**.
+    This is way faster because it do not need "waveforms" to be computed first. 
+    """
+    extension_name = "fast_templates"
+    depend_on = []
+    need_recording = True
+    use_nodepiepline = False
+
+    def _run(self, **kwargs):
+        self.data.clear()
+
+        if self.sorting_result.random_spikes_indices is None:
+            raise ValueError("compute_waveforms need SortingResult.select_random_spikes() need to be run first")
+
+        recording = self.sorting_result.recording
+        sorting = self.sorting_result.sorting
+        unit_ids = sorting.unit_ids
+
+        # retrieve spike vector and the sampling
+        spikes = sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        
+        nbefore = int(self.params["ms_before"] * sorting.sampling_frequency / 1000.0)
+        nafter = int(self.params["ms_after"] * sorting.sampling_frequency / 1000.0)
+
+        return_scaled = self.params["return_scaled"]
+
+        # TODO jobw_kwargs
+        self.data["average"] = estimate_templates(recording, some_spikes, unit_ids, nbefore, nafter, return_scaled=return_scaled)
+    
+    def _set_params(self,
+            ms_before: float = 1.0,
+            ms_after: float = 2.0,
+            return_scaled: bool = True,
+        ):
+        params = dict(
+            ms_before=float(ms_before),
+            ms_after=float(ms_after),
+            return_scaled=return_scaled,
+        )
+        return params
+
+        
+
+    def _select_extension_data(self, unit_ids):
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
+
+        new_data = dict()
+        new_data["average"] = self.data["average"][keep_unit_indices, :, :]
+
+        return new_data
+
+compute_fast_templates = ComputeFastTemplates.function_factory()
+register_result_extension(ComputeFastTemplates)
