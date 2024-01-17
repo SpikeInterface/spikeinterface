@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import multiprocessing
 
 from .job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
 from .core_tools import make_shared_array
@@ -730,8 +731,6 @@ def estimate_templates(
 
     """
 
-    nsamples = nbefore + nafter
-
     assert spikes.size > 0, "estimate_templates() need non empty sorting"
 
     job_kwargs = fix_job_kwargs(job_kwargs)
@@ -740,10 +739,16 @@ def estimate_templates(
     num_chans = recording.get_num_channels()
     num_units = len(unit_ids)
 
-    shape = (num_worker, num_units, nsamples, num_chans)
+    shape = (num_worker, num_units, nbefore + nafter, num_chans)
     dtype = np.dtype("float32")
     waveforms_per_worker, shm = make_shared_array(shape, dtype)
     shm_name = shm.name
+
+    # trick to get the work_index given pid arrays
+    lock = multiprocessing.Lock()
+    array_pid = multiprocessing.Array('i', num_worker)
+    for i in range(num_worker):
+        array_pid[i] = -1
 
     func = _worker_estimate_templates
     init_func = _init_worker_estimate_templates
@@ -757,6 +762,9 @@ def estimate_templates(
         nbefore,
         nafter,
         return_scaled,
+        lock,
+        array_pid,
+
     )
 
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name="estimate_sparsity", **job_kwargs)
@@ -777,7 +785,7 @@ def estimate_templates(
 
 
 def _init_worker_estimate_templates(
-        recording, spikes, shm_name, shape, dtype, nbefore, nafter, return_scaled
+        recording, spikes, shm_name, shape, dtype, nbefore, nafter, return_scaled, lock, array_pid,
 
 ):
     worker_ctx = {}
@@ -804,16 +812,18 @@ def _init_worker_estimate_templates(
     worker_ctx["segment_slices"] = segment_slices
 
 
-    process = multiprocessing.current_process()
-    
-    if len(process._identity) == 0:
-        # this is the main process (n_jobs=1)
-        worker_ctx["worker_index"] = 0
-    else:
-        # this is incredible for pyhton but the process._identity is a one based integer
-        worker_ctx["worker_index"] = process._identity[0] -1 
+    child_process = multiprocessing.current_process()
 
-    print("worker_index", worker_ctx["worker_index"])
+    lock.acquire()
+    num_worker = None
+    for i in range(len(array_pid)):
+        if array_pid[i] == -1:
+            num_worker = i
+            array_pid[i] = child_process.ident
+            break
+    worker_ctx["worker_index"] = num_worker
+    lock.release()
+
     return worker_ctx
 
 

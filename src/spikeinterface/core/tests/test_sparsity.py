@@ -186,5 +186,5 @@ def test_estimate_sparsity():
 
 
 if __name__ == "__main__":
-    # test_ChannelSparsity()
+    test_ChannelSparsity()
     test_estimate_sparsity()
