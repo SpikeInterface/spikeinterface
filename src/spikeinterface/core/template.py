@@ -214,3 +214,8 @@ class Templates:
                     return False
 
         return True
+
+    def get_channel_locations(self):
+        assert self.probe is not None, "Templates.get_channel_locations() need probe to be set"
+        channel_locations = self.probe.get_channel_locations()
+        return channel_locations

@@ -90,3 +90,70 @@ def get_numba_vector_to_list_of_spiketrain():
     get_numba_vector_to_list_of_spiketrain._cached_numba_function = vector_to_list_of_spiketrain_numba
 
     return vector_to_list_of_spiketrain_numba
+
+
+# TODO later : implement other method like "maximum_rate", "by_percent", ...
+def random_spikes_selection(sorting, num_samples,
+                            method="uniform", max_spikes_per_unit=500,
+                            margin_size=None,
+                            seed=None):
+    """
+    This replace `select_random_spikes_uniformly()`.
+    Random spikes selection of spike across per units.
+    Can optionaly avoid spikes on segment borders.
+    If nbefore and nafter
+
+    Parameters
+    ----------
+    sorting: Sorting
+        The sorting object
+    num_samples: list of int
+        The number of samples per segment.
+        Can be retriove from recording with
+        num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
+    max_spikes_per_unit: int, default 500
+        The number of spikes per units.
+    method: "uniform"
+        The method. Only "uniform" is implemented for now.
+    margin_size: None | int
+        A margin on each border of segments to avoid spikes.
+    seed: None | int
+        A seed for random generator
+    Returns
+    -------
+    random_spikes_indices: np.array
+        Selected spike indicies corespond to the sorting spike vector.
+    """
+
+    rng =np.random.default_rng(seed=seed)
+    spikes = sorting.to_spike_vector()
+
+    random_spikes_indices = []
+    for unit_index, unit_id in enumerate(sorting.unit_ids):
+        all_unit_indices = np.flatnonzero(unit_index == spikes["unit_index"])
+
+        if method == "uniform":
+            selected_unit_indices = rng.choice(all_unit_indices, size=min(max_spikes_per_unit, all_unit_indices.size),
+                                               replace=False, shuffle=False)
+        else:
+            raise ValueError(f"random_spikes_selection wring method {method}")
+
+        if margin_size is not None:
+            margin_size = int(margin_size)
+            keep = np.ones(selected_unit_indices.size, dtype=bool)
+            # left margin
+            keep[selected_unit_indices < margin_size] = False
+            # right margin
+            for segment_index in range(sorting.get_num_segments()):
+                remove_mask = np.flatnonzero((spikes[selected_unit_indices]["segment_index"] == segment_index) 
+                                             &(spikes[selected_unit_indices]["sample_index"] >= (num_samples[segment_index] - margin_size))
+                                            )
+                keep[remove_mask] = False
+            selected_unit_indices = selected_unit_indices[keep]
+
+        random_spikes_indices.append(selected_unit_indices)
+
+    random_spikes_indices = np.concatenate(random_spikes_indices)
+    random_spikes_indices = np.sort(random_spikes_indices)
+
+    return random_spikes_indices
