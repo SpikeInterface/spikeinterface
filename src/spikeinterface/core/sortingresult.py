@@ -28,10 +28,6 @@ from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
 
 
-# TODO
-#  * make info.json that contain some version info of spikeinterface
-#  * same for zarr
-
 
 
 # high level function
@@ -247,8 +243,6 @@ class SortingResult:
     def create_binary_folder(cls, folder, sorting, recording, sparsity, rec_attributes):
         # used by create and save_as
 
-        # TODO add a spikeinterface_info.json folder with SI version  and object type
-
         assert recording is not None, "To create a SortingResult you need recording not None"
 
         folder = Path(folder)
@@ -261,6 +255,7 @@ class SortingResult:
         info = dict(
             version=spikeinterface.__version__,
             dev_mode=spikeinterface.DEV_MODE,
+            object="SortingResult",
         )
         with open(info_file, mode="w") as f:
             json.dump(check_json(info), f, indent=4)
@@ -378,8 +373,6 @@ class SortingResult:
         import zarr
         import numcodecs
 
-        # TODO add an attribute with SI version  and object type
-
         folder = Path(folder)
         # force zarr sufix
         if folder.suffix != ".zarr":
@@ -393,6 +386,7 @@ class SortingResult:
         info = dict(
             version=spikeinterface.__version__,
             dev_mode=spikeinterface.DEV_MODE,
+            object="SortingResult"
         )
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
         
@@ -727,7 +721,7 @@ class SortingResult:
             txt += " - sparse"
         if self.has_recording():
             txt += " - has recording"
-        ext_txt = f"Load extenstions [{len(self.extensions)}]: " + ", ".join(self.extensions.keys())
+        ext_txt = f"Loaded {len(self.extensions)} extenstions: " + ", ".join(self.extensions.keys())
         txt += "\n" + ext_txt
         return txt
 
