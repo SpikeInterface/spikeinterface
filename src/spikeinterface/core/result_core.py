@@ -130,19 +130,12 @@ class ComputeTemplates(ResultExtension):
 
     def _run(self, **kwargs):
         
-        
-        if self.sparsity is not None:
-            # TODO handle sparsity
-            raise NotImplementedError
-
-        unit_ids = self.sorting_result.sorting.unit_ids
+        unit_ids = self.sorting_result.unit_ids
+        channel_ids = self.sorting_result.channel_ids
         waveforms_extension = self.sorting_result.get_extension("waveforms")
         waveforms = waveforms_extension.data["waveforms"]
         
         num_samples = waveforms.shape[1]
-        # channel can be sparse or not
-        num_channels = waveforms.shape[2]
-
         
         for operator in self.params["operators"]:
             if isinstance(operator, str) and operator in ("average", "std", "median"):
@@ -153,7 +146,7 @@ class ComputeTemplates(ResultExtension):
                 key = f"pencentile_{percentile}"
             else:
                 raise ValueError(f"ComputeTemplates: wrong operator {operator}")
-            self.data[key] = np.zeros((unit_ids.size, num_samples, num_channels))
+            self.data[key] = np.zeros((unit_ids.size, num_samples, channel_ids.size))
 
         spikes = self.sorting_result.sorting.to_spike_vector()
         some_spikes = spikes[self.sorting_result.random_spikes_indices]
@@ -177,9 +170,12 @@ class ComputeTemplates(ResultExtension):
                     operator, percentile = operator
                     arr = np.percentile(wfs, percentile, axis=0)
                     key = f"pencentile_{percentile}"
-            
-                self.data[key][unit_index, :, :] = arr
 
+                if self.sparsity is None:
+                    self.data[key][unit_index, :, :] = arr
+                else:
+                    channel_indices = self.sparsity.unit_id_to_channel_indices[unit_id]
+                    self.data[key][unit_index, :, :][:, channel_indices] = arr[:, :channel_indices.size]
 
     def _set_params(self, operators = ["average", "std"]):
         assert isinstance(operators, list)

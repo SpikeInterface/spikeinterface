@@ -142,7 +142,7 @@ from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
 from .template import Templates
 
 # SortingResult and ResultExtension
-from .sortingresult import SortingResult, ResultExtension, start_sorting_result, load_sorting_result, random_spikes_selection
+from .sortingresult import SortingResult, ResultExtension, start_sorting_result, load_sorting_result
 from .result_core import (
     ComputeWaveforms, compute_waveforms,
     ComputeTemplates, compute_templates

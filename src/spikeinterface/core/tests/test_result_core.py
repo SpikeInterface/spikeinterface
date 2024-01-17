@@ -14,12 +14,22 @@ else:
     cache_folder = Path("cache_folder") / "core"
 
 
-def get_sorting_result(format="memory"):
+def get_sorting_result(format="memory", sparse=True):
     recording, sorting = generate_ground_truth_recording(
-        durations=[30.0], sampling_frequency=16000.0, num_channels=10, num_units=5,
+        durations=[30.0], sampling_frequency=16000.0, num_channels=20, num_units=5,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
+        generate_unit_locations_kwargs=dict(
+            margin_um=5.0,
+            minimum_z=5.0,
+            maximum_z=20.0,
+        ),
+        generate_templates_kwargs=dict(
+            unit_params_range=dict(
+                alpha=(9_000.0, 12_000.0),
+            )
+        ),
         noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
-        seed=2205,
+        seed=2406,
     )
     if format == "memory":
         folder = None
@@ -30,7 +40,7 @@ def get_sorting_result(format="memory"):
     if folder and folder.exists():
         shutil.rmtree(folder)
     
-    sortres = start_sorting_result(sorting, recording, format=format, folder=folder,  sparse=False, sparsity=None)
+    sortres = start_sorting_result(sorting, recording, format=format, folder=folder, sparse=sparse, sparsity=None)
 
     return sortres
 
@@ -39,8 +49,8 @@ def _check_result_extension(sortres, extension_name):
 
 
     # select unit_ids to several format
-    # for format in ("memory", "binary_folder", "zarr"):
-    for format in ("memory", ):
+    for format in ("memory", "binary_folder", "zarr"):
+    # for format in ("memory", ):
         if format != "memory":
             if format == "zarr":
                 folder = cache_folder / f"test_SortingResult_{extension_name}_select_units_with_{format}.zarr"
@@ -60,8 +70,10 @@ def _check_result_extension(sortres, extension_name):
         #     print(k, arr.shape)
 
 
-def test_ComputeWaveforms(format="memory"):
-    sortres = get_sorting_result(format=format)
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("sparse", [True, False])
+def test_ComputeWaveforms(format, sparse):
+    sortres = get_sorting_result(format=format, sparse=sparse)
 
     sortres.select_random_spikes(max_spikes_per_unit=50, seed=2205)
     ext = sortres.compute("waveforms")
@@ -69,8 +81,10 @@ def test_ComputeWaveforms(format="memory"):
     _check_result_extension(sortres, "waveforms")
 
 
-def test_ComputeTemplates(format="memory"):
-    sortres = get_sorting_result(format=format)
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("sparse", [True, False])
+def test_ComputeTemplates(format, sparse):
+    sortres = get_sorting_result(format=format, sparse=sparse)
 
     sortres.select_random_spikes(max_spikes_per_unit=20, seed=2205)
     
@@ -79,32 +93,36 @@ def test_ComputeTemplates(format="memory"):
         sortres.compute("templates")
     
     sortres.compute("waveforms")
-    waveforms = sortres.get_extension("waveforms").data["waveforms"]
     sortres.compute("templates", operators=["average", "std", "median", ("percentile", 5.), ("percentile", 95.),])
 
 
     data = sortres.get_extension("templates").data
     for k in ['average', 'std', 'median', 'pencentile_5.0', 'pencentile_95.0']:
         assert k in data.keys()
-        assert data[k].shape[0] == sortres.sorting.unit_ids.size
-        assert data[k].shape[1] == waveforms.shape[1]
-
+        assert data[k].shape[0] == sortres.unit_ids.size
+        assert data[k].shape[2] == sortres.channel_ids.size
+        assert np.any(data[k] > 0)
 
     # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # unit_index = 2
-    # for k in data.keys():
-    #     wf0 = data[k][unit_index, :, :]
-    #     ax.plot(wf0.T.flatten(), label=k)
-    # ax.legend()
+    # for unit_index, unit_id in enumerate(sortres.unit_ids):
+    #     fig, ax = plt.subplots()
+    #     for k in data.keys():
+    #         wf0 = data[k][unit_index, :, :]
+    #         ax.plot(wf0.T.flatten(), label=k)
+    #     ax.legend()
     # plt.show()
 
     _check_result_extension(sortres, "templates")
 
 if __name__ == '__main__':
-    # test_ComputeWaveforms(format="memory")
-    # test_ComputeWaveforms(format="binary_folder")
-    # test_ComputeWaveforms(format="zarr")
-    test_ComputeTemplates(format="memory")
-    # test_ComputeTemplates(format="binary_folder")
-    # test_ComputeTemplates(format="zarr")
+    # test_ComputeWaveforms(format="memory", sparse=True)
+    # test_ComputeWaveforms(format="memory", sparse=False)
+    # test_ComputeWaveforms(format="binary_folder", sparse=True)
+    # test_ComputeWaveforms(format="binary_folder", sparse=False)
+    # test_ComputeWaveforms(format="zarr", sparse=True)
+    # test_ComputeWaveforms(format="zarr", sparse=False)
+
+    # test_ComputeTemplates(format="memory", sparse=True)
+    # test_ComputeTemplates(format="memory", sparse=False)
+    test_ComputeTemplates(format="binary_folder", sparse=True)
+    # test_ComputeTemplates(format="zarr", sparse=True)

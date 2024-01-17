@@ -18,11 +18,13 @@ from .basesorting import BaseSorting
 
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
+from .sorting_tools import random_spikes_selection
 from .core_tools import check_json
 from .numpyextractors import SharedMemorySorting
-from .sparsity import ChannelSparsity
+from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
+
 
 # TODO
 #  * make info.json that contain some version info of spikeinterface
@@ -32,8 +34,7 @@ from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
 
 # high level function
 def start_sorting_result(sorting, recording, format="memory", folder=None, 
-    sparse=True, sparsity=None,
-    # **kwargs
+    sparse=True, sparsity=None, **sparsity_kwargs
     ):
     """
     Create a SortingResult by pairing a Sorting and the corresponding Recording.
@@ -57,28 +58,12 @@ def start_sorting_result(sorting, recording, format="memory", folder=None,
         The "folder" argument must be specified in case of mode "folder".
         If "memory" is used, the waveforms are stored in RAM. Use this option carefully!
     sparse: bool, default: True
-        If True, then a sparsity mask is computed usingthe `precompute_sparsity()` function is run using
+        If True, then a sparsity mask is computed usingthe `estimate_sparsity()` function is run using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
         Then, the sparsity will be propagated to all ResultExtention that handle sparsity (like wavforms, pca, ...)
+        You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity: ChannelSparsity or None, default: None
         The sparsity used to compute waveforms. If this is given, `sparse` is ignored. Default None.
-    sparsity_temp_folder: str or Path or None, default: None
-        If sparse is True, this is the temporary folder where the dense waveforms are temporarily saved.
-        If None, dense waveforms are extracted in memory in batches (which can be controlled by the `unit_batch_size`
-        parameter. With a large number of units (e.g., > 400), it is advisable to use a temporary folder.
-    num_spikes_for_sparsity: int, default: 100
-        The number of spikes to use to estimate sparsity (if sparse=True).
-    unit_batch_size: int, default: 200
-        The number of units to process at once when extracting dense waveforms (if sparse=True and sparsity_temp_folder
-        is None).
-
-    sparsity kwargs:
-    {}
-
-
-    job kwargs:
-    {}
-
 
     Returns
     -------
@@ -109,28 +94,12 @@ def start_sorting_result(sorting, recording, format="memory", folder=None,
 
     # handle sparsity
     if sparsity is not None:
+        # some checks
         assert isinstance(sparsity, ChannelSparsity), "'sparsity' must be a ChannelSparsity object"
-        unit_id_to_channel_ids = sparsity.unit_id_to_channel_ids
-        assert all(u in sorting.unit_ids for u in unit_id_to_channel_ids), "Invalid unit ids in sparsity"
-        for channels in unit_id_to_channel_ids.values():
-            assert all(ch in recording.channel_ids for ch in channels), "Invalid channel ids in sparsity"
+        assert np.array_equal(sorting.unit_ids, sparsity.unit_ids), "start_sorting_result(): if external sparsity is given unit_ids must correspond"
+        assert np.array_equal(recording.channel_ids, recording.channel_ids), "start_sorting_result(): if external sparsity is given unit_ids must correspond"
     elif sparse:
-        # TODO
-        # raise NotImplementedError()
-        sparsity = None
-        # estimate_kwargs, job_kwargs = split_job_kwargs(kwargs)
-        # sparsity = precompute_sparsity(
-        #     recording,
-        #     sorting,
-        #     ms_before=ms_before,
-        #     ms_after=ms_after,
-        #     num_spikes_for_sparsity=num_spikes_for_sparsity,
-        #     unit_batch_size=unit_batch_size,
-        #     temp_folder=sparsity_temp_folder,
-        #     allow_unfiltered=allow_unfiltered,
-        #     **estimate_kwargs,
-        #     **job_kwargs,
-        # )
+        sparsity = estimate_sparsity( recording, sorting, **sparsity_kwargs)
     else:
         sparsity = None
 
@@ -367,12 +336,12 @@ class SortingResult:
             sparsity_mask = np.load(sparsity_file)
             # with open(sparsity_file, mode="r") as f:
             #     sparsity = ChannelSparsity.from_dict(json.load(f))
-            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], rec_attributes["unit_ids"], rec_attributes["channel_ids"])
+            sparsity = ChannelSparsity(sparsity_mask, sorting.unit_ids, rec_attributes["channel_ids"])
         else:
             sparsity = None
 
         selected_spike_file = folder / "random_spikes_indices.npy"
-        if sparsity_file.is_file():
+        if selected_spike_file.is_file():
             random_spikes_indices = np.load(selected_spike_file)
         else:
             random_spikes_indices = None
@@ -507,7 +476,7 @@ class SortingResult:
         # sparsity
         if "sparsity_mask" in zarr_root.attrs:
             # sparsity = zarr_root.attrs["sparsity"]
-            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], rec_attributes["unit_ids"], rec_attributes["channel_ids"])
+            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], self.unit_ids, rec_attributes["channel_ids"])
         else:
             sparsity = None
 
@@ -537,11 +506,14 @@ class SortingResult:
         else:
             recording = None
         
-        if self.sparsity is not None:
-            # handle sparsity propagation and slicing
-            raise NotImplementedError
-        sparsity = None
-        
+        if self.sparsity is not None and unit_ids is None:
+            sparsity = self.sparsity
+        elif self.sparsity is not None and unit_ids is not None:
+            sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
+            sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
+        else:
+            sparsity = None
+
         # Note that the sorting is a copy we need to go back to the orginal sorting (if available)
         sorting_provenance = self.get_sorting_provenance()
         if sorting_provenance is None:
@@ -1298,76 +1270,6 @@ class ResultExtension:
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["params"] = check_json(params_to_save)
-
-
-
-# TODO implement other method like "maximum_rate", "by_percent", ...
-def random_spikes_selection(sorting, num_samples,
-                            method="uniform", max_spikes_per_unit=500,
-                            margin_size=None,
-                            seed=None):
-    """
-    This replace `select_random_spikes_uniformly()`.
-
-    Random spikes selection of spike across per units.
-
-    Can optionaly avoid spikes on segment borders.
-    If nbefore and nafter
-
-    Parameters
-    ----------
-    recording
-    
-    sorting
-    
-    max_spikes_per_unit
-
-    method: "uniform"
-
-    margin_size
-    
-    seed=None
-
-    Returns
-    -------
-    random_spikes_indices
-        Selected spike indicies corespond to the sorting spike vector.
-    """
-
-    rng =np.random.default_rng(seed=seed)
-    spikes = sorting.to_spike_vector()
-
-    random_spikes_indices = []
-    for unit_index, unit_id in enumerate(sorting.unit_ids):
-        all_unit_indices = np.flatnonzero(unit_index == spikes["unit_index"])
-
-        if method == "uniform":
-            selected_unit_indices = rng.choice(all_unit_indices, size=min(max_spikes_per_unit, all_unit_indices.size),
-                                               replace=False, shuffle=False)
-        else:
-            raise ValueError(f"random_spikes_selection wring method {method}")
-        
-        if margin_size is not None:
-            margin_size = int(margin_size)
-            keep = np.ones(selected_unit_indices.size, dtype=bool)
-            # left margin
-            keep[selected_unit_indices < margin_size] = False
-            # right margin
-            for segment_index in range(sorting.get_num_segments()):
-                remove_mask = np.flatnonzero((spikes[selected_unit_indices]["segment_index"] == segment_index) 
-                                             &(spikes[selected_unit_indices]["sample_index"] >= (num_samples[segment_index] - margin_size))
-                                            )
-                keep[remove_mask] = False
-            selected_unit_indices = selected_unit_indices[keep]
-        
-        random_spikes_indices.append(selected_unit_indices)
-
-    random_spikes_indices = np.concatenate(random_spikes_indices)
-    random_spikes_indices = np.sort(random_spikes_indices)
-
-    return random_spikes_indices
-
-
 
 
 

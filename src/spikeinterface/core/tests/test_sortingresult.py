@@ -5,7 +5,7 @@ import shutil
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import SortingResult, start_sorting_result, load_sorting_result
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension, random_spikes_selection
+from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
 
 import numpy as np
 
@@ -25,11 +25,14 @@ def get_dataset():
     return recording, sorting
 
 
-
 def test_SortingResult_memory():
     recording, sorting = get_dataset()
     sortres = start_sorting_result(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_results(sortres, sorting)
+
+    sortres = start_sorting_result(sorting, recording, format="memory", sparse=True, sparsity=None)
+    _check_sorting_results(sortres, sorting)
+
 
 
 def test_SortingResult_binary_folder():
@@ -189,34 +192,9 @@ def test_extension():
     with pytest.raises(AssertionError):
         register_result_extension(DummyResultExtension2)
 
-def test_random_spikes_selection():
-    recording, sorting = get_dataset()
-
-    max_spikes_per_unit = 12
-    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-
-    random_spikes_indices = random_spikes_selection(sorting, num_samples, 
-                            method="uniform", max_spikes_per_unit=max_spikes_per_unit,
-                            margin_size=None,
-                            seed=2205)
-    spikes = sorting.to_spike_vector()
-    some_spikes = spikes[random_spikes_indices]
-    for unit_index, unit_id in enumerate(sorting.unit_ids):
-        spike_slected_unit = some_spikes[some_spikes["unit_index"] == unit_index]
-        assert spike_slected_unit.size == max_spikes_per_unit
-
-    # with margin
-    random_spikes_indices = random_spikes_selection(sorting, num_samples, 
-                            method="uniform", max_spikes_per_unit=max_spikes_per_unit,
-                            margin_size=25,
-                            seed=2205)
-    # in that case the number is not garanty so it can be a bit less
-    assert random_spikes_indices.size >= (0.9 * sorting.unit_ids.size * max_spikes_per_unit)
-
 
 if __name__ == "__main__":
-    # test_SortingResult_memory()
-    test_SortingResult_binary_folder()
+    test_SortingResult_memory()
+    # test_SortingResult_binary_folder()
     # test_SortingResult_zarr()
     # test_extension()
-    # test_random_spikes_selection()
