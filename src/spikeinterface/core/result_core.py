@@ -2,9 +2,9 @@
 Implement ResultExtension that are essential and imported in core
   * ComputeWaveforms
   * ComputeTemplates
-
 Theses two classes replace the WaveformExtractor
 
+It also implement ComputeFastTemplates which is equivalent but without extacting waveforms.
 """
 
 import numpy as np

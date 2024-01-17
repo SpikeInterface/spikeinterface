@@ -194,7 +194,7 @@ def test_extension():
 
 
 if __name__ == "__main__":
-    test_SortingResult_memory()
-    # test_SortingResult_binary_folder()
-    # test_SortingResult_zarr()
+    # test_SortingResult_memory()
+    test_SortingResult_binary_folder()
+    test_SortingResult_zarr()
     # test_extension()

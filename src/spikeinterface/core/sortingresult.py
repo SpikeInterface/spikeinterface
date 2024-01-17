@@ -13,6 +13,8 @@ import numpy as np
 
 import probeinterface
 
+import spikeinterface
+
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
@@ -254,6 +256,15 @@ class SortingResult:
             raise ValueError(f"Folder already exists {folder}")
         folder.mkdir(parents=True)
 
+
+        info_file = folder / f"spikeinterface_info.json"
+        info = dict(
+            version=spikeinterface.__version__,
+            dev_mode=spikeinterface.DEV_MODE,
+        )
+        with open(info_file, mode="w") as f:
+            json.dump(check_json(info), f, indent=4)
+
         # save a copy of the sorting
         NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
 
@@ -378,6 +389,12 @@ class SortingResult:
             raise ValueError(f"Folder already exists {folder}")
 
         zarr_root = zarr.open(folder, mode="w")
+
+        info = dict(
+            version=spikeinterface.__version__,
+            dev_mode=spikeinterface.DEV_MODE,
+        )
+        zarr_root.attrs["spikeinterface_info"] = check_json(info)
         
         # the recording
         rec_dict = recording.to_dict(relative_to=folder, recursive=True)
