@@ -28,13 +28,19 @@ class SortingSummaryWidget(BaseWidget):
     max_amplitudes_per_unit : int or None, default: None
         Maximum number of spikes per unit for plotting amplitudes.
         If None, all spikes are plotted
+    min_similarity_for_correlograms : float, default: 0.2
+        Threshold for computing pair-wise cross-correlograms. If template similarity between two units
+        is below this threshold, the cross-correlogram is not computed
+        (sortingview backend)
     curation : bool, default: False
         If True, manual curation is enabled
         (sortingview backend)
     unit_table_properties : list or None, default: None
         List of properties to be added to the unit table
+        (sortingview backend)
     label_choices : list or None, default: None
         List of labels to be added to the curation table
+        (sortingview backend)
     unit_table_properties : list or None, default: None
         List of properties to be added to the unit table
         (sortingview backend)
@@ -46,6 +52,7 @@ class SortingSummaryWidget(BaseWidget):
         unit_ids=None,
         sparsity=None,
         max_amplitudes_per_unit=None,
+        min_similarity_for_correlograms=0.2,
         curation=False,
         unit_table_properties=None,
         label_choices=None,
@@ -63,6 +70,7 @@ class SortingSummaryWidget(BaseWidget):
             waveform_extractor=waveform_extractor,
             unit_ids=unit_ids,
             sparsity=sparsity,
+            min_similarity_for_correlograms=min_similarity_for_correlograms,
             unit_table_properties=unit_table_properties,
             curation=curation,
             label_choices=label_choices,
@@ -79,6 +87,7 @@ class SortingSummaryWidget(BaseWidget):
         we = dp.waveform_extractor
         unit_ids = dp.unit_ids
         sparsity = dp.sparsity
+        min_similarity_for_correlograms = dp.min_similarity_for_correlograms
 
         unit_ids = make_serializable(dp.unit_ids)
 
@@ -101,7 +110,13 @@ class SortingSummaryWidget(BaseWidget):
             backend="sortingview",
         ).view
         v_cross_correlograms = CrossCorrelogramsWidget(
-            we, unit_ids=unit_ids, hide_unit_selector=True, generate_url=False, display=False, backend="sortingview"
+            we,
+            unit_ids=unit_ids,
+            min_similarity_for_correlograms=min_similarity_for_correlograms,
+            hide_unit_selector=True,
+            generate_url=False,
+            display=False,
+            backend="sortingview",
         ).view
 
         v_unit_locations = UnitLocationsWidget(

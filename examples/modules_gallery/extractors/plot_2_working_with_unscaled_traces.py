@@ -56,8 +56,8 @@ print(recording.get_property('offset_to_uV'))
 # With gain and offset information, we can retrieve traces both in their unscaled (raw) type, and in their scaled
 # type:
 
-traces_unscaled = recording.get_traces(return_scaled=False)
-traces_scaled = recording.get_traces(return_scaled=True)  # return_scaled is True by default
+traces_unscaled = recording.get_traces(return_scaled=False) # return_scaled is False by default
+traces_scaled = recording.get_traces(return_scaled=True)
 
 print(f"Traces dtype after scaling: {traces_scaled.dtype}")
 

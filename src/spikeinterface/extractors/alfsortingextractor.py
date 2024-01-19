@@ -149,8 +149,8 @@ class ALFSortingSegment(BaseSortingSegment):
             end_frame = np.inf
 
         spike_times = self._spike_time[np.where(self._spike_clusters == unit_id)]
-        spike_frames = (spike_times * self._sampling_frequency).astype("int64")
-        return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)]
+        spike_frames = spike_times * self._sampling_frequency
+        return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)].astype("int64", copy=False)
 
 
 read_alf_sorting = define_function_from_class(source_class=ALFSortingExtractor, name="read_alf_sorting")

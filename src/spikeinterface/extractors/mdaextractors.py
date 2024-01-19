@@ -10,7 +10,7 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.core_tools import write_binary_recording
+from spikeinterface.core import write_binary_recording
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 
