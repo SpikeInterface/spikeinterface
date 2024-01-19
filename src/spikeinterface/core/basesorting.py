@@ -518,7 +518,7 @@ class BaseSorting(BaseExtractor):
         Function that can be implemented by some children sorting to quickly
         cache the spike vector without computing it from spike trains
         (e.g. computing it from a sorting parent).
-        This function should set the `self._cached_spike_vector`, see for 
+        This function should set the `self._cached_spike_vector`, see for
         instance the `UnitsSelectionSorting` implementation.
         """
         pass
