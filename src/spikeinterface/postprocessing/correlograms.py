@@ -68,7 +68,7 @@ WaveformExtractor.register_extension(CorrelogramsCalculator)
 
 
 def _make_bins(sorting, window_ms, bin_ms):
-    fs = sorting.get_sampling_frequency()
+    fs = sorting.sampling_frequency
 
     window_size = int(round(fs * window_ms / 2 * 1e-3))
     bin_size = int(round(fs * bin_ms * 1e-3))

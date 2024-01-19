@@ -11,6 +11,7 @@ from spikeinterface.core import (
     NumpySorting,
     NpySnippetsExtractor,
     ZarrRecordingExtractor,
+    ZarrSortingExtractor,
     read_binary,
     read_zarr,
     read_npz_sorting,
@@ -79,8 +80,9 @@ recording_extractor_full_list += neo_recording_extractors_list
 
 sorting_extractor_full_list = [
     NpzSortingExtractor,
-    # natively implemented in spikeinterface.extractors
+    ZarrSortingExtractor,
     NumpySorting,
+    # natively implemented in spikeinterface.extractors
     MdaSortingExtractor,
     SHYBRIDSortingExtractor,
     ALFSortingExtractor,

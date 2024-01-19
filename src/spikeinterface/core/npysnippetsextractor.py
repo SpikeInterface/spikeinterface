@@ -1,9 +1,10 @@
-from spikeinterface.core.basesnippets import BaseSnippets, BaseSnippetsSegment
-from .core_tools import define_function_from_class
+from __future__ import annotations
 from pathlib import Path
+
 import numpy as np
 
-from typing import List, Union
+from spikeinterface.core.basesnippets import BaseSnippets, BaseSnippetsSegment
+from .core_tools import define_function_from_class
 
 
 class NpySnippetsExtractor(BaseSnippets):
@@ -101,8 +102,8 @@ class NpySnippetsSegment(BaseSnippetsSegment):
 
     def get_snippets(
         self,
-        indices,
-        channel_indices: Union[List, None] = None,
+        indices: list[int],
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
@@ -111,7 +112,7 @@ class NpySnippetsSegment(BaseSnippetsSegment):
         ----------
         indices: list[int]
             Indices of the snippets to return, or all if None
-        channel_indices: Union[List, None], default: None
+        channel_indices: list | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
@@ -126,15 +127,15 @@ class NpySnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         """
         Return the slice of snippets
 
         Parameters
         ----------
-        start_frame: Union[int, None], default: None
+        start_frame: int | None, default: None
             start sample index, or zero if None
-        end_frame: Union[int, None], default: None
+        end_frame: int | None, default: None
             end_sample, or number of samples if None
 
         Returns

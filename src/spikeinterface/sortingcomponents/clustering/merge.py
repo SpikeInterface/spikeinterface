@@ -291,7 +291,7 @@ def find_merge_pairs(
     template_locs = channel_locs[max_chans, :]
     template_dist = scipy.spatial.distance.cdist(template_locs, template_locs, metric="euclidean")
 
-    pair_mask = pair_mask & (template_dist < radius_um)
+    pair_mask = pair_mask & (template_dist <= radius_um)
     indices0, indices1 = np.nonzero(pair_mask)
 
     n_jobs = job_kwargs["n_jobs"]
@@ -337,7 +337,7 @@ def find_merge_pairs(
                 pair_shift[ind0, ind1] = shift
                 pair_values[ind0, ind1] = merge_value
 
-    pair_mask = pair_mask & (template_dist < radius_um)
+    pair_mask = pair_mask & (template_dist <= radius_um)
     indices0, indices1 = np.nonzero(pair_mask)
 
     return labels_set, pair_mask, pair_shift, pair_values

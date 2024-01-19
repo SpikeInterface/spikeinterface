@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 
 import numpy as np
 
@@ -46,6 +46,25 @@ class UnitsSelectionSorting(BaseSorting):
 
         self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
 
+    def _custom_cache_spike_vector(self) -> None:
+        if self._parent_sorting._cached_spike_vector is None:
+            self._parent_sorting._custom_cache_spike_vector()
+
+            if self._parent_sorting._cached_spike_vector is None:
+                return
+
+        parent_spike_vector = self._parent_sorting._cached_spike_vector
+        parent_unit_indices = self._parent_sorting.ids_to_indices(self._unit_ids)
+        mask = np.isin(parent_spike_vector["unit_index"], parent_unit_indices)
+        spike_vector = np.array(
+            parent_spike_vector[mask]
+        )  # np.array() necessary to fix 'read-only' crash with memmaps.
+        spike_vector["unit_index"] = np.searchsorted(
+            parent_unit_indices, spike_vector["unit_index"]
+        )  # Trick to make sure that the new indices are correct.
+
+        self._cached_spike_vector = spike_vector
+
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
     def __init__(self, parent_segment, ids_conversion):
@@ -56,8 +75,8 @@ class UnitsSelectionSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         unit_id_parent = self._ids_conversion[unit_id]
         times = self._parent_segment.get_unit_spike_train(unit_id_parent, start_frame, end_frame)

@@ -1,6 +1,7 @@
 """
 Some utils to handle parallel jobs on top of job and/or loky
 """
+from __future__ import annotations
 from pathlib import Path
 import numpy as np
 import platform
@@ -141,6 +142,10 @@ def ensure_n_jobs(recording, n_jobs=1):
         n_jobs = 1
     elif n_jobs is None:
         n_jobs = 1
+
+    # ProcessPoolExecutor has a hard limit of 61 for Windows
+    if platform.system() == "Windows" and n_jobs > 61:
+        n_jobs = 61
 
     version = sys.version_info
 

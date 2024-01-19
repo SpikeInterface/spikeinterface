@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 import mmap
 import warnings
 from pathlib import Path
@@ -6,7 +6,8 @@ from pathlib import Path
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .core_tools import write_binary_recording, define_function_from_class
+from .core_tools import define_function_from_class
+from .recording_tools import write_binary_recording
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -196,9 +197,9 @@ class BinaryRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         length = self.memmap_length
         memmap_offset = self.memmap_offset

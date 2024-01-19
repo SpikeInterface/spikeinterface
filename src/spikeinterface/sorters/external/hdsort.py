@@ -6,7 +6,7 @@ import sys
 
 import numpy as np
 
-from spikeinterface.core.core_tools import write_to_h5_dataset_format
+from spikeinterface.core import write_to_h5_dataset_format
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
 

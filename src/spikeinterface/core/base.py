@@ -1,5 +1,6 @@
+from __future__ import annotations
 from pathlib import Path
-import re
+import shutil
 from typing import Any, Iterable, List, Optional, Sequence, Union
 import importlib
 import warnings
@@ -15,7 +16,14 @@ from copy import deepcopy
 import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, SIJsonEncoder
+from .core_tools import (
+    check_json,
+    is_dict_extractor,
+    SIJsonEncoder,
+    make_paths_relative,
+    make_paths_absolute,
+    check_paths_relative,
+)
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -83,24 +91,38 @@ class BaseExtractor:
         else:
             return segment_index
 
-    def ids_to_indices(self, ids: Iterable, prefer_slice: bool = False) -> Union[np.ndarray, slice]:
+    def ids_to_indices(
+        self, ids: list | np.ndarray | tuple | None = None, prefer_slice: bool = False
+    ) -> np.ndarray | slice:
         """
-        Transform a ids list (aka channel_ids or unit_ids)
-        into a indices array.
-        Useful to manipulate:
-          * data
-          * properties
+        Convert a list of IDs into indices, either as an array or a slice.
 
-        "prefer_slice" is an efficient option that tries to make a slice object
-        when indices are consecutive.
+        This function is designed to transform a list of IDs (such as channel or unit IDs) into an array of indices.
+        These indices are useful for interacting with data and accessing properties. When `prefer_slice` is set to `True`,
+        the function tries to return a slice object if the indices are consecutive, which can be more efficient
+        (e.g. with hdf5 files and to avoid copying data in numpy).
 
+        Parameters
+        ----------
+        ids : list | np.ndarray | tuple | None, default: None
+            The array of IDs to be converted into indices. If `None`, it generates indices based on the length of `_main_ids`.
+        prefer_slice : bool, default: False
+            If `True`, the function will return a slice object when the indices are consecutive. Default is `False`.
+
+        Returns
+        -------
+        np.ndarray or slice
+            An array of indices corresponding to the input IDs. If `prefer_slice` is `True` and the indices are consecutive,
+            a slice object is returned instead.
         """
+
         if ids is None:
             if prefer_slice:
                 indices = slice(None)
             else:
                 indices = np.arange(len(self._main_ids))
         else:
+            assert isinstance(ids, (list, np.ndarray, tuple)), "'ids' must be a list, np.ndarray or tuple"
             _main_ids = self._main_ids.tolist()
             indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
             if prefer_slice:
@@ -322,6 +344,9 @@ class BaseExtractor:
         to a dictionary. The resulting dictionary can be used to re-initialize the extractor
         through the `load_extractor_from_dict` function.
 
+        In some situations, 'relative_to' is not possible, (for instance different drives on Windows or url-like path), then
+        the relative will ignored and absolute (relative_to=None) will be done instead.
+
         Examples
         --------
         >>> dump_dict = original_extractor.to_dict()
@@ -383,7 +408,8 @@ class BaseExtractor:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
                 include_properties=include_properties,
-                relative_to=None,  # '_make_paths_relative' is already recursive!
+                # make_paths_relative() will make the recusrivity later:
+                relative_to=None,
                 folder_metadata=folder_metadata,
                 recursive=recursive,
             )
@@ -414,10 +440,9 @@ class BaseExtractor:
             "module": module,
             "kwargs": kwargs,
             "version": module_version,
-            "relative_paths": (relative_to is not None),
         }
 
-        dump_dict["version"] = module_version  # Can be spikeinterface, spikefores, etc.
+        dump_dict["version"] = module_version  # Can be spikeinterface, spikeforest, etc.
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations
@@ -431,10 +456,20 @@ class BaseExtractor:
             # include only main properties
             dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
-        if relative_to is not None:
+        if relative_to is None:
+            dump_dict["relative_paths"] = False
+        else:
             relative_to = Path(relative_to).resolve().absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
-            dump_dict = _make_paths_relative(dump_dict, relative_to)
+
+            if check_paths_relative(dump_dict, relative_to):
+                dump_dict["relative_paths"] = True
+                dump_dict = make_paths_relative(dump_dict, relative_to)
+            else:
+                # A warning will be very annoying for end user.
+                # So let's switch back to absolute path, but silently!
+                # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
+                dump_dict["relative_paths"] = False
 
         if folder_metadata is not None:
             if relative_to is not None:
@@ -463,7 +498,7 @@ class BaseExtractor:
         # for pickle dump relative_path was not in the dict, this ensure compatibility
         if dictionary.get("relative_paths", False):
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
-            dictionary = _make_paths_absolute(dictionary, base_folder)
+            dictionary = make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
         folder_metadata = dictionary.get("folder_metadata", None)
         if folder_metadata is not None:
@@ -726,7 +761,7 @@ class BaseExtractor:
             file = None
 
             if folder.suffix == ".zarr":
-                from .zarrrecordingextractor import read_zarr
+                from .zarrextractors import read_zarr
 
                 extractor = read_zarr(folder)
             else:
@@ -812,9 +847,10 @@ class BaseExtractor:
 
     save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
-    def save_to_memory(self, **kwargs) -> "BaseExtractor":
-        # used only by recording at the moment
-        cached = self._save(**kwargs)
+    def save_to_memory(self, sharedmem=True, **save_kwargs) -> "BaseExtractor":
+        save_kwargs.pop("format", None)
+
+        cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)
         self.copy_metadata(cached)
         return cached
 
@@ -907,52 +943,43 @@ class BaseExtractor:
         self,
         name=None,
         folder=None,
+        overwrite=False,
         storage_options=None,
         channel_chunk_size=None,
         verbose=True,
-        zarr_path=None,
         **save_kwargs,
     ):
         """
         Save extractor to zarr.
 
-        The save consist of:
-            * extracting traces by calling get_trace() method in chunks
-            * saving data into a zarr file
-            * dumping the original extractor for provenance in attributes
-
         Parameters
         ----------
         name: str or None, default: None
             Name of the subfolder in get_global_tmp_folder()
-            If "name" is given, "folder" must be None.
+            If "name" is given, "folder" must be None
         folder: str, Path, or None, default: None
             The folder used to save the zarr output. If the folder does not have a ".zarr" suffix,
-            it will be automatically appended.
+            it will be automatically appended
+        overwrite: bool, default: False
+            If True, the folder is removed if it already exists
         storage_options: dict or None, default: None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
         channel_chunk_size: int or None, default: None
-            Channels per chunk
+            Channels per chunk (only for BaseRecording)
         verbose: bool, default: True
             If True, the output is verbose
-        zarr_path: str, Path, or None, default: None
-            (Deprecated) Name of the zarr folder (.zarr)
-        **save_kwargs: Keyword arguments for saving.
+        **save_kwargs: Keyword arguments for saving to zarr
 
         Returns
         -------
-        cached: ZarrRecordingExtractor
+        cached: ZarrExtractor
             Saved copy of the extractor.
         """
         import zarr
-        from .zarrrecordingextractor import read_zarr
+        from .zarrextractors import read_zarr
 
-        if zarr_path is not None:
-            warnings.warn(
-                "The 'zarr_path' argument is deprecated. " "Use 'folder' instead", DeprecationWarning, stacklevel=2
-            )
-            folder = zarr_path
+        save_kwargs.pop("format", None)
 
         if folder is None:
             cache_folder = get_global_tmp_folder()
@@ -971,53 +998,21 @@ class BaseExtractor:
                 folder = Path(folder)
                 if folder.suffix != ".zarr":
                     folder = folder.parent / f"{folder.stem}.zarr"
+                if folder.is_dir() and overwrite:
+                    shutil.rmtree(folder)
                 zarr_path = folder
-                zarr_path_init = str(zarr_path)
             else:
                 zarr_path = folder
-                zarr_path_init = zarr_path
 
         if isinstance(zarr_path, Path):
             assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
-
-        zarr_root = zarr.open(zarr_path_init, mode="w", storage_options=storage_options)
-
-        if self.check_if_json_serializable():
-            zarr_root.attrs["provenance"] = check_json(self.to_dict())
-        else:
-            zarr_root.attrs["provenance"] = None
-
-        # save data (done the subclass)
-        save_kwargs["zarr_root"] = zarr_root
         save_kwargs["zarr_path"] = zarr_path
         save_kwargs["storage_options"] = storage_options
         save_kwargs["channel_chunk_size"] = channel_chunk_size
-        cached = self._save(verbose=verbose, **save_kwargs)
-
-        # save properties
-        prop_group = zarr_root.create_group("properties")
-        for key in self.get_property_keys():
-            values = self.get_property(key)
-            prop_group.create_dataset(name=key, data=values, compressor=None)
-
-        # save annotations
-        zarr_root.attrs["annotations"] = check_json(self._annotations)
-
+        cached = self._save(format="zarr", verbose=verbose, **save_kwargs)
         cached = read_zarr(zarr_path)
 
         return cached
-
-
-def _make_paths_relative(d, relative) -> dict:
-    relative = str(Path(relative).resolve().absolute())
-    func = lambda p: os.path.relpath(str(p), start=relative)
-    return recursive_path_modifier(d, func, target="path", copy=True)
-
-
-def _make_paths_absolute(d, base):
-    base = Path(base)
-    func = lambda p: str((base / p).resolve().absolute())
-    return recursive_path_modifier(d, func, target="path", copy=True)
 
 
 def _load_extractor_from_dict(dic) -> BaseExtractor:
