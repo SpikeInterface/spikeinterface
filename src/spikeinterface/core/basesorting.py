@@ -513,6 +513,16 @@ class BaseSorting(BaseExtractor):
                 for unit_id in unit_ids:
                     self.get_unit_spike_train(unit_id, segment_index=segment_index, use_cache=True)
 
+    def _custom_cache_spike_vector(self) -> None:
+        """
+        Function that can be implemented by some children sorting to quickly
+        cache the spike vector without computing it from spike trains
+        (e.g. computing it from a sorting parent).
+        This function should set the `self._cached_spike_vector`, see for
+        instance the `UnitsSelectionSorting` implementation.
+        """
+        pass
+
     def to_spike_vector(
         self, concatenated=True, extremum_channel_inds=None, use_cache=True
     ) -> np.ndarray | list[np.ndarray]:
@@ -547,6 +557,9 @@ class BaseSorting(BaseExtractor):
         if extremum_channel_inds is not None:
             spike_dtype = spike_dtype + [("channel_index", "int64")]
             ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
+
+        if use_cache and self._cached_spike_vector is None:
+            self._custom_cache_spike_vector()
 
         if use_cache and self._cached_spike_vector is not None:
             # the cache already exists

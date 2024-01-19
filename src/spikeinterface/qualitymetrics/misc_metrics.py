@@ -1451,24 +1451,29 @@ def compute_sd_ratio(
             spk_amp.append(np.delete(spike_amplitudes[segment_index][unit_id], censored_indices))
         spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
 
-        if correct_for_drift:
-            unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
+        if len(spk_amp) == 0:
+            sd_ratio[unit_id] = np.nan
+        elif len(spk_amp) == 1:
+            sd_ratio[unit_id] = 0.0
         else:
-            unit_std = np.std(spk_amp)
+            if correct_for_drift:
+                unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
+            else:
+                unit_std = np.std(spk_amp)
 
-        best_channel = best_channels[unit_id]
-        std_noise = noise_levels[best_channel]
+            best_channel = best_channels[unit_id]
+            std_noise = noise_levels[best_channel]
 
-        if correct_for_template_itself:
-            template = wvf_extractor.get_template(unit_id, force_dense=True)[:, best_channel]
+            if correct_for_template_itself:
+                template = wvf_extractor.get_template(unit_id, force_dense=True)[:, best_channel]
 
-            # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
-            # TODO: Take into account that templates for different segments might differ.
-            p = wvf_extractor.nsamples * n_spikes[unit_id] / wvf_extractor.get_total_samples()
-            total_variance = p * np.mean(template**2) - p**2 * np.mean(template)
+                # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
+                # TODO: Take into account that templates for different segments might differ.
+                p = wvf_extractor.nsamples * n_spikes[unit_id] / wvf_extractor.get_total_samples()
+                total_variance = p * np.mean(template**2) - p**2 * np.mean(template)
 
-            std_noise = np.sqrt(std_noise**2 - total_variance)
+                std_noise = np.sqrt(std_noise**2 - total_variance)
 
-        sd_ratio[unit_id] = unit_std / std_noise
+            sd_ratio[unit_id] = unit_std / std_noise
 
     return sd_ratio
