@@ -6,7 +6,8 @@ from pathlib import Path
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .core_tools import write_binary_recording, define_function_from_class
+from .core_tools import define_function_from_class
+from .recording_tools import write_binary_recording
 from .job_tools import _shared_job_kwargs_doc
 
 
