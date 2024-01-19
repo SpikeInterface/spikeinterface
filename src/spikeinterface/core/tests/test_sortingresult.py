@@ -148,7 +148,7 @@ class DummyResultExtension(ResultExtension):
     extension_name = "dummy"
     depend_on = []
     need_recording = False
-    use_nodepiepline = False
+    use_nodepipeline = False
 
     def _set_params(self, param0="yep", param1=1.2, param2=[1,2, 3.]):
         params = dict(param0=param0, param1=param1, param2=param2)

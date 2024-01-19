@@ -22,7 +22,7 @@ else:
 
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
-        durations=[3600.0], sampling_frequency=16000.0, num_channels=128, num_units=100,
+        durations=[30.0, 20.], sampling_frequency=16000.0, num_channels=4, num_units=5,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
         generate_unit_locations_kwargs=dict(
             margin_um=5.0,
@@ -42,21 +42,38 @@ def get_dataset():
 
 def test_extract_waveforms():
     recording, sorting = get_dataset()
-    print(recording)
-
-    folder = cache_folder / "mock_waveforms_extractor"
-    if folder.exists():
-        shutil.rmtree(folder)
-
-    we = mock_extract_waveforms(recording, sorting, folder=folder, sparse=True)
-    print(we)
 
     folder = cache_folder / "old_waveforms_extractor"
     if folder.exists():
         shutil.rmtree(folder)
 
-    we = old_extract_waveforms(recording, sorting, folder=folder, sparse=True)
-    print(we)
+    we_kwargs = dict(sparse=True, max_spikes_per_unit=30)
+
+    we_old = old_extract_waveforms(recording, sorting, folder=folder, **we_kwargs)
+    print(we_old)
+
+
+    folder = cache_folder / "mock_waveforms_extractor"
+    if folder.exists():
+        shutil.rmtree(folder)
+
+    we_mock = mock_extract_waveforms(recording, sorting, folder=folder, **we_kwargs)
+    print(we_mock)
+    
+    for we in (we_old, we_mock):
+
+        selected_spikes = we.get_sampled_indices(unit_id=sorting.unit_ids[0])
+        # print(selected_spikes.size, selected_spikes.dtype)
+
+        wfs = we.get_waveforms(sorting.unit_ids[0])
+        # print(wfs.shape)
+
+        wfs = we.get_waveforms(sorting.unit_ids[0], force_dense=True)
+        # print(wfs.shape)
+
+        templates = we.get_all_templates()
+        # print(templates.shape)
+
 
 
 if __name__ == "__main__":

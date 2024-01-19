@@ -117,35 +117,40 @@ class MockWaveformExtractor:
         return self.sorting_result.is_sparse()
     
     def has_waveforms(self) -> bool:
-
-        raise NotImplementedError
+        return self.sorting_result.get_extension("waveforms") is not None
 
     def delete_waveforms(self) -> None:
-        raise NotImplementedError
+        self.sorting_result.delete_extension("waveforms")
 
     @property
     def recording(self) -> BaseRecording:
-        raise NotImplementedError
+        return self.sorting_result.recording
+    
+    @property
+    def sorting(self) -> BaseSorting:
+        return self.sorting_result.sorting
 
     @property
     def channel_ids(self) -> np.ndarray:
-        raise NotImplementedError
+        return self.sorting_result.channel_ids
 
     @property
     def sampling_frequency(self) -> float:
-        raise NotImplementedError
+        return self.sorting_result.sampling_frequency
 
     @property
     def unit_ids(self) -> np.ndarray:
-        raise NotImplementedError
+        return self.sorting_result.unit_ids
 
     @property
     def nbefore(self) -> int:
-        raise NotImplementedError
+        ms_before = self.sorting_result.get_extension("waveforms").params["ms_before"]
+        return int(ms_before * self.sampling_frequency / 1000.0)
 
     @property
     def nafter(self) -> int:
-        raise NotImplementedError
+        ms_after = self.sorting_result.get_extension("waveforms").params["ms_after"]
+        return int(ms_after * self.sampling_frequency / 1000.0)
 
     @property
     def nsamples(self) -> int:
@@ -153,74 +158,68 @@ class MockWaveformExtractor:
 
     @property
     def return_scaled(self) -> bool:
-        raise NotImplementedError
+        return self.sorting_result.get_extension("waveforms").params["return_scaled"]
 
     @property
     def dtype(self):
-        raise NotImplementedError
+        return self.sorting_result.get_extension("waveforms").params["dtype"]
 
     def is_read_only(self) -> bool:
-        raise NotImplementedError
+        return self.sorting_result.is_read_only()
 
     def has_recording(self) -> bool:
-        raise NotImplementedError
+        return self.sorting_result._recording is not None
 
     def get_num_samples(self, segment_index: Optional[int] = None) -> int:
-        raise NotImplementedError
+        return self.sorting_result.get_num_samples(segment_index)
 
     def get_total_samples(self) -> int:
-        s = 0
-        for segment_index in range(self.get_num_segments()):
-            s += self.get_num_samples(segment_index)
-        return s
+        return self.sorting_result.get_total_samples()
 
     def get_total_duration(self) -> float:
-        duration = self.get_total_samples() / self.sampling_frequency
-        return duration
+        return self.sorting_result.get_total_duration()
 
     def get_num_channels(self) -> int:
-        raise NotImplementedError
-        # if self.has_recording():
-        #     return self.recording.get_num_channels()
-        # else:
-        #     return self._rec_attributes["num_channels"]
+        return self.sorting_result.get_num_channels()
 
     def get_num_segments(self) -> int:
-        return self.sorting_result.sorting.get_num_segments()
+        return self.sorting_result.get_num_segments()
 
     def get_probegroup(self):
-        raise NotImplementedError
-        # if self.has_recording():
-        #     return self.recording.get_probegroup()
-        # else:
-        #     return self._rec_attributes["probegroup"]
-
-    # def is_filtered(self) -> bool:
-    #     if self.has_recording():
-    #         return self.recording.is_filtered()
-    #     else:
-    #         return self._rec_attributes["is_filtered"]
+        return self.sorting_result.get_probegroup()
 
     def get_probe(self):
-        probegroup = self.get_probegroup()
-        assert len(probegroup.probes) == 1, "There are several probes. Use `get_probegroup()`"
-        return probegroup.probes[0]
+        return self.sorting_result.get_probe()
+
+    def is_filtered(self) -> bool:
+        return self.sorting_result.rec_attributes["is_filtered"]
 
     def get_channel_locations(self) -> np.ndarray:
-        raise NotImplementedError
+        return self.sorting_result.get_channel_locations()
 
     def channel_ids_to_indices(self, channel_ids) -> np.ndarray:
-        raise NotImplementedError
+        return self.sorting_result.channel_ids_to_indices(channel_ids)
 
     def get_recording_property(self, key) -> np.ndarray:
-        raise NotImplementedError
+        return self.sorting_result.get_recording_property(key)
 
     def get_sorting_property(self, key) -> np.ndarray:
-        return self.sorting.get_property(key)
+        return self.sorting_result.get_sorting_property(key)
 
-    # def has_extension(self, extension_name: str) -> bool:
-    #     raise NotImplementedError
-    
+    def has_extension(self, extension_name: str) -> bool:
+        return self.sorting_result.has_extension(extension_name)
+
+    def get_sampled_indices(self, unit_id):
+        # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) with a complex dtype as follow
+        selected_spikes = []
+        for segment_index in range(self.get_num_segments()):
+            inds = self.sorting_result.get_selected_indices_in_spike_train(unit_id, segment_index)
+            sampled_index = np.zeros(inds.size, dtype=[("spike_index", "int64"), ("segment_index", "int64")])
+            sampled_index["spike_index"] = inds
+            sampled_index["segment_index"][:] = segment_index
+            selected_spikes.append(sampled_index)
+        return np.concatenate(selected_spikes)
+
     def get_waveforms(
         self,
         unit_id,
@@ -229,26 +228,67 @@ class MockWaveformExtractor:
         lazy: bool = True,
         sparsity=None,
         force_dense: bool = False,
-    ):
-        raise NotImplementedError
-        
-    def get_sampled_indices(self, unit_id):
-        raise NotImplementedError
+    ):  
+        # lazy and cache are ingnored
+        ext = self.sorting_result.get_extension("waveforms")
+        unit_index = self.sorting.id_to_index(unit_id)
+        spikes = self.sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        spike_mask = some_spikes["unit_index"] == unit_index
+        wfs = ext.data["waveforms"][spike_mask, :, :]
 
+        if sparsity is not None:
+            assert self.sorting_result.sparsity is None, "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
+            wfs = wfs[:, :, sparsity.mask[self.sorting.id_to_index(unit_id)]]
+
+        if force_dense:
+            assert sparsity is None
+            if self.sorting_result.sparsity is None:
+                # nothing to do
+                pass
+            else:
+                num_channels = self.get_num_channels()
+                dense_wfs = np.zeros((wfs.shape[0], wfs.shape[1], num_channels), dtype=np.float32)
+                unit_sparsity = self.sorting_result.sparsity.mask[unit_index]
+                dense_wfs[:, :, unit_sparsity] = wfs
+                wfs = dense_wfs
+
+        if with_index:
+            sampled_index = self.get_sampled_indices(unit_id)
+            return wfs, sampled_index
+        else:
+            return wfs
 
     def get_all_templates(
         self, unit_ids: list | np.array | tuple | None = None, mode="average", percentile: float | None = None
     ):
-        raise NotImplementedError
+        ext = self.sorting_result.get_extension("templates")
+
+        if mode == "percentile":
+            key = f"pencentile_{percentile}"
+        else:
+            key = mode
+        
+        templates = ext.data.get(key)
+        if templates is None:
+            raise ValueError(f"{mode} is not computed")
+
+        if unit_ids is not None:
+            unit_indices = self.sorting.ids_to_indices(unit_ids)
+            templates = templates[unit_indices, :, :]
+
+        return templates
+
 
     def get_template(
         self, unit_id, mode="average", sparsity=None, force_dense: bool = False, percentile: float | None = None
     ):
-        raise NotImplementedError
+        # force_dense and sparsity are ignored
+        templates = self.get_all_templates(unit_ids=[unit_id], mode=mode, percentile=percentile)
+        return templates[0]
 
 
-
-def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None, output="SortingResult"):
+def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None, output="SortingResult", ):
     """
     This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingResult or MockWaveformExtractor.
 

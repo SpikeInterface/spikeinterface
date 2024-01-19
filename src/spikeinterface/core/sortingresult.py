@@ -161,6 +161,20 @@ class SortingResult:
         # extensions are not loaded at init
         self.extensions = dict()
 
+    def __repr__(self) -> str:
+        clsname = self.__class__.__name__
+        nseg = self.get_num_segments()
+        nchan = self.get_num_channels()
+        nunits = self.sorting.get_num_units()
+        txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
+        if self.is_sparse():
+            txt += " - sparse"
+        if self.has_recording():
+            txt += " - has recording"
+        ext_txt = f"Loaded {len(self.extensions)} extenstions: " + ", ".join(self.extensions.keys())
+        txt += "\n" + ext_txt
+        return txt
+
     ## create and load zone
 
     @classmethod
@@ -711,19 +725,12 @@ class SortingResult:
         indices = np.array([all_channel_ids.index(id) for id in channel_ids], dtype=int)
         return indices
 
-    def __repr__(self) -> str:
-        clsname = self.__class__.__name__
-        nseg = self.get_num_segments()
-        nchan = self.get_num_channels()
-        nunits = self.sorting.get_num_units()
-        txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
-        if self.is_sparse():
-            txt += " - sparse"
-        if self.has_recording():
-            txt += " - has recording"
-        ext_txt = f"Loaded {len(self.extensions)} extenstions: " + ", ".join(self.extensions.keys())
-        txt += "\n" + ext_txt
-        return txt
+    def get_recording_property(self, key) -> np.ndarray:
+        values = np.array(self.rec_attributes["properties"].get(key, None))
+        return values
+
+    def get_sorting_property(self, key) -> np.ndarray:
+        return self.sorting.get_property(key)
 
     ## extensions zone
     def compute(self, extension_name, **params):
@@ -883,7 +890,7 @@ class SortingResult:
 
     ## random_spikes_selection zone
     def select_random_spikes(self, **random_kwargs):
-
+        # random_spikes_indices is a vector that refer to the spike vector of the sorting in absolut index
         assert self.random_spikes_indices is None, "select random spikes is already computed"
 
         self.random_spikes_indices = random_spikes_selection(self.sorting, self.rec_attributes["num_samples"], **random_kwargs)
@@ -893,6 +900,17 @@ class SortingResult:
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root()
             zarr_root.create_dataset("random_spikes_indices", data=self.random_spikes_indices)
+
+    def get_selected_indices_in_spike_train(self, unit_id, segment_index):
+        # usefull for Waveforms extractor backwars compatibility
+        # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) of list (segment_index) of indices of spikes in spiketrain
+        assert self.random_spikes_indices is not None, "random spikes selection is not computeds"
+        unit_index = self.sorting.id_to_index(unit_id)
+        spikes = self.sorting.to_spike_vector()
+        spike_indices_in_seg = np.flatnonzero((spikes["segment_index"] == segment_index) & (spikes["unit_index"] == unit_index))
+        common_element, inds_left, inds_right  = np.intersect1d(spike_indices_in_seg, self.random_spikes_indices, return_indices=True)
+        selected_spikes_in_spike_train = inds_left
+        return selected_spikes_in_spike_train
 
 
 global _possible_extensions
@@ -962,7 +980,7 @@ class ResultExtension:
       * extension_name
       * depend_on
       * need_recording
-      * use_nodepiepline
+      * use_nodepipeline
       * _set_params()
       * _run()
       * _select_extension_data()
@@ -980,7 +998,7 @@ class ResultExtension:
     extension_name = None
     depend_on = []
     need_recording = False
-    use_nodepiepline = False
+    use_nodepipeline = False
 
     def __init__(self, sorting_result):
         self._sorting_result = weakref.ref(sorting_result)

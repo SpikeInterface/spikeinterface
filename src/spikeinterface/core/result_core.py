@@ -21,7 +21,7 @@ class ComputeWaveforms(ResultExtension):
     extension_name = "waveforms"
     depend_on = []
     need_recording = True
-    use_nodepiepline = False
+    use_nodepipeline = False
 
     def _run(self, **kwargs):
         self.data.clear()
@@ -134,7 +134,7 @@ class ComputeTemplates(ResultExtension):
     extension_name = "templates"
     depend_on = ["waveforms"]
     need_recording = False
-    use_nodepiepline = False
+    use_nodepipeline = False
 
     def _run(self, **kwargs):
         
@@ -219,7 +219,7 @@ class ComputeFastTemplates(ResultExtension):
     extension_name = "fast_templates"
     depend_on = []
     need_recording = True
-    use_nodepiepline = False
+    use_nodepipeline = False
 
     def _run(self, **kwargs):
         self.data.clear()
