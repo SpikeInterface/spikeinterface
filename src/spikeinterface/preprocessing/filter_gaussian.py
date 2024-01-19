@@ -115,6 +115,7 @@ gaussian_bandpass_filter = define_function_from_class(
     source_class=GaussianBandpassFilterRecording, name="gaussian_filter"
 )
 
+
 def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
     """
     Manual implementation of the Normal distribution pdf (probability density function).
@@ -135,4 +136,4 @@ def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
         The pdf of the Normal distribution for the given x-axis.
     """
 
-    return 1/(sigma * np.sqrt(2*np.pi)) * np.exp(-(x - mu)**2 / (2 * sigma**2))
+    return 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-((x - mu) ** 2) / (2 * sigma**2))
