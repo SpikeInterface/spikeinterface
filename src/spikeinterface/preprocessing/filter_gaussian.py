@@ -95,16 +95,14 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         sf = self.parent_recording_segment.sampling_frequency
         faxis = np.fft.fftfreq(N, d=1 / sf)
 
-        from scipy.stats import norm
-
         if cutoff_f > sf / 8:  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
             sigma = sf / (2 * np.pi * cutoff_f)
-            limit = int(round(6 * sigma)) + 1
+            limit = int(round(5 * sigma)) + 1
             xaxis = np.arange(-limit, limit + 1) / sigma
-            gaussian = norm.pdf(xaxis) / sigma
+            gaussian = normal_pdf(xaxis) / sigma
             gaussian = np.abs(np.fft.fft(gaussian, n=N))
         else:
-            gaussian = norm.pdf(faxis / cutoff_f) * np.sqrt(2 * np.pi)
+            gaussian = normal_pdf(faxis / cutoff_f) * np.sqrt(2 * np.pi)
 
         if cutoff_f not in self.cached_gaussian:
             self.cached_gaussian[cutoff_f] = dict()
@@ -116,3 +114,25 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 gaussian_bandpass_filter = define_function_from_class(
     source_class=GaussianBandpassFilterRecording, name="gaussian_filter"
 )
+
+def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
+    """
+    Manual implementation of the Normal distribution pdf (probability density function).
+    It is about 8 to 10 times faster than scipy.stats.norm.pdf().
+
+    Parameters
+    ----------
+    x: scalar or array
+        The x-axis
+    mu: float, default: 0.0
+        The mean of the Normal distribution.
+    sigma: float, default: 1.0
+        The standard deviation of the Normal distribution.
+
+    Returns
+    -------
+    normal_pdf: scalar or array (same type as 'x')
+        The pdf of the Normal distribution for the given x-axis.
+    """
+
+    return 1/(sigma * np.sqrt(2*np.pi)) * np.exp(-(x - mu)**2 / (2 * sigma**2))
