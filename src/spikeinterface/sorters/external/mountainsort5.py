@@ -42,7 +42,7 @@ class Mountainsort5Sorter(BaseSorter):
         "filter": True,
         "whiten": True,  # Important to do whitening
         "temporary_base_dir": None,
-        "n_jobs_for_preprocessing": 1,
+        "n_jobs_for_preprocessing": -1,
     }
 
     _params_description = {
