@@ -423,10 +423,10 @@ class LocalizeGridConvolution(PipelineNode):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
             num_spikes = len(idx)
             nearest_templates = self.nearest_template_mask[main_chan, :]
+
             num_templates = np.sum(nearest_templates)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
             sub_w = self.weights[:, channel_mask, :][:, :, nearest_templates]
-
             global_products = (waveforms[idx][:, :, channel_mask] * self.prototype).sum(axis=1)
 
             dot_products = np.zeros((nb_weights, num_spikes, num_templates), dtype=np.float32)
