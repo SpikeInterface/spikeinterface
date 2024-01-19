@@ -194,7 +194,7 @@ Further notes on preprocessing by channel group
         filtered_recording = common_reference(combined_recording)
 
     In the below example the first preprocessing step (bandpass filter)
-    would applied by channel group (although, in practice this would have no effect
+    would be applied by channel group (although, in practice this would have no effect
     as filtering is always applied separately to each individual channel).
 
     However, common referencing (does operate across
