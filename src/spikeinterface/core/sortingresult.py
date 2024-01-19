@@ -733,15 +733,22 @@ class SortingResult:
         return self.sorting.get_property(key)
 
     ## extensions zone
-    def compute(self, extension_name, **params):
+    def compute(self, extension_name, save=True, **params):
         """
         Compute one extension
 
         Parameters
         ----------
-        extension_name
+        extension_name: str
+            The name of the extension.
+            For instance "waveforms", "templates", ...
+        save: bool, default True
+            It the extension can be saved then it is saved.
+            If not then the extension will only live in memory as long as the object is deleted.
+            save=False is convinient to try some parameters without changing an already saved extension.
 
-        **params
+        **params: 
+            All other kwargs are transimited to extension.set_params()
 
         Returns
         -------
@@ -751,9 +758,9 @@ class SortingResult:
         Examples
         --------
 
-        >>> extension = sortres.compute("unit_location", **some_params)
-        >>> unit_location = extension.get_data()
-        
+        >>> extension = sortres.compute("waveforms", **some_params)
+        >>> wfs = extension.data["waveforms"]
+
         """
         
 
@@ -767,8 +774,8 @@ class SortingResult:
             assert ext is not None, f"Extension {extension_name} need {dependency_name} to be computed first"
         
         extension_instance = extension_class(self)
-        extension_instance.set_params(**params)
-        extension_instance.run()
+        extension_instance.set_params(save=save, **params)
+        extension_instance.run(save=save)
         
         self.extensions[extension_name] = extension_instance
 
@@ -1032,10 +1039,23 @@ class ResultExtension:
         class FuncWrapper:
             def __init__(self, extension_name):
                 self.extension_name = extension_name
-            def __call__(self, sorting_result, *args, **kwargs):
-                return sorting_result.compute(self.extension_name, *args, **kwargs)
+            def __call__(self, sorting_result, load_if_exists=None, *args, **kwargs):
+                # backward compatibility with "load_if_exists"
+                if load_if_exists is not None:
+                    warnings.warn(f"compute_{cls.extension_name}(..., load_if_exists=True/False) is kept for backward compatibility but should not be used anymore")
+                    assert isinstance(load_if_exists, bool)
+                    if load_if_exists:
+                        ext = sorting_result.get_extension(self.extension_name)
+                        return ext
+
+                ext = sorting_result.compute(cls.extension_name, *args, **kwargs)
+                # TODO be discussed 
+                return ext
+                # return ext.data
+                # return ext.get_data()
+
         func = FuncWrapper(cls.extension_name)
-        # TODO : make docstring from class docstring
+        func.__doc__ = cls.__doc__
         # TODO: add load_if_exists
         return func
 
@@ -1153,14 +1173,14 @@ class ResultExtension:
         new_extension.save()
         return new_extension
 
-    def run(self, **kwargs):
-        if not self.sorting_result.is_read_only():
+    def run(self, save=True, **kwargs):
+        if save and not self.sorting_result.is_read_only():
             # this also reset the folder or zarr group
             self._save_params()
 
         self._run(**kwargs)
 
-        if not self.sorting_result.is_read_only():
+        if save and not self.sorting_result.is_read_only():
             self._save_data(**kwargs)
 
     def save(self, **kwargs):
@@ -1260,7 +1280,7 @@ class ResultExtension:
         self.data = dict()
 
 
-    def set_params(self, **params):
+    def set_params(self, save=True, **params):
         """
         Set parameters for the extension and
         make it persistent in json.
@@ -1275,8 +1295,8 @@ class ResultExtension:
         if self.sorting_result.is_read_only():
             return
 
-        
-        self._save_params()
+        if save:
+            self._save_params()
 
     def _save_params(self):
         params_to_save = self.params.copy()
