@@ -165,6 +165,58 @@ class Templates:
             probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
 
+    def save_to_zarr(self, folder_path):
+        import zarr
+
+        zarr_group = zarr.open_group(folder_path, mode="w")
+
+        # Saves one chunk per unit
+        arrays_chunk = (1, None, None)
+        zarr_group.create_dataset("templates_array", data=self.templates_array, chunks=arrays_chunk)
+        zarr_group.create_dataset("channel_ids", data=self.channel_ids)
+        zarr_group.create_dataset("unit_ids", data=self.unit_ids)
+
+        zarr_group.attrs["sampling_frequency"] = self.sampling_frequency
+        zarr_group.attrs["nbefore"] = self.nbefore
+
+        if self.sparsity_mask is not None:
+            zarr_group.create_dataset("sparsity_mask", data=self.sparsity_mask)
+
+        if self.probe is not None:
+            probe_dict = self.probe.to_dict(array_as_list=True)
+            zarr_group.attrs["probe"] = probe_dict
+
+    @classmethod
+    def load_from_zarr(cls, folder_path):
+        import zarr
+
+        zarr_group = zarr.open_group(folder_path, mode="r")
+
+        templates_array = zarr_group["templates_array"][:]
+        channel_ids = zarr_group["channel_ids"][:]
+        unit_ids = zarr_group["unit_ids"][:]
+        sampling_frequency = zarr_group.attrs["sampling_frequency"]
+        nbefore = zarr_group.attrs["nbefore"]
+
+        sparsity_mask = None
+        if "sparsity_mask" in zarr_group:
+            sparsity_mask = zarr_group["sparsity_mask"][:]
+
+        probe = None
+        if "probe" in zarr_group.attrs:
+            probe_json = zarr_group.attrs["probe"]
+            probe = Probe.from_dict(probe_json)
+
+        return cls(
+            templates_array=templates_array,
+            sampling_frequency=sampling_frequency,
+            nbefore=nbefore,
+            sparsity_mask=sparsity_mask,
+            channel_ids=channel_ids,
+            unit_ids=unit_ids,
+            probe=probe,
+        )
+
     def to_json(self):
         from spikeinterface.core.core_tools import SIJsonEncoder
 
@@ -208,7 +260,10 @@ class Templates:
                     return False
             elif isinstance(s_field, Probe):
                 # TODO implement __eq__ in probeinterface...
-                pass
+                if not np.array_equal(s_field.contact_ids, o_field.contact_ids):
+                    return False
+                if not np.array_equal(s_field.contact_positions, o_field.contact_positions):
+                    return False
             else:
                 if s_field != o_field:
                     return False
