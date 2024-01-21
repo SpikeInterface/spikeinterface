@@ -187,20 +187,20 @@ class Templates:
             zarr_group.attrs["probe"] = probe_dict
 
     @classmethod
-    def load_from_zarr(cls, folder_path):
-        import zarr
+    def load_from_open_zarr_storage(cls, base_root):
+        # This function can be used for streaming where the base_root is already open
 
-        zarr_group = zarr.open_group(folder_path, mode="r")
+        zarr_group = base_root
 
-        templates_array = zarr_group["templates_array"][:]
-        channel_ids = zarr_group["channel_ids"][:]
-        unit_ids = zarr_group["unit_ids"][:]
+        templates_array = zarr_group["templates_array"]
+        channel_ids = zarr_group["channel_ids"]
+        unit_ids = zarr_group["unit_ids"]
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
-            sparsity_mask = zarr_group["sparsity_mask"][:]
+            sparsity_mask = zarr_group["sparsity_mask"]
 
         probe = None
         if "probe" in zarr_group.attrs:
@@ -216,6 +216,15 @@ class Templates:
             unit_ids=unit_ids,
             probe=probe,
         )
+
+    @classmethod
+    def load_from_zarr(cls, folder_path):
+        import zarr
+
+        zarr_group = zarr.open_group(folder_path, mode="r")
+
+        template_object = cls.load_from_open_zarr_storage(zarr_group)
+        return template_object
 
     def to_json(self):
         from spikeinterface.core.core_tools import SIJsonEncoder
