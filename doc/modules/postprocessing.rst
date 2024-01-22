@@ -96,8 +96,8 @@ For dense waveforms, sparsity can also be passed as an argument.
 .. code-block:: python
 
     pc = compute_principal_components(waveform_extractor=we,
-                                 n_components=3,
-                                 mode="by_channel_local")
+                                      n_components=3,
+                                      mode="by_channel_local")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_principal_components`
 
