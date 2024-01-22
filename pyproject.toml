@@ -21,7 +21,7 @@ classifiers = [
 
 dependencies = [
     "numpy",
-    "threadpoolctl",
+    "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr",
     "neo>=0.12.0",

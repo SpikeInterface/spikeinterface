@@ -197,7 +197,7 @@ Tested units are classified depending on their performance. We identify three di
   * **over-merged** units
 
 A **well-detected** unit is a unit whose performance is good. By default, a good performance is measured by an accuracy
-greater than 0.8-
+greater than 0.8.
 
 A **false positive** unit has low agreement scores for all GT units and is not matched.
 
@@ -216,11 +216,11 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
 
 
     # run a sorter and compare to ground truth
-    sorting_HS = run_sorter('herdingspike', recording)
+    sorting_HS = run_sorter(sorter_name='herdingspike', recording=recording)
     cmp_gt_HS = sc.compare_sorter_to_ground_truth(sorting_true, sorting_HS, exhaustive_gt=True)
 
 
-    # To have an overview of the match we can use the ordered agreement matrix
+    # To have an overview of the match we can use the ordered agreement matrix
     plot_agreement_matrix(cmp_gt_HS, ordered=True)
 
     # This function first matches the ground-truth and spike sorted units, and
@@ -229,13 +229,13 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
     perf = cmp_gt_HS.get_performance()
 
 
-    # The confusion matrix is also a good summary of the score as it has
-    # the same shape as an agreement matrix, but it contains an extra column for FN
+    # The confusion matrix is also a good summary of the score as it has
+    # the same shape as an agreement matrix, but it contains an extra column for FN
     # and an extra row for FP
     plot_confusion_matrix(cmp_gt_HS)
 
     # We can query the well and poorly detected units. By default, the threshold
-    # on accuracy is 0.95.
+    # for accuracy is 0.95.
     cmp_gt_HS.get_well_detected_units(well_detected_score=0.95)
 
     cmp_gt_HS.get_false_positive_units(redundant_score=0.2)
@@ -246,7 +246,7 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
 **Example: compare many sorters with a Ground Truth Study**
 
 We also have a high level class to compare many sorters against ground truth:
-:py:func:`~spiekinterface.comparison.GroundTruthStudy()`
+:py:func:`~spikeinterface.comparison.GroundTruthStudy()`
 
 A study is a systematic performance comparison of several ground truth recordings with several sorters or several cases
 like the different parameter sets.
@@ -254,7 +254,7 @@ like the different parameter sets.
 The study class proposes high-level tool functions to run many ground truth comparisons with many "cases"
 on many recordings and then collect and aggregate results in an easy way.
 
-The all mechanism is based on an intrinsic organization into a "study_folder" with several subfolder:
+The all mechanism is based on an intrinsic organization into a "study_folder" with several subfolders:
 
   * datasets: contains ground truth datasets
   * sorters : contains outputs of sorters
@@ -282,7 +282,7 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
         "toy1": (rec1, gt_sorting1),
     }
 
-    # define some "cases" here we want to tests tridesclous2 on 2 datasets and spykingcircus on one dataset
+    # define some "cases" here we want to test tridesclous2 on 2 datasets and spykingcircus2 on one dataset
     # so it is a two level study (sorter_name, dataset)
     # this could be more complicated like (sorter_name, dataset, params)
     cases = {
@@ -310,8 +310,8 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
             },
         },
     }
-    # this initilize a folder
-    study = GroundTruthStudy.create(study_folder, datasets=datasets, cases=cases,
+    # this initilizes a folder
+    study = GroundTruthStudy.create(study_folder=study_folder, datasets=datasets, cases=cases,
                                     levels=["sorter_name", "dataset"])
 
 
@@ -319,13 +319,13 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
     study.run_sorters()
 
     # Collect comparisons
-    #  
+    #
     # You can collect in one shot all results and run the
     # GroundTruthComparison on it.
     # So you can have fine access to all individual results.
-    #  
+    #
     # Note: use exhaustive_gt=True when you know exactly how many
-    # units in ground truth (for synthetic datasets)
+    # units in the ground truth (for synthetic datasets)
 
     # run all comparisons and loop over the results
     study.run_comparisons(exhaustive_gt=True)
@@ -340,13 +340,13 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
         perf_avg = comp.get_performance(method='pooled_with_average')
         # some plots
         m = comp.get_confusion_matrix()
-        w_comp = sw.plot_agreement_matrix(comp)
+        w_comp = sw.plot_agreement_matrix(sorting_comparison=comp)
 
     # Collect synthetic dataframes and display
     # As shown previously, the performance is returned as a pandas dataframe.
-    # The :py:func:`~spikeinterface.comparison.get_performance_by_unit()` function,
-    # gathers all the outputs in the study folder and merges them in a single dataframe.
-    # Same idea for :py:func:`~spikeinterface.comparison.get_count_units()`
+    # The spikeinterface.comparison.get_performance_by_unit() function,
+    # gathers all the outputs in the study folder and merges them into a single dataframe.
+    # Same idea for spikeinterface.comparison.get_count_units()
 
     # this is a dataframe
     perfs = study.get_performance_by_unit()
@@ -358,7 +358,7 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
     run_times = study.get_run_times()
     print(run_times)
 
-    # Easy plot with seaborn
+    # Easy plotting with seaborn
     fig1, ax1 = plt.subplots()
     sns.barplot(data=run_times, x='rec_name', y='run_time', hue='sorter_name', ax=ax1)
     ax1.set_title('Run times')
@@ -395,17 +395,22 @@ The :py:func:`~spikeinterface.comparison.compare_two_sorters()` returns the comp
 
 .. code-block:: python
 
+    import spikeinterface as si
+    import spikeinterface.extractors as se
+    import spikeinterface.sorters as ss
+    import spikeinterface.comparisons as sc
+    import spikinterface.widgets as sw
 
     # First, let's download a simulated dataset
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting = se.read_mearec(local_path)
 
     # Then run two spike sorters and compare their outputs.
-    sorting_HS = ss.run_sorter('herdingspikes', recording)
-    sorting_TDC = ss.run_sorter('tridesclous', recording)
+    sorting_HS = ss.run_sorter(sorter_name='herdingspikes', recording=recording)
+    sorting_TDC = ss.run_sorter(sorter_name='tridesclous', recording=recording)
 
     # Run the comparison
-    # Let’s see how to inspect and access this matching.
+    # Let's see how to inspect and access this matching.
     cmp_HS_TDC = sc.compare_two_sorters(
         sorting1=sorting_HS,
         sorting2=sorting_TDC,
@@ -413,16 +418,16 @@ The :py:func:`~spikeinterface.comparison.compare_two_sorters()` returns the comp
         sorting2_name='TDC',
     )
 
-    # We can check the agreement matrix to inspect the matching.
-    plot_agreement_matrix(cmp_HS_TDC)
+    # We can check the agreement matrix to inspect the matching.
+    sw.plot_agreement_matrix(sorting_comparison=cmp_HS_TDC)
 
-    # Some useful internal dataframes help to check the match and count
-    #  like **match_event_count** or **agreement_scores**
+    # Some useful internal dataframes help to check the match and count
+    # like **match_event_count** or **agreement_scores**
     print(cmp_HS_TDC.match_event_count)
     print(cmp_HS_TDC.agreement_scores)
 
-    # In order to check which units were matched, the :code:`get_matching`
-    # method can be used. If units are not matched they are listed as -1.
+    # In order to check which units were matched, the `comparison.get_matching()`
+    # method can be used. If units are not matched they are listed as -1.
     sc_to_tdc, tdc_to_sc = cmp_HS_TDC.get_matching()
     print('matching HS to TDC')
     print(sc_to_tdc)
@@ -457,9 +462,9 @@ Comparison of multiple sorters uses the following procedure:
     recording, sorting = se.read_mearec(local_path)
 
     # Then run 3 spike sorters and compare their outputs.
-    sorting_MS4 = ss.run_sorter('mountainsort4', recording)
-    sorting_HS = ss.run_sorter('herdingspikes', recording)
-    sorting_TDC = ss.run_sorter('tridesclous', recording)
+    sorting_MS4 = ss.run_sorter(sorter_name='mountainsort4', recording=recording)
+    sorting_HS = ss.run_sorter(sorter_name='herdingspikes', recording=recording)
+    sorting_TDC = ss.run_sorter(sorter_name='tridesclous', recording=recording)
 
     # Compare multiple spike sorter outputs
     mcmp = sc.compare_multiple_sorters(
@@ -477,12 +482,12 @@ Comparison of multiple sorters uses the following procedure:
     print(mcmp.comparisons[('MS4', 'TDC')].get_matching())
 
     # The global multi comparison can be visualized with this graph
-    sw.plot_multicomp_graph(mcmp)
+    sw.plot_multicomp_graph(multi_comparison=mcmp)
 
     # Consensus-based method
-    #  
+    #
     # We can pull the units in agreement with different sorters using the
-    # :py:func:`~spikeinterface.comparison.MultiSortingComparison.get_agreement_sorting` method.
+    # spikeinterface.comparison.MultiSortingComparison.get_agreement_sorting method.
     # This allows us to make spike sorting more robust by integrating the outputs of several algorithms.
     # On the other hand, it might suffer from weak performances of single algorithms.
     # When extracting the units in agreement, the spike trains are modified so
@@ -498,7 +503,7 @@ Comparison of multiple sorters uses the following procedure:
     agr_all = mcmp.get_agreement_sorting()
 
     # The unit index of the different sorters can also be retrieved from the
-    # agreement sorting object (:code:`agr_3`) property :code:`sorter_unit_ids`.
+    # agreement sorting object (`agr_3`) property `sorter_unit_ids`.
 
     print(agr_3.get_property('unit_ids'))
 
@@ -515,7 +520,7 @@ Template comparison
 For template comparisons, the underlying ideas are very similar to :ref:`symmetric` and :ref:`multiple`, for
 pairwise and multiple comparisons, respectively. In contrast to spike train comparisons, agreement is assessed
 in the similarity of templates rather than spiking events.
-This enables us to use exatly the same tools for both types of comparisons, just by changing the way that agreement
+This enables us to use exactly the same tools for both types of comparisons, just by changing the way that agreement
 scores are computed.
 
 The functions to compare templates take a list of :py:class:`~spikeinterface.core.WaveformExtractor` objects as input,
@@ -527,10 +532,10 @@ waveform extractors from day 1 (:code:`we_day1`) to day 5 (:code:`we_day5`):
     we_list = [we_day1, we_day2, we_day3, we_day4, we_day5]
 
     # match only day 1 and 2
-    p_tcmp = sc.compare_templates(we_day1, we_day2, we1_name="Day1", we2_name="Day2")
+    p_tcmp = sc.compare_templates(we1=we_day1, we2=we_day2, we1_name="Day1", we2_name="Day2")
 
     # match all
-    m_tcmp = sc.compare_multiple_templates(we_list,
+    m_tcmp = sc.compare_multiple_templates(waveform_list=we_list,
                                            name_list=["D1", "D2", "D3", "D4", "D5"])
 
 
@@ -538,7 +543,7 @@ waveform extractors from day 1 (:code:`we_day1`) to day 5 (:code:`we_day5`):
 Benchmark spike collisions
 --------------------------
 
-SpikeInterface also has a specific toolset to benchmark how good sorters are at recovering spikes in "collision".
+SpikeInterface also has a specific toolset to benchmark how well sorters are at recovering spikes in "collision".
 
 We have three classes to handle collision-specific comparisons, and also to quantify the effects on correlogram
 estimation:
