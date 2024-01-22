@@ -800,6 +800,9 @@ class WaveformExtractor:
 
                 if self.has_recording():
                     self.recording.dump(new_folder / "recording.json", relative_to=relative_to)
+
+                shutil.copytree(self.folder / "recording_info", new_folder / "recording_info")
+
                 sorting.dump(new_folder / "sorting.json", relative_to=relative_to)
 
                 # create and populate waveforms folder
@@ -824,7 +827,8 @@ class WaveformExtractor:
                     with (new_folder / "sparsity.json").open("w") as f:
                         json.dump(check_json(new_sparsity.to_dict()), f)
 
-                we = WaveformExtractor.load(new_folder)
+                we = WaveformExtractor.load(new_folder, with_recording=self.has_recording())
+
             elif self.format == "zarr":
                 raise NotImplementedError(
                     "For zarr format, `select_units()` to a folder is not supported yet. "
@@ -1990,6 +1994,8 @@ class BaseWaveformExtractorExtension:
                     ext_data = pd.read_csv(ext_data_file, index_col=0)
                 elif ext_data_file.suffix == ".pkl":
                     ext_data = pickle.load(ext_data_file.open("rb"))
+                else:
+                    continue
                 self._extension_data[ext_data_name] = ext_data
         elif self.format == "zarr":
             for ext_data_name in self.extension_group.keys():

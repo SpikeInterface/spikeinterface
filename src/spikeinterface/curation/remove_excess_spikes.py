@@ -30,16 +30,41 @@ class RemoveExcessSpikesSorting(BaseSorting):
             sorting.get_num_segments() == recording.get_num_segments()
         ), "The sorting and recording objects must have the same number of samples!"
 
+        self._parent_sorting = sorting
+        self._num_samples = np.empty(sorting.get_num_segments(), dtype=np.int64)
         for segment_index in range(sorting.get_num_segments()):
             sorting_segment = sorting._sorting_segments[segment_index]
-            num_samples = recording.get_num_samples(segment_index=segment_index)
-            self.add_sorting_segment(RemoveExcessSpikesSortingSegment(sorting_segment, num_samples))
+            self._num_samples[segment_index] = recording.get_num_samples(segment_index=segment_index)
+            self.add_sorting_segment(
+                RemoveExcessSpikesSortingSegment(sorting_segment, self._num_samples[segment_index])
+            )
 
         sorting.copy_metadata(self, only_main=False)
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 
         self._kwargs = {"sorting": sorting, "recording": recording}
+
+    def _custom_cache_spike_vector(self) -> None:
+        if self._parent_sorting._cached_spike_vector is None:
+            self._parent_sorting._custom_cache_spike_vector()
+
+            if self._parent_sorting._cached_spike_vector is None:
+                return
+
+        parent_spike_vector = self._parent_sorting._cached_spike_vector
+
+        list_spike_vectors = []
+        segments_bounds = np.searchsorted(
+            parent_spike_vector["segment_index"], np.arange(1 + parent_spike_vector["segment_index"][-1])
+        )
+        for segment_index in range(parent_spike_vector["segment_index"][-1]):
+            spike_vector = parent_spike_vector[segments_bounds[segment_index] : segments_bounds[segment_index + 1]]
+            end = np.searchsorted(spike_vector["sample_index"], self._num_samples[segment_index])
+            list_spike_vectors.append(spike_vector[:end])
+
+        spike_vector = np.concatenate(list_spike_vectors)
+        self._cached_spike_vector = spike_vector
 
 
 class RemoveExcessSpikesSortingSegment(BaseSortingSegment):

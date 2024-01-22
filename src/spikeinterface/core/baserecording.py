@@ -11,9 +11,12 @@ from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import (
     convert_bytes_to_str,
     convert_seconds_to_str,
+)
+from .recording_tools import (
     write_binary_recording,
     write_memory_recording,
 )
+
 from .job_tools import split_job_kwargs
 
 
@@ -438,12 +441,6 @@ class BaseRecording(BaseRecordingSnippets):
         return rs.time_to_sample_index(time_s)
 
     def _save(self, format="binary", **save_kwargs):
-        """
-        This function replaces the old CacheRecordingExtractor, but enables more engines
-        for caching a results. At the moment only "binary" with memmap is supported.
-        We plan to add other engines, such as zarr and NWB.
-        """
-
         # handle t_starts
         t_starts = []
         has_time_vectors = []
@@ -487,19 +484,19 @@ class BaseRecording(BaseRecordingSnippets):
             cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == "memory":
-            traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
-            from .numpyextractors import NumpyRecording
+            if kwargs.get("sharedmem", True):
+                from .numpyextractors import SharedMemoryRecording
 
-            cached = NumpyRecording(
-                traces_list, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids
-            )
+                cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
+            else:
+                cached = NumpyRecording.from_recording(self, **job_kwargs)
 
         elif format == "zarr":
             from .zarrextractors import ZarrRecordingExtractor
 
             zarr_path = kwargs.pop("zarr_path")
             storage_options = kwargs.pop("storage_options")
-            ZarrRecordingExtractor.write_recording(self, zarr_path, storage_options, **kwargs)
+            ZarrRecordingExtractor.write_recording(self, zarr_path, storage_options, **kwargs, **job_kwargs)
             cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
         elif format == "nwb":
@@ -547,6 +544,23 @@ class BaseRecording(BaseRecordingSnippets):
             time_vector = d["time_vector"]
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+
+    def rename_channels(self, new_channel_ids: list | np.array | tuple):
+        """
+        Returns a new recording object with renamed channel ids.
+
+        Parameters
+        ----------
+        new_channel_ids : list or np.array or tuple
+            The new channel ids. They are mapped positionally to the old channel ids.
+        """
+        from .channelslice import ChannelSliceRecording
+
+        assert len(new_channel_ids) == self.get_num_channels(), (
+            "new_channel_ids must have the same length as the " "number of channels in the recording"
+        )
+
+        return ChannelSliceRecording(self, renamed_channel_ids=new_channel_ids)
 
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceRecording
