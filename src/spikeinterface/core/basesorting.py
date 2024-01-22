@@ -283,7 +283,7 @@ class BaseSorting(BaseExtractor):
 
     def get_total_num_spikes(self):
         warnings.warn(
-            "Sorting.get_total_num_spikes() is deprecated, se sorting.count_num_spikes_per_unit()",
+            "Sorting.get_total_num_spikes() is deprecated and will be removed in spikeinterface 0.102, use sorting.count_num_spikes_per_unit()",
             DeprecationWarning,
             stacklevel=2,
         )
