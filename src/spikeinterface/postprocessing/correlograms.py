@@ -1,3 +1,4 @@
+from __future__ import annotations
 import math
 import warnings
 import numpy as np
@@ -139,7 +140,7 @@ def compute_correlograms(
     load_if_exists=False,
     window_ms: float = 50.0,
     bin_ms: float = 1.0,
-    method: str = "auto",
+    method: "auto" | "numpy" | "numba" = "auto",
 ):
     """Compute auto and cross correlograms.
 
@@ -161,7 +162,7 @@ def compute_correlograms(
     ccgs : np.array
         Correlograms with shape (num_units, num_units, num_bins)
         The diagonal of ccgs is the auto correlogram.
-        ccgs[A, B, :] is the symetrie of ccgs[B, A, :]
+        ccgs[A, B, :] is the symmetry of ccgs[B, A, :]
         ccgs[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
     bins :  np.array
         The bin edges in ms
@@ -302,7 +303,7 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
     Implementation: Aurélien Wyngaard
     """
 
-    assert HAVE_NUMBA
+    assert HAVE_NUMBA, "numba version of this function requires installation of numba"
 
     num_bins = 2 * int(window_size / bin_size)
     num_units = len(sorting.unit_ids)

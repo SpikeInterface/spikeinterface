@@ -536,13 +536,14 @@ def get_random_data_chunks(
     # check chunk size
     num_segments = recording.get_num_segments()
     for segment_index in range(num_segments):
-        if chunk_size > recording.get_num_frames(segment_index) - 2 * margin_frames:
-            error_message = (
+        chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames
+        if chunk_size > chunk_size_limit:
+            chunk_size = chunk_size_limit - 1
+            warnings.warn(
                 f"chunk_size is greater than the number "
                 f"of samples for segment index {segment_index}. "
-                f"Use a smaller chunk_size!"
+                f"Using {chunk_size}."
             )
-            raise ValueError(error_message)
 
     rng = np.random.default_rng(seed)
     chunk_list = []

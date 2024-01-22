@@ -9,7 +9,7 @@ The :py:mod:`spikeinterface.core` module provides the basic classes and tools of
 Several Base classes are implemented here and inherited throughout the SI code-base.
 The core classes are: :py:class:`~spikeinterface.core.BaseRecording` (for raw data),
 :py:class:`~spikeinterface.core.BaseSorting` (for spike-sorted data), and
-:py:class:`~spikeinterface.core.WaveformExtarctor` (for waveform extraction and postprocessing).
+:py:class:`~spikeinterface.core.WaveformExtractor` (for waveform extraction and postprocessing).
 
 There are additional classes to allow to retrieve events (:py:class:`~spikeinterface.core.BaseEvent`) and to
 handle unsorted waveform cutouts, or *snippets*, which are recorded by some acquisition systems
@@ -25,7 +25,7 @@ All classes support:
 Recording
 ---------
 
-The :py:class:`~spikeinterface.core.BaseRecording` class serves as the basis for all
+The :py:class:`~spikeinterface.core.BaseRecording` class serves as the basis of all
 :code:`Recording` classes.
 It interfaces with the raw traces and has the following features:
 
@@ -90,7 +90,7 @@ with 16 channels:
 
     # set times (for synchronization) - assume our times start at 300 seconds
     timestamps = np.arange(num_samples) / sampling_frequency + 300
-    recording.set_times(timestamps, segment_index=0)
+    recording.set_times(times=timestamps, segment_index=0)
 
 **Note**:
 Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (uV), you can apply a gain and an offset.
@@ -148,7 +148,7 @@ with 10 units:
     sorting_select_units = sorting.select_units(unit_ids=unit_ids[:4])
 
     # register 'recording' from the previous example and get the spike trains in seconds
-    sorting.register_recording(recording)
+    sorting.register_recording(recording=recording)
     spike_train_s = sorting.get_unit_spike_train(unit_id=unit0, segment_index=0,
                                                  return_times=True)
     ### NOTE ###
@@ -180,7 +180,7 @@ The :py:class:`~spikeinterface.core.WaveformExtractor` allows us to:
 * save sparse waveforms or *sparsify* dense waveforms
 * select units and associated waveforms
 
-The default format (:code:`mode='folder'`) which waveforms are saved to a folder structure with waveforms as
+In the default format (:code:`mode='folder'`) waveforms are saved to a folder structure with waveforms as
 :code:`.npy` files.
 In addition, waveforms can also be extracted in-memory for fast computations (:code:`mode='memory'`).
 Note that this mode can quickly fill up your RAM... Use it wisely!
@@ -217,8 +217,8 @@ Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be s
     we_loaded = load_waveforms(folder="waveforms")
 
     # retrieve waveforms and templates for a unit
-    waveforms0 = we.get_waveforms(unit0)
-    template0 = we.get_template(unit0)
+    waveforms0 = we.get_waveforms(unit_id=unit0)
+    template0 = we.get_template(unit_id=unit0)
 
     # compute template standard deviations (average is computed by default)
     # (this can also be done within the 'extract_waveforms')
@@ -393,8 +393,8 @@ probes, such as Neuropixels, because the waveforms of a unit will only appear on
 Sparsity is defined as the subset of channels on which waveforms (and related information) are defined. Of course,
 sparsity is not global, but it is unit-specific.
 
-**NOTE** As of version :code:`0.99.0` the default for a :code:`extract_waveforms()` has `sparse=True`, ie every :code:`waveform_extractor`
-will be sparse by default. Thus for users that wish to have dense waveforms they must set `sparse=False`. Keyword arguments
+**NOTE** As of version :code:`0.99.0` the default for a :code:`extract_waveforms()` has :code:`sparse=True`, i.e. every :code:`waveform_extractor`
+will be sparse by default. Thus for users that wish to have dense waveforms they must set :code:`sparse=False`. Keyword arguments
 can still be input into the :code:`extract_wavforms()` to generate the desired sparsity as explained below.
 
 Sparsity can be computed from a :py:class:`~spikeinterface.core.WaveformExtractor` object with the
@@ -429,7 +429,7 @@ The computed sparsity can be used in several postprocessing and visualization fu
 
 .. code-block:: python
 
-    we_sparse = we.save(waveform_extractor=we, sparsity=sparsity, folder="waveforms_sparse")
+    we_sparse = we.save(sparsity=sparsity, folder="waveforms_sparse")
 
 The :code:`we_sparse` object will now have an associated sparsity (:code:`we.sparsity`), which is automatically taken
 into consideration for downstream analysis (with the :py:meth:`~spikeinterface.core.WaveformExtractor.is_sparse`
@@ -549,7 +549,7 @@ In order to do this, one can use the :code:`Numpy*` classes, :py:class:`~spikein
 but they are not bound to a file.
 
 Also note the class :py:class:`~spikeinterface.core.SharedMemorySorting` which is very similar to
-Similar to :py:class:`~spikeinterface.core.NumpySorting` but with an underlying SharedMemory which is useful for
+:py:class:`~spikeinterface.core.NumpySorting` but with an underlying SharedMemory which is useful for
 parallel computing.
 
 In this example, we create a recording and a sorting object from numpy objects:
@@ -603,14 +603,14 @@ Manipulating objects: slicing, aggregating
 :py:class:`~spikeinterface.core.BaseRecording` (and :py:class:`~spikeinterface.core.BaseSnippets`)
 and :py:class:`~spikeinterface.core.BaseSorting` objects can be sliced on the time or channel/unit axis.
 
-This operations are completely lazy, as there is no data duplication. After slicing or aggregating,
-the new objects will be a *view* of the original ones.
+These operations are completely lazy, as there is no data duplication. After slicing or aggregating,
+the new objects will be *views* of the original ones.
 
 .. code-block:: python
 
     # here we load a very long recording and sorting
-    recording = read_spikeglx('np_folder')
-    sorting =read_kilosort('ks_folder')
+    recording = read_spikeglx(folder_path='np_folder')
+    sorting =read_kilosort(folder_path='ks_folder')
 
     # keep one channel of every tenth channel
     keep_ids = recording.channel_ids[::10]
