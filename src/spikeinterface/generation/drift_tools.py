@@ -513,3 +513,11 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_num_samples(self) -> int:
         return self.num_samples
+
+
+def get_templates_from_recording(recording, num_templates=None, **sc2_params):
+
+    from spikeinterface.sorters.runsorter import run_sorter
+
+    templates = run_sorter('spykingcircus2', recording, templates_only=True, **sc2_params)
+    return templates

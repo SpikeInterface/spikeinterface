@@ -46,6 +46,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
+        "templates_only": False,
     }
 
     handle_multi_segment = True
@@ -69,6 +70,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
+        "templates_only" : "Boolean to return only the Templates after the clustering, without the matching step",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "debug": "Boolean to specify if the internal data structure should be kept for debugging",
     }
@@ -225,6 +227,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 mode=mode,
                 **waveforms_params,
             )
+
+            if params["templates_only"]:
+                from spikeinterface.core.template import Templates
+                templates = Templates.from_waveform_extractor(we)
+                return templates
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
             matching_method = params["matching"]["method"]

@@ -165,6 +165,26 @@ class Templates:
             probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
 
+    @classmethod
+    def from_waveform_extractor(cls, waveforms):
+        templates = waveforms.get_all_templates(mode='median')
+        sparsity_mask = waveforms.sparsity.mask
+        channel_ids = waveforms.recording.channel_ids
+        unit_ids = waveforms.unit_ids
+        sampling_frequency = waveforms.sampling_frequency
+        nbefore = waveforms.nbefore
+        probe = waveforms.recording.get_probe()
+
+        return cls(
+            templates_array=templates,
+            sparsity_mask=sparsity_mask,
+            channel_ids=channel_ids,
+            unit_ids=unit_ids,
+            sampling_frequency=sampling_frequency,
+            nbefore=nbefore,
+            probe=probe,
+        )
+
     def to_json(self):
         from spikeinterface.core.core_tools import SIJsonEncoder
 
