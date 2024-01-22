@@ -7,6 +7,7 @@ import shutil
 from spikeinterface.core import generate_ground_truth_recording
 
 from spikeinterface.core.waveforms_extractor_backwards_compatibility import extract_waveforms as mock_extract_waveforms
+from spikeinterface.core.waveforms_extractor_backwards_compatibility import load_waveforms as load_waveforms_backwards
 
 # remove this when WaveformsExtractor will be removed
 from spikeinterface.core import extract_waveforms as old_extract_waveforms
@@ -49,9 +50,9 @@ def test_extract_waveforms():
 
     we_kwargs = dict(sparse=True, max_spikes_per_unit=30)
 
+    
     we_old = old_extract_waveforms(recording, sorting, folder=folder, **we_kwargs)
     print(we_old)
-
 
     folder = cache_folder / "mock_waveforms_extractor"
     if folder.exists():
@@ -73,6 +74,15 @@ def test_extract_waveforms():
 
         templates = we.get_all_templates()
         # print(templates.shape)
+
+
+
+    # test reading old WaveformsExtractor folder
+    folder = cache_folder / "old_waveforms_extractor"
+    sorting_result_from_we = load_waveforms_backwards(folder, output="SortingResult")
+    print(sorting_result_from_we)
+    mock_loaded_we_old = load_waveforms_backwards(folder, output="MockWaveformExtractor")
+    print(mock_loaded_we_old)
 
 
 

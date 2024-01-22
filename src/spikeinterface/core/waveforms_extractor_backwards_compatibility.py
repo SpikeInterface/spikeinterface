@@ -9,14 +9,20 @@ from typing import Literal, Optional
 
 from pathlib import Path
 
+import json
+
 import numpy as np
 
+import probeinterface
 
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 from .sortingresult import start_sorting_result
 from .job_tools import split_job_kwargs
-
+from .sparsity import ChannelSparsity
+from .sortingresult import SortingResult
+from .base import load_extractor
+from .result_core import ComputeWaveforms, ComputeTemplates
 
 _backwards_compatibility_msg = """####
 # extract_waveforms() and WaveformExtractor() have been replace by SortingResult since version 0.101
@@ -288,18 +294,188 @@ class MockWaveformExtractor:
         return templates[0]
 
 
+
 def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None, output="SortingResult", ):
     """
     This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingResult or MockWaveformExtractor.
 
     """
 
-    raise NotImplementedError
+    folder = Path(folder)
+    assert folder.is_dir(), "Waveform folder does not exists"
+    if folder.suffix == ".zarr":
+        raise NotImplementedError
+        # Alessio this is for you
+    else:
+        sorting_result = _read_old_waveforms_extractor_binary(folder)
 
-    # This will be something like this create a SortingResult in memory and copy/translate all data into the new structure.
-    # sorting_result = ...
+    if output == "SortingResult":
+        return sorting_result
+    elif output in ("WaveformExtractor", "MockWaveformExtractor"):
+        return MockWaveformExtractor(sorting_result)
 
-    # if output == "SortingResult":
-    #     return sorting_result
-    # elif output in ("WaveformExtractor", "MockWaveformExtractor"):
-    #     return MockWaveformExtractor(sorting_result)
+
+
+def _read_old_waveforms_extractor_binary(folder):
+    params_file = folder / "params.json"
+    if not params_file.exists():
+        raise ValueError(f"This folder is not a WaveformsExtractor folder {folder}")
+    with open(params_file, "r") as f:
+        params = json.load(f)
+
+    sparsity_file = folder / "sparsity.json"
+    if params_file.exists():
+        with open(sparsity_file, "r") as f:
+            sparsity_dict = json.load(f)
+            sparsity = ChannelSparsity.from_dict(sparsity_dict)
+    else:
+        sparsity = None
+
+    # recording attributes
+    rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
+    with open(rec_attributes_file, "r") as f:
+        rec_attributes = json.load(f)
+    probegroup_file = folder / "recording_info" / "probegroup.json"
+    if probegroup_file.is_file():
+        rec_attributes["probegroup"] = probeinterface.read_probeinterface(probegroup_file)
+    else:
+        rec_attributes["probegroup"] = None
+
+    # recording
+    recording = None
+    if (folder / "recording.json").exists():
+        try:
+            recording = load_extractor(folder / "recording.json", base_folder=folder)
+        except:
+            pass
+    elif (folder / "recording.pickle").exists():
+        try:
+            recording = load_extractor(folder / "recording.pickle", base_folder=folder)
+        except:
+            pass
+
+    # sorting
+    if (folder / "sorting.json").exists():
+        sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+    elif (folder / "sorting.pickle").exists():
+        sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
+
+    sorting_result = SortingResult.create_memory(sorting, recording, sparsity, rec_attributes=rec_attributes)
+
+    # waveforms
+    # need to concatenate all waveforms in one unique buffer
+    # need to concatenate sampled_index and order it
+    waveform_folder = folder / "waveforms"
+    if waveform_folder.exists():
+        
+        spikes = sorting.to_spike_vector()
+        random_spike_mask = np.zeros(spikes.size, dtype="bool")
+
+        all_sampled_indices = []
+        # first readd all sampled_index to get the correct ordering
+        for unit_index, unit_id in enumerate(sorting.unit_ids):
+            # unit_indices has dtype=[("spike_index", "int64"), ("segment_index", "int64")] 
+            unit_indices = np.load(waveform_folder / f"sampled_index_{unit_id}.npy")
+            for segment_index in range(sorting.get_num_segments()):
+                in_seg_selected = unit_indices[unit_indices["segment_index"] == segment_index]["spike_index"]
+                spikes_indices = np.flatnonzero((spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index))
+                random_spike_mask[spikes_indices[in_seg_selected]] = True
+        random_spikes_indices = np.flatnonzero(random_spike_mask)
+
+        num_spikes = random_spikes_indices.size
+        if sparsity is None:
+            max_num_channel = len(rec_attributes["channel_ids"])
+        else:
+            max_num_channel = np.max(np.sum(sparsity.mask, axis=1))
+
+        nbefore = int(params["ms_before"] * sorting.sampling_frequency / 1000.0)
+        nafter = int(params["ms_after"] * sorting.sampling_frequency / 1000.0)
+
+        waveforms = np.zeros((num_spikes, nbefore + nafter, max_num_channel), dtype=params["dtype"])
+        # then read waveforms per units
+        some_spikes = spikes[random_spikes_indices]
+        for unit_index, unit_id in enumerate(sorting.unit_ids):
+            wfs = np.load(waveform_folder / f"waveforms_{unit_id}.npy")
+            mask = some_spikes["unit_index"] == unit_index
+            waveforms[:, :, :wfs.shape[1]][mask, :, :] = wfs
+
+        sorting_result.random_spikes_indices = random_spikes_indices
+
+        ext = ComputeWaveforms(sorting_result)
+        ext.params = params
+        ext.data["waveforms"] = waveforms
+        sorting_result.extensions["waveforms"] = ext
+
+    # templates saved dense
+    # load cached templates
+    templates = {}
+    for mode in ("average", "std", "median", "percentile"):
+        template_file = folder / f"templates_{mode}.npy"
+        if template_file.is_file():
+            templates [mode] = np.load(template_file)
+    if len(templates) > 0:
+        ext = ComputeTemplates(sorting_result)
+        ext.params = dict(operators=list(templates.keys()))
+        for mode, arr in templates.items():
+            ext.data[mode] = arr
+        sorting_result.extensions["templates"] = ext
+
+
+    # TODO : implement this when extension will be prted in the new API
+    # old_extension_to_new_class : {
+        # old extensions with same names and equvalent data
+        # "spike_amplitudes": ,
+        # "spike_locations": ,
+        # "amplitude_scalings": ,
+        # "template_metrics" : ,
+        # "similarity": , 
+        # "unit_locations": ,
+        # "correlograms" : ,
+        # isi_histograms: ,
+        # "noise_levels": ,
+        # "quality_metrics": ,
+        # "principal_components" : , 
+    # }
+    # for ext_name, new_class in old_extension_to_new_class.items():
+    #     ext_folder = folder / ext_name
+    #     ext = new_class(sorting_result)
+    #     with open(ext_folder / "params.json", "r") as f:
+    #         params = json.load(f)
+    #     ext.params = params
+    #     if ext_name == "spike_amplitudes":
+    #         amplitudes = []
+    #         for segment_index in range(sorting.get_num_segments()):
+    #             amplitudes.append(np.load(ext_folder / f"amplitude_segment_{segment_index}.npy"))
+    #         amplitudes = np.concatenate(amplitudes)
+    #         ext.data["amplitudes"] = amplitudes
+    #     elif ext_name == "spike_locations":
+    #         ext.data["spike_locations"] = np.load(ext_folder / "spike_locations.npy")
+    #     elif ext_name == "amplitude_scalings":
+    #         ext.data["amplitude_scalings"] = np.load(ext_folder / "amplitude_scalings.npy")
+    #     elif ext_name == "template_metrics":
+    #         import pandas as pd
+    #         ext.data["metrics"] = pd.read_csv(ext_folder / "metrics.csv", index_col=0)
+    #     elif ext_name == "similarity":
+    #         ext.data["similarity"] = np.load(ext_folder / "similarity.npy")
+    #     elif ext_name == "unit_locations":
+    #         ext.data["unit_locations"] = np.load(ext_folder / "unit_locations.npy")
+    #     elif ext_name == "correlograms":
+    #         ext.data["ccgs"] = np.load(ext_folder / "ccgs.npy")
+    #         ext.data["bins"] = np.load(ext_folder / "bins.npy")
+    #     elif ext_name == "isi_histograms":
+    #         ext.data["isi_histograms"] = np.load(ext_folder / "isi_histograms.npy")
+    #         ext.data["bins"] = np.load(ext_folder / "bins.npy")
+    #     elif ext_name == "noise_levels":
+    #         ext.data["noise_levels"] = np.load(ext_folder / "noise_levels.npy")
+    #     elif ext_name == "quality_metrics":
+    #         import pandas as pd
+    #         ext.data["metrics"] = pd.read_csv(ext_folder / "metrics.csv", index_col=0)
+    #     elif ext_name == "principal_components":
+    #         # TODO: this is for you
+    #         pass
+
+
+
+    return sorting_result
+
+
