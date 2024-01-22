@@ -105,12 +105,20 @@ class MergeUnitsSorting(BaseSorting):
 
             if properties_policy == "keep":
                 # propagate keep values
-                new_values = np.empty(shape=len(units_ids), dtype=parent_values.dtype)
+                if isinstance(parent_values, np.ndarray):
+                    shape = (len(units_ids),) + parent_values.shape[1:]
+                else:
+                    shape = len(units_ids)
+                new_values = np.empty(shape=shape, dtype=parent_values.dtype)
                 new_values[keep_inds] = parent_values[keep_parent_inds]
                 for new_id, ids in zip(new_unit_ids, units_to_merge):
                     removed_inds = parent_sorting.ids_to_indices(ids)
                     merge_values = parent_values[removed_inds]
-                    if all(merge_values == merge_values[0]):
+                    if isinstance(parent_values, np.ndarray):
+                        same_property_values = np.all([np.array_equal(m, merge_values[0]) for m in merge_values[1:]])
+                    else:
+                        same_property_values = np.all([m == merge_values[0] for m in merge_values[1:]])
+                    if same_property_values:
                         # and new values only if they are all similar
                         ind = self.id_to_index(new_id)
                         new_values[ind] = merge_values[0]
