@@ -38,7 +38,7 @@ save the object:
 .. code-block:: python
 
     # here the spykingcircus2 sorter engine directly uses the lazy "recording_cmr" object
-    sorting = run_sorter(recording=recording_cmr, sorter_name='spykingcircus2')
+    sorting = run_sorter(sorter='spykingcircus2', recording=recording_cmr, sorter_name='spykingcircus2')
 
 Most of the external sorters, however, will need a binary file as input, so we can optionally save the processed
 recording with the efficient SpikeInterface :code:`save()` function:
@@ -315,7 +315,6 @@ Motion/drift correction
 
 Motion/drift correction is one of the most sophisticated preprocessing. See the :ref:`motion_correction` page for a full
 explanation.
-
 
 
 

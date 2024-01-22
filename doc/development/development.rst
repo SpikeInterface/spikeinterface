@@ -359,19 +359,10 @@ Now you can start filling out the required methods:
         return sorting
 
 When your spike sorter class is implemented, you have to add it to the list of available spike sorters in the
-`sorterlist.py`
-Moreover, you have to add a launcher function like `run_XXXX()`.
-
-.. code-block:: python
-
-    def run_myspikesorter(*args, **kwargs):
-        return run_sorter('myspikesorter', *args, **kwargs)
-
-
-When you are done you need to write a test in **tests/test_myspikesorter.py**. In order to be tested, you can
+`sorterlist.py`. Then you need to write a test in **tests/test_myspikesorter.py**. In order to be tested, you can
 install the required packages by changing the **pyproject.toml**. Note that MATLAB based tests cannot be run at the moment,
 but we recommend testing the implementation locally.
 
-After this you need to add a block in **doc/sorters_info.rst**
+After this you need to add a block in **doc/sorters_info.rst** to describe your sorter.
 
-Finally, make a pull request to the spikesorters repo, so we can review the code and merge it to the spikesorters!
+Finally, make a pull request so we can review the code and incorporate into the sorters module of SpikeInterface!
