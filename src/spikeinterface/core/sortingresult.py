@@ -770,8 +770,12 @@ class SortingResult:
         if extension_class.need_recording:
             assert self.has_recording(), f"Extension {extension_name} need the recording"
         for dependency_name in extension_class.depend_on:
-            ext = self.get_extension(dependency_name)
-            assert ext is not None, f"Extension {extension_name} need {dependency_name} to be computed first"
+            if "|" in dependency_name:
+                # at least one extension must be done : usefull for "templates|fast_templates" for instance
+                ok =  any(self.get_extension(name) is not None for name in dependency_name.split("|"))
+            else:
+                ok = self.get_extension(dependency_name) is not None
+            assert ok, f"Extension {extension_name} need {dependency_name} to be computed first"
         
         extension_instance = extension_class(self)
         extension_instance.set_params(save=save, **params)

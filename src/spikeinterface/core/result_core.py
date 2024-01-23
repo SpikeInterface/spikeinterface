@@ -23,6 +23,14 @@ class ComputeWaveforms(ResultExtension):
     need_recording = True
     use_nodepipeline = False
 
+    @property
+    def nbefore(self):
+        return int(self.params["ms_before"] * self.sorting_result.sampling_frequency / 1000.0)
+
+    @property
+    def nafter(self):
+        return int(self.params["ms_after"] * self.sorting_result.sampling_frequency / 1000.0)
+
     def _run(self, **kwargs):
         self.data.clear()
 
@@ -37,9 +45,6 @@ class ComputeWaveforms(ResultExtension):
         spikes = sorting.to_spike_vector()
         some_spikes = spikes[self.sorting_result.random_spikes_indices]
         
-        nbefore = int(self.params["ms_before"] * sorting.sampling_frequency / 1000.0)
-        nafter = int(self.params["ms_after"] * sorting.sampling_frequency / 1000.0)
-
         if self.format == "binary_folder":
             # in that case waveforms are extacted directly in files
             file_path = self._get_binary_extension_folder() / "waveforms.npy"
@@ -62,8 +67,8 @@ class ComputeWaveforms(ResultExtension):
             recording,
             some_spikes,
             unit_ids,
-            nbefore,
-            nafter,
+            self.nbefore,
+            self.nafter,
             mode=mode,
             return_scaled=self.params["return_scaled"],
             file_path=file_path,
@@ -195,8 +200,18 @@ class ComputeTemplates(ResultExtension):
                 assert len(operator) == 2
                 assert operator[0] == "percentile"
 
-        params = dict(operators=operators)
+        waveforms_extension = self.sorting_result.get_extension("waveforms")
+
+        params = dict(operators=operators, nbefore=waveforms_extension.nbefore, nafter=waveforms_extension.nafter)
         return params
+
+    @property
+    def nbefore(self):
+        return self.params["nbefore"]
+
+    @property
+    def nafter(self):
+        return self.params["nafter"]
 
     def _select_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
@@ -221,6 +236,14 @@ class ComputeFastTemplates(ResultExtension):
     need_recording = True
     use_nodepipeline = False
 
+    @property
+    def nbefore(self):
+        return int(self.params["ms_before"] * self.sorting_result.sampling_frequency / 1000.0)
+
+    @property
+    def nafter(self):
+        return int(self.params["ms_after"] * self.sorting_result.sampling_frequency / 1000.0)
+
     def _run(self, **kwargs):
         self.data.clear()
 
@@ -235,13 +258,10 @@ class ComputeFastTemplates(ResultExtension):
         spikes = sorting.to_spike_vector()
         some_spikes = spikes[self.sorting_result.random_spikes_indices]
         
-        nbefore = int(self.params["ms_before"] * sorting.sampling_frequency / 1000.0)
-        nafter = int(self.params["ms_after"] * sorting.sampling_frequency / 1000.0)
-
         return_scaled = self.params["return_scaled"]
 
         # TODO jobw_kwargs
-        self.data["average"] = estimate_templates(recording, some_spikes, unit_ids, nbefore, nafter, return_scaled=return_scaled)
+        self.data["average"] = estimate_templates(recording, some_spikes, unit_ids, self.nbefore, self.nafter, return_scaled=return_scaled)
     
     def _set_params(self,
             ms_before: float = 1.0,

@@ -15,7 +15,7 @@ from .principal_component import (
     compute_principal_components,
 )
 
-from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculator
+from .spike_amplitudes import compute_spike_amplitudes, ComputeSpikeAmplitudes
 
 from .correlograms import (
     CorrelogramsCalculator,

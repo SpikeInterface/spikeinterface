@@ -156,9 +156,9 @@ if __name__ == '__main__':
     # test_ComputeWaveforms(format="zarr", sparse=True)
     # test_ComputeWaveforms(format="zarr", sparse=False)
 
-    # test_ComputeTemplates(format="memory", sparse=True)
-    # test_ComputeTemplates(format="memory", sparse=False)
-    # test_ComputeTemplates(format="binary_folder", sparse=True)
-    # test_ComputeTemplates(format="zarr", sparse=True)
+    test_ComputeTemplates(format="memory", sparse=True)
+    test_ComputeTemplates(format="memory", sparse=False)
+    test_ComputeTemplates(format="binary_folder", sparse=True)
+    test_ComputeTemplates(format="zarr", sparse=True)
 
-    test_ComputeFastTemplates(format="memory", sparse=True)
+    # test_ComputeFastTemplates(format="memory", sparse=True)

@@ -5,18 +5,45 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kw
 
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
 
-from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+# from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+
+from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
 
 
-class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
+class ComputeSpikeAmplitudes(ResultExtension):
     """
-    Computes spike amplitudes from WaveformExtractor.
-    """
+    ResultExtension
+    Computes the spike amplitudes.
 
+    Need "templates" or "fast_templates" to be computed first.
+
+    1. Determine the max channel per unit.
+    2. Then a "peak_shift" is estimated because for some sorters the spike index is not always at the
+       peak.
+    3. Amplitudes are extracted in chunks (parallel or not)
+
+    Parameters
+    ----------
+    sorting_result: SortingResult
+        The waveform extractor object
+    load_if_exists : bool, default: False
+        Whether to load precomputed spike amplitudes, if they already exist.
+    peak_sign: "neg" | "pos" | "both", default: "neg
+        The sign to compute maximum channel
+    return_scaled: bool
+        If True and recording has gain_to_uV/offset_to_uV properties, amplitudes are converted to uV.
+    outputs: "concatenated" | "by_unit", default: "concatenated"
+        How the output should be returned
+    {}
+    """
     extension_name = "spike_amplitudes"
+    depend_on = ["fast_templates|templates", ]
+    need_recording = True
+    # TODO: implement this as a pipeline
+    use_nodepipeline = False
 
-    def __init__(self, waveform_extractor):
-        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
+    def __init__(self, sorting_result):
+        ResultExtension.__init__(self, sorting_result)
 
         self._all_spikes = None
 
@@ -25,37 +52,34 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
-        # load filter and save amplitude files
-        sorting = self.waveform_extractor.sorting
-        spikes = sorting.to_spike_vector(concatenated=False)
-        (keep_unit_indices,) = np.nonzero(np.isin(sorting.unit_ids, unit_ids))
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
 
-        new_extension_data = dict()
-        for seg_index in range(sorting.get_num_segments()):
-            amp_data_name = f"amplitude_segment_{seg_index}"
-            amps = self._extension_data[amp_data_name]
-            filtered_idxs = np.isin(spikes[seg_index]["unit_index"], keep_unit_indices)
-            new_extension_data[amp_data_name] = amps[filtered_idxs]
-        return new_extension_data
+        spikes = self.sorting_result.sorting.to_spike_vector()
+        keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
+
+        new_data = dict()
+        new_data["amplitudes"] = self.data["amplitudes"][keep_spike_mask]
+
+        return new_data
 
     def _run(self, **job_kwargs):
-        if not self.waveform_extractor.has_recording():
-            self.waveform_extractor.delete_extension(SpikeAmplitudesCalculator.extension_name)
-            raise ValueError("compute_spike_amplitudes() cannot run with a WaveformExtractor in recordless mode.")
+        if not self.sorting_result.has_recording():
+            self.sorting_result.delete_extension(ComputeSpikeAmplitudes.extension_name)
+            raise ValueError("compute_spike_amplitudes() cannot run with a SortingResult in recordless mode.")
 
         job_kwargs = fix_job_kwargs(job_kwargs)
-        we = self.waveform_extractor
-        recording = we.recording
-        sorting = we.sorting
+        sorting_result = self.sorting_result
+        recording = sorting_result.recording
+        sorting = sorting_result.sorting
 
         all_spikes = sorting.to_spike_vector()
         self._all_spikes = all_spikes
 
-        peak_sign = self._params["peak_sign"]
-        return_scaled = self._params["return_scaled"]
+        peak_sign = self.params["peak_sign"]
+        return_scaled = self.params["return_scaled"]
 
-        extremum_channels_index = get_template_extremum_channel(we, peak_sign=peak_sign, outputs="index")
-        peak_shifts = get_template_extremum_channel_peak_shift(we, peak_sign=peak_sign)
+        extremum_channels_index = get_template_extremum_channel(sorting_result, peak_sign=peak_sign, outputs="index")
+        peak_shifts = get_template_extremum_channel_peak_shift(sorting_result, peak_sign=peak_sign)
 
         # put extremum_channels_index and peak_shifts in vector way
         extremum_channels_index = np.array(
@@ -77,104 +101,81 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         processor = ChunkRecordingExecutor(
             recording, func, init_func, init_args, handle_returns=True, job_name="extract amplitudes", **job_kwargs
         )
-        out = processor.run()
-        amps, segments = zip(*out)
+        # out = processor.run()
+        # amps, segments = zip(*out)
+        # amps = np.concatenate(amps)
+        # segments = np.concatenate(segments)
+
+        # for segment_index in range(recording.get_num_segments()):
+        #     mask = segments == segment_index
+        #     amps_seg = amps[mask]
+        #     self._extension_data[f"amplitude_segment_{segment_index}"] = amps_seg
+        amps = processor.run()
         amps = np.concatenate(amps)
-        segments = np.concatenate(segments)
+        self.data["amplitudes"] = amps
 
-        for segment_index in range(recording.get_num_segments()):
-            mask = segments == segment_index
-            amps_seg = amps[mask]
-            self._extension_data[f"amplitude_segment_{segment_index}"] = amps_seg
+    # def get_data(self, outputs="concatenated"):
+    #     """
+    #     Get computed spike amplitudes.
 
-    def get_data(self, outputs="concatenated"):
-        """
-        Get computed spike amplitudes.
+    #     Parameters
+    #     ----------
+    #     outputs : "concatenated" | "by_unit", default: "concatenated"
+    #         The output format
 
-        Parameters
-        ----------
-        outputs : "concatenated" | "by_unit", default: "concatenated"
-            The output format
+    #     Returns
+    #     -------
+    #     spike_amplitudes : np.array or dict
+    #         The spike amplitudes as an array (outputs="concatenated") or
+    #         as a dict with units as key and spike amplitudes as values.
+    #     """
+    #     sorting_result = self.sorting_result
+    #     sorting = sorting_result.sorting
 
-        Returns
-        -------
-        spike_amplitudes : np.array or dict
-            The spike amplitudes as an array (outputs="concatenated") or
-            as a dict with units as key and spike amplitudes as values.
-        """
-        we = self.waveform_extractor
-        sorting = we.sorting
+    #     if outputs == "concatenated":
+    #         amplitudes = []
+    #         for segment_index in range(sorting_result.get_num_segments()):
+    #             amplitudes.append(self._extension_data[f"amplitude_segment_{segment_index}"])
+    #         return amplitudes
+    #     elif outputs == "by_unit":
+    #         all_spikes = sorting.to_spike_vector(concatenated=False)
 
-        if outputs == "concatenated":
-            amplitudes = []
-            for segment_index in range(we.get_num_segments()):
-                amplitudes.append(self._extension_data[f"amplitude_segment_{segment_index}"])
-            return amplitudes
-        elif outputs == "by_unit":
-            all_spikes = sorting.to_spike_vector(concatenated=False)
+    #         amplitudes_by_unit = []
+    #         for segment_index in range(sorting_result.get_num_segments()):
+    #             amplitudes_by_unit.append({})
+    #             for unit_index, unit_id in enumerate(sorting.unit_ids):
+    #                 spike_labels = all_spikes[segment_index]["unit_index"]
+    #                 mask = spike_labels == unit_index
+    #                 amps = self._extension_data[f"amplitude_segment_{segment_index}"][mask]
+    #                 amplitudes_by_unit[segment_index][unit_id] = amps
+    #         return amplitudes_by_unit
 
-            amplitudes_by_unit = []
-            for segment_index in range(we.get_num_segments()):
-                amplitudes_by_unit.append({})
-                for unit_index, unit_id in enumerate(sorting.unit_ids):
-                    spike_labels = all_spikes[segment_index]["unit_index"]
-                    mask = spike_labels == unit_index
-                    amps = self._extension_data[f"amplitude_segment_{segment_index}"][mask]
-                    amplitudes_by_unit[segment_index][unit_id] = amps
-            return amplitudes_by_unit
-
-    @staticmethod
-    def get_extension_function():
-        return compute_spike_amplitudes
+    # @staticmethod
+    # def get_extension_function():
+    #     return compute_spike_amplitudes
 
 
-WaveformExtractor.register_extension(SpikeAmplitudesCalculator)
+# WaveformExtractor.register_extension(SpikeAmplitudesCalculator)
+register_result_extension(ComputeSpikeAmplitudes)
+
+compute_spike_amplitudes = ComputeSpikeAmplitudes.function_factory()
+
+# def compute_spike_amplitudes(
+#     sorting_result, load_if_exists=False, peak_sign="neg", return_scaled=True, outputs="concatenated", **job_kwargs
+# ):
+
+#     if load_if_exists and sorting_result.has_extension(SpikeAmplitudesCalculator.extension_name):
+#         sac = sorting_result.load_extension(SpikeAmplitudesCalculator.extension_name)
+#     else:
+#         sac = SpikeAmplitudesCalculator(sorting_result)
+#         sac.set_params(peak_sign=peak_sign, return_scaled=return_scaled)
+#         sac.run(**job_kwargs)
+
+#     amps = sac.get_data(outputs=outputs)
+#     return amps
 
 
-def compute_spike_amplitudes(
-    waveform_extractor, load_if_exists=False, peak_sign="neg", return_scaled=True, outputs="concatenated", **job_kwargs
-):
-    """
-    Computes the spike amplitudes from a WaveformExtractor.
-
-    1. The waveform extractor is used to determine the max channel per unit.
-    2. Then a "peak_shift" is estimated because for some sorters the spike index is not always at the
-       peak.
-    3. Amplitudes are extracted in chunks (parallel or not)
-
-    Parameters
-    ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor object
-    load_if_exists : bool, default: False
-        Whether to load precomputed spike amplitudes, if they already exist.
-    peak_sign: "neg" | "pos" | "both", default: "neg
-        The sign to compute maximum channel
-    return_scaled: bool
-        If True and recording has gain_to_uV/offset_to_uV properties, amplitudes are converted to uV.
-    outputs: "concatenated" | "by_unit", default: "concatenated"
-        How the output should be returned
-    {}
-
-    Returns
-    -------
-    amplitudes: np.array or list of dict
-        The spike amplitudes.
-            - If "concatenated" all amplitudes for all spikes and all units are concatenated
-            - If "by_unit", amplitudes are returned as a list (for segments) of dictionaries (for units)
-    """
-    if load_if_exists and waveform_extractor.has_extension(SpikeAmplitudesCalculator.extension_name):
-        sac = waveform_extractor.load_extension(SpikeAmplitudesCalculator.extension_name)
-    else:
-        sac = SpikeAmplitudesCalculator(waveform_extractor)
-        sac.set_params(peak_sign=peak_sign, return_scaled=return_scaled)
-        sac.run(**job_kwargs)
-
-    amps = sac.get_data(outputs=outputs)
-    return amps
-
-
-compute_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
+# compute_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
 
 
 def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, peak_shifts, return_scaled):
@@ -241,6 +242,7 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
         # and get amplitudes
         amplitudes = traces[sample_inds, chan_inds]
 
-    segments = np.zeros(amplitudes.size, dtype="int64") + segment_index
+    # segments = np.zeros(amplitudes.size, dtype="int64") + segment_index
 
-    return amplitudes, segments
+    # return amplitudes, segments
+    return amplitudes
