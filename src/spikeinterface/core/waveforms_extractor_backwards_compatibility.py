@@ -397,7 +397,7 @@ def _read_old_waveforms_extractor_binary(folder):
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             wfs = np.load(waveform_folder / f"waveforms_{unit_id}.npy")
             mask = some_spikes["unit_index"] == unit_index
-            waveforms[:, :, :wfs.shape[1]][mask, :, :] = wfs
+            waveforms[:, :, :wfs.shape[2]][mask, :, :] = wfs
 
         sorting_result.random_spikes_indices = random_spikes_indices
 
