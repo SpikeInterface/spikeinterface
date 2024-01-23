@@ -647,6 +647,8 @@ class NormalizedTemplateDiff:
         num_samples = template0.shape[0]
         # norm = np.mean(np.abs(template0)) + np.mean(np.abs(template1))
         norm = np.mean(np.abs(template0) + np.abs(template1))
+        # norm = np.median(np.abs(template0) + np.abs(template1))
+
         all_shift_diff = []
         for shift in range(-num_shift, num_shift + 1):
             temp0 = template0[num_shift : num_samples - num_shift, :]
@@ -663,18 +665,19 @@ class NormalizedTemplateDiff:
             final_shift = 0
             merge_value = np.nan
 
-        DEBUG = False
-        # DEBUG = True
-        if DEBUG and normed_diff < 0.2:
-            # if DEBUG:
+        # DEBUG = False
+        DEBUG = True
+        # if DEBUG and normed_diff < 0.2:
+        if DEBUG:
 
             import matplotlib.pyplot as plt
 
-            fig, ax = plt.subplots()
+            fig, axs = plt.subplots(nrows=2)
 
             m0 = template0.T.flatten()
             m1 = template1.T.flatten()
-
+            
+            ax = axs[0]
             ax.plot(m0, color="C0", label=f"{label0} {inds0.size}")
             ax.plot(m1, color="C1", label=f"{label1} {inds1.size}")
 
@@ -682,6 +685,21 @@ class NormalizedTemplateDiff:
                 f"union{union_chans.size} intersect{target_chans.size} \n {normed_diff:.3f} {final_shift} {is_merge}"
             )
             ax.legend()
+
+            ax = axs[1]
+
+            #~ temp0 = template0[num_shift : num_samples - num_shift, :]
+            #~ temp1 = template1[num_shift + shift : num_samples - num_shift + shift, :]
+            ax.plot(np.abs(m0 - m1))
+            ax.axhline(norm)
+            # ax.plot(np.abs(m0) + np.abs(m1))
+
+            # ax.plot(np.abs(m0 - m1) / (np.abs(m0) + np.abs(m1)))
+
+            ax.set_title(f"{norm}")
+
+
+
             plt.show()
 
         return is_merge, label0, label1, final_shift, merge_value
