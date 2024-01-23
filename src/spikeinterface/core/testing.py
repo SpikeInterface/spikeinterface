@@ -78,6 +78,8 @@ def check_sortings_equal(
 ) -> None:
     assert SX1.get_num_segments() == SX2.get_num_segments()
 
+    max_spike_index = SX1.to_spike_vector()["sample_index"].max()
+
     # TODO for later  use to_spike_vector() to do this without looping
     for segment_idx in range(SX1.get_num_segments()):
         # get_unit_ids
@@ -87,6 +89,20 @@ def check_sortings_equal(
         for id in ids1:
             train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx))
             train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx))
+            assert np.array_equal(train1, train2)
+            train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30))
+            train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30))
+            assert np.array_equal(train1, train2)
+            # test that slicing works correctly
+            train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx, end_frame=max_spike_index - 30))
+            train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx, end_frame=max_spike_index - 30))
+            assert np.array_equal(train1, train2)
+            train1 = np.sort(
+                SX1.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30, end_frame=max_spike_index - 30)
+            )
+            train2 = np.sort(
+                SX2.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30, end_frame=max_spike_index - 30)
+            )
             assert np.array_equal(train1, train2)
 
     if check_annotations:

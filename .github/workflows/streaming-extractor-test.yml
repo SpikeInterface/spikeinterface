@@ -34,7 +34,7 @@ jobs:
         run: sudo apt install libopenblas-dev  # Necessary for ROS3 support
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v41
       - name: Module changes
         id: modules-changed
         run: |

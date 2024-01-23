@@ -4,8 +4,14 @@ import numpy as np
 
 import probeinterface
 
-from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
+from spikeinterface.core import (
+    BinaryRecordingExtractor,
+    BaseRecordingSegment,
+    BaseSorting,
+    BaseSortingSegment,
+    write_binary_recording,
+)
+from spikeinterface.core.core_tools import define_function_from_class
 
 
 class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):

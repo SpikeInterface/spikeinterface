@@ -10,6 +10,7 @@ from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
     NoiseGeneratorRecording,
+    TransformSorting,
     generate_recording_by_size,
     InjectTemplatesRecording,
     generate_single_fake_waveform,
@@ -17,8 +18,10 @@ from spikeinterface.core.generate import (
     generate_channel_locations,
     generate_unit_locations,
     generate_ground_truth_recording,
+    generate_sorting_to_inject,
 )
 
+from spikeinterface.core.numpyextractors import NumpySorting
 
 from spikeinterface.core.core_tools import convert_bytes_to_str
 
@@ -452,12 +455,79 @@ def test_inject_templates():
         check_recordings_equal(rec, saved_loaded, return_scaled=False)
 
 
+def test_transformsorting():
+    sorting_1 = generate_sorting(seed=0)
+    sorting_2 = generate_sorting(seed=1)
+    sorting_3 = generate_sorting(num_units=50, seed=1)
+
+    transformed_1 = TransformSorting(sorting_1, sorting_2.to_spike_vector())
+    n_spikes_1 = len(sorting_1.to_spike_vector())
+    n_spikes_2 = len(sorting_2.to_spike_vector())
+    n_spikes_added_1 = len(transformed_1.to_spike_vector())
+    assert n_spikes_added_1 == n_spikes_1 + n_spikes_2
+
+    transformed = TransformSorting.add_from_sorting(sorting_1, sorting_3)
+    assert len(transformed.unit_ids) == 50
+
+    sorting_1 = NumpySorting.from_unit_dict({46: np.array([0, 150], dtype=int)}, sampling_frequency=20000.0)
+    sorting_2 = NumpySorting.from_unit_dict(
+        {0: np.array([100, 2000], dtype=int), 3: np.array([200, 4000], dtype=int)}, sampling_frequency=20000.0
+    )
+    transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
+    assert len(transformed.unit_ids) == 3
+    assert np.all(np.array([k for k in transformed.count_num_spikes_per_unit(outputs="array")]) == 2)
+
+    sorting_1 = NumpySorting.from_unit_dict({0: np.array([12], dtype=int)}, sampling_frequency=20000.0)
+    sorting_2 = NumpySorting.from_unit_dict(
+        {0: np.array([150], dtype=int), 3: np.array([12, 150], dtype=int)}, sampling_frequency=20000.0
+    )
+    transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
+    assert len(transformed.unit_ids) == 2
+    target_array = np.array([2, 2])
+    source_array = np.array([k for k in transformed.count_num_spikes_per_unit(outputs="array")])
+    assert np.array_equal(source_array, target_array)
+
+    assert transformed.get_added_spikes_from_existing_indices().size == 1
+    assert transformed.get_added_spikes_from_new_indices().size == 2
+    assert transformed.get_added_units_inds() == [3]
+
+    transformed = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
+
+    sorting_1 = generate_sorting(seed=0)
+    transformed = TransformSorting(sorting_1, sorting_1.to_spike_vector(), refractory_period_ms=0)
+    assert len(sorting_1.to_spike_vector()) == len(transformed.to_spike_vector())
+
+    transformed = TransformSorting(sorting_1, sorting_1.to_spike_vector(), refractory_period_ms=5)
+    assert 2 * len(sorting_1.to_spike_vector()) > len(transformed.to_spike_vector())
+
+    transformed_2 = TransformSorting(sorting_1, transformed.to_spike_vector())
+    assert len(transformed_2.to_spike_vector()) > len(transformed.to_spike_vector())
+
+    assert np.sum(transformed_2.get_added_spikes_indices()) >= np.sum(transformed_2.get_added_spikes_from_new_indices())
+    assert np.sum(transformed_2.get_added_spikes_indices()) >= np.sum(
+        transformed_2.get_added_spikes_from_existing_indices()
+    )
+
+
 def test_generate_ground_truth_recording():
     rec, sorting = generate_ground_truth_recording(upsample_factor=None)
     assert rec.templates.ndim == 3
 
     rec, sorting = generate_ground_truth_recording(upsample_factor=2)
     assert rec.templates.ndim == 4
+
+
+def test_generate_sorting_to_inject():
+    durations = [10.0, 20.0]
+    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0)
+    injected_sorting = generate_sorting_to_inject(
+        sorting, [int(duration * sorting.sampling_frequency) for duration in durations]
+    )
+    num_spikes = sorting.count_num_spikes_per_unit()
+    num_injected_spikes = injected_sorting.count_num_spikes_per_unit()
+    # injected spikes should be less than original spikes
+    for unit_id in num_spikes:
+        assert num_injected_spikes[unit_id] <= num_spikes[unit_id]
 
 
 if __name__ == "__main__":
@@ -471,7 +541,7 @@ if __name__ == "__main__":
     # test_noise_generator_consistency_after_dump(strategy, None)
     # test_generate_recording()
     # test_generate_single_fake_waveform()
-    test_generate_unit_locations()
+    test_transformsorting()
     # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()

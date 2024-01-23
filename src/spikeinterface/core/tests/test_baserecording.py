@@ -162,15 +162,20 @@ def test_BaseRecording():
     rec3 = BaseExtractor.load(cache_folder / "simple_recording")
 
     # cache to memory
-    rec4 = rec3.save(format="memory")
-
+    rec4 = rec3.save(format="memory", shared=False)
     traces4 = rec4.get_traces(segment_index=0)
     traces = rec.get_traces(segment_index=0)
     assert np.array_equal(traces4, traces)
 
+    # cache to sharedmemory
+    rec5 = rec3.save(format="memory", shared=True)
+    traces5 = rec5.get_traces(segment_index=0)
+    traces = rec.get_traces(segment_index=0)
+    assert np.array_equal(traces5, traces)
+
     # cache joblib several jobs
     folder = cache_folder / "simple_recording2"
-    rec2 = rec.save(folder=folder, chunk_size=10, n_jobs=4)
+    rec2 = rec.save(format="binary", folder=folder, chunk_size=10, n_jobs=4)
     traces2 = rec2.get_traces(segment_index=0)
 
     # set/get Probe only 2 channels
@@ -343,6 +348,13 @@ def test_BaseRecording():
         rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15), rec_i.get_traces().astype("float")
     )
     assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
+
+
+def test_rename_channels():
+    recording = generate_recording(durations=[1.0], num_channels=3)
+    renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])
+    renamed_channel_ids = renamed_recording.get_channel_ids()
+    assert np.array_equal(renamed_channel_ids, ["a", "b", "c"])
 
 
 if __name__ == "__main__":

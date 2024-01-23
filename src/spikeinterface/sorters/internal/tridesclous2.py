@@ -15,7 +15,7 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
-from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
+from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel, cache_preprocessing
 
 import numpy as np
 
@@ -28,6 +28,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "apply_preprocessing": True,
+        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "waveforms": {
             "ms_before": 0.5,
             "ms_after": 1.5,
@@ -46,13 +47,16 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "ms_after": 2.5,
             # "peak_shift_ms": 0.2,
         },
-        "matching": {"peak_shift_ms": 0.2, "radius_um": 100.0},
+        # "matching": {"method": "tridesclous", "method_kwargs": {"peak_shift_ms": 0.2, "radius_um": 100.0}},
+        "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
+
         "job_kwargs": {"n_jobs": -1},
         "save_array": True,
     }
 
     _params_description = {
         "apply_preprocessing": "Apply internal preprocessing or not",
+        "cache_preprocessing": "A dict contaning how to cache the preprocessed recording. mode='memory' | 'folder | 'zarr' ",
         "waveforms": "A dictonary containing waveforms params: ms_before, ms_after, radius_um",
         "filtering": "A dictonary containing filtering params: freq_min, freq_max", 
         "detection": "A dictonary containing detection params: peak_sign, detect_threshold, exclude_sweep_ms, radius_um", 
@@ -109,6 +113,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             recording = common_reference(recording)
             recording = zscore(recording, dtype="float32")
             # recording = whiten(recording, dtype="float32")
+            
+            # used only if "folder" or "zarr"
+            cache_folder = sorter_output_folder / "cache_preprocessing"
+            recording = cache_preprocessing(recording, folder=cache_folder, **job_kwargs,  **params["cache_preprocessing"])
+
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
             recording = recording_raw
@@ -321,17 +330,30 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #     recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
         # )
 
-        matching_params = params["matching"].copy()
+        matching_method = params["matching"]["method"]
+        matching_params = params["matching"]["method_kwargs"].copy()
+
         matching_params["waveform_extractor"] = we
         matching_params["noise_levels"] = noise_levels
         # matching_params["peak_sign"] = params["detection"]["peak_sign"]
         # matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
         # matching_params["radius_um"] = params["detection"]["radius_um"]
 
-        spikes = find_spikes_from_templates(
-            recording, method="circus-omp-svd", method_kwargs=matching_params, **job_kwargs
-        )
+        # spikes = find_spikes_from_templates(
+        #     recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
+        # )
+        # )
 
+        if matching_method == "circus-omp-svd":
+            job_kwargs = job_kwargs.copy()
+            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+                if value in job_kwargs:
+                    job_kwargs.pop(value)
+            job_kwargs["chunk_duration"] = "100ms"
+
+        spikes = find_spikes_from_templates(
+            recording, method=matching_method, method_kwargs=matching_params, **job_kwargs
+        )
 
         if params["save_array"]:
             np.save(sorter_output_folder / "noise_levels.npy", noise_levels)
