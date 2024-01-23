@@ -538,7 +538,7 @@ def get_templates_from_recording(recording, num_templates=None, output_folder=No
     from spikeinterface.sorters.sorterlist import sorter_dict
     from spikeinterface.core.globals import get_global_tmp_folder
     from pathlib import Path
-    import json
+    import json, shutil
 
     SorterClass = sorter_dict['spykingcircus2']
     if output_folder is None:
