@@ -711,7 +711,7 @@ def compute_principal_components(
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    load_if_exists: bool
+    load_if_exists: bool, default: False
         If True and pc scores are already in the waveform extractor folders, pc scores are loaded and not recomputed.
     n_components: int, default: 5
         Number of components fo PCA
@@ -744,7 +744,7 @@ def compute_principal_components(
     Examples
     --------
     >>> we = si.extract_waveforms(recording, sorting, folder='waveforms')
-    >>> pc = st.compute_principal_components(we, n_components=3, mode='by_channel_local')
+    >>> pc = si.compute_principal_components(we, n_components=3, mode='by_channel_local')
     >>> # get pre-computed projections for unit_id=1
     >>> projections = pc.get_projections(unit_id=1)
     >>> # get all pre-computed projections and labels

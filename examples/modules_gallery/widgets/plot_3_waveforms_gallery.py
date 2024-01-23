@@ -47,7 +47,7 @@ _ = spost.compute_template_metrics(we)
 
 unit_ids = sorting.unit_ids[:4]
 
-sw.plot_unit_waveforms(we, unit_ids=unit_ids)
+sw.plot_unit_waveforms(we, unit_ids=unit_ids, figsize=(16,4))
 
 ##############################################################################
 # plot_unit_templates()
@@ -55,21 +55,21 @@ sw.plot_unit_waveforms(we, unit_ids=unit_ids)
 
 unit_ids = sorting.unit_ids
 
-sw.plot_unit_templates(we, unit_ids=unit_ids, ncols=5)
+sw.plot_unit_templates(we, unit_ids=unit_ids, ncols=5, figsize=(16,8))
 
 
 ##############################################################################
 # plot_amplitudes()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_amplitudes(we, plot_histograms=True)
+sw.plot_amplitudes(we, plot_histograms=True, figsize=(12,8))
 
 
 ##############################################################################
 # plot_unit_locations()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_unit_locations(we)
+sw.plot_unit_locations(we, figsize=(4,8))
 
 
 ##############################################################################
@@ -79,7 +79,7 @@ sw.plot_unit_locations(we)
 # This is your best friend to check over merge
 
 unit_ids = sorting.unit_ids[:4]
-sw.plot_unit_waveforms_density_map(we, unit_ids=unit_ids)
+sw.plot_unit_waveforms_density_map(we, unit_ids=unit_ids, figsize=(14,8))
 
 
 
@@ -87,13 +87,13 @@ sw.plot_unit_waveforms_density_map(we, unit_ids=unit_ids)
 # plot_amplitudes_distribution()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_all_amplitudes_distributions(we)
+sw.plot_all_amplitudes_distributions(we, figsize=(10,10))
 
 ##############################################################################
 # plot_units_depths()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_unit_depths(we)
+sw.plot_unit_depths(we, figsize=(10,10))
 
 
 ##############################################################################
@@ -101,7 +101,7 @@ sw.plot_unit_depths(we)
 # ~~~~~~~~~~~~~~~~~~~~~
 
 unit_ids = sorting.unit_ids[:4]
-sw.plot_unit_probe_map(we, unit_ids=unit_ids)
+sw.plot_unit_probe_map(we, unit_ids=unit_ids, figsize=(20,8))
 
 
 
