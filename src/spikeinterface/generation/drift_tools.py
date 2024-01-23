@@ -526,6 +526,12 @@ def get_templates_from_recording(recording, num_templates=None, output_folder=No
         ----------
         num_templates: int
             The number of templates that should be kept
+        output_folder: Path
+            The temporary folder where data are stored (None implies tmp folder is used)
+        remove_existing_folder: Path
+            Wheter or not the temporary folder should be overwritten (default True)
+        delete_output_folder: Path
+            Wheter or not the temporary folder should be deleted at the end (default True)    
         verbose: bool
         **sorter_params: keyword arguments for `spyking_circus2` function
 
