@@ -515,9 +515,31 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-def get_templates_from_recording(recording, num_templates=None, **sc2_params):
+def get_templates_from_recording(recording, num_templates=None, **sorter_params):
 
     from spikeinterface.sorters.runsorter import run_sorter
+    from spikeinterface.sorters.sorterlist import sorter_dict
+    from pathlib import Path
+    import json
 
-    templates = run_sorter('spykingcircus2', recording, templates_only=True, **sc2_params)
+    SorterClass = sorter_dict['spykingcircus2']
+    output_folder = 'test'
+    verbose = True
+    remove_existing_folder = True
+    sorter_params['templates_only'] = True
+
+    # only classmethod call not instance (stateless at instance level but state is in folder)
+    output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
+    SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
+    SorterClass.setup_recording(recording, output_folder, verbose=verbose)
+    
+    output_folder = Path(output_folder)
+    sorter_output_folder = output_folder / "sorter_output"
+
+    # retrieve sorter_name and params
+    with (output_folder / "spikeinterface_params.json").open(mode="r") as f:
+        params = json.load(f)
+    sorter_params = params["sorter_params"]
+    
+    templates = SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose)
     return templates
