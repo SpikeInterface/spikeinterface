@@ -90,6 +90,7 @@ class ResultExtensionCommonTestSuite:
 
         
         for kwargs in self.extension_function_kwargs_list:
+            print('  kwargs', kwargs)
             sorting_result.compute(self.extension_name, **kwargs)
         ext = sorting_result.get_extension(self.extension_name)
         assert ext is not None
@@ -105,7 +106,7 @@ class ResultExtensionCommonTestSuite:
 
         for key, sorting_result in self.sorting_results.items():
             print()
-            print(key)
+            print(self.extension_name, key)
             self._check_one(sorting_result)
 
 

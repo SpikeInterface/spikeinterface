@@ -5,7 +5,7 @@ from spikeinterface.postprocessing import ComputeSpikeAmplitudes
 
 # from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
-from spikeinterface.postprocessing.tests.common_extension_tests import get_sorting_result, ResultExtensionCommonTestSuite
+from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
 
 
 class ComputeSpikeAmplitudesTest(ResultExtensionCommonTestSuite, unittest.TestCase):

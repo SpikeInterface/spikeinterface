@@ -547,6 +547,7 @@ class SortingResult:
         
         if unit_ids is not None:
             # when only some unit_ids then the sorting must be sliced
+            # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
             sorting_provenance = sorting_provenance.select_units(unit_ids)
 
         if format == "memory":
@@ -614,6 +615,7 @@ class SortingResult:
         we :  WaveformExtractor
             The newly create waveform extractor with the selected units
         """
+        # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         return self._save_or_select(format=format, folder=folder, unit_ids=unit_ids)
 
     def copy(self):

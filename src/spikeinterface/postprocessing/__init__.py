@@ -18,10 +18,10 @@ from .principal_component import (
 from .spike_amplitudes import compute_spike_amplitudes, ComputeSpikeAmplitudes
 
 from .correlograms import (
-    CorrelogramsCalculator,
+    ComputeCorrelograms,
+    compute_correlograms,
     compute_autocorrelogram_from_spiketrain,
     compute_crosscorrelogram_from_spiketrain,
-    compute_correlograms,
     correlogram_for_one_segment,
     compute_correlograms_numba,
     compute_correlograms_numpy,
