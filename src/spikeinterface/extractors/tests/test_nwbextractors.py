@@ -421,7 +421,6 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
     processing.add(second_units_table)
 
     file_path = tmp_path / "test.nwb"
-    print(file_path)
     # Write the nwbfile to a temporary file
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
