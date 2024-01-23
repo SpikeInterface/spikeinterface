@@ -6,7 +6,6 @@ from typing import List, Optional, Union
 import numpy as np
 
 from .base import BaseExtractor, BaseSegment
-from .sorting_tools import spike_vector_to_spike_trains
 from .waveform_tools import has_exceeding_spikes
 
 
@@ -499,6 +498,8 @@ class BaseSorting(BaseExtractor):
             If True, will compute it from the spike vector.
             If False, will call `get_unit_spike_train` for each segment for each unit.
         """
+        from .sorting_tools import spike_vector_to_spike_trains
+
         unit_ids = self.unit_ids
 
         if from_spike_vector is None:

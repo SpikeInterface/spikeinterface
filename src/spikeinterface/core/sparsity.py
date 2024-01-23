@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from .recording_tools import get_channel_distances, get_noise_levels
+from .basesorting import BaseSorting
+from .baserecording import BaseRecording
+from .recording_tools import get_noise_levels
 from .sorting_tools import random_spikes_selection
-from .job_tools import fix_job_kwargs, ChunkRecordingExecutor, split_job_kwargs, _shared_job_kwargs_doc
-from .core_tools import make_shared_array
+from .job_tools import _shared_job_kwargs_doc
 from .waveform_tools import estimate_templates
+
 
 _sparsity_doc = """
     method: str
@@ -408,13 +410,19 @@ def compute_sparsity(
     from .waveform_extractor import WaveformExtractor
 
     if method in ("best_channels", "radius"):
-        assert isinstance(templates_or_waveform_extractor, (Templates, WaveformExtractor)), "compute_sparsity() need Templates or WaveformExtractor"
+        assert isinstance(
+            templates_or_waveform_extractor, (Templates, WaveformExtractor)
+        ), "compute_sparsity() need Templates or WaveformExtractor"
     else:
-        assert isinstance(templates_or_waveform_extractor, WaveformExtractor), f"compute_sparsity(method='{method}') need WaveformExtractor"
+        assert isinstance(
+            templates_or_waveform_extractor, WaveformExtractor
+        ), f"compute_sparsity(method='{method}') need WaveformExtractor"
 
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
-        sparsity = ChannelSparsity.from_best_channels(templates_or_waveform_extractor, num_channels, peak_sign=peak_sign)
+        sparsity = ChannelSparsity.from_best_channels(
+            templates_or_waveform_extractor, num_channels, peak_sign=peak_sign
+        )
     elif method == "radius":
         assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
         sparsity = ChannelSparsity.from_radius(templates_or_waveform_extractor, radius_um, peak_sign=peak_sign)
@@ -440,48 +448,49 @@ compute_sparsity.__doc__ = compute_sparsity.__doc__.format(_sparsity_doc)
 
 
 def estimate_sparsity(
-    recording,
-    sorting,
-    num_spikes_for_sparsity=100,
-    ms_before=1.0,
-    ms_after=2.5,
-    method="radius",
-    peak_sign="neg",
-    radius_um=100.0,
-    num_channels=5,
-    **job_kwargs
+    recording: BaseRecording,
+    sorting: BaseSorting,
+    num_spikes_for_sparsity: int = 100,
+    ms_before: float = 1.0,
+    ms_after: float = 2.5,
+    method: "radius" | "best_channels" = "radius",
+    peak_sign: str = "neg",
+    radius_um: float = 100.0,
+    num_channels: int = 5,
+    **job_kwargs,
 ):
     """
-    This estimate the sparsity without the need of a WaveformExtractor.
-    This is a faster than  `spikeinterface.waveforms_extractor.precompute_sparsity()`.
+    Estimate the sparsity without the need of a WaveformExtractor.
+    This is faster than  `spikeinterface.waveforms_extractor.precompute_sparsity()` and it
+    traverses the recording to compute the average templates for each unit.
 
-    Contrary to previous implementation:
+    Contrary to the previous implementation:
       * all units are computed in one read of recording
-      * no need to have folder
-      * do not consumes too much memory
-      * use internally estimate_templates() which is fast and parrallel
+      * it doesn't require a folder
+      * it doesn't not consume too much memory
+      * it uses internally the `estimate_templates()` which is fast and parallel
 
     Parameters
     ----------
-    recording: Recording
+    recording: BaseRecording
         The recording
-    sorting: Sorting
+    sorting: BaseSorting
         The sorting
-    num_spikes_for_sparsity: int, default 100
-        How many spikes per units to compute the sparsity.
-    ms_before: float
+    num_spikes_for_sparsity: int, default: 100
+        How many spikes per units to compute the sparsity
+    ms_before: float, default: 1.0
         Cut out in ms before spike time
-    ms_after: float
+    ms_after: float, default: 2.5
         Cut out in ms after spike time
-    method: "radius" | "best_channels"
-        Method propagated to compute_sparsity().
-        Only "radius" or "best_channels"
+    method: "radius" | "best_channels", default: "radius"
+        Sparsity method propagated to the `compute_sparsity()` function.
+        Only "radius" or "best_channels" are implemented
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
-    radius_um: float, default 100.0
-        Used for method "radius"
-    num_channels: int, default 5
-        Used for method "best_channels"
+    radius_um: float, default: 100.0
+        Used for "radius" method
+    num_channels: int, default: 5
+        Used for "best_channels" method
 
     {}
 
@@ -494,26 +503,28 @@ def estimate_sparsity(
     from .template import Templates
 
     assert method in ("radius", "best_channels"), "estimate_sparsity() handle only method='radius' or 'best_channel'"
+    if method == "radius":
+        assert (
+            len(recording.get_probes()) == 1
+        ), "The 'radius' method of `estimate_sparsity()` can handle only one probe"
 
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
 
     num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-    random_spikes_indices = random_spikes_selection(sorting, num_samples, 
-                            method="uniform", max_spikes_per_unit=num_spikes_for_sparsity,
-                            margin_size=max(nbefore, nafter),
-                            seed=2205)
+    random_spikes_indices = random_spikes_selection(
+        sorting,
+        num_samples,
+        method="uniform",
+        max_spikes_per_unit=num_spikes_for_sparsity,
+        margin_size=max(nbefore, nafter),
+        seed=2205,
+    )
     spikes = sorting.to_spike_vector()
     spikes = spikes[random_spikes_indices]
 
     templates_array = estimate_templates(
-        recording,
-        spikes,
-        sorting.unit_ids,
-        nbefore,
-        nafter,
-        return_scaled=False,
-        **job_kwargs
+        recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=False, **job_kwargs
     )
     templates = Templates(
         templates_array=templates_array,
@@ -522,13 +533,14 @@ def estimate_sparsity(
         sparsity_mask=None,
         channel_ids=recording.channel_ids,
         unit_ids=sorting.unit_ids,
-        probe=recording
+        probe=recording.get_probe(),
     )
-    
-    sparsity = compute_sparsity(templates, method=method, peak_sign=peak_sign, num_channels=num_channels, radius_um=radius_um)
+
+    sparsity = compute_sparsity(
+        templates, method=method, peak_sign=peak_sign, num_channels=num_channels, radius_um=radius_um
+    )
 
     return sparsity
 
-estimate_sparsity.__doc__ = estimate_sparsity.__doc__.format(_shared_job_kwargs_doc)
-    
 
+estimate_sparsity.__doc__ = estimate_sparsity.__doc__.format(_shared_job_kwargs_doc)
