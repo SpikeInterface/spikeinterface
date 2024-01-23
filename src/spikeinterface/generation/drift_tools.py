@@ -515,17 +515,35 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-def get_templates_from_recording(recording, num_templates=None, **sorter_params):
+def get_templates_from_recording(recording, num_templates=None, output_folder=None, verbose=True, 
+                                            remove_existing_folder=True, delete_output_folder=True, **sorter_params):
+    """
+        Get templates from a recording. Internally, SpyKING CIRCUS 2 is used (see parameters)
+        with the only twist that the template matching step is not launch. Instead, a Template
+        object is returned based on the results of the clutering.
 
+        Parameters
+        ----------
+        num_templates: int
+            The number of templates that should be kept
+        verbose: bool
+        **sorter_params: keyword arguments for `spyking_circus2` function
+
+        Returns
+        -------
+        templates: Templates
+            The found templates
+        """
     from spikeinterface.sorters.runsorter import run_sorter
     from spikeinterface.sorters.sorterlist import sorter_dict
+    from spikeinterface.core.globals import get_global_tmp_folder
     from pathlib import Path
     import json
 
     SorterClass = sorter_dict['spykingcircus2']
-    output_folder = 'test'
-    verbose = True
-    remove_existing_folder = True
+    if output_folder is None:
+        output_folder = get_global_tmp_folder() / 'templates'
+
     sorter_params['templates_only'] = True
 
     # only classmethod call not instance (stateless at instance level but state is in folder)
@@ -542,4 +560,8 @@ def get_templates_from_recording(recording, num_templates=None, **sorter_params)
     sorter_params = params["sorter_params"]
     
     templates = SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose)
+
+    if delete_output_folder:
+        shutil.rmtree(sorter_output_folder)
+
     return templates
