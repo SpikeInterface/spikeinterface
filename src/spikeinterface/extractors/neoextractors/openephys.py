@@ -217,12 +217,14 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 self.set_property("inter_sample_shift", sample_shifts)
 
         # load synchronized timestamps and set_times to recording
-        if load_sync_timestamps:
-            recording_folder = Path(folder_path) / record_node
-            for segment_index in range(self.get_num_segments()):
-                stream_folder = (
-                    recording_folder / f"experiment{exp_id}" / f"recording{segment_index+1}" / "continuous" / oe_stream
-                )
+        recording_folder = Path(folder_path) / record_node
+        stream_folders = []
+        for segment_index in range(self.get_num_segments()):
+            stream_folder = (
+                recording_folder / f"experiment{exp_id}" / f"recording{segment_index+1}" / "continuous" / oe_stream
+            )
+            stream_folders.append(stream_folder)
+            if load_sync_timestamps:
                 if (stream_folder / "sample_numbers.npy").is_file():
                     # OE version>=v0.6
                     sync_times = np.load(stream_folder / "timestamps.npy")
@@ -235,6 +237,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     self.set_times(times=sync_times, segment_index=segment_index, with_warning=False)
                 except AssertionError:
                     warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
+
+        self._stream_folders = stream_folders
 
         self._kwargs.update(
             dict(
