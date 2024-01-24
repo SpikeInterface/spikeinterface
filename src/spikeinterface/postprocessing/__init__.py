@@ -1,11 +1,11 @@
 from .template_metrics import (
-    TemplateMetricsCalculator,
+    ComputeTemplateMetrics,
     compute_template_metrics,
     get_template_metric_names,
 )
 
 from .template_similarity import (
-    TemplateSimilarityCalculator,
+    ComputeTemplateSimilarity,
     compute_template_similarity,
     check_equal_template_with_distribution_overlap,
 )

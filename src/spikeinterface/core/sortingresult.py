@@ -723,7 +723,7 @@ class SortingResult:
         return all_positions
 
     def channel_ids_to_indices(self, channel_ids) -> np.ndarray:
-        all_channel_ids = self.rec_attributes["channel_ids"]
+        all_channel_ids = list(self.rec_attributes["channel_ids"])
         indices = np.array([all_channel_ids.index(id) for id in channel_ids], dtype=int)
         return indices
 

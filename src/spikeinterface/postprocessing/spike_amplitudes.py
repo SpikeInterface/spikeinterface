@@ -25,7 +25,7 @@ class ComputeSpikeAmplitudes(ResultExtension):
     Parameters
     ----------
     sorting_result: SortingResult
-        The waveform extractor object
+        The SortingResult object
     load_if_exists : bool, default: False
         Whether to load precomputed spike amplitudes, if they already exist.
     peak_sign: "neg" | "pos" | "both", default: "neg
