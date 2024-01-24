@@ -515,48 +515,55 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-def get_templates_from_recording(recording, num_templates=None, output_folder=None, verbose=True, 
-                                            remove_existing_folder=True, delete_output_folder=True, **sorter_params):
+def get_templates_from_recording(
+    recording,
+    num_templates=None,
+    output_folder=None,
+    verbose=True,
+    remove_existing_folder=True,
+    delete_output_folder=True,
+    **sorter_params,
+):
     """
-        Get templates from a recording. Internally, SpyKING CIRCUS 2 is used (see parameters)
-        with the only twist that the template matching step is not launch. Instead, a Template
-        object is returned based on the results of the clutering.
+    Get templates from a recording. Internally, SpyKING CIRCUS 2 is used (see parameters)
+    with the only twist that the template matching step is not launch. Instead, a Template
+    object is returned based on the results of the clutering.
 
-        Parameters
-        ----------
-        num_templates: int
-            The number of templates that should be kept
-        output_folder: Path
-            The temporary folder where data are stored (None implies tmp folder is used)
-        remove_existing_folder: Path
-            Wheter or not the temporary folder should be overwritten (default True)
-        delete_output_folder: Path
-            Wheter or not the temporary folder should be deleted at the end (default True)    
-        verbose: bool
-        **sorter_params: keyword arguments for `spyking_circus2` function
+    Parameters
+    ----------
+    num_templates: int
+        The number of templates that should be kept
+    output_folder: Path
+        The temporary folder where data are stored (None implies tmp folder is used)
+    remove_existing_folder: Path
+        Wheter or not the temporary folder should be overwritten (default True)
+    delete_output_folder: Path
+        Wheter or not the temporary folder should be deleted at the end (default True)
+    verbose: bool
+    **sorter_params: keyword arguments for `spyking_circus2` function
 
-        Returns
-        -------
-        templates: Templates
-            The found templates
-        """
+    Returns
+    -------
+    templates: Templates
+        The found templates
+    """
     from spikeinterface.sorters.runsorter import run_sorter
     from spikeinterface.sorters.sorterlist import sorter_dict
     from spikeinterface.core.globals import get_global_tmp_folder
     from pathlib import Path
     import json, shutil
 
-    SorterClass = sorter_dict['spykingcircus2']
+    SorterClass = sorter_dict["spykingcircus2"]
     if output_folder is None:
-        output_folder = get_global_tmp_folder() / 'templates'
+        output_folder = get_global_tmp_folder() / "templates"
 
-    sorter_params['templates_only'] = True
+    sorter_params["templates_only"] = True
 
     # only classmethod call not instance (stateless at instance level but state is in folder)
     output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
     SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
-    
+
     output_folder = Path(output_folder)
     sorter_output_folder = output_folder / "sorter_output"
 
@@ -564,7 +571,7 @@ def get_templates_from_recording(recording, num_templates=None, output_folder=No
     with (output_folder / "spikeinterface_params.json").open(mode="r") as f:
         params = json.load(f)
     sorter_params = params["sorter_params"]
-    
+
     templates = SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose)
 
     if delete_output_folder:

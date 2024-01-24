@@ -167,7 +167,7 @@ class Templates:
 
     @classmethod
     def from_waveform_extractor(cls, waveforms):
-        templates = waveforms.get_all_templates(mode='median')
+        templates = waveforms.get_all_templates(mode="median")
         sparsity_mask = waveforms.sparsity.mask
         channel_ids = waveforms.recording.channel_ids
         unit_ids = waveforms.unit_ids
