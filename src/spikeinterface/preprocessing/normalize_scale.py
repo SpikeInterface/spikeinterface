@@ -11,6 +11,7 @@ from ..core import get_random_data_chunks
 
 class ScaleRecordingSegment(BasePreprocessorSegment):
     # use by NormalizeByQuantileRecording/ScaleRecording/CenterRecording
+
     def __init__(self, parent_recording_segment, gain, offset, dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.gain = gain
@@ -20,14 +21,17 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices) -> np.ndarray:
         # TODO when we are sure that BaseExtractors get_traces allocate their own buffer instead of just passing
         # It along we should remove copies in preprocessors including the one in the next line
-        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices).copy()
-        traces = np.multiply(traces, self.gain[:, channel_indices], out=traces, casting="unsafe")
-        traces = np.add(traces, self.offset[:, channel_indices], out=traces, casting="unsafe")
+
+        scaled_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices).astype(
+            "float32", copy=True
+        )
+        scaled_traces *= self.gain[:, channel_indices]  # in-place
+        scaled_traces += self.offset[:, channel_indices]  # in-place
 
         if np.issubdtype(self._dtype, np.integer):
-            traces = np.round(traces, out=traces)
+            scaled_traces = np.round(scaled_traces, out=scaled_traces)
 
-        return traces.astype(self._dtype, copy=False)
+        return scaled_traces.astype(self._dtype, copy=False)
 
 
 class NormalizeByQuantileRecording(BasePreprocessor):
