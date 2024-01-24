@@ -149,6 +149,7 @@ from .result_core import (
     ComputeWaveforms, compute_waveforms,
     ComputeTemplates, compute_templates,
     ComputeFastTemplates, compute_fast_templates,
+    ComputeNoiseLevels, compute_noise_levels,
 )
 
 # Important not for compatibility!!

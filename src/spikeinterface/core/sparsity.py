@@ -266,118 +266,147 @@ class ChannelSparsity:
 
     ## Some convinient function to compute sparsity from several strategy
     @classmethod
-    def from_best_channels(cls, templates_or_we, num_channels, peak_sign="neg"):
+    def from_best_channels(cls, templates_or_sorting_result, num_channels, peak_sign="neg"):
         """
         Construct sparsity from N best channels with the largest amplitude.
         Use the "num_channels" argument to specify the number of channels.
         """
         from .template_tools import get_template_amplitudes
 
-        mask = np.zeros((templates_or_we.unit_ids.size, templates_or_we.channel_ids.size), dtype="bool")
-        peak_values = get_template_amplitudes(templates_or_we, peak_sign=peak_sign)
-        for unit_ind, unit_id in enumerate(templates_or_we.unit_ids):
+        mask = np.zeros((templates_or_sorting_result.unit_ids.size, templates_or_sorting_result.channel_ids.size), dtype="bool")
+        peak_values = get_template_amplitudes(templates_or_sorting_result, peak_sign=peak_sign)
+        for unit_ind, unit_id in enumerate(templates_or_sorting_result.unit_ids):
             chan_inds = np.argsort(np.abs(peak_values[unit_id]))[::-1]
             chan_inds = chan_inds[:num_channels]
             mask[unit_ind, chan_inds] = True
-        return cls(mask, templates_or_we.unit_ids, templates_or_we.channel_ids)
+        return cls(mask, templates_or_sorting_result.unit_ids, templates_or_sorting_result.channel_ids)
 
     @classmethod
-    def from_radius(cls, templates_or_we, radius_um, peak_sign="neg"):
+    def from_radius(cls, templates_or_sorting_result, radius_um, peak_sign="neg"):
         """
         Construct sparsity from a radius around the best channel.
         Use the "radius_um" argument to specify the radius in um
         """
         from .template_tools import get_template_extremum_channel
 
-        mask = np.zeros((templates_or_we.unit_ids.size, templates_or_we.channel_ids.size), dtype="bool")
-        channel_locations = templates_or_we.get_channel_locations()
+        mask = np.zeros((templates_or_sorting_result.unit_ids.size, templates_or_sorting_result.channel_ids.size), dtype="bool")
+        channel_locations = templates_or_sorting_result.get_channel_locations()
         distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
-        best_chan = get_template_extremum_channel(templates_or_we, peak_sign=peak_sign, outputs="index")
-        for unit_ind, unit_id in enumerate(templates_or_we.unit_ids):
+        best_chan = get_template_extremum_channel(templates_or_sorting_result, peak_sign=peak_sign, outputs="index")
+        for unit_ind, unit_id in enumerate(templates_or_sorting_result.unit_ids):
             chan_ind = best_chan[unit_id]
             (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
             mask[unit_ind, chan_inds] = True
-        return cls(mask, templates_or_we.unit_ids, templates_or_we.channel_ids)
+        return cls(mask, templates_or_sorting_result.unit_ids, templates_or_sorting_result.channel_ids)
 
     @classmethod
-    def from_snr(cls, we, threshold, peak_sign="neg"):
+    def from_snr(cls, sorting_result, threshold, peak_sign="neg"):
         """
         Construct sparsity from a thresholds based on template signal-to-noise ratio.
         Use the "threshold" argument to specify the SNR threshold.
         """
         from .template_tools import get_template_amplitudes
 
-        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
+        assert sorting_result.sparsity is None,  "To compute sparsity you need a dense SortingResult"
 
-        peak_values = get_template_amplitudes(we, peak_sign=peak_sign, mode="extremum")
-        noise = get_noise_levels(we.recording, return_scaled=we.return_scaled)
-        for unit_ind, unit_id in enumerate(we.unit_ids):
+        mask = np.zeros((sorting_result.unit_ids.size, sorting_result.channel_ids.size), dtype="bool")
+
+        peak_values = get_template_amplitudes(sorting_result, peak_sign=peak_sign, mode="extremum", return_scaled=True)
+
+        ext = sorting_result.get_extension("noise_levels")
+        assert ext is not None, "To compute sparsity from snr you need to compute 'noise_levels' first"
+        assert ext.params["return_scaled"], "To compute sparsity from snr you need return_scaled=True for extensions"
+        noise = ext.data["noise_levels"]
+
+        for unit_ind, unit_id in enumerate(sorting_result.unit_ids):
             chan_inds = np.nonzero((np.abs(peak_values[unit_id]) / noise) >= threshold)
             mask[unit_ind, chan_inds] = True
-        return cls(mask, we.unit_ids, we.channel_ids)
+        return cls(mask, sorting_result.unit_ids, sorting_result.channel_ids)
 
     @classmethod
-    def from_ptp(cls, we, threshold):
+    def from_ptp(cls, sorting_result, threshold):
         """
         Construct sparsity from a thresholds based on template peak-to-peak values.
         Use the "threshold" argument to specify the SNR threshold.
         """
+        assert sorting_result.sparsity is None,  "To compute sparsity with ptp you need a dense SortingResult"
 
-        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
-        templates_ptps = np.ptp(we.get_all_templates(), axis=1)
-        noise = get_noise_levels(we.recording, return_scaled=we.return_scaled)
-        for unit_ind, unit_id in enumerate(we.unit_ids):
+        from .template_tools import _get_dense_templates_array
+        mask = np.zeros((sorting_result.unit_ids.size, sorting_result.channel_ids.size), dtype="bool")
+        templates_array = _get_dense_templates_array(sorting_result, return_scaled=True)
+        templates_ptps = np.ptp(templates_array, axis=1)
+        ext = sorting_result.get_extension("noise_levels")
+        assert ext is not None, "To compute sparsity from ptp you need to compute 'noise_levels' first"
+        assert ext.params["return_scaled"], "To compute sparsity from snr you need return_scaled=True for extensions"
+        noise = ext.data["noise_levels"]
+
+        for unit_ind, unit_id in enumerate(sorting_result.unit_ids):
             chan_inds = np.nonzero(templates_ptps[unit_ind] / noise >= threshold)
             mask[unit_ind, chan_inds] = True
-        return cls(mask, we.unit_ids, we.channel_ids)
+        return cls(mask, sorting_result.unit_ids, sorting_result.channel_ids)
 
     @classmethod
-    def from_energy(cls, we, threshold):
+    def from_energy(cls, sorting_result, threshold):
         """
         Construct sparsity from a threshold based on per channel energy ratio.
         Use the "threshold" argument to specify the SNR threshold.
         """
-        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
-        noise = np.sqrt(we.nsamples) * get_noise_levels(we.recording, return_scaled=we.return_scaled)
-        for unit_ind, unit_id in enumerate(we.unit_ids):
-            wfs = we.get_waveforms(unit_id)
+        assert sorting_result.sparsity is None,  "To compute sparsity with energy you need a dense SortingResult"
+
+        mask = np.zeros((sorting_result.unit_ids.size, sorting_result.channel_ids.size), dtype="bool")
+
+        # noise_levels
+        ext = sorting_result.get_extension("noise_levels")
+        assert ext is not None, "To compute sparsity from ptp you need to compute 'noise_levels' first"
+        assert ext.params["return_scaled"], "To compute sparsity from snr you need return_scaled=True for extensions"
+        noise_levels = ext.data["noise_levels"]
+
+        # waveforms
+        ext_waveforms = sorting_result.get_extension("waveforms")
+        assert ext_waveforms is not None, "To compute sparsity from energy you need to compute 'waveforms' first"
+        namples = ext_waveforms.nbefore + ext_waveforms.nafter
+
+        noise = np.sqrt(namples) * noise_levels
+
+        for unit_ind, unit_id in enumerate(sorting_result.unit_ids):
+            wfs = ext_waveforms.get_waveforms_one_unit(unit_id, force_dense=True)
             energies = np.linalg.norm(wfs, axis=(0, 1))
             chan_inds = np.nonzero(energies / (noise * np.sqrt(len(wfs))) >= threshold)
             mask[unit_ind, chan_inds] = True
-        return cls(mask, we.unit_ids, we.channel_ids)
+        return cls(mask, sorting_result.unit_ids, sorting_result.channel_ids)
 
     @classmethod
-    def from_property(cls, we, by_property):
+    def from_property(cls, sorting_result, by_property):
         """
         Construct sparsity witha property of the recording and sorting(e.g. "group").
         Use the "by_property" argument to specify the property name.
         """
         # check consistency
-        assert by_property in we.recording.get_property_keys(), f"Property {by_property} is not a recording property"
-        assert by_property in we.sorting.get_property_keys(), f"Property {by_property} is not a sorting property"
+        assert by_property in sorting_result.recording.get_property_keys(), f"Property {by_property} is not a recording property"
+        assert by_property in sorting_result.sorting.get_property_keys(), f"Property {by_property} is not a sorting property"
 
-        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
-        rec_by = we.recording.split_by(by_property)
-        for unit_ind, unit_id in enumerate(we.unit_ids):
-            unit_property = we.sorting.get_property(by_property)[unit_ind]
+        mask = np.zeros((sorting_result.unit_ids.size, sorting_result.channel_ids.size), dtype="bool")
+        rec_by = sorting_result.recording.split_by(by_property)
+        for unit_ind, unit_id in enumerate(sorting_result.unit_ids):
+            unit_property = sorting_result.sorting.get_property(by_property)[unit_ind]
             assert (
                 unit_property in rec_by.keys()
             ), f"Unit property {unit_property} cannot be found in the recording properties"
-            chan_inds = we.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
+            chan_inds = sorting_result.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
             mask[unit_ind, chan_inds] = True
-        return cls(mask, we.unit_ids, we.channel_ids)
+        return cls(mask, sorting_result.unit_ids, sorting_result.channel_ids)
 
     @classmethod
-    def create_dense(cls, we):
+    def create_dense(cls, sorting_result):
         """
         Create a sparsity object with all selected channel for all units.
         """
-        mask = np.ones((we.unit_ids.size, we.channel_ids.size), dtype="bool")
-        return cls(mask, we.unit_ids, we.channel_ids)
+        mask = np.ones((sorting_result.unit_ids.size, sorting_result.channel_ids.size), dtype="bool")
+        return cls(mask, sorting_result.unit_ids, sorting_result.channel_ids)
 
 
 def compute_sparsity(
-    templates_or_waveform_extractor,
+    templates_or_sorting_result,
     method="radius",
     peak_sign="neg",
     num_channels=5,
@@ -390,10 +419,10 @@ def compute_sparsity(
 
     Parameters
     ----------
-    templates_or_waveform_extractor: Templates | WaveformExtractor
-        A Templates or a WaveformExtractor object.
-        Some method accept both objects ("best_channels", "radius", )
-        Other method need WaveformExtractor because internally the recording is needed.
+    templates_or_sorting_result: Templates | SortingResult
+        A Templates or a SortingResult object.
+        Some methods accept both objects ("best_channels", "radius", )
+        Other methods require only SortingResult because internally the recording is needed.
 
     {}
 
@@ -406,30 +435,31 @@ def compute_sparsity(
     # Can't be done at module because this is a cyclic import, too bad
     from .template import Templates
     from .waveform_extractor import WaveformExtractor
+    from .sortingresult import SortingResult
 
     if method in ("best_channels", "radius"):
-        assert isinstance(templates_or_waveform_extractor, (Templates, WaveformExtractor)), "compute_sparsity() need Templates or WaveformExtractor"
+        assert isinstance(templates_or_sorting_result, (Templates, WaveformExtractor, SortingResult)), "compute_sparsity() need Templates or WaveformExtractor or SortingResult"
     else:
-        assert isinstance(templates_or_waveform_extractor, WaveformExtractor), f"compute_sparsity(method='{method}') need WaveformExtractor"
+        assert isinstance(templates_or_sorting_result, (WaveformExtractor, SortingResult)), f"compute_sparsity(method='{method}') need WaveformExtractor or SortingResult"
 
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
-        sparsity = ChannelSparsity.from_best_channels(templates_or_waveform_extractor, num_channels, peak_sign=peak_sign)
+        sparsity = ChannelSparsity.from_best_channels(templates_or_sorting_result, num_channels, peak_sign=peak_sign)
     elif method == "radius":
         assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
-        sparsity = ChannelSparsity.from_radius(templates_or_waveform_extractor, radius_um, peak_sign=peak_sign)
+        sparsity = ChannelSparsity.from_radius(templates_or_sorting_result, radius_um, peak_sign=peak_sign)
     elif method == "snr":
         assert threshold is not None, "For the 'snr' method, 'threshold' needs to be given"
-        sparsity = ChannelSparsity.from_snr(templates_or_waveform_extractor, threshold, peak_sign=peak_sign)
+        sparsity = ChannelSparsity.from_snr(templates_or_sorting_result, threshold, peak_sign=peak_sign)
     elif method == "energy":
         assert threshold is not None, "For the 'energy' method, 'threshold' needs to be given"
-        sparsity = ChannelSparsity.from_energy(templates_or_waveform_extractor, threshold)
+        sparsity = ChannelSparsity.from_energy(templates_or_sorting_result, threshold)
     elif method == "ptp":
         assert threshold is not None, "For the 'ptp' method, 'threshold' needs to be given"
-        sparsity = ChannelSparsity.from_ptp(templates_or_waveform_extractor, threshold)
+        sparsity = ChannelSparsity.from_ptp(templates_or_sorting_result, threshold)
     elif method == "by_property":
         assert by_property is not None, "For the 'by_property' method, 'by_property' needs to be given"
-        sparsity = ChannelSparsity.from_property(templates_or_waveform_extractor, by_property)
+        sparsity = ChannelSparsity.from_property(templates_or_sorting_result, by_property)
     else:
         raise ValueError(f"compute_sparsity() method={method} do not exists")
 

@@ -9,7 +9,7 @@ from .recording_tools import get_channel_distances, get_noise_levels
 from .sortingresult import SortingResult
 
 
-def _get_dense_templates_array(one_object):
+def _get_dense_templates_array(one_object, return_scaled=True):
     if isinstance(one_object, Templates):
         templates_array = one_object.get_dense_templates()
     elif isinstance(one_object, WaveformExtractor):
@@ -18,8 +18,10 @@ def _get_dense_templates_array(one_object):
         ext = one_object.get_extension("templates")
         if ext is not None:
             templates_array =  ext.data["average"]
+            assert return_scaled == ext.params["return_scaled"], f"templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
         else:
             ext = one_object.get_extension("fast_templates")
+            assert return_scaled == ext.params["return_scaled"], f"fast_templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
             if ext is not None:
                 templates_array =  ext.data["average"]
             else:
@@ -49,7 +51,7 @@ def _get_nbefore(one_object):
 
 
 def get_template_amplitudes(
-    templates_or_waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum"
+    templates_or_waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum", return_scaled: bool = True
 ):
     """
     Get amplitude per channel for each unit.
@@ -63,6 +65,8 @@ def get_template_amplitudes(
     mode: "extremum" | "at_index", default: "extremum"
         "extremum":  max or min
         "at_index": take value at spike index
+    return_scaled: bool, default True
+        The amplitude is scaled or not.
 
     Returns
     -------
@@ -78,7 +82,7 @@ def get_template_amplitudes(
 
     peak_values = {}
 
-    templates_array = _get_dense_templates_array(templates_or_waveform_extractor)
+    templates_array = _get_dense_templates_array(templates_or_waveform_extractor, return_scaled=return_scaled)
 
     for unit_ind, unit_id in enumerate(unit_ids):
         template = templates_array[unit_ind, :, :]

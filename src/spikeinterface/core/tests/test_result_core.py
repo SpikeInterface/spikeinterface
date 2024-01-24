@@ -146,6 +146,16 @@ def test_ComputeFastTemplates(format, sparse):
     # ax.legend()
     # plt.show()
 
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+# @pytest.mark.parametrize("sparse", [True, False])
+def test_ComputeNoiseLevels(format, sparse):
+    sortres = get_sorting_result(format=format, sparse=sparse)
+
+    sortres.compute("noise_levels", return_scaled=True)
+    print(sortres)
+
+    noise_levels = sortres.get_extension("noise_levels").data["noise_levels"]
+    assert noise_levels.shape[0] == sortres.channel_ids.size
 
 
 if __name__ == '__main__':
@@ -156,9 +166,11 @@ if __name__ == '__main__':
     # test_ComputeWaveforms(format="zarr", sparse=True)
     # test_ComputeWaveforms(format="zarr", sparse=False)
 
-    test_ComputeTemplates(format="memory", sparse=True)
-    test_ComputeTemplates(format="memory", sparse=False)
-    test_ComputeTemplates(format="binary_folder", sparse=True)
-    test_ComputeTemplates(format="zarr", sparse=True)
+    # test_ComputeTemplates(format="memory", sparse=True)
+    # test_ComputeTemplates(format="memory", sparse=False)
+    # test_ComputeTemplates(format="binary_folder", sparse=True)
+    # test_ComputeTemplates(format="zarr", sparse=True)
 
     # test_ComputeFastTemplates(format="memory", sparse=True)
+
+    test_ComputeNoiseLevels(format="memory", sparse=False)

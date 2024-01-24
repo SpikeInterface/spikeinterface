@@ -248,7 +248,7 @@ class SortingResult:
             rec_attributes = rec_attributes.copy()
 
         # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
-        sorting_copy = SharedMemorySorting.from_sorting(sorting)
+        sorting_copy = SharedMemorySorting.from_sorting(sorting, with_metadata=True)
         sortres = SortingResult(sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes,
                                 format="memory", sparsity=sparsity)
         return sortres
@@ -317,7 +317,7 @@ class SortingResult:
         assert folder.is_dir(), f"This folder does not exists {folder}"
 
         # load internal sorting copy and make it sharedmem
-        sorting = SharedMemorySorting.from_sorting(NumpyFolderSorting(folder / "sorting"))
+        sorting = SharedMemorySorting.from_sorting(NumpyFolderSorting(folder / "sorting"), with_metadata=True)
         
         # load recording if possible
         if recording is None:
@@ -473,7 +473,7 @@ class SortingResult:
 
         # load internal sorting and make it sharedmem
         # TODO propagate storage_options
-        sorting = SharedMemorySorting.from_sorting(ZarrSortingExtractor(folder, zarr_group="sorting"))
+        sorting = SharedMemorySorting.from_sorting(ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True)
         
         # load recording if possible
         if recording is None:
@@ -970,7 +970,7 @@ def get_extension_class(extension_name: str):
     """
     global _possible_extensions
     extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
-    assert extension_name in extensions_dict, "Extension is not registered, please import related module before"
+    assert extension_name in extensions_dict, f"Extension '{extension_name}' is not registered, please import related module before"
     ext_class = extensions_dict[extension_name]
     return ext_class
 

@@ -76,6 +76,14 @@ class ResultExtensionCommonTestSuite:
                 key = f"spare{sparse}_{format}"
                 self.sorting_results[key] = sorting_result
     
+    def tearDown(self):
+        for k in list(self.sorting_results.keys()):
+            sorting_result = self.sorting_results.pop(k)
+            if sorting_result.format != "memory":
+                folder = sorting_result.folder
+                del sorting_result
+                shutil.rmtree(folder)
+
     @property
     def extension_name(self):
         return self.extension_class.extension_name
