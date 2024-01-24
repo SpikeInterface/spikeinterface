@@ -1,11 +1,9 @@
 import numpy as np
 import warnings
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs, fix_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
-
-# from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
@@ -16,7 +14,42 @@ class ComputeSpikeAmplitudes(ResultExtension):
     Computes the spike amplitudes.
 
     Need "templates" or "fast_templates" to be computed first.
+    Localize spikes in 2D or 3D with several methods given the template.
 
+    Parameters
+    ----------
+    sorting_result: SortingResult
+        A SortingResult object
+    ms_before : float, default: 0.5
+        The left window, before a peak, in milliseconds
+    ms_after : float, default: 0.5
+        The right window, after a peak, in milliseconds
+    spike_retriver_kwargs: dict
+        A dictionary to control the behavior for getting the maximum channel for each spike
+        This dictionary contains:
+
+          * channel_from_template: bool, default: True
+              For each spike is the maximum channel computed from template or re estimated at every spikes
+              channel_from_template = True is old behavior but less acurate
+              channel_from_template = False is slower but more accurate
+          * radius_um: float, default: 50
+              In case channel_from_template=False, this is the radius to get the true peak
+          * peak_sign, default: "neg"
+              In case channel_from_template=False, this is the peak sign.
+    method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
+        The localization method to use
+    method_kwargs : dict, default: dict()
+        Other kwargs depending on the method.
+    outputs : "concatenated" | "by_unit", default: "concatenated"
+        The output format
+    {}
+
+    Returns
+    -------
+    spike_locations: np.array or list of dict
+        The spike locations.
+            - If "concatenated" all locations for all spikes and all units are concatenated
+            - If "by_unit", locations are returned as a list (for segments) of dictionaries (for units)
     1. Determine the max channel per unit.
     2. Then a "peak_shift" is estimated because for some sorters the spike index is not always at the
        peak.

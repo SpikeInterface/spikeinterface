@@ -34,7 +34,7 @@ from .isi import (
     compute_isi_histograms_numba,
 )
 
-from .spike_locations import compute_spike_locations, SpikeLocationsCalculator
+from .spike_locations import compute_spike_locations, ComputeSpikeLocations
 
 from .unit_localization import (
     compute_unit_locations,

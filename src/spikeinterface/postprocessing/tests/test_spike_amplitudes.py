@@ -8,15 +8,14 @@ from spikeinterface.postprocessing.tests.common_extension_tests import ResultExt
 class ComputeSpikeAmplitudesTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeSpikeAmplitudes
     extension_function_kwargs_list = [
-        dict(),
+        dict(return_scaled=True),
+        dict(return_scaled=False),
     ]
 
 if __name__ == "__main__":
     test = ComputeSpikeAmplitudesTest()
     test.setUp()
     test.test_extension()
-    # test.test_scaled()
-    # test.test_parallel()
 
     # for k, sorting_result in test.sorting_results.items():
     #     print(sorting_result)
