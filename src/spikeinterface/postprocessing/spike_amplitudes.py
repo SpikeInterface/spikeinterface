@@ -1,5 +1,5 @@
 import numpy as np
-import shutil
+import warnings
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs, fix_job_kwargs
 
@@ -8,7 +8,7 @@ from spikeinterface.core.template_tools import get_template_extremum_channel, ge
 # from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
-
+from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 
 class ComputeSpikeAmplitudes(ResultExtension):
     """
@@ -39,8 +39,7 @@ class ComputeSpikeAmplitudes(ResultExtension):
     extension_name = "spike_amplitudes"
     depend_on = ["fast_templates|templates", ]
     need_recording = True
-    # TODO: implement this as a pipeline
-    use_nodepipeline = False
+    use_nodepipeline = True
 
     def __init__(self, sorting_result):
         ResultExtension.__init__(self, sorting_result)
@@ -62,57 +61,46 @@ class ComputeSpikeAmplitudes(ResultExtension):
 
         return new_data
 
-    def _run(self, **job_kwargs):
-        if not self.sorting_result.has_recording():
-            self.sorting_result.delete_extension(ComputeSpikeAmplitudes.extension_name)
-            raise ValueError("compute_spike_amplitudes() cannot run with a SortingResult in recordless mode.")
 
-        job_kwargs = fix_job_kwargs(job_kwargs)
-        sorting_result = self.sorting_result
-        recording = sorting_result.recording
-        sorting = sorting_result.sorting
+    def _get_pipeline_nodes(self):
 
-        all_spikes = sorting.to_spike_vector()
-        self._all_spikes = all_spikes
+        recording = self.sorting_result.recording
+        sorting = self.sorting_result.sorting
 
         peak_sign = self.params["peak_sign"]
         return_scaled = self.params["return_scaled"]
 
-        extremum_channels_index = get_template_extremum_channel(sorting_result, peak_sign=peak_sign, outputs="index")
-        peak_shifts = get_template_extremum_channel_peak_shift(sorting_result, peak_sign=peak_sign)
-
-        # put extremum_channels_index and peak_shifts in vector way
-        extremum_channels_index = np.array(
-            [extremum_channels_index[unit_id] for unit_id in sorting.unit_ids], dtype="int64"
-        )
-        peak_shifts = np.array([peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype="int64")
+        extremum_channels_indices = get_template_extremum_channel(self.sorting_result, peak_sign=peak_sign, outputs="index")
+        peak_shifts = get_template_extremum_channel_peak_shift(self.sorting_result, peak_sign=peak_sign)
 
         if return_scaled:
             # check if has scaled values:
             if not recording.has_scaled_traces():
-                print("Setting 'return_scaled' to False")
+                warnings.warn("Recording doesn't have scaled traces! Setting 'return_scaled' to False")
                 return_scaled = False
 
-        # and run
-        func = _spike_amplitudes_chunk
-        init_func = _init_worker_spike_amplitudes
-        n_jobs = ensure_n_jobs(recording, job_kwargs.get("n_jobs", None))
-        init_args = (recording, sorting.to_multiprocessing(n_jobs), extremum_channels_index, peak_shifts, return_scaled)
-        processor = ChunkRecordingExecutor(
-            recording, func, init_func, init_args, handle_returns=True, job_name="extract amplitudes", **job_kwargs
+        spike_retriever_node = SpikeRetriever(
+            recording, sorting, channel_from_template=True, extremum_channel_inds=extremum_channels_indices
         )
-        # out = processor.run()
-        # amps, segments = zip(*out)
-        # amps = np.concatenate(amps)
-        # segments = np.concatenate(segments)
+        spike_amplitudes_node = SpikeAmplitudeNode(
+            recording,
+            parents=[spike_retriever_node],
+            return_output=True,
+            peak_shifts=peak_shifts,
+            return_scaled=return_scaled,
+        )
+        nodes = [spike_retriever_node, spike_amplitudes_node]
+        return nodes
 
-        # for segment_index in range(recording.get_num_segments()):
-        #     mask = segments == segment_index
-        #     amps_seg = amps[mask]
-        #     self._extension_data[f"amplitude_segment_{segment_index}"] = amps_seg
-        amps = processor.run()
-        amps = np.concatenate(amps)
+    def _run(self, **job_kwargs):
+        # TODO later gather to disk when format="binary_folder"
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        nodes = self.get_pipeline_nodes()
+        amps = run_node_pipeline(
+            self.sorting_result.recording, nodes, job_kwargs=job_kwargs, job_name="spike_amplitudes", gather_mode="memory"
+        )
         self.data["amplitudes"] = amps
+
 
     # def get_data(self, outputs="concatenated"):
     #     """
@@ -150,99 +138,68 @@ class ComputeSpikeAmplitudes(ResultExtension):
     #                 amplitudes_by_unit[segment_index][unit_id] = amps
     #         return amplitudes_by_unit
 
-    # @staticmethod
-    # def get_extension_function():
-    #     return compute_spike_amplitudes
 
 
-# WaveformExtractor.register_extension(SpikeAmplitudesCalculator)
 register_result_extension(ComputeSpikeAmplitudes)
 
 compute_spike_amplitudes = ComputeSpikeAmplitudes.function_factory()
 
-# def compute_spike_amplitudes(
-#     sorting_result, load_if_exists=False, peak_sign="neg", return_scaled=True, outputs="concatenated", **job_kwargs
-# ):
-
-#     if load_if_exists and sorting_result.has_extension(SpikeAmplitudesCalculator.extension_name):
-#         sac = sorting_result.load_extension(SpikeAmplitudesCalculator.extension_name)
-#     else:
-#         sac = SpikeAmplitudesCalculator(sorting_result)
-#         sac.set_params(peak_sign=peak_sign, return_scaled=return_scaled)
-#         sac.run(**job_kwargs)
-
-#     amps = sac.get_data(outputs=outputs)
-#     return amps
 
 
-# compute_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
 
-
-def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, peak_shifts, return_scaled):
-    worker_ctx = {}
-    worker_ctx["recording"] = recording
-    worker_ctx["sorting"] = sorting
-    worker_ctx["return_scaled"] = return_scaled
-    worker_ctx["peak_shifts"] = peak_shifts
-    worker_ctx["min_shift"] = np.min(peak_shifts)
-    worker_ctx["max_shifts"] = np.max(peak_shifts)
-
-    worker_ctx["all_spikes"] = sorting.to_spike_vector(concatenated=False)
-    worker_ctx["extremum_channels_index"] = extremum_channels_index
-
-    return worker_ctx
-
-
-def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    # recover variables of the worker
-    all_spikes = worker_ctx["all_spikes"]
-    recording = worker_ctx["recording"]
-    return_scaled = worker_ctx["return_scaled"]
-    peak_shifts = worker_ctx["peak_shifts"]
-
-    seg_size = recording.get_num_samples(segment_index=segment_index)
-
-    spike_times = all_spikes[segment_index]["sample_index"]
-    spike_labels = all_spikes[segment_index]["unit_index"]
-
-    d = np.diff(spike_times)
-    assert np.all(d >= 0)
-
-    i0, i1 = np.searchsorted(spike_times, [start_frame, end_frame])
-    n_spikes = i1 - i0
-    amplitudes = np.zeros(n_spikes, dtype=recording.get_dtype())
-
-    if i0 != i1:
-        # some spike in the chunk
-
-        extremum_channels_index = worker_ctx["extremum_channels_index"]
-
-        sample_inds = spike_times[i0:i1].copy()
-        labels = spike_labels[i0:i1]
-
-        # apply shifts per spike
-        sample_inds += peak_shifts[labels]
-
-        # get channels per spike
-        chan_inds = extremum_channels_index[labels]
-
-        # prevent border accident due to shift
-        sample_inds[sample_inds < 0] = 0
-        sample_inds[sample_inds >= seg_size] = seg_size - 1
-
-        first = np.min(sample_inds)
-        last = np.max(sample_inds)
-        sample_inds -= first
-
-        # load trace in memory
-        traces = recording.get_traces(
-            start_frame=first, end_frame=last + 1, segment_index=segment_index, return_scaled=return_scaled
+class SpikeAmplitudeNode(PipelineNode):
+    def __init__(
+        self,
+        recording,
+        parents=None,
+        return_output=True,
+        peak_shifts=None,
+        return_scaled=True,
+    ):
+        PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
+        self.return_scaled = return_scaled
+        if return_scaled and recording.has_scaled():
+            self._dtype = np.float32
+            self._gains = recording.get_channel_gains()
+            self._offsets = recording.get_channel_gains()
+        else:
+            self._dtype = recording.get_dtype()
+            self._gains = None
+            self._offsets = None
+        spike_retriever = find_parent_of_type(parents, SpikeRetriever)
+        assert isinstance(
+            spike_retriever, SpikeRetriever
+        ), "SpikeAmplitudeNode needs a single SpikeRetriever as a parent"
+        # put peak_shifts in vector way
+        self._peak_shifts = np.array(list(peak_shifts.values()), dtype="int64")
+        self._margin = np.max(np.abs(self._peak_shifts))
+        self._kwargs.update(
+            peak_shifts=peak_shifts,
+            return_scaled=return_scaled,
         )
 
+    def get_dtype(self):
+        return self._dtype
+
+    def compute(self, traces, peaks):
+        sample_indices = peaks["sample_index"].copy()
+        unit_index = peaks["unit_index"]
+        chan_inds = peaks["channel_index"]
+
+        # apply shifts per spike
+        sample_indices += self._peak_shifts[unit_index]
+
         # and get amplitudes
-        amplitudes = traces[sample_inds, chan_inds]
+        amplitudes = traces[sample_indices, chan_inds]
 
-    # segments = np.zeros(amplitudes.size, dtype="int64") + segment_index
+        # and scale
+        if self._gains is not None:
+            traces = traces.astype("float32") * self._gains + self._offsets
+            amplitudes = amplitudes.astype('float32', copy=True)
+            amplitudes *= self._gains[chan_inds]
+            amplitudes += self._offsets[chan_inds]
 
-    # return amplitudes, segments
-    return amplitudes
+        return amplitudes
+
+    def get_trace_margin(self):
+        return self._margin

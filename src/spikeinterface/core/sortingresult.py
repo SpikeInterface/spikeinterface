@@ -735,7 +735,27 @@ class SortingResult:
         return self.sorting.get_property(key)
 
     ## extensions zone
-    def compute(self, extension_name, save=True, **params):
+
+    
+
+    def compute(self, input, save=True, **params):
+        """
+        Compute one extension or several extension.
+        Internally calling compute_one_extension() or compute_several_extensions() depending th input type.
+
+        Parameters
+        ----------
+        input: str or dict
+            If the input is a string then compute one extension with compute_one_extension(extension_name=input, ...)
+            If the input is a dict then compute several extension with compute_several_extensions(extensions=input)
+        """
+        if isinstance(input, str):
+            self.compute_one_extension(extension_name=input, save=save, **params)
+        elif isinstance(input, dict):
+            assert len(params) == 0, "Too many arguments for SortingResult.compute_several_extensions()"
+            self.compute_several_extensions(extensions=input, save=save)
+
+    def compute_one_extension(self, extension_name, save=True, **params):
         """
         Compute one extension
 
@@ -761,6 +781,7 @@ class SortingResult:
         --------
 
         >>> extension = sortres.compute("waveforms", **some_params)
+        >>> extension = sortres.compute_one_extension("waveforms", **some_params)
         >>> wfs = extension.data["waveforms"]
 
         """
@@ -789,6 +810,36 @@ class SortingResult:
         return extension_instance
         # OR
         return extension_instance.data
+
+    def compute_several_extensions(self, extensions, save=True):
+        """
+        Compute several extensions
+
+        Parameters
+        ----------
+        extensions: dict
+            Key are extension_name and values are params.
+        save: bool, default True
+            It the extension can be saved then it is saved.
+            If not then the extension will only live in memory as long as the object is deleted.
+            save=False is convinient to try some parameters without changing an already saved extension.
+
+        Returns
+        -------
+        No return
+
+        Examples
+        --------
+
+        >>> sortres.compute({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std", ]} })
+        >>> sortres.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
+
+        """
+        # TODO this is a simple implementation
+        # this will be improved with nodepipeline!!!
+        for extension_name, extension_params in extensions.items():
+            self.compute_one_extension(self, extension_name, save=save, **extension_params)
+
 
     def get_saved_extension_names(self):
         """
@@ -1035,6 +1086,11 @@ class ResultExtension:
     def _select_extension_data(self, unit_ids):
         # must be implemented in subclass
         raise NotImplementedError
+    
+    def _get_pipeline_nodes(self):
+        # must be implemented in subclass only if use_nodepipeline=True
+        raise NotImplementedError
+
     # 
     #######
 
@@ -1326,5 +1382,7 @@ class ResultExtension:
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["params"] = check_json(params_to_save)
 
-
+    def get_pipeline_nodes(self):
+        assert self.use_nodepipeline, "ResultExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
+        return self._get_pipeline_nodes()
 
