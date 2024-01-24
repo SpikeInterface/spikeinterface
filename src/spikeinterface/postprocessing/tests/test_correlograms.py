@@ -22,9 +22,8 @@ class ComputeCorrelogramsTest(ResultExtensionCommonTestSuite, unittest.TestCase)
         dict(method="numpy"),
         dict(method="auto"),
     ]
-
-if HAVE_NUMBA:
-    ComputeCorrelogramsTest.extension_function_kwargs_list.append(dict(method="numba"))
+    if HAVE_NUMBA:
+        extension_function_kwargs_list.append(dict(method="numba"))
 
 
 

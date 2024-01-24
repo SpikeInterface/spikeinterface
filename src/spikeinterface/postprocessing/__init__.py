@@ -28,7 +28,7 @@ from .correlograms import (
 )
 
 from .isi import (
-    ISIHistogramsCalculator,
+    ComputeISIHistograms,
     compute_isi_histograms,
     compute_isi_histograms_numpy,
     compute_isi_histograms_numba,
@@ -46,4 +46,4 @@ from .amplitude_scalings import compute_amplitude_scalings, AmplitudeScalingsCal
 
 from .alignsorting import align_sorting, AlignSortingExtractor
 
-from .noise_level import compute_noise_levels, NoiseLevelsCalculator
+from .noise_level import compute_noise_levels, ComputeNoiseLevels

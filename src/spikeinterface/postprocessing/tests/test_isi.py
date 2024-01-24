@@ -2,9 +2,10 @@ import unittest
 import numpy as np
 from typing import List
 
-from spikeinterface.postprocessing import compute_isi_histograms, ISIHistogramsCalculator
 
-from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
+from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
+from spikeinterface.postprocessing import compute_isi_histograms, ComputeISIHistograms
+from spikeinterface.postprocessing.isi import _compute_isi_histograms
 
 
 try:
@@ -15,16 +16,22 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-class ISIHistogramsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
-    extension_class = ISIHistogramsCalculator
-    extension_data_names = ["isi_histograms", "bins"]
+class ComputeISIHistogramsTest(ResultExtensionCommonTestSuite, unittest.TestCase):
+    extension_class = ComputeISIHistograms
+    extension_function_kwargs_list = [
+        dict(method="numpy"),
+        dict(method="auto"),
+    ]
+    if HAVE_NUMBA:
+        extension_function_kwargs_list.append(dict(method="numba"))
 
     def test_compute_ISI(self):
         methods = ["numpy", "auto"]
         if HAVE_NUMBA:
             methods.append("numba")
 
-        sorting = self.we2.sorting
+        key0 = list(self.sorting_results.keys())[0]
+        sorting = self.sorting_results[key0].sorting
 
         _test_ISI(sorting, window_ms=60.0, bin_ms=1.0, methods=methods)
         _test_ISI(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
@@ -32,7 +39,7 @@ class ISIHistogramsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Test
 
 def _test_ISI(sorting, window_ms: float, bin_ms: float, methods: List[str]):
     for method in methods:
-        ISI, bins = compute_isi_histograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
+        ISI, bins = _compute_isi_histograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         if method == "numpy":
             ref_ISI = ISI
@@ -43,6 +50,8 @@ def _test_ISI(sorting, window_ms: float, bin_ms: float, methods: List[str]):
 
 
 if __name__ == "__main__":
-    test = ISIHistogramsExtensionTest()
+    test = ComputeISIHistogramsTest()
     test.setUp()
+    test.test_extension()
     test.test_compute_ISI()
+
