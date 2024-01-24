@@ -12,7 +12,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 def import_lazily():
     "Makes annotations / typing available lazily"
-    global NWBFile, ElectricalSeries, NWBHDF5IO
+    global NWBFile, ElectricalSeries, Units, NWBHDF5IO
     from pynwb import NWBFile
     from pynwb.ecephys import ElectricalSeries
     from pynwb.misc import Units
@@ -46,39 +46,42 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
     """
     from pynwb.ecephys import ElectricalSeries
 
+    electrical_series_dict: Dict[str, ElectricalSeries] = {}
+
+    for item in nwbfile.all_children():
+        if isinstance(item, ElectricalSeries):
+            # remove data and skip first "/"
+            electrical_series_path = item.data.name.replace("/data", "")[1:]
+            electrical_series_dict[electrical_series_path] = item
+
     if electrical_series_name is not None:
-        # TODO note that this case does not handle repetitions of the same name
-        electrical_series_dict: Dict[str, ElectricalSeries] = {
-            item.name: item for item in nwbfile.all_children() if isinstance(item, ElectricalSeries)
-        }
         if electrical_series_name not in electrical_series_dict:
             raise ValueError(f"{electrical_series_name} not found in the NWBFile. ")
         electrical_series = electrical_series_dict[electrical_series_name]
     else:
-        electrical_series_list: List[ElectricalSeries] = [
-            series for series in nwbfile.acquisition.values() if isinstance(series, ElectricalSeries)
-        ]
+        electrical_series_list = list(electrical_series_dict.keys())
         if len(electrical_series_list) > 1:
             raise ValueError(
                 f"More than one acquisition found! You must specify 'electrical_series_name'. \n"
-                f"Options in current file are: {[e.name for e in electrical_series_list]}"
+                f"Options in current file are: {[e for e in electrical_series_list]}"
             )
         if len(electrical_series_list) == 0:
             raise ValueError("No acquisitions found in the .nwb file.")
-        electrical_series = electrical_series_list[0]
+        electrical_series = electrical_series_dict[electrical_series_list[0]]
 
     return electrical_series
 
 
-def retrieve_unit_table(nwbfile: NWBFile, unit_table_path: Optional[str] = None) -> Units:
+def retrieve_unit_table(nwbfile: NWBFile, unit_table_name: Optional[str] = None) -> Units:
     """
     Get an Units object from an NWBFile.
+    Units tables can be either the main unit table (nwbfile.units) or in the processing module.
 
     Parameters
     ----------
     nwbfile : NWBFile
         The NWBFile object from which to extract the Units.
-    unit_table_path : str, default: None
+    unit_table_name : str, default: None
         The path of the Units to extract. If not specified, it will return the first found Units
         if there's only one; otherwise, it raises an error.
 
@@ -90,27 +93,25 @@ def retrieve_unit_table(nwbfile: NWBFile, unit_table_path: Optional[str] = None)
     Raises
     ------
     ValueError
-        If no unit tables are found in the NWBFile or if multiple unit tables are found but no unit_table_path
+        If no unit tables are found in the NWBFile or if multiple unit tables are found but no unit_table_name
         is provided.
     AssertionError
-        If the specified unit_table_path is not present in the NWBFile.
+        If the specified unit_table_name is not present in the NWBFile.
     """
     from pynwb.misc import Units
 
-    unit_table_dict: Dict[str:Units] = {
-        unit_table.name: unit_table for unit_table in nwbfile.all_children() if isinstance(unit_table, Units)
-    }
-    unit_table_dict_processing: Dict[str:Units] = {}
-    for processing_name, processing in nwbfile.processing.items():
-        for interface_name, interface in processing.data_interfaces.items():
-            if isinstance(interface, Units):
-                unit_table_dict_processing[f"processing/{processing_name}/{interface_name}"] = interface
-    unit_table_dict.update(unit_table_dict_processing)
+    unit_table_dict: Dict[str:Units] = {}
 
-    if unit_table_path is not None:
-        if unit_table_path not in unit_table_dict:
-            raise ValueError(f"{unit_table_path} not found in the NWBFile. ")
-        unit_table = unit_table_dict[unit_table_path]
+    for item in nwbfile.all_children():
+        if isinstance(item, Units):
+            # retrieve name of "id" column and skip first "/"
+            electrical_series_path = item.id.data.name.replace("/id", "")[1:]
+            unit_table_dict[electrical_series_path] = item
+
+    if unit_table_name is not None:
+        if unit_table_name not in unit_table_dict:
+            raise ValueError(f"{unit_table_name} not found in the NWBFile. ")
+        unit_table = unit_table_dict[unit_table_name]
     else:
         unit_table_list: List[Units] = list(unit_table_dict.keys())
 
@@ -121,7 +122,7 @@ def retrieve_unit_table(nwbfile: NWBFile, unit_table_path: Optional[str] = None)
             )
         if len(unit_table_list) == 0:
             raise ValueError("No unit table found in the .nwb file.")
-        unit_table = list(unit_table_dict.values())[0]
+        unit_table = unit_table_dict[unit_table_list[0]]
 
     return unit_table
 
@@ -470,7 +471,6 @@ class _NwbHDF5RecordingExtractor(BaseRecording):
         stream_cache_path: str | Path | None = None,
         *,
         file: BinaryIO | None = None,  # file-like - provide either this or file_path
-        electrical_series_location: str | None = None,
         cache: bool = False,
     ):
         if file_path is not None and file is not None:
@@ -491,32 +491,32 @@ class _NwbHDF5RecordingExtractor(BaseRecording):
             stream_cache_path=stream_cache_path,
         )
 
-        # If the electrical_series_location is not given, `find_electrical_series` will be called
-        # And returns a dictionary with the electrical_series_name as key and the location as value
-        # If there is only one electrical series, the electrical_series_name is set to the name of the series
-        if electrical_series_location is None:
+        # If the electrical_series_name is not given, `find_electrical_series` will be called
+        # And returns a list with the electrical_series_names available in the file.
+        # If there is only one electrical series, the electrical_series_name is set to the name of the series,
+        # otherwise an error is raised.
+        if electrical_series_name is None:
             available_electrical_series = _NwbHDF5RecordingExtractor.find_electrical_series(hdf5_file)
-            if electrical_series_name is None:
-                if len(available_electrical_series) == 1:
-                    electrical_series_name = list(available_electrical_series.keys())[0]
-                else:
-                    raise ValueError(
-                        "Multiple ElectricalSeries found in the file. "
-                        "Please specify the 'electrical_series_name' argument:"
-                        f"Available options are: {available_electrical_series}."
-                    )
+            # if electrical_series_name is None:
+            if len(available_electrical_series) == 1:
+                electrical_series_name = available_electrical_series[0]
             else:
-                if electrical_series_name not in available_electrical_series:
-                    raise ValueError(
-                        f"'{electrical_series_name}' not found in the file. "
-                        f"Available options are: {available_electrical_series}"
-                    )
-            electrical_series_location = available_electrical_series[electrical_series_name]
-
-        self.electrical_series_location = electrical_series_location
+                raise ValueError(
+                    "Multiple ElectricalSeries found in the file. "
+                    "Please specify the 'electrical_series_name' argument:"
+                    f"Available options are: {available_electrical_series}."
+                )
+        self.electrical_series_name = electrical_series_name
 
         # The indices in the electrode table corresponding to this electrical series
-        electrical_series = hdf5_file[electrical_series_location]
+        try:
+            electrical_series = hdf5_file[self.electrical_series_name]
+        except KeyError:
+            available_electrical_series = _NwbHDF5RecordingExtractor.find_electrical_series(hdf5_file)
+            raise ValueError(
+                f"{self.electrical_series_name} not found in the NWB file!"
+                f"Available options are: {available_electrical_series}."
+            )
         electrodes_indices = electrical_series["electrodes"][:]
         # The table for all the electrodes in the nwbfile
         electrodes_table = hdf5_file["/general/extracellular_ephys/electrodes"]
@@ -670,26 +670,25 @@ class _NwbHDF5RecordingExtractor(BaseRecording):
             "cache": cache,
             "stream_cache_path": stream_cache_path,
             "file": file,
-            "electrical_series_location": electrical_series_location,
         }
 
     @staticmethod
     def find_electrical_series(group, path="", result=None):
         """
         Recursively searches for groups with neurodata_type 'ElectricalSeries' in the HDF5 group or file,
-        and returns a dictionary with their names and paths.
+        and returns a list with their paths.
         """
         import h5py
 
         if result is None:
-            result = {}
+            result = []
 
         for neurodata_name, value in group.items():
             # Check if it's a group and if it has the 'ElectricalSeries' neurodata_type
             if isinstance(value, h5py.Group):
                 current_path = f"{path}/{neurodata_name}" if path else neurodata_name
                 if value.attrs.get("neurodata_type") == "ElectricalSeries":
-                    result[neurodata_name] = current_path
+                    result.append(current_path)
                 _NwbHDF5RecordingExtractor.find_electrical_series(
                     value, current_path, result
                 )  # Recursive call for sub-groups
@@ -710,6 +709,9 @@ class NwbRecordingExtractor(BaseRecording):
         when the NWB file contains multiple ElectricalSeries objects. It helps in identifying
         which specific series to extract data from. If there is only one ElectricalSeries and
         this parameter is not set, that unique series will be used by default.
+        If multiple ElectricalSeries are present and this parameter is not set, an error is raised.
+        The `electrical_series_name` corresponds to the path within the NWB file, e.g.,
+        'acquisition/MyElectricalSeries`.
     file: file-like object or None, default: None
         A file-like object representing the NWB file. Use this parameter if you have an in-memory
         representation of the NWB file instead of a file path.
@@ -730,19 +732,6 @@ class NwbRecordingExtractor(BaseRecording):
     use_pynwb: bool, default: False
         Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
         to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
-    electrical_series_location: str or None, default: None
-        This parameter is only used when `use_pynwb=False`.
-        Specifies the direct path to the ElectricalSeries object within the NWB file,
-        e.g., 'acquisition/ElectricalSeries/my_electrical_series'.
-
-        Precedence:
-        - If provided, this parameter directly locates the ElectricalSeries, enhancing
-        data loading speed.
-        - If absent but `electrical_series_name` is specified, the extractor searches
-        for an ElectricalSeries with the given name across the NWB file.
-        - If both this parameter and `electrical_series_name` are unspecified, and there
-        is only one ElectricalSeries in the file, that series is automatically selected
-        otherwise an error is raised.
 
     Returns
     -------
@@ -784,7 +773,6 @@ class NwbRecordingExtractor(BaseRecording):
         stream_cache_path: str | Path | None = None,
         *,
         file: BinaryIO | None = None,  # file-like - provide either this or file_path
-        electrical_series_location: str | None = None,
         cache: bool = False,
         use_pynwb: bool = False,
     ):
@@ -808,7 +796,6 @@ class NwbRecordingExtractor(BaseRecording):
                 stream_mode=stream_mode,
                 stream_cache_path=stream_cache_path,
                 file=file,
-                electrical_series_location=electrical_series_location,
                 cache=cache,
             )
 
@@ -865,7 +852,7 @@ class _NwbHDF5SortingExtractor(BaseSorting):
         samples_for_rate_estimation: int = 1_000,
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
-        unit_table_path: str | None = None,
+        unit_table_name: str | None = None,
         cache: bool = False,
         t_start: float | None = None,
     ):
@@ -888,7 +875,7 @@ class _NwbHDF5SortingExtractor(BaseSorting):
             available_electrical_series = _NwbHDF5RecordingExtractor.find_electrical_series(hdf5_file)
             if electrical_series_name is None:
                 if len(available_electrical_series) == 1:
-                    electrical_series_name = list(available_electrical_series.keys())[0]
+                    electrical_series_name = available_electrical_series[0]
                 else:
                     raise ValueError(
                         "Multiple ElectricalSeries found in the file. "
@@ -901,8 +888,8 @@ class _NwbHDF5SortingExtractor(BaseSorting):
                         f"'{electrical_series_name}' not found in the file. "
                         f"Available options are: {available_electrical_series}"
                     )
-            self.electrical_series_location = available_electrical_series[electrical_series_name]
-            electrical_series = hdf5_file[self.electrical_series_location]
+            self.electrical_series_name = electrical_series_name
+            electrical_series = hdf5_file[self.electrical_series_name]
 
             # Get sampling frequency
             if "starting_time" in electrical_series.keys():
@@ -922,23 +909,23 @@ class _NwbHDF5SortingExtractor(BaseSorting):
             self.t_start is not None
         ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
-        available_unit_table_paths = _NwbHDF5SortingExtractor.find_unit_tables(hdf5_file)
-        if unit_table_path is None:
-            if len(available_unit_table_paths) == 1:
-                unit_table_path = available_unit_table_paths[0]
+        available_unit_table_names = _NwbHDF5SortingExtractor.find_unit_tables(hdf5_file)
+        if unit_table_name is None:
+            if len(available_unit_table_names) == 1:
+                unit_table_name = available_unit_table_names[0]
             else:
                 raise ValueError(
                     "Multiple Units tables found in the file. "
-                    "Please specify the 'unit_table_path' argument:"
-                    f"Available options are: {available_unit_table_paths}."
+                    "Please specify the 'unit_table_name' argument:"
+                    f"Available options are: {available_unit_table_names}."
                 )
         else:
-            if unit_table_path not in available_unit_table_paths:
+            if unit_table_name not in available_unit_table_names:
                 raise ValueError(
-                    f"'{unit_table_path}' not found in the file. "
-                    f"Available options are: {available_unit_table_paths}"
+                    f"'{unit_table_name}' not found in the file. "
+                    f"Available options are: {available_unit_table_names}"
                 )
-        self.unit_table_location = unit_table_path
+        self.unit_table_location = unit_table_name
         units_table = hdf5_file[self.unit_table_location]
 
         spike_times_data = units_table["spike_times"]
@@ -1044,7 +1031,7 @@ class _NwbPynwbSortingExtractor(BaseSorting):
         electrical_series_name: str | None = None,
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 1000,
-        unit_table_path: str | None = None,
+        unit_table_name: str | None = None,
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -1089,7 +1076,7 @@ class _NwbPynwbSortingExtractor(BaseSorting):
             self.t_start is not None
         ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
-        units_table = retrieve_unit_table(self._nwbfile, unit_table_path=unit_table_path)
+        units_table = retrieve_unit_table(self._nwbfile, unit_table_name=unit_table_name)
 
         name_to_column_data = {c.name: c for c in units_table.columns}
         spike_times_data = name_to_column_data.pop("spike_times").data
@@ -1162,7 +1149,7 @@ class NwbSortingExtractor(BaseSorting):
         The name of the ElectricalSeries (if multiple ElectricalSeries are present).
     sampling_frequency: float or None, default: None
         The sampling frequency in Hz (required if no ElectricalSeries is available).
-    unit_table_path: str or None, default: None
+    unit_table_name: str or None, default: "units"
         The path of the unit table in the NWB file.
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
@@ -1207,7 +1194,7 @@ class NwbSortingExtractor(BaseSorting):
         electrical_series_name: str | None = None,
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 1000,
-        unit_table_path: str | None = None,
+        unit_table_name: str = "units",
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -1221,7 +1208,7 @@ class NwbSortingExtractor(BaseSorting):
                 electrical_series_name=electrical_series_name,
                 sampling_frequency=sampling_frequency,
                 samples_for_rate_estimation=samples_for_rate_estimation,
-                unit_table_path=unit_table_path,
+                unit_table_name=unit_table_name,
                 stream_mode=stream_mode,
                 stream_cache_path=stream_cache_path,
                 cache=cache,
@@ -1234,7 +1221,7 @@ class NwbSortingExtractor(BaseSorting):
                 electrical_series_name=electrical_series_name,
                 sampling_frequency=sampling_frequency,
                 samples_for_rate_estimation=samples_for_rate_estimation,
-                unit_table_path=unit_table_path,
+                unit_table_name=unit_table_name,
                 stream_mode=stream_mode,
                 stream_cache_path=stream_cache_path,
                 cache=cache,

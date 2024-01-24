@@ -132,7 +132,7 @@ def test_nwb_extractor_channel_ids_retrieval(path_to_nwbfile, nwbfile_with_eceph
     for electrical_series_name in electrical_series_name_list:
         recording_extractor = NwbRecordingExtractor(
             path_to_nwbfile,
-            electrical_series_name=electrical_series_name,
+            electrical_series_name=f"acquisition/{electrical_series_name}",
             use_pynwb=use_pynwb,
         )
 
@@ -158,7 +158,7 @@ def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_
     for electrical_series_name in electrical_series_name_list:
         recording_extractor = NwbRecordingExtractor(
             path_to_nwbfile,
-            electrical_series_name=electrical_series_name,
+            electrical_series_name=f"acquisition/{electrical_series_name}",
             use_pynwb=use_pynwb,
         )
         nwbfile = nwbfile_with_ecephys_content
@@ -178,7 +178,7 @@ def test_nwb_extractor_offset_from_electrodes_table(path_to_nwbfile, nwbfile_wit
     electrical_series_name = "ElectricalSeries1"
     recording_extractor = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_name=electrical_series_name,
+        electrical_series_name=f"acquisition/{electrical_series_name}",
         use_pynwb=use_pynwb,
     )
     nwbfile = nwbfile_with_ecephys_content
@@ -198,7 +198,7 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     electrical_series_name = "ElectricalSeries2"
     recording_extractor = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_name=electrical_series_name,
+        electrical_series_name=f"acquisition/{electrical_series_name}",
         use_pynwb=use_pynwb,
     )
     nwbfile = nwbfile_with_ecephys_content
@@ -209,7 +209,7 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
 
 
-@pytest.mark.parametrize("electrical_series_name", ["ElectricalSeries1", "ElectricalSeries2"])
+@pytest.mark.parametrize("electrical_series_name", ["acquisition/ElectricalSeries1", "acquisition/ElectricalSeries2"])
 def test_that_hdf5_and_pynwb_extractors_return_the_same_data(path_to_nwbfile, electrical_series_name):
     recording_extractor_hdf5 = NwbRecordingExtractor(
         path_to_nwbfile,
@@ -224,6 +224,17 @@ def test_that_hdf5_and_pynwb_extractors_return_the_same_data(path_to_nwbfile, el
     )
 
     check_recordings_equal(recording_extractor_hdf5, recording_extractor_pynwb)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_failure_with_wrong_electrical_series_name(path_to_nwbfile, use_pynwb):
+    """Test that the extractor raises an error if the electrical series name is not found."""
+    with pytest.raises(ValueError):
+        recording_extractor = NwbRecordingExtractor(
+            path_to_nwbfile,
+            electrical_series_name="acquisition/ElectricalSeries3",
+            use_pynwb=use_pynwb,
+        )
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
@@ -365,7 +376,7 @@ def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
 
     sorting_extractor = NwbSortingExtractor(
         file_path=file_path,
-        electrical_series_name=electrical_series_name,
+        electrical_series_name=f"acquisition/{electrical_series_name}",
         use_pynwb=use_pynwb,
     )
 
@@ -425,13 +436,10 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    # not passing unit_table_path will result in an error
+    # passing a non existing unit table name should raise an error
     with pytest.raises(ValueError):
         sorting_extractor = NwbSortingExtractor(
-            file_path=file_path,
-            sampling_frequency=10.0,
-            t_start=0,
-            use_pynwb=use_pynwb,
+            file_path=file_path, sampling_frequency=10.0, t_start=0, use_pynwb=use_pynwb, unit_table_name="units2"
         )
 
     sorting_extractor_main = NwbSortingExtractor(
@@ -439,7 +447,7 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
         sampling_frequency=10.0,
         t_start=0,
         use_pynwb=use_pynwb,
-        unit_table_path="units",
+        unit_table_name="units",
     )
     assert np.array_equal(sorting_extractor_main.unit_ids, ["a", "b"])
     assert "a_property" in sorting_extractor_main.get_property_keys()
@@ -450,7 +458,7 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
         sampling_frequency=10.0,
         t_start=0,
         use_pynwb=use_pynwb,
-        unit_table_path="processing/ecephys/units_raw",
+        unit_table_name="processing/ecephys/units_raw",
     )
     assert np.array_equal(sorting_extractor_processing.unit_ids, ["a1", "b1"])
     assert "a_property" not in sorting_extractor_processing.get_property_keys()
