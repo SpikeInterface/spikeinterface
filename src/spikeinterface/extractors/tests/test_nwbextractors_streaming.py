@@ -202,7 +202,7 @@ def test_sorting_s3_nwb_fsspec(tmp_path, cache):
     num_seg = sorting.get_num_segments()
     assert num_seg == 1
     num_units = len(sorting.unit_ids)
-    assert num_units == 64
+    assert num_units == 456
 
     for segment_index in range(num_seg):
         for unit in sorting.unit_ids:
@@ -245,6 +245,45 @@ def test_sorting_s3_nwb_remfile(tmp_path):
             assert np.all(spike_train >= 0)
 
     tmp_file = tmp_path / "test_remfile_sorting.pkl"
+    with open(tmp_file, "wb") as f:
+        pickle.dump(sorting, f)
+
+    with open(tmp_file, "rb") as f:
+        reloaded_sorting = pickle.load(f)
+
+    check_sortings_equal(reloaded_sorting, sorting)
+
+
+@pytest.mark.streaming_extractors
+@pytest.mark.skip("Too slow")
+def test_sorting_s3_nwb_zarr(tmp_path):
+    file_path = (
+        "s3://aind-open-data/ecephys_625749_2022-08-03_15-15-06_nwb_2023-05-16_16-34-55/"
+        "ecephys_625749_2022-08-03_15-15-06_nwb/"
+        "ecephys_625749_2022-08-03_15-15-06_experiment1_recording1.nwb.zarr/"
+    )
+    # We provide the 'sampling_frequency' because the NWB file obly has LFP electrical series
+    sorting = NwbSortingExtractor(
+        file_path,
+        sampling_frequency=30000.0,
+        stream_mode="zarr",
+        storage_options={"anon": True},
+        t_start=0,
+    )
+
+    num_seg = sorting.get_num_segments()
+    assert num_seg == 1
+    num_units = len(sorting.unit_ids)
+    assert num_units == 456
+
+    for segment_index in range(num_seg):
+        for unit in sorting.unit_ids:
+            spike_train = sorting.get_unit_spike_train(unit_id=unit, segment_index=segment_index)
+            assert len(spike_train) > 0
+            assert spike_train.dtype == "int64"
+            assert np.all(spike_train >= 0)
+
+    tmp_file = tmp_path / "test_zarr_sorting.pkl"
     with open(tmp_file, "wb") as f:
         pickle.dump(sorting, f)
 

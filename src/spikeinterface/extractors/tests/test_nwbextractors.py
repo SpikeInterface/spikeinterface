@@ -7,6 +7,7 @@ from datetime import datetime
 import pytest
 import numpy as np
 from pynwb import NWBHDF5IO
+from hdmf_zarr import NWBZarrIO
 from pynwb.ecephys import ElectricalSeries, LFP, FilteredEphys
 from pynwb.testing.mock.file import mock_NWBFile
 from pynwb.testing.mock.device import mock_Device
@@ -32,7 +33,7 @@ class NwbSortingTest(SortingCommonTestSuite, unittest.TestCase):
 from pynwb.testing.mock.ecephys import mock_ElectrodeGroup
 
 
-@pytest.fixture(scope="module")
+# @pytest.fixture(scope="module")
 def nwbfile_with_ecephys_content():
     nwbfile = mock_NWBFile()
     device = mock_Device(name="probe")
@@ -152,21 +153,34 @@ def nwbfile_with_ecephys_content():
     return nwbfile
 
 
-@pytest.fixture(scope="module")
-def path_to_nwbfile(nwbfile_with_ecephys_content, tmp_path_factory):
-    nwbfile_path = tmp_path_factory.mktemp("nwb_tests_directory") / "test.nwb"
-    with NWBHDF5IO(nwbfile_path, mode="w") as io:
-        io.write(nwbfile_with_ecephys_content)
+def _generate_nwbfile(backend, file_path):
+    nwbfile = nwbfile_with_ecephys_content()
+    if backend == "hdf5":
+        io_class = NWBHDF5IO
+    elif backend == "zarr":
+        io_class = NWBZarrIO
+    with io_class(str(file_path), mode="w") as io:
+        io.write(nwbfile)
+    return file_path, nwbfile
 
-    return nwbfile_path
+
+# TODO: fix this test
+@pytest.fixture(scope="module", params=["hdf5", "zarr"])
+def generate_nwbfile(request, tmp_path_factory):
+    nwbfile = nwbfile_with_ecephys_content()
+    backend = request.param
+    nwbfile_path = tmp_path_factory.mktemp("nwb_tests_directory") / "test.nwb"
+    nwbfile_path, nwbfile = _generate_nwbfile(backend, nwbfile_path)
+    return nwbfile_path, nwbfile
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
-def test_nwb_extractor_channel_ids_retrieval(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
+def test_nwb_extractor_channel_ids_retrieval(generate_nwbfile, use_pynwb):
     """
     Test that the channel_ids are retrieved from the electrodes table ONLY from the corresponding
     region of the electrical series
     """
+    path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile
     electrical_series_name_list = ["ElectricalSeries1", "ElectricalSeries2"]
     for electrical_series_name in electrical_series_name_list:
         recording_extractor = NwbRecordingExtractor(
@@ -187,12 +201,12 @@ def test_nwb_extractor_channel_ids_retrieval(path_to_nwbfile, nwbfile_with_eceph
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
-def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
+def test_nwb_extractor_property_retrieval(generate_nwbfile, use_pynwb):
     """
     Test that the property is retrieved from the electrodes table ONLY from the corresponding
     region of the electrical series
     """
-
+    path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile
     electrical_series_name_list = ["ElectricalSeries1", "ElectricalSeries2"]
     for electrical_series_name in electrical_series_name_list:
         recording_extractor = NwbRecordingExtractor(
@@ -212,8 +226,10 @@ def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
-def test_nwb_extractor_offset_from_electrodes_table(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
+def test_nwb_extractor_offset_from_electrodes_table(generate_nwbfile, use_pynwb):
     """Test that the offset is retrieved from the electrodes table if it is not present in the ElectricalSeries."""
+    path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile
+
     electrical_series_name = "ElectricalSeries1"
     recording_extractor = NwbRecordingExtractor(
         path_to_nwbfile,
@@ -232,8 +248,10 @@ def test_nwb_extractor_offset_from_electrodes_table(path_to_nwbfile, nwbfile_wit
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
-def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
+def test_nwb_extractor_offset_from_series(generate_nwbfile, use_pynwb):
     """Test that the offset is retrieved from the ElectricalSeries if it is present."""
+    path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile
+
     electrical_series_name = "ElectricalSeries2"
     recording_extractor = NwbRecordingExtractor(
         path_to_nwbfile,
@@ -249,8 +267,10 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
-def test_retrieving_from_processing(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
+def test_retrieving_from_processing(generate_nwbfile, use_pynwb):
     """Test that the offset is retrieved from the ElectricalSeries if it is present."""
+    path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile
+
     electrical_series_name = "ElectricalSeries1"
     module = "ecephys"
     data_interface = "LFP"
@@ -277,7 +297,8 @@ def test_retrieving_from_processing(path_to_nwbfile, nwbfile_with_ecephys_conten
 
 
 @pytest.mark.parametrize("electrical_series_name", ["acquisition/ElectricalSeries1", "acquisition/ElectricalSeries2"])
-def test_that_hdf5_and_pynwb_extractors_return_the_same_data(path_to_nwbfile, electrical_series_name):
+def test_that_hdf5_and_pynwb_extractors_return_the_same_data(generate_nwbfile, electrical_series_name):
+    path_to_nwbfile, _ = generate_nwbfile
     recording_extractor_hdf5 = NwbRecordingExtractor(
         path_to_nwbfile,
         electrical_series_name=electrical_series_name,
@@ -294,8 +315,9 @@ def test_that_hdf5_and_pynwb_extractors_return_the_same_data(path_to_nwbfile, el
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
-def test_failure_with_wrong_electrical_series_name(path_to_nwbfile, use_pynwb):
+def test_failure_with_wrong_electrical_series_name(generate_nwbfile, use_pynwb):
     """Test that the extractor raises an error if the electrical series name is not found."""
+    path_to_nwbfile, _ = generate_nwbfile
     with pytest.raises(ValueError):
         recording_extractor = NwbRecordingExtractor(
             path_to_nwbfile,
@@ -540,4 +562,5 @@ if __name__ == "__main__":
         shutil.rmtree(tmp_path)
     tmp_path.mkdir()
     use_pynwb = False
-    test_multiple_unit_tables(tmp_path, use_pynwb)
+    gen = _generate_nwbfile("zarr", tmp_path / "test.nwb")
+    test_retrieving_from_processing(gen, use_pynwb)

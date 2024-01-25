@@ -60,6 +60,7 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 extractors = [
     "MEArec>=1.8",
     "pynwb>=2.3.0",
+    "hdmf-zarr>=0.5.0",
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
