@@ -8,6 +8,13 @@ from .filter import fix_dtype
 class UnsignedToSignedRecording(BasePreprocessor):
     """
     Converts a recording with unsigned traces to a signed one.
+    Parameters
+    ----------
+    recording: Recording
+        The recording to be signed.
+    bit_depth: int or None, default: None
+        In case the bit depth of the ADC does not match that of the data type,
+        specifying the bit depth corrects the offset.
     """
 
     name = "unsigned_to_signed"
@@ -46,13 +53,12 @@ class UnsignedToSignedRecordingSegment(BasePreprocessorSegment):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         # if uint --> take care of offset
         traces_dtype = traces.dtype
-        nbits = traces_dtype.itemsize * 8
-        signed_dtype = f"int{2 * (traces_dtype.itemsize) * 8}"
         if self.bit_depth is not None:
-            offset = 2 ** (self.bit_depth - 1)
+            nbits = self.bit_depth
         else:
-            # offset = 2 ** (nbits - 1)
-            offset = 0
+            nbits = traces_dtype.itemsize * 8
+        signed_dtype = f"int{2 * (traces_dtype.itemsize) * 8}"
+        offset = 2 ** (nbits - 1)
         # upcast to int with double itemsize
         traces = traces.astype(signed_dtype, copy=False) - offset
         return traces.astype(self.dtype_signed, copy=False)
