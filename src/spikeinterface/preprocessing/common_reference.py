@@ -209,18 +209,18 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
 
             re_referenced_traces = np.zeros((traces.shape[0], sliced_channel_indices.size))
             for group_index, selected_indices_in_group, all_group_indices in self.slice_groups(sliced_channel_indices):
-                (out_inds,) = np.nonzero(np.in1d(sliced_channel_indices, selected_indices_in_group))
+                (out_indices,) = np.nonzero(np.isin(sliced_channel_indices, selected_indices_in_group))
                 in_group_traces = traces[:, selected_indices_in_group]
 
                 if self.reference == "global":
                     shift = self.operator_func(traces[:, all_group_indices], axis=1, keepdims=True)
-                    re_referenced_traces[:, out_inds] = in_group_traces - shift
+                    re_referenced_traces[:, out_indices] = in_group_traces - shift
                 else:
                     # single (as local is not allowed for groups)
                     shift = self.operator_func(
                         traces[:, [self.ref_channel_indices[group_index]]], axis=1, keepdims=True
                     )
-                    re_referenced_traces[:, out_inds] = in_group_traces - shift
+                    re_referenced_traces[:, out_indices] = in_group_traces - shift
 
             return re_referenced_traces.astype(self.dtype, copy=False)
 
