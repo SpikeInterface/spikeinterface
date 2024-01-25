@@ -533,4 +533,11 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
 
 
 if __name__ == "__main__":
-    test = NwbRecordingTest()
+    tmp_path = Path("tmp")
+    if tmp_path.is_dir():
+        import shutil
+
+        shutil.rmtree(tmp_path)
+    tmp_path.mkdir()
+    use_pynwb = False
+    test_multiple_unit_tables(tmp_path, use_pynwb)
