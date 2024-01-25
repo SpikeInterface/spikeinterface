@@ -220,7 +220,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_method = params["matching"]["method"]
 
             if matching_method is not None:
-
                 we = extract_waveforms(
                     recording_f,
                     sorting,
