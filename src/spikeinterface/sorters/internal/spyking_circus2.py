@@ -219,7 +219,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 waveforms_folder = sorter_output_folder / "waveforms"
 
             if not params["templates_only"]:
-
                 we = extract_waveforms(
                     recording_f,
                     sorting,
