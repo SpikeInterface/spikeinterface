@@ -70,7 +70,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
-        "templates_only" : "Boolean to return only the Templates after the clustering, without the matching step",
+        "templates_only": "Boolean to return only the Templates after the clustering, without the matching step",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "debug": "Boolean to specify if the internal data structure should be kept for debugging",
     }

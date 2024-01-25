@@ -513,4 +513,3 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_num_samples(self) -> int:
         return self.num_samples
-
