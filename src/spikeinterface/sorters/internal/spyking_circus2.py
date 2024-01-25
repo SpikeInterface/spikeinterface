@@ -46,7 +46,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
-        "templates_only": False,
     }
 
     handle_multi_segment = True
@@ -218,7 +217,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 mode = "folder"
                 waveforms_folder = sorter_output_folder / "waveforms"
 
-            if not params["templates_only"]:
+            matching_method = params["matching"]["method"]
+
+            if matching_method is not None:
 
                 we = extract_waveforms(
                     recording_f,
@@ -231,7 +232,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 )
 
                 ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
-                matching_method = params["matching"]["method"]
                 matching_params = params["matching"]["method_kwargs"].copy()
                 matching_job_params = {}
                 matching_job_params.update(job_kwargs)
