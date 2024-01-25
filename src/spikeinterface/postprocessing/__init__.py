@@ -42,7 +42,7 @@ from .unit_localization import (
     compute_center_of_mass,
 )
 
-from .amplitude_scalings import compute_amplitude_scalings, AmplitudeScalingsCalculator
+from .amplitude_scalings import compute_amplitude_scalings, ComputeAmplitudeScalings
 
 from .alignsorting import align_sorting, AlignSortingExtractor
 

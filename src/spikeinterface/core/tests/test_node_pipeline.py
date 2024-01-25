@@ -14,6 +14,7 @@ from spikeinterface.core.node_pipeline import (
     PipelineNode,
     ExtractDenseWaveforms,
     sorting_to_peaks,
+    spike_peak_dtype
 )
 
 
@@ -78,7 +79,7 @@ def test_run_node_pipeline():
     # create peaks from spikes
     we = extract_waveforms(recording, sorting, mode="memory", **job_kwargs)
     extremum_channel_inds = get_template_extremum_channel(we, peak_sign="neg", outputs="index")
-    peaks = sorting_to_peaks(sorting, extremum_channel_inds)
+    peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
 
     peak_retriever = PeakRetriever(recording, peaks)
     # channel index is from template
