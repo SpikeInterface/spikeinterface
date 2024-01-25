@@ -218,57 +218,54 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 mode = "folder"
                 waveforms_folder = sorter_output_folder / "waveforms"
 
-            we = extract_waveforms(
-                recording_f,
-                sorting,
-                waveforms_folder,
-                return_scaled=False,
-                precompute_template=["median"],
-                mode=mode,
-                **waveforms_params,
-            )
+            if not params["templates_only"]:
 
-            if params["templates_only"]:
-                from spikeinterface.core.template import Templates
-                templates = Templates.from_waveform_extractor(we)
-                return templates
+                we = extract_waveforms(
+                    recording_f,
+                    sorting,
+                    waveforms_folder,
+                    return_scaled=False,
+                    precompute_template=["median"],
+                    mode=mode,
+                    **waveforms_params,
+                )
 
-            ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
-            matching_method = params["matching"]["method"]
-            matching_params = params["matching"]["method_kwargs"].copy()
-            matching_job_params = {}
-            matching_job_params.update(job_kwargs)
-            if matching_method == "wobble":
-                matching_params["templates"] = we.get_all_templates(mode="median")
-                matching_params["nbefore"] = we.nbefore
-                matching_params["nafter"] = we.nafter
-            else:
-                matching_params["waveform_extractor"] = we
+                ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
+                matching_method = params["matching"]["method"]
+                matching_params = params["matching"]["method_kwargs"].copy()
+                matching_job_params = {}
+                matching_job_params.update(job_kwargs)
+                if matching_method == "wobble":
+                    matching_params["templates"] = we.get_all_templates(mode="median")
+                    matching_params["nbefore"] = we.nbefore
+                    matching_params["nafter"] = we.nafter
+                else:
+                    matching_params["waveform_extractor"] = we
 
-            if matching_method == "circus-omp-svd":
-                for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                    if value in matching_job_params:
-                        matching_job_params.pop(value)
-                matching_job_params["chunk_duration"] = "100ms"
+                if matching_method == "circus-omp-svd":
+                    for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+                        if value in matching_job_params:
+                            matching_job_params.pop(value)
+                    matching_job_params["chunk_duration"] = "100ms"
 
-            spikes = find_spikes_from_templates(
-                recording_f, matching_method, method_kwargs=matching_params, **matching_job_params
-            )
+                spikes = find_spikes_from_templates(
+                    recording_f, matching_method, method_kwargs=matching_params, **matching_job_params
+                )
 
-            if params["debug"]:
-                fitting_folder = sorter_output_folder / "fitting"
-                fitting_folder.mkdir(parents=True, exist_ok=True)
-                np.save(fitting_folder / "spikes", spikes)
+                if params["debug"]:
+                    fitting_folder = sorter_output_folder / "fitting"
+                    fitting_folder.mkdir(parents=True, exist_ok=True)
+                    np.save(fitting_folder / "spikes", spikes)
 
-            if verbose:
-                print("We found %d spikes" % len(spikes))
+                if verbose:
+                    print("We found %d spikes" % len(spikes))
 
-            ## And this is it! We have a spyking circus
-            sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
-            sorting["sample_index"] = spikes["sample_index"]
-            sorting["unit_index"] = spikes["cluster_index"]
-            sorting["segment_index"] = spikes["segment_index"]
-            sorting = NumpySorting(sorting, sampling_frequency, unit_ids)
+                ## And this is it! We have a spyking circus
+                sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+                sorting["sample_index"] = spikes["sample_index"]
+                sorting["unit_index"] = spikes["cluster_index"]
+                sorting["segment_index"] = spikes["segment_index"]
+                sorting = NumpySorting(sorting, sampling_frequency, unit_ids)
 
         sorting_folder = sorter_output_folder / "sorting"
         if sorting_folder.exists():
