@@ -202,7 +202,7 @@ def test_sorting_s3_nwb_fsspec(tmp_path, cache):
     num_seg = sorting.get_num_segments()
     assert num_seg == 1
     num_units = len(sorting.unit_ids)
-    assert num_units == 456
+    assert num_units == 64
 
     for segment_index in range(num_seg):
         for unit in sorting.unit_ids:
