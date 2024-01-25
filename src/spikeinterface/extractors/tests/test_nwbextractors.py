@@ -6,8 +6,8 @@ from datetime import datetime
 
 import pytest
 import numpy as np
-from pynwb import NWBHDF5IO, NWBFile
-from pynwb.ecephys import ElectricalSeries
+from pynwb import NWBHDF5IO
+from pynwb.ecephys import ElectricalSeries, LFP, FilteredEphys
 from pynwb.testing.mock.file import mock_NWBFile
 from pynwb.testing.mock.device import mock_Device
 from pynwb.testing.mock.ecephys import mock_ElectricalSeries, mock_ElectrodeGroup, mock_electrodes
@@ -110,6 +110,45 @@ def nwbfile_with_ecephys_content():
     )
     nwbfile.add_acquisition(electrical_series)
 
+    # add electrical series in processing
+    electrical_series_name = "ElectricalSeries1"
+    electrode_indices = [5, 6, 7, 8, 9]
+    data = rng.random(size=(num_frames, len(electrode_indices)))
+    rate = 30_000.0
+    conversion = 5.0
+    a_different_offset = offset + 1.0
+    electrical_series = ElectricalSeries(
+        name=electrical_series_name,
+        data=data,
+        electrodes=electrode_region,
+        rate=rate,
+        conversion=conversion,
+    )
+
+    ecephys_mod = nwbfile.create_processing_module(name="ecephys", description="Ecephys module")
+    ecephys_mod.add(LFP(name="LFP"))
+    ecephys_mod.data_interfaces["LFP"].add_electrical_series(electrical_series)
+
+    # custom module
+    # add electrical series in processing
+    electrical_series_name = "ElectricalSeries2"
+    electrode_indices = [0, 1, 2, 3, 4]
+    data = rng.random(size=(num_frames, len(electrode_indices)))
+    rate = 30_000.0
+    conversion = 5.0
+    a_different_offset = offset + 1.0
+    electrical_series = ElectricalSeries(
+        name=electrical_series_name,
+        data=data,
+        electrodes=electrode_region,
+        rate=rate,
+        conversion=conversion,
+    )
+
+    custom_mod = nwbfile.create_processing_module(name="my_custom_module", description="Something custom")
+    custom_mod.add(FilteredEphys(name="MyContainer"))
+    custom_mod.data_interfaces["MyContainer"].add_electrical_series(electrical_series)
+
     return nwbfile
 
 
@@ -207,6 +246,34 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     expected_offsets_uV = np.ones(recording_extractor.get_num_channels()) * expected_offsets_uV
     extracted_offsets_uV = recording_extractor.get_channel_offsets()
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_retrieving_from_processing(path_to_nwbfile, nwbfile_with_ecephys_content, use_pynwb):
+    """Test that the offset is retrieved from the ElectricalSeries if it is present."""
+    electrical_series_name = "ElectricalSeries1"
+    module = "ecephys"
+    data_interface = "LFP"
+    recording_extractor_lfp = NwbRecordingExtractor(
+        path_to_nwbfile,
+        electrical_series_name=f"processing/{module}/{data_interface}/{electrical_series_name}",
+        use_pynwb=use_pynwb,
+    )
+    nwbfile = nwbfile_with_ecephys_content
+    electrical_series_lfp = nwbfile.processing[module].data_interfaces[data_interface][electrical_series_name]
+    assert np.array_equal(electrical_series_lfp.data[:], recording_extractor_lfp.get_traces())
+
+    electrical_series_name = "ElectricalSeries2"
+    module = "my_custom_module"
+    data_interface = "MyContainer"
+    recording_extractor_custom = NwbRecordingExtractor(
+        path_to_nwbfile,
+        electrical_series_name=f"processing/{module}/{data_interface}/{electrical_series_name}",
+        use_pynwb=use_pynwb,
+    )
+    nwbfile = nwbfile_with_ecephys_content
+    electrical_series_custom = nwbfile.processing[module].data_interfaces[data_interface][electrical_series_name]
+    assert np.array_equal(electrical_series_custom.data[:], recording_extractor_custom.get_traces())
 
 
 @pytest.mark.parametrize("electrical_series_name", ["acquisition/ElectricalSeries1", "acquisition/ElectricalSeries2"])
