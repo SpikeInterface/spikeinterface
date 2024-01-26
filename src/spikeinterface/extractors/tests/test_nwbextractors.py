@@ -33,7 +33,6 @@ class NwbSortingTest(SortingCommonTestSuite, unittest.TestCase):
 from pynwb.testing.mock.ecephys import mock_ElectrodeGroup
 
 
-# @pytest.fixture(scope="module")
 def nwbfile_with_ecephys_content():
     nwbfile = mock_NWBFile()
     device = mock_Device(name="probe")
@@ -164,7 +163,6 @@ def _generate_nwbfile(backend, file_path):
     return file_path, nwbfile
 
 
-# TODO: fix this test
 @pytest.fixture(scope="module", params=["hdf5", "zarr"])
 def generate_nwbfile(request, tmp_path_factory):
     nwbfile = nwbfile_with_ecephys_content()
