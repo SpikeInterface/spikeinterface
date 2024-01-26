@@ -316,7 +316,7 @@ def get_backend_from_local_file(file_path: str | Path) -> str:
 
 def find_neurodata_type_from_backend(group, path="", result=None, neurodata_type="ElectricalSeries", backend="hdf5"):
     """
-    Recursively searches for groups with neurodata_type 'ElectricalSeries' in the HDF5 group or file,
+    Recursively searches for groups with the specified neurodata_type hdf5 or zarr object,
     and returns a list with their paths.
     """
     if backend == "hdf5":
@@ -344,7 +344,9 @@ def find_neurodata_type_from_backend(group, path="", result=None, neurodata_type
 
 
 def extract_time_info_pynwb(electrical_series, samples_for_rate_estimation, load_time_vector=False):
-    """ """
+    """
+    Extracts the sampling frequency and the time vector from an ElectricalSeries object.
+    """
     sampling_frequency = None
     if hasattr(electrical_series, "rate"):
         sampling_frequency = electrical_series.rate
@@ -373,6 +375,10 @@ def extract_time_info_pynwb(electrical_series, samples_for_rate_estimation, load
 
 
 def retrieve_electrodes_indices_from_electrical_series(open_file, electrical_series, backend="hdf5"):
+    """
+    Retrieves the indices of the electrodes from the electrical series.
+    For the Zarr backend, the electrodes are stored in the electrical_series.attrs["zarr_link"].
+    """
     if "electrodes" not in electrical_series:
         if backend == "zarr":
             import zarr
@@ -467,7 +473,7 @@ class NwbRecordingExtractor(BaseRecording):
         file_path: str | Path | None = None,  # provide either this or file
         electrical_series_path: str | None = None,
         load_time_vector: bool = False,
-        samples_for_rate_estimation: int = 1000,
+        samples_for_rate_estimation: int = 1_000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile", "zarr"]] = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -966,7 +972,7 @@ class NwbSortingExtractor(BaseSorting):
         file_path: str | Path,
         electrical_series_path: str | None = None,
         sampling_frequency: float | None = None,
-        samples_for_rate_estimation: int = 1000,
+        samples_for_rate_estimation: int = 1_000,
         unit_table_path: str = "units",
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
