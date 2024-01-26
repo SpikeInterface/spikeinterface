@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+from turtle import st
 from typing import Union, List, Optional, Literal, Dict, BinaryIO
 import warnings
 
@@ -19,7 +20,7 @@ def import_lazily():
     from pynwb import NWBHDF5IO
 
 
-def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optional[str] = None) -> ElectricalSeries:
+def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_path: Optional[str] = None) -> ElectricalSeries:
     """
     Get an ElectricalSeries object from an NWBFile.
 
@@ -27,7 +28,7 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
     ----------
     nwbfile : NWBFile
         The NWBFile object from which to extract the ElectricalSeries.
-    electrical_series_name : str, default: None
+    electrical_series_path : str, default: None
         The name of the ElectricalSeries to extract. If not specified, it will return the first found ElectricalSeries
         if there's only one; otherwise, it raises an error.
 
@@ -39,10 +40,10 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
     Raises
     ------
     ValueError
-        If no acquisitions are found in the NWBFile or if multiple acquisitions are found but no electrical_series_name
+        If no acquisitions are found in the NWBFile or if multiple acquisitions are found but no electrical_series_path
         is provided.
     AssertionError
-        If the specified electrical_series_name is not present in the NWBFile.
+        If the specified electrical_series_path is not present in the NWBFile.
     """
     from pynwb.ecephys import ElectricalSeries
 
@@ -51,18 +52,18 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
     for item in nwbfile.all_children():
         if isinstance(item, ElectricalSeries):
             # remove data and skip first "/"
-            electrical_series_path = item.data.name.replace("/data", "")[1:]
-            electrical_series_dict[electrical_series_path] = item
+            electrical_series_key = item.data.name.replace("/data", "")[1:]
+            electrical_series_dict[electrical_series_key] = item
 
-    if electrical_series_name is not None:
-        if electrical_series_name not in electrical_series_dict:
-            raise ValueError(f"{electrical_series_name} not found in the NWBFile. ")
-        electrical_series = electrical_series_dict[electrical_series_name]
+    if electrical_series_path is not None:
+        if electrical_series_path not in electrical_series_dict:
+            raise ValueError(f"{electrical_series_path} not found in the NWBFile. ")
+        electrical_series = electrical_series_dict[electrical_series_path]
     else:
         electrical_series_list = list(electrical_series_dict.keys())
         if len(electrical_series_list) > 1:
             raise ValueError(
-                f"More than one acquisition found! You must specify 'electrical_series_name'. \n"
+                f"More than one acquisition found! You must specify 'electrical_series_path'. \n"
                 f"Options in current file are: {[e for e in electrical_series_list]}"
             )
         if len(electrical_series_list) == 0:
@@ -72,7 +73,7 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
     return electrical_series
 
 
-def retrieve_unit_table(nwbfile: NWBFile, unit_table_name: Optional[str] = None) -> Units:
+def retrieve_unit_table(nwbfile: NWBFile, unit_table_path: Optional[str] = None) -> Units:
     """
     Get an Units object from an NWBFile.
     Units tables can be either the main unit table (nwbfile.units) or in the processing module.
@@ -81,7 +82,7 @@ def retrieve_unit_table(nwbfile: NWBFile, unit_table_name: Optional[str] = None)
     ----------
     nwbfile : NWBFile
         The NWBFile object from which to extract the Units.
-    unit_table_name : str, default: None
+    unit_table_path : str, default: None
         The path of the Units to extract. If not specified, it will return the first found Units
         if there's only one; otherwise, it raises an error.
 
@@ -93,10 +94,10 @@ def retrieve_unit_table(nwbfile: NWBFile, unit_table_name: Optional[str] = None)
     Raises
     ------
     ValueError
-        If no unit tables are found in the NWBFile or if multiple unit tables are found but no unit_table_name
+        If no unit tables are found in the NWBFile or if multiple unit tables are found but no unit_table_path
         is provided.
     AssertionError
-        If the specified unit_table_name is not present in the NWBFile.
+        If the specified unit_table_path is not present in the NWBFile.
     """
     from pynwb.misc import Units
 
@@ -105,13 +106,13 @@ def retrieve_unit_table(nwbfile: NWBFile, unit_table_name: Optional[str] = None)
     for item in nwbfile.all_children():
         if isinstance(item, Units):
             # retrieve name of "id" column and skip first "/"
-            electrical_series_path = item.id.data.name.replace("/id", "")[1:]
-            unit_table_dict[electrical_series_path] = item
+            unit_table_key = item.id.data.name.replace("/id", "")[1:]
+            unit_table_dict[unit_table_key] = item
 
-    if unit_table_name is not None:
-        if unit_table_name not in unit_table_dict:
-            raise ValueError(f"{unit_table_name} not found in the NWBFile. ")
-        unit_table = unit_table_dict[unit_table_name]
+    if unit_table_path is not None:
+        if unit_table_path not in unit_table_dict:
+            raise ValueError(f"{unit_table_path} not found in the NWBFile. ")
+        unit_table = unit_table_dict[unit_table_path]
     else:
         unit_table_list: List[Units] = list(unit_table_dict.keys())
 
@@ -210,6 +211,7 @@ def read_nwbfile(
     stream_mode: Literal["ffspec", "ros3", "remfile", "zarr"] | None = None,
     cache: bool = False,
     stream_cache_path: str | Path | None = None,
+    storage_options: dict | None = None,
 ) -> NWBFile:
     """
     Read an NWB file and return the NWBFile object.
@@ -259,6 +261,7 @@ def read_nwbfile(
         stream_mode=stream_mode,
         cache=cache,
         stream_cache_path=stream_cache_path,
+        storage_options=storage_options,
     )
     if backend == "hdf5":
         from pynwb import NWBHDF5IO
@@ -395,13 +398,13 @@ class NwbRecordingExtractor(BaseRecording):
     file_path: str, Path, or None
         Path to the NWB file or an s3 URL. Use this parameter to specify the file location
         if not using the `file` parameter.
-    electrical_series_name: str or None, default: None
+    electrical_series_path: str or None, default: None
         The name of the ElectricalSeries object within the NWB file. This parameter is crucial
         when the NWB file contains multiple ElectricalSeries objects. It helps in identifying
         which specific series to extract data from. If there is only one ElectricalSeries and
         this parameter is not set, that unique series will be used by default.
         If multiple ElectricalSeries are present and this parameter is not set, an error is raised.
-        The `electrical_series_name` corresponds to the path within the NWB file, e.g.,
+        The `electrical_series_path` corresponds to the path within the NWB file, e.g.,
         'acquisition/MyElectricalSeries`.
     file: file-like object or None, default: None
         A file-like object representing the NWB file. Use this parameter if you have an in-memory
@@ -460,7 +463,7 @@ class NwbRecordingExtractor(BaseRecording):
     def __init__(
         self,
         file_path: str | Path | None = None,  # provide either this or file
-        electrical_series_name: str | None = None,
+        electrical_series_path: str | None = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 1000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile", "zarr"]] = None,
@@ -479,7 +482,8 @@ class NwbRecordingExtractor(BaseRecording):
         self.file_path = file_path
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
-        self.electrical_series_name = electrical_series_name
+        self.storage_options = storage_options
+        self.electrical_series_path = electrical_series_path
 
         if self.stream_mode is None:
             self.backend = get_backend_from_local_file(file_path)
@@ -534,7 +538,7 @@ class NwbRecordingExtractor(BaseRecording):
 
         self._kwargs = {
             "file_path": file_path,
-            "electrical_series_name": self.electrical_series_name,
+            "electrical_series_path": self.electrical_series_path,
             "load_time_vector": load_time_vector,
             "samples_for_rate_estimation": samples_for_rate_estimation,
             "stream_mode": stream_mode,
@@ -565,7 +569,7 @@ class NwbRecordingExtractor(BaseRecording):
             cache=cache,
             stream_cache_path=self.stream_cache_path,
         )
-        electrical_series = retrieve_electrical_series(self._nwbfile, self.electrical_series_name)
+        electrical_series = retrieve_electrical_series(self._nwbfile, self.electrical_series_path)
         # The indices in the electrode table corresponding to this electrical series
         electrodes_indices = electrical_series.electrodes.data[:]
         # The table for all the electrodes in the nwbfile
@@ -603,33 +607,33 @@ class NwbRecordingExtractor(BaseRecording):
             stream_cache_path=self.stream_cache_path,
         )
 
-        # If the electrical_series_name is not given, `find_neurodata_type_from_backend` will be called
-        # And returns a list with the electrical_series_names available in the file.
-        # If there is only one electrical series, the electrical_series_name is set to the name of the series,
+        # If the electrical_series_path is not given, `find_neurodata_type_from_backend` will be called
+        # And returns a list with the electrical_series_paths available in the file.
+        # If there is only one electrical series, the electrical_series_path is set to the name of the series,
         # otherwise an error is raised.
-        if self.electrical_series_name is None:
+        if self.electrical_series_path is None:
             available_electrical_series = find_neurodata_type_from_backend(
                 open_file, neurodata_type="ElectricalSeries", backend=self.backend
             )
-            # if electrical_series_name is None:
+            # if electrical_series_path is None:
             if len(available_electrical_series) == 1:
-                self.electrical_series_name = available_electrical_series[0]
+                self.electrical_series_path = available_electrical_series[0]
             else:
                 raise ValueError(
                     "Multiple ElectricalSeries found in the file. "
-                    "Please specify the 'electrical_series_name' argument:"
+                    "Please specify the 'electrical_series_path' argument:"
                     f"Available options are: {available_electrical_series}."
                 )
 
-        # The indices in the electrode table corresponding to this electrical series
+        # Open the electrical series. In case of failure, raise an error with the available options.
         try:
-            electrical_series = open_file[self.electrical_series_name]
+            electrical_series = open_file[self.electrical_series_path]
         except KeyError:
             available_electrical_series = find_neurodata_type_from_backend(
                 open_file, neurodata_type="ElectricalSeries", backend=self.backend
             )
             raise ValueError(
-                f"{self.electrical_series_name} not found in the NWB file!"
+                f"{self.electrical_series_path} not found in the NWB file!"
                 f"Available options are: {available_electrical_series}."
             )
         electrodes_indices = retrieve_electrodes_indices_from_electrical_series(
@@ -910,11 +914,11 @@ class NwbSortingExtractor(BaseSorting):
     ----------
     file_path: str or Path
         Path to NWB file.
-    electrical_series_name: str or None, default: None
+    electrical_series_path: str or None, default: None
         The name of the ElectricalSeries (if multiple ElectricalSeries are present).
     sampling_frequency: float or None, default: None
         The sampling frequency in Hz (required if no ElectricalSeries is available).
-    unit_table_name: str or None, default: "units"
+    unit_table_path: str or None, default: "units"
         The path of the unit table in the NWB file.
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
@@ -936,7 +940,7 @@ class NwbSortingExtractor(BaseSorting):
         of the `t_start`.
 
         When a `t_start` is not provided it will be inferred from the corresponding ElectricalSeries with name equal
-        to `electrical_series_name`. The `t_start` then will be either the `ElectricalSeries.starting_time` or the
+        to `electrical_series_path`. The `t_start` then will be either the `ElectricalSeries.starting_time` or the
         first timestamp in the `ElectricalSeries.timestamps`.
     storage_options: dict | None = None,
         Additional parameters for the storage backend (e.g. AWS credentials) used for "zarr" stream_mode.
@@ -958,10 +962,10 @@ class NwbSortingExtractor(BaseSorting):
     def __init__(
         self,
         file_path: str | Path,
-        electrical_series_name: str | None = None,
+        electrical_series_path: str | None = None,
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 1000,
-        unit_table_name: str = "units",
+        unit_table_path: str = "units",
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
         *,
@@ -972,10 +976,11 @@ class NwbSortingExtractor(BaseSorting):
     ):
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
-        self.electrical_series_name = electrical_series_name
+        self.electrical_series_path = electrical_series_path
         self.file_path = file_path
         self.t_start = t_start
         self.internal_sampling_frequency = sampling_frequency
+        self.storage_options = storage_options
         self.units_table = None
 
         if self.stream_mode is None:
@@ -993,11 +998,11 @@ class NwbSortingExtractor(BaseSorting):
                 raise ImportError(self.installation_mesg)
 
             unit_ids, spike_times_data, spike_times_index_data = self.extract_info_pynwb(
-                unit_table_name=unit_table_name, samples_for_rate_estimation=samples_for_rate_estimation, cache=cache
+                unit_table_path=unit_table_path, samples_for_rate_estimation=samples_for_rate_estimation, cache=cache
             )
         else:
             unit_ids, spike_times_data, spike_times_index_data = self.extract_info_backend(
-                unit_table_name=unit_table_name, samples_for_rate_estimation=samples_for_rate_estimation, cache=cache
+                unit_table_path=unit_table_path, samples_for_rate_estimation=samples_for_rate_estimation, cache=cache
             )
 
         BaseSorting.__init__(self, sampling_frequency=self.internal_sampling_frequency, unit_ids=unit_ids)
@@ -1020,12 +1025,13 @@ class NwbSortingExtractor(BaseSorting):
 
         self._kwargs = {
             "file_path": file_path,
-            "electrical_series_name": self.electrical_series_name,
+            "electrical_series_path": self.electrical_series_path,
             "sampling_frequency": sampling_frequency,
             "samples_for_rate_estimation": samples_for_rate_estimation,
             "cache": cache,
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
+            "storage_options": storage_options,
             "t_start": self.t_start,
         }
 
@@ -1043,7 +1049,7 @@ class NwbSortingExtractor(BaseSorting):
                 io.close()
 
     def extract_info_pynwb(
-        self, unit_table_name: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
+        self, unit_table_path: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
     ):
         self._nwbfile = read_nwbfile(
             backend=self.backend,
@@ -1051,13 +1057,14 @@ class NwbSortingExtractor(BaseSorting):
             stream_mode=self.stream_mode,
             cache=cache,
             stream_cache_path=self.stream_cache_path,
+            storage_options=self.storage_options,
         )
 
         timestamps = None
         if self.internal_sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
-            self.electrical_series = retrieve_electrical_series(self._nwbfile, self.electrical_series_name)
+            self.electrical_series = retrieve_electrical_series(self._nwbfile, self.electrical_series_path)
             # get rate
             if self.electrical_series.rate is not None:
                 self.internal_sampling_frequency = self.electrical_series.rate
@@ -1077,7 +1084,7 @@ class NwbSortingExtractor(BaseSorting):
             self.t_start is not None
         ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
-        units_table = retrieve_unit_table(self._nwbfile, unit_table_name=unit_table_name)
+        units_table = retrieve_unit_table(self._nwbfile, unit_table_path=unit_table_path)
 
         name_to_column_data = {c.name: c for c in units_table.columns}
         spike_times_data = name_to_column_data.pop("spike_times").data
@@ -1093,7 +1100,7 @@ class NwbSortingExtractor(BaseSorting):
         return units_ids, spike_times_data, spike_times_index_data
 
     def extract_info_backend(
-        self, unit_table_name: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
+        self, unit_table_path: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
     ):
         open_file = read_file_from_backend(
             backend=self.backend,
@@ -1101,6 +1108,7 @@ class NwbSortingExtractor(BaseSorting):
             stream_mode=self.stream_mode,
             cache=cache,
             stream_cache_path=self.stream_cache_path,
+            storage_options=self.storage_options,
         )
 
         timestamps = None
@@ -1111,22 +1119,22 @@ class NwbSortingExtractor(BaseSorting):
             available_electrical_series = find_neurodata_type_from_backend(
                 open_file, neurodata_type="ElectricalSeries", backend=self.backend
             )
-            if self.electrical_series_name is None:
+            if self.electrical_series_path is None:
                 if len(available_electrical_series) == 1:
-                    self.electrical_series_name = available_electrical_series[0]
+                    self.electrical_series_path = available_electrical_series[0]
                 else:
                     raise ValueError(
                         "Multiple ElectricalSeries found in the file. "
-                        "Please specify the 'electrical_series_name' argument:"
+                        "Please specify the 'electrical_series_path' argument:"
                         f"Available options are: {available_electrical_series}."
                     )
             else:
-                if self.electrical_series_name not in available_electrical_series:
+                if self.electrical_series_path not in available_electrical_series:
                     raise ValueError(
-                        f"'{self.electrical_series_name}' not found in the file. "
+                        f"'{self.electrical_series_path}' not found in the file. "
                         f"Available options are: {available_electrical_series}"
                     )
-            electrical_series = open_file[self.electrical_series_name]
+            electrical_series = open_file[self.electrical_series_path]
 
             # Get sampling frequency
             if "starting_time" in electrical_series.keys():
@@ -1144,25 +1152,29 @@ class NwbSortingExtractor(BaseSorting):
             self.t_start is not None
         ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
-        available_unit_table_names = find_neurodata_type_from_backend(
-            open_file, neurodata_type="Units", backend=self.backend
-        )
-        if unit_table_name is None:
-            if len(available_unit_table_names) == 1:
-                unit_table_name = available_unit_table_names[0]
+        if unit_table_path is None:
+            available_unit_table_paths = find_neurodata_type_from_backend(
+                open_file, neurodata_type="Units", backend=self.backend
+            )
+            if len(available_unit_table_paths) == 1:
+                unit_table_path = available_unit_table_paths[0]
             else:
                 raise ValueError(
                     "Multiple Units tables found in the file. "
-                    "Please specify the 'unit_table_name' argument:"
-                    f"Available options are: {available_unit_table_names}."
+                    "Please specify the 'unit_table_path' argument:"
+                    f"Available options are: {available_unit_table_paths}."
                 )
-        else:
-            if unit_table_name not in available_unit_table_names:
-                raise ValueError(
-                    f"'{unit_table_name}' not found in the file. "
-                    f"Available options are: {available_unit_table_names}"
-                )
-        self.units_table_location = unit_table_name
+        # Try to open the unit table. If it fails, raise an error with the available options.
+        try:
+            units_table = open_file[unit_table_path]
+        except KeyError:
+            available_unit_table_paths = find_neurodata_type_from_backend(
+                open_file, neurodata_type="Units", backend=self.backend
+            )
+            raise ValueError(
+                f"{unit_table_path} not found in the NWB file!" f"Available options are: {available_unit_table_paths}."
+            )
+        self.units_table_location = unit_table_path
         units_table = open_file[self.units_table_location]
 
         spike_times_data = units_table["spike_times"]
@@ -1289,7 +1301,7 @@ read_nwb_recording = define_function_from_class(source_class=NwbRecordingExtract
 read_nwb_sorting = define_function_from_class(source_class=NwbSortingExtractor, name="read_nwb_sorting")
 
 
-def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_name=None):
+def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_path=None):
     """Reads NWB file into SpikeInterface extractors.
 
     Parameters
@@ -1300,7 +1312,7 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
         If True, the recording object is loaded.
     load_sorting : bool, default: False
         If True, the recording object is loaded.
-    electrical_series_name: str or None, default: None
+    electrical_series_path: str or None, default: None
         The name of the ElectricalSeries (if multiple ElectricalSeries are present)
 
     Returns
@@ -1311,10 +1323,10 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
     """
     outputs = ()
     if load_recording:
-        rec = read_nwb_recording(file_path, electrical_series_name=electrical_series_name)
+        rec = read_nwb_recording(file_path, electrical_series_path=electrical_series_path)
         outputs = outputs + (rec,)
     if load_sorting:
-        sorting = read_nwb_sorting(file_path, electrical_series_name=electrical_series_name)
+        sorting = read_nwb_sorting(file_path, electrical_series_path=electrical_series_path)
         outputs = outputs + (sorting,)
 
     if len(outputs) == 1:

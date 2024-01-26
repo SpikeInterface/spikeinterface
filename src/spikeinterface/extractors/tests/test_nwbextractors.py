@@ -185,7 +185,7 @@ def test_nwb_extractor_channel_ids_retrieval(generate_nwbfile, use_pynwb):
     for electrical_series_name in electrical_series_name_list:
         recording_extractor = NwbRecordingExtractor(
             path_to_nwbfile,
-            electrical_series_name=f"acquisition/{electrical_series_name}",
+            electrical_series_path=f"acquisition/{electrical_series_name}",
             use_pynwb=use_pynwb,
         )
 
@@ -211,7 +211,7 @@ def test_nwb_extractor_property_retrieval(generate_nwbfile, use_pynwb):
     for electrical_series_name in electrical_series_name_list:
         recording_extractor = NwbRecordingExtractor(
             path_to_nwbfile,
-            electrical_series_name=f"acquisition/{electrical_series_name}",
+            electrical_series_path=f"acquisition/{electrical_series_name}",
             use_pynwb=use_pynwb,
         )
         nwbfile = nwbfile_with_ecephys_content
@@ -233,7 +233,7 @@ def test_nwb_extractor_offset_from_electrodes_table(generate_nwbfile, use_pynwb)
     electrical_series_name = "ElectricalSeries1"
     recording_extractor = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_name=f"acquisition/{electrical_series_name}",
+        electrical_series_path=f"acquisition/{electrical_series_name}",
         use_pynwb=use_pynwb,
     )
     nwbfile = nwbfile_with_ecephys_content
@@ -255,7 +255,7 @@ def test_nwb_extractor_offset_from_series(generate_nwbfile, use_pynwb):
     electrical_series_name = "ElectricalSeries2"
     recording_extractor = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_name=f"acquisition/{electrical_series_name}",
+        electrical_series_path=f"acquisition/{electrical_series_name}",
         use_pynwb=use_pynwb,
     )
     nwbfile = nwbfile_with_ecephys_content
@@ -276,7 +276,7 @@ def test_retrieving_from_processing(generate_nwbfile, use_pynwb):
     data_interface = "LFP"
     recording_extractor_lfp = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_name=f"processing/{module}/{data_interface}/{electrical_series_name}",
+        electrical_series_path=f"processing/{module}/{data_interface}/{electrical_series_name}",
         use_pynwb=use_pynwb,
     )
     nwbfile = nwbfile_with_ecephys_content
@@ -288,7 +288,7 @@ def test_retrieving_from_processing(generate_nwbfile, use_pynwb):
     data_interface = "MyContainer"
     recording_extractor_custom = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_name=f"processing/{module}/{data_interface}/{electrical_series_name}",
+        electrical_series_path=f"processing/{module}/{data_interface}/{electrical_series_name}",
         use_pynwb=use_pynwb,
     )
     nwbfile = nwbfile_with_ecephys_content
@@ -301,13 +301,13 @@ def test_that_hdf5_and_pynwb_extractors_return_the_same_data(generate_nwbfile, e
     path_to_nwbfile, _ = generate_nwbfile
     recording_extractor_hdf5 = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_name=electrical_series_name,
+        electrical_series_path=electrical_series_name,
         use_pynwb=False,
     )
 
     recording_extractor_pynwb = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_name=electrical_series_name,
+        electrical_series_path=electrical_series_name,
         use_pynwb=True,
     )
 
@@ -321,7 +321,7 @@ def test_failure_with_wrong_electrical_series_name(generate_nwbfile, use_pynwb):
     with pytest.raises(ValueError):
         recording_extractor = NwbRecordingExtractor(
             path_to_nwbfile,
-            electrical_series_name="acquisition/ElectricalSeries3",
+            electrical_series_path="acquisition/ElectricalSeries3",
             use_pynwb=use_pynwb,
         )
 
@@ -465,7 +465,7 @@ def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
 
     sorting_extractor = NwbSortingExtractor(
         file_path=file_path,
-        electrical_series_name=f"acquisition/{electrical_series_name}",
+        electrical_series_path=f"acquisition/{electrical_series_name}",
         use_pynwb=use_pynwb,
     )
 
@@ -528,7 +528,7 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
     # passing a non existing unit table name should raise an error
     with pytest.raises(ValueError):
         sorting_extractor = NwbSortingExtractor(
-            file_path=file_path, sampling_frequency=10.0, t_start=0, use_pynwb=use_pynwb, unit_table_name="units2"
+            file_path=file_path, sampling_frequency=10.0, t_start=0, use_pynwb=use_pynwb, unit_table_path="units2"
         )
 
     sorting_extractor_main = NwbSortingExtractor(
@@ -536,7 +536,7 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
         sampling_frequency=10.0,
         t_start=0,
         use_pynwb=use_pynwb,
-        unit_table_name="units",
+        unit_table_path="units",
     )
     assert np.array_equal(sorting_extractor_main.unit_ids, ["a", "b"])
     assert "a_property" in sorting_extractor_main.get_property_keys()
@@ -547,7 +547,7 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
         sampling_frequency=10.0,
         t_start=0,
         use_pynwb=use_pynwb,
-        unit_table_name="processing/ecephys/units_raw",
+        unit_table_path="processing/ecephys/units_raw",
     )
     assert np.array_equal(sorting_extractor_processing.unit_ids, ["a1", "b1"])
     assert "a_property" not in sorting_extractor_processing.get_property_keys()
