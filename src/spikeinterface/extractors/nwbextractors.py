@@ -1,6 +1,5 @@
 from __future__ import annotations
 from pathlib import Path
-from turtle import st
 from typing import Union, List, Optional, Literal, Dict, BinaryIO
 import warnings
 
