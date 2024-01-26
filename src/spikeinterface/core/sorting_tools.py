@@ -114,7 +114,7 @@ def random_spikes_selection(
         The sorting object
     num_samples: list of int
         The number of samples per segment.
-        Can be retriove from recording with
+        Can be retrieved from recording with
         num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
     method: "uniform", default: "uniform"
         The method to use. Only "uniform" is implemented for now
@@ -142,7 +142,7 @@ def random_spikes_selection(
                 all_unit_indices, size=min(max_spikes_per_unit, all_unit_indices.size), replace=False, shuffle=False
             )
         else:
-            raise ValueError(f"random_spikes_selection wring method {method}")
+            raise ValueError(f"random_spikes_selection wrong method {method}, currently only 'uniform' can be used.")
 
         if margin_size is not None:
             margin_size = int(margin_size)
