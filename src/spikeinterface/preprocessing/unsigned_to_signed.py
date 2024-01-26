@@ -8,7 +8,7 @@ from .filter import fix_dtype
 class UnsignedToSignedRecording(BasePreprocessor):
     """
     Converts a recording with unsigned traces to a signed one.
-    
+
     Parameters
     ----------
     recording: Recording
