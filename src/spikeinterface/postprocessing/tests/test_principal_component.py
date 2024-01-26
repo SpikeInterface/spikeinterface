@@ -27,7 +27,6 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
     extension_class = ComputePrincipalComponents
     extension_function_kwargs_list = [
         dict(mode="by_channel_local"),
-        dict(mode="by_channel_local"),
         dict(mode="by_channel_global"),
         dict(mode="concatenated"),
     ]

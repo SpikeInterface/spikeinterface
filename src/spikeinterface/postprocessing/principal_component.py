@@ -119,7 +119,7 @@ class ComputePrincipalComponents(ResultExtension):
             In case sparsity is used, only the projections on sparse channels are returned.
         """
         projections = self._extension_data[f"pca_{unit_id}"]
-        mode = self._params["mode"]
+        mode = self.params["mode"]
         if mode in ("by_channel_local", "by_channel_global") and sparse:
             sparsity = self.get_sparsity()
             if sparsity is not None:
@@ -136,7 +136,7 @@ class ComputePrincipalComponents(ResultExtension):
             * if mode is "by_channel_local", "pca_model" is a list of PCA model by channel
             * if mode is "by_channel_global" or "concatenated", "pca_model" is a single PCA model
         """
-        mode = self._params["mode"]
+        mode = self.params["mode"]
         if mode == "by_channel_local":
             pca_models = []
             for chan_id in self.sorting_result.channel_ids:
@@ -208,7 +208,7 @@ class ComputePrincipalComponents(ResultExtension):
             Projections of new waveforms on PCA compoents
 
         """
-        p = self._params
+        p = self.params
         mode = p["mode"]
         sparsity = p["sparsity"]
 
@@ -260,7 +260,7 @@ class ComputePrincipalComponents(ResultExtension):
     def get_sparsity(self):
         if self.sorting_result.is_sparse():
             return self.sorting_result.sparsity
-        return self._params["sparsity"]
+        return self.params["sparsity"]
 
     def _run(self, **job_kwargs):
         """
@@ -271,14 +271,32 @@ class ComputePrincipalComponents(ResultExtension):
         This will be cached in the same folder than WaveformExtarctor
         in extension subfolder.
         """
-        p = self._params
-        we = self.sorting_result
-        num_chans = we.get_num_channels()
+        p = self.params
+        # we = self.sorting_result
+        # num_chans = we.get_num_channels()
 
         # update job_kwargs with global ones
         job_kwargs = fix_job_kwargs(job_kwargs)
         n_jobs = job_kwargs["n_jobs"]
         progress_bar = job_kwargs["progress_bar"]
+
+        ext = self.sorting_result.get_extension("waveforms")
+        waveforms = ext.data["waveforms"]
+
+        
+        spikes = self.sorting_result.to_spike_vector()
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+
+        # prepare buffer
+        n_components = self.params["n_components"]
+        if p["mode"] in ("by_channel_local", "by_channel_global"):
+            shape = (waveforms.shape[0], n_components, waveforms.shape[2])
+        elif p["mode"] == "concatenated":
+            shape = (waveforms.shape[0], n_components)
+        pca_projection = np.zeros(shape, dtype="float32")
+
+        # fit PCA models
+        ####
 
         # prepare memmap files with npy
         projection_objects = {}
@@ -339,7 +357,7 @@ class ComputePrincipalComponents(ResultExtension):
         {}
         """
         job_kwargs = fix_job_kwargs(job_kwargs)
-        p = self._params
+        p = self.params
         we = self.sorting_result
         sorting = we.sorting
         assert (
@@ -402,7 +420,7 @@ class ComputePrincipalComponents(ResultExtension):
         from concurrent.futures import ProcessPoolExecutor
 
         we = self.sorting_result
-        p = self._params
+        p = self.params
 
         unit_ids = we.unit_ids
         channel_ids = we.channel_ids
@@ -505,7 +523,7 @@ class ComputePrincipalComponents(ResultExtension):
 
     def _fit_by_channel_global(self, progress_bar):
         we = self.sorting_result
-        p = self._params
+        p = self.params
         unit_ids = we.unit_ids
 
         # there is one unique PCA accross channels
@@ -561,7 +579,7 @@ class ComputePrincipalComponents(ResultExtension):
 
     def _fit_concatenated(self, progress_bar):
         we = self.sorting_result
-        p = self._params
+        p = self.params
         unit_ids = we.unit_ids
 
         sparsity = self.get_sparsity()
@@ -600,7 +618,7 @@ class ComputePrincipalComponents(ResultExtension):
         a global fit_transform at once.
         """
         we = self.sorting_result
-        p = self._params
+        p = self.params
 
         unit_ids = we.unit_ids
 
@@ -621,7 +639,7 @@ class ComputePrincipalComponents(ResultExtension):
     def _get_sparse_waveforms(self, unit_id):
         # get waveforms : dense or sparse
         we = self.sorting_result
-        sparsity = self._params["sparsity"]
+        sparsity = self.params["sparsity"]
         if we.is_sparse():
             # natural sparsity
             wfs = we.get_waveforms(unit_id, lazy=False)
