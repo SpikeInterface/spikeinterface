@@ -868,14 +868,16 @@ class _NwbHDF5SortingExtractor(BaseSorting):
 
         timestamps = None
         self.t_start = t_start
+        self.electrical_series_location = None
 
         if sampling_frequency is None or t_start is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
-            available_electrical_series = _NwbHDF5RecordingExtractor.find_electrical_series(hdf5_file)
             if electrical_series_path is None:
+                available_electrical_series = _NwbHDF5RecordingExtractor.find_electrical_series(hdf5_file)
                 if len(available_electrical_series) == 1:
                     electrical_series_path = available_electrical_series[0]
+                    electrical_series = hdf5_file[electrical_series_path]
                 else:
                     raise ValueError(
                         "Multiple ElectricalSeries found in the file. "
@@ -883,13 +885,15 @@ class _NwbHDF5SortingExtractor(BaseSorting):
                         f"Available options are: {available_electrical_series}."
                     )
             else:
-                if electrical_series_path not in available_electrical_series:
+                try:
+                    electrical_series = hdf5_file[electrical_series_path]
+                except KeyError:
+                    available_electrical_series = _NwbHDF5RecordingExtractor.find_electrical_series(hdf5_file)
                     raise ValueError(
-                        f"'{electrical_series_path}' not found in the file. "
-                        f"Available options are: {available_electrical_series}"
+                        f"{electrical_series_path} not found in the NWB file!"
+                        f"Available options are: {available_electrical_series}."
                     )
-            self.electrical_series_path = electrical_series_path
-            electrical_series = hdf5_file[self.electrical_series_path]
+            self.electrical_series_location = electrical_series_path
 
             # Get sampling frequency
             if "starting_time" in electrical_series.keys():
@@ -909,10 +913,11 @@ class _NwbHDF5SortingExtractor(BaseSorting):
             self.t_start is not None
         ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
 
-        available_unit_table_paths = _NwbHDF5SortingExtractor.find_unit_tables(hdf5_file)
         if unit_table_path is None:
+            available_unit_table_paths = _NwbHDF5SortingExtractor.find_unit_tables(hdf5_file)
             if len(available_unit_table_paths) == 1:
-                unit_table_path = available_unit_table_paths[0]
+                self.unit_table_location = available_unit_table_paths[0]
+                units_table = hdf5_file[unit_table_path]
             else:
                 raise ValueError(
                     "Multiple Units tables found in the file. "
@@ -920,13 +925,15 @@ class _NwbHDF5SortingExtractor(BaseSorting):
                     f"Available options are: {available_unit_table_paths}."
                 )
         else:
-            if unit_table_path not in available_unit_table_paths:
+            try:
+                units_table = hdf5_file[unit_table_path]
+            except KeyError:
+                available_unit_table_paths = _NwbHDF5SortingExtractor.find_unit_tables(hdf5_file)
                 raise ValueError(
-                    f"'{unit_table_path}' not found in the file. "
-                    f"Available options are: {available_unit_table_paths}"
+                    f"{unit_table_path} not found in the NWB file!"
+                    f"Available options are: {available_unit_table_paths}."
                 )
         self.unit_table_location = unit_table_path
-        units_table = hdf5_file[self.unit_table_location]
 
         spike_times_data = units_table["spike_times"]
         spike_times_index_data = units_table["spike_times_index"]
