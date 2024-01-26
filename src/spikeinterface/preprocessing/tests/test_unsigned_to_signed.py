@@ -27,8 +27,7 @@ def test_unsigned_to_signed():
     traces_int32 = (traces_uint32.astype("int64") - 2**31).astype("int32")
     np.testing.assert_array_equal(traces_int32, unsigned_to_signed(rec_uint32).get_traces())
     traces_int16_12bits = (traces_uint16_12bits.astype("int32") - 2**11).astype("int16")
-    np.testing.assert_array_equal(traces_int16_12bits, 
-                                  unsigned_to_signed(rec_uint16_12bits, bit_depth=12).get_traces())
+    np.testing.assert_array_equal(traces_int16_12bits, unsigned_to_signed(rec_uint16_12bits, bit_depth=12).get_traces())
 
 
 if __name__ == "__main__":
