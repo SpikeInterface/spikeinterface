@@ -97,7 +97,7 @@ sorting3 = UnitsSelectionSorting(sorting2, unit_ids=[1, 4])
 ###############################################################################
 # A sorting can be "dumped" (exported) to:
 #  * a dict
-#  * a json file
+#  * a json file
 #  * a pickle file
 #
 # The "dump" operation is lazy, i.e., the spike trains are not exported.
