@@ -174,6 +174,7 @@ def read_file_from_backend(
 
     elif stream_mode == "remfile":
         import remfile
+        import h5py
 
         assert file_path is not None, "file_path must be specified when using stream_mode='remfile'"
         rfile = remfile.File(file_path)
@@ -196,8 +197,9 @@ def read_file_from_backend(
 
             open_file = h5py.File(name=file_path, mode="r")
     else:
-        assert file is not None, "Unexpected, file is None"
+        import h5py
 
+        assert file is not None, "Unexpected, file is None"
         open_file = h5py.File(file, "r")
 
     return open_file
@@ -485,7 +487,7 @@ class NwbRecordingExtractor(BaseRecording):
         self.storage_options = storage_options
         self.electrical_series_path = electrical_series_path
 
-        if self.stream_mode is None:
+        if self.stream_mode is None and file is None:
             self.backend = get_backend_from_local_file(file_path)
         else:
             if self.stream_mode == "zarr":
