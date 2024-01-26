@@ -7,65 +7,92 @@ from tqdm.auto import tqdm
 
 import numpy as np
 
+from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
-from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 from spikeinterface.core.globals import get_global_tmp_folder
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
 
-class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
+# TODO handle extra sparsity
+
+class ComputePrincipalComponents(ResultExtension):
     """
-    Class to extract principal components from a WaveformExtractor object.
+    Compute PC scores from waveform extractor. The PCA projections are pre-computed only
+    on the sampled waveforms available from the WaveformExtractor.
+
+    Parameters
+    ----------
+    sorting_result: SortingResult
+        A SortingResult object
+    n_components: int, default: 5
+        Number of components fo PCA
+    mode: "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
+        The PCA mode:
+            - "by_channel_local": a local PCA is fitted for each channel (projection by channel)
+            - "by_channel_global": a global PCA is fitted for all channels (projection by channel)
+            - "concatenated": channels are concatenated and a global PCA is fitted
+    sparsity: ChannelSparsity or None, default: None
+        The sparsity to apply to waveforms.
+        If sorting_result is already sparse, the default sparsity will be used
+    whiten: bool, default: True
+        If True, waveforms are pre-whitened
+    dtype: dtype, default: "float32"
+        Dtype of the pc scores
+    tmp_folder: str or Path or None, default: None
+        The temporary folder to use for parallel computation. If you run several `compute_principal_components`
+        functions in parallel with mode "by_channel_local", you need to specify a different `tmp_folder` for each call,
+        to avoid overwriting to the same folder
+
+
+    Examples
+    --------
+    >>> we = si.extract_waveforms(recording, sorting, folder='waveforms')
+    >>> pc = st.compute_principal_components(we, n_components=3, mode='by_channel_local')
+    >>> # get pre-computed projections for unit_id=1
+    >>> projections = pc.get_projections(unit_id=1)
+    >>> # get all pre-computed projections and labels
+    >>> all_projections, all_labels = pc.get_all_projections()
+    >>> # retrieve fitted pca model(s)
+    >>> pca_model = pc.get_pca_model()
+    >>> # compute projections on new waveforms
+    >>> proj_new = pc.project_new(new_waveforms)
+    >>> # run for all spikes in the SortingExtractor
+    >>> pc.run_for_all_spikes(file_path="all_pca_projections.npy")
     """
 
     extension_name = "principal_components"
-    handle_sparsity = True
+    depend_on = ["waveforms", ]
+    need_recording = False
+    use_nodepipeline = False
 
-    def __init__(self, waveform_extractor):
-        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
-
-    @classmethod
-    def create(cls, waveform_extractor):
-        pc = WaveformPrincipalComponent(waveform_extractor)
-        return pc
-
-    def __repr__(self):
-        we = self.waveform_extractor
-        clsname = self.__class__.__name__
-        nseg = we.get_num_segments()
-        nchan = we.get_num_channels()
-        txt = f"{clsname}: {nchan} channels - {nseg} segments"
-        if len(self._params) > 0:
-            mode = self._params["mode"]
-            n_components = self._params["n_components"]
-            txt = txt + f"\n  mode: {mode} n_components: {n_components}"
-            if self._params["sparsity"] is not None:
-                txt += " - sparse"
-        return txt
+    def __init__(self, sorting_result):
+        ResultExtension.__init__(self, sorting_result)
 
     def _set_params(
         self, n_components=5, mode="by_channel_local", whiten=True, dtype="float32", sparsity=None, tmp_folder=None
     ):
         assert mode in _possible_modes, "Invalid mode!"
 
-        if self.waveform_extractor.is_sparse():
-            assert sparsity is None, "WaveformExtractor is already sparse, sparsity must be None"
+        if sparsity is not None:
+            # TODO alessio:  implement local sparsity or not ??
+            raise NotImplementedError
 
-        # the sparsity in params is ONLY the injected sparsity and not the waveform_extractor one
+        # the sparsity in params is ONLY the injected sparsity and not the sorting_result one
         params = dict(
-            n_components=int(n_components),
-            mode=str(mode),
-            whiten=bool(whiten),
-            dtype=np.dtype(dtype).str,
-            sparsity=sparsity,
-            tmp_folder=tmp_folder,
+            n_components=n_components,
+            mode=mode,
+            whiten=whiten,
+            dtype=np.dtype(dtype),
+            # sparsity=sparsity,
+            # tmp_folder=tmp_folder,
         )
-
         return params
 
     def _select_extension_data(self, unit_ids):
+        raise NotImplementedError
+    
         new_extension_data = dict()
         for unit_id in unit_ids:
             new_extension_data[f"pca_{unit_id}"] = self._extension_data[f"pca_{unit_id}"]
@@ -112,7 +139,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         mode = self._params["mode"]
         if mode == "by_channel_local":
             pca_models = []
-            for chan_id in self.waveform_extractor.channel_ids:
+            for chan_id in self.sorting_result.channel_ids:
                 pca_models.append(self._extension_data[f"pca_model_{mode}_{chan_id}"])
         else:
             pca_models = self._extension_data[f"pca_model_{mode}"]
@@ -140,14 +167,14 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             The PCA projections (num_all_waveforms, num_components, num_channels)
         """
         if unit_ids is None:
-            unit_ids = self.waveform_extractor.sorting.unit_ids
+            unit_ids = self.sorting_result.sorting.unit_ids
 
         all_labels = []  #  can be unit_id or unit_index
         all_projections = []
         for unit_index, unit_id in enumerate(unit_ids):
             proj = self.get_projections(unit_id, sparse=False)
             if channel_ids is not None:
-                chan_inds = self.waveform_extractor.channel_ids_to_indices(channel_ids)
+                chan_inds = self.sorting_result.channel_ids_to_indices(channel_ids)
                 proj = proj[:, :, chan_inds]
             n = proj.shape[0]
             if outputs == "id":
@@ -185,11 +212,11 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         mode = p["mode"]
         sparsity = p["sparsity"]
 
-        wfs0 = self.waveform_extractor.get_waveforms(unit_id=self.waveform_extractor.sorting.unit_ids[0])
+        wfs0 = self.sorting_result.get_waveforms(unit_id=self.sorting_result.sorting.unit_ids[0])
         assert (
             wfs0.shape[1] == new_waveforms.shape[1]
         ), "Mismatch in number of samples between waveforms used to fit the pca model and 'new_waveforms'"
-        num_channels = len(self.waveform_extractor.channel_ids)
+        num_channels = len(self.sorting_result.channel_ids)
 
         # check waveform shapes
         if sparsity is not None:
@@ -231,8 +258,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         return projections
 
     def get_sparsity(self):
-        if self.waveform_extractor.is_sparse():
-            return self.waveform_extractor.sparsity
+        if self.sorting_result.is_sparse():
+            return self.sorting_result.sparsity
         return self._params["sparsity"]
 
     def _run(self, **job_kwargs):
@@ -245,7 +272,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         in extension subfolder.
         """
         p = self._params
-        we = self.waveform_extractor
+        we = self.sorting_result
         num_chans = we.get_num_channels()
 
         # update job_kwargs with global ones
@@ -313,7 +340,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         """
         job_kwargs = fix_job_kwargs(job_kwargs)
         p = self._params
-        we = self.waveform_extractor
+        we = self.sorting_result
         sorting = we.sorting
         assert (
             we.has_recording()
@@ -374,7 +401,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         from sklearn.decomposition import IncrementalPCA
         from concurrent.futures import ProcessPoolExecutor
 
-        we = self.waveform_extractor
+        we = self.sorting_result
         p = self._params
 
         unit_ids = we.unit_ids
@@ -447,7 +474,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         """
         from sklearn.exceptions import NotFittedError
 
-        we = self.waveform_extractor
+        we = self.sorting_result
         unit_ids = we.unit_ids
 
         pca_model = self._fit_by_channel_local(n_jobs, progress_bar)
@@ -477,7 +504,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             )
 
     def _fit_by_channel_global(self, progress_bar):
-        we = self.waveform_extractor
+        we = self.sorting_result
         p = self._params
         unit_ids = we.unit_ids
 
@@ -513,7 +540,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         The transform is applied by channel.
         The output is then (n_spike, n_components, n_channels)
         """
-        we = self.waveform_extractor
+        we = self.sorting_result
         unit_ids = we.unit_ids
 
         pca_model = self._fit_by_channel_global(progress_bar)
@@ -533,7 +560,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 projection_objects[unit_id][:, :, chan_ind] = proj
 
     def _fit_concatenated(self, progress_bar):
-        we = self.waveform_extractor
+        we = self.sorting_result
         p = self._params
         unit_ids = we.unit_ids
 
@@ -572,7 +599,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         In this mode the waveforms are concatenated and there is
         a global fit_transform at once.
         """
-        we = self.waveform_extractor
+        we = self.sorting_result
         p = self._params
 
         unit_ids = we.unit_ids
@@ -593,7 +620,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
     def _get_sparse_waveforms(self, unit_id):
         # get waveforms : dense or sparse
-        we = self.waveform_extractor
+        we = self.sorting_result
         sparsity = self._params["sparsity"]
         if we.is_sparse():
             # natural sparsity
@@ -601,11 +628,11 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             channel_inds = we.sparsity.unit_id_to_channel_indices[unit_id]
         elif sparsity is not None:
             # injected sparsity
-            wfs = self.waveform_extractor.get_waveforms(unit_id, sparsity=sparsity, lazy=False)
+            wfs = self.sorting_result.get_waveforms(unit_id, sparsity=sparsity, lazy=False)
             channel_inds = sparsity.unit_id_to_channel_indices[unit_id]
         else:
             # dense
-            wfs = self.waveform_extractor.get_waveforms(unit_id, sparsity=None, lazy=False)
+            wfs = self.sorting_result.get_waveforms(unit_id, sparsity=None, lazy=False)
             channel_inds = np.arange(we.channel_ids.size, dtype=int)
         return wfs, channel_inds
 
@@ -685,88 +712,12 @@ def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafte
     return worker_ctx
 
 
-WaveformPrincipalComponent.run_for_all_spikes.__doc__ = WaveformPrincipalComponent.run_for_all_spikes.__doc__.format(
-    _shared_job_kwargs_doc
-)
+# WaveformPrincipalComponent.run_for_all_spikes.__doc__ = WaveformPrincipalComponent.run_for_all_spikes.__doc__.format(
+#     _shared_job_kwargs_doc
+# )
 
-WaveformExtractor.register_extension(WaveformPrincipalComponent)
-
-
-def compute_principal_components(
-    waveform_extractor,
-    load_if_exists=False,
-    n_components=5,
-    mode="by_channel_local",
-    sparsity=None,
-    whiten=True,
-    dtype="float32",
-    tmp_folder=None,
-    **job_kwargs,
-):
-    """
-    Compute PC scores from waveform extractor. The PCA projections are pre-computed only
-    on the sampled waveforms available from the WaveformExtractor.
-
-    Parameters
-    ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
-    load_if_exists: bool
-        If True and pc scores are already in the waveform extractor folders, pc scores are loaded and not recomputed.
-    n_components: int, default: 5
-        Number of components fo PCA
-    mode: "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
-        The PCA mode:
-            - "by_channel_local": a local PCA is fitted for each channel (projection by channel)
-            - "by_channel_global": a global PCA is fitted for all channels (projection by channel)
-            - "concatenated": channels are concatenated and a global PCA is fitted
-    sparsity: ChannelSparsity or None, default: None
-        The sparsity to apply to waveforms.
-        If waveform_extractor is already sparse, the default sparsity will be used
-    whiten: bool, default: True
-        If True, waveforms are pre-whitened
-    dtype: dtype, default: "float32"
-        Dtype of the pc scores
-    tmp_folder: str or Path or None, default: None
-        The temporary folder to use for parallel computation. If you run several `compute_principal_components`
-        functions in parallel with mode "by_channel_local", you need to specify a different `tmp_folder` for each call,
-        to avoid overwriting to the same folder
-    n_jobs: int, default: 1
-        Number of jobs used to fit the PCA model (if mode is "by_channel_local")
-    progress_bar: bool, default: False
-        If True, a progress bar is shown
-
-    Returns
-    -------
-    pc: WaveformPrincipalComponent
-        The waveform principal component object
-
-    Examples
-    --------
-    >>> we = si.extract_waveforms(recording, sorting, folder='waveforms')
-    >>> pc = st.compute_principal_components(we, n_components=3, mode='by_channel_local')
-    >>> # get pre-computed projections for unit_id=1
-    >>> projections = pc.get_projections(unit_id=1)
-    >>> # get all pre-computed projections and labels
-    >>> all_projections, all_labels = pc.get_all_projections()
-    >>> # retrieve fitted pca model(s)
-    >>> pca_model = pc.get_pca_model()
-    >>> # compute projections on new waveforms
-    >>> proj_new = pc.project_new(new_waveforms)
-    >>> # run for all spikes in the SortingExtractor
-    >>> pc.run_for_all_spikes(file_path="all_pca_projections.npy")
-    """
-
-    if load_if_exists and waveform_extractor.has_extension(WaveformPrincipalComponent.extension_name):
-        pc = waveform_extractor.load_extension(WaveformPrincipalComponent.extension_name)
-    else:
-        pc = WaveformPrincipalComponent.create(waveform_extractor)
-        pc.set_params(
-            n_components=n_components, mode=mode, whiten=whiten, dtype=dtype, sparsity=sparsity, tmp_folder=tmp_folder
-        )
-        pc.run(**job_kwargs)
-
-    return pc
+register_result_extension(ComputePrincipalComponents)
+compute_principal_components = ComputePrincipalComponents.function_factory()
 
 
 def partial_fit_one_channel(args):

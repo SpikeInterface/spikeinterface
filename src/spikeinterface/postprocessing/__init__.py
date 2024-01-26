@@ -11,7 +11,7 @@ from .template_similarity import (
 )
 
 from .principal_component import (
-    WaveformPrincipalComponent,
+    ComputePrincipalComponents,
     compute_principal_components,
 )
 
