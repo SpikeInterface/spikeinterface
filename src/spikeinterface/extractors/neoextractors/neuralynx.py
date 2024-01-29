@@ -35,7 +35,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), exclude_filename=exclude_filename))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, exclude_filename):
