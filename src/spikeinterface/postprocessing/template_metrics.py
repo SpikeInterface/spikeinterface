@@ -262,18 +262,8 @@ class ComputeTemplateMetrics(ResultExtension):
                 template_metrics.at[index, metric_name] = value
         self.data["metrics"] = template_metrics
 
-    # def get_data(self):
-    #     """
-    #     Get the computed metrics.
-
-    #     Returns
-    #     -------
-    #     metrics : pd.DataFrame
-    #         Dataframe with template metrics
-    #     """
-    #     msg = "Template metrics are not computed. Use the 'run()' function."
-    #     assert self.data["metrics"] is not None, msg
-    #     return self.data["metrics"]
+    def _get_data(self):
+        return self.data["metrics"]
 
 
 register_result_extension(ComputeTemplateMetrics)

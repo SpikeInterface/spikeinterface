@@ -254,18 +254,8 @@ class ComputePrincipalComponents(ResultExtension):
         self.data["pca_projection"] = pca_projection
 
 
-    # def get_data(self):
-    #     """
-    #     Get computed PCA projections.
-
-    #     Returns
-    #     -------
-    #     all_labels : 1d np.array
-    #         Array with all spike labels
-    #     all_projections : 3d array
-    #         Array with PCA projections (num_spikes, num_components, num_channels)
-    #     """
-    #     return self.get_all_projections()
+    def _get_data(self):
+        return self.data["pca_projection"]
 
     # @staticmethod
     # def get_extension_function():

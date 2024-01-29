@@ -44,22 +44,9 @@ class ComputeTemplateSimilarity(ResultExtension):
         similarity = compute_similarity_with_templates_array(templates_array, templates_array, method=self.params["method"])
         self.data["similarity"] = similarity
 
-    # def get_data(self):
-    #     """
-    #     Get the computed similarity.
+    def _get_data(self):
+        return self.data["similarity"]
 
-    #     Returns
-    #     -------
-    #     similarity : 2d np.array
-    #         2d matrix with computed similarity values.
-    #     """
-    #     msg = "Template similarity is not computed. Use the 'run()' function."
-    #     assert self._extension_data["similarity"] is not None, msg
-    #     return self._extension_data["similarity"]
-
-    # @staticmethod
-    # def get_extension_function():
-    #     return compute_template_similarity
 
 register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()

@@ -46,10 +46,9 @@ class ComputeSpikeLocations(ResultExtension):
 
     Returns
     -------
-    spike_locations: np.array or list of dict
-        The spike locations.
-            - If "concatenated" all locations for all spikes and all units are concatenated
-            - If "by_unit", locations are returned as a list (for segments) of dictionaries (for units)    """
+    spike_locations: np.array
+        All locations for all spikes
+    """
 
     extension_name = "spike_locations"
     depend_on = ["fast_templates|templates", ]
@@ -120,40 +119,8 @@ class ComputeSpikeLocations(ResultExtension):
         )
         self.data["spike_locations"] = spike_locations
 
-    # def get_data(self, outputs="concatenated"):
-    #     """
-    #     Get computed spike locations
-
-    #     Parameters
-    #     ----------
-    #     outputs : "concatenated" | "by_unit", default: "concatenated"
-    #         The output format
-
-    #     Returns
-    #     -------
-    #     spike_locations : np.array or dict
-    #         The spike locations as a structured array (outputs="concatenated") or
-    #         as a dict with units as key and spike locations as values.
-    #     """
-    #     we = self.sorting_result
-    #     sorting = we.sorting
-
-    #     if outputs == "concatenated":
-    #         return self._extension_data["spike_locations"]
-
-    #     elif outputs == "by_unit":
-    #         locations_by_unit = []
-    #         for segment_index in range(self.sorting_result.get_num_segments()):
-    #             i0 = np.searchsorted(self.spikes["segment_index"], segment_index, side="left")
-    #             i1 = np.searchsorted(self.spikes["segment_index"], segment_index, side="right")
-    #             spikes = self.spikes[i0:i1]
-    #             locations = self._extension_data["spike_locations"][i0:i1]
-
-    #             locations_by_unit.append({})
-    #             for unit_ind, unit_id in enumerate(sorting.unit_ids):
-    #                 mask = spikes["unit_index"] == unit_ind
-    #                 locations_by_unit[segment_index][unit_id] = locations[mask]
-    #         return locations_by_unit
+    def _get_data(self, outputs="concatenated"):
+        return self.data["spike_locations"]
 
 
 ComputeSpikeLocations.__doc__.format(_shared_job_kwargs_doc)

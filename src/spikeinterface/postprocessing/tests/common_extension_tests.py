@@ -17,7 +17,7 @@ else:
 
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
-        durations=[30.0, 20.0], sampling_frequency=24000.0, num_channels=10, num_units=5,
+        durations=[15.0, 5.0], sampling_frequency=24000.0, num_channels=6, num_units=3,
         generate_sorting_kwargs=dict(firing_rates=3.0, refractory_period_ms=4.0),
         generate_unit_locations_kwargs=dict(
             margin_um=5.0,
@@ -99,10 +99,12 @@ class ResultExtensionCommonTestSuite:
 
         for params in self.extension_function_params_list:
             print('  params', params)
-            sorting_result.compute(self.extension_name, **params, **job_kwargs)
+            ext = sorting_result.compute(self.extension_name, **params, **job_kwargs)
+            assert len(ext.data) > 0
+            main_data = ext.get_data()
+
         ext = sorting_result.get_extension(self.extension_name)
         assert ext is not None
-        assert len(ext.data) > 0
         
         some_unit_ids = sorting_result.unit_ids[::2]
         sliced = sorting_result.select_units(some_unit_ids, format="memory")

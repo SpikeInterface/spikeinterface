@@ -35,6 +35,13 @@ class ComputeCorrelograms(ResultExtension):
         ccgs[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
     bins :  np.array
         The bin edges in ms
+
+    Returns
+        -------
+        isi_histograms : np.array
+            2D array with ISI histograms (num_units, num_bins)
+        bins : np.array
+            1D array with bins in ms
         
     """
     extension_name = "correlograms"
@@ -64,20 +71,8 @@ class ComputeCorrelograms(ResultExtension):
         self.data["ccgs"] = ccgs
         self.data["bins"] = bins
 
-    # def get_data(self):
-    #     """
-    #     Get the computed ISI histograms.
-
-    #     Returns
-    #     -------
-    #     isi_histograms : np.array
-    #         2D array with ISI histograms (num_units, num_bins)
-    #     bins : np.array
-    #         1D array with bins in ms
-    #     """
-    #     msg = "Crosscorrelograms are not computed. Use the 'run()' function."
-    #     assert self.data["ccgs"] is not None and self.data["bins"] is not None, msg
-    #     return self.data["ccgs"], self.data["bins"]
+    def _get_data(self):
+        return self.data["ccgs"], self.data["bins"]
 
 
 register_result_extension(ComputeCorrelograms)

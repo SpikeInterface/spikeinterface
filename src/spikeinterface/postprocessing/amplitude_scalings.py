@@ -199,37 +199,8 @@ class ComputeAmplitudeScalings(ResultExtension):
             # # Note: collisions are note in _extension_data because they are not pickable. We only store the indices
             # self._extension_data["collisions"] = np.array(list(collisions_dict.keys()))
 
-    # def get_data(self, outputs="concatenated"):
-    #     """
-    #     Get computed spike amplitudes.
-    #     Parameters
-    #     ----------
-    #     outputs : "concatenated" | "by_unit", default: "concatenated"
-    #         The output format
-
-    #     Returns
-    #     -------
-    #     spike_amplitudes : np.array or dict
-    #         The spike amplitudes as an array (outputs="concatenated") or
-    #         as a dict with units as key and spike amplitudes as values.
-    #     """
-    #     we = self.sorting_result
-    #     sorting = we.sorting
-
-    #     if outputs == "concatenated":
-    #         return self._extension_data[f"amplitude_scalings"]
-    #     elif outputs == "by_unit":
-    #         amplitudes_by_unit = []
-    #         for segment_index in range(we.get_num_segments()):
-    #             amplitudes_by_unit.append({})
-    #             segment_mask = self.spikes["segment_index"] == segment_index
-    #             spikes_segment = self.spikes[segment_mask]
-    #             amp_scalings_segment = self._extension_data[f"amplitude_scalings"][segment_mask]
-    #             for unit_index, unit_id in enumerate(sorting.unit_ids):
-    #                 unit_mask = spikes_segment["unit_index"] == unit_index
-    #                 amp_scalings = amp_scalings_segment[unit_mask]
-    #                 amplitudes_by_unit[segment_index][unit_id] = amp_scalings
-    #         return amplitudes_by_unit
+    def _get_data(self):
+        return self.data[f"amplitude_scalings"]
 
 
 register_result_extension(ComputeAmplitudeScalings)

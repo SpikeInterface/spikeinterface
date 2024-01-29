@@ -1412,4 +1412,5 @@ class ResultExtension:
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):
+        assert len(self.data) > 0, f"You must run the extension {self.extension_name} before retrieving data"
         return self._get_data(*args, **kwargs)

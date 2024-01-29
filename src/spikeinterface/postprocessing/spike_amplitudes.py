@@ -42,32 +42,12 @@ class ComputeSpikeAmplitudes(ResultExtension):
         Other kwargs depending on the method.
     outputs : "concatenated" | "by_unit", default: "concatenated"
         The output format
-    {}
 
     Returns
     -------
-    spike_locations: np.array or list of dict
-        The spike locations.
-            - If "concatenated" all locations for all spikes and all units are concatenated
-            - If "by_unit", locations are returned as a list (for segments) of dictionaries (for units)
-    1. Determine the max channel per unit.
-    2. Then a "peak_shift" is estimated because for some sorters the spike index is not always at the
-       peak.
-    3. Amplitudes are extracted in chunks (parallel or not)
+    spike_locations: np.array
+        All locations for all spikes and all units are concatenated
 
-    Parameters
-    ----------
-    sorting_result: SortingResult
-        The SortingResult object
-    load_if_exists : bool, default: False
-        Whether to load precomputed spike amplitudes, if they already exist.
-    peak_sign: "neg" | "pos" | "both", default: "neg
-        The sign to compute maximum channel
-    return_scaled: bool
-        If True and recording has gain_to_uV/offset_to_uV properties, amplitudes are converted to uV.
-    outputs: "concatenated" | "by_unit", default: "concatenated"
-        How the output should be returned
-    {}
     """
     extension_name = "spike_amplitudes"
     depend_on = ["fast_templates|templates", ]
@@ -136,43 +116,8 @@ class ComputeSpikeAmplitudes(ResultExtension):
         self.data["amplitudes"] = amps
 
 
-    # def get_data(self, outputs="concatenated"):
-    #     """
-    #     Get computed spike amplitudes.
-
-    #     Parameters
-    #     ----------
-    #     outputs : "concatenated" | "by_unit", default: "concatenated"
-    #         The output format
-
-    #     Returns
-    #     -------
-    #     spike_amplitudes : np.array or dict
-    #         The spike amplitudes as an array (outputs="concatenated") or
-    #         as a dict with units as key and spike amplitudes as values.
-    #     """
-    #     sorting_result = self.sorting_result
-    #     sorting = sorting_result.sorting
-
-    #     if outputs == "concatenated":
-    #         amplitudes = []
-    #         for segment_index in range(sorting_result.get_num_segments()):
-    #             amplitudes.append(self._extension_data[f"amplitude_segment_{segment_index}"])
-    #         return amplitudes
-    #     elif outputs == "by_unit":
-    #         all_spikes = sorting.to_spike_vector(concatenated=False)
-
-    #         amplitudes_by_unit = []
-    #         for segment_index in range(sorting_result.get_num_segments()):
-    #             amplitudes_by_unit.append({})
-    #             for unit_index, unit_id in enumerate(sorting.unit_ids):
-    #                 spike_labels = all_spikes[segment_index]["unit_index"]
-    #                 mask = spike_labels == unit_index
-    #                 amps = self._extension_data[f"amplitude_segment_{segment_index}"][mask]
-    #                 amplitudes_by_unit[segment_index][unit_id] = amps
-    #         return amplitudes_by_unit
-
-
+    def _get_data(self, outputs="concatenated"):
+        return self.data["amplitudes"]
 
 register_result_extension(ComputeSpikeAmplitudes)
 

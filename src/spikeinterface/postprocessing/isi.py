@@ -59,20 +59,8 @@ class ComputeISIHistograms(ResultExtension):
         self.data["isi_histograms"] = isi_histograms
         self.data["bins"] = bins
 
-    # def get_data(self):
-    #     """
-    #     Get the computed ISI histograms.
-
-    #     Returns
-    #     -------
-    #     isi_histograms : np.array
-    #         2D array with ISI histograms (num_units, num_bins)
-    #     bins : np.array
-    #         1D array with bins in ms
-    #     """
-    #     msg = "ISI histograms are not computed. Use the 'run()' function."
-    #     assert self.data["isi_histograms"] is not None and self.data["bins"] is not None, msg
-    #     return self.data["isi_histograms"], self.data["bins"]
+    def _get_data(self):
+        return self.data["isi_histograms"], self.data["bins"]
 
 
 register_result_extension(ComputeISIHistograms)

@@ -78,29 +78,8 @@ class ComputeUnitLocations(ResultExtension):
             unit_location = compute_monopolar_triangulation(self.sorting_result, **method_kwargs)
         self.data["unit_locations"] = unit_location
 
-    # def get_data(self, outputs="numpy"):
-    #     """
-    #     Get the computed unit locations.
-
-    #     Parameters
-    #     ----------
-    #     outputs : "numpy" | "by_unit", default: "numpy"
-    #         The output format
-
-    #     Returns
-    #     -------
-    #     unit_locations : np.array or dict
-    #         The unit locations as a Nd array (outputs="numpy") or
-    #         as a dict with units as key and locations as values.
-    #     """
-    #     if outputs == "numpy":
-    #         return self.data["unit_locations"]
-
-    #     elif outputs == "by_unit":
-    #         locations_by_unit = {}
-    #         for unit_ind, unit_id in enumerate(self.sorting_result.sorting.unit_ids):
-    #             locations_by_unit[unit_id] = self.data["unit_locations"][unit_ind]
-    #         return locations_by_unit
+    def get_data(self, outputs="numpy"):
+        return self.data["unit_locations"]
 
 
 register_result_extension(ComputeUnitLocations)
