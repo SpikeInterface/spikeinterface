@@ -227,7 +227,7 @@ class Templates:
 
         zarr_group = zarr.open_group(folder_path, mode="r")
 
-        template_object = cls.load_from_open_zarr_storage(zarr_group)
+        template_object = cls.load_from_zarr_group(zarr_group)
         return template_object
 
     def to_json(self):
