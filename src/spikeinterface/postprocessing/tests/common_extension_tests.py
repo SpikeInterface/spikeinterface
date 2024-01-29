@@ -61,26 +61,20 @@ class ResultExtensionCommonTestSuite:
     """
     extension_class = None
     extension_function_kwargs_list = None
-    def setUp(self):
-        
-        self.recording, self.sorting = get_dataset()
-        # sparsity is computed once for all cases to save processing time
-        self.sparsity = estimate_sparsity(self.recording, self.sorting)
 
-        self.sorting_results = {}
-        for sparse in (True, False):
-            for format in ("memory", "binary_folder", "zarr"):
-                sorting_result = self._prepare_sorting_result(format, sparse)
-                key = f"sparse{sparse}_{format}"
-                self.sorting_results[key] = sorting_result
-    
-    def tearDown(self):
-        for k in list(self.sorting_results.keys()):
-            sorting_result = self.sorting_results.pop(k)
-            if sorting_result.format != "memory":
-                folder = sorting_result.folder
-                del sorting_result
-                shutil.rmtree(folder)
+    @classmethod
+    def setUpClass(cls):
+        cls.recording, cls.sorting = get_dataset()
+        # sparsity is computed once for all cases to save processing time
+        cls.sparsity = estimate_sparsity(cls.recording, cls.sorting)
+
+    # def tearDown(self):
+    #     for k in list(self.sorting_results.keys()):
+    #         sorting_result = self.sorting_results.pop(k)
+    #         if sorting_result.format != "memory":
+    #             folder = sorting_result.folder
+    #             del sorting_result
+    #             shutil.rmtree(folder)
 
     @property
     def extension_name(self):
@@ -113,7 +107,9 @@ class ResultExtensionCommonTestSuite:
 
 
     def test_extension(self):
-        for key, sorting_result in self.sorting_results.items():
-            print()
-            print(self.extension_name, key)
-            self._check_one(sorting_result)
+        for sparse in (True, False):
+            for format in ("memory", "binary_folder", "zarr"):
+                print()
+                print("sparse", sparse, format)
+                sorting_result = self._prepare_sorting_result(format, sparse)
+                self._check_one(sorting_result)

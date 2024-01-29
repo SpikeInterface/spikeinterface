@@ -16,7 +16,8 @@ class AmplitudeScalingsExtensionTest(ResultExtensionCommonTestSuite, unittest.Te
     ]
 
     def test_scaling_values(self):
-        sorting_result = self.sorting_results["sparseTrue_memory"]
+        sorting_result = self._prepare_sorting_result("memory", True)
+        sorting_result.compute("amplitude_scalings", handle_collisions=False)
 
         spikes = sorting_result.sorting.to_spike_vector()
 
@@ -39,4 +40,4 @@ if __name__ == "__main__":
     test = AmplitudeScalingsExtensionTest()
     test.setUp()
     test.test_extension()
-    test.test_scaling_values()
+    # test.test_scaling_values()

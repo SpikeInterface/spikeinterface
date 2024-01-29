@@ -30,11 +30,8 @@ class ComputeISIHistogramsTest(ResultExtensionCommonTestSuite, unittest.TestCase
         if HAVE_NUMBA:
             methods.append("numba")
 
-        key0 = list(self.sorting_results.keys())[0]
-        sorting = self.sorting_results[key0].sorting
-
-        _test_ISI(sorting, window_ms=60.0, bin_ms=1.0, methods=methods)
-        _test_ISI(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
+        _test_ISI(self.sorting, window_ms=60.0, bin_ms=1.0, methods=methods)
+        _test_ISI(self.sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
 
 
 def _test_ISI(sorting, window_ms: float, bin_ms: float, methods: List[str]):
@@ -51,7 +48,8 @@ def _test_ISI(sorting, window_ms: float, bin_ms: float, methods: List[str]):
 
 if __name__ == "__main__":
     test = ComputeISIHistogramsTest()
-    test.setUp()
+    # test.setUp()
+    test.setUpClass()
     test.test_extension()
     test.test_compute_ISI()
 
