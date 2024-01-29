@@ -39,7 +39,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, exclude_filename):
-        neo_kwargs = {"dirname": str(folder_path), 'exclude_filename': exclude_filename}
+        neo_kwargs = {"dirname": str(folder_path), "exclude_filename": exclude_filename}
         return neo_kwargs
 
 
