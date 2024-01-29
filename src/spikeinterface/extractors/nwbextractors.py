@@ -51,7 +51,10 @@ def read_file_from_backend(
         else:
             ffspec_file = fsspec_file_system.open(file_path, "rb")
 
-        open_file = h5py.File(name=ffspec_file, mode="r")
+        if _is_hdf5_file(ffspec_file):
+            open_file = h5py.File(ffspec_file, "r")
+        else:
+            raise RuntimeError(f"{file_path} is not a valid HDF5 file!")
 
     elif stream_mode == "ros3":
         import h5py
@@ -69,7 +72,10 @@ def read_file_from_backend(
 
         assert file_path is not None, "file_path must be specified when using stream_mode='remfile'"
         rfile = remfile.File(file_path)
-        open_file = h5py.File(rfile, "r")
+        if _is_hdf5_file(rfile):
+            open_file = h5py.File(rfile, "r")
+        else:
+            raise RuntimeError(f"{file_path} is not a valid HDF5 file!")
 
     elif stream_mode == "zarr":
         import zarr
@@ -279,11 +285,14 @@ def _retrieve_unit_table_pynwb(nwbfile: NWBFile, unit_table_path: Optional[str] 
     return unit_table
 
 
-def _is_hdf5_file(filename):
+def _is_hdf5_file(filename_or_file):
     # Source for magic numbers https://www.loc.gov/preservation/digital/formats/fdd/fdd000229.shtml
     # We should find a better one though
-    with open(filename, "rb") as f:
-        file_signature = f.read(8)
+    if isinstance(filename_or_file, (str, Path)):
+        with open(filename_or_file, "rb") as f:
+            file_signature = f.read(8)
+    else:
+        file_signature = filename_or_file.read(8)
     return file_signature == b"\x89HDF\r\n\x1a\n"
 
 
