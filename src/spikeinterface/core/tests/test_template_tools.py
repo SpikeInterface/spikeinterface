@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 from spikeinterface import load_extractor, extract_waveforms, load_waveforms, generate_recording, generate_sorting
-
+from spikeinterface import Templates
 from spikeinterface.core import (
     get_template_amplitudes,
     get_template_extremum_channel,
@@ -36,9 +36,24 @@ def setup_module():
     we = extract_waveforms(recording, sorting, cache_folder / "toy_waveforms")
 
 
+def _get_templates_object_from_waveform_extractor(we):
+    templates = Templates(
+        templates_array=we.get_all_templates(mode="average"),
+        sampling_frequency=we.sampling_frequency,
+        nbefore=we.nbefore,
+        sparsity_mask=None,
+        channel_ids=we.channel_ids,
+        unit_ids=we.unit_ids,
+    )
+    return templates
+
+
 def test_get_template_amplitudes():
     we = load_waveforms(cache_folder / "toy_waveforms")
     peak_values = get_template_amplitudes(we)
+    print(peak_values)
+    templates = _get_templates_object_from_waveform_extractor(we)
+    peak_values = get_template_amplitudes(templates)
     print(peak_values)
 
 
@@ -46,12 +61,17 @@ def test_get_template_extremum_channel():
     we = load_waveforms(cache_folder / "toy_waveforms")
     extremum_channels_ids = get_template_extremum_channel(we, peak_sign="both")
     print(extremum_channels_ids)
+    templates = _get_templates_object_from_waveform_extractor(we)
+    extremum_channels_ids = get_template_extremum_channel(templates, peak_sign="both")
+    print(extremum_channels_ids)
 
 
 def test_get_template_extremum_channel_peak_shift():
     we = load_waveforms(cache_folder / "toy_waveforms")
     shifts = get_template_extremum_channel_peak_shift(we, peak_sign="neg")
     print(shifts)
+    templates = _get_templates_object_from_waveform_extractor(we)
+    shifts = get_template_extremum_channel_peak_shift(templates, peak_sign="neg")
 
     # DEBUG
     # import matplotlib.pyplot as plt
@@ -74,6 +94,9 @@ def test_get_template_extremum_amplitude():
 
     extremum_channels_ids = get_template_extremum_amplitude(we, peak_sign="both")
     print(extremum_channels_ids)
+
+    templates = _get_templates_object_from_waveform_extractor(we)
+    extremum_channels_ids = get_template_extremum_amplitude(templates, peak_sign="both")
 
 
 if __name__ == "__main__":
