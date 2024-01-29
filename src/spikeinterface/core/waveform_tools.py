@@ -771,7 +771,7 @@ def estimate_templates(
     )
 
     processor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name="estimate_sparsity", **job_kwargs
+        recording, func, init_func, init_args, job_name="estimate_templates", **job_kwargs
     )
     processor.run()
 
