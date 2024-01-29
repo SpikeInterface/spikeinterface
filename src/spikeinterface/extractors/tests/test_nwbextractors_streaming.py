@@ -255,7 +255,6 @@ def test_sorting_s3_nwb_remfile(tmp_path):
 
 
 @pytest.mark.streaming_extractors
-@pytest.mark.skip("Too slow")
 def test_sorting_s3_nwb_zarr(tmp_path):
     file_path = (
         "s3://aind-open-data/ecephys_625749_2022-08-03_15-15-06_nwb_2023-05-16_16-34-55/"
@@ -269,6 +268,7 @@ def test_sorting_s3_nwb_zarr(tmp_path):
         stream_mode="zarr",
         storage_options={"anon": True},
         t_start=0,
+        load_unit_properties=False,
     )
 
     num_seg = sorting.get_num_segments()
@@ -276,12 +276,13 @@ def test_sorting_s3_nwb_zarr(tmp_path):
     num_units = len(sorting.unit_ids)
     assert num_units == 456
 
-    for segment_index in range(num_seg):
-        for unit in sorting.unit_ids:
-            spike_train = sorting.get_unit_spike_train(unit_id=unit, segment_index=segment_index)
-            assert len(spike_train) > 0
-            assert spike_train.dtype == "int64"
-            assert np.all(spike_train >= 0)
+    # This is too slow for testing
+    # for segment_index in range(num_seg):
+    #     for unit in sorting.unit_ids:
+    #         spike_train = sorting.get_unit_spike_train(unit_id=unit, segment_index=segment_index)
+    #         assert len(spike_train) > 0
+    #         assert spike_train.dtype == "int64"
+    #         assert np.all(spike_train >= 0)
 
     tmp_file = tmp_path / "test_zarr_sorting.pkl"
     with open(tmp_file, "wb") as f:
@@ -294,7 +295,10 @@ def test_sorting_s3_nwb_zarr(tmp_path):
 
 
 if __name__ == "__main__":
-    test_recording_s3_nwb_ros3()
-    test_recording_s3_nwb_fsspec()
-    test_sorting_s3_nwb_ros3()
-    test_sorting_s3_nwb_fsspec()
+    tmp_path = Path("tmp")
+    if tmp_path.is_dir():
+        import shutil
+
+        shutil.rmtree(tmp_path)
+    tmp_path.mkdir()
+    test_recording_s3_nwb_fsspec(tmp_path, cache=True)

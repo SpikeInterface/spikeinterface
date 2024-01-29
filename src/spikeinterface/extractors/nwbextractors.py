@@ -574,14 +574,13 @@ class NwbRecordingExtractor(BaseRecording):
                 electrodes_table = self._nwbfile.electrodes
                 electrodes_indices = self.electrical_series.electrodes.data[:]
                 columns = electrodes_table.colnames
-                properties = self._fetch_other_properties(electrodes_table, electrodes_indices, columns)
             else:
                 electrodes_table = self._file["/general/extracellular_ephys/electrodes"]
                 electrodes_indices = _retrieve_electrodes_indices_from_electrical_series_backend(
                     self._file, self.electrical_series, self.backend
                 )
                 columns = electrodes_table.attrs["colnames"]
-                properties = self._fetch_other_properties(electrodes_table, electrodes_indices, columns)
+            properties = self._fetch_other_properties(electrodes_table, electrodes_indices, columns)
             for property_name, property_values in properties.items():
                 values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in property_values]
                 self.set_property(property_name, values)
@@ -752,9 +751,11 @@ class NwbRecordingExtractor(BaseRecording):
         # Channel groups
         groups = None
         if "group_name" in electrodes_table:
-            groups = electrodes_table["group_name"][electrodes_indices]
+            groups = electrodes_table["group_name"][electrodes_indices][:]
         elif "group" in electrodes_table:
-            groups = electrodes_table["group"][electrodes_indices]
+            groups = electrodes_table["group"][electrodes_indices][:]
+        if groups is not None:
+            groups = np.array([g for g in groups])
 
         return locations, groups
 
@@ -765,7 +766,17 @@ class NwbRecordingExtractor(BaseRecording):
         from pynwb.ecephys import ElectrodeGroup
 
         properties = dict()
-        properties_to_skip = ["rel_x", "rel_y", "rel_z", "group_name", "id", "location", "channel_name", "offset"]
+        properties_to_skip = [
+            "rel_x",
+            "rel_y",
+            "rel_z",
+            "group_name",
+            "id",
+            "location",
+            "channel_name",
+            "offset",
+            "group",
+        ]
         rename_properties = dict(location="brain_area")
 
         for column in columns:
