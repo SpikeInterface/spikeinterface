@@ -304,7 +304,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 
 
 class LocalizeGridConvolution(PipelineNode):
-    """Localize peaks using convlution with a grid of fake templates
+    """Localize peaks using convolution with a grid of fake templates
 
     Notes
     -----
@@ -314,19 +314,19 @@ class LocalizeGridConvolution(PipelineNode):
     need_waveforms = True
     name = "grid_convolution"
     params_doc = """
-    radius_um: float
+    radius_um: float, default: 40.0
         Radius in um for channel sparsity.
-    upsampling_um: float
+    upsampling_um: float, default: 5.0
         Upsampling resolution for the grid of templates
-    sigma_um: np.array
+    sigma_um: np.array, default: np.linspace(5.0, 25.0, 5)
         Spatial decays of the fake templates
-    sigma_ms: float
+    sigma_ms: float, default: 0.25
         The temporal decay of the fake templates
-    margin_um: float
+    margin_um: float, default: 50.0
         The margin for the grid of fake templates
-    prototype: np.array
+    prototype: np.array | None, default: None
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float, default: 5
+    percentile: float, default: 5.0
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
     sparsity_threshold: float, default: 0.01

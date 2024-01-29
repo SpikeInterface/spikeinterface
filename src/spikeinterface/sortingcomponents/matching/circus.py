@@ -518,6 +518,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "sparse_kwargs": {"method": "ptp", "threshold": 1},
         "ignored_ids": [],
         "vicinity": 0,
+        "optimize_amplitudes": False,
     }
 
     @classmethod
@@ -555,14 +556,39 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         # We reconstruct the approximated templates
         templates = np.matmul(d["temporal"] * d["singular"][:, np.newaxis, :], d["spatial"])
 
-        d["templates"] = {}
+        d["templates"] = np.zeros(templates.shape, dtype=np.float32)
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
 
         # And get the norms, saving compressed templates for CC matrix
         for count in range(num_templates):
             template = templates[count][:, d["sparsity_mask"][count]]
             d["norms"][count] = np.linalg.norm(template)
-            d["templates"][count] = template / d["norms"][count]
+            d["templates"][count][:, d["sparsity_mask"][count]] = template / d["norms"][count]
+
+        if d["optimize_amplitudes"]:
+            noise = np.random.randn(200, d["num_samples"] * d["num_channels"])
+            r = d["templates"].reshape(num_templates, -1).dot(noise.reshape(len(noise), -1).T)
+            s = r / d["norms"][:, np.newaxis]
+            mad = np.median(np.abs(s - np.median(s, 1)[:, np.newaxis]), 1)
+            a_min = np.median(s, 1) + 5 * mad
+
+            means = np.zeros((num_templates, num_templates), dtype=np.float32)
+            stds = np.zeros((num_templates, num_templates), dtype=np.float32)
+            for count, unit_id in enumerate(waveform_extractor.unit_ids):
+                w = waveform_extractor.get_waveforms(unit_id, force_dense=True)
+                r = d["templates"].reshape(num_templates, -1).dot(w.reshape(len(w), -1).T)
+                s = r / d["norms"][:, np.newaxis]
+                means[count] = np.median(s, 1)
+                stds[count] = np.median(np.abs(s - np.median(s, 1)[:, np.newaxis]), 1)
+
+            _, a_max = d["amplitudes"]
+            d["amplitudes"] = np.zeros((num_templates, 2), dtype=np.float32)
+
+            for count in range(num_templates):
+                indices = np.argsort(means[count])
+                a = np.where(indices == count)[0][0]
+                d["amplitudes"][count][1] = 1 + 5 * stds[count, indices[a]]
+                d["amplitudes"][count][0] = max(a_min[count], 1 - 5 * stds[count, indices[a]])
 
         d["temporal"] /= d["norms"][:, np.newaxis, np.newaxis]
         d["temporal"] = np.flip(d["temporal"], axis=1)
@@ -663,7 +689,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         omp_tol = np.finfo(np.float32).eps
         num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
-        min_amplitude, max_amplitude = d["amplitudes"]
+        if d["optimize_amplitudes"]:
+            min_amplitude, max_amplitude = d["amplitudes"][:, 0], d["amplitudes"][:, 1]
+            min_amplitude = min_amplitude[:, np.newaxis]
+            max_amplitude = max_amplitude[:, np.newaxis]
+        else:
+            min_amplitude, max_amplitude = d["amplitudes"]
         ignored_ids = d["ignored_ids"]
         vicinity = d["vicinity"]
         rank = d["rank"]
