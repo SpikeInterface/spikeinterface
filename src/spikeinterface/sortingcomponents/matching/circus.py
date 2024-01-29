@@ -887,7 +887,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
 
 class CircusPeeler(BaseTemplateMatchingEngine):
-
     """
     Greedy Template-matching ported from the Spyking Circus sorter
 
