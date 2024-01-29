@@ -428,7 +428,7 @@ def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_id
         return np.nan
 
     trough_val = template_single[trough_idx]
-    # threshold is half of peak heigth (assuming baseline is 0)
+    # threshold is half of peak height (assuming baseline is 0)
     threshold = 0.5 * trough_val
 
     (cpre_idx,) = np.where(template_single[:trough_idx] < threshold)
@@ -451,12 +451,9 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     """
     Return slope of repolarization period between trough and baseline
 
-    After reaching it's maxumum polarization, the neuron potential will
+    After reaching it's maximum polarization, the neuron potential will
     recover. The repolarization slope is defined as the dV/dT of the action potential
     between trough and baseline.
-
-    Optionally the function returns also the indices per waveform where the
-    potential crosses baseline.
 
     Parameters
     ----------
@@ -466,9 +463,14 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
         The sampling frequency of the template
     trough_idx: int, default: None
         The index of the trough
+
+    Returns
+    -------
+    slope: float
+        The repolarization slope
     """
     if trough_idx is None:
-        trough_idx = get_trough_and_peak_idx(template_single)
+        trough_idx, _ = get_trough_and_peak_idx(template_single)
 
     times = np.arange(template_single.shape[0]) / sampling_frequency
 
@@ -478,7 +480,7 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     (rtrn_idx,) = np.nonzero(template_single[trough_idx:] >= 0)
     if len(rtrn_idx) == 0:
         return np.nan
-    # first time after  trough, where template is at baseline
+    # first time after trough, where template is at baseline
     return_to_base_idx = rtrn_idx[0] + trough_idx
 
     if return_to_base_idx - trough_idx < 3:
@@ -493,8 +495,8 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
 def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwargs):
     """
     Return the recovery slope of input waveforms. After repolarization,
-    the neuron hyperpolarizes untill it peaks. The recovery slope is the
-    slope of the actiopotential after the peak, returning to the baseline
+    the neuron hyperpolarizes until it peaks. The recovery slope is the
+    slope of the action potential after the peak, returning to the baseline
     in dV/dT. The slope is computed within a user-defined window after
     the peak.
 
@@ -511,6 +513,11 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
         The index of the peak
     **kwargs: Required kwargs:
         - recovery_window_ms: the window in ms after the peak to compute the recovery_slope
+
+    Returns
+    -------
+    res.slope: float
+        The recovery slope
     """
     import scipy.stats
 
@@ -543,6 +550,11 @@ def get_num_positive_peaks(template_single, sampling_frequency, **kwargs):
     **kwargs: Required kwargs:
         - peak_relative_threshold: the relative threshold to detect positive and negative peaks
         - peak_width_ms: the width in samples to detect peaks
+
+    Returns
+    -------
+    number_positive_peaks: int
+        the number of positive peaks
     """
     from scipy.signal import find_peaks
 
@@ -571,6 +583,11 @@ def get_num_negative_peaks(template_single, sampling_frequency, **kwargs):
     **kwargs: Required kwargs:
         - peak_relative_threshold: the relative threshold to detect positive and negative peaks
         - peak_width_ms: the width in samples to detect peaks
+
+    Returns
+    -------
+    num_negative_peaks: int
+        the number of negative peaks
     """
     from scipy.signal import find_peaks
 
@@ -628,7 +645,7 @@ def sort_template_and_locations(template, channel_locations, depth_direction="y"
 
 def fit_velocity(peak_times, channel_dist):
     """
-    Fit velocity from peak times and channel distances using ribust Theilsen estimator.
+    Fit velocity from peak times and channel distances using robust Theilsen estimator.
     """
     # from scipy.stats import linregress
     # slope, intercept, _, _, _ = linregress(peak_times, channel_dist)
