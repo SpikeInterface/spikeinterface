@@ -82,7 +82,8 @@ streaming_extractors = [
     "requests",
     "pynwb>=2.3.0",
     "hdmf-zarr>=0.5.0",
-    "remfile"
+    "remfile",
+    "s3fs"
 ]
 
 full = [
