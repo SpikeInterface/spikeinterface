@@ -3,8 +3,9 @@ import pytest
 import numpy as np
 import json
 
-from spikeinterface.core import ChannelSparsity
+from spikeinterface.core import ChannelSparsity, estimate_sparsity
 from spikeinterface.core.core_tools import check_json
+from spikeinterface.core import generate_ground_truth_recording
 
 
 def test_ChannelSparsity():
@@ -143,5 +144,50 @@ def test_densify_waveforms():
         assert np.array_equal(template_sparse, template_sparse2)
 
 
+def test_estimate_sparsity():
+    num_units = 5
+    recording, sorting = generate_ground_truth_recording(
+        durations=[30.0],
+        sampling_frequency=16000.0,
+        num_channels=10,
+        num_units=5,
+        generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
+        noise_kwargs=dict(noise_level=1.0, strategy="tile_pregenerated"),
+        seed=2205,
+    )
+
+    # small radius should give a very sparse = one channel per unit
+    sparsity = estimate_sparsity(
+        recording,
+        sorting,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="radius",
+        radius_um=1.0,
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=2,
+    )
+    # print(sparsity)
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units))
+
+    # best_channel : the mask should exactly 3 channels per units
+    sparsity = estimate_sparsity(
+        recording,
+        sorting,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="best_channels",
+        num_channels=3,
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=1,
+    )
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
+
+
 if __name__ == "__main__":
     test_ChannelSparsity()
+    test_estimate_sparsity()
