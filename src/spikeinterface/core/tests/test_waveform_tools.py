@@ -5,11 +5,12 @@ import platform
 
 import numpy as np
 
-from spikeinterface.core import generate_recording, generate_sorting
+from spikeinterface.core import generate_recording, generate_sorting, generate_ground_truth_recording
 from spikeinterface.core.waveform_tools import (
     extract_waveforms_to_buffers,
     extract_waveforms_to_single_buffer,
     split_waveforms_by_units,
+    estimate_templates,
 )
 
 
@@ -26,22 +27,38 @@ def _check_all_wf_equal(list_wfs_arrays):
             assert np.array_equal(wfs_arrays[unit_id], wfs_arrays0[unit_id])
 
 
-def test_waveform_tools():
-    durations = [30, 40]
-    sampling_frequency = 30000.0
-
-    # 2 segments
-    num_channels = 2
-    recording = generate_recording(
-        num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency
+def get_dataset():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[30.0, 40.0],
+        sampling_frequency=30000.0,
+        num_channels=4,
+        num_units=7,
+        generate_sorting_kwargs=dict(firing_rates=5.0, refractory_period_ms=4.0),
+        noise_kwargs=dict(noise_level=1.0, strategy="tile_pregenerated"),
+        seed=2205,
     )
-    recording.annotate(is_filtered=True)
-    num_units = 15
-    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
+    return recording, sorting
+
+
+def test_waveform_tools():
+    # durations = [30, 40]
+    # sampling_frequency = 30000.0
+
+    # # 2 segments
+    # num_channels = 2
+    # recording = generate_recording(
+    #     num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency
+    # )
+    # recording.annotate(is_filtered=True)
+    # num_units = 15
+    # sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
 
     # test with dump !!!!
-    recording = recording.save()
-    sorting = sorting.save()
+    # recording = recording.save()
+    # sorting = sorting.save()
+
+    recording, sorting = get_dataset()
+    sampling_frequency = recording.sampling_frequency
 
     nbefore = int(3.0 * sampling_frequency / 1000.0)
     nafter = int(4.0 * sampling_frequency / 1000.0)
@@ -145,5 +162,38 @@ def test_waveform_tools():
     _check_all_wf_equal(list_wfs_sparse)
 
 
+def test_estimate_templates():
+    recording, sorting = get_dataset()
+
+    ms_before = 1.0
+    ms_after = 1.5
+
+    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+
+    spikes = sorting.to_spike_vector()
+    # take one spikes every 10
+    spikes = spikes[::10]
+
+    job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
+
+    templates = estimate_templates(
+        recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
+    )
+    print(templates.shape)
+    assert templates.shape[0] == sorting.unit_ids.size
+    assert templates.shape[1] == nbefore + nafter
+    assert templates.shape[2] == recording.get_num_channels()
+
+    assert np.any(templates != 0)
+
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # for unit_index, unit_id in enumerate(sorting.unit_ids):
+    #     ax.plot(templates[unit_index, :, :].T.flatten())
+    # plt.show()
+
+
 if __name__ == "__main__":
-    test_waveform_tools()
+    # test_waveform_tools()
+    test_estimate_templates()
