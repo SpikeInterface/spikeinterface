@@ -18,12 +18,12 @@ except ModuleNotFoundError as err:
 
 class ComputeISIHistogramsTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeISIHistograms
-    extension_function_kwargs_list = [
+    extension_function_params_list = [
         dict(method="numpy"),
         dict(method="auto"),
     ]
     if HAVE_NUMBA:
-        extension_function_kwargs_list.append(dict(method="numba"))
+        extension_function_params_list.append(dict(method="numba"))
 
     def test_compute_ISI(self):
         methods = ["numpy", "auto"]
@@ -48,7 +48,6 @@ def _test_ISI(sorting, window_ms: float, bin_ms: float, methods: List[str]):
 
 if __name__ == "__main__":
     test = ComputeISIHistogramsTest()
-    # test.setUp()
     test.setUpClass()
     test.test_extension()
     test.test_compute_ISI()

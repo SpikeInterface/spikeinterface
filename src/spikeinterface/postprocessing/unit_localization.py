@@ -50,6 +50,7 @@ class ComputeUnitLocations(ResultExtension):
     depend_on = ["fast_templates|templates", ]
     need_recording = True
     use_nodepipeline = False
+    need_job_kwargs = False
 
     def __init__(self, sorting_result):
         ResultExtension.__init__(self, sorting_result)
@@ -63,7 +64,7 @@ class ComputeUnitLocations(ResultExtension):
         new_unit_location = self.data["unit_locations"][unit_inds]
         return dict(unit_locations=new_unit_location)
 
-    def _run(self, **job_kwargs):
+    def _run(self):
         method = self.params["method"]
         method_kwargs = self.params["method_kwargs"]
 

@@ -23,6 +23,7 @@ class ComputeWaveforms(ResultExtension):
     depend_on = []
     need_recording = True
     use_nodepipeline = False
+    need_job_kwargs = True
 
     @property
     def nbefore(self):
@@ -32,7 +33,7 @@ class ComputeWaveforms(ResultExtension):
     def nafter(self):
         return int(self.params["ms_after"] * self.sorting_result.sampling_frequency / 1000.0)
 
-    def _run(self, **kwargs):
+    def _run(self, **job_kwargs):
         self.data.clear()
 
         if self.sorting_result.random_spikes_indices is None:
@@ -60,9 +61,6 @@ class ComputeWaveforms(ResultExtension):
             sparsity_mask = None
         else:
             sparsity_mask = self.sparsity.mask
-
-        # TODO propagate some job_kwargs
-        job_kwargs = dict(n_jobs=-1)
 
         all_waveforms = extract_waveforms_to_single_buffer(
             recording,
@@ -140,6 +138,8 @@ class ComputeWaveforms(ResultExtension):
 
         return wfs
 
+    def _get_data(self):
+        return self.data["waveforms"]
 
 
 
@@ -160,8 +160,9 @@ class ComputeTemplates(ResultExtension):
     depend_on = ["waveforms"]
     need_recording = False
     use_nodepipeline = False
+    need_job_kwargs = False
 
-    def _run(self, **kwargs):
+    def _run(self):
         
         unit_ids = self.sorting_result.unit_ids
         channel_ids = self.sorting_result.channel_ids
@@ -247,6 +248,14 @@ class ComputeTemplates(ResultExtension):
 
         return new_data
 
+    def _get_data(self, operator="average", percentile=None):
+        if operator != "percentile":
+            key = operator
+        else:
+            assert percentile is not None, "You must provide percentile=..."
+            key = f"pencentile_{percentile}"
+        return self.data[key]
+
 
 
 compute_templates = ComputeTemplates.function_factory()
@@ -262,6 +271,7 @@ class ComputeFastTemplates(ResultExtension):
     depend_on = []
     need_recording = True
     use_nodepipeline = False
+    need_job_kwargs = True
 
     @property
     def nbefore(self):
@@ -271,7 +281,7 @@ class ComputeFastTemplates(ResultExtension):
     def nafter(self):
         return int(self.params["ms_after"] * self.sorting_result.sampling_frequency / 1000.0)
 
-    def _run(self, **kwargs):
+    def _run(self, **job_kwargs):
         self.data.clear()
 
         if self.sorting_result.random_spikes_indices is None:
@@ -288,7 +298,7 @@ class ComputeFastTemplates(ResultExtension):
         return_scaled = self.params["return_scaled"]
 
         # TODO jobw_kwargs
-        self.data["average"] = estimate_templates(recording, some_spikes, unit_ids, self.nbefore, self.nafter, return_scaled=return_scaled)
+        self.data["average"] = estimate_templates(recording, some_spikes, unit_ids, self.nbefore, self.nafter, return_scaled=return_scaled, **job_kwargs)
     
     def _set_params(self,
             ms_before: float = 1.0,
@@ -302,7 +312,8 @@ class ComputeFastTemplates(ResultExtension):
         )
         return params
 
-        
+    def _get_data(self):
+        return self.data["average"]        
 
     def _select_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
@@ -340,6 +351,10 @@ class ComputeNoiseLevels(ResultExtension):
         noise level vector.
     """
     extension_name = "noise_levels"
+    depend_on = []
+    need_recording = True
+    use_nodepipeline = False
+    need_job_kwargs = False
 
     def __init__(self, sorting_result):
         ResultExtension.__init__(self, sorting_result)
@@ -355,7 +370,7 @@ class ComputeNoiseLevels(ResultExtension):
     def _run(self):
         self.data["noise_levels"] = get_noise_levels(self.sorting_result.recording,  **self.params)
 
-    # def get_data(self):
+    # def _get_data(self):
     #     """
     #     Get computed noise levels.
 

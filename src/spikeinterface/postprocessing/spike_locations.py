@@ -55,6 +55,7 @@ class ComputeSpikeLocations(ResultExtension):
     depend_on = ["fast_templates|templates", ]
     need_recording = True
     use_nodepipeline = True
+    need_job_kwargs = True
 
     def __init__(self, sorting_result):
         ResultExtension.__init__(self, sorting_result)

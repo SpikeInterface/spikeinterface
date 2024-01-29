@@ -10,7 +10,7 @@ from spikeinterface.postprocessing import ComputeAmplitudeScalings
 
 class AmplitudeScalingsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeAmplitudeScalings
-    extension_function_kwargs_list = [
+    extension_function_params_list = [
         dict(handle_collisions=True),
         dict(handle_collisions=False),
     ]
@@ -38,6 +38,6 @@ class AmplitudeScalingsExtensionTest(ResultExtensionCommonTestSuite, unittest.Te
 
 if __name__ == "__main__":
     test = AmplitudeScalingsExtensionTest()
-    test.setUp()
+    test.setUpClass()
     test.test_extension()
-    # test.test_scaling_values()
+    test.test_scaling_values()

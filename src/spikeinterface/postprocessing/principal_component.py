@@ -59,6 +59,7 @@ class ComputePrincipalComponents(ResultExtension):
     depend_on = ["waveforms", ]
     need_recording = False
     use_nodepipeline = False
+    need_job_kwargs = True
 
     def __init__(self, sorting_result):
         ResultExtension.__init__(self, sorting_result)

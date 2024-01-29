@@ -18,12 +18,12 @@ from spikeinterface.postprocessing.correlograms import _compute_correlograms, _m
 
 class ComputeCorrelogramsTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeCorrelograms
-    extension_function_kwargs_list = [
+    extension_function_params_list = [
         dict(method="numpy"),
         dict(method="auto"),
     ]
     if HAVE_NUMBA:
-        extension_function_kwargs_list.append(dict(method="numba"))
+        extension_function_params_list.append(dict(method="numba"))
 
 
 
@@ -201,5 +201,5 @@ if __name__ == "__main__":
     # test_detect_injected_correlation()
 
     test = ComputeCorrelogramsTest()
-    test.setUp()
+    test.setUpClass()
     test.test_extension()

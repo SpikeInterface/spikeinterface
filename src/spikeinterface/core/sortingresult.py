@@ -22,6 +22,7 @@ from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
 from .sorting_tools import random_spikes_selection
 from .core_tools import check_json
+from .job_tools import split_job_kwargs
 from .numpyextractors import SharedMemorySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
@@ -738,7 +739,7 @@ class SortingResult:
 
     
 
-    def compute(self, input, save=True, **params):
+    def compute(self, input, save=True, **kwargs):
         """
         Compute one extension or several extension.
         Internally calling compute_one_extension() or compute_several_extensions() depending th input type.
@@ -750,12 +751,12 @@ class SortingResult:
             If the input is a dict then compute several extension with compute_several_extensions(extensions=input)
         """
         if isinstance(input, str):
-            self.compute_one_extension(extension_name=input, save=save, **params)
+            return self.compute_one_extension(extension_name=input, save=save, **kwargs)
         elif isinstance(input, dict):
-            assert len(params) == 0, "Too many arguments for SortingResult.compute_several_extensions()"
+            assert len(kwargs) == 0, "Too many arguments for SortingResult.compute_several_extensions()"
             self.compute_several_extensions(extensions=input, save=save)
 
-    def compute_one_extension(self, extension_name, save=True, **params):
+    def compute_one_extension(self, extension_name, save=True, **kwargs):
         """
         Compute one extension
 
@@ -769,8 +770,8 @@ class SortingResult:
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convinient to try some parameters without changing an already saved extension.
 
-        **params: 
-            All other kwargs are transimited to extension.set_params()
+        **kwargs: 
+            All other kwargs are transimited to extension.set_params() or job_kwargs
 
         Returns
         -------
@@ -785,9 +786,17 @@ class SortingResult:
         >>> wfs = extension.data["waveforms"]
 
         """
+
         
 
         extension_class = get_extension_class(extension_name)
+
+        
+        if extension_class.need_job_kwargs:
+            params, job_kwargs = split_job_kwargs(kwargs)
+        else:
+            params = kwargs
+            job_kwargs = {}
 
         # check dependencies
         if extension_class.need_recording:
@@ -802,7 +811,7 @@ class SortingResult:
         
         extension_instance = extension_class(self)
         extension_instance.set_params(save=save, **params)
-        extension_instance.run(save=save)
+        extension_instance.run(save=save, **job_kwargs)
         
         self.extensions[extension_name] = extension_instance
 
@@ -1045,9 +1054,11 @@ class ResultExtension:
       * depend_on
       * need_recording
       * use_nodepipeline
+      * need_job_kwargs
       * _set_params()
       * _run()
       * _select_extension_data()
+      * _get_data()
 
     The subclass must also set an `extension_name` class attribute which is not None by default.
 
@@ -1063,6 +1074,7 @@ class ResultExtension:
     depend_on = []
     need_recording = False
     use_nodepipeline = False
+    need_job_kwargs = False
 
     def __init__(self, sorting_result):
         self._sorting_result = weakref.ref(sorting_result)
@@ -1091,6 +1103,10 @@ class ResultExtension:
         # must be implemented in subclass only if use_nodepipeline=True
         raise NotImplementedError
 
+    def _get_data(self):
+        # must be implemented in subclass
+        raise NotImplementedError
+
     # 
     #######
 
@@ -1098,17 +1114,27 @@ class ResultExtension:
     def function_factory(cls):
         # make equivalent
         # comptute_unit_location(sorting_result, ...) <> sorting_result.compute("unit_location", ...)
+        # this also make backcompatibility
+        # comptute_unit_location(we, ...)
+
         class FuncWrapper:
             def __init__(self, extension_name):
                 self.extension_name = extension_name
             def __call__(self, sorting_result, load_if_exists=None, *args, **kwargs):
-                # backward compatibility with "load_if_exists"
+                from .waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+                
+                if isinstance(sorting_result, MockWaveformExtractor):
+                    # backward compatibility with WaveformsExtractor
+                    sorting_result = sorting_result.sorting_result
+
                 if load_if_exists is not None:
+                    # backward compatibility with "load_if_exists"
                     warnings.warn(f"compute_{cls.extension_name}(..., load_if_exists=True/False) is kept for backward compatibility but should not be used anymore")
                     assert isinstance(load_if_exists, bool)
                     if load_if_exists:
                         ext = sorting_result.get_extension(self.extension_name)
                         return ext
+                
 
                 ext = sorting_result.compute(cls.extension_name, *args, **kwargs)
                 # TODO be discussed 
@@ -1118,7 +1144,6 @@ class ResultExtension:
 
         func = FuncWrapper(cls.extension_name)
         func.__doc__ = cls.__doc__
-        # TODO: add load_if_exists
         return func
 
     @property
@@ -1386,3 +1411,5 @@ class ResultExtension:
         assert self.use_nodepipeline, "ResultExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
         return self._get_pipeline_nodes()
 
+    def get_data(self, *args, **kwargs):
+        return self._get_data(*args, **kwargs)

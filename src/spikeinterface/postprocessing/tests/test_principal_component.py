@@ -25,7 +25,7 @@ DEBUG = False
 
 class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputePrincipalComponents
-    extension_function_kwargs_list = [
+    extension_function_params_list = [
         dict(mode="by_channel_local"),
         dict(mode="by_channel_global"),
         # mode concatenated cannot be tested here because it do not work with sparse=True
@@ -34,7 +34,7 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
     # TODO : put back theses tests
 
     def test_mode_concatenated(self):
-        # this is tested outside "extension_function_kwargs_list" because it do not support sparsity!
+        # this is tested outside "extension_function_params_list" because it do not support sparsity!
 
         sorting_result = self._prepare_sorting_result(format="memory", sparse=False)
 
@@ -103,7 +103,7 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
 
 if __name__ == "__main__":
     test = PrincipalComponentsExtensionTest()
-    test.setUp()
+    test.setUpClass()
     test.test_extension()
     test.test_mode_concatenated()
     # test.test_compute_for_all_spikes()

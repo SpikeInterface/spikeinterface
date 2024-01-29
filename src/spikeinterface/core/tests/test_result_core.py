@@ -73,8 +73,9 @@ def _check_result_extension(sortres, extension_name):
 def test_ComputeWaveforms(format, sparse):
     sortres = get_sorting_result(format=format, sparse=sparse)
 
+    job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
     sortres.select_random_spikes(max_spikes_per_unit=50, seed=2205)
-    ext = sortres.compute("waveforms")
+    ext = sortres.compute("waveforms", **job_kwargs)
     wfs = ext.data["waveforms"]
     _check_result_extension(sortres, "waveforms")
 
@@ -90,7 +91,8 @@ def test_ComputeTemplates(format, sparse):
         # This require "waveforms first and should trig an error
         sortres.compute("templates")
     
-    sortres.compute("waveforms")
+    job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
+    sortres.compute("waveforms", **job_kwargs)
     sortres.compute("templates", operators=["average", "std", "median", ("percentile", 5.), ("percentile", 95.),])
 
 
@@ -118,18 +120,21 @@ def test_ComputeTemplates(format, sparse):
 def test_ComputeFastTemplates(format, sparse):
     sortres = get_sorting_result(format=format, sparse=sparse)
 
+    # TODO check this because this is not passing with n_jobs=2
+    job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
+
     ms_before=1.0
     ms_after=2.5
 
     sortres.select_random_spikes(max_spikes_per_unit=20, seed=2205)
-    sortres.compute("fast_templates", ms_before=ms_before, ms_after=ms_after, return_scaled=True)
+    sortres.compute("fast_templates", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs)
 
     _check_result_extension(sortres, "fast_templates")
 
     # compare ComputeTemplates with dense and ComputeFastTemplates: should give the same on "average"
     other_sortres = get_sorting_result(format=format, sparse=False)
     other_sortres.select_random_spikes(max_spikes_per_unit=20, seed=2205)
-    other_sortres.compute("waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True)
+    other_sortres.compute("waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs)
     other_sortres.compute("templates", operators=["average",])
 
     templates0 = sortres.get_extension("fast_templates").data["average"]
@@ -166,11 +171,11 @@ if __name__ == '__main__':
     # test_ComputeWaveforms(format="zarr", sparse=True)
     # test_ComputeWaveforms(format="zarr", sparse=False)
 
-    # test_ComputeTemplates(format="memory", sparse=True)
-    # test_ComputeTemplates(format="memory", sparse=False)
-    # test_ComputeTemplates(format="binary_folder", sparse=True)
-    # test_ComputeTemplates(format="zarr", sparse=True)
+    test_ComputeTemplates(format="memory", sparse=True)
+    test_ComputeTemplates(format="memory", sparse=False)
+    test_ComputeTemplates(format="binary_folder", sparse=True)
+    test_ComputeTemplates(format="zarr", sparse=True)
 
-    # test_ComputeFastTemplates(format="memory", sparse=True)
+    test_ComputeFastTemplates(format="memory", sparse=True)
 
     test_ComputeNoiseLevels(format="memory", sparse=False)

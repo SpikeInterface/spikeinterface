@@ -53,14 +53,14 @@ class ResultExtensionCommonTestSuite:
     """
     Common tests with class approach to compute extension on several cases (3 format x 2 sparsity)
 
-    This is done a a list of differents parameters (extension_function_kwargs_list).
+    This is done a a list of differents parameters (extension_function_params_list).
 
     This automatically precompute extension dependencies with default params before running computation.
 
     This also test the select_units() ability.
     """
     extension_class = None
-    extension_function_kwargs_list = None
+    extension_function_params_list = None
 
     @classmethod
     def setUpClass(cls):
@@ -92,10 +92,14 @@ class ResultExtensionCommonTestSuite:
         return sorting_result
 
     def _check_one(self, sorting_result):
+        if self.extension_class.need_job_kwargs:
+            job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
+        else:
+            job_kwargs = dict()
 
-        for kwargs in self.extension_function_kwargs_list:
-            print('  kwargs', kwargs)
-            sorting_result.compute(self.extension_name, **kwargs)
+        for params in self.extension_function_params_list:
+            print('  params', params)
+            sorting_result.compute(self.extension_name, **params, **job_kwargs)
         ext = sorting_result.get_extension(self.extension_name)
         assert ext is not None
         assert len(ext.data) > 0

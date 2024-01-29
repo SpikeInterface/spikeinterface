@@ -7,7 +7,7 @@ from spikeinterface.postprocessing import check_equal_template_with_distribution
 
 class SimilarityExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeTemplateSimilarity
-    extension_function_kwargs_list = [
+    extension_function_params_list = [
         dict(method="cosine_similarity"),
     ]
 
@@ -26,5 +26,5 @@ class SimilarityExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase)
 
 if __name__ == "__main__":
     test = SimilarityExtensionTest()
-    test.setUp()
+    test.setUpClass()
     test.test_extension()

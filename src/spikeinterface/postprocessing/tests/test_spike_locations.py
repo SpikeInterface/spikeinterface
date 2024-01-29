@@ -9,7 +9,7 @@ from spikeinterface.postprocessing.tests.common_extension_tests import ResultExt
 
 class SpikeLocationsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeSpikeLocations
-    extension_function_kwargs_list = [
+    extension_function_params_list = [
         dict(method="center_of_mass", spike_retriver_kwargs=dict(channel_from_template=True)),  # chunk_size=10000, n_jobs=1,
         dict(method="center_of_mass", spike_retriver_kwargs=dict(channel_from_template=False)),
         dict(method="center_of_mass", ),
@@ -21,5 +21,5 @@ class SpikeLocationsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestC
 
 if __name__ == "__main__":
     test = SpikeLocationsExtensionTest()
-    test.setUp()
+    test.setUpClass()
     test.test_extension()

@@ -99,6 +99,7 @@ class ComputeTemplateMetrics(ResultExtension):
     depend_on = ["fast_templates|templates", ]
     need_recording = True
     use_nodepipeline = False
+    need_job_kwargs = False
 
     min_channels_for_multi_channel_warning = 10
 

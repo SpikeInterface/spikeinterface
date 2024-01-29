@@ -41,6 +41,7 @@ class ComputeCorrelograms(ResultExtension):
     depend_on = []
     need_recording = False
     use_nodepipeline = False
+    need_job_kwargs = False
 
     def __init__(self, sorting_result):
         ResultExtension.__init__(self, sorting_result)

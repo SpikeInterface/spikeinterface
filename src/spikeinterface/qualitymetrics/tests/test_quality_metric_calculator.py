@@ -39,7 +39,7 @@ else:
 class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
     extension_class = QualityMetricCalculator
     extension_data_names = ["metrics"]
-    extension_function_kwargs_list = [dict(), dict(n_jobs=2), dict(metric_names=["snr", "firing_rate"])]
+    extension_function_params_list = [dict(), dict(n_jobs=2), dict(metric_names=["snr", "firing_rate"])]
 
     exact_same_content = False
 
