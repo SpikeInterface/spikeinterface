@@ -190,8 +190,9 @@ class Templates:
             zarr_group.attrs["probe"] = probe_dict
 
     @classmethod
-    def load_from_open_zarr_storage(cls, base_root):
-        # This function can be used for streaming where the base_root is already open
+    def load_from_zarr_group(cls, base_root):
+        # This is a class method because it is used to load from a zarr group
+        # Note that the zarr group needs to have the same structure as the one saved by save_to_zarr
 
         zarr_group = base_root
 
