@@ -101,6 +101,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
 read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
 
+
 class SpikeGLXEventExtractor(NeoBaseEventExtractor):
     """
     Class for reading events saved on the event channel by SpikeGLX software.
@@ -123,6 +124,7 @@ class SpikeGLXEventExtractor(NeoBaseEventExtractor):
     def map_to_neo_kwargs(cls, folder_path):
         neo_kwargs = {"dirname": str(folder_path)}
         return neo_kwargs
+
 
 def read_spikeglx_event(folder_path, block_index=None):
     """
