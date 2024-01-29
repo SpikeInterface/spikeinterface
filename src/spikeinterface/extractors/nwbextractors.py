@@ -492,11 +492,11 @@ class NwbRecordingExtractor(BaseRecording):
         self,
         file_path: str | Path | None = None,  # provide either this or file
         electrical_series_name: str | None = None,  # deprecated
-        electrical_series_path: str | None = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 1_000,
         stream_mode: Optional[Literal["fsspec", "ros3", "remfile", "zarr"]] = None,
         stream_cache_path: str | Path | None = None,
+        electrical_series_path: str | None = None,
         load_channel_properties: bool = True,
         *,
         file: BinaryIO | None = None,  # file-like - provide either this or file_path
@@ -590,6 +590,7 @@ class NwbRecordingExtractor(BaseRecording):
                 )
                 columns = electrodes_table.attrs["colnames"]
             properties = self._fetch_other_properties(electrodes_table, electrodes_indices, columns)
+
             for property_name, property_values in properties.items():
                 values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in property_values]
                 self.set_property(property_name, values)
@@ -959,10 +960,10 @@ class NwbSortingExtractor(BaseSorting):
         electrical_series_path: str | None = None,
         sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 1_000,
-        unit_table_path: str = "units",
         stream_mode: str | None = None,
         stream_cache_path: str | Path | None = None,
         load_unit_properties: bool = True,
+        unit_table_path: str = "units",
         *,
         t_start: float | None = None,
         cache: bool = False,
@@ -1086,8 +1087,10 @@ class NwbSortingExtractor(BaseSorting):
         assert (
             self.t_start is not None
         ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
-
-        units_table = _retrieve_unit_table_pynwb(self._nwbfile, unit_table_path=unit_table_path)
+        if unit_table_path == "units":
+            units_table = self._nwbfile.units
+        else:
+            units_table = _retrieve_unit_table_pynwb(self._nwbfile, unit_table_path=unit_table_path)
 
         name_to_column_data = {c.name: c for c in units_table.columns}
         spike_times_data = name_to_column_data.pop("spike_times").data
@@ -1199,8 +1202,6 @@ class NwbSortingExtractor(BaseSorting):
         return unit_ids, spike_times_data, spike_times_index_data
 
     def _fetch_properties(self, columns):
-        # name_to_column_data = {c.name: c for c in self.units_table.columns}
-        # Add only the columns that are not indices
         units_table = self.units_table
 
         properties_to_skip = ["spike_times", "spike_times_index", "unit_name", "id"]
