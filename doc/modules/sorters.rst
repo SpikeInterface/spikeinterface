@@ -51,7 +51,7 @@ to easily run spike sorters:
     # run Tridesclous
     sorting_TDC = run_sorter(sorter_name="tridesclous", recording=recording, output_folder="/folder_TDC")
     # run Kilosort2.5
-    sorting_KS2_5 = run_sorter(sorter_name="kilosort2_5", recording=recording, output_folder="/folder_KS2.5")
+    sorting_KS2_5 = run_sorter(sorter_name="kilosort2_5", recording=recording, output_folder="/folder_KS2_5")
     # run IronClust
     sorting_IC = run_sorter(sorter_name="ironclust", recording=recording, output_folder="/folder_IC")
     # run pyKilosort
@@ -84,7 +84,7 @@ Spike-sorter-specific parameters can be controlled directly from the
     sorting_TDC = run_sorter(sorter_name='tridesclous', recording=recording, output_folder="/folder_TDC",
                              detect_threshold=8.)
 
-    sorting_KS2_5 = run_sorter(sorter_name="kilosort2_5", recording=recording, output_folder="/folder_KS2.5"
+    sorting_KS2_5 = run_sorter(sorter_name="kilosort2_5", recording=recording, output_folder="/folder_KS2_5"
                                do_correction=False, preclust_threshold=6, freq_min=200.)
 
 
@@ -92,10 +92,10 @@ Parameters from all sorters can be retrieved with these functions:
 
 .. code-block:: python
 
-    params = get_default_sorter_params('spykingcircus')
+    params = get_default_sorter_params(sorter_name_or_class='spykingcircus')
     print("Parameters:\n", params)
 
-    desc = get_sorter_params_description('spykingcircus')
+    desc = get_sorter_params_description(sorter_name_or_class='spykingcircus')
     print("Descriptions:\n", desc)
 
 .. parsed-literal::
@@ -163,7 +163,7 @@ need to be installed. Only NVIDIA GPUs are supported for now.
 
 
 For Docker users, you can either install `Docker Desktop <https://www.docker.com/products/docker-desktop/>`_
-(recommended for Windows and MacOS) or the `Docker Engine  <https://docs.docker.com/engine/install/ubuntu/>`_
+(recommended for Windows and MacOS) or `Docker Engine  <https://docs.docker.com/engine/install/ubuntu/>`_
 (recommended for Linux).
 To enable :code:`Docker Desktop` to download the containers, you need to create an account on
 `DockerHub <https://hub.docker.com/>`_ (free) and perform the login in :code:`Docker Desktop`.
@@ -246,7 +246,7 @@ There are three options:
 3. **local copy**: if you installed :code:`spikeinterface` from source and you have some changes in your branch or fork
    that are not in the :code:`main` branch, you can install a copy of your :code:`spikeinterface` package in the container.
    To do so, you need to set en environment variable :code:`SPIKEINTERFACE_DEV_PATH` to the location where you cloned the
-   :code:`spikeinterface` repo (e.g. on Linux: :code:`export SPIKEINTERFACE_DEV_PATH="path-to-spikeinterface-clone"`.
+   :code:`spikeinterface` repo (e.g. on Linux: :code:`export SPIKEINTERFACE_DEV_PATH="path-to-spikeinterface-clone"`).
 
 In all cases, the :code:`[full]` extra is installed, which includes all optional dependencies.
 
@@ -450,31 +450,31 @@ versions.
 
 Here is the list of external sorters accessible using the run_sorter wrapper:
 
-* **HerdingSpikes2** :code:`run_sorter('herdingspikes')`
-* **IronClust** :code:`run_sorter('ironclust')`
-* **Kilosort**  :code:`run_sorter('kilosort')`
-* **Kilosort2** :code:`run_sorter('kilosort2')`
-* **Kilosort2.5** :code:`run_sorter('kilosort2_5')`
-* **Kilosort3** :code:`run_sorter('kilosort3')`
-* **PyKilosort** :code:`run_sorter('pykilosort')`
-* **Klusta** :code:`run_sorter('klusta')`
-* **Mountainsort4** :code:`run_sorter('mountainsort4')`
-* **Mountainsort5** :code:`run_sorter('mountainsort5')`
-* **SpyKING Circus** :code:`run_sorter('spykingcircus')`
-* **Tridesclous** :code:`run_sorter('tridesclous')`
-* **Wave clus** :code:`run_sorter('waveclus')`
-* **Combinato** :code:`run_sorter('combinato')`
-* **HDSort** :code:`run_sorter('hdsort')`
-* **YASS** :code:`run_sorter('yass')`
+* **HerdingSpikes2** :code:`run_sorter(sorter_name='herdingspikes')`
+* **IronClust** :code:`run_sorter(sorter_name='ironclust')`
+* **Kilosort**  :code:`run_sorter(sorter_name='kilosort')`
+* **Kilosort2** :code:`run_sorter(sorter_name='kilosort2')`
+* **Kilosort2.5** :code:`run_sorter(sorter_name='kilosort2_5')`
+* **Kilosort3** :code:`run_sorter(sorter_name='kilosort3')`
+* **PyKilosort** :code:`run_sorter(sorter_name='pykilosort')`
+* **Klusta** :code:`run_sorter(sorter_name='klusta')`
+* **Mountainsort4** :code:`run_sorter(sorter_name='mountainsort4')`
+* **Mountainsort5** :code:`run_sorter(sorter_name='mountainsort5')`
+* **SpyKING Circus** :code:`run_sorter(sorter_name='spykingcircus')`
+* **Tridesclous** :code:`run_sorter(sorter_name='tridesclous')`
+* **Wave clus** :code:`run_sorter(sorter_name='waveclus')`
+* **Combinato** :code:`run_sorter(sorter_name='combinato')`
+* **HDSort** :code:`run_sorter(sorter_name='hdsort')`
+* **YASS** :code:`run_sorter(sorter_name='yass')`
 
 
 Here a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
 experimental for now:
 
-* **Spyking Circus2** :code:`run_sorter('spykingcircus2')`
-* **Tridesclous2** :code:`run_sorter('tridesclous2')`
+* **Spyking Circus2** :code:`run_sorter(sorter_name='spykingcircus2')`
+* **Tridesclous2** :code:`run_sorter(sorter_name='tridesclous2')`
 
-In 2023, we expect to add many more sorters to this list.
+In 2024, we expect to add many more sorters to this list.
 
 
 Installed Sorters

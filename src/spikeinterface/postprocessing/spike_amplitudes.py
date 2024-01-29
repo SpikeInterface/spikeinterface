@@ -150,7 +150,7 @@ def compute_spike_amplitudes(
         Whether to load precomputed spike amplitudes, if they already exist.
     peak_sign: "neg" | "pos" | "both", default: "neg
         The sign to compute maximum channel
-    return_scaled: bool
+    return_scaled: bool, deafult: True
         If True and recording has gain_to_uV/offset_to_uV properties, amplitudes are converted to uV.
     outputs: "concatenated" | "by_unit", default: "concatenated"
         How the output should be returned
