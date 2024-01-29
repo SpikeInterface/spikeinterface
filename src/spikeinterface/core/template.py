@@ -80,6 +80,9 @@ class Templates:
         else:
             self.num_channels = self.sparsity_mask.shape[1]
 
+        if self.probe is not None:
+            assert isinstance(self.probe, Probe), "'probe' must be a probeinterface.Probe object"
+
         # Time and frames domain information
         self.nafter = self.num_samples - self.nbefore
         self.ms_before = self.nbefore / self.sampling_frequency * 1000
@@ -214,3 +217,8 @@ class Templates:
                     return False
 
         return True
+
+    def get_channel_locations(self):
+        assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
+        channel_locations = self.probe.contact_positions
+        return channel_locations
