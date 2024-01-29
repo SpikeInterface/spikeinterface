@@ -63,15 +63,14 @@ class ResultExtensionCommonTestSuite:
     extension_function_kwargs_list = None
     def setUp(self):
         
-        recording, sorting = get_dataset()
-        # sparsity is computed once for all cases to save processing
-        sparsity = estimate_sparsity(recording, sorting)
+        self.recording, self.sorting = get_dataset()
+        # sparsity is computed once for all cases to save processing time
+        self.sparsity = estimate_sparsity(self.recording, self.sorting)
 
         self.sorting_results = {}
         for sparse in (True, False):
             for format in ("memory", "binary_folder", "zarr"):
-                sparsity_ = sparsity if sparse else None
-                sorting_result = get_sorting_result(recording, sorting, format=format, sparsity=sparsity_, name=self.extension_class.extension_name)
+                sorting_result = self._prepare_sorting_result(format, sparse)
                 key = f"sparse{sparse}_{format}"
                 self.sorting_results[key] = sorting_result
     
@@ -86,16 +85,20 @@ class ResultExtensionCommonTestSuite:
     @property
     def extension_name(self):
         return self.extension_class.extension_name
-
-    def _check_one(self, sorting_result):
+    
+    def _prepare_sorting_result(self, format, sparse):
+        # prepare a SortingResult object with depencies already computed
+        sparsity_ = self.sparsity if sparse else None
+        sorting_result = get_sorting_result(self.recording, self.sorting, format=format, sparsity=sparsity_, name=self.extension_class.extension_name)
         sorting_result.select_random_spikes(max_spikes_per_unit=50, seed=2205)
-
         for dependency_name in self.extension_class.depend_on:
             if "|" in dependency_name:
                 dependency_name = dependency_name.split("|")[0]
             sorting_result.compute(dependency_name)
+        return sorting_result
 
-        
+    def _check_one(self, sorting_result):
+
         for kwargs in self.extension_function_kwargs_list:
             print('  kwargs', kwargs)
             sorting_result.compute(self.extension_name, **kwargs)
@@ -110,7 +113,6 @@ class ResultExtensionCommonTestSuite:
 
 
     def test_extension(self):
-
         for key, sorting_result in self.sorting_results.items():
             print()
             print(self.extension_name, key)
