@@ -114,9 +114,9 @@ class MergeUnitsSorting(BaseSorting):
 
                     same_property_values = np.all([np.array_equal(m, merge_values[0]) for m in merge_values[1:]])
 
+                    ind = self.id_to_index(new_id)
                     if same_property_values:
                         # and new values only if they are all similar
-                        ind = self.id_to_index(new_id)
                         new_values[ind] = merge_values[0]
                     else:
                         if parent_values.dtype.kind == "f":
