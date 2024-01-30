@@ -8,6 +8,7 @@ It is a 2-step approach:
   2. extract and distribute snippets into buffers (optionally in parallel)
 
 """
+
 from __future__ import annotations
 from pathlib import Path
 
@@ -771,7 +772,7 @@ def estimate_templates(
     )
 
     processor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name="estimate_sparsity", **job_kwargs
+        recording, func, init_func, init_args, job_name="estimate_templates", **job_kwargs
     )
     processor.run()
 

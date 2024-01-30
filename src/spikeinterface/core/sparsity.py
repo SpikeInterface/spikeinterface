@@ -394,8 +394,8 @@ def compute_sparsity(
     ----------
     templates_or_waveform_extractor: Templates | WaveformExtractor
         A Templates or a WaveformExtractor object.
-        Some method accept both objects ("best_channels", "radius", )
-        Other method need WaveformExtractor because internally the recording is needed.
+        Some methods accept both objects (e.g. "best_channels", "radius", )
+        Other methods need WaveformExtractor because internally the recording is needed.
 
     {}
 
@@ -412,11 +412,11 @@ def compute_sparsity(
     if method in ("best_channels", "radius"):
         assert isinstance(
             templates_or_waveform_extractor, (Templates, WaveformExtractor)
-        ), "compute_sparsity() need Templates or WaveformExtractor"
+        ), f"compute_sparsity() requires either a Templates or WaveformExtractor, not a type: {type(templates_or_waveform_extractor)}"
     else:
         assert isinstance(
             templates_or_waveform_extractor, WaveformExtractor
-        ), f"compute_sparsity(method='{method}') need WaveformExtractor"
+        ), f"compute_sparsity(method='{method}') requires a WaveformExtractor"
 
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
@@ -439,7 +439,7 @@ def compute_sparsity(
         assert by_property is not None, "For the 'by_property' method, 'by_property' needs to be given"
         sparsity = ChannelSparsity.from_property(templates_or_waveform_extractor, by_property)
     else:
-        raise ValueError(f"compute_sparsity() method={method} do not exists")
+        raise ValueError(f"compute_sparsity() method={method} does not exists")
 
     return sparsity
 
@@ -460,14 +460,14 @@ def estimate_sparsity(
     **job_kwargs,
 ):
     """
-    Estimate the sparsity without the need of a WaveformExtractor.
+    Estimate the sparsity without needing a WaveformExtractor.
     This is faster than  `spikeinterface.waveforms_extractor.precompute_sparsity()` and it
     traverses the recording to compute the average templates for each unit.
 
     Contrary to the previous implementation:
       * all units are computed in one read of recording
       * it doesn't require a folder
-      * it doesn't not consume too much memory
+      * it doesn't consume too much memory
       * it uses internally the `estimate_templates()` which is fast and parallel
 
     Parameters
