@@ -2,6 +2,7 @@
 test for BaseRecording are done with BinaryRecordingExtractor.
 but check only for BaseRecording general methods.
 """
+
 from typing import Sequence
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core import generate_recording, concatenate_recordings
