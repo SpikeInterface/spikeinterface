@@ -130,7 +130,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             detection_params["radius_um"] = params["general"]["radius_um"]
         if "exclude_sweep_ms" not in detection_params:
             detection_params["exclude_sweep_ms"] = max(params["general"]["ms_before"], params["general"]["ms_after"])
-        detection_params["noise_levels"] = noise_levels
 
         peaks = detect_peaks(recording_f, method="locally_exclusive", **detection_params)
 
