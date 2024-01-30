@@ -49,7 +49,7 @@ class MergeUnitsSorting(BaseSorting):
 
         if new_unit_ids is None:
             dtype = parents_unit_ids.dtype
-            # select new_units_ids greater that the max id, event greater than the numerical str ids
+            # select new_unit_ids greater that the max id, event greater than the numerical str ids
             if np.issubdtype(dtype, np.character):
                 # dtype str
                 if all(p.isdigit() for p in parents_unit_ids):
@@ -79,8 +79,8 @@ class MergeUnitsSorting(BaseSorting):
         assert properties_policy in ("keep", "remove"), "properties_policy must be " "keep" " or " "remove" ""
 
         # new units are put at the end
-        units_ids = keep_unit_ids + new_unit_ids
-        BaseSorting.__init__(self, sampling_frequency, units_ids)
+        unit_ids = keep_unit_ids + new_unit_ids
+        BaseSorting.__init__(self, sampling_frequency, unit_ids)
         # assert all(np.isin(keep_unit_ids, self.unit_ids)), 'new_unit_id should have a compatible format with the parent ids'
 
         if delta_time_ms is None:
@@ -99,25 +99,37 @@ class MergeUnitsSorting(BaseSorting):
         # ~ all_removed_inds = parent_sorting.ids_to_indices(all_removed_ids)
         keep_inds = self.ids_to_indices(keep_unit_ids)
         # ~ merge_inds = self.ids_to_indices(new_unit_ids)
-        prop_keys = parent_sorting._properties.keys()
-        for k in prop_keys:
-            parent_values = parent_sorting._properties[k]
+        prop_keys = parent_sorting.get_property_keys()
+        for key in prop_keys:
+            parent_values = parent_sorting.get_property(key)
 
             if properties_policy == "keep":
                 # propagate keep values
-                new_values = np.empty(shape=len(units_ids), dtype=parent_values.dtype)
+                shape = (len(unit_ids),) + parent_values.shape[1:]
+                new_values = np.empty(shape=shape, dtype=parent_values.dtype)
                 new_values[keep_inds] = parent_values[keep_parent_inds]
                 for new_id, ids in zip(new_unit_ids, units_to_merge):
                     removed_inds = parent_sorting.ids_to_indices(ids)
                     merge_values = parent_values[removed_inds]
-                    if all(merge_values == merge_values[0]):
+
+                    same_property_values = np.all([np.array_equal(m, merge_values[0]) for m in merge_values[1:]])
+
+                    ind = self.id_to_index(new_id)
+                    if same_property_values:
                         # and new values only if they are all similar
-                        ind = self.id_to_index(new_id)
                         new_values[ind] = merge_values[0]
-                self.set_property(k, new_values)
+                    else:
+                        if parent_values.dtype.kind == "f":
+                            new_values[ind] = np.nan
+                        elif parent_values.dtype.kind in ("U", "S"):
+                            new_values[ind] = ""
+                        else:
+                            new_values = new_values.astype(object)
+                            new_values[ind] = None
+                self.set_property(key, new_values)
 
             elif properties_policy == "remove":
-                self.set_property(k, parent_values[keep_parent_inds], keep_unit_ids)
+                self.set_property(key, parent_values[keep_parent_inds], keep_unit_ids)
 
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
