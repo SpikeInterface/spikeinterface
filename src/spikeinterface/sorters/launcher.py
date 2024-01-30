@@ -1,6 +1,7 @@
 """
 Utils functions to launch several sorter on several recording in parallel or not.
 """
+
 from pathlib import Path
 import shutil
 import numpy as np
