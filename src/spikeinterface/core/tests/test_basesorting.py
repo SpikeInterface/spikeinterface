@@ -2,6 +2,7 @@
 test for BaseSorting are done with NpzSortingExtractor.
 but check only for BaseRecording general methods.
 """
+
 import shutil
 from pathlib import Path
 
