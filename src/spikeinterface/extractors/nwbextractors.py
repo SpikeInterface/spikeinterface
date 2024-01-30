@@ -765,7 +765,7 @@ class NwbRecordingExtractor(BaseRecording):
         elif "group" in electrodes_table:
             groups = electrodes_table["group"][electrodes_indices][:]
         if groups is not None:
-            groups = np.array([g for g in groups])
+            groups = np.array([x.decode("utf-8") if isinstance(x, bytes) else x for x in groups])
 
         return locations, groups
 
