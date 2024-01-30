@@ -321,7 +321,7 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
 
     ms_before = 1.0
     ms_after = 1.0
-    prototype = -get_prototype_spike(recording, peaks_by_channel_np, ms_before, ms_after, **job_kwargs)
+    prototype = get_prototype_spike(recording, peaks_by_channel_np, ms_before, ms_after, **job_kwargs)
 
     peaks_local_mf_filtering = detect_peaks(
         recording,
