@@ -1,4 +1,5 @@
 """Sorting components: peak localization."""
+
 import numpy as np
 import warnings
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
