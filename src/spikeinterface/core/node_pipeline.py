@@ -18,6 +18,7 @@ There are two ways for using theses "plugin nodes":
   * when peaks are already detected and reduced with `select_peaks()`
   * on a sorting object
 """
+
 from __future__ import annotations
 from typing import Optional, Type
 

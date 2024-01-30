@@ -161,13 +161,13 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["nNeigh"] = 16.0  # visualization only (Phy): number of neighboring templates to retain projections of (16)
 
         # options for channel whitening
-        ops[
-            "whitening"
-        ] = "full"  # type of whitening (default 'full', for 'noSpikes' set options for spike detection below)
+        ops["whitening"] = (
+            "full"  # type of whitening (default 'full', for 'noSpikes' set options for spike detection below)
+        )
         ops["nSkipCov"] = 1.0  # compute whitening matrix from every N-th batch (1)
-        ops[
-            "whiteningRange"
-        ] = 32.0  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
+        ops["whiteningRange"] = (
+            32.0  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
+        )
 
         # ops['criterionNoiseChannels'] = 0.2  # fraction of "noise" templates allowed to span all channel groups (see createChannelMapFile for more info).
 
