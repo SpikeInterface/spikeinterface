@@ -79,7 +79,7 @@ motion_options_preset = {
             method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
-            exclude_sweep_ms=0.1,
+            exclude_sweep_ms=0.5,
             radius_um=50,
         ),
         "select_kwargs": dict(),
