@@ -21,7 +21,9 @@ class _NeoBaseExtractor:
     NeoRawIOClass = None
 
     def __init__(self, block_index, **neo_kwargs):
-        if not hasattr(self, "neo_reader"):  # Avoid double initialization
+
+        # Avoids double initiation of the neo reader if it was already done in the __init__ of the child class
+        if not hasattr(self, "neo_reader"):
             self.neo_reader = self.get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
 
         if self.neo_reader.block_count() > 1 and block_index is None:
