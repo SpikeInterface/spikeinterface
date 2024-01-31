@@ -293,6 +293,10 @@ def test_sorting_s3_nwb_zarr(tmp_path):
 
     check_sortings_equal(reloaded_sorting, sorting)
 
+    # with this mode, the object is not serializable
+    assert not sorting.check_serializability("json")
+    assert not sorting.check_serializability("pickle")
+
 
 if __name__ == "__main__":
     tmp_path = Path("tmp")

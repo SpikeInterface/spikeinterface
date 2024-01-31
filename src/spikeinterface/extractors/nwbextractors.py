@@ -606,12 +606,22 @@ class NwbRecordingExtractor(BaseRecording):
             # not json serializable if file arg is provided
             self._serializability["json"] = False
 
+        if storage_options is not None and stream_mode == "zarr":
+            warnings.warn(
+                "The `storage_options` parameter will not be propagated to the `kwargs` for security reasons. "
+                "The extractor will not be serializable."
+            )
+            # not serializable if storage_options is provided
+            self._serializability["json"] = False
+            self._serializability["pickle"] = False
+
         self._kwargs = {
             "file_path": file_path,
             "electrical_series_path": self.electrical_series_path,
             "load_time_vector": load_time_vector,
             "samples_for_rate_estimation": samples_for_rate_estimation,
             "stream_mode": stream_mode,
+            "load_channel_properties": load_channel_properties,
             "cache": cache,
             "stream_cache_path": stream_cache_path,
             "file": file,
@@ -1027,6 +1037,15 @@ class NwbSortingExtractor(BaseSorting):
         if stream_mode is None and file_path is not None:
             file_path = str(Path(file_path).resolve())
 
+        if storage_options is not None and stream_mode == "zarr":
+            warnings.warn(
+                "The `storage_options` parameter will not be propagated to the `kwargs` for security reasons. "
+                "The extractor will not be serializable."
+            )
+            # not serializable if storage_options is provided
+            self._serializability["json"] = False
+            self._serializability["pickle"] = False
+
         self._kwargs = {
             "file_path": file_path,
             "electrical_series_path": self.electrical_series_path,
@@ -1035,7 +1054,7 @@ class NwbSortingExtractor(BaseSorting):
             "cache": cache,
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
-            "storage_options": storage_options,
+            "load_unit_properties": load_unit_properties,
             "t_start": self.t_start,
         }
 
