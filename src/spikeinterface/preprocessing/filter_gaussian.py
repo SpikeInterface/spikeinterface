@@ -2,7 +2,7 @@ from typing import Iterable, Union
 
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin
+from spikeinterface.core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin, normal_pdf
 from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -114,26 +114,3 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 gaussian_bandpass_filter = define_function_from_class(
     source_class=GaussianBandpassFilterRecording, name="gaussian_filter"
 )
-
-
-def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
-    """
-    Manual implementation of the Normal distribution pdf (probability density function).
-    It is about 8 to 10 times faster than scipy.stats.norm.pdf().
-
-    Parameters
-    ----------
-    x: scalar or array
-        The x-axis
-    mu: float, default: 0.0
-        The mean of the Normal distribution.
-    sigma: float, default: 1.0
-        The standard deviation of the Normal distribution.
-
-    Returns
-    -------
-    normal_pdf: scalar or array (same type as 'x')
-        The pdf of the Normal distribution for the given x-axis.
-    """
-
-    return 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-((x - mu) ** 2) / (2 * sigma**2))
