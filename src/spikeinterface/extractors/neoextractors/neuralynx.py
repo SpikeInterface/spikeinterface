@@ -24,6 +24,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     exlude_filename: list[str], default: None
         List of filename to exclude from the loading.
+        For example, use `exclude_filename=["events.nev"]` to skip loading the event file.
     """
 
     mode = "folder"
