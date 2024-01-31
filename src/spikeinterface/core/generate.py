@@ -135,7 +135,7 @@ def generate_sorting(
 
     spikes = []
     for segment_index in range(num_segments):
-        num_samples = int(sampling_frequency * durations[segment_index]) - 1
+        num_samples = int(sampling_frequency * durations[segment_index])
         samples, labels = synthesize_poisson_spike_vector(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
@@ -681,7 +681,7 @@ def synthesize_poisson_spike_vector(
     # p is the probably of an spike per tick of the sampling frequency
     binomial_p = firing_rates / sampling_frequency
     # We estimate how many spikes we will have in the duration
-    max_frames = duration * sampling_frequency
+    max_frames = int(duration * sampling_frequency) - 1
     max_binomial_p = float(np.max(binomial_p))
     num_spikes_expected = ceil(max_frames * max_binomial_p)
     num_spikes_std = int(np.sqrt(num_spikes_expected * (1 - max_binomial_p)))
