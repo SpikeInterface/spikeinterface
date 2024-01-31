@@ -608,8 +608,8 @@ class NwbRecordingExtractor(BaseRecording):
 
         if storage_options is not None and stream_mode == "zarr":
             warnings.warn(
-                "The `storage_options` parameter will not be propagated to the `kwargs` for security reasons. "
-                "The extractor will not be serializable."
+                "The `storage_options` parameter will not be propagated to JSON or pickle files for security reasons, "
+                "so the extractor will not be JSON/pickle serializable. Only in-memory mode will be available."
             )
             # not serializable if storage_options is provided
             self._serializability["json"] = False
@@ -622,6 +622,7 @@ class NwbRecordingExtractor(BaseRecording):
             "samples_for_rate_estimation": samples_for_rate_estimation,
             "stream_mode": stream_mode,
             "load_channel_properties": load_channel_properties,
+            "storage_options": storage_options,
             "cache": cache,
             "stream_cache_path": stream_cache_path,
             "file": file,
@@ -1039,8 +1040,8 @@ class NwbSortingExtractor(BaseSorting):
 
         if storage_options is not None and stream_mode == "zarr":
             warnings.warn(
-                "The `storage_options` parameter will not be propagated to the `kwargs` for security reasons. "
-                "The extractor will not be serializable."
+                "The `storage_options` parameter will not be propagated to JSON or pickle files for security reasons, "
+                "so the extractor will not be JSON/pickle serializable. Only in-memory mode will be available."
             )
             # not serializable if storage_options is provided
             self._serializability["json"] = False
@@ -1054,6 +1055,7 @@ class NwbSortingExtractor(BaseSorting):
             "cache": cache,
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
+            "storage_options": storage_options,
             "load_unit_properties": load_unit_properties,
             "t_start": self.t_start,
         }

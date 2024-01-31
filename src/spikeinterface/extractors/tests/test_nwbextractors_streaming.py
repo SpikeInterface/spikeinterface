@@ -1,11 +1,13 @@
 from pathlib import Path
 import pickle
+from tabnanny import check
 
 import pytest
 import numpy as np
 import h5py
-from spikeinterface.core.testing import check_recordings_equal
 
+from spikeinterface import load_extractor
+from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
 
@@ -287,6 +289,10 @@ def test_sorting_s3_nwb_zarr(tmp_path):
     # with this mode, the object is not serializable
     assert not sorting.check_serializability("json")
     assert not sorting.check_serializability("pickle")
+
+    # test to/from dict
+    sorting_loaded = load_extractor(sorting.to_dict())
+    check_sortings_equal(sorting, sorting_loaded)
 
 
 if __name__ == "__main__":
