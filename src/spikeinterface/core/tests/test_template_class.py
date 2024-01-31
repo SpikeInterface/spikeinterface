@@ -99,10 +99,10 @@ def test_save_and_load_zarr(template_type, tmp_path):
     original_template = generate_test_template(template_type)
 
     zarr_path = tmp_path / "templates.zarr"
-    original_template.save_to_zarr(str(zarr_path))
+    original_template.to_zarr(str(zarr_path))
 
     # Load from the Zarr archive
-    loaded_template = Templates.load_from_zarr(str(zarr_path))
+    loaded_template = Templates.from_zarr(str(zarr_path))
 
     assert original_template == loaded_template
 

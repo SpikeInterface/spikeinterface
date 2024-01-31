@@ -2,6 +2,7 @@ import numpy as np
 import json
 from dataclasses import dataclass, field, astuple
 from probeinterface import Probe
+from pathlib import Path
 from .sparsity import ChannelSparsity
 
 
@@ -168,7 +169,20 @@ class Templates:
             probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
 
-    def save_to_zarr(self, folder_path):
+    def to_zarr(self, folder_path: str | Path) -> None:
+        """
+        Saves the object's data to a Zarr group.
+
+        Parameters
+        ----------
+        folder_path : str | Path
+            The path to the folder where the Zarr data will be saved.
+
+        Notes
+        -----
+        This method saves various attributes and datasets of the object into a Zarr group,
+        such as templates_array, channel_ids, unit_ids, and optionally sparsity_mask and probe information.
+        """
         import zarr
 
         zarr_group = zarr.open_group(folder_path, mode="w")
@@ -190,21 +204,34 @@ class Templates:
             zarr_group.attrs["probe"] = probe_dict
 
     @classmethod
-    def load_from_zarr_group(cls, base_root):
-        # This is a class method because it is used to load from a zarr group
-        # Note that the zarr group needs to have the same structure as the one saved by save_to_zarr
+    def from_zarr_group(cls, zarr_group: "zarr.Group") -> "Templates":
+        """
+        Loads an instance of the class from a specified Zarr group.
 
-        zarr_group = base_root
+        Parameters
+        ----------
+        zarr_group : zarr.Group
+            The Zarr group from which to load the instance.
 
-        templates_array = zarr_group["templates_array"]
-        channel_ids = zarr_group["channel_ids"]
-        unit_ids = zarr_group["unit_ids"]
+        Returns
+        -------
+        Templates
+            An instance of Templates populated with the data from the Zarr group.
+
+        Notes
+        -----
+        This method assumes the Zarr group has the same structure as the one created by `to_zarr`.
+        It handles optional datasets and attributes such as `sparsity_mask` and `probe`, loading them if they exist.
+        """
+        templates_array = zarr_group["templates_array"][:]
+        channel_ids = zarr_group["channel_ids"][:]
+        unit_ids = zarr_group["unit_ids"][:]
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
-            sparsity_mask = zarr_group["sparsity_mask"]
+            sparsity_mask = zarr_group["sparsity_mask"][:]
 
         probe = None
         if "probe" in zarr_group.attrs:
@@ -221,14 +248,26 @@ class Templates:
             probe=probe,
         )
 
-    @classmethod
-    def load_from_zarr(cls, folder_path):
+    @staticmethod
+    def from_zarr(folder_path: str | Path) -> "Templates":
+        """
+        Deserialize the Templates object from a Zarr file located at the given folder path.
+
+        Parameters
+        ----------
+        folder_path : str | Path
+            The path to the folder where the Zarr file is located.
+
+        Returns
+        -------
+        Templates
+            An instance of Templates initialized with data from the Zarr file.
+        """
         import zarr
 
         zarr_group = zarr.open_group(folder_path, mode="r")
 
-        template_object = cls.load_from_zarr_group(zarr_group)
-        return template_object
+        return Templates.from_zarr_group(zarr_group)
 
     def to_json(self):
         from spikeinterface.core.core_tools import SIJsonEncoder
