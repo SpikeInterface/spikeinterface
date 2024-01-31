@@ -135,7 +135,7 @@ def generate_sorting(
 
     spikes = []
     for segment_index in range(num_segments):
-        num_samples = int(sampling_frequency * durations[segment_index])
+        num_samples = int(sampling_frequency * durations[segment_index]) - 1
         samples, labels = synthesize_poisson_spike_vector(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
@@ -166,7 +166,7 @@ def generate_sorting(
             )
             # at end
             spikes_on_borders["sample_index"][num_spikes_per_border:] = rng.integers(
-                num_samples - border_size_samples, num_samples, num_spikes_per_border
+                num_samples - border_size_samples - 1, num_samples - 1, num_spikes_per_border
             )
             spikes.append(spikes_on_borders)
 
