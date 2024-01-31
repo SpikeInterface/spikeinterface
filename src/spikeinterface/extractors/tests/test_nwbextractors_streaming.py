@@ -284,15 +284,6 @@ def test_sorting_s3_nwb_zarr(tmp_path):
     #         assert spike_train.dtype == "int64"
     #         assert np.all(spike_train >= 0)
 
-    tmp_file = tmp_path / "test_zarr_sorting.pkl"
-    with open(tmp_file, "wb") as f:
-        pickle.dump(sorting, f)
-
-    with open(tmp_file, "rb") as f:
-        reloaded_sorting = pickle.load(f)
-
-    check_sortings_equal(reloaded_sorting, sorting)
-
     # with this mode, the object is not serializable
     assert not sorting.check_serializability("json")
     assert not sorting.check_serializability("pickle")
