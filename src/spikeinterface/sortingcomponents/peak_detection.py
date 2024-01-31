@@ -1,4 +1,5 @@
 """Sorting components: peak detection."""
+
 import copy
 from typing import Tuple, Union, List, Dict, Any, Optional, Callable
 
