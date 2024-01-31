@@ -46,7 +46,7 @@
 [![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
 
 
-> :warning::warning::warning: **PRs with new features are frozen!**: after the 0.100.0 release, we will not accept PRs with new features (only bug fixes) until February 20th 2024
+> :warning::warning::warning: **PRs with new features are frozen!**: after the 0.100.0 release, we will not accept PRs with new features (only bug fixes) until February 21st 2024.
 
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
