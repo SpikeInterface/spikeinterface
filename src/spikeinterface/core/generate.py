@@ -166,7 +166,7 @@ def generate_sorting(
             )
             # at end
             spikes_on_borders["sample_index"][num_spikes_per_border:] = rng.integers(
-                num_samples - border_size_samples - 1, num_samples - 1, num_spikes_per_border
+                num_samples - border_size_samples, num_samples, num_spikes_per_border
             )
             spikes.append(spikes_on_borders)
 
