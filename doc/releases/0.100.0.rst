@@ -3,14 +3,17 @@
 SpikeInterface 0.100.0 release notes
 ------------------------------------
 
-2nd February 2024
+5th February 2024
 
 Main changes:
 
-* Windows
-* NWB
-* joblib
-* `run_sorter` in container: add several options for installing spikeinterface (#2273)
+* Several improvements and bug fixes for Windows users
+* Important refactoring of NWB extractors:
+  * implemented direct backend implementation (to avoid using `pynwb`)
+  * sped up streaming using `remfile`
+  * added support for `zarr` backend
+* Removed `joblib` dependency in favor of `ParallelProcessExecutor`
+* Improved flexibility when running sorters in container by adding several options for installing `spikeinterface`
 
 
 core:

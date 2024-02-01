@@ -37,7 +37,14 @@ Release notes
 Version 0.100.0
 ===============
 
-* TODO
+
+* Several improvements and bug fixes for Windows users
+* Important refactoring of NWB extractors:
+  * implemented direct backend implementation (to avoid using `pynwb`)
+  * sped up streaming using `remfile`
+  * added support for `zarr` backend
+* Removed `joblib` dependency in favor of `ParallelProcessExecutor`
+* Improved flexibility when running sorters in container by adding several options for installing `spikeinterface`
 
 
 Version 0.99.1
