@@ -169,23 +169,27 @@ class Templates:
             probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
 
-    def to_zarr(self, folder_path: str | Path) -> None:
+    def add_templates_to_zarr_group(self, zarr_group: "zarr.Group") -> None:
         """
-        Saves the object's data to a Zarr group.
+        Adds a serialized version of the object to a given Zarr group.
+
+        It is the inverse of the `from_zarr_group` method.
 
         Parameters
         ----------
-        folder_path : str | Path
-            The path to the folder where the Zarr data will be saved.
+        zarr_group : zarr.Group
+            The Zarr group to which the template object will be serialized.
 
         Notes
         -----
-        This method saves various attributes and datasets of the object into a Zarr group,
-        such as templates_array, channel_ids, unit_ids, and optionally sparsity_mask and probe information.
-        """
-        import zarr
+        This method will create datasets within the Zarr group for `templates_array`,
+        `channel_ids`, and `unit_ids`. It will also add `sampling_frequency` and `nbefore`
+        as attributes to the group. If `sparsity_mask` and `probe` are not None, they will
+        be included as a dataset and a subgroup, respectively.
 
-        zarr_group = zarr.open_group(folder_path, mode="w")
+        The `templates_array` dataset is saved with a chunk size that has a single unit per chunk
+        to optimize read/write operations for individual units.
+        """
 
         # Saves one chunk per unit
         arrays_chunk = (1, None, None)
@@ -201,12 +205,35 @@ class Templates:
 
         if self.probe is not None:
             probe_dict = self.probe.to_dict(array_as_list=True)
-            zarr_group.attrs["probe"] = probe_dict
+            probe_group = zarr_group.create_group("probe")
+            # Probably better to use probe to zarr when available
+            probe_group.attrs["probe"] = probe_dict
+
+    def to_zarr(self, folder_path: str | Path) -> None:
+        """
+        Saves the object's data to a Zarr file in the specified folder.
+
+        Use the `add_templates_to_zarr_group` method to serialize the object to a Zarr group and then
+        save the group to a Zarr file.
+
+        Parameters
+        ----------
+        folder_path : str | Path
+            The path to the folder where the Zarr data will be saved.
+
+        """
+        import zarr
+
+        zarr_group = zarr.open_group(folder_path, mode="w")
+
+        self.add_templates_to_zarr_group(zarr_group)
 
     @classmethod
     def from_zarr_group(cls, zarr_group: "zarr.Group") -> "Templates":
         """
-        Loads an instance of the class from a specified Zarr group.
+        Loads an instance of the class from an open Zarr group.
+
+        This is the inverse of the `add_templates_to_zarr_group` method.
 
         Parameters
         ----------
@@ -220,23 +247,24 @@ class Templates:
 
         Notes
         -----
-        This method assumes the Zarr group has the same structure as the one created by `to_zarr`.
-        It handles optional datasets and attributes such as `sparsity_mask` and `probe`, loading them if they exist.
+        This method assumes the Zarr group has the same structure as the one created by
+        the `add_templates_to_zarr_group` method.
+
         """
-        templates_array = zarr_group["templates_array"][:]
-        channel_ids = zarr_group["channel_ids"][:]
-        unit_ids = zarr_group["unit_ids"][:]
+        templates_array = zarr_group["templates_array"]
+        channel_ids = zarr_group["channel_ids"]
+        unit_ids = zarr_group["unit_ids"]
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
-            sparsity_mask = zarr_group["sparsity_mask"][:]
+            sparsity_mask = zarr_group["sparsity_mask"]
 
         probe = None
-        if "probe" in zarr_group.attrs:
-            probe_json = zarr_group.attrs["probe"]
-            probe = Probe.from_dict(probe_json)
+        if "probe" in zarr_group:
+            probe_dict = zarr_group["probe"].attrs["probe"]
+            probe = Probe.from_dict(probe_dict)
 
         return cls(
             templates_array=templates_array,
@@ -310,12 +338,7 @@ class Templates:
                     return False
                 if not np.array_equal(s_field.channel_ids, o_field.channel_ids):
                     return False
-            elif isinstance(s_field, Probe):
-                # TODO implement __eq__ in probeinterface...
-                if not np.array_equal(s_field.contact_ids, o_field.contact_ids):
-                    return False
-                if not np.array_equal(s_field.contact_positions, o_field.contact_positions):
-                    return False
+
             else:
                 if s_field != o_field:
                     return False
