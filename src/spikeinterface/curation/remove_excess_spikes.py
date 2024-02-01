@@ -53,12 +53,11 @@ class RemoveExcessSpikesSorting(BaseSorting):
                 return
 
         parent_spike_vector = self._parent_sorting._cached_spike_vector
+        num_segments = self._parent_sorting.get_num_segments()
 
         list_spike_vectors = []
-        segments_bounds = np.searchsorted(
-            parent_spike_vector["segment_index"], np.arange(1 + parent_spike_vector["segment_index"][-1])
-        )
-        for segment_index in range(parent_spike_vector["segment_index"][-1]):
+        segments_bounds = np.searchsorted(parent_spike_vector["segment_index"], np.arange(1 + num_segments))
+        for segment_index in range(num_segments):
             spike_vector = parent_spike_vector[segments_bounds[segment_index] : segments_bounds[segment_index + 1]]
             end = np.searchsorted(spike_vector["sample_index"], self._num_samples[segment_index])
             list_spike_vectors.append(spike_vector[:end])
