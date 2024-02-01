@@ -22,22 +22,25 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
+    exlude_filename: list[str], default: None
+        List of filename to exclude from the loading.
+        For example, use `exclude_filename=["events.nev"]` to skip loading the event file.
     """
 
     mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
     name = "neuralynx"
 
-    def __init__(self, folder_path, stream_id=None, stream_name=None, all_annotations=False):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+    def __init__(self, folder_path, stream_id=None, stream_name=None, all_annotations=False, exclude_filename=None):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, exclude_filename)
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), exclude_filename=exclude_filename))
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(folder_path)}
+    def map_to_neo_kwargs(cls, folder_path, exclude_filename):
+        neo_kwargs = {"dirname": str(folder_path), "exclude_filename": exclude_filename}
         return neo_kwargs
 
 
