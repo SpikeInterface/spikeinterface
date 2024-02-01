@@ -53,6 +53,7 @@ class ComputeSpikeAmplitudes(ResultExtension):
     depend_on = ["fast_templates|templates", ]
     need_recording = True
     use_nodepipeline = True
+    nodepipeline_variables = ["amplitudes"]
     need_job_kwargs = True
 
     def __init__(self, sorting_result):

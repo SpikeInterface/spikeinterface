@@ -27,6 +27,7 @@ from .numpyextractors import SharedMemorySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
+from .node_pipeline import run_node_pipeline
 
 
 
@@ -753,8 +754,9 @@ class SortingResult:
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, **kwargs)
         elif isinstance(input, dict):
-            assert len(kwargs) == 0, "Too many arguments for SortingResult.compute_several_extensions()"
-            self.compute_several_extensions(extensions=input, save=save)
+            params_, job_kwargs = split_job_kwargs(kwargs)
+            assert len(params_) == 0, "Too many arguments for SortingResult.compute_several_extensions()"
+            self.compute_several_extensions(extensions=input, save=save, **job_kwargs)
 
     def compute_one_extension(self, extension_name, save=True, **kwargs):
         """
@@ -820,7 +822,7 @@ class SortingResult:
         # OR
         return extension_instance.data
 
-    def compute_several_extensions(self, extensions, save=True):
+    def compute_several_extensions(self, extensions, save=True, **job_kwargs):
         """
         Compute several extensions
 
@@ -846,8 +848,57 @@ class SortingResult:
         """
         # TODO this is a simple implementation
         # this will be improved with nodepipeline!!!
+
+        pipeline_mode = True
         for extension_name, extension_params in extensions.items():
-            self.compute_one_extension(self, extension_name, save=save, **extension_params)
+            extension_class = get_extension_class(extension_name)
+            if not extension_class.use_nodepipeline:
+                pipeline_mode = False
+                break
+        
+        if not pipeline_mode:
+            # simple loop
+            for extension_name, extension_params in extensions.items():
+                extension_class = get_extension_class(extension_name)
+                if extension_class.need_job_kwargs:
+                    self.compute_one_extension(extension_name, save=save, **extension_params)
+                else:
+                    self.compute_one_extension(extension_name, save=save, **extension_params)
+        else:
+            
+            all_nodes = []
+            result_routage = []
+            extension_instances = {}
+            for extension_name, extension_params in extensions.items():
+                extension_class = get_extension_class(extension_name)
+                assert self.has_recording(), f"Extension {extension_name} need the recording"
+
+                for variable_name in extension_class.nodepipeline_variables:
+                    result_routage.append((extension_name, variable_name))
+
+                extension_instance = extension_class(self)
+                extension_instance.set_params(save=save, **extension_params)
+                extension_instances[extension_name] = extension_instance
+
+                nodes = extension_instance.get_pipeline_nodes()
+                all_nodes.extend(nodes)
+
+            job_name = "Compute : " + " + ".join(extensions.keys())
+            results = run_node_pipeline(
+                self.recording, all_nodes, job_kwargs=job_kwargs, job_name=job_name, gather_mode="memory"
+            )
+
+            for r, result in enumerate(results):
+                extension_name, variable_name = result_routage[r]
+                extension_instances[extension_name].data[variable_name] = result
+
+
+            for extension_name, extension_instance in extension_instances.items():
+                self.extensions[extension_name] = extension_instance
+                if save:
+                    extension_instance.save()
+
+
 
 
     def get_saved_extension_names(self):
@@ -1054,6 +1105,7 @@ class ResultExtension:
       * depend_on
       * need_recording
       * use_nodepipeline
+      * nodepipeline_variables only if use_nodepipeline=True
       * need_job_kwargs
       * _set_params()
       * _run()
@@ -1074,6 +1126,7 @@ class ResultExtension:
     depend_on = []
     need_recording = False
     use_nodepipeline = False
+    nodepipeline_variables = None
     need_job_kwargs = False
 
     def __init__(self, sorting_result):
@@ -1137,10 +1190,7 @@ class ResultExtension:
                 
 
                 ext = sorting_result.compute(cls.extension_name, *args, **kwargs)
-                # TODO be discussed 
-                return ext
-                # return ext.data
-                # return ext.get_data()
+                return ext.get_data()
 
         func = FuncWrapper(cls.extension_name)
         func.__doc__ = cls.__doc__

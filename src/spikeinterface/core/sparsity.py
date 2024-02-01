@@ -543,6 +543,7 @@ def estimate_sparsity(
         nbefore,
         nafter,
         return_scaled=False,
+        job_name="estimate_sparsity",
         **job_kwargs
     )
     templates = Templates(

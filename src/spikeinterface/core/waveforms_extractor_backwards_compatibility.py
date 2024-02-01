@@ -72,7 +72,8 @@ def extract_waveforms(
         folder = Path(folder)
         format = "binary_folder"
     else:
-        mode = "memory"
+        folder = None
+        format = "memory"
 
     assert sparsity_temp_folder is None, "sparsity_temp_folder must be None"
     assert unit_batch_size is None, "unit_batch_size must be None"

@@ -60,6 +60,7 @@ class ComputeAmplitudeScalings(ResultExtension):
     depend_on = ["fast_templates|templates", ]
     need_recording = True
     use_nodepipeline = True
+    nodepipeline_variables = ["amplitude_scalings", "collision_mask"]
     need_job_kwargs = True
 
     def __init__(self, sorting_result):
