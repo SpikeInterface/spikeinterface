@@ -23,7 +23,7 @@ dependencies = [
     "numpy",
     "threadpoolctl>=3.0.0",
     "tqdm",
-    "zarr",
+    "zarr>=2.15",
     "neo>=0.12.0",
     "probeinterface>=0.2.19",
 ]
