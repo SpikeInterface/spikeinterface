@@ -1,4 +1,5 @@
 import platform
+import math
 from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
 import importlib
@@ -10,6 +11,7 @@ from spikeinterface.core.core_tools import (
     make_paths_relative,
     make_paths_absolute,
     check_paths_relative,
+    normal_pdf,
 )
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 from spikeinterface.core.generate import NoiseGeneratorRecording
@@ -85,6 +87,22 @@ def test_path_utils_functions():
 
         # UNC can be relative to the same UNC
         assert check_paths_relative(d, r"\\host\share")
+
+
+def test_normal_pdf() -> None:
+    mu = 4.160771
+    sigma = 2.9334
+    dx = 0.001
+
+    xaxis = np.arange(-15, 25, dx)
+    gauss = normal_pdf(xaxis, mu=mu, sigma=sigma)
+
+    assert math.isclose(1.0, dx * np.sum(gauss))  # Checking that sum of pdf is 1
+    assert math.isclose(mu, dx * np.sum(xaxis * gauss))  # Checking that mean is mu
+    assert math.isclose(sigma**2, dx * np.sum(xaxis**2 * gauss) - mu**2)  # Checking that variance is sigma^2
+
+    print(normal_pdf(-0.9355, mu=mu, sigma=sigma))
+    assert math.isclose(normal_pdf(-0.9355, mu=mu, sigma=sigma), 0.03006929091)
 
 
 if __name__ == "__main__":
