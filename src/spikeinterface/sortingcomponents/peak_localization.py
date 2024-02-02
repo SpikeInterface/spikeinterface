@@ -415,7 +415,6 @@ class LocalizeGridConvolution(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    @np.errstate(divide="ignore", invalid="ignore")
     def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
         nb_weights = self.weights.shape[0]
@@ -423,11 +422,11 @@ class LocalizeGridConvolution(PipelineNode):
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
             num_spikes = len(idx)
-            nearest_templates = self.nearest_template_mask[main_chan, :]
+            nearest_mask = self.nearest_template_mask[main_chan, :]
 
-            num_templates = np.sum(nearest_templates)
-            channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
-            sub_w = self.weights[:, channel_mask, :][:, :, nearest_templates]
+            num_templates = np.sum(nearest_mask)
+            channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_mask], axis=(0, 2)) > 0
+            sub_w = self.weights[:, channel_mask, :][:, :, nearest_mask]
             global_products = (waveforms[idx][:, :, channel_mask] * self.prototype).sum(axis=1)
 
             dot_products = np.zeros((nb_weights, num_spikes, num_templates), dtype=np.float32)
@@ -448,14 +447,15 @@ class LocalizeGridConvolution(PipelineNode):
 
             scalar_products = dot_products.sum(2)
             found_positions = np.zeros((num_spikes, 3), dtype=np.float32)
-            nearest_templates = self.template_positions[nearest_templates]
+            nearest_templates = self.template_positions[nearest_mask]
             for count in range(nb_weights):
                 found_positions[:, :2] += np.dot(dot_products[count], nearest_templates)
 
             ## Now we need to compute a putative depth given the z_factors
             found_positions[:, 2] = np.dot(self.z_factors, scalar_products)
             scalar_products = (scalar_products.sum(0))[:, np.newaxis]
-            found_positions /= scalar_products
+            with np.errstate(divide="ignore", invalid="ignore"):
+                found_positions /= scalar_products
             found_positions = np.nan_to_num(found_positions)
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]

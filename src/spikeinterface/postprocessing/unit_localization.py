@@ -367,7 +367,6 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
     return unit_location
 
 
-@np.errstate(divide="ignore", invalid="ignore")
 def compute_grid_convolution(
     waveform_extractor,
     peak_sign="neg",
@@ -443,10 +442,10 @@ def compute_grid_convolution(
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]
         wf = templates[i, :, :]
-        nearest_templates = nearest_template_mask[main_chan, :]
-        channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
-        num_templates = np.sum(nearest_templates)
-        sub_w = weights[:, channel_mask, :][:, :, nearest_templates]
+        nearest_mask = nearest_template_mask[main_chan, :]
+        channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_mask], axis=(0, 2)) > 0
+        num_templates = np.sum(nearest_mask)
+        sub_w = weights[:, channel_mask, :][:, :, nearest_mask]
         global_products = (wf[:, channel_mask] * prototype).sum(axis=0)
 
         dot_products = np.zeros((nb_weights, num_templates), dtype=np.float32)
@@ -465,13 +464,14 @@ def compute_grid_convolution(
             dot_products[dot_products < thresholds] = 0
         dot_products[mask] = 0
 
-        nearest_templates = template_positions[nearest_templates]
+        nearest_templates = template_positions[nearest_mask]
         for count in range(nb_weights):
             unit_location[i, :2] += np.dot(dot_products[count], nearest_templates)
 
         scalar_products = dot_products.sum(1)
         unit_location[i, 2] = np.dot(z_factors, scalar_products)
-        unit_location[i] /= scalar_products.sum()
+        with np.errstate(divide="ignore", invalid="ignore"):
+            unit_location[i] /= scalar_products.sum()
     unit_location = np.nan_to_num(unit_location)
 
     return unit_location
