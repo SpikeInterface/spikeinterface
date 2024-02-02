@@ -209,9 +209,7 @@ class Templates:
                     return False
                 if not np.array_equal(s_field.channel_ids, o_field.channel_ids):
                     return False
-            elif isinstance(s_field, Probe):
-                # TODO implement __eq__ in probeinterface...
-                pass
+
             else:
                 if s_field != o_field:
                     return False
