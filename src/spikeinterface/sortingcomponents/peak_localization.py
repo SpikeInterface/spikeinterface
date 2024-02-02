@@ -415,7 +415,6 @@ class LocalizeGridConvolution(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    @np.errstate(divide="ignore", invalid="ignore")
     def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
         nb_weights = self.weights.shape[0]
@@ -455,7 +454,8 @@ class LocalizeGridConvolution(PipelineNode):
             ## Now we need to compute a putative depth given the z_factors
             found_positions[:, 2] = np.dot(self.z_factors, scalar_products)
             scalar_products = (scalar_products.sum(0))[:, np.newaxis]
-            found_positions /= scalar_products
+            with np.errstate(divide="ignore", invalid="ignore"):
+                found_positions /= scalar_products
             found_positions = np.nan_to_num(found_positions)
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]

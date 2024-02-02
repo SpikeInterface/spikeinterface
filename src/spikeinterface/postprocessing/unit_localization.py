@@ -367,7 +367,6 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
     return unit_location
 
 
-@np.errstate(divide="ignore", invalid="ignore")
 def compute_grid_convolution(
     waveform_extractor,
     peak_sign="neg",
@@ -471,7 +470,8 @@ def compute_grid_convolution(
 
         scalar_products = dot_products.sum(1)
         unit_location[i, 2] = np.dot(z_factors, scalar_products)
-        unit_location[i] /= scalar_products.sum()
+        with np.errstate(divide="ignore", invalid="ignore"):
+            unit_location[i] /= scalar_products.sum()
     unit_location = np.nan_to_num(unit_location)
 
     return unit_location
