@@ -65,7 +65,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "clustering": "A dictonary containing clustering params: split_radius_um, merge_radius_um",
         "templates": "A dictonary containing waveforms params for peeler: ms_before, ms_after",
         "matching": "A dictonary containing matching params for matching: peak_shift_ms, radius_um",
-        "job_kwargs": "A dictionnary containing job kwargs",
+        "job_kwargs": "A dictionary containing job kwargs",
         "save_array": "Save or not intermediate arrays",
      }
 
