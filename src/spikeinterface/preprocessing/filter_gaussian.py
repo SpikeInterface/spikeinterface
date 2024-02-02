@@ -82,7 +82,12 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         channel_indices: Union[Iterable, None] = None,
     ):
         traces, left_margin, right_margin = get_chunk_with_margin(
-            self.parent_recording_segment, start_frame, end_frame, channel_indices, self.margin
+            self.parent_recording_segment,
+            start_frame,
+            end_frame,
+            channel_indices,
+            self.margin,
+            add_reflect_padding=True,
         )
         dtype = traces.dtype
 
