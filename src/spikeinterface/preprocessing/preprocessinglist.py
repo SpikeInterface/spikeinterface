@@ -1,5 +1,6 @@
 ### PREPROCESSORS ###
 from .resample import ResampleRecording, resample
+from .decimate import DecimateRecording, decimate
 from .filter import (
     FilterRecording,
     filter,
@@ -65,6 +66,7 @@ preprocessers_full_list = [
     ZeroChannelPaddedRecording,
     DeepInterpolatedRecording,
     ResampleRecording,
+    DecimateRecording,
     HighpassSpatialFilterRecording,
     InterpolateBadChannelsRecording,
     DepthOrderRecording,

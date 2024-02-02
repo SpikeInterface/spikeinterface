@@ -80,6 +80,9 @@ class Templates:
         else:
             self.num_channels = self.sparsity_mask.shape[1]
 
+        if self.probe is not None:
+            assert isinstance(self.probe, Probe), "'probe' must be a probeinterface.Probe object"
+
         # Time and frames domain information
         self.nafter = self.num_samples - self.nbefore
         self.ms_before = self.nbefore / self.sampling_frequency * 1000
@@ -102,6 +105,15 @@ class Templates:
                 if not self._are_passed_templates_sparse():
                     raise ValueError("Sparsity mask passed but the templates are not sparse")
 
+    def get_one_template_dense(self, unit_index):
+        if self.sparsity is None:
+            template = self.templates_array[unit_index, :, :]
+        else:
+            sparse_template = self.templates_array[unit_index, :, :]
+            template = self.sparsity.densify_waveforms(waveforms=sparse_template, unit_id=self.unit_ids[unit_index])
+            # dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+        return template
+
     def get_dense_templates(self) -> np.ndarray:
         # Assumes and object without a sparsity mask already has dense templates
         if self.sparsity is None:
@@ -111,8 +123,9 @@ class Templates:
         dense_waveforms = np.zeros(shape=densified_shape, dtype=self.templates_array.dtype)
 
         for unit_index, unit_id in enumerate(self.unit_ids):
-            waveforms = self.templates_array[unit_index, ...]
-            dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+            # waveforms = self.templates_array[unit_index, ...]
+            # dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+            dense_waveforms[unit_index, ...] = self.get_one_template_dense(unit_index)
 
         return dense_waveforms
 
@@ -196,11 +209,14 @@ class Templates:
                     return False
                 if not np.array_equal(s_field.channel_ids, o_field.channel_ids):
                     return False
-            elif isinstance(s_field, Probe):
-                # TODO implement __eq__ in probeinterface...
-                pass
+
             else:
                 if s_field != o_field:
                     return False
 
         return True
+
+    def get_channel_locations(self):
+        assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
+        channel_locations = self.probe.contact_positions
+        return channel_locations

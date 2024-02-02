@@ -8,7 +8,14 @@ from .baserecordingsnippets import BaseRecordingSnippets
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
 from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
-from .numpyextractors import NumpyRecording, NumpySorting, SharedMemorySorting, NumpyEvent, NumpySnippets
+from .numpyextractors import (
+    NumpyRecording,
+    SharedMemoryRecording,
+    NumpySorting,
+    SharedMemorySorting,
+    NumpyEvent,
+    NumpySnippets,
+)
 from .zarrextractors import ZarrRecordingExtractor, ZarrSortingExtractor, read_zarr, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .sortingfolder import NumpyFolderSorting, NpzFolderSorting, read_numpy_sorting_folder, read_npz_folder
@@ -79,14 +86,14 @@ from .globals import (
 
 # tools
 from .core_tools import (
-    write_binary_recording,
-    write_to_h5_dataset_format,
-    write_binary_recording,
     read_python,
     write_python,
+    normal_pdf,
 )
 from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
 from .recording_tools import (
+    write_binary_recording,
+    write_to_h5_dataset_format,
     get_random_data_chunks,
     get_channel_distances,
     get_closest_channels,
@@ -131,4 +138,6 @@ from .template_tools import (
 )
 
 # channel sparsity
-from .sparsity import ChannelSparsity, compute_sparsity
+from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
+
+from .template import Templates
