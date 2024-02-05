@@ -773,11 +773,8 @@ class NwbRecordingExtractor(BaseRecording):
         groups = None
         if "group_name" in electrodes_table:
             groups = electrodes_table["group_name"][electrodes_indices][:]
-        elif "group" in electrodes_table:
-            groups = electrodes_table["group"][electrodes_indices][:]
         if groups is not None:
             groups = np.array([x.decode("utf-8") if isinstance(x, bytes) else x for x in groups])
-
         return locations, groups
 
     def _fetch_other_properties(self, electrodes_table, electrodes_indices, columns):
@@ -788,15 +785,14 @@ class NwbRecordingExtractor(BaseRecording):
 
         properties = dict()
         properties_to_skip = [
+            "id",
             "rel_x",
             "rel_y",
             "rel_z",
+            "group",
             "group_name",
-            "id",
-            "location",
             "channel_name",
             "offset",
-            "group",
         ]
         rename_properties = dict(location="brain_area")
 
