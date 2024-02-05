@@ -102,7 +102,7 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         else:
             neg_factor = np.zeros((traces.shape[0],))
 
-        filtered_fft = traces_fft * (pos_factor * (1-neg_factor))[:, None]
+        filtered_fft = traces_fft * (pos_factor * (1 - neg_factor))[:, None]
         filtered_traces = np.real(np.fft.ifft(filtered_fft, axis=0))
 
         if np.issubdtype(dtype, np.integer):
