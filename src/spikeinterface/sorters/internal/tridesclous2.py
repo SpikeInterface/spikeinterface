@@ -47,14 +47,13 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "threshold_diff": 1.5,
         },
         "templates": {
-            "ms_before": 2.,
-            "ms_after": 3.,
-            "max_spikes_per_unit" : 400,
+            "ms_before": 2.0,
+            "ms_after": 3.0,
+            "max_spikes_per_unit": 400,
             # "peak_shift_ms": 0.2,
         },
         # "matching": {"method": "tridesclous", "method_kwargs": {"peak_shift_ms": 0.2, "radius_um": 100.0}},
         "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
-
         "job_kwargs": {"n_jobs": -1},
         "save_array": True,
     }
@@ -63,16 +62,16 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": "Apply internal preprocessing or not",
         "cache_preprocessing": "A dict contaning how to cache the preprocessed recording. mode='memory' | 'folder | 'zarr' ",
         "waveforms": "A dictonary containing waveforms params: ms_before, ms_after, radius_um",
-        "filtering": "A dictonary containing filtering params: freq_min, freq_max", 
-        "detection": "A dictonary containing detection params: peak_sign, detect_threshold, exclude_sweep_ms, radius_um", 
-        "selection": "A dictonary containing selection params: n_peaks_per_channel, min_n_peaks", 
-        "svd": "A dictonary containing svd params: n_components", 
+        "filtering": "A dictonary containing filtering params: freq_min, freq_max",
+        "detection": "A dictonary containing detection params: peak_sign, detect_threshold, exclude_sweep_ms, radius_um",
+        "selection": "A dictonary containing selection params: n_peaks_per_channel, min_n_peaks",
+        "svd": "A dictonary containing svd params: n_components",
         "clustering": "A dictonary containing clustering params: split_radius_um, merge_radius_um",
         "templates": "A dictonary containing waveforms params for peeler: ms_before, ms_after",
         "matching": "A dictonary containing matching params for matching: peak_shift_ms, radius_um",
         "job_kwargs": "A dictionary containing job kwargs",
         "save_array": "Save or not intermediate arrays",
-     }
+    }
 
     handle_multi_segment = True
 
@@ -118,10 +117,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             recording = common_reference(recording)
             recording = zscore(recording, dtype="float32")
             # recording = whiten(recording, dtype="float32")
-            
+
             # used only if "folder" or "zarr"
             cache_folder = sorter_output_folder / "cache_preprocessing"
-            recording = cache_preprocessing(recording, folder=cache_folder, **job_kwargs,  **params["cache_preprocessing"])
+            recording = cache_preprocessing(
+                recording, folder=cache_folder, **job_kwargs, **params["cache_preprocessing"]
+            )
 
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
@@ -243,7 +244,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         merge_radius_um = params["clustering"]["merge_radius_um"]
         threshold_diff = params["clustering"]["threshold_diff"]
-        
 
         post_merge_label, peak_shifts = merge_clusters(
             peaks,
@@ -297,16 +297,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
         sorting_temp = sorting_temp.save(folder=sorter_output_folder / "sorting_temp")
 
-        we = extract_waveforms(
-            recording,
-            sorting_temp,
-            sorter_output_folder / "waveforms_temp",
-            **params["templates"])
+        we = extract_waveforms(recording, sorting_temp, sorter_output_folder / "waveforms_temp", **params["templates"])
 
         # snrs = compute_snrs(we, peak_sign=params["detection"]["peak_sign"], peak_mode="extremum")
         # print(snrs)
-
-
 
         # matching_params = params["matching"].copy()
         # matching_params["waveform_extractor"] = we

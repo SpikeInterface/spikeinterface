@@ -660,10 +660,10 @@ class NormalizedTemplateDiff:
         for shift in range(-num_shift, num_shift + 1):
             temp0 = template0[num_shift : num_samples - num_shift, :]
             temp1 = template1[num_shift + shift : num_samples - num_shift + shift, :]
-            #d = np.mean(np.abs(temp0 - temp1)) / (norm)
+            # d = np.mean(np.abs(temp0 - temp1)) / (norm)
             # d = np.max(np.abs(temp0 - temp1)) / (norm)
             diff_per_channel = np.abs(temp0 - temp1) / norm
-            
+
             diff_max = np.max(diff_per_channel, axis=0)
 
             # diff = np.max(diff_per_channel)
@@ -675,7 +675,6 @@ class NormalizedTemplateDiff:
             # d = np.mean(diff_by_channel)
             # all_shift_diff.append(d)
         normed_diff = np.min(all_shift_diff)
-        
 
         is_merge = normed_diff < threshold_diff
 
@@ -687,7 +686,6 @@ class NormalizedTemplateDiff:
         else:
             final_shift = 0
             merge_value = np.nan
-        
 
         # print('merge_value', merge_value, 'final_shift', final_shift, 'is_merge', is_merge)
 
@@ -696,7 +694,7 @@ class NormalizedTemplateDiff:
         # if DEBUG and ( 0. < normed_diff < .4):
         # if 0.5 < normed_diff < 4:
         if DEBUG and is_merge:
-        # if DEBUG:
+            # if DEBUG:
 
             import matplotlib.pyplot as plt
 
@@ -711,8 +709,6 @@ class NormalizedTemplateDiff:
             m0 = temp0.T.flatten()
             m1 = temp1.T.flatten()
 
-
-
             ax = axs[0]
             ax.plot(m0, color="C0", label=f"{label0} {inds0.size}")
             ax.plot(m1, color="C1", label=f"{label1} {inds1.size}")
@@ -724,16 +720,15 @@ class NormalizedTemplateDiff:
 
             ax = axs[1]
 
-            #~ temp0 = template0[num_shift : num_samples - num_shift, :]
-            #~ temp1 = template1[num_shift + shift : num_samples - num_shift + shift, :]
+            # ~ temp0 = template0[num_shift : num_samples - num_shift, :]
+            # ~ temp1 = template1[num_shift + shift : num_samples - num_shift + shift, :]
             ax.plot(np.abs(m0 - m1))
             # ax.axhline(norm, ls='--', color='k')
             ax = axs[2]
             ax.plot(diff_per_channel.T.flatten())
-            ax.axhline(threshold_diff, ls='--')
+            ax.axhline(threshold_diff, ls="--")
             ax.axhline(normed_diff)
-            
-            
+
             # ax.axhline(normed_diff, ls='-', color='b')
             # ax.plot(norm, ls='--')
             # ax.plot(diff_by_channel)
@@ -743,8 +738,6 @@ class NormalizedTemplateDiff:
             # ax.plot(np.abs(m0 - m1) / (np.abs(m0) + np.abs(m1)))
 
             # ax.set_title(f"{norm=:.3f}")
-
-
 
             plt.show()
 
