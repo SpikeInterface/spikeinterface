@@ -204,10 +204,8 @@ class Templates:
             zarr_group.create_dataset("sparsity_mask", data=self.sparsity_mask)
 
         if self.probe is not None:
-            probe_dict = self.probe.to_dict(array_as_list=True)
             probe_group = zarr_group.create_group("probe")
-            # Probably better to use probe to zarr when available
-            probe_group.attrs["probe"] = probe_dict
+            self.probe.add_probe_to_zarr_group(probe_group)
 
     def to_zarr(self, folder_path: str | Path) -> None:
         """
@@ -263,8 +261,7 @@ class Templates:
 
         probe = None
         if "probe" in zarr_group:
-            probe_dict = zarr_group["probe"].attrs["probe"]
-            probe = Probe.from_dict(probe_dict)
+            probe = Probe.from_zarr_group(zarr_group["probe"])
 
         return cls(
             templates_array=templates_array,
