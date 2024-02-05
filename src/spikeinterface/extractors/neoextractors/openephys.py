@@ -57,8 +57,8 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     all_annotations: bool, default: False
         Load exhaustively all annotation from neo
     ignore_timestamps_errors: None
-        Deprecated kwarg. This is now ignored.
-        neo.OpenEphysRawIO is now handling gaps directly but make the read slower.
+        Deprecated keyword argument. This is now ignored.
+        neo.OpenEphysRawIO is now handling gaps directly but makes the read slower.
     """
 
     mode = "folder"
