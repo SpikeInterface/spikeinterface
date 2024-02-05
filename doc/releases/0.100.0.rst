@@ -13,12 +13,15 @@ Main changes:
   * sped up streaming using `remfile`
   * added support for `zarr` backend
 * Removed `joblib` dependency in favor of `ParallelProcessExecutor`
-* Improved flexibility when running sorters in container by adding several options for installing `spikeinterface`
-
+* Improved flexibility when running sorters in containers by adding several options for installing `spikeinterface`
+* Add `Templates` class to core, which handles unit templates and sparsity (#1982)
+* Added Zarr-backend to `Sorting` objects (`sorting.save(folder="...", format="zarr")`) (#2403)
+* Added `SharedmemRecording` for shared memory recordings (#2365)
+* Added machinery for moving/interpolating templates for generating hybrid recordings with drift (#2291)
 
 core:
 
-* Add `Template`` class (#1982)
+* Add `Templates` class (#1982)
 * Use python methods instead of parsing and eleminate try-except in to_dict
 (#2157)
 * `WaveformExtractor.is_extension` --> `has_extension` (#2158)
@@ -88,8 +91,8 @@ sorters:
 * Several updates to SpykingCircus2 (#2205, #2236, #2244, #2276)
 * Handling segments in SpykingCircus2 and Tridesclous2 (#2208)
 * A couple updates to `mountainsort5` sorter (#2225)
-* `run_sorter` in container: dump to json or pickle (#2271)
-* `run_sorter` in container: add several options for installing spikeinterface (#2273)
+* `run_sorter` in containers: dump to json or pickle (#2271)
+* `run_sorter` in containers: add several options for installing spikeinterface (#2273)
 * Close `ShellScript` and pipes process at deletion (#2292, #2338)
 * Remove deprecated direct function to `run_sorter` (e.g., `run_kilosort2` -> `run_sorter('kilosort2')` (#2355)
 * Expose `lam` and `momentum` params in the appropriate kilosorts (#2358)
@@ -128,6 +131,7 @@ generation:
 * Add a minimum distance in generate_unit_locations (#2147)
 * Add Poisson statistics to generate_sorting and optimize memory profile (#2226)
 * Fix add_shift_shuffle section in synthesize_random_firings (#2334)
+* Machinery for moving templates and generating hybrid recordings with drift (#2291)
 
 sortingcomponents:
 
