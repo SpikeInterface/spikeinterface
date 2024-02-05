@@ -48,8 +48,6 @@ class GaussianFilterRecording(BasePreprocessor):
 
         if freq_min is None and freq_max is None:
             raise ValueError("At least one of `freq_min`,`freq_max` should be specified.")
-        if freq_min is not None and freq_max is not None and freq_max <= freq_min:
-            raise ValueError("Expecting `freq_min`<`freq_max`.")
 
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max, margin_sd))
