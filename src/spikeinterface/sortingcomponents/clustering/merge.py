@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from multiprocessing import get_context
 from concurrent.futures import ProcessPoolExecutor
@@ -255,7 +257,7 @@ def find_merge_pairs(
     radius_um=70,
     method="project_distribution",
     method_kwargs={},
-    **job_kwargs
+    **job_kwargs,
     # n_jobs=1,
     # mp_context="fork",
     # max_threads_per_process=1,

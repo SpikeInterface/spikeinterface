@@ -88,6 +88,7 @@ from .globals import (
 from .core_tools import (
     read_python,
     write_python,
+    normal_pdf,
 )
 from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
 from .recording_tools import (
@@ -137,6 +138,6 @@ from .template_tools import (
 )
 
 # channel sparsity
-from .sparsity import ChannelSparsity, compute_sparsity
+from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
 
 from .template import Templates

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import shutil
+
 from .si_based import ComponentsBasedSorter
 
 from spikeinterface.core import (

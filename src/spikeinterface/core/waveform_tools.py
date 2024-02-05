@@ -8,11 +8,16 @@ It is a 2-step approach:
   2. extract and distribute snippets into buffers (optionally in parallel)
 
 """
+
 from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import multiprocessing
 
+from spikeinterface.core.baserecording import BaseRecording
+
+from .baserecording import BaseRecording
 from .job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
 from .core_tools import make_shared_array
 from .job_tools import fix_job_kwargs
@@ -692,3 +697,187 @@ def has_exceeding_spikes(recording, sorting):
             if spike_vector_seg["sample_index"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:
                 return True
     return False
+
+
+def estimate_templates(
+    recording: BaseRecording,
+    spikes: np.ndarray,
+    unit_ids: list | np.ndarray,
+    nbefore: int,
+    nafter: int,
+    return_scaled: bool = True,
+    **job_kwargs,
+):
+    """
+    This is a fast implementation to compute average templates.
+    This is useful to estimate sparsity without the need to allocate large waveform buffers.
+    The mechanism is pretty simple: it accumulates and sums spike waveforms in-place per worker and per unit.
+    Note that std, median and percentiles can't be computed with this method.
+
+    Parameters
+    ----------
+    recording: BaseRecording
+        The recording object
+    spikes: 1d numpy array with several fields
+        Spikes handled as a unique vector.
+        This vector can be obtained with: `spikes = sorting.to_spike_vector()`
+    unit_ids: list ot numpy
+        List of unit_ids
+    nbefore: int
+        Number of samples to cut out before a spike
+    nafter: int
+        Number of samples to cut out after a spike
+    return_scaled: bool, default: True
+        If True, the traces are scaled before averaging
+
+    Returns
+    -------
+    templates_array: np.array
+        The average templates with shape (num_units, nbefore + nafter, num_channels)
+    """
+
+    assert spikes.size > 0, "estimate_templates() need non empty sorting"
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    num_worker = job_kwargs["n_jobs"]
+
+    num_chans = recording.get_num_channels()
+    num_units = len(unit_ids)
+
+    shape = (num_worker, num_units, nbefore + nafter, num_chans)
+    dtype = np.dtype("float32")
+    waveforms_per_worker, shm = make_shared_array(shape, dtype)
+    shm_name = shm.name
+
+    # trick to get the work_index given pid arrays
+    lock = multiprocessing.Lock()
+    array_pid = multiprocessing.Array("i", num_worker)
+    for i in range(num_worker):
+        array_pid[i] = -1
+
+    func = _worker_estimate_templates
+    init_func = _init_worker_estimate_templates
+
+    init_args = (
+        recording,
+        spikes,
+        shm_name,
+        shape,
+        dtype,
+        nbefore,
+        nafter,
+        return_scaled,
+        lock,
+        array_pid,
+    )
+
+    processor = ChunkRecordingExecutor(
+        recording, func, init_func, init_args, job_name="estimate_templates", **job_kwargs
+    )
+    processor.run()
+
+    # average
+    templates_array = np.sum(waveforms_per_worker, axis=0)
+    unit_indices, spike_count = np.unique(spikes["unit_index"], return_counts=True)
+    templates_array[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
+
+    # important : release the sharemem
+    del waveforms_per_worker
+    shm.unlink()
+    shm.close()
+
+    return templates_array
+
+
+def _init_worker_estimate_templates(
+    recording,
+    spikes,
+    shm_name,
+    shape,
+    dtype,
+    nbefore,
+    nafter,
+    return_scaled,
+    lock,
+    array_pid,
+):
+    worker_ctx = {}
+    worker_ctx["recording"] = recording
+    worker_ctx["spikes"] = spikes
+    worker_ctx["nbefore"] = nbefore
+    worker_ctx["nafter"] = nafter
+    worker_ctx["return_scaled"] = return_scaled
+
+    from multiprocessing.shared_memory import SharedMemory
+    import multiprocessing
+
+    shm = SharedMemory(shm_name)
+    waveforms_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+    worker_ctx["shm"] = shm
+    worker_ctx["waveforms_per_worker"] = waveforms_per_worker
+
+    # prepare segment slices
+    segment_slices = []
+    for segment_index in range(recording.get_num_segments()):
+        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
+        segment_slices.append((s0, s1))
+    worker_ctx["segment_slices"] = segment_slices
+
+    child_process = multiprocessing.current_process()
+
+    lock.acquire()
+    num_worker = None
+    for i in range(len(array_pid)):
+        if array_pid[i] == -1:
+            num_worker = i
+            array_pid[i] = child_process.ident
+            break
+    worker_ctx["worker_index"] = num_worker
+    lock.release()
+
+    return worker_ctx
+
+
+# used by ChunkRecordingExecutor
+def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_ctx):
+    # recover variables of the worker
+    recording = worker_ctx["recording"]
+    segment_slices = worker_ctx["segment_slices"]
+    spikes = worker_ctx["spikes"]
+    nbefore = worker_ctx["nbefore"]
+    nafter = worker_ctx["nafter"]
+    waveforms_per_worker = worker_ctx["waveforms_per_worker"]
+    worker_index = worker_ctx["worker_index"]
+    return_scaled = worker_ctx["return_scaled"]
+
+    seg_size = recording.get_num_samples(segment_index=segment_index)
+
+    s0, s1 = segment_slices[segment_index]
+    in_seg_spikes = spikes[s0:s1]
+
+    # take only spikes in range [start_frame, end_frame]
+    # this is a slice so no copy!!
+    # the border of segment are protected by nbefore on left an nafter on the right
+    i0, i1 = np.searchsorted(
+        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
+    )
+
+    # slice in absolut in spikes vector
+    l0 = i0 + s0
+    l1 = i1 + s0
+
+    if l1 > l0:
+        start = spikes[l0]["sample_index"] - nbefore
+        end = spikes[l1 - 1]["sample_index"] + nafter
+
+        # load trace in memory
+        traces = recording.get_traces(
+            start_frame=start, end_frame=end, segment_index=segment_index, return_scaled=return_scaled
+        )
+
+        for spike_index in range(l0, l1):
+            sample_index = spikes[spike_index]["sample_index"]
+            unit_index = spikes[spike_index]["unit_index"]
+            wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
+
+            waveforms_per_worker[worker_index, unit_index, :, :] += wf

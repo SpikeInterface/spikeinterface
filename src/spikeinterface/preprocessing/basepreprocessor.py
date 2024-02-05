@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 
 

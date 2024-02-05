@@ -1,5 +1,8 @@
 """Sorting components: template matching."""
 
+from __future__ import annotations
+
+
 import numpy as np
 import warnings
 
@@ -887,7 +890,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
 
 class CircusPeeler(BaseTemplateMatchingEngine):
-
     """
     Greedy Template-matching ported from the Spyking Circus sorter
 

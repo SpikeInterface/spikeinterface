@@ -1,6 +1,10 @@
 """
 base class for sorters implementation.
 """
+
+from __future__ import annotations
+
+
 import time
 import copy
 from pathlib import Path

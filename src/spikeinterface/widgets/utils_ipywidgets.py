@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ipywidgets.widgets as W
 import traitlets
 
@@ -75,7 +77,7 @@ class TimeSlider(W.HBox):
             min=0.01,
             max=30.0,
             description="win (s)",
-            layout=W.Layout(width="auto")
+            layout=W.Layout(width="auto"),
             # layout=W.Layout(width=f'10%')
         )
         self.window_sizer.observe(self.win_size_changed, names="value", type="change")
