@@ -1,5 +1,8 @@
 """Sorting components: peak waveform features."""
 
+from __future__ import annotations
+
+
 import numpy as np
 
 from spikeinterface.core.job_tools import fix_job_kwargs
