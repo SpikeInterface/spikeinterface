@@ -2,6 +2,9 @@
 This gather some function usefull for some clusetring algos.
 """
 
+from __future__ import annotations
+
+
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
