@@ -22,7 +22,7 @@ core:
 * Use python methods instead of parsing and eleminate try-except in to_dict
 (#2157)
 * `WaveformExtractor.is_extension` --> `has_extension` (#2158)
-* Speed improvement to `get_empty_units()`` (#2173)
+* Speed improvement to `get_empty_units()` (#2173)
 * Allow precomputing spike trains (#2175)
 * Add 'percentile' to template modes and `plot_unit_templates` (#2179)
 * Add `rename_units` method in sorting (#2207)
@@ -57,6 +57,8 @@ extractors:
 
 * Add .stream.cbin compatibility to `CompressedBinaryIblExtractor` (#2297)
 * Add stream_folders path to `OpenEphysBinaryRecordingExtractor` (#2369)
+* Deprecate `ignore_timestamps_errors` in `OpenEphysLegacyRecordingExtractor` (#2450)
+* Better auto-guess of open-ephys format (#2465)
 * Several improvements to NWB extractors:
   *  Add option for no caching option to the NWB extractor when streaming (#2246, #2248, #2268)
   *  Fix `NwbSortingExtractor` reading of ragged arrays (#2255)
@@ -65,7 +67,7 @@ extractors:
   *  Add hdf5 backend support for Nwb extractors (#2294, #2297, #2341)
   *  Refactor `NwbSortingSegment` (#2313)
   *  Add `t_start` argument to NwbSortingExtractor (#2333)
-  *  Add support for NWB-Zarr enhancement and zarr streaming (#2441)
+  *  Add support for NWB-Zarr enhancement and zarr streaming (#2441, #2464)
 
 preprocessing:
 
