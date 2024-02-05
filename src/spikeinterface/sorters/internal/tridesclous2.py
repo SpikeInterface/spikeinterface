@@ -1,9 +1,6 @@
-import shutil
 from .si_based import ComponentsBasedSorter
 
 from spikeinterface.core import (
-    load_extractor,
-    BaseRecording,
     get_noise_levels,
     extract_waveforms,
     NumpySorting,
@@ -272,7 +269,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             method="normalized_template_diff",
             method_kwargs=dict(
                 waveforms_sparse_mask=sparse_mask,
-                threshold_diff=0.2,
+                # threshold_diff=0.2,
+                 threshold_diff=3,
                 min_cluster_size=min_cluster_size + 1,
                 num_shift=5,
             ),
