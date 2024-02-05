@@ -23,7 +23,7 @@ dependencies = [
     "numpy",
     "threadpoolctl>=3.0.0",
     "tqdm",
-    "zarr",
+    "zarr>=2.15",
     "neo>=0.12.0",
     "probeinterface>=0.2.19",
 ]
@@ -60,6 +60,7 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 extractors = [
     "MEArec>=1.8",
     "pynwb>=2.3.0",
+    "hdmf-zarr>=0.5.0",
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
@@ -80,7 +81,9 @@ streaming_extractors = [
     "aiohttp",
     "requests",
     "pynwb>=2.3.0",
-    "remfile"
+    "hdmf-zarr>=0.5.0",
+    "remfile",
+    "s3fs"
 ]
 
 full = [
@@ -113,6 +116,11 @@ qualitymetrics = [
 test_core = [
     "pytest",
     "psutil",
+
+    # for github test : probeinterface and neo from master
+    # for release we need pypi, so this need to be commented
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test = [

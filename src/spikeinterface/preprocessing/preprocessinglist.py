@@ -11,7 +11,7 @@ from .filter import (
     HighpassFilterRecording,
     highpass_filter,
 )
-from .filter_gaussian import GaussianBandpassFilterRecording, gaussian_bandpass_filter
+from .filter_gaussian import GaussianFilterRecording, gaussian_filter
 from .normalize_scale import (
     NormalizeByQuantileRecording,
     normalize_by_quantile,
@@ -46,7 +46,7 @@ preprocessers_full_list = [
     BandpassFilterRecording,
     HighpassFilterRecording,
     NotchFilterRecording,
-    GaussianBandpassFilterRecording,
+    GaussianFilterRecording,
     # gain offset stuff
     NormalizeByQuantileRecording,
     ScaleRecording,
