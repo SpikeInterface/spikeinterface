@@ -48,6 +48,7 @@ Version 0.100.0
 * Added Zarr-backend to `Sorting` objects (`sorting.save(folder="...", format="zarr")`) (#2403)
 * Added `SharedmemRecording` for shared memory recordings (#2365)
 * Added machinery for moving/interpolating templates for generating hybrid recordings with drift (#2291)
+* Added new fast method for unit/spike/peak localization: `grid_convolution` (#2172)
 
 
 Version 0.99.1
