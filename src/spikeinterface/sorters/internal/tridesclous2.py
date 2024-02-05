@@ -14,6 +14,8 @@ from spikeinterface.core.basesorting import minimum_spike_dtype
 
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel, cache_preprocessing
 
+# from spikeinterface.qualitymetrics import compute_snrs
+
 import numpy as np
 
 import pickle
@@ -38,10 +40,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "clustering": {
             "split_radius_um": 40.0,
             "merge_radius_um": 40.0,
+            "threshold_diff": 1.5,
         },
         "templates": {
-            "ms_before": 1.5,
-            "ms_after": 2.5,
+            "ms_before": 2.,
+            "ms_after": 3.,
+            "max_spikes_per_unit" : 400,
             # "peak_shift_ms": 0.2,
         },
         # "matching": {"method": "tridesclous", "method_kwargs": {"peak_shift_ms": 0.2, "radius_um": 100.0}},
@@ -169,22 +173,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         features_folder = sorter_output_folder / "features"
         node0 = PeakRetriever(recording, peaks)
 
-        # node1 = ExtractDenseWaveforms(rec, parents=[node0], return_output=False,
-        #     ms_before=0.5,
-        #     ms_after=1.5,
-        # )
-
-        # node2 = LocalizeCenterOfMass(rec, parents=[node0, node1], return_output=True,
-        #                              local_radius_um=75.0,
-        #                              feature="ptp", )
-
-        # node2 = LocalizeGridConvolution(rec, parents=[node0, node1], return_output=True,
-        #                             local_radius_um=40.,
-        #                             upsampling_um=5.0,
-        #                             )
-
         radius_um = params["waveforms"]["radius_um"]
-        node3 = ExtractSparseWaveforms(
+        node1 = ExtractSparseWaveforms(
             recording,
             parents=[node0],
             return_output=True,
@@ -195,12 +185,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         model_folder_path = sorter_output_folder / "tsvd_model"
 
-        node4 = TemporalPCAProjection(
-            recording, parents=[node0, node3], return_output=True, model_folder_path=model_folder_path
+        node2 = TemporalPCAProjection(
+            recording, parents=[node0, node1], return_output=True, model_folder_path=model_folder_path
         )
 
-        # pipeline_nodes = [node0, node1, node2, node3, node4]
-        pipeline_nodes = [node0, node3, node4]
+        pipeline_nodes = [node0, node1, node2]
 
         output = run_node_pipeline(
             recording,
@@ -213,7 +202,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
 
         # TODO make this generic in GatherNPY ???
-        sparse_mask = node3.neighbours_mask
+        sparse_mask = node1.neighbours_mask
         np.save(features_folder / "sparse_mask.npy", sparse_mask)
         np.save(features_folder / "peaks.npy", peaks)
 
@@ -249,6 +238,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
 
         merge_radius_um = params["clustering"]["merge_radius_um"]
+        threshold_diff = params["clustering"]["threshold_diff"]
+        
 
         post_merge_label, peak_shifts = merge_clusters(
             peaks,
@@ -269,8 +260,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             method="normalized_template_diff",
             method_kwargs=dict(
                 waveforms_sparse_mask=sparse_mask,
-                # threshold_diff=0.2,
-                 threshold_diff=3,
+                threshold_diff=threshold_diff,
                 min_cluster_size=min_cluster_size + 1,
                 num_shift=5,
             ),
@@ -303,19 +293,16 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
         sorting_temp = sorting_temp.save(folder=sorter_output_folder / "sorting_temp")
 
-        ms_before = params["templates"]["ms_before"]
-        ms_after = params["templates"]["ms_after"]
-        max_spikes_per_unit = 300
-
         we = extract_waveforms(
             recording,
             sorting_temp,
             sorter_output_folder / "waveforms_temp",
-            ms_before=ms_before,
-            ms_after=ms_after,
-            max_spikes_per_unit=max_spikes_per_unit,
-            **job_kwargs,
-        )
+            **params["templates"])
+
+        # snrs = compute_snrs(we, peak_sign=params["detection"]["peak_sign"], peak_mode="extremum")
+        # print(snrs)
+
+
 
         # matching_params = params["matching"].copy()
         # matching_params["waveform_extractor"] = we
