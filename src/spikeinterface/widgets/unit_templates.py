@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .unit_waveforms import UnitWaveformsWidget
 from .base import to_attr
 

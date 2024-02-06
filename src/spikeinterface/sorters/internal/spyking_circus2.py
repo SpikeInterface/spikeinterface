@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .si_based import ComponentsBasedSorter
 
 import os

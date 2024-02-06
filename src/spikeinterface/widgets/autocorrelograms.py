@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .base import BaseWidget, to_attr
 
 from .crosscorrelograms import CrossCorrelogramsWidget
