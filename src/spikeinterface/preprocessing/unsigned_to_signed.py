@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from ..core.core_tools import define_function_from_class

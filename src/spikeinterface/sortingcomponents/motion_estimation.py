@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from tqdm.auto import tqdm, trange
 import scipy.interpolate
