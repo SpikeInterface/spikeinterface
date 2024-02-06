@@ -3,7 +3,7 @@
 SpikeInterface 0.100.0 release notes
 ------------------------------------
 
-5th February 2024
+6th February 2024
 
 Main changes:
 
@@ -57,6 +57,7 @@ core:
 * Zarr backcompatibility: map `root_path` to `folder_path` (#2451)
 * Fix spikes generation on borders (#2453)
 * Zarr IO for `Templates` object (#2423)
+* Avoid double parsing in Plexon (#2459)
 
 extractors:
 
@@ -86,7 +87,7 @@ preprocessing:
 * Faster Gaussian filter implementation  preprocessing (#2420)
 * Faster unpickling of ZScoreRecording (#2431)
 * Add bit depth compensation to unsigned_to_signed (#2438)
-* Renaming: `GaussianBandpassFilter` -> `GaussianFilter` (and option for low/high pass filter) (#2397)
+* Renaming: `GaussianBandpassFilter` -> `GaussianFilter` (and option for low/high pass filter) (#2397, #2466)
 
 sorters:
 
@@ -153,5 +154,5 @@ docs:
 ci / packaging / tests:
 
 * Add tests for unique names in channel slice and unit selection (#2258)
-* Add from `__future__` import annotations to core files (#2340)
+* Add from `__future__` import annotations to all files for Python3.8 (#2340, #2468)
 * Add pickling test to streamers (#2170)
