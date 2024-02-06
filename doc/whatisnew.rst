@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.100.0.rst
   releases/0.99.1.rst
   releases/0.99.0.rst
   releases/0.98.2.rst
@@ -31,6 +32,23 @@ Release notes
   releases/0.10.0.rst
   releases/0.9.9.rst
   releases/0.9.1.rst
+
+
+Version 0.100.0
+===============
+
+* Several improvements and bug fixes for Windows users
+* Important refactoring of NWB extractors:
+  * implemented direct backend implementation (to avoid using `pynwb`)
+  * sped up streaming using `remfile`
+  * added support for `zarr` backend
+* Removed `joblib` dependency in favor of `ParallelProcessExecutor`
+* Improved flexibility when running sorters in containers by adding several options for installing `spikeinterface`
+* Add `Templates` class to core, which handles unit templates and sparsity (#1982)
+* Added Zarr-backend to `Sorting` objects (`sorting.save(folder="...", format="zarr")`) (#2403)
+* Added `SharedmemRecording` for shared memory recordings (#2365)
+* Added machinery for moving/interpolating templates for generating hybrid recordings with drift (#2291)
+* Added new fast method for unit/spike/peak localization: `grid_convolution` (#2172)
 
 
 Version 0.99.1
