@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.100.0.dev0"
+version = "0.100.0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -23,9 +23,9 @@ dependencies = [
     "numpy",
     "threadpoolctl>=3.0.0",
     "tqdm",
-    "zarr>=2.15",
-    "neo>=0.12.0",
-    "probeinterface>=0.2.19",
+    "zarr>=0.2.16",
+    "neo>=0.13.0",
+    "probeinterface>=0.2.21",
 ]
 
 [build-system]
@@ -119,8 +119,8 @@ test_core = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test = [
@@ -152,8 +152,8 @@ test = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 docs = [
@@ -170,8 +170,8 @@ docs = [
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     # for release we need pypi, so this needs to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
 ]
 
