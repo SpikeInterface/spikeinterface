@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from spikeinterface.core import generate_ground_truth_recording
 
 

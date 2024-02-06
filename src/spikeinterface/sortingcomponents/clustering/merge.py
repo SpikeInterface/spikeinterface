@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from multiprocessing import get_context
 from concurrent.futures import ProcessPoolExecutor

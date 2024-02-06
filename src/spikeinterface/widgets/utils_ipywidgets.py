@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ipywidgets.widgets as W
 import traitlets
 

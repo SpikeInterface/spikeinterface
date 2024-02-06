@@ -1,6 +1,6 @@
-from re import template
-import numpy as np
+from __future__ import annotations
 
+import numpy as np
 
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms

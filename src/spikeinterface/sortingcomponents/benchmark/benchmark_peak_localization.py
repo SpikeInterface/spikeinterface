@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from spikeinterface.core import extract_waveforms
 from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks

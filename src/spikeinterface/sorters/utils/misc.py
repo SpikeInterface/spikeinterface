@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from subprocess import check_output, CalledProcessError
 from typing import List, Union
