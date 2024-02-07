@@ -370,16 +370,8 @@ class ComputeNoiseLevels(ResultExtension):
     def _run(self):
         self.data["noise_levels"] = get_noise_levels(self.sorting_result.recording,  **self.params)
 
-    # def _get_data(self):
-    #     """
-    #     Get computed noise levels.
-
-    #     Returns
-    #     -------
-    #     noise_levels : np.array
-    #         The noise levels associated to each channel.
-    #     """
-    #     return self._extension_data["noise_levels"]
+    def _get_data(self):
+        return self.data["noise_levels"]
 
 
 register_result_extension(ComputeNoiseLevels)
