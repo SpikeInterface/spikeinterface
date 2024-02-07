@@ -2,6 +2,7 @@
 test for BaseSnippets are done with NumpySnippets.
 but check only for BaseRecording general methods.
 """
+
 from pathlib import Path
 import pytest
 import numpy as np

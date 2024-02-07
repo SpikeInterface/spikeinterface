@@ -1,3 +1,4 @@
+from __future__ import annotations
 import math
 import warnings
 import numpy as np
@@ -314,7 +315,7 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
     Implementation: Aurélien Wyngaard
     """
 
-    assert HAVE_NUMBA
+    assert HAVE_NUMBA, "numba version of this function requires installation of numba"
 
     num_bins = 2 * int(window_size / bin_size)
     num_units = len(sorting.unit_ids)

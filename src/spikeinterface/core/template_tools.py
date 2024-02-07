@@ -59,7 +59,7 @@ def get_template_amplitudes(
     Parameters
     ----------
     templates_or_waveform_extractor: Templates | WaveformExtractor
-        A Templates or a WaveformExtractor object.
+        A Templates or a WaveformExtractor object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     mode: "extremum" | "at_index", default: "extremum"
@@ -76,7 +76,6 @@ def get_template_amplitudes(
     assert peak_sign in ("both", "neg", "pos"), "'peak_sign' must be 'both', 'neg', or 'pos'"
     assert mode in ("extremum", "at_index"), "'mode' must be 'extremum' or 'at_index'"
 
-    
     unit_ids = templates_or_waveform_extractor.unit_ids
     before = _get_nbefore(templates_or_waveform_extractor)
 
@@ -119,7 +118,7 @@ def get_template_extremum_channel(
     Parameters
     ----------
     templates_or_waveform_extractor: Templates | WaveformExtractor
-        A Templates or a WaveformExtractor object.
+        A Templates or a WaveformExtractor object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     mode: "extremum" | "at_index", default: "extremum"
@@ -172,7 +171,7 @@ def get_template_channel_sparsity(
     Parameters
     ----------
     templates_or_waveform_extractor: Templates | WaveformExtractor
-        A Templates or a WaveformExtractor object.
+        A Templates or a WaveformExtractor object
 
     {}
 
@@ -215,7 +214,9 @@ def get_template_channel_sparsity(
 get_template_channel_sparsity.__doc__ = get_template_channel_sparsity.__doc__.format(_sparsity_doc)
 
 
-def get_template_extremum_channel_peak_shift(templates_or_waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg"):
+def get_template_extremum_channel_peak_shift(
+    templates_or_waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg"
+):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
@@ -224,7 +225,7 @@ def get_template_extremum_channel_peak_shift(templates_or_waveform_extractor, pe
     Parameters
     ----------
     templates_or_waveform_extractor: Templates | WaveformExtractor
-        A Templates or a WaveformExtractor object.
+        A Templates or a WaveformExtractor object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
 
@@ -262,7 +263,9 @@ def get_template_extremum_channel_peak_shift(templates_or_waveform_extractor, pe
 
 
 def get_template_extremum_amplitude(
-    templates_or_waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "at_index"
+    templates_or_waveform_extractor,
+    peak_sign: "neg" | "pos" | "both" = "neg",
+    mode: "extremum" | "at_index" = "at_index",
 ):
     """
     Computes amplitudes on the best channel.
@@ -270,7 +273,7 @@ def get_template_extremum_amplitude(
     Parameters
     ----------
     templates_or_waveform_extractor: Templates | WaveformExtractor
-        A Templates or a WaveformExtractor object.
+        A Templates or a WaveformExtractor object
     peak_sign:  "neg" | "pos" | "both"
         Sign of the template to compute best channels
     mode: "extremum" | "at_index", default: "at_index"

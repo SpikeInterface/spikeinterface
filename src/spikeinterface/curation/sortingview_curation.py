@@ -1,3 +1,4 @@
+from __future__ import annotations
 import json
 import numpy as np
 from pathlib import Path
@@ -70,6 +71,7 @@ def apply_sortingview_curation(
             if verbose:
                 print(f"Merging {merge_group}")
             if unit_ids_dtype.kind in ("U", "S"):
+                merge_group = [str(unit) for unit in merge_group]
                 # if unit dtype is str, set new id as "{unit1}-{unit2}"
                 new_unit_id = "-".join(merge_group)
                 curation_sorting.merge(merge_group, new_unit_id=new_unit_id)

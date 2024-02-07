@@ -35,9 +35,10 @@ def setup_module():
 
     we = extract_waveforms(recording, sorting, cache_folder / "toy_waveforms")
 
+
 def _get_templates_object_from_waveform_extractor(we):
     templates = Templates(
-        templates_array = we.get_all_templates(mode="average"),
+        templates_array=we.get_all_templates(mode="average"),
         sampling_frequency=we.sampling_frequency,
         nbefore=we.nbefore,
         sparsity_mask=None,
@@ -71,7 +72,6 @@ def test_get_template_extremum_channel_peak_shift():
     print(shifts)
     templates = _get_templates_object_from_waveform_extractor(we)
     shifts = get_template_extremum_channel_peak_shift(templates, peak_sign="neg")
-
 
     # DEBUG
     # import matplotlib.pyplot as plt

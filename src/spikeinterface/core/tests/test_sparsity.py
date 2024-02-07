@@ -8,6 +8,7 @@ from spikeinterface.core.core_tools import check_json
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import start_sorting_result
 
+
 def test_ChannelSparsity():
     for unit_ids in (["a", "b", "c", "d"], [4, 5, 6, 7]):
         channel_ids = [1, 2, 3]
@@ -146,7 +147,10 @@ def test_densify_waveforms():
 
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
-        durations=[30.0], sampling_frequency=16000.0, num_channels=10, num_units=5,
+        durations=[30.0],
+        sampling_frequency=16000.0,
+        num_channels=10,
+        num_units=5,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
         noise_kwargs=dict(noise_level=1.0, strategy="tile_pregenerated"),
         seed=2205,
@@ -171,7 +175,7 @@ def test_estimate_sparsity():
         radius_um=1.0,
         chunk_duration="1s",
         progress_bar=True,
-        n_jobs=2
+        n_jobs=2,
     )
     # print(sparsity)
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units))
@@ -187,9 +191,9 @@ def test_estimate_sparsity():
         num_channels=3,
         chunk_duration="1s",
         progress_bar=True,
-        n_jobs=1
+        n_jobs=1,
     )
-    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units)*3)
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
 
 def test_compute_sparsity():
     recording, sorting = get_dataset()

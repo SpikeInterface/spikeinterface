@@ -51,9 +51,9 @@ class CommonReferenceRecording(BasePreprocessor):
         List of lists containing the channel ids for splitting the reference. The CMR, CAR, or referencing with respect to
         single channels are applied group-wise. However, this is not applied for the local CAR.
         It is useful when dealing with different channel groups, e.g. multiple tetrodes.
-    ref_channel_ids: list or int, default: None
+    ref_channel_ids: list or str or int, default: None
         If no "groups" are specified, all channels are referenced to "ref_channel_ids". If "groups" is provided, then a
-        list of channels to be applied to each group is expected. If "single" reference, a list of one channel  or an
+        list of channels to be applied to each group is expected. If "single" reference, a list of one channel or an
         int is expected.
     local_radius: tuple(int, int), default: (30, 55)
         Use in the local CAR implementation as the selecting annulus with the following format:
@@ -80,7 +80,7 @@ class CommonReferenceRecording(BasePreprocessor):
     def __init__(
         self,
         recording: BaseRecording,
-        reference: Literal["global", "single", "global"] = "global",
+        reference: Literal["global", "single", "local"] = "global",
         operator: Literal["median", "average"] = "median",
         groups=None,
         ref_channel_ids=None,
@@ -107,10 +107,10 @@ class CommonReferenceRecording(BasePreprocessor):
                 else:
                     assert (
                         len(ref_channel_ids) == 1
-                    ), "'ref_channel_ids' with no 'groups' must be int or a list of one element"
+                    ), "'ref_channel_ids' with no 'groups' must be a single channel id or a list of one element"
                 ref_channel_ids = np.asarray(ref_channel_ids)
                 assert np.all(
-                    [ch in recording.get_channel_ids() for ch in ref_channel_ids]
+                    [ch in recording.channel_ids for ch in ref_channel_ids]
                 ), "Some 'ref_channel_ids' are wrong!"
         elif reference == "local":
             assert groups is None, "With 'local' CAR, the group option should not be used."
@@ -173,57 +173,86 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.neighbors = neighbors
         self.temp = None
         self.dtype = dtype
-
-        if self.operator == "median":
-            self.operator_func = lambda x: np.median(x, axis=1, out=self.temp)[:, None]
-        elif self.operator == "average":
-            self.operator_func = lambda x: np.mean(x, axis=1, out=self.temp)[:, None]
+        self.operator_func = operator = np.mean if self.operator == "average" else np.median
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        # need input trace
-        all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
-        all_traces = all_traces.astype(self.dtype)
-        self.temp = np.zeros((all_traces.shape[0],), dtype=all_traces.dtype)
-        _channel_indices = np.arange(all_traces.shape[1])
-        if channel_indices is not None:
-            _channel_indices = _channel_indices[channel_indices]
+        # Let's do the case with group_indices equal None as that is easy
+        if self.group_indices is None:
+            # We need all the channels to calculate the reference
+            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
 
-        out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=self.dtype)
+            if self.reference == "global":
+                shift = self.operator_func(traces, axis=1, keepdims=True)
+                re_referenced_traces = traces[:, channel_indices] - shift
+            elif self.reference == "single":
+                # single channel -> no need of operator
+                shift = traces[:, self.ref_channel_indices]
+                re_referenced_traces = traces[:, channel_indices] - shift
+            else:  # then it must be local
+                re_referenced_traces = np.zeros_like(traces[:, channel_indices])
+                channel_indices_array = np.arange(traces.shape[1])[channel_indices]
+                for channel_index in channel_indices_array:
+                    channel_neighborhood = self.neighbors[channel_index]
+                    channel_shift = self.operator_func(traces[:, channel_neighborhood], axis=1)
+                    re_referenced_traces[:, channel_index] = traces[:, channel_index] - channel_shift
 
-        if self.reference == "global":
-            for chan_inds, chan_group_inds in self._groups(_channel_indices):
-                out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
-                out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(all_traces[:, chan_group_inds])
+            return re_referenced_traces.astype(self.dtype, copy=False)
 
-        elif self.reference == "single":
-            for i, (chan_inds, _) in enumerate(self._groups(_channel_indices)):
-                out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
-                out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(
-                    all_traces[:, [self.ref_channel_indices[i]]]
-                )
-
-        elif self.reference == "local":
-            for i, chan_ind in enumerate(_channel_indices):
-                out_traces[:, [i]] = all_traces[:, [chan_ind]] - self.operator_func(
-                    all_traces[:, self.neighbors[chan_ind]]
-                )
-        return out_traces
-
-    def _groups(self, channel_indices):
-        selected_groups = []
-        selected_channels = []
-        if self.group_indices:
-            for chan_inds in self.group_indices:
-                sel_inds = [ind for ind in channel_indices if ind in chan_inds]
-                # if no channels are in a group, do not return the group
-                if len(sel_inds) > 0:
-                    selected_groups.append(chan_inds)
-                    selected_channels.append(sel_inds)
+        # Then the old implementation for backwards compatibility that supports grouping
         else:
-            # no groups = all channels
-            selected_groups = [slice(None)]
-            selected_channels = [channel_indices]
-        return zip(selected_channels, selected_groups)
+            # need input trace
+            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
+
+            sliced_channel_indices = np.arange(traces.shape[1])
+            if channel_indices is not None:
+                sliced_channel_indices = sliced_channel_indices[channel_indices]
+
+            re_referenced_traces = np.zeros((traces.shape[0], sliced_channel_indices.size))
+            for group_index, selected_indices_in_group, all_group_indices in self.slice_groups(sliced_channel_indices):
+                (out_indices,) = np.nonzero(np.isin(sliced_channel_indices, selected_indices_in_group))
+                in_group_traces = traces[:, selected_indices_in_group]
+
+                if self.reference == "global":
+                    shift = self.operator_func(traces[:, all_group_indices], axis=1, keepdims=True)
+                    re_referenced_traces[:, out_indices] = in_group_traces - shift
+                else:
+                    # single (as local is not allowed for groups)
+                    shift = self.operator_func(
+                        traces[:, [self.ref_channel_indices[group_index]]], axis=1, keepdims=True
+                    )
+                    re_referenced_traces[:, out_indices] = in_group_traces - shift
+
+            return re_referenced_traces.astype(self.dtype, copy=False)
+
+    def slice_groups(self, channel_indices):
+        """
+        Slice the channel indices into groups. This is used to apply the common reference to groups of channels.
+
+        Parameters
+        ----------
+        channel_indices: array-like
+            The channel indices to be sliced
+
+        Returns
+        -------
+        zip with:
+            * group_index: The index of the group
+            * selected_channels: The selected channel indices in the group
+            * group_channels: The channels indices in the group
+        """
+        selected_channels = []
+        group_channels = []
+        group_indices = []
+
+        assert self.group_indices is not None, "No groups to slice"
+        for group_index, chanel_indices in enumerate(self.group_indices):
+            selected_indices = [ind for ind in channel_indices if ind in chanel_indices]
+            # if no channels are in a group, do not return the group
+            if len(selected_indices) > 0:
+                group_channels.append(chanel_indices)
+                selected_channels.append(selected_indices)
+                group_indices.append(group_index)
+        return zip(group_indices, selected_channels, group_channels)
 
 
 common_reference = define_function_from_class(source_class=CommonReferenceRecording, name="common_reference")

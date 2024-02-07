@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from pathlib import Path
 
@@ -73,6 +75,68 @@ motion_options_preset = {
             num_closest=3,
         ),
     },
+    "nonrigid_fast_and_accurate": {
+        "doc": "mixed methods by KS & Paninski lab (grid_convolution + decentralized)",
+        "detect_kwargs": dict(
+            method="locally_exclusive",
+            peak_sign="neg",
+            detect_threshold=8.0,
+            exclude_sweep_ms=0.5,
+            radius_um=50,
+        ),
+        "select_kwargs": dict(),
+        "localize_peaks_kwargs": dict(
+            method="grid_convolution",
+            radius_um=40.0,
+            upsampling_um=5.0,
+            sigma_ms=0.25,
+            margin_um=30.0,
+            prototype=None,
+            percentile=5.0,
+        ),
+        "estimate_motion_kwargs": dict(
+            method="decentralized",
+            direction="y",
+            bin_duration_s=2.0,
+            rigid=False,
+            bin_um=5.0,
+            margin_um=0.0,
+            # win_shape="gaussian",
+            # win_step_um=50.0,
+            # win_sigma_um=150.0,
+            win_shape="gaussian",
+            win_step_um=100.0,
+            win_sigma_um=200.0,
+            histogram_depth_smooth_um=5.0,
+            histogram_time_smooth_s=None,
+            pairwise_displacement_method="conv",
+            max_displacement_um=100.0,
+            weight_scale="linear",
+            error_sigma=0.2,
+            conv_engine=None,
+            torch_device=None,
+            batch_size=1,
+            corr_threshold=0.0,
+            time_horizon_s=None,
+            convergence_method="lsmr",
+            soft_weights=False,
+            normalized_xcorr=True,
+            centered_xcorr=True,
+            temporal_prior=True,
+            spatial_prior=False,
+            force_spatial_median_continuity=False,
+            reference_displacement="median",
+            reference_displacement_time_s=0,
+            robust_regression_sigma=2,
+            weight_with_amplitude=False,
+        ),
+        "interpolate_motion_kwargs": dict(
+            direction=1,
+            border_mode="remove_channels",
+            spatial_interpolation_method="idw",
+            num_closest=3,
+        ),
+    },
     # This preset is a super fast rigid estimation with center of mass
     "rigid_fast": {
         "doc": "Rigid and not super accurate but fast. Use center of mass.",
@@ -103,7 +167,7 @@ motion_options_preset = {
     },
     # This preset try to mimic kilosort2.5 motion estimator
     "kilosort_like": {
-        "doc": "Mimic the drift correction of kilosrt (grid_convolution + iterative_template)",
+        "doc": "Mimic the drift correction of kilosort (grid_convolution + iterative_template)",
         "detect_kwargs": dict(
             method="locally_exclusive",
             peak_sign="neg",
@@ -116,12 +180,11 @@ motion_options_preset = {
             method="grid_convolution",
             radius_um=40.0,
             upsampling_um=5.0,
-            sigma_um=np.linspace(5.0, 25.0, 5),
+            weight_method={"mode": "gaussian_2d", "sigma_list_um": np.linspace(5, 25, 5)},
             sigma_ms=0.25,
             margin_um=30.0,
             prototype=None,
-            percentile=10.0,
-            sparsity_threshold=0.01,
+            percentile=5.0,
         ),
         "estimate_motion_kwargs": dict(
             method="iterative_template",
@@ -306,7 +369,7 @@ def correct_motion(
             detect_and_localize=t1 - t0,
         )
     else:
-        # lcalization is done after select_peaks()
+        # localization is done after select_peaks()
         pipeline_nodes = None
 
         t0 = time.perf_counter()

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .metrics import MetricsBaseWidget
 from ..core.waveform_extractor import WaveformExtractor
 

@@ -369,8 +369,11 @@ def test_calculate_sd_ratio(sorting_result_simple):
         sorting_result_simple,
     )
 
+
     assert np.all(list(sd_ratio.keys()) == sorting_result_simple.unit_ids)
-    # assert np.allclose(list(sd_ratio.values()), 1, atol=0.2, rtol=0)
+    # @aurelien can you check this, this is not working anymore
+    # assert np.allclose(list(sd_ratio.values()), 1, atol=0.25, rtol=0)
+
 
 
 if __name__ == "__main__":
@@ -388,7 +391,7 @@ if __name__ == "__main__":
     # test_synchrony_metrics(sorting_result)
     # test_calculate_firing_range(sorting_result)
     # test_calculate_amplitude_cv_metrics(sorting_result)
-    # test_calculate_sd_ratio(sorting_result)
+    test_calculate_sd_ratio(sorting_result)
 
 
 

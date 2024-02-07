@@ -8,9 +8,10 @@ class UnitLocationsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCa
     extension_class = ComputeUnitLocations
     extension_function_params_list = [
         dict(method="center_of_mass", radius_um=100),
-        dict(method="center_of_mass", radius_um=100),
-        dict(method="grid_convolution", radius_um=50),
-        dict(method="monopolar_triangulation", radius_um=150),
+
+         dict(method="grid_convolution", radius_um=50),
+        dict(method="grid_convolution", radius_um=150, weight_method={"mode": "gaussian_2d"}),
+
         dict(method="monopolar_triangulation", radius_um=150),
         dict(method="monopolar_triangulation", radius_um=150, optimizer="minimize_with_log_penality"),
     ]

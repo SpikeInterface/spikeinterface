@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import shutil
 import os
@@ -21,7 +23,8 @@ from .paircomparisons import compare_sorter_to_ground_truth, GroundTruthComparis
 
 
 # This is to separate names when the key are tuples when saving folders
-_key_separator = "_##_"
+# _key_separator = "_##_"
+_key_separator = "_-°°-_"
 
 
 class GroundTruthStudy:

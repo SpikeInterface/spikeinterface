@@ -117,6 +117,8 @@ class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ["openephys"]
     entities = [
         "openephys/OpenEphys_SampleData_1",
+        # This has gaps!!!
+        "openephys/OpenEphys_SampleData_2_(multiple_starts)",
     ]
 
 
