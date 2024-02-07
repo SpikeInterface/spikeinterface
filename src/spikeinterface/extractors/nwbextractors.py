@@ -573,7 +573,7 @@ class NwbRecordingExtractor(BaseRecording):
         self.set_channel_gains(gains)
         self.set_channel_offsets(offsets)
         if locations is not None:
-            self.set_channel_locations(locations)
+            self.set_dummy_probe_from_locations(locations)
         if groups is not None:
             self.set_channel_groups(groups)
 
