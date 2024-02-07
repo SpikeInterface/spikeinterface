@@ -26,9 +26,13 @@ def _check_all_wf_equal(list_wfs_arrays):
         for unit_id in wfs_arrays.keys():
             assert np.array_equal(wfs_arrays[unit_id], wfs_arrays0[unit_id])
 
+
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
-        durations=[30.0, 40.], sampling_frequency=30000.0, num_channels=4, num_units=7,
+        durations=[30.0, 40.0],
+        sampling_frequency=30000.0,
+        num_channels=4,
+        num_units=7,
         generate_sorting_kwargs=dict(firing_rates=5.0, refractory_period_ms=4.0),
         noise_kwargs=dict(noise_level=1.0, strategy="tile_pregenerated"),
         seed=2205,
@@ -52,7 +56,6 @@ def test_waveform_tools():
     # test with dump !!!!
     # recording = recording.save()
     # sorting = sorting.save()
-
 
     recording, sorting = get_dataset()
     sampling_frequency = recording.sampling_frequency
@@ -162,8 +165,8 @@ def test_waveform_tools():
 def test_estimate_templates():
     recording, sorting = get_dataset()
 
-    ms_before=1.0
-    ms_after=1.5
+    ms_before = 1.0
+    ms_after = 1.5
 
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
@@ -175,13 +178,7 @@ def test_estimate_templates():
     job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
     templates = estimate_templates(
-        recording,
-        spikes,
-        sorting.unit_ids,
-        nbefore,
-        nafter,
-        return_scaled=True,
-        **job_kwargs
+        recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
     )
     print(templates.shape)
     assert templates.shape[0] == sorting.unit_ids.size

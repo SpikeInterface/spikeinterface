@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -34,9 +36,6 @@ class SortingSummaryWidget(BaseWidget):
         (sortingview backend)
     curation : bool, default: False
         If True, manual curation is enabled
-        (sortingview backend)
-    unit_table_properties : list or None, default: None
-        List of properties to be added to the unit table
         (sortingview backend)
     label_choices : list or None, default: None
         List of labels to be added to the curation table

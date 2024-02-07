@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -504,6 +506,8 @@ def get_waveforms_scales(we, templates, channel_locations, x_offset_units=False)
     x_chans = np.unique(channel_locations[:, 0])
     if x_chans.size > 1:
         delta_x = np.min(np.diff(x_chans))
+        if delta_x < 5:
+            delta_x = 20.0
     else:
         delta_x = 40.0
 
