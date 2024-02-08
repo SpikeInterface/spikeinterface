@@ -918,8 +918,10 @@ class SortingResult:
         saved_extension_names = []
         for extension_class in _possible_extensions:
             extension_name = extension_class.extension_name
+            
             if self.format == "binary_folder":
-                is_saved = (self.folder / extension_name).is_dir() and (self.folder / extension_name / "params.json").is_file()
+                extension_folder = self.folder / "extensions" /extension_name
+                is_saved = extension_folder.is_dir() and (extension_folder / "params.json").is_file()
             elif self.format == "zarr":
                 if extension_group is not None:
                     is_saved = extension_name in extension_group.keys() and "params" in extension_group[extension_name].attrs.keys()
@@ -969,6 +971,8 @@ class SortingResult:
         extension_instance = extension_class(self)
         extension_instance.load_params()
         extension_instance.load_data()
+
+        self.extensions[extension_name] = extension_instance
 
         return extension_instance
 
@@ -1222,7 +1226,7 @@ class ResultExtension:
         return self.sorting_result.folder
     
     def _get_binary_extension_folder(self):
-        extension_folder = self.folder / "saved_extensions" /self.extension_name
+        extension_folder = self.folder / "extensions" /self.extension_name
         return extension_folder
 
 

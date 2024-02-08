@@ -437,7 +437,12 @@ def compute_sparsity(
     # Can't be done at module because this is a cyclic import, too bad
     from .template import Templates
     from .waveform_extractor import WaveformExtractor
+    from .waveforms_extractor_backwards_compatibility import MockWaveformExtractor
     from .sortingresult import SortingResult
+
+    if isinstance(templates_or_sorting_result, MockWaveformExtractor):
+        # to keep backward compatibility
+        templates_or_sorting_result = templates_or_sorting_result.sorting_result
 
     if method in ("best_channels", "radius"):
         assert isinstance(templates_or_sorting_result, (Templates, WaveformExtractor, SortingResult)), "compute_sparsity() need Templates or WaveformExtractor or SortingResult"
