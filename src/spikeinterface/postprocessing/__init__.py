@@ -7,6 +7,7 @@ from .template_metrics import (
 from .template_similarity import (
     ComputeTemplateSimilarity,
     compute_template_similarity,
+    compute_template_similarity_by_pair,
     check_equal_template_with_distribution_overlap,
 )
 

@@ -49,7 +49,7 @@ class ComputeTemplateSimilarity(ResultExtension):
     def _get_data(self):
         return self.data["similarity"]
 
-
+# @alessio:  compute_template_similarity() is now one inner SortingResult only
 register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
@@ -68,7 +68,14 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
     return similarity
 
 
-# TODO port the waveform_extractor_other concept that compare 2 SortingResult
+def compute_template_similarity_by_pair(sorting_result_1, sorting_result_2, method="cosine_similarity"):
+    templates_array_1 = _get_dense_templates_array(sorting_result_1, return_scaled=True)
+    templates_array_2 = _get_dense_templates_array(sorting_result_2, return_scaled=True)
+    similmarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method)
+    return similmarity
+
+
+
 
 
 # def _compute_template_similarity(
