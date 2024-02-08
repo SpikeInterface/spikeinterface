@@ -40,12 +40,12 @@ def get_sorting_result(format="memory", sparse=True):
     if folder and folder.exists():
         shutil.rmtree(folder)
     
-    sortres = start_sorting_result(sorting, recording, format=format, folder=folder, sparse=sparse, sparsity=None)
+    sorting_result = start_sorting_result(sorting, recording, format=format, folder=folder, sparse=sparse, sparsity=None)
 
-    return sortres
+    return sorting_result
 
 
-def _check_result_extension(sortres, extension_name):
+def _check_result_extension(sorting_result, extension_name):
     # select unit_ids to several format
     for format in ("memory", "binary_folder", "zarr"):
     # for format in ("memory", ):
@@ -60,10 +60,10 @@ def _check_result_extension(sortres, extension_name):
             folder = None
 
         # check unit slice
-        keep_unit_ids = sortres.sorting.unit_ids[::2]
-        sortres2 = sortres.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
+        keep_unit_ids = sorting_result.sorting.unit_ids[::2]
+        sorting_result2 = sorting_result.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
 
-        data = sortres2.get_extension(extension_name).data
+        data = sorting_result2.get_extension(extension_name).data
         # for k, arr in data.items():
         #     print(k, arr.shape)
 
@@ -71,54 +71,63 @@ def _check_result_extension(sortres, extension_name):
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeWaveforms(format, sparse):
-    sortres = get_sorting_result(format=format, sparse=sparse)
+    sorting_result = get_sorting_result(format=format, sparse=sparse)
 
     job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
-    sortres.select_random_spikes(max_spikes_per_unit=50, seed=2205)
-    ext = sortres.compute("waveforms", **job_kwargs)
+    sorting_result.select_random_spikes(max_spikes_per_unit=50, seed=2205)
+    ext = sorting_result.compute("waveforms", **job_kwargs)
     wfs = ext.data["waveforms"]
-    _check_result_extension(sortres, "waveforms")
+    _check_result_extension(sorting_result, "waveforms")
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeTemplates(format, sparse):
-    sortres = get_sorting_result(format=format, sparse=sparse)
+    sorting_result = get_sorting_result(format=format, sparse=sparse)
 
-    sortres.select_random_spikes(max_spikes_per_unit=20, seed=2205)
+    sorting_result.select_random_spikes(max_spikes_per_unit=20, seed=2205)
     
     with pytest.raises(AssertionError):
         # This require "waveforms first and should trig an error
-        sortres.compute("templates")
+        sorting_result.compute("templates")
     
     job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
-    sortres.compute("waveforms", **job_kwargs)
-    sortres.compute("templates", operators=["average", "std", "median", ("percentile", 5.), ("percentile", 95.),])
+    sorting_result.compute("waveforms", **job_kwargs)
 
+    # compute some operators
+    sorting_result.compute("templates", operators=["average", "std", ("percentile", 95.),])
 
-    data = sortres.get_extension("templates").data
+    # ask for more operator later
+    ext = sorting_result.get_extension("templates")
+    templated_median = ext.get_templates(operator="median")
+    templated_per_5 = ext.get_templates(operator="percentile", percentile=5.)
+
+    # they all should be in data
+    data = sorting_result.get_extension("templates").data
     for k in ['average', 'std', 'median', 'pencentile_5.0', 'pencentile_95.0']:
         assert k in data.keys()
-        assert data[k].shape[0] == sortres.unit_ids.size
-        assert data[k].shape[2] == sortres.channel_ids.size
+        assert data[k].shape[0] == sorting_result.unit_ids.size
+        assert data[k].shape[2] == sorting_result.channel_ids.size
         assert np.any(data[k] > 0)
 
-    import matplotlib.pyplot as plt
-    for unit_index, unit_id in enumerate(sortres.unit_ids):
-        fig, ax = plt.subplots()
-        for k in data.keys():
-            wf0 = data[k][unit_index, :, :]
-            ax.plot(wf0.T.flatten(), label=k)
-        ax.legend()
+
+
+    # import matplotlib.pyplot as plt
+    # for unit_index, unit_id in enumerate(sorting_result.unit_ids):
+    #     fig, ax = plt.subplots()
+    #     for k in data.keys():
+    #         wf0 = data[k][unit_index, :, :]
+    #         ax.plot(wf0.T.flatten(), label=k)
+    #     ax.legend()
     # plt.show()
 
-    _check_result_extension(sortres, "templates")
+    _check_result_extension(sorting_result, "templates")
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeFastTemplates(format, sparse):
-    sortres = get_sorting_result(format=format, sparse=sparse)
+    sorting_result = get_sorting_result(format=format, sparse=sparse)
 
     # TODO check this because this is not passing with n_jobs=2
     job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
@@ -126,24 +135,24 @@ def test_ComputeFastTemplates(format, sparse):
     ms_before=1.0
     ms_after=2.5
 
-    sortres.select_random_spikes(max_spikes_per_unit=20, seed=2205)
-    sortres.compute("fast_templates", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs)
+    sorting_result.select_random_spikes(max_spikes_per_unit=20, seed=2205)
+    sorting_result.compute("fast_templates", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs)
 
-    _check_result_extension(sortres, "fast_templates")
+    _check_result_extension(sorting_result, "fast_templates")
 
     # compare ComputeTemplates with dense and ComputeFastTemplates: should give the same on "average"
-    other_sortres = get_sorting_result(format=format, sparse=False)
-    other_sortres.select_random_spikes(max_spikes_per_unit=20, seed=2205)
-    other_sortres.compute("waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs)
-    other_sortres.compute("templates", operators=["average",])
+    other_sorting_result = get_sorting_result(format=format, sparse=False)
+    other_sorting_result.select_random_spikes(max_spikes_per_unit=20, seed=2205)
+    other_sorting_result.compute("waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs)
+    other_sorting_result.compute("templates", operators=["average",])
 
-    templates0 = sortres.get_extension("fast_templates").data["average"]
-    templates1 = other_sortres.get_extension("templates").data["average"]
+    templates0 = sorting_result.get_extension("fast_templates").data["average"]
+    templates1 = other_sorting_result.get_extension("templates").data["average"]
     np.testing.assert_almost_equal(templates0, templates1)
 
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
-    # for unit_index, unit_id in enumerate(sortres.unit_ids):
+    # for unit_index, unit_id in enumerate(sorting_result.unit_ids):
     #     wf0 = templates0[unit_index, :, :]
     #     ax.plot(wf0.T.flatten(), label=f"{unit_id}")
     #     wf1 = templates1[unit_index, :, :]
@@ -154,13 +163,13 @@ def test_ComputeFastTemplates(format, sparse):
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeNoiseLevels(format, sparse):
-    sortres = get_sorting_result(format=format, sparse=sparse)
+    sorting_result = get_sorting_result(format=format, sparse=sparse)
 
-    sortres.compute("noise_levels", return_scaled=True)
-    print(sortres)
+    sorting_result.compute("noise_levels", return_scaled=True)
+    print(sorting_result)
 
-    noise_levels = sortres.get_extension("noise_levels").data["noise_levels"]
-    assert noise_levels.shape[0] == sortres.channel_ids.size
+    noise_levels = sorting_result.get_extension("noise_levels").data["noise_levels"]
+    assert noise_levels.shape[0] == sorting_result.channel_ids.size
 
 
 if __name__ == '__main__':
@@ -171,11 +180,11 @@ if __name__ == '__main__':
     # test_ComputeWaveforms(format="zarr", sparse=True)
     # test_ComputeWaveforms(format="zarr", sparse=False)
 
-    # test_ComputeTemplates(format="memory", sparse=True)
+    test_ComputeTemplates(format="memory", sparse=True)
     # test_ComputeTemplates(format="memory", sparse=False)
     # test_ComputeTemplates(format="binary_folder", sparse=True)
     # test_ComputeTemplates(format="zarr", sparse=True)
 
     # test_ComputeFastTemplates(format="memory", sparse=True)
 
-    test_ComputeNoiseLevels(format="memory", sparse=False)
+    # test_ComputeNoiseLevels(format="memory", sparse=False)

@@ -964,7 +964,7 @@ class SortingResult:
             The loaded instance of the extension
 
         """
-        assert self.format != "memory"
+        assert self.format != "memory", "SortingResult.load_extension() do not work for format='memory' use SortingResult.get_extension()instead"
 
         extension_class = get_extension_class(extension_name)
 

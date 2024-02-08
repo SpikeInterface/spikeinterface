@@ -9,6 +9,7 @@ from .recording_tools import get_channel_distances, get_noise_levels
 from .sortingresult import SortingResult
 
 
+# TODO make this function a non private function
 def _get_dense_templates_array(one_object, return_scaled=True):
     if isinstance(one_object, Templates):
         templates_array = one_object.get_dense_templates()

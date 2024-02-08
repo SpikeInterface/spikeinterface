@@ -127,13 +127,14 @@ class ComputeWaveforms(ResultExtension):
         some_spikes = spikes[self.sorting_result.random_spikes_indices]
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = self.data["waveforms"][spike_mask, :, :]
-
-        if force_dense:
-            if self.sorting_result.sparsity is not None:
+        
+        if self.sorting_result.sparsity is not None:
+            chan_inds = self.sorting_result.sparsity.unit_id_to_channel_indices[unit_id]
+            wfs = wfs[:, :, :chan_inds.size]
+            if force_dense:
                 num_channels = self.get_num_channels()
                 dense_wfs = np.zeros((wfs.shape[0], wfs.shape[1], num_channels), dtype=wfs.dtype)
-                unit_sparsity = self.sorting_result.sparsity.mask[unit_index]
-                dense_wfs[:, :, unit_sparsity] = wfs
+                dense_wfs[:, :, chan_inds] = wfs
                 wfs = dense_wfs
 
         return wfs
@@ -155,61 +156,17 @@ class ComputeTemplates(ResultExtension):
     This must be run after "waveforms" extension (`SortingResult.compute("waveforms")`)
 
     Note that when "waveforms" is already done, then the recording is not needed anymore for this extension.
+
+    Note: by default only the average is computed. Other operator (std, median, percentile) can be computed on demand
+    after the SortingResult.compute("templates") and then the data dict is updated on demand.
+    
+
     """
     extension_name = "templates"
     depend_on = ["waveforms"]
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
-
-    def _run(self):
-        
-        unit_ids = self.sorting_result.unit_ids
-        channel_ids = self.sorting_result.channel_ids
-        waveforms_extension = self.sorting_result.get_extension("waveforms")
-        waveforms = waveforms_extension.data["waveforms"]
-        
-        num_samples = waveforms.shape[1]
-        
-        for operator in self.params["operators"]:
-            if isinstance(operator, str) and operator in ("average", "std", "median"):
-                key = operator
-            elif isinstance(operator, (list, tuple)):
-                operator, percentile = operator
-                assert operator == "percentile"
-                key = f"pencentile_{percentile}"
-            else:
-                raise ValueError(f"ComputeTemplates: wrong operator {operator}")
-            self.data[key] = np.zeros((unit_ids.size, num_samples, channel_ids.size))
-
-        spikes = self.sorting_result.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_result.random_spikes_indices]
-        for unit_index, unit_id in enumerate(unit_ids):
-            spike_mask = some_spikes["unit_index"] == unit_index
-            wfs = waveforms[spike_mask, :, :]
-            if wfs.shape[0] == 0:
-                continue
-            
-            for operator in self.params["operators"]:
-                if operator == "average":
-                    arr = np.average(wfs, axis=0)
-                    key = operator
-                elif operator == "std":
-                    arr = np.std(wfs, axis=0)
-                    key = operator
-                elif operator == "median":
-                    arr = np.median(wfs, axis=0)
-                    key = operator
-                elif isinstance(operator, (list, tuple)):
-                    operator, percentile = operator
-                    arr = np.percentile(wfs, percentile, axis=0)
-                    key = f"pencentile_{percentile}"
-
-                if self.sparsity is None:
-                    self.data[key][unit_index, :, :] = arr
-                else:
-                    channel_indices = self.sparsity.unit_id_to_channel_indices[unit_id]
-                    self.data[key][unit_index, :, :][:, channel_indices] = arr[:, :channel_indices.size]
 
     def _set_params(self, operators = ["average", "std"]):
         assert isinstance(operators, list)
@@ -230,6 +187,58 @@ class ComputeTemplates(ResultExtension):
             return_scaled=waveforms_extension.params["return_scaled"],
             )
         return params
+
+    def _run(self):
+        self._compute_and_append(self.params["operators"])
+
+
+    def _compute_and_append(self, operators):
+        unit_ids = self.sorting_result.unit_ids
+        channel_ids = self.sorting_result.channel_ids
+        waveforms_extension = self.sorting_result.get_extension("waveforms")
+        waveforms = waveforms_extension.data["waveforms"]
+        
+        num_samples = waveforms.shape[1]
+        
+        for operator in operators:
+            if isinstance(operator, str) and operator in ("average", "std", "median"):
+                key = operator
+            elif isinstance(operator, (list, tuple)):
+                operator, percentile = operator
+                assert operator == "percentile"
+                key = f"pencentile_{percentile}"
+            else:
+                raise ValueError(f"ComputeTemplates: wrong operator {operator}")
+            self.data[key] = np.zeros((unit_ids.size, num_samples, channel_ids.size))
+
+        spikes = self.sorting_result.sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        for unit_index, unit_id in enumerate(unit_ids):
+            spike_mask = some_spikes["unit_index"] == unit_index
+            wfs = waveforms[spike_mask, :, :]
+            if wfs.shape[0] == 0:
+                continue
+            
+            for operator in operators:
+                if operator == "average":
+                    arr = np.average(wfs, axis=0)
+                    key = operator
+                elif operator == "std":
+                    arr = np.std(wfs, axis=0)
+                    key = operator
+                elif operator == "median":
+                    arr = np.median(wfs, axis=0)
+                    key = operator
+                elif isinstance(operator, (list, tuple)):
+                    operator, percentile = operator
+                    arr = np.percentile(wfs, percentile, axis=0)
+                    key = f"pencentile_{percentile}"
+
+                if self.sparsity is None:
+                    self.data[key][unit_index, :, :] = arr
+                else:
+                    channel_indices = self.sparsity.unit_id_to_channel_indices[unit_id]
+                    self.data[key][unit_index, :, :][:, channel_indices] = arr[:, :channel_indices.size]
 
     @property
     def nbefore(self):
@@ -255,6 +264,54 @@ class ComputeTemplates(ResultExtension):
             assert percentile is not None, "You must provide percentile=..."
             key = f"pencentile_{percentile}"
         return self.data[key]
+
+    def get_templates(self, unit_ids=None, operator="average", percentile=None, save=True):
+        """
+        Return templates (average, std, median or percentil) for multiple units.
+
+        I not computed yet then this is computed on demand and optionally saved.
+
+        Parameters
+        ----------
+        unit_ids: list or None
+            Unit ids to retrieve waveforms for
+        mode: "average" | "median" | "std" | "percentile", default: "average"
+            The mode to compute the templates
+        percentile: float, default: None
+            Percentile to use for mode="percentile"
+        save: bool, default True
+            In case, the operator is not computed yet it can be saved to folder or zarr.
+
+        Returns
+        -------
+        templates: np.array
+            The returned templates (num_units, num_samples, num_channels)
+        """
+        if operator != "percentile":
+            key = operator
+        else:
+            assert percentile is not None, "You must provide percentile=..."
+            key = f"pencentile_{percentile}"
+
+        if key in self.data:
+            templates = self.data[key]
+        else:
+            if operator != "percentile":
+                self._compute_and_append([operator])
+                self.params["operators"] += [operator]
+            else:
+                self._compute_and_append([(operator, percentile)])
+                self.params["operators"] += [(operator, percentile)]
+            templates = self.data[key]
+
+        if save:
+            self.save()
+
+        if unit_ids is not None:
+            unit_indices = self.sorting_result.sorting.ids_to_indices(unit_ids)
+            templates = templates[unit_indices, :, :]
+
+        return np.array(templates)
 
 
 

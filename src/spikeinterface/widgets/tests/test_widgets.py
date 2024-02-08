@@ -87,14 +87,14 @@ class TestWidgets(unittest.TestCase):
         extensions_to_compute = dict(
             waveforms=dict(),
             templates=dict(),
-            noise_levels=dict(),
-            spike_amplitudes=dict(),
-            unit_locations=dict(),
-            spike_locations=dict(),
-            quality_metrics=dict(metric_names = ["snr", "isi_violation", "num_spikes"]),
-            template_metrics=dict(),
-            correlograms=dict(),
-            template_similarity=dict(),
+            # noise_levels=dict(),
+            # spike_amplitudes=dict(),
+            # unit_locations=dict(),
+            # spike_locations=dict(),
+            # quality_metrics=dict(metric_names = ["snr", "isi_violation", "num_spikes"]),
+            # template_metrics=dict(),
+            # correlograms=dict(),
+            # template_similarity=dict(),
         )
         job_kwargs = dict(n_jobs=-1)
 
@@ -117,7 +117,9 @@ class TestWidgets(unittest.TestCase):
         cls.sorting_result_sparse.compute(extensions_to_compute, **job_kwargs)
 
 
-        cls.skip_backends = ["ipywidgets", "ephyviewer"]
+        # cls.skip_backends = ["ipywidgets", "ephyviewer"]
+        # TODO : delete this after debug
+        cls.skip_backends = ["ipywidgets", "ephyviewer", "sortingview"]
 
         if ON_GITHUB and not KACHERY_CLOUD_SET:
             cls.skip_backends.append("sortingview")
@@ -126,11 +128,11 @@ class TestWidgets(unittest.TestCase):
 
         cls.backend_kwargs = {"matplotlib": {}, "sortingview": {}, "ipywidgets": {"display": False}}
 
-        cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
+        # cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
-        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+        # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive")
+        # cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", **job_kwargs)
 
     @classmethod
     def tearDownClass(cls):
@@ -582,11 +584,10 @@ if __name__ == "__main__":
 
     # mytest.test_plot_unit_waveforms_density_map()
     # mytest.test_plot_unit_summary()
-    mytest.test_plot_all_amplitudes_distributions()
+    # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_traces()
     # mytest.test_plot_unit_waveforms()
-    # mytest.test_plot_unit_templates()
-    # mytest.test_plot_unit_waveforms()
+    mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
@@ -603,7 +604,8 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_unit_presence()
     # mytest.test_plot_multicomparison()
+    plt.show()
 
     TestWidgets.tearDownClass()
 
-    plt.show()
+    
