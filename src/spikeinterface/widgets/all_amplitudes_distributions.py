@@ -6,7 +6,7 @@ from warnings import warn
 from .base import BaseWidget, to_attr
 from .utils import get_some_colors
 
-from ..core.waveform_extractor import WaveformExtractor
+from ..core import SortingResult
 
 
 class AllAmplitudesDistributionsWidget(BaseWidget):
@@ -15,8 +15,8 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The input waveform extractor
+    sorting_result: SortingResult
+        The SortingResult
     unit_ids: list
         List of unit ids, default None
     unit_colors: None or dict
@@ -24,20 +24,20 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
     """
 
     def __init__(
-        self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
+        self, sorting_result: SortingResult, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
     ):
-        we = waveform_extractor
 
-        self.check_extensions(we, "spike_amplitudes")
-        amplitudes = we.load_extension("spike_amplitudes").get_data(outputs="by_unit")
+        self.check_extensions(sorting_result, "spike_amplitudes")
+        
+        amplitudes = sorting_result.get_extension("spike_amplitudes").get_data()
 
-        num_segments = we.get_num_segments()
+        num_segments = sorting_result.get_num_segments()
 
         if unit_ids is None:
-            unit_ids = we.unit_ids
+            unit_ids = sorting_result.unit_ids
 
         if unit_colors is None:
-            unit_colors = get_some_colors(we.unit_ids)
+            unit_colors = get_some_colors(sorting_result.unit_ids)
 
         plot_data = dict(
             unit_ids=unit_ids,

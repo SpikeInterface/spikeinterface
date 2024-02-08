@@ -118,8 +118,7 @@ class ComputeSpikeAmplitudes(ResultExtension):
         )
         self.data["amplitudes"] = amps
 
-
-    def _get_data(self, outputs="concatenated"):
+    def _get_data(self):
         return self.data["amplitudes"]
 
 register_result_extension(ComputeSpikeAmplitudes)

@@ -309,11 +309,18 @@ class MockWaveformExtractor:
 
 
 
-def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None, output="SortingResult", ):
+def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None, output="MockWaveformExtractor", ):
     """
     This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingResult or MockWaveformExtractor.
 
     It also mimic the old load_waveforms by opening a Sortingresult folder and return a MockWaveformExtractor.
+    This later behavior is usefull to no break old code like this in versio >=0.101
+    
+    >>> # In this example we is a MockWaveformExtractor that behave the same as before
+    >>> we = extract_waveforms(..., folder="/my_we")
+    >>> we = load_waveforms("/my_we")
+    >>> templates = we.get_all_templates()
+
 
     """
 

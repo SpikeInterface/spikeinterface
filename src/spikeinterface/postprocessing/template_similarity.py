@@ -22,7 +22,7 @@ class ComputeTemplateSimilarity(ResultExtension):
         The similarity matrix
     """
 
-    extension_name = "similarity"
+    extension_name = "template_similarity"
     depend_on = ["fast_templates|templates", ]
     need_recording = True
     use_nodepipeline = False
