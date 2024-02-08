@@ -356,8 +356,8 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
         comp = TemplateComparison(
             self.object_list[i],
             self.object_list[j],
-            we1_name=self.name_list[i],
-            we2_name=self.name_list[j],
+            name1=self.name_list[i],
+            name2=self.name_list[j],
             match_score=self.match_score,
             verbose=False,
         )
