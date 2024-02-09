@@ -1,5 +1,8 @@
 """Cluster quality metrics computed from principal components."""
 
+from __future__ import annotations
+
+
 from copy import deepcopy
 
 import numpy as np

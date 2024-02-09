@@ -7,6 +7,9 @@ Some of then come from or the old implementation:
 Implementations here have been refactored to support the multi-segment API of spikeinterface.
 """
 
+from __future__ import annotations
+
+
 from collections import namedtuple
 
 import math

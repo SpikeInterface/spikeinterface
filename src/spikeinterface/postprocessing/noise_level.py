@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from spikeinterface.core.waveform_extractor import BaseWaveformExtractorExtension, WaveformExtractor
 from spikeinterface.core import get_noise_levels
 

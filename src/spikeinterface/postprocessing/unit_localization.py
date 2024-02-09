@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
@@ -17,7 +19,7 @@ from ..core.template_tools import get_template_extremum_channel
 
 dtype_localize_by_method = {
     "center_of_mass": [("x", "float64"), ("y", "float64")],
-    "grid_convolution": [("x", "float64"), ("y", "float64")],
+    "grid_convolution": [("x", "float64"), ("y", "float64"), ("z", "float64")],
     "peak_channel": [("x", "float64"), ("y", "float64")],
     "monopolar_triangulation": [("x", "float64"), ("y", "float64"), ("z", "float64"), ("alpha", "float64")],
 }
@@ -367,18 +369,16 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
     return unit_location
 
 
-@np.errstate(divide="ignore", invalid="ignore")
 def compute_grid_convolution(
     waveform_extractor,
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    sigma_um=np.linspace(5.0, 25.0, 5),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
-    percentile=10,
-    sparsity_threshold=0.01,
+    percentile=5,
+    weight_method={},
 ):
     """
     Estimate the positions of the templates from a large grid of fake templates
@@ -393,19 +393,19 @@ def compute_grid_convolution(
         Radius to consider for the fake templates
     upsampling_um: float, default: 5
         Upsampling resolution for the grid of templates
-    sigma_um: np.array, default: np.linspace(5.0, 25.0, 5)
-        Spatial decays of the fake templates
     sigma_ms: float, default: 0.25
         The temporal decay of the fake templates
     margin_um: float, default: 50
         The margin for the grid of fake templates
     prototype: np.array or None, default: None
         Fake waveforms for the templates. If None, generated as Gaussian
-    percentile: float, default: 10
+    percentile: float, default: 5
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
-    sparsity_threshold: float, default: 0.01
-        The sparsity threshold (in 0-1) below which weights should be considered as 0.
+    weight_method: dict
+        Parameter that should be provided to the get_convolution_weights() function
+        in order to know how to estimate the positions. One argument is mode that could
+        be either gaussian_2d (KS like) or exponential_3d (default)
     Returns
     -------
     unit_location: np.array
@@ -418,55 +418,63 @@ def compute_grid_convolution(
     fs = waveform_extractor.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
-    assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
         prototype = np.exp(-(time_axis**2) / (2 * (sigma_ms**2)))
+        if peak_sign == "neg":
+            prototype *= -1
 
     prototype = prototype[:, np.newaxis]
 
-    template_positions, weights, nearest_template_mask = get_grid_convolution_templates_and_weights(
-        contact_locations, radius_um, upsampling_um, sigma_um, margin_um
+    template_positions, weights, nearest_template_mask, z_factors = get_grid_convolution_templates_and_weights(
+        contact_locations, radius_um, upsampling_um, margin_um, weight_method
     )
 
+    # print(template_positions.shape)
     templates = waveform_extractor.get_all_templates(mode="average")
 
     peak_channels = get_template_extremum_channel(waveform_extractor, peak_sign, outputs="index")
     unit_ids = waveform_extractor.sorting.unit_ids
 
-    weights_sparsity_mask = weights > sparsity_threshold
+    weights_sparsity_mask = weights > 0
 
-    unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
+    nb_weights = weights.shape[0]
+    unit_location = np.zeros((unit_ids.size, 3), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]
         wf = templates[i, :, :]
-        amplitude = wf[nbefore, main_chan]
-        nearest_templates = nearest_template_mask[main_chan, :]
+        nearest_mask = nearest_template_mask[main_chan, :]
+        channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_mask], axis=(0, 2)) > 0
+        num_templates = np.sum(nearest_mask)
+        sub_w = weights[:, channel_mask, :][:, :, nearest_mask]
+        global_products = (wf[:, channel_mask] * prototype).sum(axis=0)
 
-        channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
-        num_templates = np.sum(nearest_templates)
-        global_products = ((wf[:, channel_mask] / amplitude) * prototype).sum(axis=0)
+        dot_products = np.zeros((nb_weights, num_templates), dtype=np.float32)
+        for count in range(nb_weights):
+            dot_products[count] = np.dot(global_products, sub_w[count])
 
-        dot_products = np.zeros((weights.shape[0], num_templates), dtype=np.float32)
-        for count in range(weights.shape[0]):
-            w = weights[count, :, :][channel_mask, :][:, nearest_templates]
-            # w = w / np.sum(w, axis=0)[np.newaxis, None]
-            # w[np.isnan(w)] = 0.
-            dot_products[count, :] = np.dot(global_products, w)
+        mask = dot_products < 0
+        if percentile > 0:
+            dot_products[mask] = np.nan
+            ## We need to catch warnings because some line can have only NaN, and
+            ## if so the nanpercentile function throws a warning
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                thresholds = np.nanpercentile(dot_products, percentile)
+            thresholds = np.nan_to_num(thresholds)
+            dot_products[dot_products < thresholds] = 0
+        dot_products[mask] = 0
 
-        dot_products = np.maximum(0, dot_products)
-        if percentile < 100:
-            thresholds = np.percentile(dot_products, percentile, axis=0)
-            dot_products[dot_products < thresholds[np.newaxis, :]] = 0
+        nearest_templates = template_positions[nearest_mask]
+        for count in range(nb_weights):
+            unit_location[i, :2] += np.dot(dot_products[count], nearest_templates)
 
-        found_positions = np.zeros(2, dtype=np.float32)
-        scalar_products = np.zeros(num_templates, dtype=np.float32)
-        for count in range(weights.shape[0]):
-            scalar_products += dot_products[count]
-            found_positions += np.dot(dot_products[count], template_positions[nearest_templates])
-
-        unit_location[i, :] = found_positions / scalar_products.sum()
+        scalar_products = dot_products.sum(1)
+        unit_location[i, 2] = np.dot(z_factors, scalar_products)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            unit_location[i] /= scalar_products.sum()
+    unit_location = np.nan_to_num(unit_location)
 
     return unit_location
 
@@ -568,8 +576,38 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 
 def get_grid_convolution_templates_and_weights(
-    contact_locations, radius_um=50, upsampling_um=5, sigma_um=np.linspace(10, 50.0, 5), margin_um=50
+    contact_locations, radius_um=40, upsampling_um=5, margin_um=50, weight_method={"mode": "exponential_3d"}
 ):
+    """Get a upsampled grid of artificial templates given a particular probe layout
+
+    Parameters
+    ----------
+    contact_locations: array
+        The positions of the channels
+    radius_um: float
+        Radius in um for channel sparsity.
+    upsampling_um: float
+        Upsampling resolution for the grid of templates
+    margin_um: float
+        The margin for the grid of fake templates
+    weight_method: dict
+        Parameter that should be provided to the get_convolution_weights() function
+        in order to know how to estimate the positions. One argument is mode that could
+        be either gaussian_2d (KS like) or exponential_3d (default)
+
+    Returns
+    -------
+    template_positions: array
+        The positions of the upsampled templates
+    weights:
+        The weights of the templates, on a per channel basis
+    nearest_template_mask: array
+        A sparsity mask to to know which template is close to the contact locations, given
+        the radius_um parameter
+    z_factors: array
+        The z_factors that have been used to generate the weights along the third dimension
+    """
+
     import sklearn.metrics
 
     x_min, x_max = contact_locations[:, 0].min(), contact_locations[:, 0].max()
@@ -598,18 +636,85 @@ def get_grid_convolution_templates_and_weights(
     # mask to get nearest template given a channel
     dist = sklearn.metrics.pairwise_distances(contact_locations, template_positions)
     nearest_template_mask = dist <= radius_um
+    weights, z_factors = get_convolution_weights(dist, **weight_method)
 
-    weights = np.zeros((len(sigma_um), len(contact_locations), nb_templates), dtype=np.float32)
-    for count, sigma in enumerate(sigma_um):
-        weights[count] = np.exp(-(dist**2) / (2 * (sigma**2)))
+    return template_positions, weights, nearest_template_mask, z_factors
 
-    # normalize
+
+def get_convolution_weights(
+    distances,
+    z_list_um=np.linspace(0, 120.0, 5),
+    sigma_list_um=np.linspace(5, 25, 5),
+    sparsity_threshold=None,
+    sigma_3d=2.5,
+    mode="exponential_3d",
+):
+    """Get normalized weights for creating artificial templates, given some precomputed distances
+
+    Parameters
+    ----------
+    distances: 2D array
+        The distances between the source channels (real ones) and the upsampled one (virual ones)
+    sparsity_threshold: float, default None
+        The sparsity_threshold below which weights are set to 0 (speeding up computations). If None,
+        then a default value of 0.5/sqrt(distances.shape[0]) is set
+    mode: exponential_3d | gaussian_2d
+        The inference scheme to be used to get the convolution weights
+        Keyword arguments for the chosen method:
+            "gaussian_2d" (similar to KiloSort):
+                * sigma_list_um: array, default np.linspace(5, 25, 5)
+                    The list of sigma to consider for decaying exponentials
+            "exponential_3d" (default):
+                * z_list_um: array, default np.linspace(0, 120.0, 5)
+                    The list of z to consider for putative depth of the sources
+                * sigma_3d: float, default 2.5
+                    The scaling factor controling the decay of the exponential
+
+    Returns
+    -------
+    weights:
+        The weights of the templates, on a per channel basis
+    z_factors: array
+        The z_factors that have been used to generate the weights along the third dimension
+    """
+
+    if sparsity_threshold is not None:
+        assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
+
+    if mode == "exponential_3d":
+        weights = np.zeros((len(z_list_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
+        for count, z in enumerate(z_list_um):
+            dist_3d = np.sqrt(distances**2 + z**2)
+            weights[count] = np.exp(-dist_3d / sigma_3d)
+        z_factors = z_list_um
+    elif mode == "gaussian_2d":
+        weights = np.zeros((len(sigma_list_um), distances.shape[0], distances.shape[1]), dtype=np.float32)
+        for count, sigma in enumerate(sigma_list_um):
+            alpha = 2 * (sigma**2)
+            weights[count] = np.exp(-(distances**2) / alpha)
+        z_factors = sigma_list_um
+
+    # normalize to get normalized values in [0, 1]
     with np.errstate(divide="ignore", invalid="ignore"):
-        norm = np.sqrt(np.sum(weights**2, axis=1))[:, np.newaxis, :]
+        norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
         weights /= norm
-        weights[np.isnan(weights)] = 0.0
 
-    return template_positions, weights, nearest_template_mask
+    weights[~np.isfinite(weights)] = 0.0
+
+    # If sparsity is None or non zero, we are pruning weights that are below the
+    # sparsification factor. This will speed up furter computations
+    if sparsity_threshold is None:
+        sparsity_threshold = 0.5 / np.sqrt(distances.shape[0])
+    weights[weights < sparsity_threshold] = 0
+
+    # re normalize to ensure we have unitary norms
+    with np.errstate(divide="ignore", invalid="ignore"):
+        norm = np.linalg.norm(weights, axis=1)[:, np.newaxis, :]
+        weights /= norm
+
+    weights[~np.isfinite(weights)] = 0.0
+
+    return weights, z_factors
 
 
 if HAVE_NUMBA:

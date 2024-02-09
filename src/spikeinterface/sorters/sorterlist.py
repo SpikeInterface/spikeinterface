@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .external.combinato import CombinatoSorter
 from .external.hdsort import HDSortSorter
 from .external.herdingspikes import HerdingspikesSorter
