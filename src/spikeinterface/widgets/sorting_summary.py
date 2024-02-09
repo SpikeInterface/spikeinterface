@@ -11,7 +11,7 @@ from .unit_locations import UnitLocationsWidget
 from .unit_templates import UnitTemplatesWidget
 
 
-from ..core import WaveformExtractor
+from ..core import SortingResult
 
 
 class SortingSummaryWidget(BaseWidget):
@@ -20,13 +20,13 @@ class SortingSummaryWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object
+    sorting_result : SortingResult
+        The SortingResult object
     unit_ids : list or None, default: None
         List of unit ids
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply
-        If WaveformExtractor is already sparse, the argument is ignored
+        If SortingResult is already sparse, the argument is ignored
     max_amplitudes_per_unit : int or None, default: None
         Maximum number of spikes per unit for plotting amplitudes.
         If None, all spikes are plotted
@@ -47,7 +47,7 @@ class SortingSummaryWidget(BaseWidget):
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_result: SortingResult,
         unit_ids=None,
         sparsity=None,
         max_amplitudes_per_unit=None,
@@ -58,15 +58,14 @@ class SortingSummaryWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, ["correlograms", "spike_amplitudes", "unit_locations", "similarity"])
-        we = waveform_extractor
-        sorting = we.sorting
+        self.check_extensions(sorting_result, ["correlograms", "spike_amplitudes", "unit_locations", "similarity"])
+        sorting = sorting_result.sorting
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
 
         plot_data = dict(
-            waveform_extractor=waveform_extractor,
+            sorting_result=sorting_result,
             unit_ids=unit_ids,
             sparsity=sparsity,
             min_similarity_for_correlograms=min_similarity_for_correlograms,
@@ -83,7 +82,7 @@ class SortingSummaryWidget(BaseWidget):
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
         dp = to_attr(data_plot)
-        we = dp.waveform_extractor
+        sorting_result = dp.sorting_result
         unit_ids = dp.unit_ids
         sparsity = dp.sparsity
         min_similarity_for_correlograms = dp.min_similarity_for_correlograms
@@ -91,7 +90,7 @@ class SortingSummaryWidget(BaseWidget):
         unit_ids = make_serializable(dp.unit_ids)
 
         v_spike_amplitudes = AmplitudesWidget(
-            we,
+            sorting_result,
             unit_ids=unit_ids,
             max_spikes_per_unit=dp.max_amplitudes_per_unit,
             hide_unit_selector=True,
@@ -100,7 +99,7 @@ class SortingSummaryWidget(BaseWidget):
             backend="sortingview",
         ).view
         v_average_waveforms = UnitTemplatesWidget(
-            we,
+            sorting_result,
             unit_ids=unit_ids,
             sparsity=sparsity,
             hide_unit_selector=True,
@@ -109,7 +108,7 @@ class SortingSummaryWidget(BaseWidget):
             backend="sortingview",
         ).view
         v_cross_correlograms = CrossCorrelogramsWidget(
-            we,
+            sorting_result,
             unit_ids=unit_ids,
             min_similarity_for_correlograms=min_similarity_for_correlograms,
             hide_unit_selector=True,
@@ -119,11 +118,11 @@ class SortingSummaryWidget(BaseWidget):
         ).view
 
         v_unit_locations = UnitLocationsWidget(
-            we, unit_ids=unit_ids, hide_unit_selector=True, generate_url=False, display=False, backend="sortingview"
+            sorting_result, unit_ids=unit_ids, hide_unit_selector=True, generate_url=False, display=False, backend="sortingview"
         ).view
 
         w = TemplateSimilarityWidget(
-            we, unit_ids=unit_ids, immediate_plot=False, generate_url=False, display=False, backend="sortingview"
+            sorting_result, unit_ids=unit_ids, immediate_plot=False, generate_url=False, display=False, backend="sortingview"
         )
         similarity = w.data_plot["similarity"]
 
@@ -137,7 +136,7 @@ class SortingSummaryWidget(BaseWidget):
 
         # unit ids
         v_units_table = generate_unit_table_view(
-            dp.waveform_extractor.sorting, dp.unit_table_properties, similarity_scores=similarity_scores
+            dp.sorting_result.sorting, dp.unit_table_properties, similarity_scores=similarity_scores
         )
 
         if dp.curation:

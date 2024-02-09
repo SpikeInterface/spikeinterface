@@ -93,7 +93,8 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             all_hist2d = {}
 
         wf_ext = sorting_result.get_extension("waveforms")
-        for unit_index, unit_id in enumerate(unit_ids):
+        for i, unit_id in enumerate(unit_ids):
+            unit_index = sorting_result.sorting.id_to_index(unit_id)
             chan_inds = channel_inds[unit_id]
 
             # this have already the sparsity
@@ -102,7 +103,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             wfs = wf_ext.get_waveforms_one_unit(unit_id, force_dense=False)
             if sparsity is not None:
                 # external sparsity
-                wfs = wfs[:, sparsity.mask[:, unit_index]]
+                wfs = wfs[:, :, sparsity.mask[unit_index, :]]
 
             if use_max_channel:
                 chan_ind = max_channels[unit_id]
@@ -142,7 +143,8 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
         # plot median
         templates_flat = {}
-        for unit_index, unit_id in enumerate(unit_ids):
+        for i, unit_id in enumerate(unit_ids):
+            unit_index = sorting_result.sorting.id_to_index(unit_id)
             chan_inds = channel_inds[unit_id]
             template = templates[unit_index, :, chan_inds]
             template_flat = template.flatten()

@@ -6,6 +6,7 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
+from spikeinterface.core.sorting_tools import spike_vector_to_indices
 
 from spikeinterface.core.node_pipeline import SpikeRetriever, run_node_pipeline
 
@@ -122,8 +123,23 @@ class ComputeSpikeLocations(ResultExtension):
         )
         self.data["spike_locations"] = spike_locations
 
-    def _get_data(self, outputs="concatenated"):
-        return self.data["spike_locations"]
+    def _get_data(self, outputs="numpy"):
+        all_spike_locations = self.data["spike_locations"]
+        if outputs == "numpy":
+            return all_spike_locations
+        elif outputs == "by_unit":
+            unit_ids = self.sorting_result.unit_ids
+            spike_vector = self.sorting_result.sorting.to_spike_vector(concatenated=False)
+            spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
+            spike_locations_by_units = {}
+            for segment_index in range(self.sorting_result.sorting.get_num_segments()):
+                spike_locations_by_units[segment_index] = {}
+                for unit_id in unit_ids:
+                    inds = spike_indices[segment_index][unit_id]
+                    spike_locations_by_units[segment_index][unit_id] = all_spike_locations[inds]
+            return spike_locations_by_units
+        else:
+            raise ValueError(f"Wrong .get_data(outputs={outputs})")
 
 
 ComputeSpikeLocations.__doc__.format(_shared_job_kwargs_doc)

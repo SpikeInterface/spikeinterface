@@ -2,7 +2,6 @@ import unittest
 import pytest
 import os
 from pathlib import Path
-import shutil
 
 if __name__ != "__main__":
     import matplotlib
@@ -16,22 +15,12 @@ from spikeinterface import (
     compute_sparsity,
     generate_ground_truth_recording,
     start_sorting_result,
-    load_sorting_result,
 )
 
-import spikeinterface.extractors as se
+
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
 from spikeinterface.preprocessing import scale
-from spikeinterface.postprocessing import (
-    compute_correlograms,
-    compute_spike_amplitudes,
-    compute_spike_locations,
-    compute_unit_locations,
-    compute_template_metrics,
-    compute_template_similarity,
-)
-from spikeinterface.qualitymetrics import compute_quality_metrics
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -45,20 +34,9 @@ KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.geten
 
 
 class TestWidgets(unittest.TestCase):
-    # @classmethod
-    # def _delete_widget_folders(cls):
-    #     for name in (
-    #         "recording",
-    #         "sorting",
-    #         "we_dense",
-    #         "we_sparse",
-    #     ):
-    #         if (cache_folder / name).is_dir():
-    #             shutil.rmtree(cache_folder / name)
 
     @classmethod
     def setUpClass(cls):
-        # cls._delete_widget_folders()
 
         recording, sorting = generate_ground_truth_recording(
             durations=[30.0],
@@ -89,12 +67,12 @@ class TestWidgets(unittest.TestCase):
             templates=dict(),
             noise_levels=dict(),
             spike_amplitudes=dict(),
-            # unit_locations=dict(),
-            # spike_locations=dict(),
-            # quality_metrics=dict(metric_names = ["snr", "isi_violation", "num_spikes"]),
-            # template_metrics=dict(),
-            # correlograms=dict(),
-            # template_similarity=dict(),
+            unit_locations=dict(),
+            spike_locations=dict(),
+            quality_metrics=dict(metric_names = ["snr", "isi_violation", "num_spikes"]),
+            template_metrics=dict(),
+            correlograms=dict(),
+            template_similarity=dict(),
         )
         job_kwargs = dict(n_jobs=-1)
 
@@ -130,13 +108,9 @@ class TestWidgets(unittest.TestCase):
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
-        # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-        # cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", **job_kwargs)
-
-    # @classmethod
-    # def tearDownClass(cls):
-    #     del cls.recording, cls.sorting, cls.peaks, cls.gt_comp, cls.sorting_result_sparse, cls.sorting_result_dense
+        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", **job_kwargs)
 
     def test_plot_traces(self):
         possible_backends = list(sw.TracesWidget.get_possible_backends())
@@ -174,6 +148,14 @@ class TestWidgets(unittest.TestCase):
                         backend=backend,
                         **self.backend_kwargs[backend],
                     )
+
+    def test_plot_spikes_on_traces(self):
+        possible_backends = list(sw.SpikesOnTracesWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_spikes_on_traces(self.sorting_result_dense, backend=backend, **self.backend_kwargs[backend])
+
+
 
     def test_plot_unit_waveforms(self):
         possible_backends = list(sw.UnitWaveformsWidget.get_possible_backends())
@@ -318,18 +300,18 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 unit_ids = self.sorting.unit_ids[:2]
+                
+                # on dense
                 sw.plot_unit_waveforms_density_map(
-                    self.sorting_result_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_result_dense,
+                    unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
+                # on sparse
                 sw.plot_unit_waveforms_density_map(
-                    self.sorting_result_sparse, unit_ids=unit_ids, backend=backend, same_axis=True, **self.backend_kwargs[backend]
+                    self.sorting_result_sparse, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
 
-    def test_plot_unit_waveforms_density_map_sparsity_radius(self):
-        possible_backends = list(sw.UnitWaveformDensityMapWidget.get_possible_backends())
-        for backend in possible_backends:
-            if backend not in self.skip_backends:
-                unit_ids = self.sorting.unit_ids[:2]
+                # externals parsity
                 sw.plot_unit_waveforms_density_map(
                     self.sorting_result_dense,
                     sparsity=self.sparsity_radius,
@@ -339,11 +321,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-    def test_plot_unit_waveforms_density_map_sparsity_None_same_axis(self):
-        possible_backends = list(sw.UnitWaveformDensityMapWidget.get_possible_backends())
-        for backend in possible_backends:
-            if backend not in self.skip_backends:
-                unit_ids = self.sorting.unit_ids[:2]
+                # on sparse with same_axis
                 sw.plot_unit_waveforms_density_map(
                     self.sorting_result_sparse,
                     sparsity=None,
@@ -576,6 +554,8 @@ class TestWidgets(unittest.TestCase):
             if backend == "matplotlib":
                 _, axes = plt.subplots(len(mcmp.object_list), 1)
                 sw.plot_multicomparison_agreement_by_sorter(mcmp, axes=axes)
+    
+    
 
 
 if __name__ == "__main__":
@@ -584,29 +564,32 @@ if __name__ == "__main__":
     TestWidgets.setUpClass()
     mytest = TestWidgets()
 
-    # mytest.test_plot_unit_waveforms_density_map()
+    mytest.test_plot_unit_waveforms_density_map()
     # mytest.test_plot_unit_summary()
     # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_traces()
+    # mytest.test_plot_spikes_on_traces()
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
-    # mytest.test_plot_unit_summary()
     # mytest.test_plot_autocorrelograms()
     # mytest.test_plot_crosscorrelograms()
     # mytest.test_plot_isi_distribution()
     # mytest.test_plot_unit_locations()
+    # mytest.test_plot_spike_locations()
+    # mytest.test_plot_similarity()
     # mytest.test_plot_quality_metrics()
     # mytest.test_plot_template_metrics()
-    mytest.test_plot_amplitudes()
+    # mytest.test_plot_amplitudes()
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
     # mytest.test_plot_rasters()
     # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_unit_presence()
-    # mytest.test_plot_peak_activity()
+    # mytest.test_plot_peak_activity()
     # mytest.test_plot_multicomparison()
+    # mytest.test_plot_sorting_summary()
     plt.show()
 
     # TestWidgets.tearDownClass()
