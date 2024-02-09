@@ -53,8 +53,7 @@ class AmplitudesWidget(BaseWidget):
         sorting = sorting_result.sorting
         self.check_extensions(sorting_result, "spike_amplitudes")
 
-        # TODO 
-        amplitudes = sorting_result.load_extension("spike_amplitudes").get_data(outputs="by_unit")
+        amplitudes = sorting_result.get_extension("spike_amplitudes").get_data(outputs="by_unit")
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids

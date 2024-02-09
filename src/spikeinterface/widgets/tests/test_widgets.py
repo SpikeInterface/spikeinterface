@@ -89,12 +89,12 @@ class TestWidgets(unittest.TestCase):
             templates=dict(),
             noise_levels=dict(),
             spike_amplitudes=dict(),
-            unit_locations=dict(),
-            spike_locations=dict(),
-            quality_metrics=dict(metric_names = ["snr", "isi_violation", "num_spikes"]),
-            template_metrics=dict(),
-            correlograms=dict(),
-            template_similarity=dict(),
+            # unit_locations=dict(),
+            # spike_locations=dict(),
+            # quality_metrics=dict(metric_names = ["snr", "isi_violation", "num_spikes"]),
+            # template_metrics=dict(),
+            # correlograms=dict(),
+            # template_similarity=dict(),
         )
         job_kwargs = dict(n_jobs=-1)
 
@@ -130,9 +130,9 @@ class TestWidgets(unittest.TestCase):
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
-        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+        # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", **job_kwargs)
+        # cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", **job_kwargs)
 
     # @classmethod
     # def tearDownClass(cls):
@@ -586,7 +586,7 @@ if __name__ == "__main__":
 
     # mytest.test_plot_unit_waveforms_density_map()
     # mytest.test_plot_unit_summary()
-    # mytest.test_plot_all_amplitudes_distributions()   ## TODO vector amplitudes
+    # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_traces()
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
@@ -598,7 +598,7 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_locations()
     # mytest.test_plot_quality_metrics()
     # mytest.test_plot_template_metrics()
-    # mytest.test_plot_amplitudes()  ## TODO vector amplitudes
+    mytest.test_plot_amplitudes()
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
@@ -606,7 +606,7 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_unit_presence()
     # mytest.test_plot_peak_activity()
-    mytest.test_plot_multicomparison()
+    # mytest.test_plot_multicomparison()
     plt.show()
 
     # TestWidgets.tearDownClass()

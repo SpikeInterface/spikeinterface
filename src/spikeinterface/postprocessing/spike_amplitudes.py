@@ -9,6 +9,7 @@ from spikeinterface.core.template_tools import get_template_extremum_channel, ge
 
 from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
+from spikeinterface.core.sorting_tools import spike_vector_to_indices
 
 class ComputeSpikeAmplitudes(ResultExtension):
     """
@@ -118,8 +119,23 @@ class ComputeSpikeAmplitudes(ResultExtension):
         )
         self.data["amplitudes"] = amps
 
-    def _get_data(self):
-        return self.data["amplitudes"]
+    def _get_data(self, outputs="numpy"):
+        all_amplitudes =  self.data["amplitudes"]
+        if outputs == "numpy":
+            return all_amplitudes
+        elif outputs == "by_unit":
+            unit_ids = self.sorting_result.unit_ids
+            spike_vector = self.sorting_result.sorting.to_spike_vector(concatenated=False)
+            spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
+            amplitudes_by_units = {}
+            for segment_index in range(self.sorting_result.sorting.get_num_segments()):
+                amplitudes_by_units[segment_index] = {}
+                for unit_id in unit_ids:
+                    inds = spike_indices[segment_index][unit_id]
+                    amplitudes_by_units[segment_index][unit_id] = all_amplitudes[inds]
+            return amplitudes_by_units
+        else:
+            raise ValueError(f"Wrong .get_data(outputs={outputs})")
 
 register_result_extension(ComputeSpikeAmplitudes)
 

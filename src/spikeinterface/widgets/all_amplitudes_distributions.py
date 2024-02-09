@@ -39,11 +39,19 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_some_colors(sorting_result.unit_ids)
 
+        amplitudes_by_units = {}
+        spikes = sorting_result.sorting.to_spike_vector()
+        for unit_id in unit_ids:
+            unit_index = sorting_result.sorting.id_to_index(unit_id)
+            spike_mask = spikes["unit_index"] == unit_index
+            amplitudes_by_units[unit_id] = amplitudes[spike_mask]
+
+
         plot_data = dict(
             unit_ids=unit_ids,
             unit_colors=unit_colors,
             num_segments=num_segments,
-            amplitudes=amplitudes,
+            amplitudes_by_units=amplitudes_by_units,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -58,14 +66,7 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
 
         ax = self.ax
 
-        unit_amps = []
-        for i, unit_id in enumerate(dp.unit_ids):
-            amps = []
-            for segment_index in range(dp.num_segments):
-                amps.append(dp.amplitudes[segment_index][unit_id])
-            amps = np.concatenate(amps)
-            unit_amps.append(amps)
-        parts = ax.violinplot(unit_amps, showmeans=False, showmedians=False, showextrema=False)
+        parts = ax.violinplot(list(dp.amplitudes_by_units.values()), showmeans=False, showmedians=False, showextrema=False)
 
         for i, pc in enumerate(parts["bodies"]):
             color = dp.unit_colors[dp.unit_ids[i]]
