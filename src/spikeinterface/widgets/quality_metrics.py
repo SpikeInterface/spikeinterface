@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .metrics import MetricsBaseWidget
-from ..core.waveform_extractor import WaveformExtractor
+from ..core.sortingresult import SortingResult
 
 
 class QualityMetricsWidget(MetricsBaseWidget):
@@ -10,8 +10,8 @@ class QualityMetricsWidget(MetricsBaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The object to compute/get quality metrics from
+    sorting_result : SortingResult
+        The object to get quality metrics from
     unit_ids: list or None, default: None
         List of unit ids
     include_metrics: list or None, default: None
@@ -26,7 +26,7 @@ class QualityMetricsWidget(MetricsBaseWidget):
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_result: SortingResult,
         unit_ids=None,
         include_metrics=None,
         skip_metrics=None,
@@ -35,11 +35,10 @@ class QualityMetricsWidget(MetricsBaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, "quality_metrics")
-        qlc = waveform_extractor.load_extension("quality_metrics")
-        quality_metrics = qlc.get_data()
+        self.check_extensions(sorting_result, "quality_metrics")
+        quality_metrics = sorting_result.get_extension("quality_metrics").get_data()
 
-        sorting = waveform_extractor.sorting
+        sorting = sorting_result.sorting
 
         MetricsBaseWidget.__init__(
             self,

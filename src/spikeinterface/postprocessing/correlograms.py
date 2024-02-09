@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 import warnings
 import numpy as np
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
+from spikeinterface.core.sortingresult import register_result_extension, ResultExtension, SortingResult
 
 try:
     import numba
@@ -68,7 +68,7 @@ class ComputeCorrelograms(ResultExtension):
         return new_data
 
     def _run(self):
-        ccgs, bins = _compute_correlograms(self.sorting_result.sorting, **self.params)
+        ccgs, bins = compute_correlograms_on_sorting(self.sorting_result.sorting, **self.params)
         self.data["ccgs"] = ccgs
         self.data["bins"] = bins
 
@@ -77,7 +77,22 @@ class ComputeCorrelograms(ResultExtension):
 
 
 register_result_extension(ComputeCorrelograms)
-compute_correlograms = ComputeCorrelograms.function_factory()
+compute_correlograms_sorting_result = ComputeCorrelograms.function_factory()
+
+def compute_correlograms(
+    sorting_result_or_sorting,
+    window_ms: float = 50.0,
+    bin_ms: float = 1.0,
+    method: str = "auto",
+):
+    if isinstance(sorting_result_or_sorting, SortingResult):
+        return compute_correlograms_sorting_result(sorting_result_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
+    else:
+        return compute_correlograms_on_sorting(sorting_result_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
+
+compute_correlograms.__doc__ = compute_correlograms_sorting_result.__doc__
+
+
 
 
 def _make_bins(sorting, window_ms, bin_ms):
@@ -189,10 +204,10 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
 #         ccgs, bins = ccc.get_data()
 #         return ccgs, bins
 #     else:
-#         return _compute_correlograms(waveform_or_sorting_extractor, window_ms=window_ms, bin_ms=bin_ms, method=method)
+#         return compute_correlograms_on_sorting(waveform_or_sorting_extractor, window_ms=window_ms, bin_ms=bin_ms, method=method)
 
 
-def _compute_correlograms(sorting, window_ms, bin_ms, method="auto"):
+def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
     """

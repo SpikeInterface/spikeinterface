@@ -87,14 +87,14 @@ class TestWidgets(unittest.TestCase):
         extensions_to_compute = dict(
             waveforms=dict(),
             templates=dict(),
-            # noise_levels=dict(),
-            # spike_amplitudes=dict(),
-            # unit_locations=dict(),
-            # spike_locations=dict(),
-            # quality_metrics=dict(metric_names = ["snr", "isi_violation", "num_spikes"]),
-            # template_metrics=dict(),
-            # correlograms=dict(),
-            # template_similarity=dict(),
+            noise_levels=dict(),
+            spike_amplitudes=dict(),
+            unit_locations=dict(),
+            spike_locations=dict(),
+            quality_metrics=dict(metric_names = ["snr", "isi_violation", "num_spikes"]),
+            template_metrics=dict(),
+            correlograms=dict(),
+            template_similarity=dict(),
         )
         job_kwargs = dict(n_jobs=-1)
 
@@ -128,16 +128,15 @@ class TestWidgets(unittest.TestCase):
 
         cls.backend_kwargs = {"matplotlib": {}, "sortingview": {}, "ipywidgets": {"display": False}}
 
-        # cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
+        cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
-        # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-        # cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", **job_kwargs)
+        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", **job_kwargs)
 
-    @classmethod
-    def tearDownClass(cls):
-        del cls.recording, cls.sorting, cls.peaks, cls.gt_comp, cls.sorting_result_sparse, cls.sorting_result_dense
-        # cls._delete_widget_folders()
+    # @classmethod
+    # def tearDownClass(cls):
+    #     del cls.recording, cls.sorting, cls.peaks, cls.gt_comp, cls.sorting_result_sparse, cls.sorting_result_dense
 
     def test_plot_traces(self):
         possible_backends = list(sw.TracesWidget.get_possible_backends())
@@ -322,6 +321,9 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_unit_waveforms_density_map(
                     self.sorting_result_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
+                sw.plot_unit_waveforms_density_map(
+                    self.sorting_result_sparse, unit_ids=unit_ids, backend=backend, same_axis=True, **self.backend_kwargs[backend]
+                )
 
     def test_plot_unit_waveforms_density_map_sparsity_radius(self):
         possible_backends = list(sw.UnitWaveformDensityMapWidget.get_possible_backends())
@@ -365,7 +367,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-    def test_plot_crosscorrelogram(self):
+    def test_plot_crosscorrelograms(self):
         possible_backends = list(sw.CrossCorrelogramsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -584,28 +586,29 @@ if __name__ == "__main__":
 
     # mytest.test_plot_unit_waveforms_density_map()
     # mytest.test_plot_unit_summary()
-    # mytest.test_plot_all_amplitudes_distributions()
+    # mytest.test_plot_all_amplitudes_distributions()   ## TODO vector amplitudes
     # mytest.test_plot_traces()
     # mytest.test_plot_unit_waveforms()
-    mytest.test_plot_unit_templates()
+    # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
-    # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
-    # mytest.test_crosscorrelogram()
-    # mytest.test_isi_distribution()
-    # mytest.test_unit_locations()
-    # mytest.test_quality_metrics()
-    # mytest.test_template_metrics()
-    # mytest.test_amplitudes()
+    # mytest.test_plot_autocorrelograms()
+    # mytest.test_plot_crosscorrelograms()
+    # mytest.test_plot_isi_distribution()
+    # mytest.test_plot_unit_locations()
+    # mytest.test_plot_quality_metrics()
+    # mytest.test_plot_template_metrics()
+    # mytest.test_plot_amplitudes()  ## TODO vector amplitudes
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
-    # mytest.test_plot_rasters()
+    # mytest.test_plot_rasters()
     # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_unit_presence()
-    # mytest.test_plot_multicomparison()
+    # mytest.test_plot_peak_activity()
+    mytest.test_plot_multicomparison()
     plt.show()
 
-    TestWidgets.tearDownClass()
+    # TestWidgets.tearDownClass()
 
     

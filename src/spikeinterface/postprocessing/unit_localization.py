@@ -81,8 +81,13 @@ class ComputeUnitLocations(ResultExtension):
         self.data["unit_locations"] = unit_location
 
     def get_data(self, outputs="numpy"):
-        return self.data["unit_locations"]
-
+        if outputs == "numpy":
+            return self.data["unit_locations"]
+        elif outputs == "by_unit":
+            locations_by_unit = {}
+            for unit_ind, unit_id in enumerate(self.sorting_result.unit_ids):
+                locations_by_unit[unit_id] = self.data["unit_locations"][unit_ind]
+            return locations_by_unit
 
 register_result_extension(ComputeUnitLocations)
 compute_unit_locations = ComputeUnitLocations.function_factory()

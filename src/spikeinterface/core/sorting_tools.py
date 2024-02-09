@@ -57,7 +57,6 @@ def vector_to_list_of_spiketrain_numpy(sample_indices, unit_indices, num_units):
         spike_trains.append(sample_indices[unit_indices == u])
     return spike_trains
 
-
 def get_numba_vector_to_list_of_spiketrain():
     if hasattr(get_numba_vector_to_list_of_spiketrain, "_cached_numba_function"):
         return get_numba_vector_to_list_of_spiketrain._cached_numba_function

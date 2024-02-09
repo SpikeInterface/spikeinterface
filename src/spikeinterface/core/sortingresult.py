@@ -1184,6 +1184,9 @@ class ResultExtension:
                     # backward compatibility with WaveformsExtractor
                     sorting_result = sorting_result.sorting_result
 
+                if not isinstance(sorting_result, SortingResult):
+                    raise ValueError(f"compute_{self.extension_name}() need a SortingResult instance")
+
                 if load_if_exists is not None:
                     # backward compatibility with "load_if_exists"
                     warnings.warn(f"compute_{cls.extension_name}(..., load_if_exists=True/False) is kept for backward compatibility but should not be used anymore")
