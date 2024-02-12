@@ -194,6 +194,7 @@ def test_estimate_templates_average():
     #     ax.plot(templates[unit_index, :, :].T.flatten())
     # plt.show()
 
+
 def test_estimate_templates():
     recording, sorting = get_dataset()
 
@@ -226,10 +227,6 @@ def test_estimate_templates():
     #         ax.plot(templates[unit_index, :, :].T.flatten())
 
     # plt.show()
-
-
-
-
 
 
 if __name__ == "__main__":

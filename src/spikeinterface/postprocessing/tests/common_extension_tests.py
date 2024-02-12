@@ -17,9 +17,13 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "postprocessing"
 
+
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
-        durations=[15.0, 5.0], sampling_frequency=24000.0, num_channels=6, num_units=3,
+        durations=[15.0, 5.0],
+        sampling_frequency=24000.0,
+        num_channels=6,
+        num_units=3,
         generate_sorting_kwargs=dict(firing_rates=3.0, refractory_period_ms=4.0),
         generate_unit_locations_kwargs=dict(
             margin_um=5.0,
@@ -36,6 +40,7 @@ def get_dataset():
     )
     return recording, sorting
 
+
 def get_sorting_result(recording, sorting, format="memory", sparsity=None, name=""):
     sparse = sparsity is not None
     if format == "memory":
@@ -46,10 +51,11 @@ def get_sorting_result(recording, sorting, format="memory", sparsity=None, name=
         folder = cache_folder / f"test_{name}_sparse{sparse}_{format}.zarr"
     if folder and folder.exists():
         shutil.rmtree(folder)
-    
+
     sortres = start_sorting_result(sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity)
 
     return sortres
+
 
 class ResultExtensionCommonTestSuite:
     """
@@ -61,6 +67,7 @@ class ResultExtensionCommonTestSuite:
 
     This also test the select_units() ability.
     """
+
     extension_class = None
     extension_function_params_list = None
 
@@ -81,11 +88,13 @@ class ResultExtensionCommonTestSuite:
     @property
     def extension_name(self):
         return self.extension_class.extension_name
-    
+
     def _prepare_sorting_result(self, format, sparse):
         # prepare a SortingResult object with depencies already computed
         sparsity_ = self.sparsity if sparse else None
-        sorting_result = get_sorting_result(self.recording, self.sorting, format=format, sparsity=sparsity_, name=self.extension_class.extension_name)
+        sorting_result = get_sorting_result(
+            self.recording, self.sorting, format=format, sparsity=sparsity_, name=self.extension_class.extension_name
+        )
         sorting_result.select_random_spikes(max_spikes_per_unit=50, seed=2205)
         for dependency_name in self.extension_class.depend_on:
             if "|" in dependency_name:
@@ -100,19 +109,18 @@ class ResultExtensionCommonTestSuite:
             job_kwargs = dict()
 
         for params in self.extension_function_params_list:
-            print('  params', params)
+            print("  params", params)
             ext = sorting_result.compute(self.extension_name, **params, **job_kwargs)
             assert len(ext.data) > 0
             main_data = ext.get_data()
 
         ext = sorting_result.get_extension(self.extension_name)
         assert ext is not None
-        
+
         some_unit_ids = sorting_result.unit_ids[::2]
         sliced = sorting_result.select_units(some_unit_ids, format="memory")
         assert np.array_equal(sliced.unit_ids, sorting_result.unit_ids[::2])
         # print(sliced)
-
 
     def test_extension(self):
         for sparse in (True, False):

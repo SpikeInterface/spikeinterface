@@ -20,6 +20,7 @@ from ..core.template_tools import _get_dense_templates_array
 
 # TODO handle external sparsity
 
+
 def get_single_channel_template_metric_names():
     return deepcopy(list(_single_channel_metric_name_to_func.keys()))
 
@@ -97,7 +98,9 @@ class ComputeTemplateMetrics(ResultExtension):
     """
 
     extension_name = "template_metrics"
-    depend_on = ["fast_templates|templates", ]
+    depend_on = [
+        "fast_templates|templates",
+    ]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
@@ -113,7 +116,7 @@ class ComputeTemplateMetrics(ResultExtension):
         metrics_kwargs=None,
         include_multi_channel_metrics=False,
     ):
-        
+
         if sparsity is not None:
             # TODO handle extra sparsity
             raise NotImplementedError
@@ -130,12 +133,11 @@ class ComputeTemplateMetrics(ResultExtension):
                 self.sorting_result.get_channel_locations().shape[1] == 2
             ), "If multi-channel metrics are computed, channel locations must be 2D."
 
-
         if metric_names is None:
             metric_names = get_single_channel_template_metric_names()
         if include_multi_channel_metrics:
             metric_names += get_multi_channel_template_metric_names()
-        
+
         if metrics_kwargs is None:
             metrics_kwargs_ = _default_function_kwargs.copy()
         else:
@@ -284,8 +286,6 @@ _default_function_kwargs = dict(
     spread_smooth_um=20,
     column_range=None,
 )
-
-
 
 
 def get_trough_and_peak_idx(template):

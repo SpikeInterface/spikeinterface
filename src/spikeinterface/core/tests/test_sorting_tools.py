@@ -5,7 +5,11 @@ import numpy as np
 from spikeinterface.core import NumpySorting
 
 from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.core.sorting_tools import spike_vector_to_spike_trains, random_spikes_selection, spike_vector_to_indices
+from spikeinterface.core.sorting_tools import (
+    spike_vector_to_spike_trains,
+    random_spikes_selection,
+    spike_vector_to_indices,
+)
 
 
 @pytest.mark.skipif(
@@ -20,6 +24,7 @@ def test_spike_vector_to_spike_trains():
     for unit_index, unit_id in enumerate(sorting.unit_ids):
         assert np.array_equal(spike_trains[0][unit_id], sorting.get_unit_spike_train(unit_id=unit_id, segment_index=0))
 
+
 def test_spike_vector_to_indices():
     sorting = NumpySorting.from_unit_dict({1: np.array([0, 51, 108]), 5: np.array([23, 87])}, 30_000)
     spike_vector = sorting.to_spike_vector(concatenated=False)
@@ -31,7 +36,7 @@ def test_spike_vector_to_indices():
         inds = spike_indices[segment_index][unit_id]
         assert np.array_equal(
             spike_vector[segment_index][inds]["sample_index"],
-            sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index),
         )
 
 

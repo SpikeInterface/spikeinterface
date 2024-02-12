@@ -20,9 +20,10 @@ from .sorters import *
 from .preprocessing import *
 from .postprocessing import *
 from .qualitymetrics import *
+
 # TODO
-# from .curation import *
-# from .comparison import *
-# from .widgets import *
-# from .exporters import *
+# from .curation import *
+# from .comparison import *
+# from .widgets import *
+# from .exporters import *
 from .generation import *

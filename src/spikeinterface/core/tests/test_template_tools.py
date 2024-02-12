@@ -14,7 +14,10 @@ from spikeinterface.core import (
 
 def get_sorting_result():
     recording, sorting = generate_ground_truth_recording(
-        durations=[10.0, 5.0], sampling_frequency=10_000.0, num_channels=4, num_units=10,
+        durations=[10.0, 5.0],
+        sampling_frequency=10_000.0,
+        num_channels=4,
+        num_units=10,
         noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
@@ -28,11 +31,10 @@ def get_sorting_result():
 
     return sorting_result
 
+
 @pytest.fixture(scope="module")
 def sorting_result():
     return get_sorting_result()
-
-
 
 
 def _get_templates_object_from_sorting_result(sorting_result):

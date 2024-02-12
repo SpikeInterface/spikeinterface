@@ -12,6 +12,7 @@ class ComputeSpikeAmplitudesTest(ResultExtensionCommonTestSuite, unittest.TestCa
         dict(return_scaled=False),
     ]
 
+
 if __name__ == "__main__":
     test = ComputeSpikeAmplitudesTest()
     test.setUpClass()

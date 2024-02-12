@@ -9,7 +9,6 @@ from spikeinterface.core.generate import inject_some_split_units
 from spikeinterface.curation import get_potential_auto_merge
 
 
-
 from spikeinterface.curation.tests.common import make_sorting_result
 
 
@@ -19,9 +18,8 @@ else:
     cache_folder = Path("cache_folder") / "curation"
 
 
-
 def test_get_auto_merge_list(sorting_result_for_curation):
-    
+
     sorting = sorting_result_for_curation.sorting
     recording = sorting_result_for_curation.recording
     num_unit_splited = 1
@@ -31,12 +29,9 @@ def test_get_auto_merge_list(sorting_result_for_curation):
         sorting, split_ids=sorting.unit_ids[:num_unit_splited], num_split=num_split, output_ids=True, seed=42
     )
 
-    
-
     # print(sorting_with_split)
     # print(sorting_with_split.unit_ids)
     # print(other_ids)
-
 
     job_kwargs = dict(n_jobs=-1)
 
@@ -44,7 +39,6 @@ def test_get_auto_merge_list(sorting_result_for_curation):
     sorting_result.select_random_spikes()
     sorting_result.compute("waveforms", **job_kwargs)
     sorting_result.compute("templates")
-
 
     potential_merges, outs = get_potential_auto_merge(
         sorting_result,
@@ -72,8 +66,6 @@ def test_get_auto_merge_list(sorting_result_for_curation):
     for true_pair in other_ids.values():
         true_pair = tuple(true_pair)
         assert true_pair in potential_merges
-
-
 
     # import matplotlib.pyplot as plt
     # from spikeinterface.curation.auto_merge import normalize_correlogram

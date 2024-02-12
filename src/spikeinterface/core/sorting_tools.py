@@ -46,6 +46,7 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
 
     return spike_trains
 
+
 def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array):
     """
     Similar to spike_vector_to_spike_trains but instead having the spike_trains (aka spike times) return
@@ -90,8 +91,6 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array):
     return spike_indices
 
 
-
-
 def vector_to_list_of_spiketrain_numpy(sample_indices, unit_indices, num_units):
     """
     Slower implementation of vetor_to_dict using numpy boolean mask.
@@ -101,6 +100,7 @@ def vector_to_list_of_spiketrain_numpy(sample_indices, unit_indices, num_units):
     for u in range(num_units):
         spike_trains.append(sample_indices[unit_indices == u])
     return spike_trains
+
 
 def get_numba_vector_to_list_of_spiketrain():
     if hasattr(get_numba_vector_to_list_of_spiketrain, "_cached_numba_function"):

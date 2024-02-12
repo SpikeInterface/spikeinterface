@@ -107,10 +107,9 @@ class RemoveArtifactsRecording(BasePreprocessor):
         scale_amplitude=False,
         time_jitter=0,
         waveforms_kwargs=None,
-    ):  
+    ):
         if waveforms_kwargs is not None:
             warnings("remove_artifacts() waveforms_kwargs is deprecated and ignored")
-
 
         available_modes = ("zeros", "linear", "cubic", "average", "median")
         num_seg = recording.get_num_segments()
@@ -172,13 +171,19 @@ class RemoveArtifactsRecording(BasePreprocessor):
                     ms_before is not None and ms_after is not None
                 ), f"ms_before/after should not be None for mode {mode}"
                 sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
-                
+
                 nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
                 nafter = int(ms_after * recording.sampling_frequency / 1000.0)
 
-                templates = estimate_templates(recording=recording, spikes=sorting.to_spike_vector(),
-                                   unit_ids=sorting.unit_ids, nbefore=nbefore, nafter=nafter,
-                                   operator=mode, return_scaled=False)
+                templates = estimate_templates(
+                    recording=recording,
+                    spikes=sorting.to_spike_vector(),
+                    unit_ids=sorting.unit_ids,
+                    nbefore=nbefore,
+                    nafter=nafter,
+                    operator=mode,
+                    return_scaled=False,
+                )
                 artifacts = {}
                 for i, label in enumerate(sorting.unit_ids):
                     artifacts[label] = templates[i, :, :]

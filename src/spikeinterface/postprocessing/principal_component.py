@@ -12,12 +12,14 @@ import numpy as np
 from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
+
 # from spikeinterface.core.globals import get_global_tmp_folder
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
 
 # TODO handle extra sparsity
+
 
 class ComputePrincipalComponents(ResultExtension):
     """
@@ -59,7 +61,9 @@ class ComputePrincipalComponents(ResultExtension):
     """
 
     extension_name = "principal_components"
-    depend_on = ["waveforms", ]
+    depend_on = [
+        "waveforms",
+    ]
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
@@ -68,7 +72,12 @@ class ComputePrincipalComponents(ResultExtension):
         ResultExtension.__init__(self, sorting_result)
 
     def _set_params(
-        self, n_components=5, mode="by_channel_local", whiten=True, dtype="float32", sparsity=None, 
+        self,
+        n_components=5,
+        mode="by_channel_local",
+        whiten=True,
+        dtype="float32",
+        sparsity=None,
     ):
         assert mode in _possible_modes, "Invalid mode!"
 
@@ -101,7 +110,6 @@ class ComputePrincipalComponents(ResultExtension):
             if "model" in k:
                 new_data[k] = v
         return new_data
-
 
     def get_projections(self, unit_id, sparse=False):
         """
@@ -209,9 +217,8 @@ class ComputePrincipalComponents(ResultExtension):
 
         """
         pca_model = self.get_pca_model()
-        new_projections = self._transform_waveforms( new_spikes, new_waveforms, pca_model, progress_bar=progress_bar)
+        new_projections = self._transform_waveforms(new_spikes, new_waveforms, pca_model, progress_bar=progress_bar)
         return new_projections
-
 
     def get_sparsity(self):
         if self.sorting_result.is_sparse():
@@ -245,17 +252,15 @@ class ComputePrincipalComponents(ResultExtension):
             pca_model = self._fit_concatenated(progress_bar)
             self.data[f"pca_model_{mode}"] = pca_model
 
-
         # transform
         waveforms_ext = self.sorting_result.get_extension("waveforms")
         some_waveforms = waveforms_ext.data["waveforms"]
         spikes = self.sorting_result.sorting.to_spike_vector()
         some_spikes = spikes[self.sorting_result.random_spikes_indices]
-        
+
         pca_projection = self._transform_waveforms(some_spikes, some_waveforms, pca_model, progress_bar)
 
         self.data["pca_projection"] = pca_projection
-
 
     def _get_data(self):
         return self.data["pca_projection"]
@@ -296,7 +301,6 @@ class ComputePrincipalComponents(ResultExtension):
     #     if file_path is None:
     #         file_path = self.extension_folder / "all_pcs.npy"
     #     file_path = Path(file_path)
-
 
     #     sparsity = self.get_sparsity()
     #     if sparsity is None:
@@ -358,7 +362,9 @@ class ComputePrincipalComponents(ResultExtension):
                     pca.partial_fit(wfs[:, :, wf_ind])
             else:
                 # parallel
-                items = [(chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind]) for wf_ind, chan_ind in enumerate(channel_inds)]
+                items = [
+                    (chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind]) for wf_ind, chan_ind in enumerate(channel_inds)
+                ]
                 n_jobs = min(n_jobs, len(items))
 
                 with ProcessPoolExecutor(max_workers=n_jobs) as executor:
@@ -394,9 +400,8 @@ class ComputePrincipalComponents(ResultExtension):
             wfs_concat = wfs.transpose(0, 2, 1).reshape(shape[0] * shape[2], shape[1])
             pca_model.partial_fit(wfs_concat)
 
-
         return pca_model
-        
+
     def _fit_concatenated(self, progress_bar):
 
         p = self.params
@@ -422,7 +427,6 @@ class ComputePrincipalComponents(ResultExtension):
             pca_model.partial_fit(wfs_flat)
 
         return pca_model
-    
 
     def _transform_waveforms(self, spikes, waveforms, pca_model, progress_bar):
         # transform a waveforms buffer
@@ -460,7 +464,7 @@ class ComputePrincipalComponents(ResultExtension):
                     pca_model = pca_models[chan_ind]
                     try:
                         proj = pca_model.transform(wfs[:, :, wf_ind])
-                        pca_projection[:, :, wf_ind][spike_mask, : ] = proj
+                        pca_projection[:, :, wf_ind][spike_mask, :] = proj
                     except NotFittedError as e:
                         # this could happen if len(wfs) is less then n_comp for a channel
                         project_on_non_fitted = True
@@ -477,27 +481,27 @@ class ComputePrincipalComponents(ResultExtension):
                     continue
                 for wf_ind, chan_ind in enumerate(channel_inds):
                     proj = pca_model.transform(wfs[:, :, wf_ind])
-                    pca_projection[:, :, wf_ind][spike_mask, : ] = proj
+                    pca_projection[:, :, wf_ind][spike_mask, :] = proj
         elif mode == "concatenated":
             for unit_ind, unit_id in units_loop:
                 wfs, channel_inds, spike_mask = self._get_slice_waveforms(unit_id, spikes, waveforms)
                 wfs_flat = wfs.reshape(wfs.shape[0], -1)
                 proj = pca_model.transform(wfs_flat)
                 pca_projection[spike_mask, :] = proj
-        
+
         return pca_projection
 
     def _get_slice_waveforms(self, unit_id, spikes, waveforms):
-        # slice by mask waveforms from one unit 
+        # slice by mask waveforms from one unit
 
         unit_index = self.sorting_result.sorting.id_to_index(unit_id)
         spike_mask = spikes["unit_index"] == unit_index
         wfs = waveforms[spike_mask, :, :]
-        
+
         sparsity = self.sorting_result.sparsity
         if sparsity is not None:
             channel_inds = sparsity.unit_id_to_channel_indices[unit_id]
-            wfs = wfs[:, :, :channel_inds.size]
+            wfs = wfs[:, :, : channel_inds.size]
         else:
             channel_inds = np.arange(self.sorting_result.channel_ids.size, dtype=int)
 
@@ -605,8 +609,8 @@ compute_principal_components = ComputePrincipalComponents.function_factory()
 #     with pca_file.open("wb") as f:
 #         pickle.dump(pca_model, f)
 
+
 def partial_fit_one_channel(args):
     chan_ind, pca_model, wf_chan = args
     pca_model.partial_fit(wf_chan)
     return chan_ind, pca_model
-

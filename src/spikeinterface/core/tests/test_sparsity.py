@@ -163,7 +163,7 @@ def get_dataset():
 def test_estimate_sparsity():
     recording, sorting = get_dataset()
     num_units = sorting.unit_ids.size
-    
+
     # small radius should give a very sparse = one channel per unit
     sparsity = estimate_sparsity(
         recording,
@@ -195,9 +195,10 @@ def test_estimate_sparsity():
     )
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
 
+
 def test_compute_sparsity():
     recording, sorting = get_dataset()
-    
+
     sorting_result = start_sorting_result(sorting=sorting, recording=recording, sparse=False)
     sorting_result.select_random_spikes()
     sorting_result.compute("fast_templates", return_scaled=True)
@@ -205,10 +206,9 @@ def test_compute_sparsity():
     # this is needed for method="energy"
     sorting_result.compute("waveforms", return_scaled=True)
 
-
     # using object SortingResult
     sparsity = compute_sparsity(sorting_result, method="best_channels", num_channels=2, peak_sign="neg")
-    sparsity = compute_sparsity(sorting_result, method="radius", radius_um=50., peak_sign="neg")
+    sparsity = compute_sparsity(sorting_result, method="radius", radius_um=50.0, peak_sign="neg")
     sparsity = compute_sparsity(sorting_result, method="snr", threshold=5, peak_sign="neg")
     sparsity = compute_sparsity(sorting_result, method="ptp", threshold=5)
     sparsity = compute_sparsity(sorting_result, method="energy", threshold=5)
@@ -218,7 +218,7 @@ def test_compute_sparsity():
     templates = sorting_result.get_extension("fast_templates").get_data(outputs="Templates")
     noise_levels = sorting_result.get_extension("noise_levels").get_data()
     sparsity = compute_sparsity(templates, method="best_channels", num_channels=2, peak_sign="neg")
-    sparsity = compute_sparsity(templates, method="radius", radius_um=50., peak_sign="neg")
+    sparsity = compute_sparsity(templates, method="radius", radius_um=50.0, peak_sign="neg")
     sparsity = compute_sparsity(templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg")
     sparsity = compute_sparsity(templates, method="ptp", noise_levels=noise_levels, threshold=5)
 

@@ -705,7 +705,7 @@ def estimate_templates(
     unit_ids: list | np.ndarray,
     nbefore: int,
     nafter: int,
-    operator: str ="average",
+    operator: str = "average",
     return_scaled: bool = True,
     job_name=None,
     **job_kwargs,
@@ -742,12 +742,25 @@ def estimate_templates(
         job_name = "estimate_templates"
 
     if operator == "average":
-        templates_array = estimate_templates_average(recording, spikes, unit_ids, nbefore, nafter, return_scaled=return_scaled, job_name=job_name, **job_kwargs)
+        templates_array = estimate_templates_average(
+            recording, spikes, unit_ids, nbefore, nafter, return_scaled=return_scaled, job_name=job_name, **job_kwargs
+        )
     elif operator == "median":
-        all_waveforms, wf_array_info = extract_waveforms_to_single_buffer( recording, spikes, unit_ids, nbefore, nafter,
-            mode="shared_memory", return_scaled=return_scaled, copy=False,**job_kwargs,)
-        templates_array = np.zeros((len(unit_ids), all_waveforms.shape[1], all_waveforms.shape[2]), dtype=all_waveforms.dtype)
-        for unit_index , unit_id in enumerate(unit_ids):
+        all_waveforms, wf_array_info = extract_waveforms_to_single_buffer(
+            recording,
+            spikes,
+            unit_ids,
+            nbefore,
+            nafter,
+            mode="shared_memory",
+            return_scaled=return_scaled,
+            copy=False,
+            **job_kwargs,
+        )
+        templates_array = np.zeros(
+            (len(unit_ids), all_waveforms.shape[1], all_waveforms.shape[2]), dtype=all_waveforms.dtype
+        )
+        for unit_index, unit_id in enumerate(unit_ids):
             wfs = all_waveforms[spikes["unit_index"] == unit_index]
             templates_array[unit_index, :, :] = np.median(wfs, axis=0)
         # release shared memory after the median
@@ -757,7 +770,7 @@ def estimate_templates(
         raise ValueError(f"estimate_templates(..., operator={operator}) wrong operator must be average or median")
 
     return templates_array
-    
+
 
 def estimate_templates_average(
     recording: BaseRecording,

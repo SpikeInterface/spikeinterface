@@ -69,7 +69,6 @@ register_result_extension(ComputeISIHistograms)
 compute_isi_histograms = ComputeISIHistograms.function_factory()
 
 
-
 # def compute_isi_histograms(
 #     waveform_or_sorting_extractor,
 #     load_if_exists=False,

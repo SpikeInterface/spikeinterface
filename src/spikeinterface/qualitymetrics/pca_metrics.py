@@ -88,7 +88,6 @@ def calculate_pc_metrics(
     pca_ext = sorting_result.get_extension("principal_components")
     assert pca_ext is not None, "calculate_pc_metrics() need extension 'principal_components'"
 
-
     sorting = sorting_result.sorting
 
     if metric_names is None:
@@ -129,7 +128,6 @@ def calculate_pc_metrics(
     if run_in_parallel:
         parallel_functions = []
 
-    
     # all_labels, all_pcs = pca.get_all_projections()
     # TODO: this is wring all_pcs used to be dense even when the waveform extractor was sparse
     all_pcs = pca_ext.data["pca_projection"]
@@ -656,7 +654,6 @@ def nearest_neighbors_noise_overlap(
 
     templates_ext = sorting_result.get_extension("templates")
     assert templates_ext is not None, "nearest_neighbors_isolation() need extension 'templates'"
-
 
     if n_spikes_all_units is None:
         n_spikes_all_units = compute_num_spikes(sorting_result)

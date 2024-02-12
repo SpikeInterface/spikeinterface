@@ -60,7 +60,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
         if use_max_channel:
             assert len(unit_ids) == 1, " UnitWaveformDensity : use_max_channel=True works only with one unit"
-            max_channels = get_template_extremum_channel(sorting_result, mode="extremum", peak_sign=peak_sign, outputs="index")
+            max_channels = get_template_extremum_channel(
+                sorting_result, mode="extremum", peak_sign=peak_sign, outputs="index"
+            )
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backends need them all
         if sorting_result.is_sparse():

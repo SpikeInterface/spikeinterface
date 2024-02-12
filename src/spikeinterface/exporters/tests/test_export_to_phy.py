@@ -10,8 +10,7 @@ from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.core import compute_sparsity
 from spikeinterface.exporters import export_to_phy
 
-from spikeinterface.exporters.tests.common import (cache_folder, make_sorting_result)
-
+from spikeinterface.exporters.tests.common import cache_folder, make_sorting_result
 
 
 def test_export_to_phy(sorting_result_sparse_for_export):

@@ -14,19 +14,24 @@ def _get_dense_templates_array(one_object, return_scaled=True):
     elif isinstance(one_object, SortingResult):
         ext = one_object.get_extension("templates")
         if ext is not None:
-            templates_array =  ext.data["average"]
-            assert return_scaled == ext.params["return_scaled"], f"templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
+            templates_array = ext.data["average"]
+            assert (
+                return_scaled == ext.params["return_scaled"]
+            ), f"templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
         else:
             ext = one_object.get_extension("fast_templates")
-            assert return_scaled == ext.params["return_scaled"], f"fast_templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
+            assert (
+                return_scaled == ext.params["return_scaled"]
+            ), f"fast_templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
             if ext is not None:
-                templates_array =  ext.data["average"]
+                templates_array = ext.data["average"]
             else:
                 raise ValueError("SortingResult need extension 'templates' or 'fast_templates' to be computed")
     else:
         raise ValueError("Input should be Templates or SortingResult or SortingResult")
 
     return templates_array
+
 
 def _get_nbefore(one_object):
     if isinstance(one_object, Templates):
@@ -43,10 +48,11 @@ def _get_nbefore(one_object):
         raise ValueError("Input should be Templates or SortingResult or SortingResult")
 
 
-
-
 def get_template_amplitudes(
-    templates_or_sorting_result, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum", return_scaled: bool = True
+    templates_or_sorting_result,
+    peak_sign: "neg" | "pos" | "both" = "neg",
+    mode: "extremum" | "at_index" = "extremum",
+    return_scaled: bool = True,
 ):
     """
     Get amplitude per channel for each unit.
@@ -150,9 +156,7 @@ def get_template_extremum_channel(
         return extremum_channels_index
 
 
-def get_template_extremum_channel_peak_shift(
-    templates_or_sorting_result, peak_sign: "neg" | "pos" | "both" = "neg"
-):
+def get_template_extremum_channel_peak_shift(templates_or_sorting_result, peak_sign: "neg" | "pos" | "both" = "neg"):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.

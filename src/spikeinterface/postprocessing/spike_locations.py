@@ -14,7 +14,6 @@ from spikeinterface.core.node_pipeline import SpikeRetriever, run_node_pipeline
 # TODO job_kwargs
 
 
-
 class ComputeSpikeLocations(ResultExtension):
     """
     Localize spikes in 2D or 3D with several methods given the template.
@@ -54,7 +53,9 @@ class ComputeSpikeLocations(ResultExtension):
     """
 
     extension_name = "spike_locations"
-    depend_on = ["fast_templates|templates", ]
+    depend_on = [
+        "fast_templates|templates",
+    ]
     need_recording = True
     use_nodepipeline = True
     nodepipeline_variables = ["spike_locations"]
@@ -73,7 +74,7 @@ class ComputeSpikeLocations(ResultExtension):
         spike_retriver_kwargs=None,
         method="center_of_mass",
         method_kwargs={},
-    ):  
+    ):
         spike_retriver_kwargs_ = dict(
             channel_from_template=True,
             radius_um=50,
@@ -82,8 +83,11 @@ class ComputeSpikeLocations(ResultExtension):
         if spike_retriver_kwargs is not None:
             spike_retriver_kwargs_.update(spike_retriver_kwargs)
         params = dict(
-            ms_before=ms_before, ms_after=ms_after, spike_retriver_kwargs=spike_retriver_kwargs_, method=method,
-            method_kwargs=method_kwargs
+            ms_before=ms_before,
+            ms_after=ms_after,
+            spike_retriver_kwargs=spike_retriver_kwargs_,
+            method=method,
+            method_kwargs=method_kwargs,
         )
         return params
 
@@ -100,8 +104,10 @@ class ComputeSpikeLocations(ResultExtension):
 
         recording = self.sorting_result.recording
         sorting = self.sorting_result.sorting
-        peak_sign=self.params["spike_retriver_kwargs"]["peak_sign"]
-        extremum_channels_indices = get_template_extremum_channel(self.sorting_result, peak_sign=peak_sign, outputs="index")
+        peak_sign = self.params["spike_retriver_kwargs"]["peak_sign"]
+        extremum_channels_indices = get_template_extremum_channel(
+            self.sorting_result, peak_sign=peak_sign, outputs="index"
+        )
 
         retriever = SpikeRetriever(
             recording,
@@ -110,7 +116,12 @@ class ComputeSpikeLocations(ResultExtension):
             extremum_channel_inds=extremum_channels_indices,
         )
         nodes = get_localization_pipeline_nodes(
-            recording, retriever, method=self.params["method"], ms_before=self.params["ms_before"], ms_after=self.params["ms_after"], **self.params["method_kwargs"]
+            recording,
+            retriever,
+            method=self.params["method"],
+            ms_before=self.params["ms_before"],
+            ms_after=self.params["ms_after"],
+            **self.params["method_kwargs"],
         )
         return nodes
 
@@ -119,7 +130,11 @@ class ComputeSpikeLocations(ResultExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         spike_locations = run_node_pipeline(
-            self.sorting_result.recording, nodes, job_kwargs=job_kwargs, job_name="spike_locations", gather_mode="memory"
+            self.sorting_result.recording,
+            nodes,
+            job_kwargs=job_kwargs,
+            job_name="spike_locations",
+            gather_mode="memory",
         )
         self.data["spike_locations"] = spike_locations
 

@@ -30,12 +30,10 @@ from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
 from .node_pipeline import run_node_pipeline
 
 
-
-
 # high level function
-def start_sorting_result(sorting, recording, format="memory", folder=None, 
-    sparse=True, sparsity=None, **sparsity_kwargs
-    ):
+def start_sorting_result(
+    sorting, recording, format="memory", folder=None, sparse=True, sparsity=None, **sparsity_kwargs
+):
     """
     Create a SortingResult by pairing a Sorting and the corresponding Recording.
 
@@ -96,15 +94,18 @@ def start_sorting_result(sorting, recording, format="memory", folder=None,
     if sparsity is not None:
         # some checks
         assert isinstance(sparsity, ChannelSparsity), "'sparsity' must be a ChannelSparsity object"
-        assert np.array_equal(sorting.unit_ids, sparsity.unit_ids), "start_sorting_result(): if external sparsity is given unit_ids must correspond"
-        assert np.array_equal(recording.channel_ids, recording.channel_ids), "start_sorting_result(): if external sparsity is given unit_ids must correspond"
+        assert np.array_equal(
+            sorting.unit_ids, sparsity.unit_ids
+        ), "start_sorting_result(): if external sparsity is given unit_ids must correspond"
+        assert np.array_equal(
+            recording.channel_ids, recording.channel_ids
+        ), "start_sorting_result(): if external sparsity is given unit_ids must correspond"
     elif sparse:
-        sparsity = estimate_sparsity( recording, sorting, **sparsity_kwargs)
+        sparsity = estimate_sparsity(recording, sorting, **sparsity_kwargs)
     else:
         sparsity = None
 
-    sorting_result = SortingResult.create(
-        sorting, recording, format=format, folder=folder, sparsity=sparsity)
+    sorting_result = SortingResult.create(sorting, recording, format=format, folder=folder, sparsity=sparsity)
 
     return sorting_result
 
@@ -150,7 +151,10 @@ class SortingResult:
     the SortingResult object can be reload even if references to the original sorting and/or to the original recording
     are lost.
     """
-    def __init__(self, sorting=None, recording=None, rec_attributes=None, format=None, sparsity=None, random_spikes_indices=None):
+
+    def __init__(
+        self, sorting=None, recording=None, rec_attributes=None, format=None, sparsity=None, random_spikes_indices=None
+    ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
         # self.recorsding will be a property
@@ -180,13 +184,18 @@ class SortingResult:
     ## create and load zone
 
     @classmethod
-    def create(cls,
-            sorting: BaseSorting,
-            recording: BaseRecording,
-            format: Literal["memory", "binary_folder", "zarr", ] = "memory",
-            folder=None,
-            sparsity=None,
-        ):
+    def create(
+        cls,
+        sorting: BaseSorting,
+        recording: BaseRecording,
+        format: Literal[
+            "memory",
+            "binary_folder",
+            "zarr",
+        ] = "memory",
+        folder=None,
+        sparsity=None,
+    ):
         # some checks
         assert sorting.sampling_frequency == recording.sampling_frequency
         # check that multiple probes are non-overlapping
@@ -223,13 +232,12 @@ class SortingResult:
                 format = "zarr"
             else:
                 format = "binary_folder"
-        
+
         if format == "binary_folder":
             sortres = SortingResult.load_from_binary_folder(folder, recording=recording)
         elif format == "zarr":
             sortres = SortingResult.load_from_zarr(folder, recording=recording)
-            
-        
+
         sortres.folder = folder
 
         if load_extensions:
@@ -251,8 +259,9 @@ class SortingResult:
 
         # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
         sorting_copy = SharedMemorySorting.from_sorting(sorting, with_metadata=True)
-        sortres = SortingResult(sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes,
-                                format="memory", sparsity=sparsity)
+        sortres = SortingResult(
+            sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes, format="memory", sparsity=sparsity
+        )
         return sortres
 
     @classmethod
@@ -265,7 +274,6 @@ class SortingResult:
         if folder.is_dir():
             raise ValueError(f"Folder already exists {folder}")
         folder.mkdir(parents=True)
-
 
         info_file = folder / f"spikeinterface_info.json"
         info = dict(
@@ -320,7 +328,7 @@ class SortingResult:
 
         # load internal sorting copy and make it sharedmem
         sorting = SharedMemorySorting.from_sorting(NumpyFolderSorting(folder / "sorting"), with_metadata=True)
-        
+
         # load recording if possible
         if recording is None:
             # try to load the recording if not provided
@@ -350,7 +358,7 @@ class SortingResult:
             rec_attributes["probegroup"] = probeinterface.read_probeinterface(probegroup_file)
         else:
             rec_attributes["probegroup"] = None
-        
+
         # sparsity
         # sparsity_file = folder / "sparsity.json"
         sparsity_file = folder / "sparsity_mask.npy"
@@ -374,12 +382,14 @@ class SortingResult:
             rec_attributes=rec_attributes,
             format="binary_folder",
             sparsity=sparsity,
-            random_spikes_indices=random_spikes_indices)
+            random_spikes_indices=random_spikes_indices,
+        )
 
         return sortres
-    
+
     def _get_zarr_root(self, mode="r+"):
         import zarr
+
         zarr_root = zarr.open(self.folder, mode=mode)
         return zarr_root
 
@@ -399,13 +409,9 @@ class SortingResult:
 
         zarr_root = zarr.open(folder, mode="w")
 
-        info = dict(
-            version=spikeinterface.__version__,
-            dev_mode=spikeinterface.DEV_MODE,
-            object="SortingResult"
-        )
+        info = dict(version=spikeinterface.__version__, dev_mode=spikeinterface.DEV_MODE, object="SortingResult")
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
-        
+
         # the recording
         rec_dict = recording.to_dict(relative_to=folder, recursive=True)
         zarr_rec = np.array([rec_dict], dtype=object)
@@ -416,8 +422,9 @@ class SortingResult:
             # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
             zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
         else:
-            warnings.warn("SortingResult with zarr : the Recording is not json serializable, the recording link will be lost for futur load")
-        
+            warnings.warn(
+                "SortingResult with zarr : the Recording is not json serializable, the recording link will be lost for futur load"
+            )
 
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
@@ -442,7 +449,7 @@ class SortingResult:
         else:
             rec_attributes = rec_attributes.copy()
             probegroup = rec_attributes.pop("probegroup")
-        
+
         recording_info.attrs["recording_attributes"] = check_json(rec_attributes)
         # recording_info.create_dataset("recording_attributes", data=check_json(rec_attributes), object_codec=numcodecs.JSON())
 
@@ -457,6 +464,7 @@ class SortingResult:
 
         # write sorting copy
         from .zarrextractors import add_sorting_to_zarr_group
+
         # Alessio : we need to find a way to propagate compressor for all steps.
         # kwargs = dict(compressor=...)
         zarr_kwargs = dict()
@@ -464,10 +472,10 @@ class SortingResult:
 
         recording_info = zarr_root.create_group("extensions")
 
-
     @classmethod
     def load_from_zarr(cls, folder, recording=None):
         import zarr
+
         folder = Path(folder)
         assert folder.is_dir(), f"This folder does not exists {folder}"
 
@@ -475,13 +483,15 @@ class SortingResult:
 
         # load internal sorting and make it sharedmem
         # TODO propagate storage_options
-        sorting = SharedMemorySorting.from_sorting(ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True)
-        
+        sorting = SharedMemorySorting.from_sorting(
+            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True
+        )
+
         # load recording if possible
         if recording is None:
             rec_dict = zarr_root["recording"][0]
             try:
-                
+
                 recording = load_extractor(rec_dict, base_folder=folder)
             except:
                 recording = None
@@ -518,10 +528,10 @@ class SortingResult:
             rec_attributes=rec_attributes,
             format="zarr",
             sparsity=sparsity,
-            random_spikes_indices=random_spikes_indices)
+            random_spikes_indices=random_spikes_indices,
+        )
 
         return sortres
-
 
     def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingResult":
         """
@@ -532,7 +542,7 @@ class SortingResult:
             recording = self.recording
         else:
             recording = None
-        
+
         if self.sparsity is not None and unit_ids is None:
             sparsity = self.sparsity
         elif self.sparsity is not None and unit_ids is not None:
@@ -546,7 +556,7 @@ class SortingResult:
         if sorting_provenance is None:
             # if the original sorting objetc is not available anymore (kilosort folder deleted, ....), take the copy
             sorting_provenance = self.sorting
-        
+
         if unit_ids is not None:
             # when only some unit_ids then the sorting must be sliced
             # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
@@ -582,7 +592,7 @@ class SortingResult:
         """
         Save SortingResult object into another format.
         Uselfull for memory to zarr or memory to binray.
-        
+
         Note that the recording provenance or sorting provenance can be lost.
 
         Mainly propagate the copied sorting and recording property.
@@ -595,7 +605,6 @@ class SortingResult:
             The backend to use for saving the waveforms
         """
         return self._save_or_select(format=format, folder=folder, unit_ids=None)
-
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingResult":
         """
@@ -610,7 +619,7 @@ class SortingResult:
             The unit ids to keep in the new WaveformExtractor object
         folder : Path or None
             The new folder where selected waveforms are copied
-        format: 
+        format:
         a
         Returns
         -------
@@ -630,7 +639,6 @@ class SortingResult:
         if self.format == "memory":
             return False
         return not os.access(self.folder, os.W_OK)
-
 
     ## map attribute and property zone
 
@@ -657,14 +665,14 @@ class SortingResult:
 
     def is_sparse(self) -> bool:
         return self.sparsity is not None
-    
+
     def get_sorting_provenance(self):
         """
         Get the original sorting if possible otherwise return None
         """
         if self.format == "memory":
             # the orginal sorting provenance is not keps in that case
-            sorting_provenance =  None
+            sorting_provenance = None
 
         elif self.format == "binary_folder":
             for type in ("json", "pickle"):
@@ -735,13 +743,11 @@ class SortingResult:
 
     def get_sorting_property(self, key) -> np.ndarray:
         return self.sorting.get_property(key)
-    
+
     def get_dtype(self):
         return self.rec_attributes["dtype"]
 
     ## extensions zone
-
-    
 
     def compute(self, input, save=True, **kwargs):
         """
@@ -775,7 +781,7 @@ class SortingResult:
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convinient to try some parameters without changing an already saved extension.
 
-        **kwargs: 
+        **kwargs:
             All other kwargs are transimited to extension.set_params() or job_kwargs
 
         Returns
@@ -792,11 +798,8 @@ class SortingResult:
 
         """
 
-        
-
         extension_class = get_extension_class(extension_name)
 
-        
         if extension_class.need_job_kwargs:
             params, job_kwargs = split_job_kwargs(kwargs)
         else:
@@ -809,15 +812,15 @@ class SortingResult:
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 # at least one extension must be done : usefull for "templates|fast_templates" for instance
-                ok =  any(self.get_extension(name) is not None for name in dependency_name.split("|"))
+                ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
             else:
                 ok = self.get_extension(dependency_name) is not None
             assert ok, f"Extension {extension_name} need {dependency_name} to be computed first"
-        
+
         extension_instance = extension_class(self)
         extension_instance.set_params(save=save, **params)
         extension_instance.run(save=save, **job_kwargs)
-        
+
         self.extensions[extension_name] = extension_instance
 
         # TODO : need discussion
@@ -858,7 +861,7 @@ class SortingResult:
             if not extension_class.use_nodepipeline:
                 pipeline_mode = False
                 break
-        
+
         if not pipeline_mode:
             # simple loop
             for extension_name, extension_params in extensions.items():
@@ -868,7 +871,7 @@ class SortingResult:
                 else:
                     self.compute_one_extension(extension_name, save=save, **extension_params)
         else:
-            
+
             all_nodes = []
             result_routage = []
             extension_instances = {}
@@ -895,14 +898,10 @@ class SortingResult:
                 extension_name, variable_name = result_routage[r]
                 extension_instances[extension_name].data[variable_name] = result
 
-
             for extension_name, extension_instance in extension_instances.items():
                 self.extensions[extension_name] = extension_instance
                 if save:
                     extension_instance.save()
-
-
-
 
     def get_saved_extension_names(self):
         """
@@ -921,13 +920,16 @@ class SortingResult:
         saved_extension_names = []
         for extension_class in _possible_extensions:
             extension_name = extension_class.extension_name
-            
+
             if self.format == "binary_folder":
-                extension_folder = self.folder / "extensions" /extension_name
+                extension_folder = self.folder / "extensions" / extension_name
                 is_saved = extension_folder.is_dir() and (extension_folder / "params.json").is_file()
             elif self.format == "zarr":
                 if extension_group is not None:
-                    is_saved = extension_name in extension_group.keys() and "params" in extension_group[extension_name].attrs.keys()
+                    is_saved = (
+                        extension_name in extension_group.keys()
+                        and "params" in extension_group[extension_name].attrs.keys()
+                    )
                 else:
                     is_saved = False
             if is_saved:
@@ -941,7 +943,7 @@ class SortingResult:
         If not loaded then load is automatic.
 
         Return None if the extension is not computed yet (this avoid the use of has_extension() and then get it)
-        
+
         """
         if extension_name in self.extensions:
             return self.extensions[extension_name]
@@ -949,7 +951,7 @@ class SortingResult:
         if self.has_extension(extension_name):
             self.load_extension(extension_name)
             return self.extensions[extension_name]
-        
+
         return None
 
     def load_extension(self, extension_name: str):
@@ -967,7 +969,9 @@ class SortingResult:
             The loaded instance of the extension
 
         """
-        assert self.format != "memory", "SortingResult.load_extension() do not work for format='memory' use SortingResult.get_extension()instead"
+        assert (
+            self.format != "memory"
+        ), "SortingResult.load_extension() do not work for format='memory' use SortingResult.get_extension()instead"
 
         extension_class = get_extension_class(extension_name)
 
@@ -1005,7 +1009,7 @@ class SortingResult:
         Return the loaded or already computed extensions names.
         """
         return list(self.extensions.keys())
-    
+
     def has_extension(self, extension_name: str) -> bool:
         """
         Check if the extension exists in memory (dict) or in the folder or in zarr.
@@ -1024,7 +1028,9 @@ class SortingResult:
         # random_spikes_indices is a vector that refer to the spike vector of the sorting in absolut index
         assert self.random_spikes_indices is None, "select random spikes is already computed"
 
-        self.random_spikes_indices = random_spikes_selection(self.sorting, self.rec_attributes["num_samples"], **random_kwargs)
+        self.random_spikes_indices = random_spikes_selection(
+            self.sorting, self.rec_attributes["num_samples"], **random_kwargs
+        )
 
         if self.format == "binary_folder":
             np.save(self.folder / "random_spikes_indices.npy", self.random_spikes_indices)
@@ -1038,14 +1044,19 @@ class SortingResult:
         assert self.random_spikes_indices is not None, "random spikes selection is not computeds"
         unit_index = self.sorting.id_to_index(unit_id)
         spikes = self.sorting.to_spike_vector()
-        spike_indices_in_seg = np.flatnonzero((spikes["segment_index"] == segment_index) & (spikes["unit_index"] == unit_index))
-        common_element, inds_left, inds_right  = np.intersect1d(spike_indices_in_seg, self.random_spikes_indices, return_indices=True)
+        spike_indices_in_seg = np.flatnonzero(
+            (spikes["segment_index"] == segment_index) & (spikes["unit_index"] == unit_index)
+        )
+        common_element, inds_left, inds_right = np.intersect1d(
+            spike_indices_in_seg, self.random_spikes_indices, return_indices=True
+        )
         selected_spikes_in_spike_train = inds_left
         return selected_spikes_in_spike_train
 
 
 global _possible_extensions
 _possible_extensions = []
+
 
 def register_result_extension(extension_class):
     """
@@ -1055,7 +1066,7 @@ def register_result_extension(extension_class):
     For instance with:
     import spikeinterface as si
     only one extension will be available
-    but with 
+    but with
     import spikeinterface.postprocessing
     more extensions will be available
     """
@@ -1088,7 +1099,9 @@ def get_extension_class(extension_name: str):
     """
     global _possible_extensions
     extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
-    assert extension_name in extensions_dict, f"Extension '{extension_name}' is not registered, please import related module before"
+    assert (
+        extension_name in extensions_dict
+    ), f"Extension '{extension_name}' is not registered, please import related module before"
     ext_class = extensions_dict[extension_name]
     return ext_class
 
@@ -1125,10 +1138,10 @@ class ResultExtension:
 
     All ResultExtension will have a function associate for instance (this use the function_factory):
     comptute_unit_location(sorting_result, ...) will be equivalent to sorting_result.compute("unit_location", ...)
-    
 
-    """    
-    
+
+    """
+
     extension_name = None
     depend_on = []
     need_recording = False
@@ -1158,7 +1171,7 @@ class ResultExtension:
     def _select_extension_data(self, unit_ids):
         # must be implemented in subclass
         raise NotImplementedError
-    
+
     def _get_pipeline_nodes(self):
         # must be implemented in subclass only if use_nodepipeline=True
         raise NotImplementedError
@@ -1167,7 +1180,7 @@ class ResultExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    # 
+    #
     #######
 
     @classmethod
@@ -1180,9 +1193,10 @@ class ResultExtension:
         class FuncWrapper:
             def __init__(self, extension_name):
                 self.extension_name = extension_name
+
             def __call__(self, sorting_result, load_if_exists=None, *args, **kwargs):
                 from .waveforms_extractor_backwards_compatibility import MockWaveformExtractor
-                
+
                 if isinstance(sorting_result, MockWaveformExtractor):
                     # backward compatibility with WaveformsExtractor
                     sorting_result = sorting_result.sorting_result
@@ -1192,12 +1206,13 @@ class ResultExtension:
 
                 if load_if_exists is not None:
                     # backward compatibility with "load_if_exists"
-                    warnings.warn(f"compute_{cls.extension_name}(..., load_if_exists=True/False) is kept for backward compatibility but should not be used anymore")
+                    warnings.warn(
+                        f"compute_{cls.extension_name}(..., load_if_exists=True/False) is kept for backward compatibility but should not be used anymore"
+                    )
                     assert isinstance(load_if_exists, bool)
                     if load_if_exists:
                         ext = sorting_result.get_extension(self.extension_name)
                         return ext
-                
 
                 ext = sorting_result.compute(cls.extension_name, *args, **kwargs)
                 return ext.get_data()
@@ -1222,7 +1237,7 @@ class ResultExtension:
     @property
     def format(self):
         return self.sorting_result.format
-    
+
     @property
     def sparsity(self):
         return self.sorting_result.sparsity
@@ -1230,13 +1245,12 @@ class ResultExtension:
     @property
     def folder(self):
         return self.sorting_result.folder
-    
+
     def _get_binary_extension_folder(self):
-        extension_folder = self.folder / "extensions" /self.extension_name
+        extension_folder = self.folder / "extensions" / self.extension_name
         return extension_folder
 
-
-    def _get_zarr_extension_group(self, mode='r+'):
+    def _get_zarr_extension_group(self, mode="r+"):
         zarr_root = self.sorting_result._get_zarr_root(mode=mode)
         extension_group = zarr_root["extensions"][self.extension_name]
         return extension_group
@@ -1257,7 +1271,7 @@ class ResultExtension:
                 params = json.load(f)
 
         elif self.format == "zarr":
-            extension_group = self._get_zarr_extension_group(mode='r')
+            extension_group = self._get_zarr_extension_group(mode="r")
             assert "params" in extension_group.attrs, f"No params file in extension {self.extension_name} folder"
             params = extension_group.attrs["params"]
 
@@ -1280,25 +1294,27 @@ class ResultExtension:
                     ext_data = np.load(ext_data_file)
                 elif ext_data_file.suffix == ".csv":
                     import pandas as pd
+
                     ext_data = pd.read_csv(ext_data_file, index_col=0)
                 elif ext_data_file.suffix == ".pkl":
                     ext_data = pickle.load(ext_data_file.open("rb"))
                 else:
                     continue
                 self.data[ext_data_name] = ext_data
-        
+
         elif self.format == "zarr":
             # Alessio
             # TODO: we need decide if we make a copy to memory or keep the lazy loading. For binary_folder it used to be lazy with memmap
             # but this make the garbage complicated when a data is hold by a plot but the o SortingResult is delete
             # lets talk
-            extension_group = self._get_zarr_extension_group(mode='r')
+            extension_group = self._get_zarr_extension_group(mode="r")
             for ext_data_name in extension_group.keys():
                 ext_data_ = extension_group[ext_data_name]
                 if "dict" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 elif "dataframe" in ext_data_.attrs:
                     import xarray
+
                     ext_data = xarray.open_zarr(
                         ext_data_.store, group=f"{extension_group.name}/{ext_data_name}"
                     ).to_pandas()
@@ -1340,7 +1356,7 @@ class ResultExtension:
 
         if self.sorting_result.is_read_only():
             raise ValueError(f"The SortingResult is read only save extension {self.extension_name} is not possible")
-        
+
         if self.format == "binary_folder":
             import pandas as pd
 
@@ -1366,16 +1382,16 @@ class ResultExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-            
+
             import pandas as pd
             import numcodecs
-            
+
             extension_group = self._get_zarr_extension_group(mode="r+")
 
             compressor = kwargs.get("compressor", None)
             if compressor is None:
                 compressor = get_default_zarr_compressor()
-            
+
             for ext_data_name, ext_data in self.data.items():
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
@@ -1414,6 +1430,7 @@ class ResultExtension:
 
         elif self.format == "zarr":
             import zarr
+
             zarr_root = zarr.open(self.folder, mode="r+")
             extension_group = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
 
@@ -1425,7 +1442,6 @@ class ResultExtension:
         self._reset_extension_folder()
         self.params = None
         self.data = dict()
-
 
     def set_params(self, save=True, **params):
         """
@@ -1457,7 +1473,6 @@ class ResultExtension:
         #     ), "'sparsity' parameter must be a ChannelSparsity object!"
         #     params_to_save["sparsity"] = params_to_save["sparsity"].to_dict()
 
-
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             extension_folder.mkdir(exist_ok=True, parents=True)
@@ -1468,7 +1483,9 @@ class ResultExtension:
             extension_group.attrs["params"] = check_json(params_to_save)
 
     def get_pipeline_nodes(self):
-        assert self.use_nodepipeline, "ResultExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
+        assert (
+            self.use_nodepipeline
+        ), "ResultExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):

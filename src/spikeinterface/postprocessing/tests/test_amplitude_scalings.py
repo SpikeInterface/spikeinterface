@@ -7,7 +7,6 @@ from spikeinterface.postprocessing.tests.common_extension_tests import ResultExt
 from spikeinterface.postprocessing import ComputeAmplitudeScalings
 
 
-
 class AmplitudeScalingsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeAmplitudeScalings
     extension_function_params_list = [
@@ -22,7 +21,7 @@ class AmplitudeScalingsExtensionTest(ResultExtensionCommonTestSuite, unittest.Te
         spikes = sorting_result.sorting.to_spike_vector()
 
         ext = sorting_result.get_extension("amplitude_scalings")
-        
+
         for unit_index, unit_id in enumerate(sorting_result.unit_ids):
             mask = spikes["unit_index"] == unit_index
             scalings = ext.data["amplitude_scalings"][mask]
