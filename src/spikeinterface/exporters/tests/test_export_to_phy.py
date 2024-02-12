@@ -73,7 +73,7 @@ def test_export_to_phy_by_property(sorting_result_with_group_for_export):
 
     # Remove one channel
     # recording_rm = recording.channel_slice([0, 2, 3, 4, 5, 6, 7])
-    # sorting_result_rm = extract_waveforms(recording_rm, sorting, waveform_folder_rm, sparse=False)
+    # sorting_result_rm = start_sorting_result(sorting, recording_rm, , sparse=False)
     # sparsity_group = compute_sparsity(sorting_result_rm, method="by_property", by_property="group")
 
     # export_to_phy(

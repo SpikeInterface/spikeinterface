@@ -4,12 +4,6 @@ import pytest
 from pathlib import Path
 
 from spikeinterface.core import generate_ground_truth_recording, start_sorting_result
-from spikeinterface.postprocessing import (
-    compute_spike_amplitudes,
-    compute_template_similarity,
-    compute_principal_components,
-)
-from spikeinterface.qualitymetrics import compute_quality_metrics
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "exporters"

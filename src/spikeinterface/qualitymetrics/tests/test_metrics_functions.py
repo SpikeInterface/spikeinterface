@@ -324,7 +324,6 @@ def test_synchrony_metrics(sorting_result_simple):
     previous_sorting_result = sorting_result
     for sync_level in added_synchrony_levels:
         sorting_sync = add_synchrony_to_sorting(sorting, sync_event_ratio=sync_level)
-        #waveform_extractor_sync = extract_waveforms(previous_waveform_extractor.recording, sorting_sync, mode="memory")
         sorting_result_sync = start_sorting_result(sorting_sync, sorting_result.recording, format="memory")
 
 

@@ -10,7 +10,7 @@ It also implement ComputeFastTemplates which is equivalent but without extacting
 import numpy as np
 
 from .sortingresult import ResultExtension, register_result_extension
-from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates
+from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_average
 from .recording_tools import get_noise_levels
 
 class ComputeWaveforms(ResultExtension):
@@ -355,7 +355,7 @@ class ComputeFastTemplates(ResultExtension):
         return_scaled = self.params["return_scaled"]
 
         # TODO jobw_kwargs
-        self.data["average"] = estimate_templates(recording, some_spikes, unit_ids, self.nbefore, self.nafter, return_scaled=return_scaled, **job_kwargs)
+        self.data["average"] = estimate_templates_average(recording, some_spikes, unit_ids, self.nbefore, self.nafter, return_scaled=return_scaled, **job_kwargs)
     
     def _set_params(self,
             ms_before: float = 1.0,

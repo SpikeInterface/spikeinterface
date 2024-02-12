@@ -45,14 +45,15 @@ class ComputePrincipalComponents(ResultExtension):
 
     Examples
     --------
-    >>> we = si.extract_waveforms(recording, sorting, folder='waveforms')
-    >>> pc = st.compute_principal_components(we, n_components=3, mode='by_channel_local')
+    >>> sorting_result = start_sorting_result(sorting, recording)
+    >>> sorting_result.compute("principal_components", n_components=3, mode='by_channel_local')
+    >>> ext_pca = sorting_result.get_extension("principal_components")
     >>> # get pre-computed projections for unit_id=1
-    >>> projections = pc.get_projections(unit_id=1)
+    >>> projections = ext_pca.get_projections(unit_id=1)
     >>> # retrieve fitted pca model(s)
-    >>> pca_model = pc.get_pca_model()
+    >>> pca_model = ext_pca.get_pca_model()
     >>> # compute projections on new waveforms
-    >>> proj_new = pc.project_new(new_waveforms)
+    >>> proj_new = ext_pca.project_new(new_waveforms)
     >>> # run for all spikes in the SortingExtractor
     >>> pc.run_for_all_spikes(file_path="all_pca_projections.npy")
     """
