@@ -7,6 +7,7 @@ from typing import List, Tuple, Optional
 import matplotlib.pyplot as plt
 
 from .main import BaseTemplateMatchingEngine
+from spikeinterface.core.template import Templates
 
 
 @dataclass
@@ -309,7 +310,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     """
 
     default_params = {
-        "waveform_extractor": None,
+        "templates": None,
     }
     spike_dtype = [
         ("sample_index", "int64"),
@@ -336,29 +337,37 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Updated Keyword arguments.
         """
         d = cls.default_params.copy()
-        required_kwargs_keys = ["nbefore", "nafter", "templates"]
+
+        required_kwargs_keys = ["templates"]
         for required_key in required_kwargs_keys:
             assert required_key in kwargs, f"`{required_key}` is a required key in the kwargs"
+
+        
+
         parameters = kwargs.get("parameters", {})
         templates = kwargs["templates"]
-        templates = templates.astype(np.float32, casting="safe")
+        assert isinstance(templates, Templates), (
+            f"The templates supplied is of type {type(d['templates'])} "
+            f"and must be a Templates"
+        )
+        templates_array = templates.templates_array.astype(np.float32, casting="safe")
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
-        template_meta = TemplateMetadata.from_parameters_and_templates(params, templates)
+        template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
         sparsity = Sparsity.from_parameters_and_templates(
-            params, templates
+            params, templates_array
         )  # TODO: replace with spikeinterface sparsity
 
         # Perform initial computations on templates necessary for computing the objective
-        sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates, 0)
+        sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates_array, 0)
         temporal, singular, spatial = compress_templates(sparse_templates, params.approx_rank)
         temporal_jittered = upsample_and_jitter(temporal, params.jitter_factor, template_meta.num_samples)
         compressed_templates = (temporal, singular, spatial, temporal_jittered)
         pairwise_convolution = convolve_templates(
             compressed_templates, params.jitter_factor, params.approx_rank, template_meta.jittered_indices, sparsity
         )
-        norm_squared = compute_template_norm(sparsity.visible_channels, templates)
+        norm_squared = compute_template_norm(sparsity.visible_channels, templates_array)
         template_data = TemplateData(
             compressed_templates=compressed_templates,
             pairwise_convolution=pairwise_convolution,
@@ -370,6 +379,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         kwargs["template_meta"] = template_meta
         kwargs["sparsity"] = sparsity
         kwargs["template_data"] = template_data
+        kwargs["nbefore"] = templates.nbefore
+        kwargs["nafter"] = templates.nafter
         d.update(kwargs)
         return d
 

@@ -43,7 +43,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "select_per_channel": False,
         },
         "clustering": {"legacy": False},
-        "matching": {"method": "naive", "method_kwargs": {}},
+        "matching": {"method": "wobble", "method_kwargs": {}},
         "apply_preprocessing": True,
         "shared_memory": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},

@@ -7,6 +7,7 @@ import numpy as np
 from spikeinterface.core import WaveformExtractor, get_template_channel_sparsity, get_template_extremum_channel
 from spikeinterface.core import get_noise_levels, get_channel_distances, get_chunk_with_margin, get_random_data_chunks
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
+from spikeinterface.core.template import Templates
 
 spike_dtype = [
     ("sample_index", "int64"),
@@ -45,7 +46,10 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d = cls.default_params.copy()
         d.update(kwargs)
 
-        assert d["templates"] is not None, "'templates' must be supplied"
+        assert isinstance(d["templates"], Templates), (
+            f"The templates supplied is of type {type(d['waveform_extractor'])} "
+            f"and must be a Templates"
+        )
 
         templates = d["templates"]
 
@@ -72,10 +76,6 @@ class NaiveMatching(BaseTemplateMatchingEngine):
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
         kwargs = dict(kwargs)
-
-        templates = kwargs.pop("templates")
-        kwargs["templates"] = templates.templates_array
-
         return kwargs
 
     @classmethod
@@ -88,7 +88,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         abs_threholds = method_kwargs["abs_threholds"]
         exclude_sweep_size = method_kwargs["exclude_sweep_size"]
         neighbours_mask = method_kwargs["neighbours_mask"]
-        templates = method_kwargs["templates"]
+        templates_array = method_kwargs["templates"].templates_array
 
         nbefore = method_kwargs["nbefore"]
         nafter = method_kwargs["nafter"]
@@ -114,7 +114,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
             i1 = peak_sample_ind[i] + nafter
 
             waveforms = traces[i0:i1, :]
-            dist = np.sum(np.sum((templates - waveforms[None, :, :]) ** 2, axis=1), axis=1)
+            dist = np.sum(np.sum((templates_array - waveforms[None, :, :]) ** 2, axis=1), axis=1)
             cluster_index = np.argmin(dist)
 
             spikes["cluster_index"][i] = cluster_index
