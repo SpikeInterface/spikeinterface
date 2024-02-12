@@ -706,6 +706,7 @@ def estimate_templates(
     nbefore: int,
     nafter: int,
     return_scaled: bool = True,
+    job_name=None,
     **job_kwargs,
 ):
     """
@@ -771,7 +772,9 @@ def estimate_templates(
         array_pid,
     )
 
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name="estimate_templates", **job_kwargs)
+    if job_name is None:
+        job_name = "estimate_templates"
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
     processor.run()
 
     # average

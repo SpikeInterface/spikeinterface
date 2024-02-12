@@ -112,8 +112,8 @@ from .snippets_tools import snippets_from_sorting
 from .waveform_extractor import (
     WaveformExtractor,
     BaseWaveformExtractorExtension,
-    extract_waveforms,
-    load_waveforms,
+    # extract_waveforms,
+    # load_waveforms,
     precompute_sparsity,
 )
 
@@ -150,9 +150,10 @@ from .result_core import (
     ComputeWaveforms, compute_waveforms,
     ComputeTemplates, compute_templates,
     ComputeFastTemplates, compute_fast_templates,
+    ComputeNoiseLevels, compute_noise_levels,
 )
 
 # Important not for compatibility!!
 # This wil be uncommented after 0.100
-# from .waveforms_extractor_backwards_compatibility import extract_waveforms, load_waveforms
+from .waveforms_extractor_backwards_compatibility import extract_waveforms, load_waveforms
 

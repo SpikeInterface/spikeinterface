@@ -46,6 +46,51 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
 
     return spike_trains
 
+def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array):
+    """
+    Similar to spike_vector_to_spike_trains but instead having the spike_trains (aka spike times) return
+    spike indices by segment and units.
+
+    This is usefull to split back other unique vector like "spike_amplitudes", "spike_locations" into dict of dict
+    Internally calls numba if numba is installed.
+
+    Parameters
+    ----------
+    spike_vector: list[np.ndarray]
+        List of spike vectors optained with sorting.to_spike_vector(concatenated=False)
+    unit_ids: np.array
+        Unit ids
+    Returns
+    -------
+    spike_indices: dict[dict]:
+        A dict containing, for each segment, the spike indices of all units
+        (as a dict: unit_id --> index).
+    """
+    try:
+        import numba
+
+        HAVE_NUMBA = True
+    except:
+        HAVE_NUMBA = False
+
+    if HAVE_NUMBA:
+        # the trick here is to have a function getter
+        vector_to_list_of_spiketrain = get_numba_vector_to_list_of_spiketrain()
+    else:
+        vector_to_list_of_spiketrain = vector_to_list_of_spiketrain_numpy
+
+    num_units = unit_ids.size
+    spike_indices = {}
+    for segment_index, spikes in enumerate(spike_vector):
+        indices = np.arange(spikes.size, dtype=np.int64)
+        unit_indices = np.array(spikes["unit_index"]).astype(np.int64, copy=False)
+        list_of_spike_indices = vector_to_list_of_spiketrain(indices, unit_indices, num_units)
+        spike_indices[segment_index] = dict(zip(unit_ids, list_of_spike_indices))
+
+    return spike_indices
+
+
+
 
 def vector_to_list_of_spiketrain_numpy(sample_indices, unit_indices, num_units):
     """
@@ -56,7 +101,6 @@ def vector_to_list_of_spiketrain_numpy(sample_indices, unit_indices, num_units):
     for u in range(num_units):
         spike_trains.append(sample_indices[unit_indices == u])
     return spike_trains
-
 
 def get_numba_vector_to_list_of_spiketrain():
     if hasattr(get_numba_vector_to_list_of_spiketrain, "_cached_numba_function"):

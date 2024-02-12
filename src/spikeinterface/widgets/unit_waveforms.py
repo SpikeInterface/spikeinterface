@@ -5,10 +5,9 @@ import numpy as np
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
-from ..core import ChannelSparsity
-from ..core.waveform_extractor import WaveformExtractor
+from ..core import ChannelSparsity, SortingResult
 from ..core.basesorting import BaseSorting
-
+from ..core.template_tools import _get_dense_templates_array
 
 class UnitWaveformsWidget(BaseWidget):
     """
@@ -16,8 +15,8 @@ class UnitWaveformsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The input waveform extractor
+    sorting_result : SortingResult
+        The SortingResult
     channel_ids: list or None, default: None
         The channel ids to display
     unit_ids : list or None, default: None
@@ -26,7 +25,7 @@ class UnitWaveformsWidget(BaseWidget):
         If True, templates are plotted over the waveforms
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply
-        If WaveformExtractor is already sparse, the argument is ignored
+        If SortingResult is already sparse, the argument is ignored
     set_title : bool, default: True
         Create a plot title with the unit number if True
     plot_channels : bool, default: False
@@ -77,7 +76,7 @@ class UnitWaveformsWidget(BaseWidget):
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_result: SortingResult,
         channel_ids=None,
         unit_ids=None,
         plot_waveforms=True,
@@ -104,26 +103,26 @@ class UnitWaveformsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        we = waveform_extractor
-        sorting: BaseSorting = we.sorting
+        
+        sorting: BaseSorting = sorting_result.sorting
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
         if channel_ids is None:
-            channel_ids = we.channel_ids
+            channel_ids = sorting_result.channel_ids
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
-        channel_locations = we.get_channel_locations()[we.channel_ids_to_indices(channel_ids)]
+        channel_locations = sorting_result.get_channel_locations()[sorting_result.channel_ids_to_indices(channel_ids)]
 
         extra_sparsity = False
-        if waveform_extractor.is_sparse():
+        if sorting_result.is_sparse():
             if sparsity is None:
-                sparsity = waveform_extractor.sparsity
+                sparsity = sorting_result.sparsity
             else:
                 # assert provided sparsity is a subset of waveform sparsity
-                combined_mask = np.logical_or(we.sparsity.mask, sparsity.mask)
-                assert np.all(np.sum(combined_mask, 1) - np.sum(we.sparsity.mask, 1) == 0), (
+                combined_mask = np.logical_or(sorting_result.sparsity.mask, sparsity.mask)
+                assert np.all(np.sum(combined_mask, 1) - np.sum(sorting_result.sparsity.mask, 1) == 0), (
                     "The provided 'sparsity' needs to include only the sparse channels "
                     "used to extract waveforms (for example, by using a smaller 'radius_um')."
                 )
@@ -131,36 +130,47 @@ class UnitWaveformsWidget(BaseWidget):
         else:
             if sparsity is None:
                 # in this case, we construct a dense sparsity
-                unit_id_to_channel_ids = {u: we.channel_ids for u in we.unit_ids}
+                unit_id_to_channel_ids = {u: sorting_result.channel_ids for u in sorting_result.unit_ids}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
-                    unit_id_to_channel_ids=unit_id_to_channel_ids, unit_ids=we.unit_ids, channel_ids=we.channel_ids
+                    unit_id_to_channel_ids=unit_id_to_channel_ids, unit_ids=sorting_result.unit_ids, channel_ids=sorting_result.channel_ids
                 )
             else:
                 assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
 
         # get templates
-        templates = we.get_all_templates(unit_ids=unit_ids)
-        templates_shading = self._get_template_shadings(we, unit_ids, templates_percentile_shading)
+        ext = sorting_result.get_extension("templates")
+        assert ext is not None, "plot_waveforms() need extension 'templates'"
+        templates = ext.get_templates(unit_ids=unit_ids, operator="average")
+
+        
+
+        templates_shading = self._get_template_shadings(sorting_result, unit_ids, templates_percentile_shading)
 
         xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
-            waveform_extractor, templates, channel_locations, x_offset_units
+            sorting_result, templates, channel_locations, x_offset_units
         )
 
         wfs_by_ids = {}
         if plot_waveforms:
+            wf_ext = sorting_result.get_extension("waveforms")
+            assert wf_ext is not None, "plot_waveforms() need extension 'waveforms'"
             for unit_id in unit_ids:
+                unit_index = list(sorting.unit_ids).index(unit_id)
                 if not extra_sparsity:
-                    if waveform_extractor.is_sparse():
-                        wfs = we.get_waveforms(unit_id)
+                    if sorting_result.is_sparse():
+                        # wfs = we.get_waveforms(unit_id)
+                        wfs = wf_ext.get_waveforms_one_unit(unit_id, force_dense=False)
                     else:
-                        wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+                        # wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+                        wfs = wf_ext.get_waveforms_one_unit(unit_id)
+                        wfs = wfs[:, :, sparsity.mask[unit_index]]
                 else:
                     # in this case we have to slice the waveform sparsity based on the extra sparsity
-                    unit_index = list(sorting.unit_ids).index(unit_id)
                     # first get the sparse waveforms
-                    wfs = we.get_waveforms(unit_id)
+                    # wfs = we.get_waveforms(unit_id)
+                    wfs = wf_ext.get_waveforms_one_unit(unit_id, force_dense=False)
                     # find additional slice to apply to sparse waveforms
-                    (wfs_sparse_indices,) = np.nonzero(waveform_extractor.sparsity.mask[unit_index])
+                    (wfs_sparse_indices,) = np.nonzero(sorting_result.sparsity.mask[unit_index])
                     (extra_sparse_indices,) = np.nonzero(sparsity.mask[unit_index])
                     (extra_slice,) = np.nonzero(np.isin(wfs_sparse_indices, extra_sparse_indices))
                     # apply extra sparsity
@@ -168,8 +178,8 @@ class UnitWaveformsWidget(BaseWidget):
                 wfs_by_ids[unit_id] = wfs
 
         plot_data = dict(
-            waveform_extractor=waveform_extractor,
-            sampling_frequency=waveform_extractor.sampling_frequency,
+            sorting_result=sorting_result,
+            sampling_frequency=sorting_result.sampling_frequency,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             sparsity=sparsity,
@@ -243,6 +253,7 @@ class UnitWaveformsWidget(BaseWidget):
                     if len(wfs) > dp.max_spikes_per_unit:
                         random_idxs = np.random.permutation(len(wfs))[: dp.max_spikes_per_unit]
                         wfs = wfs[random_idxs]
+
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
 
@@ -333,7 +344,7 @@ class UnitWaveformsWidget(BaseWidget):
         self.next_data_plot = data_plot.copy()
 
         cm = 1 / 2.54
-        self.we = we = data_plot["waveform_extractor"]
+        self.we = we = data_plot["sorting_result"]
 
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
@@ -402,10 +413,12 @@ class UnitWaveformsWidget(BaseWidget):
         if backend_kwargs["display"]:
             display(self.widget)
 
-    def _get_template_shadings(self, we, unit_ids, templates_percentile_shading):
-        templates = we.get_all_templates(unit_ids=unit_ids)
+    def _get_template_shadings(self, sorting_result, unit_ids, templates_percentile_shading):
+        ext = sorting_result.get_extension("templates")
+        templates = ext.get_templates(unit_ids=unit_ids, operator="average")
+
         if templates_percentile_shading is None:
-            templates_std = we.get_all_templates(unit_ids=unit_ids, mode="std")
+            templates_std = ext.get_templates(unit_ids=unit_ids, operator="std")
             templates_shading = [templates - templates_std, templates + templates_std]
         else:
             if isinstance(templates_percentile_shading, (int, float)):
@@ -419,7 +432,8 @@ class UnitWaveformsWidget(BaseWidget):
                 ), "'templates_percentile_shading' should be a have an even number of elements."
             templates_shading = []
             for percentile in templates_percentile_shading:
-                template_percentile = we.get_all_templates(unit_ids=unit_ids, mode="percentile", percentile=percentile)
+                template_percentile = ext.get_templates(unit_ids=unit_ids, operator="percentile", percentile=percentile)
+                
                 templates_shading.append(template_percentile)
         return templates_shading
 
@@ -496,7 +510,7 @@ class UnitWaveformsWidget(BaseWidget):
         fig_probe.canvas.flush_events()
 
 
-def get_waveforms_scales(we, templates, channel_locations, x_offset_units=False):
+def get_waveforms_scales(sorting_result, templates, channel_locations, x_offset_units=False):
     """
     Return scales and x_vector for templates plotting
     """
@@ -522,7 +536,10 @@ def get_waveforms_scales(we, templates, channel_locations, x_offset_units=False)
 
     y_offset = channel_locations[:, 1][None, :]
 
-    xvect = delta_x * (np.arange(we.nsamples) - we.nbefore) / we.nsamples * 0.7
+    nbefore = sorting_result.get_extension("waveforms").nbefore
+    nsamples = templates.shape[1]
+
+    xvect = delta_x * (np.arange(nsamples) - nbefore) / nsamples * 0.7
 
     if x_offset_units:
         ch_locs = channel_locations

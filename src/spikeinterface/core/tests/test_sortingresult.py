@@ -175,6 +175,9 @@ class DummyResultExtension(ResultExtension):
         new_data["result_two"] = self.data["result_two"][keep_spike_mask]
 
         return new_data
+    
+    def _get_data(self):
+        return self.data["result_one"]
 
 compute_dummy = DummyResultExtension.function_factory()
 
@@ -194,7 +197,7 @@ def test_extension():
 
 
 if __name__ == "__main__":
-    # test_SortingResult_memory()
+    test_SortingResult_memory()
     test_SortingResult_binary_folder()
     test_SortingResult_zarr()
-    # test_extension()
+    test_extension()

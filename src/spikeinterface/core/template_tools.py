@@ -6,22 +6,53 @@ from .template import Templates
 from .waveform_extractor import WaveformExtractor
 from .sparsity import compute_sparsity, _sparsity_doc
 from .recording_tools import get_channel_distances, get_noise_levels
+from .sortingresult import SortingResult
 
 
-def _get_dense_templates_array(templates_or_waveform_extractor):
-    if isinstance(templates_or_waveform_extractor, Templates):
-        templates_array = templates_or_waveform_extractor.get_dense_templates()
-    elif isinstance(templates_or_waveform_extractor, WaveformExtractor):
-        templates_array = templates_or_waveform_extractor.get_all_templates(mode="average")
+# TODO make this function a non private function
+def _get_dense_templates_array(one_object, return_scaled=True):
+    if isinstance(one_object, Templates):
+        templates_array = one_object.get_dense_templates()
+    elif isinstance(one_object, WaveformExtractor):
+        templates_array = one_object.get_all_templates(mode="average")
+    elif isinstance(one_object, SortingResult):
+        ext = one_object.get_extension("templates")
+        if ext is not None:
+            templates_array =  ext.data["average"]
+            assert return_scaled == ext.params["return_scaled"], f"templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
+        else:
+            ext = one_object.get_extension("fast_templates")
+            assert return_scaled == ext.params["return_scaled"], f"fast_templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
+            if ext is not None:
+                templates_array =  ext.data["average"]
+            else:
+                raise ValueError("SortingResult need extension 'templates' or 'fast_templates' to be computed")
     else:
-        raise ValueError("templates_or_waveform_extractor should be Templates or WaveformExtractor")
+        raise ValueError("Input should be Templates or WaveformExtractor or SortingResult")
+
     return templates_array
+
+def _get_nbefore(one_object):
+    if isinstance(one_object, Templates):
+        return one_object.nbefore
+    elif isinstance(one_object, WaveformExtractor):
+        return one_object.nbefore
+    elif isinstance(one_object, SortingResult):
+        ext = one_object.get_extension("templates")
+        if ext is not None:
+            return ext.nbefore
+        ext = one_object.get_extension("fast_templates")
+        if ext is not None:
+            return ext.nbefore
+        raise ValueError("SortingResult need extension 'templates' or 'fast_templates' to be computed")
+    else:
+        raise ValueError("Input should be Templates or WaveformExtractor or SortingResult")
+
+
 
 
 def get_template_amplitudes(
-    templates_or_waveform_extractor,
-    peak_sign: "neg" | "pos" | "both" = "neg",
-    mode: "extremum" | "at_index" = "extremum",
+    templates_or_waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum", return_scaled: bool = True
 ):
     """
     Get amplitude per channel for each unit.
@@ -35,6 +66,8 @@ def get_template_amplitudes(
     mode: "extremum" | "at_index", default: "extremum"
         "extremum":  max or min
         "at_index": take value at spike index
+    return_scaled: bool, default True
+        The amplitude is scaled or not.
 
     Returns
     -------
@@ -45,11 +78,11 @@ def get_template_amplitudes(
     assert mode in ("extremum", "at_index"), "'mode' must be 'extremum' or 'at_index'"
 
     unit_ids = templates_or_waveform_extractor.unit_ids
-    before = templates_or_waveform_extractor.nbefore
+    before = _get_nbefore(templates_or_waveform_extractor)
 
     peak_values = {}
 
-    templates_array = _get_dense_templates_array(templates_or_waveform_extractor)
+    templates_array = _get_dense_templates_array(templates_or_waveform_extractor, return_scaled=return_scaled)
 
     for unit_ind, unit_id in enumerate(unit_ids):
         template = templates_array[unit_ind, :, :]
@@ -204,7 +237,7 @@ def get_template_extremum_channel_peak_shift(
     """
     unit_ids = templates_or_waveform_extractor.unit_ids
     channel_ids = templates_or_waveform_extractor.channel_ids
-    nbefore = templates_or_waveform_extractor.nbefore
+    nbefore = _get_nbefore(templates_or_waveform_extractor)
 
     extremum_channels_ids = get_template_extremum_channel(templates_or_waveform_extractor, peak_sign=peak_sign)
 
@@ -259,11 +292,7 @@ def get_template_extremum_amplitude(
     unit_ids = templates_or_waveform_extractor.unit_ids
     channel_ids = templates_or_waveform_extractor.channel_ids
 
-    before = templates_or_waveform_extractor.nbefore
-
-    extremum_channels_ids = get_template_extremum_channel(
-        templates_or_waveform_extractor, peak_sign=peak_sign, mode=mode
-    )
+    extremum_channels_ids = get_template_extremum_channel(templates_or_waveform_extractor, peak_sign=peak_sign, mode=mode)
 
     extremum_amplitudes = get_template_amplitudes(templates_or_waveform_extractor, peak_sign=peak_sign, mode=mode)
 

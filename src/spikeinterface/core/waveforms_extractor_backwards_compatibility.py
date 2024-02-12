@@ -20,7 +20,7 @@ from .basesorting import BaseSorting
 from .sortingresult import start_sorting_result
 from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
-from .sortingresult import SortingResult
+from .sortingresult import SortingResult, load_sorting_result
 from .base import load_extractor
 from .result_core import ComputeWaveforms, ComputeTemplates
 
@@ -72,7 +72,8 @@ def extract_waveforms(
         folder = Path(folder)
         format = "binary_folder"
     else:
-        mode = "memory"
+        folder = None
+        format = "memory"
 
     assert sparsity_temp_folder is None, "sparsity_temp_folder must be None"
     assert unit_batch_size is None, "unit_batch_size must be None"
@@ -99,10 +100,14 @@ def extract_waveforms(
     sorting_result.select_random_spikes(max_spikes_per_unit=max_spikes_per_unit, seed=seed)
 
     waveforms_params = dict(ms_before=ms_before, ms_after=ms_after, return_scaled=return_scaled, dtype=dtype)
-    sorting_result.compute("waveforms", **waveforms_params)
+    sorting_result.compute("waveforms", **waveforms_params, **job_kwargs)
 
     templates_params = dict(operators=list(precompute_template))
     sorting_result.compute("templates", **templates_params)
+
+    # this also done because some metrics need it
+    sorting_result.compute("noise_levels")
+    
 
     we = MockWaveformExtractor(sorting_result)
 
@@ -212,6 +217,15 @@ class MockWaveformExtractor:
     def get_sorting_property(self, key) -> np.ndarray:
         return self.sorting_result.get_sorting_property(key)
 
+    @property
+    def sparsity(self):
+        return self.sorting_result.sparsity
+
+    @property
+    def folder(self):
+        if self.sorting_result.format != "memory":
+            return self.sorting_result.folder
+
     def has_extension(self, extension_name: str) -> bool:
         return self.sorting_result.has_extension(extension_name)
 
@@ -295,14 +309,34 @@ class MockWaveformExtractor:
 
 
 
-def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None, output="SortingResult", ):
+def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None, output="MockWaveformExtractor", ):
     """
     This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingResult or MockWaveformExtractor.
+
+    It also mimic the old load_waveforms by opening a Sortingresult folder and return a MockWaveformExtractor.
+    This later behavior is usefull to no break old code like this in versio >=0.101
+    
+    >>> # In this example we is a MockWaveformExtractor that behave the same as before
+    >>> we = extract_waveforms(..., folder="/my_we")
+    >>> we = load_waveforms("/my_we")
+    >>> templates = we.get_all_templates()
+
 
     """
 
     folder = Path(folder)
     assert folder.is_dir(), "Waveform folder does not exists"
+
+    if (folder / "spikeinterface_info.json").exists:
+        with open(folder / "spikeinterface_info.json", mode="r") as f:
+            info = json.load(f)
+        if info.get("object", None) == "SortingResult":
+            # in this case the folder is already a sorting result from version >= 0.101.0 but create with the MockWaveformExtractor
+            sorting_result = load_sorting_result(folder)
+            sorting_result.load_all_saved_extension()
+            we = MockWaveformExtractor(sorting_result)
+            return we
+
     if folder.suffix == ".zarr":
         raise NotImplementedError
         # Alessio this is for you
