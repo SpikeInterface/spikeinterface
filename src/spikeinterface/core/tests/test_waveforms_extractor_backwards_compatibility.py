@@ -86,5 +86,10 @@ def test_extract_waveforms():
 
 
 
+# @pytest.mark.skip():
+# def test_read_old_waveforms_extractor_binary():
+#     folder = ""
+
+
 if __name__ == "__main__":
     test_extract_waveforms()

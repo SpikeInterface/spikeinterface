@@ -33,19 +33,10 @@ def test_get_auto_merge_list(sorting_result_for_curation):
 
     
 
-    print(sorting_with_split)
-    print(sorting_with_split.unit_ids)
-    print(other_ids)
+    # print(sorting_with_split)
+    # print(sorting_with_split.unit_ids)
+    # print(other_ids)
 
-    # rec = rec.save()
-    # sorting_with_split = sorting_with_split.save()
-    # wf_folder = cache_folder / "wf_auto_merge"
-    # if wf_folder.exists():
-    #     shutil.rmtree(wf_folder)
-    # we = extract_waveforms(rec, sorting_with_split, mode="folder", folder=wf_folder, n_jobs=1)
-
-    # we = extract_waveforms(rec, sorting_with_split, mode="memory", folder=None, n_jobs=1)
-    # print(we)
 
     job_kwargs = dict(n_jobs=-1)
 
