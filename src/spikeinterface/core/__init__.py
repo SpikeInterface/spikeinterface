@@ -107,6 +107,8 @@ from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
+# Important not for compatibility!!
+# This wil be commented after 0.100 relase but the module will not be removed.
 from .waveform_extractor import (
     WaveformExtractor,
     BaseWaveformExtractorExtension,
@@ -141,3 +143,16 @@ from .template_tools import (
 from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
 
 from .template import Templates
+
+# SortingResult and ResultExtension
+from .sortingresult import SortingResult, ResultExtension, start_sorting_result, load_sorting_result
+from .result_core import (
+    ComputeWaveforms, compute_waveforms,
+    ComputeTemplates, compute_templates,
+    ComputeFastTemplates, compute_fast_templates,
+)
+
+# Important not for compatibility!!
+# This wil be uncommented after 0.100
+# from .waveforms_extractor_backwards_compatibility import extract_waveforms, load_waveforms
+

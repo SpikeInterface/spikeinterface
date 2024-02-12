@@ -52,5 +52,5 @@ def test_random_spikes_selection():
 
 
 if __name__ == "__main__":
-    # test_spike_vector_to_spike_trains()
+    test_spike_vector_to_spike_trains()
     test_random_spikes_selection()

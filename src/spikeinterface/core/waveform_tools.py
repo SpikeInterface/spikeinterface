@@ -771,9 +771,7 @@ def estimate_templates(
         array_pid,
     )
 
-    processor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name="estimate_templates", **job_kwargs
-    )
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name="estimate_templates", **job_kwargs)
     processor.run()
 
     # average
