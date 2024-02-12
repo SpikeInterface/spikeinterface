@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-from spikeinterface.core import generate_ground_truth_recording, extract_waveforms
+from spikeinterface.core import generate_ground_truth_recording, start_sorting_result
 from spikeinterface.postprocessing import (
     compute_spike_amplitudes,
     compute_template_similarity,
@@ -17,7 +17,7 @@ else:
     cache_folder = Path("cache_folder") / "exporters"
 
 
-def make_waveforms_extractor(sparse=True, with_group=False):
+def make_sorting_result(sparse=True, with_group=False):
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
         sampling_frequency=28000.0,
@@ -39,30 +39,33 @@ def make_waveforms_extractor(sparse=True, with_group=False):
         recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
         sorting.set_property("group", [0, 0, 1, 1])
 
-    we = extract_waveforms(recording=recording, sorting=sorting, folder=None, mode="memory", sparse=sparse)
-    compute_principal_components(we)
-    compute_spike_amplitudes(we)
-    compute_template_similarity(we)
-    compute_quality_metrics(we, metric_names=["snr"])
+    sorting_result = start_sorting_result(sorting=sorting, recording=recording, format="memory",  sparse=sparse)
+    sorting_result.select_random_spikes()
+    sorting_result.compute("waveforms")
+    sorting_result.compute("templates")
+    sorting_result.compute("noise_levels")
+    sorting_result.compute("principal_components")
+    sorting_result.compute("template_similarity")
+    sorting_result.compute("quality_metrics", metric_names=["snr"])
 
-    return we
-
-
-@pytest.fixture(scope="module")
-def waveforms_extractor_dense_for_export():
-    return make_waveforms_extractor(sparse=False)
+    return sorting_result
 
 
 @pytest.fixture(scope="module")
-def waveforms_extractor_with_group_for_export():
-    return make_waveforms_extractor(sparse=False, with_group=True)
+def sorting_result_dense_for_export():
+    return make_sorting_result(sparse=False)
 
 
 @pytest.fixture(scope="module")
-def waveforms_extractor_sparse_for_export():
-    return make_waveforms_extractor(sparse=True)
+def sorting_result_with_group_for_export():
+    return make_sorting_result(sparse=False, with_group=True)
+
+
+@pytest.fixture(scope="module")
+def sorting_result_sparse_for_export():
+    return make_sorting_result(sparse=True)
 
 
 if __name__ == "__main__":
-    we = make_waveforms_extractor(sparse=False)
-    print(we)
+    sorting_result = make_sorting_result(sparse=False)
+    print(sorting_result)
