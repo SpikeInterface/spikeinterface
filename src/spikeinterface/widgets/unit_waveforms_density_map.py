@@ -146,7 +146,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         for i, unit_id in enumerate(unit_ids):
             unit_index = sorting_result.sorting.id_to_index(unit_id)
             chan_inds = channel_inds[unit_id]
-            template = templates[unit_index, :, chan_inds]
+            template = templates[i, :, chan_inds]
             template_flat = template.flatten()
             templates_flat[unit_id] = template_flat
 

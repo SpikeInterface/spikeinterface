@@ -735,6 +735,9 @@ class SortingResult:
 
     def get_sorting_property(self, key) -> np.ndarray:
         return self.sorting.get_property(key)
+    
+    def get_dtype(self):
+        return self.rec_attributes["dtype"]
 
     ## extensions zone
 

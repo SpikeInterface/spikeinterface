@@ -3,13 +3,14 @@ import shutil
 from pathlib import Path
 import numpy as np
 
-from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms, NumpySorting, set_global_tmp_folder
-from spikeinterface.extractors import toy_example
 
-
+from spikeinterface.core import start_sorting_result
 from spikeinterface.core.generate import inject_some_split_units
 from spikeinterface.curation import get_potential_auto_merge
-from spikeinterface.curation.auto_merge import normalize_correlogram
+
+
+
+from spikeinterface.curation.tests.common import make_sorting_result
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -17,12 +18,12 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "curation"
 
-set_global_tmp_folder(cache_folder)
 
 
-def test_get_auto_merge_list():
-    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[300.0], firing_rate=20.0, seed=42)
-
+def test_get_auto_merge_list(sorting_result_for_curation):
+    
+    sorting = sorting_result_for_curation.sorting
+    recording = sorting_result_for_curation.recording
     num_unit_splited = 1
     num_split = 2
 
@@ -30,22 +31,23 @@ def test_get_auto_merge_list():
         sorting, split_ids=sorting.unit_ids[:num_unit_splited], num_split=num_split, output_ids=True, seed=42
     )
 
-    print(sorting_with_split)
-    print(sorting_with_split.unit_ids)
-    print(other_ids)
+    
 
-    # rec = rec.save()
-    # sorting_with_split = sorting_with_split.save()
-    # wf_folder = cache_folder / "wf_auto_merge"
-    # if wf_folder.exists():
-    #     shutil.rmtree(wf_folder)
-    # we = extract_waveforms(rec, sorting_with_split, mode="folder", folder=wf_folder, n_jobs=1)
+    # print(sorting_with_split)
+    # print(sorting_with_split.unit_ids)
+    # print(other_ids)
 
-    we = extract_waveforms(rec, sorting_with_split, mode="memory", folder=None, n_jobs=1)
-    # print(we)
+
+    job_kwargs = dict(n_jobs=-1)
+
+    sorting_result = start_sorting_result(sorting_with_split, recording, format="memory")
+    sorting_result.select_random_spikes()
+    sorting_result.compute("waveforms", **job_kwargs)
+    sorting_result.compute("templates")
+
 
     potential_merges, outs = get_potential_auto_merge(
-        we,
+        sorting_result,
         minimum_spikes=1000,
         maximum_distance_um=150.0,
         peak_sign="neg",
@@ -71,7 +73,10 @@ def test_get_auto_merge_list():
         true_pair = tuple(true_pair)
         assert true_pair in potential_merges
 
+
+
     # import matplotlib.pyplot as plt
+    # from spikeinterface.curation.auto_merge import normalize_correlogram
     # templates_diff = outs['templates_diff']
     # correlogram_diff = outs['correlogram_diff']
     # bins = outs['bins']
@@ -122,4 +127,5 @@ def test_get_auto_merge_list():
 
 
 if __name__ == "__main__":
-    test_get_auto_merge_list()
+    sorting_result = make_sorting_result(sparse=True)
+    test_get_auto_merge_list(sorting_result)

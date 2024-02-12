@@ -457,7 +457,7 @@ def _read_old_waveforms_extractor_binary(folder):
 
     # TODO : implement this when extension will be prted in the new API
     # old_extension_to_new_class : {
-        # old extensions with same names and equvalent data
+        # old extensions with same names and equvalent data except similarity>template_similarity
         # "spike_amplitudes": ,
         # "spike_locations": ,
         # "amplitude_scalings": ,
