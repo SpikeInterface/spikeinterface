@@ -31,7 +31,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
     """
 
     default_params = {
-        "waveform_extractor": None,
+        "templates": None,
         "peak_sign": "neg",
         "exclude_sweep_ms": 0.1,
         "detect_threshold": 5,
@@ -45,20 +45,20 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d = cls.default_params.copy()
         d.update(kwargs)
 
-        assert d["waveform_extractor"] is not None, "'waveform_extractor' must be supplied"
+        assert d["templates"] is not None, "'templates' must be supplied"
 
-        we = d["waveform_extractor"]
+        templates = d["templates"]
 
         if d["noise_levels"] is None:
-            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"])
+            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
 
         d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
         channel_distance = get_channel_distances(recording)
         d["neighbours_mask"] = channel_distance < d["radius_um"]
 
-        d["nbefore"] = we.nbefore
-        d["nafter"] = we.nafter
+        d["nbefore"] = templates.nbefore
+        d["nafter"] = templates.nafter
 
         d["exclude_sweep_size"] = int(d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0)
 
@@ -73,8 +73,8 @@ class NaiveMatching(BaseTemplateMatchingEngine):
     def serialize_method_kwargs(cls, kwargs):
         kwargs = dict(kwargs)
 
-        we = kwargs.pop("waveform_extractor")
-        kwargs["templates"] = we.get_all_templates(mode="average")
+        templates = kwargs.pop("templates")
+        kwargs["templates"] = templates.templates_array
 
         return kwargs
 

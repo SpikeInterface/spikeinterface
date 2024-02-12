@@ -8,6 +8,8 @@ import numpy as np
 
 from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms
 from spikeinterface.core.job_tools import fix_job_kwargs
+from spikeinterface.core.template import Templates
+from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.core.basesorting import minimum_spike_dtype
@@ -41,7 +43,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "select_per_channel": False,
         },
         "clustering": {"legacy": False},
-        "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
+        "matching": {"method": "naive", "method_kwargs": {}},
         "apply_preprocessing": True,
         "shared_memory": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -218,27 +220,31 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 mode = "folder"
                 waveforms_folder = sorter_output_folder / "waveforms"
 
-            we = extract_waveforms(
-                recording_f,
-                sorting,
-                waveforms_folder,
-                return_scaled=False,
-                precompute_template=["median"],
-                mode=mode,
-                **waveforms_params,
-            )
+            # we = extract_waveforms(
+            #     recording_f,
+            #     sorting,
+            #     waveforms_folder,
+            #     return_scaled=False,
+            #     precompute_template=["median"],
+            #     mode=mode,
+            #     **waveforms_params,
+            # )
+
+            nbefore = int(params["general"]["ms_before"] * sampling_frequency / 1000.0)
+            nafter = int(params["general"]["ms_after"] * sampling_frequency / 1000.0)
+
+            templates_array = estimate_templates(recording, labeled_peaks, unit_ids, nbefore, nafter,
+                                False, job_name=None, **job_kwargs)
+
+            templates = Templates(templates_array,
+                sampling_frequency, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe())
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
             matching_method = params["matching"]["method"]
             matching_params = params["matching"]["method_kwargs"].copy()
             matching_job_params = {}
             matching_job_params.update(job_kwargs)
-            if matching_method == "wobble":
-                matching_params["templates"] = we.get_all_templates(mode="median")
-                matching_params["nbefore"] = we.nbefore
-                matching_params["nafter"] = we.nafter
-            else:
-                matching_params["waveform_extractor"] = we
+            matching_params["templates"] = templates
 
             if matching_method == "circus-omp-svd":
                 for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:

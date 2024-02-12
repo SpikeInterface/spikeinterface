@@ -536,12 +536,12 @@ def remove_duplicates(
 
 
 def remove_duplicates_via_matching(
-    waveform_extractor,
+    templates,
     peak_labels,
     method_kwargs={},
     job_kwargs={},
     tmp_folder=None,
-    method="circus-omp-svd",
+    method="naive",
 ):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor
@@ -553,21 +553,19 @@ def remove_duplicates_via_matching(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    if waveform_extractor.is_sparse():
-        sparsity = waveform_extractor.sparsity.mask
+    templates_array = templates.templates_array
 
-    templates = waveform_extractor.get_all_templates(mode="median").copy()
-    nb_templates = len(templates)
-    duration = waveform_extractor.nbefore + waveform_extractor.nafter
+    nb_templates = len(templates_array)
+    duration = templates.nbefore + templates.nafter
 
-    fs = waveform_extractor.recording.get_sampling_frequency()
-    num_chans = waveform_extractor.recording.get_num_channels()
+    fs = templates.sampling_frequency
+    num_chans = len(templates.channel_ids)
 
-    if waveform_extractor.is_sparse():
-        for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
-            templates[count][:, ~sparsity[count]] = 0
+    #if waveform_extractor.is_sparse():
+    #    for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
+    #        templates[count][:, ~sparsity[count]] = 0
 
-    zdata = templates.reshape(nb_templates, -1)
+    zdata = templates_array.reshape(nb_templates, -1)
 
     padding = 2 * duration
     blanck = np.zeros(padding * num_chans, dtype=np.float32)
@@ -586,10 +584,10 @@ def remove_duplicates_via_matching(
     f.close()
 
     recording = BinaryRecordingExtractor(tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype="float32")
-    recording = recording.set_probe(waveform_extractor.recording.get_probe())
+    recording = recording.set_probe(templates.probe)
     recording.annotate(is_filtered=True)
 
-    margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
+    margin = 2 * max(templates.nbefore, templates.nafter)
     half_marging = margin // 2
 
     chunk_size = duration + 3 * margin
@@ -597,16 +595,15 @@ def remove_duplicates_via_matching(
     local_params = method_kwargs.copy()
 
     local_params.update(
-        {"waveform_extractor": waveform_extractor, "amplitudes": [0.975, 1.025], "optimize_amplitudes": False}
+        {"templates": templates, "amplitudes": [0.975, 1.025], "optimize_amplitudes": False}
     )
 
-    spikes_per_units, counts = np.unique(waveform_extractor.sorting.to_spike_vector()["unit_index"], return_counts=True)
-    indices = np.argsort(counts)
+
 
     ignore_ids = []
     similar_templates = [[], []]
 
-    for i in indices:
+    for i in range(nb_templates):
         t_start = padding + i * duration
         t_stop = padding + (i + 1) * duration
 
@@ -662,7 +659,7 @@ def remove_duplicates_via_matching(
     labels = np.unique(new_labels)
     labels = labels[labels >= 0]
 
-    del recording, sub_recording, local_params, waveform_extractor
+    del recording, sub_recording, local_params, templates
     os.remove(tmp_filename)
 
     return labels, new_labels
