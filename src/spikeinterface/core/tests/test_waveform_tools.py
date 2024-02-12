@@ -233,6 +233,6 @@ def test_estimate_templates():
 
 
 if __name__ == "__main__":
-    # test_waveform_tools()
-    # test_estimate_templates_average()
+    test_waveform_tools()
+    test_estimate_templates_average()
     test_estimate_templates()

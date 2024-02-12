@@ -12,6 +12,7 @@ import numpy as np
 from .sortingresult import ResultExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_average
 from .recording_tools import get_noise_levels
+from .template import Templates
 
 class ComputeWaveforms(ResultExtension):
     """
@@ -257,13 +258,29 @@ class ComputeTemplates(ResultExtension):
 
         return new_data
 
-    def _get_data(self, operator="average", percentile=None):
+    def _get_data(self, operator="average", percentile=None, outputs="numpy"):
         if operator != "percentile":
             key = operator
         else:
             assert percentile is not None, "You must provide percentile=..."
             key = f"pencentile_{percentile}"
-        return self.data[key]
+        
+        templates_array = self.data[key]
+
+        if outputs == "numpy":
+            return templates_array
+        elif outputs == "Templates":
+            return Templates(
+                templates_array=templates_array,
+                sampling_frequency=self.sorting_result.sampling_frequency,
+                nbefore=self.nbefore,
+                channel_ids=self.sorting_result.channel_ids,
+                unit_ids=self.sorting_result.unit_ids,
+                probe=self.sorting_result.get_probe(),
+            )
+        else:
+            raise ValueError("outputs must be numpy or Templates")
+        
 
     def get_templates(self, unit_ids=None, operator="average", percentile=None, save=True):
         """
@@ -369,8 +386,23 @@ class ComputeFastTemplates(ResultExtension):
         )
         return params
 
-    def _get_data(self):
-        return self.data["average"]        
+    def _get_data(self, outputs="numpy"):
+        templates_array = self.data["average"]
+
+        if outputs == "numpy":
+            return templates_array
+        elif outputs == "Templates":
+            return Templates(
+                templates_array=templates_array,
+                sampling_frequency=self.sorting_result.sampling_frequency,
+                nbefore=self.nbefore,
+                channel_ids=self.sorting_result.channel_ids,
+                unit_ids=self.sorting_result.unit_ids,
+                probe=self.sorting_result.get_probe(),
+            )
+        else:
+            raise ValueError("outputs must be numpy or Templates")
+
 
     def _select_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
