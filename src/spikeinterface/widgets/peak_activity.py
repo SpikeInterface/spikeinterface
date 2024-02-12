@@ -6,7 +6,6 @@ import numpy as np
 from .base import BaseWidget, to_attr
 
 
-
 class PeakActivityMapWidget(BaseWidget):
     """
     Plots spike rate (estimated with detect_peaks()) as 2D activity map.

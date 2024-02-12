@@ -10,7 +10,6 @@ from .job_tools import _shared_job_kwargs_doc
 from .waveform_tools import estimate_templates_average
 
 
-
 _sparsity_doc = """
     method: str
         * "best_channels": N best channels with the largest amplitude. Use the "num_channels" argument to specify the
@@ -276,7 +275,9 @@ class ChannelSparsity:
         """
         from .template_tools import get_template_amplitudes
 
-        mask = np.zeros((templates_or_sorting_result.unit_ids.size, templates_or_sorting_result.channel_ids.size), dtype="bool")
+        mask = np.zeros(
+            (templates_or_sorting_result.unit_ids.size, templates_or_sorting_result.channel_ids.size), dtype="bool"
+        )
         peak_values = get_template_amplitudes(templates_or_sorting_result, peak_sign=peak_sign)
         for unit_ind, unit_id in enumerate(templates_or_sorting_result.unit_ids):
             chan_inds = np.argsort(np.abs(peak_values[unit_id]))[::-1]
@@ -292,7 +293,9 @@ class ChannelSparsity:
         """
         from .template_tools import get_template_extremum_channel
 
-        mask = np.zeros((templates_or_sorting_result.unit_ids.size, templates_or_sorting_result.channel_ids.size), dtype="bool")
+        mask = np.zeros(
+            (templates_or_sorting_result.unit_ids.size, templates_or_sorting_result.channel_ids.size), dtype="bool"
+        )
         channel_locations = templates_or_sorting_result.get_channel_locations()
         distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
         best_chan = get_template_extremum_channel(templates_or_sorting_result, peak_sign=peak_sign, outputs="index")
@@ -312,8 +315,9 @@ class ChannelSparsity:
         from .sortingresult import SortingResult
         from .template import Templates
 
-
-        assert templates_or_sorting_result.sparsity is None,  "To compute sparsity you need a dense SortingResult or Templates"
+        assert (
+            templates_or_sorting_result.sparsity is None
+        ), "To compute sparsity you need a dense SortingResult or Templates"
 
         unit_ids = templates_or_sorting_result.unit_ids
         channel_ids = templates_or_sorting_result.channel_ids
@@ -321,14 +325,18 @@ class ChannelSparsity:
         if isinstance(templates_or_sorting_result, SortingResult):
             ext = templates_or_sorting_result.get_extension("noise_levels")
             assert ext is not None, "To compute sparsity from snr you need to compute 'noise_levels' first"
-            assert ext.params["return_scaled"], "To compute sparsity from snr you need return_scaled=True for extensions"
+            assert ext.params[
+                "return_scaled"
+            ], "To compute sparsity from snr you need return_scaled=True for extensions"
             noise_levels = ext.data["noise_levels"]
         elif isinstance(templates_or_sorting_result, Templates):
             assert noise_levels is not None
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
-        peak_values = get_template_amplitudes(templates_or_sorting_result, peak_sign=peak_sign, mode="extremum", return_scaled=True)
+        peak_values = get_template_amplitudes(
+            templates_or_sorting_result, peak_sign=peak_sign, mode="extremum", return_scaled=True
+        )
 
         for unit_ind, unit_id in enumerate(unit_ids):
             chan_inds = np.nonzero((np.abs(peak_values[unit_id]) / noise_levels) >= threshold)
@@ -342,7 +350,9 @@ class ChannelSparsity:
         Use the "threshold" argument to specify the SNR threshold.
         """
 
-        assert templates_or_sorting_result.sparsity is None,  "To compute sparsity you need a dense SortingResult or Templates"
+        assert (
+            templates_or_sorting_result.sparsity is None
+        ), "To compute sparsity you need a dense SortingResult or Templates"
 
         from .template_tools import get_template_amplitudes
         from .sortingresult import SortingResult
@@ -354,12 +364,15 @@ class ChannelSparsity:
         if isinstance(templates_or_sorting_result, SortingResult):
             ext = templates_or_sorting_result.get_extension("noise_levels")
             assert ext is not None, "To compute sparsity from snr you need to compute 'noise_levels' first"
-            assert ext.params["return_scaled"], "To compute sparsity from snr you need return_scaled=True for extensions"
+            assert ext.params[
+                "return_scaled"
+            ], "To compute sparsity from snr you need return_scaled=True for extensions"
             noise_levels = ext.data["noise_levels"]
         elif isinstance(templates_or_sorting_result, Templates):
             assert noise_levels is not None
 
         from .template_tools import _get_dense_templates_array
+
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
         templates_array = _get_dense_templates_array(templates_or_sorting_result, return_scaled=True)
@@ -376,7 +389,7 @@ class ChannelSparsity:
         Construct sparsity from a threshold based on per channel energy ratio.
         Use the "threshold" argument to specify the SNR threshold.
         """
-        assert sorting_result.sparsity is None,  "To compute sparsity with energy you need a dense SortingResult"
+        assert sorting_result.sparsity is None, "To compute sparsity with energy you need a dense SortingResult"
 
         mask = np.zeros((sorting_result.unit_ids.size, sorting_result.channel_ids.size), dtype="bool")
 
@@ -407,8 +420,12 @@ class ChannelSparsity:
         Use the "by_property" argument to specify the property name.
         """
         # check consistency
-        assert by_property in sorting_result.recording.get_property_keys(), f"Property {by_property} is not a recording property"
-        assert by_property in sorting_result.sorting.get_property_keys(), f"Property {by_property} is not a sorting property"
+        assert (
+            by_property in sorting_result.recording.get_property_keys()
+        ), f"Property {by_property} is not a recording property"
+        assert (
+            by_property in sorting_result.sorting.get_property_keys()
+        ), f"Property {by_property} is not a sorting property"
 
         mask = np.zeros((sorting_result.unit_ids.size, sorting_result.channel_ids.size), dtype="bool")
         rec_by = sorting_result.recording.split_by(by_property)
@@ -469,13 +486,18 @@ def compute_sparsity(
         templates_or_sorting_result = templates_or_sorting_result.sorting_result
 
     if method in ("best_channels", "radius", "snr", "ptp"):
-        assert isinstance(templates_or_sorting_result, (Templates, SortingResult)), f"compute_sparsity(method='{method}') need Templates or SortingResult"
+        assert isinstance(
+            templates_or_sorting_result, (Templates, SortingResult)
+        ), f"compute_sparsity(method='{method}') need Templates or SortingResult"
     else:
-        assert isinstance(templates_or_sorting_result, SortingResult), f"compute_sparsity(method='{method}') need SortingResult"
-    
-    if method in ("snr", "ptp") and isinstance(templates_or_sorting_result, Templates):
-        assert noise_levels is not None, f"compute_sparsity(..., method='{method}') with Templates need noise_levels as input"
+        assert isinstance(
+            templates_or_sorting_result, SortingResult
+        ), f"compute_sparsity(method='{method}') need SortingResult"
 
+    if method in ("snr", "ptp") and isinstance(templates_or_sorting_result, Templates):
+        assert (
+            noise_levels is not None
+        ), f"compute_sparsity(..., method='{method}') with Templates need noise_levels as input"
 
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
@@ -485,10 +507,16 @@ def compute_sparsity(
         sparsity = ChannelSparsity.from_radius(templates_or_sorting_result, radius_um, peak_sign=peak_sign)
     elif method == "snr":
         assert threshold is not None, "For the 'snr' method, 'threshold' needs to be given"
-        sparsity = ChannelSparsity.from_snr(templates_or_sorting_result, threshold, noise_levels=noise_levels, peak_sign=peak_sign)
+        sparsity = ChannelSparsity.from_snr(
+            templates_or_sorting_result, threshold, noise_levels=noise_levels, peak_sign=peak_sign
+        )
     elif method == "ptp":
         assert threshold is not None, "For the 'ptp' method, 'threshold' needs to be given"
-        sparsity = ChannelSparsity.from_ptp(templates_or_sorting_result, threshold, noise_levels=noise_levels, )
+        sparsity = ChannelSparsity.from_ptp(
+            templates_or_sorting_result,
+            threshold,
+            noise_levels=noise_levels,
+        )
     elif method == "energy":
         assert threshold is not None, "For the 'energy' method, 'threshold' needs to be given"
         sparsity = ChannelSparsity.from_energy(templates_or_sorting_result, threshold)
@@ -588,7 +616,7 @@ def estimate_sparsity(
         nafter,
         return_scaled=False,
         job_name="estimate_sparsity",
-        **job_kwargs
+        **job_kwargs,
     )
     templates = Templates(
         templates_array=templates_array,

@@ -155,7 +155,9 @@ def get_potential_auto_merge(
     # STEP 3 : unit positions are estimated roughly with channel
     if "unit_positions" in steps:
         chan_loc = sorting_result.get_channel_locations()
-        unit_max_chan = get_template_extremum_channel(sorting_result, peak_sign=peak_sign, mode="extremum", outputs="index")
+        unit_max_chan = get_template_extremum_channel(
+            sorting_result, peak_sign=peak_sign, mode="extremum", outputs="index"
+        )
         unit_max_chan = list(unit_max_chan.values())
         unit_locations = chan_loc[unit_max_chan, :]
         unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
@@ -196,7 +198,12 @@ def get_potential_auto_merge(
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     if "check_increase_score" in steps:
         pair_mask, pairs_decreased_score = check_improve_contaminations_score(
-            sorting_result, pair_mask, contaminations, firing_contamination_balance, refractory_period_ms, censored_period_ms
+            sorting_result,
+            pair_mask,
+            contaminations,
+            firing_contamination_balance,
+            refractory_period_ms,
+            censored_period_ms,
         )
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
@@ -419,7 +426,6 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
 
     return templates_diff
-
 
 
 def check_improve_contaminations_score(

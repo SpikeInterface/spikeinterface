@@ -51,4 +51,3 @@ if __name__ == "__main__":
     test.setUpClass()
     test.test_extension()
     test.test_compute_ISI()
-

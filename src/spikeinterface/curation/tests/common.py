@@ -13,6 +13,8 @@ else:
 
 
 job_kwargs = dict(n_jobs=-1)
+
+
 def make_sorting_result(sparse=True):
     recording, sorting = generate_ground_truth_recording(
         durations=[300.0],
@@ -24,7 +26,7 @@ def make_sorting_result(sparse=True):
         seed=2205,
     )
 
-    sorting_result = start_sorting_result(sorting=sorting, recording=recording, format="memory",  sparse=sparse)
+    sorting_result = start_sorting_result(sorting=sorting, recording=recording, format="memory", sparse=sparse)
     sorting_result.select_random_spikes()
     sorting_result.compute("waveforms", **job_kwargs)
     sorting_result.compute("templates")

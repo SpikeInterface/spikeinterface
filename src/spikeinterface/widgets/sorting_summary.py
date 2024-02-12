@@ -118,11 +118,21 @@ class SortingSummaryWidget(BaseWidget):
         ).view
 
         v_unit_locations = UnitLocationsWidget(
-            sorting_result, unit_ids=unit_ids, hide_unit_selector=True, generate_url=False, display=False, backend="sortingview"
+            sorting_result,
+            unit_ids=unit_ids,
+            hide_unit_selector=True,
+            generate_url=False,
+            display=False,
+            backend="sortingview",
         ).view
 
         w = TemplateSimilarityWidget(
-            sorting_result, unit_ids=unit_ids, immediate_plot=False, generate_url=False, display=False, backend="sortingview"
+            sorting_result,
+            unit_ids=unit_ids,
+            immediate_plot=False,
+            generate_url=False,
+            display=False,
+            backend="sortingview",
         )
         similarity = w.data_plot["similarity"]
 

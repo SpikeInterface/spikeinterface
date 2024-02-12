@@ -34,7 +34,7 @@ class ComputeUnitLocations(ResultExtension):
     Parameters
     ----------
     sorting_result: SortingResult
-        A SortingResult object    
+        A SortingResult object
     method: "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The method to use for localization
     outputs: "numpy" | "by_unit", default: "numpy"
@@ -49,7 +49,9 @@ class ComputeUnitLocations(ResultExtension):
     """
 
     extension_name = "unit_locations"
-    depend_on = ["fast_templates|templates", ]
+    depend_on = [
+        "fast_templates|templates",
+    ]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
@@ -88,6 +90,7 @@ class ComputeUnitLocations(ResultExtension):
             for unit_ind, unit_id in enumerate(self.sorting_result.unit_ids):
                 locations_by_unit[unit_id] = self.data["unit_locations"][unit_ind]
             return locations_by_unit
+
 
 register_result_extension(ComputeUnitLocations)
 compute_unit_locations = ComputeUnitLocations.function_factory()
@@ -209,7 +212,7 @@ def compute_monopolar_triangulation(
     Parameters
     ----------
     sorting_result: SortingResult
-        A SortingResult object    
+        A SortingResult object
     method: "least_square" | "minimize_with_log_penality", default: "least_square"
        The optimizer to use
     radius_um: float, default: 75
@@ -239,11 +242,9 @@ def compute_monopolar_triangulation(
 
     contact_locations = sorting_result.get_channel_locations()
 
-    
     sparsity = compute_sparsity(sorting_result, method="radius", radius_um=radius_um)
     templates = _get_dense_templates_array(sorting_result)
     nbefore = _get_nbefore(sorting_result)
-
 
     if enforce_decrease:
         neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
@@ -287,7 +288,7 @@ def compute_center_of_mass(sorting_result, peak_sign="neg", radius_um=75, featur
     Parameters
     ----------
     sorting_result: SortingResult
-        A SortingResult object    
+        A SortingResult object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     radius_um: float
@@ -349,7 +350,7 @@ def compute_grid_convolution(
     Parameters
     ----------
     sorting_result: SortingResult
-        A SortingResult object    
+        A SortingResult object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     radius_um: float, default: 40.0
@@ -381,7 +382,6 @@ def compute_grid_convolution(
     nbefore = _get_nbefore(sorting_result)
     nafter = templates.shape[1] - nbefore
 
-
     fs = sorting_result.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
@@ -397,7 +397,6 @@ def compute_grid_convolution(
     template_positions, weights, nearest_template_mask, z_factors = get_grid_convolution_templates_and_weights(
         contact_locations, radius_um, upsampling_um, margin_um, weight_method
     )
-
 
     peak_channels = get_template_extremum_channel(sorting_result, peak_sign, outputs="index")
 

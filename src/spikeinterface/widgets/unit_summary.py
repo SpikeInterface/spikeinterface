@@ -91,7 +91,12 @@ class UnitSummaryWidget(BaseWidget):
             ax1 = fig.add_subplot(gs[:2, 0])
             # UnitLocationsPlotter().do_plot(dp.plot_data_unit_locations, ax=ax1)
             w = UnitLocationsWidget(
-                sorting_result, unit_ids=[unit_id], unit_colors=unit_colors, plot_legend=False, backend="matplotlib", ax=ax1
+                sorting_result,
+                unit_ids=[unit_id],
+                unit_colors=unit_colors,
+                plot_legend=False,
+                backend="matplotlib",
+                ax=ax1,
             )
 
             unit_locations = sorting_result.get_extension("unit_locations").get_data(outputs="by_unit")

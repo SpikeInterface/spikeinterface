@@ -17,7 +17,10 @@ else:
 
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
-        durations=[30.0], sampling_frequency=16000.0, num_channels=10, num_units=5,
+        durations=[30.0],
+        sampling_frequency=16000.0,
+        num_channels=10,
+        num_units=5,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
         noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
         seed=2205,
@@ -34,7 +37,6 @@ def test_SortingResult_memory():
     _check_sorting_results(sortres, sorting)
 
 
-
 def test_SortingResult_binary_folder():
     recording, sorting = get_dataset()
 
@@ -42,7 +44,9 @@ def test_SortingResult_binary_folder():
     if folder.exists():
         shutil.rmtree(folder)
 
-    sortres = start_sorting_result(sorting, recording, format="binary_folder", folder=folder,  sparse=False, sparsity=None)
+    sortres = start_sorting_result(
+        sorting, recording, format="binary_folder", folder=folder, sparse=False, sparsity=None
+    )
     sortres = load_sorting_result(folder, format="auto")
     _check_sorting_results(sortres, sorting)
 
@@ -54,10 +58,9 @@ def test_SortingResult_zarr():
     if folder.exists():
         shutil.rmtree(folder)
 
-    sortres = start_sorting_result(sorting, recording, format="zarr", folder=folder,  sparse=False, sparsity=None)
+    sortres = start_sorting_result(sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None)
     sortres = load_sorting_result(folder, format="auto")
     _check_sorting_results(sortres, sorting)
-
 
 
 def _check_sorting_results(sortres, original_sorting):
@@ -73,7 +76,7 @@ def _check_sorting_results(sortres, original_sorting):
 
     probe = sortres.get_probe()
     sparsity = sortres.sparsity
-    
+
     # compute
     sortres.compute("dummy", param1=5.5)
     # equivalent
@@ -89,7 +92,6 @@ def _check_sorting_results(sortres, original_sorting):
     ext = sortres.get_extension("dummy")
     assert ext is None
 
-    
     assert sortres.has_recording()
 
     if sortres.random_spikes_indices is None:
@@ -115,7 +117,7 @@ def _check_sorting_results(sortres, original_sorting):
         sortres2 = sortres.save_as(format=format, folder=folder)
         ext = sortres2.get_extension("dummy")
         assert ext is not None
-        
+
         data = sortres2.get_extension("dummy").data
         assert "result_one" in data
         assert data["result_two"].size == original_sorting.to_spike_vector().size
@@ -150,11 +152,11 @@ class DummyResultExtension(ResultExtension):
     need_recording = False
     use_nodepipeline = False
 
-    def _set_params(self, param0="yep", param1=1.2, param2=[1,2, 3.]):
+    def _set_params(self, param0="yep", param1=1.2, param2=[1, 2, 3.0]):
         params = dict(param0=param0, param1=param1, param2=param2)
         params["more_option"] = "yep"
         return params
-    
+
     def _run(self, **kwargs):
         # print("dummy run")
         self.data["result_one"] = "abcd"
@@ -162,7 +164,7 @@ class DummyResultExtension(ResultExtension):
         # and represent nothing (the trick is to use unit_index for testing slice)
         spikes = self.sorting_result.sorting.to_spike_vector()
         self.data["result_two"] = spikes["unit_index"].copy()
-    
+
     def _select_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
 
@@ -175,9 +177,10 @@ class DummyResultExtension(ResultExtension):
         new_data["result_two"] = self.data["result_two"][keep_spike_mask]
 
         return new_data
-    
+
     def _get_data(self):
         return self.data["result_one"]
+
 
 compute_dummy = DummyResultExtension.function_factory()
 

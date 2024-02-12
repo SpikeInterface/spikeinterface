@@ -30,7 +30,6 @@ def test_remove_redundant_units(sorting_result_for_curation):
     sorting_result.compute("waveforms", **job_kwargs)
     sorting_result.compute("templates")
 
-
     for remove_strategy in ("max_spikes", "minimum_shift", "highest_amplitude"):
         sorting_clean = remove_redundant_units(sorting_result, remove_strategy=remove_strategy)
         # print(sorting_clean)

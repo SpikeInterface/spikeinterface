@@ -13,14 +13,13 @@ from spikeinterface.core import (
     BinaryRecordingExtractor,
     BinaryFolderRecording,
     ChannelSparsity,
-    SortingResult
+    SortingResult,
 )
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.postprocessing import (
     compute_spike_amplitudes,
     compute_template_similarity,
     compute_principal_components,
-    
 )
 
 
@@ -74,8 +73,7 @@ def export_to_phy(
     """
     import pandas as pd
 
-    assert isinstance(
-        sorting_result, SortingResult), "sorting_result must be a SortingResult object"
+    assert isinstance(sorting_result, SortingResult), "sorting_result must be a SortingResult object"
     sorting = sorting_result.sorting
 
     assert (

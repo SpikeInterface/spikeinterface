@@ -8,8 +8,6 @@ from spikeinterface.postprocessing import ComputePrincipalComponents, compute_pr
 from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
 
 
-
-
 # from spikeinterface import compute_sparsity
 # from spikeinterface.postprocessing import WaveformPrincipalComponent, compute_principal_components
 # from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
@@ -78,7 +76,6 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
     #         pc_unit = all_pc_sparse[all_spikes_seg0["unit_index"] == unit_index]
     #         assert np.allclose(pc_unit[:, :, len(sparse_channel_ids) :], 0)
 
-
     def test_project_new(self):
         from sklearn.decomposition import IncrementalPCA
 
@@ -90,12 +87,11 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
         sorting_result.compute("principal_components", mode="by_channel_local", n_components=n_components)
         ext_pca = sorting_result.get_extension(self.extension_name)
 
-
         num_spike = 100
         new_spikes = sorting_result.sorting.to_spike_vector()[:num_spike]
         new_waveforms = np.random.randn(num_spike, waveforms.shape[1], waveforms.shape[2])
         new_proj = ext_pca.project_new(new_spikes, new_waveforms)
-        
+
         assert new_proj.shape[0] == num_spike
         assert new_proj.shape[1] == n_components
         assert new_proj.shape[2] == ext_pca.data["pca_projection"].shape[2]
@@ -108,7 +104,6 @@ if __name__ == "__main__":
     test.test_mode_concatenated()
     # test.test_compute_for_all_spikes()
     test.test_project_new()
-
 
     # ext = test.sorting_results["sparseTrue_memory"].get_extension("principal_components")
     # pca = ext.data["pca_projection"]

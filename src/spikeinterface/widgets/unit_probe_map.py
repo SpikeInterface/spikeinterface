@@ -11,6 +11,7 @@ from .base import BaseWidget, to_attr
 from ..core.sortingresult import SortingResult
 from ..core.template_tools import _get_dense_templates_array
 
+
 class UnitProbeMapWidget(BaseWidget):
     """
     Plots unit map. Amplitude is color coded on probe contact.
@@ -120,7 +121,7 @@ class UnitProbeMapWidget(BaseWidget):
 
             def animate_func(frame):
                 for i, unit_id in enumerate(self.unit_ids):
-                    # template = we.get_template(unit_id)
+                    # template = we.get_template(unit_id)
                     template = templates[i, :, :]
                     contacts_values = np.abs(template[frame, :])
                     poly_contact = all_poly_contact[i]

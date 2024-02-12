@@ -33,7 +33,7 @@ def make_sorting_result(sparse=True, with_group=False):
         recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
         sorting.set_property("group", [0, 0, 1, 1])
 
-    sorting_result = start_sorting_result(sorting=sorting, recording=recording, format="memory",  sparse=sparse)
+    sorting_result = start_sorting_result(sorting=sorting, recording=recording, format="memory", sparse=sparse)
     sorting_result.select_random_spikes()
     sorting_result.compute("waveforms")
     sorting_result.compute("templates")

@@ -26,9 +26,7 @@ class UnitDepthsWidget(BaseWidget):
         Sign of peak for amplitudes
     """
 
-    def __init__(
-        self, sorting_result, unit_colors=None, depth_axis=1, peak_sign="neg", backend=None, **backend_kwargs
-    ):
+    def __init__(self, sorting_result, unit_colors=None, depth_axis=1, peak_sign="neg", backend=None, **backend_kwargs):
         unit_ids = sorting_result.sorting.unit_ids
 
         if unit_colors is None:

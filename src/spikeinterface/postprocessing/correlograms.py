@@ -43,8 +43,9 @@ class ComputeCorrelograms(ResultExtension):
             2D array with ISI histograms (num_units, num_bins)
         bins : np.array
             1D array with bins in ms
-        
+
     """
+
     extension_name = "correlograms"
     depend_on = []
     need_recording = False
@@ -79,6 +80,7 @@ class ComputeCorrelograms(ResultExtension):
 register_result_extension(ComputeCorrelograms)
 compute_correlograms_sorting_result = ComputeCorrelograms.function_factory()
 
+
 def compute_correlograms(
     sorting_result_or_sorting,
     window_ms: float = 50.0,
@@ -86,13 +88,16 @@ def compute_correlograms(
     method: str = "auto",
 ):
     if isinstance(sorting_result_or_sorting, SortingResult):
-        return compute_correlograms_sorting_result(sorting_result_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
+        return compute_correlograms_sorting_result(
+            sorting_result_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
+        )
     else:
-        return compute_correlograms_on_sorting(sorting_result_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
+        return compute_correlograms_on_sorting(
+            sorting_result_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
+        )
+
 
 compute_correlograms.__doc__ = compute_correlograms_sorting_result.__doc__
-
-
 
 
 def _make_bins(sorting, window_ms, bin_ms):

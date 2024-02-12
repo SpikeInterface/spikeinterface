@@ -25,7 +25,6 @@ from ..core.template_tools import (
 )
 
 
-
 try:
     import numba
 
@@ -703,9 +702,7 @@ def compute_amplitude_cv_metrics(
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
     for unit_id in unit_ids:
         firing_rate = num_spikes[unit_id] / total_duration
-        temporal_bin_size_samples = int(
-            (average_num_spikes_per_bin / firing_rate) * sorting_result.sampling_frequency
-        )
+        temporal_bin_size_samples = int((average_num_spikes_per_bin / firing_rate) * sorting_result.sampling_frequency)
 
         amp_spreads = []
         # bins and amplitude means are computed for each segment
@@ -750,11 +747,11 @@ def _get_amplitudes_by_units(sorting_result, unit_ids, peak_sign):
         all_amplitudes = ext.get_data()
         for unit_id in unit_ids:
             unit_index = sorting_result.sorting.id_to_index(unit_id)
-            spike_mask = spikes["unit_index"] ==unit_index
+            spike_mask = spikes["unit_index"] == unit_index
             amplitudes_by_units[unit_id] = all_amplitudes[spike_mask]
 
     elif sorting_result.has_extension("waveforms"):
-        waveforms_ext =  sorting_result.get_extension("waveforms")
+        waveforms_ext = sorting_result.get_extension("waveforms")
         before = waveforms_ext.nbefore
         extremum_channels_ids = get_template_extremum_channel(sorting_result, peak_sign=peak_sign)
         for unit_id in unit_ids:
@@ -765,8 +762,9 @@ def _get_amplitudes_by_units(sorting_result, unit_ids, peak_sign):
             else:
                 chan_ind = sorting_result.channel_ids_to_indices([chan_id])[0]
             amplitudes_by_units[unit_id] = waveforms[:, before, chan_ind]
-    
+
     return amplitudes_by_units
+
 
 def compute_amplitude_cutoffs(
     sorting_result,
@@ -819,15 +817,17 @@ def compute_amplitude_cutoffs(
     if unit_ids is None:
         unit_ids = sorting_result.unit_ids
 
-    
     all_fraction_missing = {}
     if sorting_result.has_extension("spike_amplitudes") or sorting_result.has_extension("waveforms"):
 
         invert_amplitudes = False
-        if sorting_result.has_extension("spike_amplitudes") and sorting_result.get_extension("spike_amplitudes").params["peak_sign"] == "pos":
+        if (
+            sorting_result.has_extension("spike_amplitudes")
+            and sorting_result.get_extension("spike_amplitudes").params["peak_sign"] == "pos"
+        ):
             invert_amplitudes = True
         elif sorting_result.has_extension("waveforms") and peak_sign == "pos":
-            invert_amplitudes = True                
+            invert_amplitudes = True
 
         amplitudes_by_units = _get_amplitudes_by_units(sorting_result, unit_ids, peak_sign)
 
@@ -889,11 +889,12 @@ def compute_amplitude_medians(sorting_result, peak_sign="neg", unit_ids=None):
         for unit_id in unit_ids:
             all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
     else:
-       warnings.warn("compute_amplitude_medians need 'spike_amplitudes' or 'waveforms' extension")
-       for unit_id in unit_ids:
+        warnings.warn("compute_amplitude_medians need 'spike_amplitudes' or 'waveforms' extension")
+        for unit_id in unit_ids:
             all_amplitude_medians[unit_id] = np.nan
 
     return all_amplitude_medians
+
 
 _default_params["amplitude_median"] = dict(peak_sign="neg")
 
@@ -972,10 +973,8 @@ def compute_drift_metrics(
         spike_locations_by_unit = {}
         for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
-            spike_mask = spikes["unit_index"] ==unit_index
+            spike_mask = spikes["unit_index"] == unit_index
             spike_locations_by_unit[unit_id] = spike_locations[spike_mask]
-
-
 
     else:
         warnings.warn(
@@ -1439,7 +1438,7 @@ def compute_sd_ratio(
     sd_ratio = {}
     for unit_id in unit_ids:
         unit_index = sorting_result.sorting.id_to_index(unit_id)
-        
+
         spk_amp = []
 
         for segment_index in range(sorting_result.get_num_segments()):
@@ -1472,13 +1471,12 @@ def compute_sd_ratio(
             best_channel = best_channels[unit_id]
             std_noise = noise_levels[best_channel]
 
-
             if correct_for_template_itself:
                 # template = sorting_result.get_template(unit_id, force_dense=True)[:, best_channel]
-                
+
                 template = tamplates_array[unit_index, :, :][:, best_channel]
                 nsamples = template.shape[0]
-                
+
                 # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
                 # TODO: Take into account that templates for different segments might differ.
                 p = nsamples * n_spikes[unit_id] / sorting_result.get_total_samples()

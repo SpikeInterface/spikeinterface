@@ -14,7 +14,7 @@ from spikeinterface.core.node_pipeline import (
     PipelineNode,
     ExtractDenseWaveforms,
     sorting_to_peaks,
-    spike_peak_dtype
+    spike_peak_dtype,
 )
 
 

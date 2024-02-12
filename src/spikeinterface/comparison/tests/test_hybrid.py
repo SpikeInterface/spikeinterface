@@ -1,7 +1,7 @@
 import pytest
 import shutil
 from pathlib import Path
-from spikeinterface.core import extract_waveforms, load_waveforms,load_extractor
+from spikeinterface.core import extract_waveforms, load_waveforms, load_extractor
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.comparison import (
     create_hybrid_units_recording,
@@ -37,7 +37,6 @@ def test_hybrid_units_recording():
     wvf_extractor = load_waveforms(cache_folder / "wvf_extractor")
     print(wvf_extractor)
     print(wvf_extractor.sorting_result)
-
 
     recording = wvf_extractor.recording
     templates = wvf_extractor.get_all_templates()

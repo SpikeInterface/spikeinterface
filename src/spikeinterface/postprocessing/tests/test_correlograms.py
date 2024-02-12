@@ -4,6 +4,7 @@ from typing import List
 
 try:
     import numba
+
     HAVE_NUMBA = True
 except ModuleNotFoundError as err:
     HAVE_NUMBA = False
@@ -15,7 +16,6 @@ from spikeinterface.postprocessing import ComputeCorrelograms
 from spikeinterface.postprocessing.correlograms import compute_correlograms_on_sorting, _make_bins
 
 
-
 class ComputeCorrelogramsTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeCorrelograms
     extension_function_params_list = [
@@ -24,7 +24,6 @@ class ComputeCorrelogramsTest(ResultExtensionCommonTestSuite, unittest.TestCase)
     ]
     if HAVE_NUMBA:
         extension_function_params_list.append(dict(method="numba"))
-
 
 
 def test_make_bins():
