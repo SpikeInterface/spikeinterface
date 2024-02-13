@@ -228,8 +228,7 @@ class ChannelSparsity:
         for unit_index, unit_id in enumerate(self.unit_ids):
             template = templates_array[unit_index, ...]
             sparse_template = self.sparsify_waveforms(waveforms=template[np.newaxis, :, :], unit_id=unit_id)
-            sparse_templates[unit_index, :, :sparse_template.shape[2]] = sparse_template
-
+            sparse_templates[unit_index, :, : sparse_template.shape[2]] = sparse_template
 
         return sparse_templates
 

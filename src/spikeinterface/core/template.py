@@ -113,14 +113,15 @@ class Templates:
         assert self.sparsity_mask is None, "Templates should be dense"
 
         return Templates(
-            templates_array = sparsity.sparsify_templates(self.templates_array),
+            templates_array=sparsity.sparsify_templates(self.templates_array),
             sampling_frequency=self.sampling_frequency,
             nbefore=self.nbefore,
             sparsity_mask=sparsity.mask,
             channel_ids=self.channel_ids,
             unit_ids=self.unit_ids,
             probe=self.probe,
-            check_for_consistent_sparsity=self.check_for_consistent_sparsity)
+            check_for_consistent_sparsity=self.check_for_consistent_sparsity,
+        )
 
     def get_one_template_dense(self, unit_index):
         if self.sparsity is None:

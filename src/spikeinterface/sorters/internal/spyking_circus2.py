@@ -202,8 +202,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             nbefore = int(params["general"]["ms_before"] * sampling_frequency / 1000.0)
             nafter = int(params["general"]["ms_after"] * sampling_frequency / 1000.0)
 
-            templates_array = estimate_templates(recording_f, labeled_peaks, unit_ids, nbefore, nafter,
-                                return_scaled=False, job_name=None, **job_kwargs)
+            templates_array = estimate_templates(
+                recording_f, labeled_peaks, unit_ids, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
+            )
 
             templates = Templates(
                 templates_array,
@@ -215,7 +216,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 recording_f.get_probe(),
             )
 
-            sparsity = compute_sparsity(templates, noise_levels, **params['sparsity'])
+            sparsity = compute_sparsity(templates, noise_levels, **params["sparsity"])
             templates = templates.to_sparse(sparsity)
 
             if params["debug"]:

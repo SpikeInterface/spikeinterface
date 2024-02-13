@@ -49,7 +49,7 @@ class RandomProjectionClustering:
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
-        "sparsity" : {"method": "ptp", "threshold": 1},
+        "sparsity": {"method": "ptp", "threshold": 1},
         "radius_um": 100,
         "selection_method": "closest_to_centroid",
         "nb_projections": 10,
@@ -175,11 +175,13 @@ class RandomProjectionClustering:
         nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
 
-        templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter,
-                            return_scaled=False, job_name=None, **job_kwargs)
+        templates_array = estimate_templates(
+            recording, spikes, unit_ids, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
+        )
 
-        templates = Templates(templates_array,
-            fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe())
+        templates = Templates(
+            templates_array, fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe()
+        )
         sparsity = compute_sparsity(templates, get_noise_levels(recording), **params["sparsity"])
         templates = templates.to_sparse(sparsity)
 
