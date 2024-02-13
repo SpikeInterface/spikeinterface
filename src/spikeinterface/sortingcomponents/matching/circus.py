@@ -123,7 +123,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         sparsity = templates.sparsity.mask
 
-        d["sparsity_mask"] = sparsity
         units_overlaps = np.sum(np.logical_and(sparsity[:, np.newaxis, :], sparsity[np.newaxis, :, :]), axis=2)
         d["units_overlaps"] = units_overlaps > 0
         d["unit_overlaps_indices"] = {}
@@ -131,10 +130,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             (d["unit_overlaps_indices"][i],) = np.nonzero(d["units_overlaps"][i])
 
         templates_array = templates.get_dense_templates().copy()
-
-        # First, we set masked channels to 0
-        for count in range(num_templates):
-            templates_array[count][:, ~d["sparsity_mask"][count]] = 0
 
         # Then we keep only the strongest components
         rank = d["rank"]
@@ -151,9 +146,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         # And get the norms, saving compressed templates for CC matrix
         for count in range(num_templates):
-            template = templates_array[count][:, d["sparsity_mask"][count]]
+            template = templates_array[count][:, sparsity[count]]
             d["norms"][count] = np.linalg.norm(template)
-            d["normed_templates"][count][:, d["sparsity_mask"][count]] = template / d["norms"][count]
+            d["normed_templates"][count][:, sparsity[count]] = template / d["norms"][count]
 
         d["temporal"] /= d["norms"][:, np.newaxis, np.newaxis]
         d["temporal"] = np.flip(d["temporal"], axis=1)
@@ -171,7 +166,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             unit_overlaps = np.zeros([num_overlaps, 2 * d["num_samples"] - 1], dtype=np.float32)
 
             for count, j in enumerate(overlapping_units):
-                overlapped_channels = d["sparsity_mask"][j]
+                overlapped_channels = sparsity[j]
                 visible_i = template_i[:, overlapped_channels]
 
                 spatial_filters = d["spatial"][j, :, overlapped_channels]

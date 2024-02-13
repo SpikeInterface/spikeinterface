@@ -87,7 +87,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         abs_threholds = method_kwargs["abs_threholds"]
         exclude_sweep_size = method_kwargs["exclude_sweep_size"]
         neighbours_mask = method_kwargs["neighbours_mask"]
-        templates_array = method_kwargs["templates"].templates_array
+        templates_array = method_kwargs["templates"].get_dense_templates()
 
         nbefore = method_kwargs["nbefore"]
         nafter = method_kwargs["nafter"]
