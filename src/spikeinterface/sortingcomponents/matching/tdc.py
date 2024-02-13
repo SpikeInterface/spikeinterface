@@ -102,7 +102,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             print("TridesclousPeeler : noise should be computed outside")
             d["noise_levels"] = get_noise_levels(recording)
 
-        d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
+        d["abs_thresholds"] = d["noise_levels"] * d["detect_threshold"]
 
         channel_distance = get_channel_distances(recording)
         d["neighbours_mask"] = channel_distance < d["radius_um"]
@@ -219,14 +219,14 @@ def _tdc_find_spikes(traces, d, level=0):
     peak_sign = d["peak_sign"]
     templates = d["templates"]
     templates_short = d["templates_short"]
-    templates_array = templates.templates_array
+    templates_array = templates.get_dense_templates()
 
     margin = d["margin"]
     possible_clusters_by_channel = d["possible_clusters_by_channel"]
 
     peak_traces = traces[margin // 2 : -margin // 2, :]
     peak_sample_ind, peak_chan_ind = DetectPeakLocallyExclusive.detect_peaks(
-        peak_traces, peak_sign, d["abs_threholds"], d["peak_shift"], d["neighbours_mask"]
+        peak_traces, peak_sign, d["abs_thresholds"], d["peak_shift"], d["neighbours_mask"]
     )
     peak_sample_ind += margin // 2
 
