@@ -3,6 +3,7 @@ This backwards compatibility module aims to:
   * load old WaveformsExtractor saved with folder or zarr  (version <=0.100) into the  SortingResult (version>0.100)
   * mock the function extract_waveforms() and the class SortingResult() but based SortingResult
 """
+
 from __future__ import annotations
 
 from typing import Literal, Optional
@@ -89,10 +90,10 @@ def extract_waveforms(
         ms_before=ms_before,
         ms_after=ms_after,
         **other_kwargs,
-        **job_kwargs
+        **job_kwargs,
     )
-    sorting_result = start_sorting_result(sorting, recording, format=format, folder=folder, 
-        sparse=sparse, sparsity=sparsity, **sparsity_kwargs
+    sorting_result = start_sorting_result(
+        sorting, recording, format=format, folder=folder, sparse=sparse, sparsity=sparsity, **sparsity_kwargs
     )
 
     # TODO propagate job_kwargs
@@ -107,12 +108,10 @@ def extract_waveforms(
 
     # this also done because some metrics need it
     sorting_result.compute("noise_levels")
-    
 
     we = MockWaveformExtractor(sorting_result)
 
     return we
-
 
 
 class MockWaveformExtractor:
@@ -126,7 +125,7 @@ class MockWaveformExtractor:
 
     def is_sparse(self) -> bool:
         return self.sorting_result.is_sparse()
-    
+
     def has_waveforms(self) -> bool:
         return self.sorting_result.get_extension("waveforms") is not None
 
@@ -136,7 +135,7 @@ class MockWaveformExtractor:
     @property
     def recording(self) -> BaseRecording:
         return self.sorting_result.recording
-    
+
     @property
     def sorting(self) -> BaseSorting:
         return self.sorting_result.sorting
@@ -248,7 +247,7 @@ class MockWaveformExtractor:
         lazy: bool = True,
         sparsity=None,
         force_dense: bool = False,
-    ):  
+    ):
         # lazy and cache are ingnored
         ext = self.sorting_result.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
@@ -258,7 +257,9 @@ class MockWaveformExtractor:
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
         if sparsity is not None:
-            assert self.sorting_result.sparsity is None, "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
+            assert (
+                self.sorting_result.sparsity is None
+            ), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
             wfs = wfs[:, :, sparsity.mask[self.sorting.id_to_index(unit_id)]]
 
         if force_dense:
@@ -288,7 +289,7 @@ class MockWaveformExtractor:
             key = f"pencentile_{percentile}"
         else:
             key = mode
-        
+
         templates = ext.data.get(key)
         if templates is None:
             raise ValueError(f"{mode} is not computed")
@@ -299,7 +300,6 @@ class MockWaveformExtractor:
 
         return templates
 
-
     def get_template(
         self, unit_id, mode="average", sparsity=None, force_dense: bool = False, percentile: float | None = None
     ):
@@ -308,14 +308,18 @@ class MockWaveformExtractor:
         return templates[0]
 
 
-
-def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None, output="MockWaveformExtractor", ):
+def load_waveforms(
+    folder,
+    with_recording: bool = True,
+    sorting: Optional[BaseSorting] = None,
+    output="MockWaveformExtractor",
+):
     """
     This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingResult or MockWaveformExtractor.
 
     It also mimic the old load_waveforms by opening a Sortingresult folder and return a MockWaveformExtractor.
     This later behavior is usefull to no break old code like this in versio >=0.101
-    
+
     >>> # In this example we is a MockWaveformExtractor that behave the same as before
     >>> we = extract_waveforms(..., folder="/my_we")
     >>> we = load_waveforms("/my_we")
@@ -347,7 +351,6 @@ def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSo
         return sorting_result
     elif output in ("WaveformExtractor", "MockWaveformExtractor"):
         return MockWaveformExtractor(sorting_result)
-
 
 
 def _read_old_waveforms_extractor_binary(folder):
@@ -401,18 +404,20 @@ def _read_old_waveforms_extractor_binary(folder):
     # need to concatenate sampled_index and order it
     waveform_folder = folder / "waveforms"
     if waveform_folder.exists():
-        
+
         spikes = sorting.to_spike_vector()
         random_spike_mask = np.zeros(spikes.size, dtype="bool")
 
         all_sampled_indices = []
         # first readd all sampled_index to get the correct ordering
         for unit_index, unit_id in enumerate(sorting.unit_ids):
-            # unit_indices has dtype=[("spike_index", "int64"), ("segment_index", "int64")] 
+            # unit_indices has dtype=[("spike_index", "int64"), ("segment_index", "int64")]
             unit_indices = np.load(waveform_folder / f"sampled_index_{unit_id}.npy")
             for segment_index in range(sorting.get_num_segments()):
                 in_seg_selected = unit_indices[unit_indices["segment_index"] == segment_index]["spike_index"]
-                spikes_indices = np.flatnonzero((spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index))
+                spikes_indices = np.flatnonzero(
+                    (spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index)
+                )
                 random_spike_mask[spikes_indices[in_seg_selected]] = True
         random_spikes_indices = np.flatnonzero(random_spike_mask)
 
@@ -431,7 +436,7 @@ def _read_old_waveforms_extractor_binary(folder):
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             wfs = np.load(waveform_folder / f"waveforms_{unit_id}.npy")
             mask = some_spikes["unit_index"] == unit_index
-            waveforms[:, :, :wfs.shape[2]][mask, :, :] = wfs
+            waveforms[:, :, : wfs.shape[2]][mask, :, :] = wfs
 
         sorting_result.random_spikes_indices = random_spikes_indices
 
@@ -446,7 +451,7 @@ def _read_old_waveforms_extractor_binary(folder):
     for mode in ("average", "std", "median", "percentile"):
         template_file = folder / f"templates_{mode}.npy"
         if template_file.is_file():
-            templates [mode] = np.load(template_file)
+            templates[mode] = np.load(template_file)
     if len(templates) > 0:
         ext = ComputeTemplates(sorting_result)
         ext.params = dict(operators=list(templates.keys()))
@@ -454,21 +459,20 @@ def _read_old_waveforms_extractor_binary(folder):
             ext.data[mode] = arr
         sorting_result.extensions["templates"] = ext
 
-
     # TODO : implement this when extension will be prted in the new API
     # old_extension_to_new_class : {
-        # old extensions with same names and equvalent data
-        # "spike_amplitudes": ,
-        # "spike_locations": ,
-        # "amplitude_scalings": ,
-        # "template_metrics" : ,
-        # "similarity": , 
-        # "unit_locations": ,
-        # "correlograms" : ,
-        # isi_histograms: ,
-        # "noise_levels": ,
-        # "quality_metrics": ,
-        # "principal_components" : , 
+    # old extensions with same names and equvalent data except similarity>template_similarity
+    # "spike_amplitudes": ,
+    # "spike_locations": ,
+    # "amplitude_scalings": ,
+    # "template_metrics" : ,
+    # "similarity": ,
+    # "unit_locations": ,
+    # "correlograms" : ,
+    # isi_histograms: ,
+    # "noise_levels": ,
+    # "quality_metrics": ,
+    # "principal_components" : ,
     # }
     # for ext_name, new_class in old_extension_to_new_class.items():
     #     ext_folder = folder / ext_name
@@ -508,8 +512,4 @@ def _read_old_waveforms_extractor_binary(folder):
     #         # TODO: this is for you
     #         pass
 
-
-
     return sorting_result
-
-

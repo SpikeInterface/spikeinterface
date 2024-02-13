@@ -172,7 +172,13 @@ class SpikeRetriever(PeakSource):
     """
 
     def __init__(
-        self, recording, sorting, channel_from_template=True, extremum_channel_inds=None, radius_um=50, peak_sign="neg",
+        self,
+        recording,
+        sorting,
+        channel_from_template=True,
+        extremum_channel_inds=None,
+        radius_um=50,
+        peak_sign="neg",
         include_spikes_in_margin=False,
     ):
         PipelineNode.__init__(self, recording, return_output=False)
@@ -199,7 +205,6 @@ class SpikeRetriever(PeakSource):
         for segment_index in range(recording.get_num_segments()):
             i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
-        
 
     def get_trace_margin(self):
         return 0
@@ -212,7 +217,9 @@ class SpikeRetriever(PeakSource):
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
         if self.include_spikes_in_margin:
-            i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin])
+            i0, i1 = np.searchsorted(
+                peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
+            )
         else:
             i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]

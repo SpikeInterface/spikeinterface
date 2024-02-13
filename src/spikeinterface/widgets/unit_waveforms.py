@@ -9,6 +9,7 @@ from ..core import ChannelSparsity, SortingResult
 from ..core.basesorting import BaseSorting
 from ..core.template_tools import _get_dense_templates_array
 
+
 class UnitWaveformsWidget(BaseWidget):
     """
     Plots unit waveforms.
@@ -103,7 +104,7 @@ class UnitWaveformsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        
+
         sorting: BaseSorting = sorting_result.sorting
 
         if unit_ids is None:
@@ -132,7 +133,9 @@ class UnitWaveformsWidget(BaseWidget):
                 # in this case, we construct a dense sparsity
                 unit_id_to_channel_ids = {u: sorting_result.channel_ids for u in sorting_result.unit_ids}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
-                    unit_id_to_channel_ids=unit_id_to_channel_ids, unit_ids=sorting_result.unit_ids, channel_ids=sorting_result.channel_ids
+                    unit_id_to_channel_ids=unit_id_to_channel_ids,
+                    unit_ids=sorting_result.unit_ids,
+                    channel_ids=sorting_result.channel_ids,
                 )
             else:
                 assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
@@ -141,8 +144,6 @@ class UnitWaveformsWidget(BaseWidget):
         ext = sorting_result.get_extension("templates")
         assert ext is not None, "plot_waveforms() need extension 'templates'"
         templates = ext.get_templates(unit_ids=unit_ids, operator="average")
-
-        
 
         templates_shading = self._get_template_shadings(sorting_result, unit_ids, templates_percentile_shading)
 
@@ -433,7 +434,7 @@ class UnitWaveformsWidget(BaseWidget):
             templates_shading = []
             for percentile in templates_percentile_shading:
                 template_percentile = ext.get_templates(unit_ids=unit_ids, operator="percentile", percentile=percentile)
-                
+
                 templates_shading.append(template_percentile)
         return templates_shading
 

@@ -11,6 +11,7 @@ from spikeinterface.core.sortingresult import register_result_extension, ResultE
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 from spikeinterface.core.sorting_tools import spike_vector_to_indices
 
+
 class ComputeSpikeAmplitudes(ResultExtension):
     """
     ResultExtension
@@ -52,8 +53,11 @@ class ComputeSpikeAmplitudes(ResultExtension):
         All locations for all spikes and all units are concatenated
 
     """
+
     extension_name = "spike_amplitudes"
-    depend_on = ["fast_templates|templates", ]
+    depend_on = [
+        "fast_templates|templates",
+    ]
     need_recording = True
     use_nodepipeline = True
     nodepipeline_variables = ["amplitudes"]
@@ -79,7 +83,6 @@ class ComputeSpikeAmplitudes(ResultExtension):
 
         return new_data
 
-
     def _get_pipeline_nodes(self):
 
         recording = self.sorting_result.recording
@@ -88,7 +91,9 @@ class ComputeSpikeAmplitudes(ResultExtension):
         peak_sign = self.params["peak_sign"]
         return_scaled = self.params["return_scaled"]
 
-        extremum_channels_indices = get_template_extremum_channel(self.sorting_result, peak_sign=peak_sign, outputs="index")
+        extremum_channels_indices = get_template_extremum_channel(
+            self.sorting_result, peak_sign=peak_sign, outputs="index"
+        )
         peak_shifts = get_template_extremum_channel_peak_shift(self.sorting_result, peak_sign=peak_sign)
 
         if return_scaled:
@@ -115,12 +120,16 @@ class ComputeSpikeAmplitudes(ResultExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amps = run_node_pipeline(
-            self.sorting_result.recording, nodes, job_kwargs=job_kwargs, job_name="spike_amplitudes", gather_mode="memory"
+            self.sorting_result.recording,
+            nodes,
+            job_kwargs=job_kwargs,
+            job_name="spike_amplitudes",
+            gather_mode="memory",
         )
         self.data["amplitudes"] = amps
 
     def _get_data(self, outputs="numpy"):
-        all_amplitudes =  self.data["amplitudes"]
+        all_amplitudes = self.data["amplitudes"]
         if outputs == "numpy":
             return all_amplitudes
         elif outputs == "by_unit":
@@ -137,11 +146,10 @@ class ComputeSpikeAmplitudes(ResultExtension):
         else:
             raise ValueError(f"Wrong .get_data(outputs={outputs})")
 
+
 register_result_extension(ComputeSpikeAmplitudes)
 
 compute_spike_amplitudes = ComputeSpikeAmplitudes.function_factory()
-
-
 
 
 class SpikeAmplitudeNode(PipelineNode):
@@ -192,7 +200,7 @@ class SpikeAmplitudeNode(PipelineNode):
         # and scale
         if self._gains is not None:
             traces = traces.astype("float32") * self._gains + self._offsets
-            amplitudes = amplitudes.astype('float32', copy=True)
+            amplitudes = amplitudes.astype("float32", copy=True)
             amplitudes *= self._gains[chan_inds]
             amplitudes += self._offsets[chan_inds]
 

@@ -5,6 +5,7 @@ import numpy as np
 from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
 from ..core.template_tools import _get_dense_templates_array
 
+
 class ComputeTemplateSimilarity(ResultExtension):
     """Compute similarity between templates with several methods.
 
@@ -23,7 +24,9 @@ class ComputeTemplateSimilarity(ResultExtension):
     """
 
     extension_name = "template_similarity"
-    depend_on = ["fast_templates|templates", ]
+    depend_on = [
+        "fast_templates|templates",
+    ]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
@@ -43,15 +46,19 @@ class ComputeTemplateSimilarity(ResultExtension):
 
     def _run(self):
         templates_array = _get_dense_templates_array(self.sorting_result, return_scaled=True)
-        similarity = compute_similarity_with_templates_array(templates_array, templates_array, method=self.params["method"])
+        similarity = compute_similarity_with_templates_array(
+            templates_array, templates_array, method=self.params["method"]
+        )
         self.data["similarity"] = similarity
 
     def _get_data(self):
         return self.data["similarity"]
 
+
 # @alessio:  compute_template_similarity() is now one inner SortingResult only
 register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
+
 
 def compute_similarity_with_templates_array(templates_array, other_templates_array, method):
     import sklearn.metrics.pairwise
@@ -64,7 +71,7 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
 
     else:
         raise ValueError(f"compute_template_similarity(method {method}) not exists")
-    
+
     return similarity
 
 
@@ -73,9 +80,6 @@ def compute_template_similarity_by_pair(sorting_result_1, sorting_result_2, meth
     templates_array_2 = _get_dense_templates_array(sorting_result_2, return_scaled=True)
     similmarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method)
     return similmarity
-
-
-
 
 
 # def _compute_template_similarity(

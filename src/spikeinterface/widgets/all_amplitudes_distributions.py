@@ -23,12 +23,10 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         Dict of colors with key: unit, value: color, default None
     """
 
-    def __init__(
-        self, sorting_result: SortingResult, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
-    ):
+    def __init__(self, sorting_result: SortingResult, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs):
 
         self.check_extensions(sorting_result, "spike_amplitudes")
-        
+
         amplitudes = sorting_result.get_extension("spike_amplitudes").get_data()
 
         num_segments = sorting_result.get_num_segments()
@@ -45,7 +43,6 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
             unit_index = sorting_result.sorting.id_to_index(unit_id)
             spike_mask = spikes["unit_index"] == unit_index
             amplitudes_by_units[unit_id] = amplitudes[spike_mask]
-
 
         plot_data = dict(
             unit_ids=unit_ids,
@@ -66,7 +63,9 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
 
         ax = self.ax
 
-        parts = ax.violinplot(list(dp.amplitudes_by_units.values()), showmeans=False, showmedians=False, showextrema=False)
+        parts = ax.violinplot(
+            list(dp.amplitudes_by_units.values()), showmeans=False, showmedians=False, showextrema=False
+        )
 
         for i, pc in enumerate(parts["bodies"]):
             color = dp.unit_colors[dp.unit_ids[i]]

@@ -408,7 +408,7 @@ def extract_waveforms_to_single_buffer(
     file_path=None,
     dtype=None,
     sparsity_mask=None,
-    copy=False,
+    copy=True,
     job_name=None,
     **job_kwargs,
 ):
@@ -705,6 +705,79 @@ def estimate_templates(
     unit_ids: list | np.ndarray,
     nbefore: int,
     nafter: int,
+    operator: str = "average",
+    return_scaled: bool = True,
+    job_name=None,
+    **job_kwargs,
+):
+    """
+    Estimate dense templates with "average" or "median".
+    If "average" internaly estimate_templates_average() is used to saved memory/
+
+    Parameters
+    ----------
+
+    recording: BaseRecording
+        The recording object
+    spikes: 1d numpy array with several fields
+        Spikes handled as a unique vector.
+        This vector can be obtained with: `spikes = sorting.to_spike_vector()`
+    unit_ids: list ot numpy
+        List of unit_ids
+    nbefore: int
+        Number of samples to cut out before a spike
+    nafter: int
+        Number of samples to cut out after a spike
+    return_scaled: bool, default: True
+        If True, the traces are scaled before averaging
+
+    Returns
+    -------
+    templates_array: np.array
+        The average templates with shape (num_units, nbefore + nafter, num_channels)
+
+    """
+
+    if job_name is None:
+        job_name = "estimate_templates"
+
+    if operator == "average":
+        templates_array = estimate_templates_average(
+            recording, spikes, unit_ids, nbefore, nafter, return_scaled=return_scaled, job_name=job_name, **job_kwargs
+        )
+    elif operator == "median":
+        all_waveforms, wf_array_info = extract_waveforms_to_single_buffer(
+            recording,
+            spikes,
+            unit_ids,
+            nbefore,
+            nafter,
+            mode="shared_memory",
+            return_scaled=return_scaled,
+            copy=False,
+            **job_kwargs,
+        )
+        templates_array = np.zeros(
+            (len(unit_ids), all_waveforms.shape[1], all_waveforms.shape[2]), dtype=all_waveforms.dtype
+        )
+        for unit_index, unit_id in enumerate(unit_ids):
+            wfs = all_waveforms[spikes["unit_index"] == unit_index]
+            templates_array[unit_index, :, :] = np.median(wfs, axis=0)
+        # release shared memory after the median
+        wf_array_info["shm"].unlink()
+
+    else:
+        raise ValueError(f"estimate_templates(..., operator={operator}) wrong operator must be average or median")
+
+    return templates_array
+
+
+def estimate_templates_average(
+    recording: BaseRecording,
+    spikes: np.ndarray,
+    unit_ids: list | np.ndarray,
+    nbefore: int,
+    nafter: int,
     return_scaled: bool = True,
     job_name=None,
     **job_kwargs,
@@ -773,7 +846,7 @@ def estimate_templates(
     )
 
     if job_name is None:
-        job_name = "estimate_templates"
+        job_name = "estimate_templates_average"
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
     processor.run()
 

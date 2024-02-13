@@ -83,7 +83,7 @@ class SpikesOnTracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        
+
         self.check_extensions(sorting_result, "unit_locations")
 
         sorting: BaseSorting = sorting_result.sorting
@@ -104,8 +104,9 @@ class SpikesOnTracesWidget(BaseWidget):
                 extremum_channel_ids = get_template_extremum_channel(sorting_result)
                 unit_id_to_channel_ids = {u: [ch] for u, ch in extremum_channel_ids.items()}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
-                    unit_id_to_channel_ids=unit_id_to_channel_ids, unit_ids=sorting_result.unit_ids,
-                    channel_ids=sorting_result.channel_ids
+                    unit_id_to_channel_ids=unit_id_to_channel_ids,
+                    unit_ids=sorting_result.unit_ids,
+                    channel_ids=sorting_result.channel_ids,
                 )
             else:
                 assert isinstance(sparsity, ChannelSparsity)
@@ -211,8 +212,8 @@ class SpikesOnTracesWidget(BaseWidget):
                 if len(spike_frames_to_plot) > 0:
                     vspacing = traces_widget.data_plot["vspacing"]
                     traces = traces_widget.data_plot["list_traces"][0]
-                    
-                    # TODO find a better way 
+
+                    # TODO find a better way
                     nbefore = 30
                     nafter = 60
                     waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-nbefore, nafter) - frame_range[0]
@@ -258,7 +259,9 @@ class SpikesOnTracesWidget(BaseWidget):
         width_cm = backend_kwargs["width_cm"]
 
         # plot timeseries
-        self._traces_widget = TracesWidget(sorting_result.recording, **dp.options, backend="ipywidgets", **backend_kwargs_ts)
+        self._traces_widget = TracesWidget(
+            sorting_result.recording, **dp.options, backend="ipywidgets", **backend_kwargs_ts
+        )
         self.ax = self._traces_widget.ax
         self.axes = self._traces_widget.axes
         self.figure = self._traces_widget.figure

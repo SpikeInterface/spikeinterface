@@ -18,6 +18,7 @@ from ..core.template_tools import _get_dense_templates_array, _get_nbefore
 
 # TODO extra sparsity and job_kwargs handling
 
+
 class ComputeAmplitudeScalings(ResultExtension):
     """
     Computes the amplitude scalings from a WaveformExtractor.
@@ -59,7 +60,9 @@ class ComputeAmplitudeScalings(ResultExtension):
     """
 
     extension_name = "amplitude_scalings"
-    depend_on = ["fast_templates|templates", ]
+    depend_on = [
+        "fast_templates|templates",
+    ]
     need_recording = True
     use_nodepipeline = True
     nodepipeline_variables = ["amplitude_scalings", "collision_mask"]
@@ -105,12 +108,11 @@ class ComputeAmplitudeScalings(ResultExtension):
             new_data["collision_mask"] = self.data["collision_mask"][keep_spike_mask]
         return new_data
 
-
     def _get_pipeline_nodes(self):
 
         recording = self.sorting_result.recording
         sorting = self.sorting_result.sorting
-        
+
         # TODO return_scaled is not any more a property of SortingResult this is hard coded for now
         return_scaled = True
 
@@ -126,7 +128,7 @@ class ComputeAmplitudeScalings(ResultExtension):
             ), f"`ms_before` must be smaller than `ms_before` used in ComputeTemplates: {nbefore}"
         else:
             cut_out_before = nbefore
-        
+
         if self.params["ms_after"] is not None:
             cut_out_after = int(self.params["ms_after"] * self.sorting_result.sampling_frequency / 1000.0)
             assert (
@@ -136,7 +138,9 @@ class ComputeAmplitudeScalings(ResultExtension):
             cut_out_after = nafter
 
         peak_sign = "neg" if np.abs(np.min(all_templates)) > np.max(all_templates) else "pos"
-        extremum_channels_indices = get_template_extremum_channel(self.sorting_result, peak_sign=peak_sign, outputs="index")
+        extremum_channels_indices = get_template_extremum_channel(
+            self.sorting_result, peak_sign=peak_sign, outputs="index"
+        )
 
         # collisions
         handle_collisions = self.params["handle_collisions"]
@@ -190,7 +194,11 @@ class ComputeAmplitudeScalings(ResultExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amp_scalings, collision_mask = run_node_pipeline(
-            self.sorting_result.recording, nodes, job_kwargs=job_kwargs, job_name="amplitude_scalings", gather_mode="memory"
+            self.sorting_result.recording,
+            nodes,
+            job_kwargs=job_kwargs,
+            job_name="amplitude_scalings",
+            gather_mode="memory",
         )
         self.data["amplitude_scalings"] = amp_scalings
         if self.params["handle_collisions"]:
@@ -279,6 +287,7 @@ compute_amplitude_scalings = ComputeAmplitudeScalings.function_factory()
 
 # compute_amplitude_scalings.__doc__.format(_shared_job_kwargs_doc)
 
+
 class AmplitudeScalingNode(PipelineNode):
     def __init__(
         self,
@@ -342,7 +351,7 @@ class AmplitudeScalingNode(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces,  peaks):
+    def compute(self, traces, peaks):
         from scipy.stats import linregress
 
         # scale traces with margin to match scaling of templates
@@ -364,9 +373,6 @@ class AmplitudeScalingNode(PipelineNode):
 
         local_spikes_w_margin = peaks
         local_spikes = local_spikes_w_margin[~peaks["in_margin"]]
-
-
-
 
         # set colliding spikes apart (if needed)
         if handle_collisions:
@@ -437,9 +443,6 @@ class AmplitudeScalingNode(PipelineNode):
 
     def get_trace_margin(self):
         return self._margin
-
-
-
 
 
 ### Collision handling ###

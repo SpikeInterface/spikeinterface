@@ -7,8 +7,7 @@ from spikeinterface.exporters import export_report
 
 from spikeinterface.exporters.tests.common import (
     cache_folder,
-    make_waveforms_extractor,
-    waveforms_extractor_sparse_for_export,
+    make_sorting_result,
 )
 
 
@@ -24,5 +23,5 @@ def test_export_report(waveforms_extractor_sparse_for_export):
 
 
 if __name__ == "__main__":
-    we = make_waveforms_extractor(sparse=True)
-    test_export_report(we)
+    sorting_result = make_sorting_result(sparse=True)
+    test_export_report(sorting_result)

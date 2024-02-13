@@ -50,10 +50,16 @@ else:
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
+
 def get_sorting_result(seed=2205):
     # we need high firing rate for amplitude_cutoff
     recording, sorting = generate_ground_truth_recording(
-        durations=[120.0,], sampling_frequency=30_000.0, num_channels=6, num_units=10,
+        durations=[
+            120.0,
+        ],
+        sampling_frequency=30_000.0,
+        num_channels=6,
+        num_units=10,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
         generate_unit_locations_kwargs=dict(
             margin_um=5.0,
@@ -89,14 +95,15 @@ def sorting_result_simple():
 def test_compute_quality_metrics(sorting_result_simple):
     sorting_result = sorting_result_simple
     print(sorting_result)
-    
+
     # without PCs
-    metrics = compute_quality_metrics(sorting_result,
-                                      metric_names=["snr"],
-                                      qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
-                                      skip_pc_metrics=True,
-                                      seed=2205
-                                      )
+    metrics = compute_quality_metrics(
+        sorting_result,
+        metric_names=["snr"],
+        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        skip_pc_metrics=True,
+        seed=2205,
+    )
     # print(metrics)
 
     qm = sorting_result.get_extension("quality_metrics")
@@ -106,25 +113,27 @@ def test_compute_quality_metrics(sorting_result_simple):
 
     # with PCs
     sorting_result.compute("principal_components")
-    metrics = compute_quality_metrics(sorting_result,
-                                      metric_names=None,
-                                      qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
-                                      skip_pc_metrics=False,
-                                      seed=2205
-                                      )
+    metrics = compute_quality_metrics(
+        sorting_result,
+        metric_names=None,
+        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        skip_pc_metrics=False,
+        seed=2205,
+    )
     print(metrics.columns)
     assert "isolation_distance" in metrics.columns
+
 
 def test_compute_quality_metrics_recordingless(sorting_result_simple):
 
     sorting_result = sorting_result_simple
-    metrics = compute_quality_metrics(sorting_result,
-                                      metric_names=None,
-                                      qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
-                                      skip_pc_metrics=False,
-                                      seed=2205
-                                      )
-
+    metrics = compute_quality_metrics(
+        sorting_result,
+        metric_names=None,
+        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        skip_pc_metrics=False,
+        seed=2205,
+    )
 
     # make a copy and make it recordingless
     sorting_result_norec = sorting_result.save_as(format="memory")
@@ -133,17 +142,18 @@ def test_compute_quality_metrics_recordingless(sorting_result_simple):
 
     print(sorting_result_norec)
 
-    metrics_norec = compute_quality_metrics(sorting_result_norec,
-                                      metric_names=None,
-                                      qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
-                                      skip_pc_metrics=False,
-                                      seed=2205
-                                      )
+    metrics_norec = compute_quality_metrics(
+        sorting_result_norec,
+        metric_names=None,
+        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        skip_pc_metrics=False,
+        seed=2205,
+    )
 
     for metric_name in metrics.columns:
         if metric_name == "sd_ratio":
             # this one need recording!!!
-            continue        
+            continue
         assert np.allclose(metrics[metric_name].values, metrics_norec[metric_name].values, rtol=1e-02)
 
 
@@ -165,17 +175,16 @@ def test_empty_units(sorting_result_simple):
     sorting_result_empty.compute("templates")
     sorting_result_empty.compute("spike_amplitudes", **job_kwargs)
 
-    metrics_empty = compute_quality_metrics(sorting_result_empty,
-                                      metric_names=None,
-                                      qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
-                                      skip_pc_metrics=True,
-                                      seed=2205
-                                      )
-    
+    metrics_empty = compute_quality_metrics(
+        sorting_result_empty,
+        metric_names=None,
+        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        skip_pc_metrics=True,
+        seed=2205,
+    )
 
     for empty_unit_id in sorting_empty.get_empty_unit_ids():
         assert np.all(np.isnan(metrics_empty.loc[empty_unit_id]))
-
 
 
 # @alessio all theses old test should be moved in test_metric_functions.py or test_pca_metrics()
@@ -319,4 +328,3 @@ if __name__ == "__main__":
     test_compute_quality_metrics(sorting_result)
     test_compute_quality_metrics_recordingless(sorting_result)
     test_empty_units(sorting_result)
-

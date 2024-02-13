@@ -22,6 +22,7 @@ class SimilarityExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase)
     #             waveforms1 = we.get_waveforms(unit_id1)
     #             check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
 
+
 # TODO check_equal_template_with_distribution_overlap
 
 if __name__ == "__main__":

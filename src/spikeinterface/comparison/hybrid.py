@@ -7,7 +7,6 @@ from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
     load_waveforms,
-    
 )
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.core.generate import (
@@ -18,7 +17,6 @@ from spikeinterface.core.generate import (
 )
 
 # TODO aurelien : this is still using the WaveformExtractor!!! can you change it to use SortingResult ?
-
 
 
 class HybridUnitsRecording(InjectTemplatesRecording):

@@ -61,7 +61,6 @@ class TestWidgets(unittest.TestCase):
 
         cls.num_units = len(cls.sorting.get_unit_ids())
 
-
         extensions_to_compute = dict(
             waveforms=dict(),
             templates=dict(),
@@ -69,7 +68,7 @@ class TestWidgets(unittest.TestCase):
             spike_amplitudes=dict(),
             unit_locations=dict(),
             spike_locations=dict(),
-            quality_metrics=dict(metric_names = ["snr", "isi_violation", "num_spikes"]),
+            quality_metrics=dict(metric_names=["snr", "isi_violation", "num_spikes"]),
             template_metrics=dict(),
             correlograms=dict(),
             template_similarity=dict(),
@@ -90,10 +89,11 @@ class TestWidgets(unittest.TestCase):
         cls.sparsity_best = compute_sparsity(cls.sorting_result_dense, method="best_channels", num_channels=5)
 
         # create sparse
-        cls.sorting_result_sparse = start_sorting_result(cls.sorting, cls.recording, format="memory", sparsity=cls.sparsity_radius)
+        cls.sorting_result_sparse = start_sorting_result(
+            cls.sorting, cls.recording, format="memory", sparsity=cls.sparsity_radius
+        )
         cls.sorting_result_sparse.select_random_spikes()
         cls.sorting_result_sparse.compute(extensions_to_compute, **job_kwargs)
-
 
         # cls.skip_backends = ["ipywidgets", "ephyviewer"]
         # TODO : delete this after debug
@@ -154,8 +154,6 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_spikes_on_traces(self.sorting_result_dense, backend=backend, **self.backend_kwargs[backend])
-
-
 
     def test_plot_unit_waveforms(self):
         possible_backends = list(sw.UnitWaveformsWidget.get_possible_backends())
@@ -300,11 +298,10 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 unit_ids = self.sorting.unit_ids[:2]
-                
+
                 # on dense
                 sw.plot_unit_waveforms_density_map(
-                    self.sorting_result_dense,
-                    unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_result_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
                 # on sparse
                 sw.plot_unit_waveforms_density_map(
@@ -321,7 +318,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-                # on sparse with same_axis
+                # on sparse with same_axis
                 sw.plot_unit_waveforms_density_map(
                     self.sorting_result_sparse,
                     sparsity=None,
@@ -397,7 +394,9 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 sw.plot_amplitudes(self.sorting_result_dense, backend=backend, **self.backend_kwargs[backend])
                 unit_ids = self.sorting_result_dense.unit_ids[:4]
-                sw.plot_amplitudes(self.sorting_result_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_amplitudes(
+                    self.sorting_result_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                )
                 sw.plot_amplitudes(
                     self.sorting_result_dense,
                     unit_ids=unit_ids,
@@ -480,10 +479,16 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_unit_summary(
-                    self.sorting_result_dense, self.sorting_result_dense.sorting.unit_ids[0], backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_result_dense,
+                    self.sorting_result_dense.sorting.unit_ids[0],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
                 )
                 sw.plot_unit_summary(
-                    self.sorting_result_sparse, self.sorting_result_sparse.sorting.unit_ids[0], backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_result_sparse,
+                    self.sorting_result_sparse.sorting.unit_ids[0],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
                 )
 
     def test_plot_sorting_summary(self):
@@ -493,7 +498,10 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_sorting_summary(self.sorting_result_dense, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_sorting_summary(self.sorting_result_sparse, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_sorting_summary(
-                    self.sorting_result_sparse, sparsity=self.sparsity_strict, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_result_sparse,
+                    sparsity=self.sparsity_strict,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
                 )
 
     def test_plot_agreement_matrix(self):
@@ -554,8 +562,6 @@ class TestWidgets(unittest.TestCase):
             if backend == "matplotlib":
                 _, axes = plt.subplots(len(mcmp.object_list), 1)
                 sw.plot_multicomparison_agreement_by_sorter(mcmp, axes=axes)
-    
-    
 
 
 if __name__ == "__main__":
@@ -570,7 +576,7 @@ if __name__ == "__main__":
     # mytest.test_plot_traces()
     # mytest.test_plot_spikes_on_traces()
     # mytest.test_plot_unit_waveforms()
-    # mytest.test_plot_unit_templates()
+    # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_autocorrelograms()
     # mytest.test_plot_crosscorrelograms()
@@ -584,7 +590,7 @@ if __name__ == "__main__":
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
-    # mytest.test_plot_rasters()
+    # mytest.test_plot_rasters()
     # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_unit_presence()
     # mytest.test_plot_peak_activity()
@@ -593,5 +599,3 @@ if __name__ == "__main__":
     plt.show()
 
     # TestWidgets.tearDownClass()
-
-    

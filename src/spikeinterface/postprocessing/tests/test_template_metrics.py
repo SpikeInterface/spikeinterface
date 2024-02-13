@@ -5,7 +5,6 @@ from spikeinterface.postprocessing.tests.common_extension_tests import ResultExt
 from spikeinterface.postprocessing import ComputeTemplateMetrics
 
 
-
 class TemplateMetricsTest(ResultExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeTemplateMetrics
     extension_function_params_list = [
@@ -13,7 +12,6 @@ class TemplateMetricsTest(ResultExtensionCommonTestSuite, unittest.TestCase):
         dict(upsampling_factor=2),
         dict(include_multi_channel_metrics=True),
     ]
-
 
 
 if __name__ == "__main__":

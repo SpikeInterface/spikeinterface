@@ -303,7 +303,6 @@ class GroundTruthStudy:
             sorting_result.select_random_spikes(**select_params)
             sorting_result.compute("fast_templates", **job_kwargs)
 
-
     def get_waveform_extractor(self, case_key=None, dataset_key=None):
         if case_key is not None:
             dataset_key = self.cases[case_key]["dataset"]

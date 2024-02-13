@@ -16,7 +16,8 @@ from .quality_metric_list import calculate_pc_metrics, _misc_metric_name_to_func
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
 
-# TODO : 
+# TODO :
+
 
 class ComputeQualityMetrics(ResultExtension):
     """
@@ -50,9 +51,7 @@ class ComputeQualityMetrics(ResultExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
-    def _set_params(
-        self, metric_names=None, qm_params=None, peak_sign=None, seed=None, skip_pc_metrics=False
-    ):
+    def _set_params(self, metric_names=None, qm_params=None, peak_sign=None, seed=None, skip_pc_metrics=False):
         if metric_names is None:
             metric_names = list(_misc_metric_name_to_func.keys())
             # if PC is available, PC metrics are automatically added to the list
@@ -87,7 +86,7 @@ class ComputeQualityMetrics(ResultExtension):
     def _select_extension_data(self, unit_ids):
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
         new_data = dict(metrics=new_metrics)
-        return new_data        
+        return new_data
 
     def _run(self, verbose=False, **job_kwargs):
         """
@@ -171,7 +170,6 @@ class ComputeQualityMetrics(ResultExtension):
 
 register_result_extension(ComputeQualityMetrics)
 compute_quality_metrics = ComputeQualityMetrics.function_factory()
-
 
 
 def get_quality_metric_list():

@@ -3,7 +3,11 @@ import shutil
 from pathlib import Path
 import numpy as np
 from spikeinterface.core import (
-    NumpySorting, synthetize_spike_train_bad_isi, add_synchrony_to_sorting, generate_ground_truth_recording, start_sorting_result
+    NumpySorting,
+    synthetize_spike_train_bad_isi,
+    add_synchrony_to_sorting,
+    generate_ground_truth_recording,
+    start_sorting_result,
 )
 
 # from spikeinterface.extractors.toy_example import toy_example
@@ -43,10 +47,14 @@ from spikeinterface.qualitymetrics import (
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
-
 def _sorting_result_simple():
     recording, sorting = generate_ground_truth_recording(
-        durations=[50.0,], sampling_frequency=30_000.0, num_channels=6, num_units=10,
+        durations=[
+            50.0,
+        ],
+        sampling_frequency=30_000.0,
+        num_channels=6,
+        num_units=10,
         generate_sorting_kwargs=dict(firing_rates=6.0, refractory_period_ms=4.0),
         noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
         seed=2205,
@@ -63,9 +71,11 @@ def _sorting_result_simple():
 
     return sorting_result
 
+
 @pytest.fixture(scope="module")
 def sorting_result_simple():
     return _sorting_result_simple()
+
 
 def _sorting_violation():
     max_time = 100.0
@@ -100,9 +110,11 @@ def _sorting_result_violations():
 
     sorting = _sorting_violation()
     duration = (sorting.to_spike_vector()["sample_index"][-1] + 1) / sorting.sampling_frequency
-    
+
     recording, sorting = generate_ground_truth_recording(
-        durations=[duration], sampling_frequency=sorting.sampling_frequency, num_channels=6,
+        durations=[duration],
+        sampling_frequency=sorting.sampling_frequency,
+        num_channels=6,
         sorting=sorting,
         noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
         seed=2205,
@@ -115,10 +127,6 @@ def _sorting_result_violations():
 @pytest.fixture(scope="module")
 def sorting_result_violations():
     return _sorting_result_violations()
-
-
-
-
 
 
 def test_mahalanobis_metrics():
@@ -289,7 +297,9 @@ def test_calculate_sliding_rp_violations(sorting_result_violations):
 
 def test_calculate_rp_violations(sorting_result_violations):
     sorting_result = sorting_result_violations
-    rp_contamination, counts = compute_refrac_period_violations(sorting_result, refractory_period_ms=1, censored_period_ms=0.0)
+    rp_contamination, counts = compute_refrac_period_violations(
+        sorting_result, refractory_period_ms=1, censored_period_ms=0.0
+    )
     print(rp_contamination, counts)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -304,7 +314,9 @@ def test_calculate_rp_violations(sorting_result_violations):
     # we.sorting = sorting
     sorting_result2 = start_sorting_result(sorting, sorting_result.recording, format="memory", sparse=False)
 
-    rp_contamination, counts = compute_refrac_period_violations(sorting_result2, refractory_period_ms=1, censored_period_ms=0.0)
+    rp_contamination, counts = compute_refrac_period_violations(
+        sorting_result2, refractory_period_ms=1, censored_period_ms=0.0
+    )
     assert np.isnan(rp_contamination[1])
 
 
@@ -324,13 +336,9 @@ def test_synchrony_metrics(sorting_result_simple):
     previous_sorting_result = sorting_result
     for sync_level in added_synchrony_levels:
         sorting_sync = add_synchrony_to_sorting(sorting, sync_event_ratio=sync_level)
-        #waveform_extractor_sync = extract_waveforms(previous_waveform_extractor.recording, sorting_sync, mode="memory")
         sorting_result_sync = start_sorting_result(sorting_sync, sorting_result.recording, format="memory")
 
-
-        previous_synchrony_metrics = compute_synchrony_metrics(
-            previous_sorting_result, synchrony_sizes=synchrony_sizes
-        )
+        previous_synchrony_metrics = compute_synchrony_metrics(previous_sorting_result, synchrony_sizes=synchrony_sizes)
         current_synchrony_metrics = compute_synchrony_metrics(sorting_result_sync, synchrony_sizes=synchrony_sizes)
         print(current_synchrony_metrics)
         # check that all values increased
@@ -351,7 +359,9 @@ def test_calculate_drift_metrics(sorting_result_simple):
     sorting_result = sorting_result_simple
     sorting_result.compute("spike_locations", **job_kwargs)
 
-    drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(sorting_result, interval_s=10, min_spikes_per_interval=10)
+    drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(
+        sorting_result, interval_s=10, min_spikes_per_interval=10
+    )
 
     # print(drifts_ptps, drifts_stds, drift_mads)
 
@@ -369,15 +379,13 @@ def test_calculate_sd_ratio(sorting_result_simple):
         sorting_result_simple,
     )
 
-
     assert np.all(list(sd_ratio.keys()) == sorting_result_simple.unit_ids)
     # @aurelien can you check this, this is not working anymore
     # assert np.allclose(list(sd_ratio.values()), 1, atol=0.25, rtol=0)
 
 
-
 if __name__ == "__main__":
-    
+
     sorting_result = _sorting_result_simple()
     print(sorting_result)
 
@@ -393,14 +401,8 @@ if __name__ == "__main__":
     # test_calculate_amplitude_cv_metrics(sorting_result)
     test_calculate_sd_ratio(sorting_result)
 
-
-
     # sorting_result_violations = _sorting_result_violations()
     # print(sorting_result_violations)
     # test_calculate_isi_violations(sorting_result_violations)
     # test_calculate_sliding_rp_violations(sorting_result_violations)
     # test_calculate_rp_violations(sorting_result_violations)
-
-
-
-
