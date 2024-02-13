@@ -119,11 +119,29 @@ preprocessed separately per-channel group (then concatenated
 back together under the hood).
 
 It is strongly recommended to use the above structure to preprocess by channel group.
-A discussion of the subtleties of the :py:func:`~aggregate_channels` may be found in
-the end of this tutorial for the interested reader.
 
-.. warning::
-    It is not recommended to apply :py:func:`~aggregate_channels` more than once.
+.. note::
+
+    The splitting and aggregation of channels for preprocessing is flexible.
+    Under the hood, :py:func:`~aggregate_channels` keeps track of when a recording was split. When
+    :py:func:`~get_traces` is called, the preprocessing is still performed per-group,
+    even though the recording is now aggregated.
+
+    To ensure data is preprocessed by channel group, the preprocessing step must be
+    applied separately to each split channel group recording.
+    For example, the below example will NOT preprocess by channel group:
+
+    .. code-block:: python
+
+        split_recording = recording.split_by("group")
+        split_recording_as_list = list(**split_recording.values())
+        combined_recording = aggregate_channels(split_recording_as_list)
+
+        # will NOT preprocess by channel group.
+        filtered_recording = common_reference(combined_recording)
+
+
+    In general, it is not recommended to apply :py:func:`~aggregate_channels` more than once.
     This will slow down :py:func:`~get_traces` calls and may result in unpredictable behaviour.
 
 
@@ -168,49 +186,3 @@ Alternatively, SpikeInterface provides a convenience function to sort the record
         grouping_property='group',
         working_folder='working_path'
     )
-
-
-Further notes on preprocessing by channel group
------------------------------------------------
-
-.. note::
-
-    The splitting and aggregation of channels for preprocessing is flexible.
-    Under the hood, :py:func:`~aggregate_channels` keeps track of when a recording was split. When
-    :py:func:`~get_traces` is called, the preprocessing is still performed per-group,
-    even though the recording is now aggregated.
-
-    To ensure data is preprocessed by channel group, the preprocessing step must be
-    applied separately to each split channel group recording.
-    For example, the below example will NOT preprocess by channel group:
-
-    .. code-block:: python
-
-        split_recording = recording.split_by("group")
-        split_recording_as_list = list(**split_recording.values())
-        combined_recording = aggregate_channels(split_recording_as_list)
-
-        # will NOT preprocess by channel group.
-        filtered_recording = common_reference(combined_recording)
-
-    In the below example the first preprocessing step (bandpass filter)
-    would be applied by channel group (although, in practice this would have no effect
-    as filtering is always applied separately to each individual channel).
-
-    However, common referencing (does operate across
-    separate channels) will not be applied per channel group:
-
-    .. code-block:: python
-
-        split_recording = recording.split_by("group")
-
-        filtered_recording = []
-        for recording in split_recording.values()
-            filtered_recording.append(spre.bandpass_filtered(recording))
-
-        combined_recording = aggregate_channels(filtered_recording)
-
-        # As the recording has been combined, common referencing
-        # will NOT be applied per channel group. But, the bandpass
-        # filter step will be applied per channel group.
-        referenced_recording = spre.common_reference(combined_recording).
