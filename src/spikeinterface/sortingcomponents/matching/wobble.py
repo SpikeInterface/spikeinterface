@@ -377,13 +377,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         params = WobbleParameters(**parameters)
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
         if not templates.are_templates_sparse():
-            sparsity = Sparsity.from_parameters_and_templates(
-                params, templates_array
-            )
+            sparsity = Sparsity.from_parameters_and_templates(params, templates_array)
         else:
-            sparsity = Sparsity.from_templates(
-                params, templates
-            )
+            sparsity = Sparsity.from_templates(params, templates)
 
         # Perform initial computations on templates necessary for computing the objective
         sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates_array, 0)
