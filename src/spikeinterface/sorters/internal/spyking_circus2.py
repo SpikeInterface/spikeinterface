@@ -13,6 +13,7 @@ from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.sparsity import compute_sparsity
 
 try:
     import hdbscan
@@ -41,7 +42,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "select_per_channel": False,
         },
         "clustering": {"legacy": False},
-        "matching": {"method": "wobble", "method_kwargs": {}},
+        "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
         "apply_preprocessing": True,
         "shared_memory": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -211,6 +212,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             templates = Templates(templates_array,
                 sampling_frequency, nbefore, None, recording_f.channel_ids, unit_ids, recording_f.get_probe())
+
+            sparsity = compute_sparsity(templates, method='radius')
+            templates.sparsity = sparsity
 
             if params["debug"]:
                 sorting = sorting.save(folder=clustering_folder / "sorting")

@@ -541,7 +541,7 @@ def remove_duplicates_via_matching(
     method_kwargs={},
     job_kwargs={},
     tmp_folder=None,
-    method="naive",
+    method="circus-omp-svd",
 ):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor
@@ -560,10 +560,6 @@ def remove_duplicates_via_matching(
 
     fs = templates.sampling_frequency
     num_chans = len(templates.channel_ids)
-
-    #if waveform_extractor.is_sparse():
-    #    for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
-    #        templates[count][:, ~sparsity[count]] = 0
 
     zdata = templates_array.reshape(nb_templates, -1)
 
@@ -595,10 +591,8 @@ def remove_duplicates_via_matching(
     local_params = method_kwargs.copy()
 
     local_params.update(
-        {"templates": templates, "amplitudes": [0.975, 1.025], "optimize_amplitudes": False}
+        {"templates": templates, "amplitudes": [0.975, 1.025]}
     )
-
-
 
     ignore_ids = []
     similar_templates = [[], []]
@@ -616,7 +610,7 @@ def remove_duplicates_via_matching(
             local_params.update(
                 {
                     "overlaps": computed["overlaps"],
-                    "templates": computed["templates"],
+                    "normed_templates": computed["normed_templates"],
                     "norms": computed["norms"],
                     "temporal": computed["temporal"],
                     "spatial": computed["spatial"],

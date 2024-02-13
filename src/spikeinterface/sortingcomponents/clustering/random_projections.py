@@ -25,6 +25,7 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.template import Templates
+from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     ExtractDenseWaveforms,
@@ -209,6 +210,8 @@ class RandomProjectionClustering:
 
         templates = Templates(templates_array,
             fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe())
+        sparsity = compute_sparsity(templates, method='radius')
+        templates.sparsity = sparsity
 
         cleaning_matching_params = params["job_kwargs"].copy()
         for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
