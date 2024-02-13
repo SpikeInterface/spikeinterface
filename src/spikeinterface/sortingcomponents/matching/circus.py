@@ -38,7 +38,6 @@ spike_dtype = [
 from .main import BaseTemplateMatchingEngine
 
 
-
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
     num_templates = len(templates)
 
@@ -69,7 +68,6 @@ def compute_overlaps(templates, num_samples, num_channels, sparsities):
         new_overlaps += [data]
 
     return new_overlaps
-
 
 
 class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
@@ -157,7 +155,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             d["norms"][count] = np.linalg.norm(template)
             d["normed_templates"][count][:, d["sparsity_mask"][count]] = template / d["norms"][count]
 
-
         d["temporal"] /= d["norms"][:, np.newaxis, np.newaxis]
         d["temporal"] = np.flip(d["temporal"], axis=1)
 
@@ -197,8 +194,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         d.update(kwargs)
 
         assert isinstance(d["templates"], Templates), (
-            f"The templates supplied is of type {type(d['templates'])} "
-            f"and must be a Templates"
+            f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
         )
 
         d["num_channels"] = recording.get_num_channels()
@@ -617,13 +613,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         if d["noise_levels"] is None:
             print("CircusPeeler : noise should be computed outside")
-            d["noise_levels"] = get_noise_levels(
-                recording, **d["random_chunk_kwargs"], return_scaled=False
-            )
+            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
 
-        d["abs_threholds"] = (
-            d["noise_levels"] * d["detect_threshold"]
-        )
+        d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
         if not "circus_templates" in d:
             d = cls._prepare_templates(d)
@@ -635,9 +627,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             d["sparsities"],
         )
 
-        d["exclude_sweep_size"] = int(
-            d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0
-        )
+        d["exclude_sweep_size"] = int(d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0)
 
         d["nbefore"] = d["templates"].nbefore
         d["nafter"] = d["templates"].nafter
@@ -646,9 +636,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             d["num_channels"],
         )
         d["sym_patch"] = d["nbefore"] == d["nafter"]
-        d["jitter"] = int(
-            d["jitter_ms"] * recording.get_sampling_frequency() / 1000.0
-        )
+        d["jitter"] = int(d["jitter_ms"] * recording.get_sampling_frequency() / 1000.0)
 
         d["amplitudes"] = np.zeros((d["num_templates"], 2), dtype=np.float32)
         d["amplitudes"][:, 0] = d["min_amplitude"]
@@ -668,7 +656,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         #     .reshape(num_chunks, -1)
         #     .T
         # )
-        #parameters = cls._optimize_amplitudes(noise_snippets, d)
+        # parameters = cls._optimize_amplitudes(noise_snippets, d)
 
         return d
 

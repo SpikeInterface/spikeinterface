@@ -342,13 +342,10 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         for required_key in required_kwargs_keys:
             assert required_key in kwargs, f"`{required_key}` is a required key in the kwargs"
 
-        
-
         parameters = kwargs.get("parameters", {})
         templates = kwargs["templates"]
         assert isinstance(templates, Templates), (
-            f"The templates supplied is of type {type(d['templates'])} "
-            f"and must be a Templates"
+            f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
         )
         templates_array = templates.get_dense_templates().astype(np.float32, casting="safe")
 

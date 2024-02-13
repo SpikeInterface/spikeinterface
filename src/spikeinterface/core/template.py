@@ -122,7 +122,6 @@ class Templates:
             probe=self.probe,
             check_for_consistent_sparsity=self.check_for_consistent_sparsity)
 
-
     def get_one_template_dense(self, unit_index):
         if self.sparsity is None:
             template = self.templates_array[unit_index, :, :]
