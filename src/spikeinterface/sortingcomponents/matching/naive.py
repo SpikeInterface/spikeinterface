@@ -47,7 +47,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d.update(kwargs)
 
         assert isinstance(d["templates"], Templates), (
-            f"The templates supplied is of type {type(d['waveform_extractor'])} "
+            f"The templates supplied is of type {type(d['templates'])} "
             f"and must be a Templates"
         )
 

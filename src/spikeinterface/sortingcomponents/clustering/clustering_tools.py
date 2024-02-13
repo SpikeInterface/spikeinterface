@@ -617,14 +617,13 @@ def remove_duplicates_via_matching(
                     "singular": computed["singular"],
                     "units_overlaps": computed["units_overlaps"],
                     "unit_overlaps_indices": computed["unit_overlaps_indices"],
-                    "sparsity_mask": computed["sparsity_mask"],
                 }
             )
         elif method == "circus-omp":
             local_params.update(
                 {
                     "overlaps": computed["overlaps"],
-                    "templates": computed["templates"],
+                    "circus_templates": computed["normed_templates"],
                     "norms": computed["norms"],
                     "sparsities": computed["sparsities"],
                 }

@@ -211,7 +211,7 @@ class RandomProjectionClustering:
         templates = Templates(templates_array,
             fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe())
         sparsity = compute_sparsity(templates, method='radius')
-        templates.sparsity = sparsity
+        templates.set_sparsity(sparsity)
 
         cleaning_matching_params = params["job_kwargs"].copy()
         for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:

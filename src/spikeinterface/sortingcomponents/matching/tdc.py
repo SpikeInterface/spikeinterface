@@ -83,7 +83,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
         d["nbefore"] = templates.nbefore
         d["nafter"] = templates.nafter
-        templates_array = templates.templates_array
+        templates_array = templates.get_dense_templates()
 
         nbefore_short = int(d["ms_before"] * sr / 1000.0)
         nafter_short = int(d["ms_before"] * sr / 1000.0)

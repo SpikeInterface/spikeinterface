@@ -350,7 +350,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             f"The templates supplied is of type {type(d['templates'])} "
             f"and must be a Templates"
         )
-        templates_array = templates.templates_array.astype(np.float32, casting="safe")
+        templates_array = templates.get_dense_templates().astype(np.float32, casting="safe")
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)

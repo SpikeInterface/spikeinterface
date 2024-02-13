@@ -214,7 +214,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sampling_frequency, nbefore, None, recording_f.channel_ids, unit_ids, recording_f.get_probe())
 
             sparsity = compute_sparsity(templates, method='radius')
-            templates.sparsity = sparsity
+            templates.set_sparsity(sparsity)
 
             if params["debug"]:
                 sorting = sorting.save(folder=clustering_folder / "sorting")

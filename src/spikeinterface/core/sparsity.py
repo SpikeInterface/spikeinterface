@@ -220,9 +220,10 @@ class ChannelSparsity:
 
         return int(excess_zeros) == 0
 
-    def sparisfy_templates(self, templates_array: np.ndarray) -> np.ndarray:
+    def sparsify_templates(self, templates_array: np.ndarray) -> np.ndarray:
         max_num_active_channels = self.max_num_active_channels
-        sparisfied_shape = (self.num_units, self.num_samples, max_num_active_channels)
+        num_samples = templates_array.shape[1]
+        sparisfied_shape = (self.num_units, num_samples, max_num_active_channels)
         sparse_templates = np.zeros(shape=sparisfied_shape, dtype=templates_array.dtype)
         for unit_index, unit_id in enumerate(self.unit_ids):
             template = templates_array[unit_index, ...]
