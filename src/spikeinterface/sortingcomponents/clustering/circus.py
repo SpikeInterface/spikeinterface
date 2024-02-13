@@ -181,7 +181,7 @@ class CircusClustering:
             print("We found %d raw clusters, starting to clean with matching..." % (len(labels)))
 
         unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
-        
+
         nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
 
