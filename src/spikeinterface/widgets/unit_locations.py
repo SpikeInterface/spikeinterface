@@ -48,6 +48,8 @@ class UnitLocationsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        sorting_result = self.ensure_sorting_result(sorting_result)
+        
         self.check_extensions(sorting_result, "unit_locations")
         ulc = sorting_result.get_extension("unit_locations")
         unit_locations = ulc.get_data(outputs="by_unit")

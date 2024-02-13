@@ -5,6 +5,9 @@ import inspect
 global default_backend_
 default_backend_ = "matplotlib"
 
+from ..core import SortingResult
+from ..core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+
 
 def get_default_plotter_backend():
     """Return the default backend for spikeinterface widgets.
@@ -101,6 +104,15 @@ class BaseWidget:
     def do_plot(self):
         func = getattr(self, f"plot_{self.backend}")
         func(self.data_plot, **self.backend_kwargs)
+
+    @classmethod
+    def ensure_sorting_result(cls, sorting_result_or_waveform_extractor):
+        if isinstance(sorting_result_or_waveform_extractor, SortingResult):
+            return sorting_result_or_waveform_extractor
+        elif isinstance(sorting_result_or_waveform_extractor, MockWaveformExtractor):
+            return sorting_result_or_waveform_extractor.sorting_result
+        else:
+            return sorting_result_or_waveform_extractor
 
     @staticmethod
     def check_extensions(sorting_result, extensions):

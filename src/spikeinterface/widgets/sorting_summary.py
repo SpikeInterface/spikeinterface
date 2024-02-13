@@ -58,6 +58,7 @@ class SortingSummaryWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        sorting_result = self.ensure_sorting_result(sorting_result)
         self.check_extensions(sorting_result, ["correlograms", "spike_amplitudes", "unit_locations", "similarity"])
         sorting = sorting_result.sorting
 

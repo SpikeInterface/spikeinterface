@@ -46,6 +46,8 @@ class CrossCorrelogramsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        sorting_result_or_sorting = self.ensure_sorting_result(sorting_result_or_sorting)
+
         if min_similarity_for_correlograms is None:
             min_similarity_for_correlograms = 0
         similarity = None
