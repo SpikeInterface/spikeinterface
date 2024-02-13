@@ -95,9 +95,8 @@ class TestWidgets(unittest.TestCase):
         cls.sorting_result_sparse.select_random_spikes()
         cls.sorting_result_sparse.compute(extensions_to_compute, **job_kwargs)
 
-        # cls.skip_backends = ["ipywidgets", "ephyviewer"]
-        # TODO : delete this after debug
-        cls.skip_backends = ["ipywidgets", "ephyviewer", "sortingview"]
+        cls.skip_backends = ["ipywidgets", "ephyviewer"]
+        # cls.skip_backends = ["ipywidgets", "ephyviewer", "sortingview"]
 
         if ON_GITHUB and not KACHERY_CLOUD_SET:
             cls.skip_backends.append("sortingview")

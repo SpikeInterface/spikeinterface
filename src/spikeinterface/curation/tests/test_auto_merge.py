@@ -9,7 +9,7 @@ from spikeinterface.core.generate import inject_some_split_units
 from spikeinterface.curation import get_potential_auto_merge
 
 
-from spikeinterface.curation.tests.common import make_sorting_result
+from spikeinterface.curation.tests.common import make_sorting_result, sorting_result_for_curation
 
 
 if hasattr(pytest, "global_test_folder"):

@@ -45,17 +45,17 @@ def make_sorting_result(sparse=True, with_group=False):
     return sorting_result
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def sorting_result_dense_for_export():
     return make_sorting_result(sparse=False)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def sorting_result_with_group_for_export():
     return make_sorting_result(sparse=False, with_group=True)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def sorting_result_sparse_for_export():
     return make_sorting_result(sparse=True)
 
