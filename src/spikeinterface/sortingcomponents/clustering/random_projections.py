@@ -51,15 +51,13 @@ class RandomProjectionClustering:
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "ptp", "threshold": 1},
         "radius_um": 100,
-        "selection_method": "closest_to_centroid",
         "nb_projections": 10,
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
         "smoothing_kwargs": {"window_length_ms": 0.25},
-        "shared_memory": True,
-        "tmp_folder": None,
         "debug": False,
+        "tmp_folder": None,
         "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
     }
 
@@ -160,17 +158,7 @@ class RandomProjectionClustering:
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(labels)))
 
-        sorting_folder = tmp_folder / "sorting"
         unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
-        sorting = NumpySorting(spikes, fs, unit_ids=unit_ids)
-
-        if params["shared_memory"]:
-            waveform_folder = None
-            mode = "memory"
-        else:
-            waveform_folder = tmp_folder / "waveforms"
-            mode = "folder"
-            sorting = sorting.save(folder=sorting_folder)
 
         nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
@@ -200,15 +188,6 @@ class RandomProjectionClustering:
         labels, peak_labels = remove_duplicates_via_matching(
             templates, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
         )
-
-        del sorting
-
-        if params["tmp_folder"] is None:
-            shutil.rmtree(tmp_folder)
-        else:
-            if not params["shared_memory"]:
-                shutil.rmtree(tmp_folder / "waveforms")
-                shutil.rmtree(tmp_folder / "sorting")
 
         if verbose:
             print("We kept %d non-duplicated clusters..." % len(labels))
