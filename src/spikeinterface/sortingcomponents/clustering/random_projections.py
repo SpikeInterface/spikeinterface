@@ -205,12 +205,14 @@ class RandomProjectionClustering:
         nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
 
-        templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter,
-                            False, job_name=None, **job_kwargs)
+        templates_array = estimate_templates(
+            recording, spikes, unit_ids, nbefore, nafter, False, job_name=None, **job_kwargs
+        )
 
-        templates = Templates(templates_array,
-            fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe())
-        sparsity = compute_sparsity(templates, method='radius')
+        templates = Templates(
+            templates_array, fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe()
+        )
+        sparsity = compute_sparsity(templates, method="radius")
         templates.set_sparsity(sparsity)
 
         cleaning_matching_params = params["job_kwargs"].copy()

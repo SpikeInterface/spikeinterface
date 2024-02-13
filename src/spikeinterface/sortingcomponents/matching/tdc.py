@@ -70,8 +70,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         d.update(kwargs)
 
         assert isinstance(d["templates"], Templates), (
-            f"The templates supplied is of type {type(d['templates'])} "
-            f"and must be a Templates"
+            f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
         )
 
         templates = d["templates"]
@@ -79,7 +78,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         channel_ids = templates.channel_ids
 
         sr = templates.sampling_frequency
-
 
         d["nbefore"] = templates.nbefore
         d["nafter"] = templates.nafter
@@ -109,7 +107,9 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         channel_distance = get_channel_distances(recording)
         d["neighbours_mask"] = channel_distance < d["radius_um"]
 
-        sparsity = compute_sparsity(templates, method="best_channels")#, peak_sign=d["peak_sign"], threshold=d["detect_threshold"])
+        sparsity = compute_sparsity(
+            templates, method="best_channels"
+        )  # , peak_sign=d["peak_sign"], threshold=d["detect_threshold"])
         template_sparsity_inds = sparsity.unit_id_to_channel_indices
         template_sparsity = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
         for unit_index, unit_id in enumerate(unit_ids):

@@ -590,9 +590,7 @@ def remove_duplicates_via_matching(
 
     local_params = method_kwargs.copy()
 
-    local_params.update(
-        {"templates": templates, "amplitudes": [0.975, 1.025]}
-    )
+    local_params.update({"templates": templates, "amplitudes": [0.975, 1.025]})
 
     ignore_ids = []
     similar_templates = [[], []]

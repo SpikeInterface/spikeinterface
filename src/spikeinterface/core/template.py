@@ -113,7 +113,6 @@ class Templates:
         self.sparsity = sparsity
         self.templates_array = self.sparsity.sparsify_templates(self.get_dense_templates())
 
-
     def get_one_template_dense(self, unit_index):
         if self.sparsity is None:
             template = self.templates_array[unit_index, :, :]

@@ -207,13 +207,21 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             nbefore = int(params["general"]["ms_before"] * sampling_frequency / 1000.0)
             nafter = int(params["general"]["ms_after"] * sampling_frequency / 1000.0)
 
-            templates_array = estimate_templates(recording_f, labeled_peaks, unit_ids, nbefore, nafter,
-                                False, job_name=None, **job_kwargs)
+            templates_array = estimate_templates(
+                recording_f, labeled_peaks, unit_ids, nbefore, nafter, False, job_name=None, **job_kwargs
+            )
 
-            templates = Templates(templates_array,
-                sampling_frequency, nbefore, None, recording_f.channel_ids, unit_ids, recording_f.get_probe())
+            templates = Templates(
+                templates_array,
+                sampling_frequency,
+                nbefore,
+                None,
+                recording_f.channel_ids,
+                unit_ids,
+                recording_f.get_probe(),
+            )
 
-            sparsity = compute_sparsity(templates, method='radius')
+            sparsity = compute_sparsity(templates, method="radius")
             templates.set_sparsity(sparsity)
 
             if params["debug"]:
@@ -225,7 +233,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_params["templates"] = templates
             matching_job_params = {}
             matching_job_params.update(job_kwargs)
-            
+
             if matching_method == "circus-omp-svd":
                 for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
                     if value in matching_job_params:
