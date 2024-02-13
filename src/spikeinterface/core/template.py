@@ -108,10 +108,19 @@ class Templates:
                 if not self._are_passed_templates_sparse():
                     raise ValueError("Sparsity mask passed but the templates are not sparse")
 
-    def set_sparsity(self, sparsity):
+    def to_sparse(self, sparsity):
         assert isinstance(sparsity, ChannelSparsity), "sparsity should be of type ChannelSparsity"
-        self.sparsity = sparsity
-        self.templates_array = self.sparsity.sparsify_templates(self.get_dense_templates())
+        assert self.sparsity_mask is None, "Templates should be dense"
+
+        return Templates(
+            templates_array = sparsity.sparsify_templates(self.templates_array),
+            sampling_frequency=self.sampling_frequency,
+            nbefore=self.nbefore,
+            sparsity_mask=sparsity.mask,
+            channel_ids=self.channel_ids,
+            unit_ids=self.unit_ids,
+            probe=self.probe,
+            check_for_consistent_sparsity=self.check_for_consistent_sparsity)
 
 
     def get_one_template_dense(self, unit_index):

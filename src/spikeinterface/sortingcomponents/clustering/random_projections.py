@@ -21,6 +21,7 @@ from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers, est
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
+from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
@@ -47,7 +48,8 @@ class RandomProjectionClustering:
             "cluster_selection_method": "leaf",
         },
         "cleaning_kwargs": {},
-        "waveforms": {"ms_before": 2, "ms_after": 2, "max_spikes_per_unit": 100},
+        "waveforms": {"ms_before": 2, "ms_after": 2},
+        "sparsity" : {"method": "ptp", "threshold": 1},
         "radius_um": 100,
         "selection_method": "closest_to_centroid",
         "nb_projections": 10,
@@ -150,38 +152,6 @@ class RandomProjectionClustering:
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
 
-        # best_spikes = {}
-        # nb_spikes = 0
-
-        # all_indices = np.arange(0, peak_labels.size)
-
-        # max_spikes = params["waveforms"]["max_spikes_per_unit"]
-        # selection_method = params["selection_method"]
-
-        # for unit_ind in labels:
-        #     mask = peak_labels == unit_ind
-        #     if selection_method == "closest_to_centroid":
-        #         data = hdbscan_data[mask]
-        #         centroid = np.median(data, axis=0)
-        #         distances = sklearn.metrics.pairwise_distances(centroid[np.newaxis, :], data)[0]
-        #         best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:max_spikes]]
-        #     elif selection_method == "random":
-        #         best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[:max_spikes]
-        #     nb_spikes += best_spikes[unit_ind].size
-
-        # spikes = np.zeros(nb_spikes, dtype=minimum_spike_dtype)
-
-        # mask = np.zeros(0, dtype=np.int32)
-        # for unit_ind in labels:
-        #     mask = np.concatenate((mask, best_spikes[unit_ind]))
-
-        # idx = np.argsort(mask)
-        # mask = mask[idx]
-
-        # spikes["sample_index"] = peaks[mask]["sample_index"]
-        # spikes["segment_index"] = peaks[mask]["segment_index"]
-        # spikes["unit_index"] = peak_labels[mask]
-
         spikes = np.zeros(len(peaks), dtype=minimum_spike_dtype)
         spikes["sample_index"] = peaks["sample_index"]
         spikes["segment_index"] = peaks["segment_index"]
@@ -206,12 +176,12 @@ class RandomProjectionClustering:
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
 
         templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter,
-                            False, job_name=None, **job_kwargs)
+                            return_scaled=False, job_name=None, **job_kwargs)
 
         templates = Templates(templates_array,
             fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe())
-        sparsity = compute_sparsity(templates, method='radius')
-        templates.set_sparsity(sparsity)
+        sparsity = compute_sparsity(templates, get_noise_levels(recording), **params["sparsity"])
+        templates = templates.to_sparse(sparsity)
 
         cleaning_matching_params = params["job_kwargs"].copy()
         for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:

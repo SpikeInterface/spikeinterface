@@ -28,11 +28,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "waveforms": {
-            "sparse": True,
-            "method": "energy",
-            "threshold": 0.25,
-        },
+        "sparsity": {"method": "ptp", "threshold": 1},
         "filtering": {"freq_min": 150, "dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
@@ -56,8 +52,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     _params_description = {
         "general": "A dictionary to describe how templates should be computed. User can define ms_before and ms_after (in ms) \
                                         and also the radius_um used to be considered during clustering",
-        "waveforms": "A dictionary to be passed to all the calls to extract_waveforms that will be performed internally. Default is \
-                                        to consider sparse waveforms",
+        "sparsity": "A dictionary to be passed to all the calls to sparsify the templates",
         "filtering": "A dictionary for the high_pass filter to be used during preprocessing",
         "detection": "A dictionary for the peak detection node (locally_exclusive)",
         "selection": "A dictionary for the peak selection node. Default is to use smart_sampling_amplitudes, with a minimum of 20000 peaks\
@@ -115,9 +110,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_f = recording
             recording_f.annotate(is_filtered=True)
 
-        # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")
-        noise_levels = np.ones(num_channels, dtype=np.float32)
+        noise_levels = get_noise_levels(recording_f)
 
         if recording_f.check_serializability("json"):
             recording_f.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
@@ -158,7 +152,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ## We launch a clustering (using hdbscan) relying on positions and features extracted on
             ## the fly from the snippets
             clustering_params = params["clustering"].copy()
-            clustering_params["waveforms"] = params["waveforms"].copy()
+            clustering_params["waveforms"] = {}
+            clustering_params["sparsity"] = params["sparsity"]
 
             for k in ["ms_before", "ms_after"]:
                 clustering_params["waveforms"][k] = params["general"][k]
@@ -208,13 +203,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             nafter = int(params["general"]["ms_after"] * sampling_frequency / 1000.0)
 
             templates_array = estimate_templates(recording_f, labeled_peaks, unit_ids, nbefore, nafter,
-                                False, job_name=None, **job_kwargs)
+                                return_scaled=False, job_name=None, **job_kwargs)
 
             templates = Templates(templates_array,
                 sampling_frequency, nbefore, None, recording_f.channel_ids, unit_ids, recording_f.get_probe())
 
-            sparsity = compute_sparsity(templates, method='radius')
-            templates.set_sparsity(sparsity)
+            sparsity = compute_sparsity(templates, noise_levels, **params['sparsity'])
+            templates = templates.to_sparse(sparsity)
 
             if params["debug"]:
                 sorting = sorting.save(folder=clustering_folder / "sorting")
