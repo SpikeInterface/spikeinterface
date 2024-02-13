@@ -28,8 +28,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "waveforms": {
-            "max_spikes_per_unit": 200,
-            "overwrite": True,
             "sparse": True,
             "method": "energy",
             "threshold": 0.25,
@@ -205,47 +203,25 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 np.save(clustering_folder / "labels", labels)
                 np.save(clustering_folder / "peaks", selected_peaks)
 
-            ## We get the templates our of such a clustering
-            waveforms_params = params["waveforms"].copy()
-            waveforms_params.update(job_kwargs)
-
-            for k in ["ms_before", "ms_after"]:
-                waveforms_params[k] = params["general"][k]
-
-            if params["shared_memory"] and not params["debug"]:
-                mode = "memory"
-                waveforms_folder = None
-            else:
-                sorting = sorting.save(folder=clustering_folder / "sorting")
-                mode = "folder"
-                waveforms_folder = sorter_output_folder / "waveforms"
-
-            # we = extract_waveforms(
-            #     recording_f,
-            #     sorting,
-            #     waveforms_folder,
-            #     return_scaled=False,
-            #     precompute_template=["median"],
-            #     mode=mode,
-            #     **waveforms_params,
-            # )
-
             nbefore = int(params["general"]["ms_before"] * sampling_frequency / 1000.0)
             nafter = int(params["general"]["ms_after"] * sampling_frequency / 1000.0)
 
-            templates_array = estimate_templates(recording, labeled_peaks, unit_ids, nbefore, nafter,
+            templates_array = estimate_templates(recording_f, labeled_peaks, unit_ids, nbefore, nafter,
                                 False, job_name=None, **job_kwargs)
 
             templates = Templates(templates_array,
-                sampling_frequency, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe())
+                sampling_frequency, nbefore, None, recording_f.channel_ids, unit_ids, recording_f.get_probe())
+
+            if params["debug"]:
+                sorting = sorting.save(folder=clustering_folder / "sorting")
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
             matching_method = params["matching"]["method"]
             matching_params = params["matching"]["method_kwargs"].copy()
+            matching_params["templates"] = templates
             matching_job_params = {}
             matching_job_params.update(job_kwargs)
-            matching_params["templates"] = templates
-
+            
             if matching_method == "circus-omp-svd":
                 for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
                     if value in matching_job_params:

@@ -516,25 +516,20 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "max_failures": 20,
         "omp_min_sps": 0.1,
         "relative_error": 5e-5,
-        "waveform_extractor": None,
+        "templates": None,
         "rank": 5,
-        "sparse_kwargs": {"method": "ptp", "threshold": 1},
         "ignored_ids": [],
         "vicinity": 0,
-        "optimize_amplitudes": False,
     }
 
     @classmethod
     def _prepare_templates(cls, d):
-        waveform_extractor = d["waveform_extractor"]
-        num_templates = len(d["waveform_extractor"].sorting.unit_ids)
+        templates = d["templates"]
+        num_templates = len(d["templates"].unit_ids)
 
         assert d["stop_criteria"] in ["max_failures", "omp_min_sps", "relative_error"]
 
-        if not waveform_extractor.is_sparse():
-            sparsity = compute_sparsity(waveform_extractor, **d["sparse_kwargs"]).mask
-        else:
-            sparsity = waveform_extractor.sparsity.mask
+        sparsity = templates.sparsity.mask
 
         d["sparsity_mask"] = sparsity
         units_overlaps = np.sum(np.logical_and(sparsity[:, np.newaxis, :], sparsity[np.newaxis, :, :]), axis=2)
@@ -543,7 +538,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         for i in range(num_templates):
             (d["unit_overlaps_indices"][i],) = np.nonzero(d["units_overlaps"][i])
 
-        templates = waveform_extractor.get_all_templates(mode="median").copy()
+        templates_array = templates.templates_array.copy()
 
         # First, we set masked channels to 0
         for count in range(num_templates):
@@ -551,13 +546,13 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         # Then we keep only the strongest components
         rank = d["rank"]
-        temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
+        temporal, singular, spatial = np.linalg.svd(templates_array, full_matrices=False)
         d["temporal"] = temporal[:, :, :rank]
         d["singular"] = singular[:, :rank]
         d["spatial"] = spatial[:, :rank, :]
 
         # We reconstruct the approximated templates
-        templates = np.matmul(d["temporal"] * d["singular"][:, np.newaxis, :], d["spatial"])
+        templates_array = np.matmul(d["temporal"] * d["singular"][:, np.newaxis, :], d["spatial"])
 
         d["templates"] = np.zeros(templates.shape, dtype=np.float32)
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
@@ -666,8 +661,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
         kwargs = dict(kwargs)
-        # remove waveform_extractor
-        kwargs.pop("waveform_extractor")
         return kwargs
 
     @classmethod
@@ -681,11 +674,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def main_function(cls, traces, d):
-        templates = d["templates"]
         num_templates = d["num_templates"]
         num_channels = d["num_channels"]
         num_samples = d["num_samples"]
-        overlaps = d["overlaps"]
+        overlaps_array = d["overlaps_array"]
         norms = d["norms"]
         nbefore = d["nbefore"]
         nafter = d["nafter"]
@@ -766,7 +758,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 myline = neighbor_window + delta_t[idx]
                 myindices = selection[0, idx]
 
-                local_overlaps = overlaps[best_cluster_ind]
+                local_overlaps = overlaps_array[best_cluster_ind]
                 overlapping_templates = d["unit_overlaps_indices"][best_cluster_ind]
                 table = d["unit_overlaps_tables"][best_cluster_ind]
 
@@ -839,7 +831,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 tmp_best, tmp_peak = selection[:, i]
                 diff_amp = diff_amplitudes[i] * norms[tmp_best]
 
-                local_overlaps = overlaps[tmp_best]
+                local_overlaps = overlaps_array[tmp_best]
                 overlapping_templates = d["units_overlaps"][tmp_best]
 
                 if not tmp_peak in neighbors.keys():
