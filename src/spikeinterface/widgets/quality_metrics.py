@@ -35,6 +35,7 @@ class QualityMetricsWidget(MetricsBaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        sorting_result = self.ensure_sorting_result(sorting_result)
         self.check_extensions(sorting_result, "quality_metrics")
         quality_metrics = sorting_result.get_extension("quality_metrics").get_data()
 

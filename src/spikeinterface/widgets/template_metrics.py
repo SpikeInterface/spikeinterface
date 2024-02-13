@@ -35,6 +35,7 @@ class TemplateMetricsWidget(MetricsBaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        sorting_result = self.ensure_sorting_result(sorting_result)
         self.check_extensions(sorting_result, "template_metrics")
         template_metrics = sorting_result.get_extension("template_metrics").get_data()
 

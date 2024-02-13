@@ -42,6 +42,8 @@ class UnitProbeMapWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        sorting_result = self.ensure_sorting_result(sorting_result)
+        
         if unit_ids is None:
             unit_ids = sorting_result.unit_ids
         self.unit_ids = unit_ids

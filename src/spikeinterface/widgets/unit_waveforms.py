@@ -105,6 +105,7 @@ class UnitWaveformsWidget(BaseWidget):
         **backend_kwargs,
     ):
 
+        sorting_result = self.ensure_sorting_result(sorting_result)
         sorting: BaseSorting = sorting_result.sorting
 
         if unit_ids is None:
@@ -345,7 +346,7 @@ class UnitWaveformsWidget(BaseWidget):
         self.next_data_plot = data_plot.copy()
 
         cm = 1 / 2.54
-        self.we = we = data_plot["sorting_result"]
+        self.sorting_result = data_plot["sorting_result"]
 
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
@@ -449,18 +450,23 @@ class UnitWaveformsWidget(BaseWidget):
         hide_axis = self.hide_axis_button.value
         do_shading = self.template_shading_button.value
 
+        wf_ext = self.sorting_result.get_extension("waveforms")
+        templates_ext = self.sorting_result.get_extension("templates")
+        templates = templates_ext.get_templates(unit_ids=unit_ids, operator="average")
+
+
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = unit_ids
-        data_plot["templates"] = self.we.get_all_templates(unit_ids=unit_ids)
-        templates_shadings = self._get_template_shadings(self.we, unit_ids, data_plot["templates_percentile_shading"])
+        data_plot["templates"] = templates
+        templates_shadings = self._get_template_shadings(self.sorting_result, unit_ids, data_plot["templates_percentile_shading"])
         data_plot["templates_shading"] = templates_shadings
         data_plot["same_axis"] = same_axis
         data_plot["plot_templates"] = plot_templates
         data_plot["do_shading"] = do_shading
         data_plot["scale"] = self.scaler.value
         if data_plot["plot_waveforms"]:
-            data_plot["wfs_by_ids"] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
+            data_plot["wfs_by_ids"] = {unit_id: wf_ext.get_waveforms_one_unit(unit_id, force_dense=False) for unit_id in unit_ids}
 
         # TODO option for plot_legend
 
@@ -484,7 +490,7 @@ class UnitWaveformsWidget(BaseWidget):
                     ax.axis("off")
 
         # update probe plot
-        channel_locations = self.we.get_channel_locations()
+        channel_locations = self.sorting_result.get_channel_locations()
         self.ax_probe.plot(
             channel_locations[:, 0], channel_locations[:, 1], ls="", marker="o", color="gray", markersize=2, alpha=0.5
         )

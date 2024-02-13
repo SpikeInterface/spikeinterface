@@ -50,6 +50,9 @@ class AmplitudesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+
+        sorting_result = self.ensure_sorting_result(sorting_result)
+
         sorting = sorting_result.sorting
         self.check_extensions(sorting_result, "spike_amplitudes")
 
