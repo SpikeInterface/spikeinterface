@@ -101,7 +101,6 @@ class ComputePrincipalComponents(ResultExtension):
                 new_data[k] = v
         return new_data
 
-
     def get_pca_model(self):
         """
         Returns the scikit-learn PCA model objects.
@@ -143,7 +142,7 @@ class ComputePrincipalComponents(ResultExtension):
         """
         sparsity = self.sorting_result.sparsity
         sorting = self.sorting_result.sorting
-        
+
         if sparse:
             assert self.params["mode"] != "concatenated", "mode concatenated cannot retrieve sparse projection"
             assert sparsity is not None, "sparse projection need SortingResult to be sparse"
@@ -159,12 +158,14 @@ class ComputePrincipalComponents(ResultExtension):
             return projections
         else:
             channel_indices = sparsity.unit_id_to_channel_indices[unit_id]
-            projections = projections[:, :, :channel_indices.size]
+            projections = projections[:, :, : channel_indices.size]
             if sparse:
                 return projections, channel_indices
             else:
                 num_chans = self.sorting_result.get_num_channels()
-                projections_ = np.zeros((projections.shape[0], projections.shape[1], num_chans), dtype=projections.dtype)
+                projections_ = np.zeros(
+                    (projections.shape[0], projections.shape[1], num_chans), dtype=projections.dtype
+                )
                 projections_[:, :, channel_indices] = projections
                 return projections_
 
@@ -191,7 +192,7 @@ class ComputePrincipalComponents(ResultExtension):
         sorting = self.sorting_result.sorting
         if unit_ids is None:
             unit_ids = sorting.unit_ids
-        
+
         if channel_ids is None:
             channel_ids = self.sorting_result.channel_ids
 
@@ -235,9 +236,8 @@ class ComputePrincipalComponents(ResultExtension):
                 channel_mask = np.isin(channel_indices, local_chan_inds)
                 proj[:, :, channel_mask] = sparse_projection
                 some_projections[spike_mask, :, :] = proj
-        
-        return some_projections, spike_unit_indices
 
+        return some_projections, spike_unit_indices
 
     def project_new(self, new_spikes, new_waveforms, progress_bar=True):
         """
@@ -350,9 +350,7 @@ class ComputePrincipalComponents(ResultExtension):
         all_pcs = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
         all_pcs_args = dict(filename=file_path, mode="r+", dtype="float32", shape=shape)
 
-
         waveforms_ext = self.sorting_result.get_extension("waveforms")
-
 
         # and run
         func = _all_pc_extractor_chunk
@@ -628,7 +626,6 @@ def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafte
 
 register_result_extension(ComputePrincipalComponents)
 compute_principal_components = ComputePrincipalComponents.function_factory()
-
 
 
 def _partial_fit_one_channel(args):

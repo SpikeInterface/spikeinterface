@@ -104,7 +104,6 @@ def test_read_old_waveforms_extractor_binary():
             print(data.shape)
 
 
-
 if __name__ == "__main__":
     # test_extract_waveforms()
     test_read_old_waveforms_extractor_binary()

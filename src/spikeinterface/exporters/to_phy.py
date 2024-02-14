@@ -224,7 +224,7 @@ def export_to_phy(
     if compute_pc_features:
         if not sorting_result.has_extension("principal_components"):
             sorting_result.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
-        
+
         pca_extension = sorting_result.get_extension("principal_components")
 
         pca_extension.run_for_all_spikes(output_folder / "pc_features.npy", **job_kwargs)

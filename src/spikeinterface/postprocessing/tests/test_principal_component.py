@@ -8,7 +8,6 @@ from spikeinterface.postprocessing import ComputePrincipalComponents, compute_pr
 from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite, cache_folder
 
 
-
 DEBUG = False
 
 
@@ -35,11 +34,11 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
         pca = ext.data["pca_projection"]
         assert pca.ndim == 2
         assert pca.shape[1] == n_components
-    
+
     def test_get_projections(self):
 
         for sparse in (False, True):
-            
+
             sorting_result = self._prepare_sorting_result(format="memory", sparse=sparse)
             num_chans = sorting_result.get_num_channels()
             n_components = 2
@@ -61,10 +60,9 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
                     assert one_proj.shape[1] == n_components
                     assert one_proj.shape[2] < num_chans
                     assert one_proj.shape[2] == chan_inds.size
-            
+
             some_unit_ids = sorting_result.unit_ids[::2]
             some_channel_ids = sorting_result.channel_ids[::2]
-            
 
             # this should be all spikes all channels
             some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=None)
@@ -82,7 +80,9 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
             assert 1 not in spike_unit_index
 
             # this should be some spikes some channels
-            some_projections, spike_unit_index = ext.get_some_projections(channel_ids=some_channel_ids, unit_ids=some_unit_ids)
+            some_projections, spike_unit_index = ext.get_some_projections(
+                channel_ids=some_channel_ids, unit_ids=some_unit_ids
+            )
             assert some_projections.shape[0] == spike_unit_index.shape[0]
             assert spike_unit_index.shape[0] < sorting_result.random_spikes_indices.size
             assert some_projections.shape[1] == n_components
@@ -140,7 +140,6 @@ if __name__ == "__main__":
     # test.test_get_projections()
     test.test_compute_for_all_spikes()
     # test.test_project_new()
-    
 
     # ext = test.sorting_results["sparseTrue_memory"].get_extension("principal_components")
     # pca = ext.data["pca_projection"]

@@ -454,19 +454,22 @@ class UnitWaveformsWidget(BaseWidget):
         templates_ext = self.sorting_result.get_extension("templates")
         templates = templates_ext.get_templates(unit_ids=unit_ids, operator="average")
 
-
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = unit_ids
         data_plot["templates"] = templates
-        templates_shadings = self._get_template_shadings(self.sorting_result, unit_ids, data_plot["templates_percentile_shading"])
+        templates_shadings = self._get_template_shadings(
+            self.sorting_result, unit_ids, data_plot["templates_percentile_shading"]
+        )
         data_plot["templates_shading"] = templates_shadings
         data_plot["same_axis"] = same_axis
         data_plot["plot_templates"] = plot_templates
         data_plot["do_shading"] = do_shading
         data_plot["scale"] = self.scaler.value
         if data_plot["plot_waveforms"]:
-            data_plot["wfs_by_ids"] = {unit_id: wf_ext.get_waveforms_one_unit(unit_id, force_dense=False) for unit_id in unit_ids}
+            data_plot["wfs_by_ids"] = {
+                unit_id: wf_ext.get_waveforms_one_unit(unit_id, force_dense=False) for unit_id in unit_ids
+            }
 
         # TODO option for plot_legend
 

@@ -68,7 +68,6 @@ def test_calculate_pc_metrics(sorting_result_simple):
             assert np.array_equal(res1[k].values[mask], res2[k].values[mask])
 
 
-
 def test_nearest_neighbors_isolation(sorting_result_simple):
     sorting_result = sorting_result_simple
     this_unit_id = sorting_result.unit_ids[0]
