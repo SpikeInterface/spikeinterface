@@ -217,76 +217,6 @@ class ComputeAmplitudeScalings(ResultExtension):
 register_result_extension(ComputeAmplitudeScalings)
 compute_amplitude_scalings = ComputeAmplitudeScalings.function_factory()
 
-# def compute_amplitude_scalings(
-#     waveform_extractor,
-#     sparsity=None,
-#     max_dense_channels=16,
-#     ms_before=None,
-#     ms_after=None,
-#     handle_collisions=True,
-#     delta_collision_ms=2,
-#     load_if_exists=False,
-#     outputs="concatenated",
-#     **job_kwargs,
-# ):
-#     """
-#     Computes the amplitude scalings from a WaveformExtractor.
-
-#     Parameters
-#     ----------
-#     waveform_extractor: WaveformExtractor
-#         The waveform extractor object
-#     sparsity: ChannelSparsity or None, default: None
-#         If waveforms are not sparse, sparsity is required if the number of channels is greater than
-#         `max_dense_channels`. If the waveform extractor is sparse, its sparsity is automatically used.
-#     max_dense_channels: int, default: 16
-#         Maximum number of channels to allow running without sparsity. To compute amplitude scaling using
-#         dense waveforms, set this to None, sparsity to None, and pass dense waveforms as input.
-#     ms_before : float or None, default: None
-#         The cut out to apply before the spike peak to extract local waveforms.
-#         If None, the WaveformExtractor ms_before is used.
-#     ms_after : float or None, default: None
-#         The cut out to apply after the spike peak to extract local waveforms.
-#         If None, the WaveformExtractor ms_after is used.
-#     handle_collisions: bool, default: True
-#         Whether to handle collisions between spikes. If True, the amplitude scaling of colliding spikes
-#         (defined as spikes within `delta_collision_ms` ms and with overlapping sparsity) is computed by fitting a
-#         multi-linear regression model (with `sklearn.LinearRegression`). If False, each spike is fitted independently.
-#     delta_collision_ms: float, default: 2
-#         The maximum time difference in ms before and after a spike to gather colliding spikes.
-#     load_if_exists : bool, default: False
-#         Whether to load precomputed spike amplitudes, if they already exist.
-#     outputs: "concatenated" | "by_unit", default: "concatenated"
-#         How the output should be returned
-#     {}
-
-#     Returns
-#     -------
-#     amplitude_scalings: np.array or list of dict
-#         The amplitude scalings.
-#             - If "concatenated" all amplitudes for all spikes and all units are concatenated
-#             - If "by_unit", amplitudes are returned as a list (for segments) of dictionaries (for units)
-#     """
-#     if load_if_exists and waveform_extractor.is_extension(AmplitudeScalingsCalculator.extension_name):
-#         sac = waveform_extractor.load_extension(AmplitudeScalingsCalculator.extension_name)
-#     else:
-#         sac = AmplitudeScalingsCalculator(waveform_extractor)
-#         sac.set_params(
-#             sparsity=sparsity,
-#             max_dense_channels=max_dense_channels,
-#             ms_before=ms_before,
-#             ms_after=ms_after,
-#             handle_collisions=handle_collisions,
-#             delta_collision_ms=delta_collision_ms,
-#         )
-#         sac.run(**job_kwargs)
-
-#     amps = sac.get_data(outputs=outputs)
-#     return amps
-
-
-# compute_amplitude_scalings.__doc__.format(_shared_job_kwargs_doc)
-
 
 class AmplitudeScalingNode(PipelineNode):
     def __init__(
@@ -618,8 +548,8 @@ def fit_collision(
 
 #     Parameters
 #     ----------
-#     we : WaveformExtractor
-#         The WaveformExtractor object.
+#     we : SortingResult
+#         The SortingResult object.
 #     sparsity : ChannelSparsity, default=None
 #         The ChannelSparsity. If None, only main channels are plotted.
 #     num_collisions : int, default=None

@@ -19,7 +19,7 @@ _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 class ComputePrincipalComponents(ResultExtension):
     """
     Compute PC scores from waveform extractor. The PCA projections are pre-computed only
-    on the sampled waveforms available from the WaveformExtractor.
+    on the sampled waveforms available from the extensions "waveforms".
 
     Parameters
     ----------

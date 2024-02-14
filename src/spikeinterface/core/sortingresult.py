@@ -971,11 +971,12 @@ class SortingResult:
         if extension_name in self.extensions:
             return self.extensions[extension_name]
 
-        if self.has_extension(extension_name):
+        elif self.format != "memory" and self.has_extension(extension_name):
             self.load_extension(extension_name)
             return self.extensions[extension_name]
 
-        return None
+        else:
+            return None
 
     def load_extension(self, extension_name: str):
         """
