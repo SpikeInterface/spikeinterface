@@ -52,10 +52,10 @@ class SpikeLocationsWidget(BaseWidget):
         hide_axis=False,
         backend=None,
         **backend_kwargs,
-    ):  
+    ):
         sorting_result = self.ensure_sorting_result(sorting_result)
         self.check_extensions(sorting_result, "spike_locations")
-        
+
         spike_locations_by_units = sorting_result.get_extension("spike_locations").get_data(outputs="by_unit")
 
         sorting = sorting_result.sorting

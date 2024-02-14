@@ -18,7 +18,6 @@ from spikeinterface.qualitymetrics import (
 )
 
 
-
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "qualitymetrics"
 else:

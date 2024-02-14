@@ -121,8 +121,6 @@ def calculate_pc_metrics(
 
     run_in_parallel = n_jobs > 1
 
-    
-
     if run_in_parallel:
         parallel_functions = []
 

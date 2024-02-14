@@ -37,10 +37,10 @@ class TemplateSimilarityWidget(BaseWidget):
         show_colorbar=True,
         backend=None,
         **backend_kwargs,
-    ):  
+    ):
         sorting_result = self.ensure_sorting_result(sorting_result)
         self.check_extensions(sorting_result, "template_similarity")
-        
+
         tsc = sorting_result.get_extension("template_similarity")
         similarity = tsc.get_data().copy()
 
