@@ -109,7 +109,7 @@ class Templates:
                     raise ValueError("Sparsity mask passed but the templates are not sparse")
 
     def to_sparse(self, sparsity, remove_empty=True):
-        # Turn a dense representation of templates into a sparse one, given some sparsity. 
+        # Turn a dense representation of templates into a sparse one, given some sparsity.
         # Templates that are empty after sparsification can be removed via the remove_empty flag
         assert isinstance(sparsity, ChannelSparsity), "sparsity should be of type ChannelSparsity"
         assert self.sparsity_mask is None, "Templates should be dense"
@@ -385,4 +385,4 @@ class Templates:
 
 def get_norms_from_templates(templates):
     assert isinstance(templates, Templates)
-    return np.linalg.norm(templates.get_dense_templates(), axis=(1,2))
+    return np.linalg.norm(templates.get_dense_templates(), axis=(1, 2))
