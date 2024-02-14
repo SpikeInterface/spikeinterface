@@ -55,7 +55,7 @@ class RandomProjectionClustering:
         "ms_before": 0.5,
         "ms_after": 0.5,
         "random_seed": 42,
-        "noise_levels" : None,
+        "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "debug": False,
         "tmp_folder": None,

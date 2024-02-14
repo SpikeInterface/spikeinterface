@@ -58,7 +58,7 @@ class CircusClustering:
         "ms_before": 0.5,
         "ms_after": 0.5,
         "random_seed": 42,
-        "noise_levels":None,
+        "noise_levels": None,
         "debug": False,
         "tmp_folder": None,
         "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
