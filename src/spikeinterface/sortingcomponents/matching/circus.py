@@ -497,7 +497,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         "min_amplitude": 0.5,
         "use_sparse_matrix_threshold": 0.25,
         "templates": None,
-        "sparse_kwargs": {"method": "ptp", "threshold": 1},
     }
 
     @classmethod
@@ -520,7 +519,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         for count, unit_id in enumerate(all_units):
             (d["sparsities"][count],) = np.nonzero(sparsity[count])
-            templates_array[count][:, ~sparsity[count]] = 0
             d["norms"][count] = np.linalg.norm(templates_array[count])
             templates_array[count] /= d["norms"][count]
             d["normed_templates"][count] = templates_array[count][:, sparsity[count]]
@@ -612,15 +610,19 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
-        if not "circus_templates" in d:
+        if "overlaps" not in d:
             d = cls._prepare_templates(d)
-
-        d["overlaps"] = compute_overlaps(
-            d["normed_templates"],
-            d["num_samples"],
-            d["num_channels"],
-            d["sparsities"],
+            d["overlaps"] = compute_overlaps(
+                d["normed_templates"],
+                d["num_samples"],
+                d["num_channels"],
+                d["sparsities"],
         )
+        else:
+            for key in [
+                "circus_templates", "norms"
+            ]:
+                assert d[key] is not None, "If templates are provided, %d should also be there" % key
 
         d["exclude_sweep_size"] = int(d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0)
 

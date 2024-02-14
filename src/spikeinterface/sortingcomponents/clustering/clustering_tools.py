@@ -540,8 +540,7 @@ def remove_duplicates_via_matching(
     peak_labels,
     method_kwargs={},
     job_kwargs={},
-    tmp_folder=None,
-    method="circus-omp-svd",
+    tmp_folder=None
 ):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor
@@ -602,30 +601,20 @@ def remove_duplicates_via_matching(
         sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
         local_params.update({"ignored_ids": ignore_ids + [i]})
         spikes, computed = find_spikes_from_templates(
-            sub_recording, method=method, method_kwargs=local_params, extra_outputs=True, **job_kwargs
+            sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
         )
-        if method == "circus-omp-svd":
-            local_params.update(
-                {
-                    "overlaps": computed["overlaps"],
-                    "normed_templates": computed["normed_templates"],
-                    "norms": computed["norms"],
-                    "temporal": computed["temporal"],
-                    "spatial": computed["spatial"],
-                    "singular": computed["singular"],
-                    "units_overlaps": computed["units_overlaps"],
-                    "unit_overlaps_indices": computed["unit_overlaps_indices"],
-                }
-            )
-        elif method == "circus-omp":
-            local_params.update(
-                {
-                    "overlaps": computed["overlaps"],
-                    "circus_templates": computed["normed_templates"],
-                    "norms": computed["norms"],
-                    "sparsities": computed["sparsities"],
-                }
-            )
+        local_params.update(
+            {
+                "overlaps": computed["overlaps"],
+                "normed_templates": computed["normed_templates"],
+                "norms": computed["norms"],
+                "temporal": computed["temporal"],
+                "spatial": computed["spatial"],
+                "singular": computed["singular"],
+                "units_overlaps": computed["units_overlaps"],
+                "unit_overlaps_indices": computed["unit_overlaps_indices"],
+            }
+        )
         valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
