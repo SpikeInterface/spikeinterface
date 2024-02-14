@@ -62,10 +62,9 @@ def fix_job_kwargs(runtime_job_kwargs):
         )
     # remove None
     runtime_job_kwargs_exclude_none = runtime_job_kwargs.copy()
-    # Whe should remove these lines, otherwise, we can not reset values for total_memory/chunk_size/... on the fly
-    # for job_key, job_value in runtime_job_kwargs.items():
-    #    if job_value is None:
-    #        del runtime_job_kwargs_exclude_none[job_key]
+    for job_key, job_value in runtime_job_kwargs.items():
+       if job_value is None:
+           del runtime_job_kwargs_exclude_none[job_key]
     job_kwargs.update(runtime_job_kwargs_exclude_none)
 
     # if n_jobs is -1, set to os.cpu_count() (n_jobs is always in global job_kwargs)
