@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-from spikeinterface.core import generate_ground_truth_recording, start_sorting_result
+from spikeinterface.core import generate_ground_truth_recording, start_sorting_result, compute_sparsity
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "exporters"
@@ -33,7 +33,13 @@ def make_sorting_result(sparse=True, with_group=False):
         recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
         sorting.set_property("group", [0, 0, 1, 1])
 
-    sorting_result = start_sorting_result(sorting=sorting, recording=recording, format="memory", sparse=sparse)
+        sorting_result_unused = start_sorting_result(sorting=sorting, recording=recording, format="memory", sparse=False, sparsity=None)
+        sparsity_group = compute_sparsity(sorting_result_unused, method="by_property", by_property="group")
+
+        sorting_result = start_sorting_result(sorting=sorting, recording=recording, format="memory", sparse=False, sparsity=sparsity_group)
+    else:
+        sorting_result = start_sorting_result(sorting=sorting, recording=recording, format="memory", sparse=sparse)
+
     sorting_result.select_random_spikes()
     sorting_result.compute("waveforms")
     sorting_result.compute("templates")
