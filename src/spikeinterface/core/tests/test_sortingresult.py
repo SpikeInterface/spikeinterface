@@ -137,12 +137,11 @@ def _check_sorting_results(sortres, original_sorting):
         sortres.compute("dummy")
         keep_unit_ids = original_sorting.unit_ids[::2]
         sortres2 = sortres.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
-        
+
         # check that random_spikes_indices are remmaped
         assert sortres2.random_spikes_indices is not None
         some_spikes = sortres2.sorting.to_spike_vector()[sortres2.random_spikes_indices]
         assert np.array_equal(np.unique(some_spikes["unit_index"]), np.arange(keep_unit_ids.size))
-
 
         # check propagation of result data and correct sligin
         assert np.array_equal(keep_unit_ids, sortres2.unit_ids)
