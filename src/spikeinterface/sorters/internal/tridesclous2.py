@@ -312,7 +312,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             probe=recording.get_probe()
         )
         # TODO : try other methods for sparsity
-        sparsity = compute_sparsity(templates_dense, method="radius", radius_um=120.)
+        # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=120.)
+        sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=1.)
         templates = templates_dense.to_sparse(sparsity)
 
 
