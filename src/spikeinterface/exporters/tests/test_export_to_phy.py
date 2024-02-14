@@ -19,8 +19,6 @@ from spikeinterface.exporters.tests.common import (
 )
 
 
-
-
 def test_export_to_phy_dense(sorting_result_dense_for_export):
     output_folder1 = cache_folder / "phy_output_dense"
     for f in (output_folder1,):
@@ -75,7 +73,7 @@ def test_export_to_phy_sparse(sorting_result_sparse_for_export):
 def test_export_to_phy_by_property(sorting_result_with_group_for_export):
     output_folder = cache_folder / "phy_output_property"
 
-    for f in (output_folder, ):
+    for f in (output_folder,):
         if f.is_dir():
             shutil.rmtree(f)
 
@@ -104,4 +102,3 @@ if __name__ == "__main__":
     test_export_to_phy_dense(sorting_result_dense)
     test_export_to_phy_sparse(sorting_result_sparse)
     test_export_to_phy_by_property(sorting_result_group)
-

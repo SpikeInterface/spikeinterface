@@ -587,11 +587,10 @@ class SortingResult:
         else:
             raise ValueError("SortingResult.save: wrong format")
 
-
         # propagate random_spikes_indices is already done
         if self.random_spikes_indices is not None:
             if unit_ids is None:
-                    new_sortres.random_spikes_indices = self.random_spikes_indices.copy()
+                new_sortres.random_spikes_indices = self.random_spikes_indices.copy()
             else:
                 # more tricky
                 spikes = self.sorting.to_spike_vector()

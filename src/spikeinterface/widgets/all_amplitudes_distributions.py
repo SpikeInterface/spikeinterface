@@ -24,7 +24,7 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
     """
 
     def __init__(self, sorting_result: SortingResult, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs):
-        
+
         sorting_result = self.ensure_sorting_result(sorting_result)
         self.check_extensions(sorting_result, "spike_amplitudes")
 

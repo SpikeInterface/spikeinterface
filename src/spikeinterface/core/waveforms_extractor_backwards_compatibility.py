@@ -461,24 +461,21 @@ def _read_old_waveforms_extractor_binary(folder):
     if len(templates) > 0:
         ext = ComputeTemplates(sorting_result)
         ext.params = dict(
-            nbefore=nbefore,
-            nafter=nafter,
-            return_scaled=params["return_scaled"],
-            operators=list(templates.keys())
+            nbefore=nbefore, nafter=nafter, return_scaled=params["return_scaled"], operators=list(templates.keys())
         )
         for mode, arr in templates.items():
             ext.data[mode] = arr
         sorting_result.extensions["templates"] = ext
 
-    # old extensions with same names and equvalent data except similarity>template_similarity
+    # old extensions with same names and equvalent data except similarity>template_similarity
     old_extension_to_new_class = {
         "spike_amplitudes": "spike_amplitudes",
         "spike_locations": "spike_locations",
         "amplitude_scalings": "amplitude_scalings",
-        "template_metrics" : "template_metrics",
+        "template_metrics": "template_metrics",
         "similarity": "template_similarity",
         "unit_locations": "unit_locations",
-        "correlograms" : "correlograms",
+        "correlograms": "correlograms",
         "isi_histograms": "isi_histograms",
         "noise_levels": "noise_levels",
         "quality_metrics": "quality_metrics",
@@ -505,6 +502,7 @@ def _read_old_waveforms_extractor_binary(folder):
             ext.data["amplitude_scalings"] = np.load(ext_folder / "amplitude_scalings.npy")
         elif new_name == "template_metrics":
             import pandas as pd
+
             ext.data["metrics"] = pd.read_csv(ext_folder / "metrics.csv", index_col=0)
         elif new_name == "template_similarity":
             ext.data["similarity"] = np.load(ext_folder / "similarity.npy")
@@ -520,6 +518,7 @@ def _read_old_waveforms_extractor_binary(folder):
             ext.data["noise_levels"] = np.load(ext_folder / "noise_levels.npy")
         elif new_name == "quality_metrics":
             import pandas as pd
+
             ext.data["metrics"] = pd.read_csv(ext_folder / "metrics.csv", index_col=0)
         # elif new_name == "principal_components":
         #     # TODO: alessio this is for you

@@ -19,6 +19,7 @@ else:
 
 cache_folder.mkdir(exist_ok=True, parents=True)
 
+
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
         durations=[15.0, 5.0],

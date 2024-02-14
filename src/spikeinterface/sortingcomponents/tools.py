@@ -9,6 +9,9 @@ try:
 except:
     HAVE_PSUTIL = False
 
+from spikeinterface.core.sparsity import ChannelSparsity
+from spikeinterface.core.template import Templates
+
 from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import split_job_kwargs
@@ -100,3 +103,21 @@ def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache
         recording = recording.save_to_zarr(**extra_kwargs)
 
     return recording
+
+
+def remove_empty_templates(templates):
+    """
+    Clean A Template with sparse representtaion by removing units that have no channel
+    on the sparsity mask
+    """
+    assert templates.sparsity_mask is not None, "Need sparse Templates object"
+    not_empty = templates.sparsity_mask.sum(axis=1) > 0
+    return Templates(
+        templates_array=templates.templates_array[not_empty, :, :],
+        sampling_frequency=templates.sampling_frequency,
+        nbefore=templates.nbefore,
+        sparsity_mask=templates.sparsity_mask[not_empty, :],
+        channel_ids=templates.channel_ids,
+        unit_ids=templates.unit_ids[not_empty],
+        probe=templates.probe,
+    )
