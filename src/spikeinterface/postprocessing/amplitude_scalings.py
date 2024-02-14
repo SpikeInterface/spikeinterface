@@ -21,7 +21,7 @@ from ..core.template_tools import _get_dense_templates_array, _get_nbefore
 
 class ComputeAmplitudeScalings(ResultExtension):
     """
-    Computes the amplitude scalings from a WaveformExtractor.
+    Computes the amplitude scalings from a SortingResult.
 
     Parameters
     ----------
@@ -35,10 +35,10 @@ class ComputeAmplitudeScalings(ResultExtension):
         dense waveforms, set this to None, sparsity to None, and pass dense waveforms as input.
     ms_before : float or None, default: None
         The cut out to apply before the spike peak to extract local waveforms.
-        If None, the WaveformExtractor ms_before is used.
+        If None, the SortingResult ms_before is used.
     ms_after : float or None, default: None
         The cut out to apply after the spike peak to extract local waveforms.
-        If None, the WaveformExtractor ms_after is used.
+        If None, the SortingResult ms_after is used.
     handle_collisions: bool, default: True
         Whether to handle collisions between spikes. If True, the amplitude scaling of colliding spikes
         (defined as spikes within `delta_collision_ms` ms and with overlapping sparsity) is computed by fitting a

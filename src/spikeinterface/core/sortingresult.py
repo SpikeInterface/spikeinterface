@@ -30,6 +30,9 @@ from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
 from .node_pipeline import run_node_pipeline
 
 
+# TODO make some_spikes a method of SortingResult
+
+
 # high level function
 def start_sorting_result(
     sorting, recording, format="memory", folder=None, sparse=True, sparsity=None, **sparsity_kwargs
@@ -581,10 +584,30 @@ class SortingResult:
         else:
             raise ValueError("SortingResult.save: wrong format")
 
+
+        # propagate random_spikes_indices is already done
+        if self.random_spikes_indices is not None:
+            if unit_ids is None:
+                    new_sortres.random_spikes_indices = self.random_spikes_indices.copy()
+            else:
+                # more tricky
+                spikes = self.sorting.to_spike_vector()
+
+                keep_unit_indices = np.flatnonzero(np.isin(self.unit_ids, unit_ids))
+                keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
+
+                selected_mask = np.zeros(spikes.size, dtype=bool)
+                selected_mask[self.random_spikes_indices] = True
+
+                new_sortres.random_spikes_indices = np.flatnonzero(selected_mask[keep_spike_mask])
+
+            # save it
+            new_sortres._save_random_spikes_indices()
+
         # make a copy of extensions
-        # note that the copy of extension handle itself the slicing of units when necessary
+        # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         for extension_name, extension in self.extensions.items():
-            new_sortres.extensions[extension_name] = extension.copy(new_sortres, unit_ids=unit_ids)
+            new_ext = new_sortres.extensions[extension_name] = extension.copy(new_sortres, unit_ids=unit_ids)
 
         return new_sortres
 
@@ -1031,7 +1054,9 @@ class SortingResult:
         self.random_spikes_indices = random_spikes_selection(
             self.sorting, self.rec_attributes["num_samples"], **random_kwargs
         )
+        self._save_random_spikes_indices()
 
+    def _save_random_spikes_indices(self):
         if self.format == "binary_folder":
             np.save(self.folder / "random_spikes_indices.npy", self.random_spikes_indices)
         elif self.format == "zarr":

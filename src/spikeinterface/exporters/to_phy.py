@@ -224,19 +224,17 @@ def export_to_phy(
     if compute_pc_features:
         if not sorting_result.has_extension("principal_components"):
             sorting_result.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
+        
+        pca_extension = sorting_result.get_extension("principal_components")
 
-        # pc_sparsity = pc.get_sparsity()
-        # if pc_sparsity is None:
-        #     pc_sparsity = used_sparsity
-        # max_num_channels_pc = max(len(chan_inds) for chan_inds in pc_sparsity.unit_id_to_channel_indices.values())
-        raise NotImplementedError()
-        # pc.run_for_all_spikes(output_folder / "pc_features.npy", **job_kwargs)
+        pca_extension.run_for_all_spikes(output_folder / "pc_features.npy", **job_kwargs)
 
-        # pc_feature_ind = -np.ones((len(unit_ids), max_num_channels_pc), dtype="int64")
-        # for unit_ind, unit_id in enumerate(unit_ids):
-        #     chan_inds = pc_sparsity.unit_id_to_channel_indices[unit_id]
-        #     pc_feature_ind[unit_ind, : len(chan_inds)] = chan_inds
-        # np.save(str(output_folder / "pc_feature_ind.npy"), pc_feature_ind)
+        max_num_channels_pc = max(len(chan_inds) for chan_inds in used_sparsity.unit_id_to_channel_indices.values())
+        pc_feature_ind = -np.ones((len(unit_ids), max_num_channels_pc), dtype="int64")
+        for unit_ind, unit_id in enumerate(unit_ids):
+            chan_inds = used_sparsity.unit_id_to_channel_indices[unit_id]
+            pc_feature_ind[unit_ind, : len(chan_inds)] = chan_inds
+        np.save(str(output_folder / "pc_feature_ind.npy"), pc_feature_ind)
 
     # Save .tsv metadata
     cluster_group = pd.DataFrame(

@@ -18,7 +18,7 @@ import probeinterface
 
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
-from .sortingresult import start_sorting_result
+from .sortingresult import start_sorting_result, get_extension_class
 from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
 from .sortingresult import SortingResult, load_sorting_result
@@ -354,6 +354,7 @@ def load_waveforms(
 
 
 def _read_old_waveforms_extractor_binary(folder):
+    folder = Path(folder)
     params_file = folder / "params.json"
     if not params_file.exists():
         raise ValueError(f"This folder is not a WaveformsExtractor folder {folder}")
@@ -441,7 +442,12 @@ def _read_old_waveforms_extractor_binary(folder):
         sorting_result.random_spikes_indices = random_spikes_indices
 
         ext = ComputeWaveforms(sorting_result)
-        ext.params = params
+        ext.params = dict(
+            ms_before=params["ms_before"],
+            ms_after=params["ms_after"],
+            return_scaled=params["return_scaled"],
+            dtype=params["dtype"],
+        )
         ext.data["waveforms"] = waveforms
         sorting_result.extensions["waveforms"] = ext
 
@@ -454,62 +460,70 @@ def _read_old_waveforms_extractor_binary(folder):
             templates[mode] = np.load(template_file)
     if len(templates) > 0:
         ext = ComputeTemplates(sorting_result)
-        ext.params = dict(operators=list(templates.keys()))
+        ext.params = dict(
+            nbefore=nbefore,
+            nafter=nafter,
+            return_scaled=params["return_scaled"],
+            operators=list(templates.keys())
+        )
         for mode, arr in templates.items():
             ext.data[mode] = arr
         sorting_result.extensions["templates"] = ext
 
-    # TODO : implement this when extension will be prted in the new API
-    # old_extension_to_new_class : {
-    # old extensions with same names and equvalent data except similarity>template_similarity
-    # "spike_amplitudes": ,
-    # "spike_locations": ,
-    # "amplitude_scalings": ,
-    # "template_metrics" : ,
-    # "similarity": ,
-    # "unit_locations": ,
-    # "correlograms" : ,
-    # isi_histograms: ,
-    # "noise_levels": ,
-    # "quality_metrics": ,
-    # "principal_components" : ,
-    # }
-    # for ext_name, new_class in old_extension_to_new_class.items():
-    #     ext_folder = folder / ext_name
-    #     ext = new_class(sorting_result)
-    #     with open(ext_folder / "params.json", "r") as f:
-    #         params = json.load(f)
-    #     ext.params = params
-    #     if ext_name == "spike_amplitudes":
-    #         amplitudes = []
-    #         for segment_index in range(sorting.get_num_segments()):
-    #             amplitudes.append(np.load(ext_folder / f"amplitude_segment_{segment_index}.npy"))
-    #         amplitudes = np.concatenate(amplitudes)
-    #         ext.data["amplitudes"] = amplitudes
-    #     elif ext_name == "spike_locations":
-    #         ext.data["spike_locations"] = np.load(ext_folder / "spike_locations.npy")
-    #     elif ext_name == "amplitude_scalings":
-    #         ext.data["amplitude_scalings"] = np.load(ext_folder / "amplitude_scalings.npy")
-    #     elif ext_name == "template_metrics":
-    #         import pandas as pd
-    #         ext.data["metrics"] = pd.read_csv(ext_folder / "metrics.csv", index_col=0)
-    #     elif ext_name == "similarity":
-    #         ext.data["similarity"] = np.load(ext_folder / "similarity.npy")
-    #     elif ext_name == "unit_locations":
-    #         ext.data["unit_locations"] = np.load(ext_folder / "unit_locations.npy")
-    #     elif ext_name == "correlograms":
-    #         ext.data["ccgs"] = np.load(ext_folder / "ccgs.npy")
-    #         ext.data["bins"] = np.load(ext_folder / "bins.npy")
-    #     elif ext_name == "isi_histograms":
-    #         ext.data["isi_histograms"] = np.load(ext_folder / "isi_histograms.npy")
-    #         ext.data["bins"] = np.load(ext_folder / "bins.npy")
-    #     elif ext_name == "noise_levels":
-    #         ext.data["noise_levels"] = np.load(ext_folder / "noise_levels.npy")
-    #     elif ext_name == "quality_metrics":
-    #         import pandas as pd
-    #         ext.data["metrics"] = pd.read_csv(ext_folder / "metrics.csv", index_col=0)
-    #     elif ext_name == "principal_components":
-    #         # TODO: this is for you
-    #         pass
+    # old extensions with same names and equvalent data except similarity>template_similarity
+    old_extension_to_new_class = {
+        "spike_amplitudes": "spike_amplitudes",
+        "spike_locations": "spike_locations",
+        "amplitude_scalings": "amplitude_scalings",
+        "template_metrics" : "template_metrics",
+        "similarity": "template_similarity",
+        "unit_locations": "unit_locations",
+        "correlograms" : "correlograms",
+        "isi_histograms": "isi_histograms",
+        "noise_levels": "noise_levels",
+        "quality_metrics": "quality_metrics",
+        # "principal_components" : "principal_components",
+    }
+    for old_name, new_name in old_extension_to_new_class.items():
+        ext_folder = folder / old_name
+        if not ext_folder.is_dir():
+            continue
+        new_class = get_extension_class(new_name)
+        ext = new_class(sorting_result)
+        with open(ext_folder / "params.json", "r") as f:
+            params = json.load(f)
+        ext.params = params
+        if new_name == "spike_amplitudes":
+            amplitudes = []
+            for segment_index in range(sorting.get_num_segments()):
+                amplitudes.append(np.load(ext_folder / f"amplitude_segment_{segment_index}.npy"))
+            amplitudes = np.concatenate(amplitudes)
+            ext.data["amplitudes"] = amplitudes
+        elif new_name == "spike_locations":
+            ext.data["spike_locations"] = np.load(ext_folder / "spike_locations.npy")
+        elif new_name == "amplitude_scalings":
+            ext.data["amplitude_scalings"] = np.load(ext_folder / "amplitude_scalings.npy")
+        elif new_name == "template_metrics":
+            import pandas as pd
+            ext.data["metrics"] = pd.read_csv(ext_folder / "metrics.csv", index_col=0)
+        elif new_name == "template_similarity":
+            ext.data["similarity"] = np.load(ext_folder / "similarity.npy")
+        elif new_name == "unit_locations":
+            ext.data["unit_locations"] = np.load(ext_folder / "unit_locations.npy")
+        elif new_name == "correlograms":
+            ext.data["ccgs"] = np.load(ext_folder / "ccgs.npy")
+            ext.data["bins"] = np.load(ext_folder / "bins.npy")
+        elif new_name == "isi_histograms":
+            ext.data["isi_histograms"] = np.load(ext_folder / "isi_histograms.npy")
+            ext.data["bins"] = np.load(ext_folder / "bins.npy")
+        elif new_name == "noise_levels":
+            ext.data["noise_levels"] = np.load(ext_folder / "noise_levels.npy")
+        elif new_name == "quality_metrics":
+            import pandas as pd
+            ext.data["metrics"] = pd.read_csv(ext_folder / "metrics.csv", index_col=0)
+        # elif new_name == "principal_components":
+        #     # TODO: alessio this is for you
+        #     pass
+        sorting_result.extensions[new_name] = ext
 
     return sorting_result

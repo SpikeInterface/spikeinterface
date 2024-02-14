@@ -17,29 +17,6 @@ from spikeinterface.qualitymetrics import (
     compute_quality_metrics,
 )
 
-#     generate_ground_truth_recording
-#     WaveformExtractor,
-#     NumpySorting,
-#     compute_sparsity,
-#     load_extractor,
-#     extract_waveforms,
-#     split_recording,
-#     select_segment_sorting,
-#     load_waveforms,
-#     aggregate_units,
-# )
-# from spikeinterface.extractors import toy_example
-
-# from spikeinterface.postprocessing import (
-#     compute_principal_components,
-#     compute_spike_amplitudes,
-#     compute_spike_locations,
-#     compute_noise_levels,
-# )
-# from spikeinterface.preprocessing import scale
-# from spikeinterface.qualitymetrics import QualityMetricCalculator, get_default_qm_params
-
-# from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -137,6 +114,7 @@ def test_compute_quality_metrics_recordingless(sorting_result_simple):
 
     # make a copy and make it recordingless
     sorting_result_norec = sorting_result.save_as(format="memory")
+    sorting_result_norec.delete_extension("quality_metrics")
     sorting_result_norec._recording = None
     assert not sorting_result_norec.has_recording()
 

@@ -83,7 +83,7 @@ class SpikesOnTracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
+        sorting_result = self.ensure_sorting_result(sorting_result)
         self.check_extensions(sorting_result, "unit_locations")
 
         sorting: BaseSorting = sorting_result.sorting

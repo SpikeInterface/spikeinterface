@@ -48,7 +48,8 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
+        sorting_result = self.ensure_sorting_result(sorting_result)
+        
         if channel_ids is None:
             channel_ids = sorting_result.channel_ids
 
