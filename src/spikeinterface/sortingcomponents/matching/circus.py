@@ -617,11 +617,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                 d["num_samples"],
                 d["num_channels"],
                 d["sparsities"],
-        )
+            )
         else:
-            for key in [
-                "circus_templates", "norms"
-            ]:
+            for key in ["circus_templates", "norms"]:
                 assert d[key] is not None, "If templates are provided, %d should also be there" % key
 
         d["exclude_sweep_size"] = int(d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0)

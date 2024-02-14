@@ -535,13 +535,7 @@ def remove_duplicates(
     return labels, new_labels
 
 
-def remove_duplicates_via_matching(
-    templates,
-    peak_labels,
-    method_kwargs={},
-    job_kwargs={},
-    tmp_folder=None
-):
+def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor
     from spikeinterface.core import NumpySorting
