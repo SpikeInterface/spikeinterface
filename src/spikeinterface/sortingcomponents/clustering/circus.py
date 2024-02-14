@@ -58,6 +58,7 @@ class CircusClustering:
         "ms_before": 0.5,
         "ms_after": 0.5,
         "random_seed": 42,
+        "noise_levels":None,
         "debug": False,
         "tmp_folder": None,
         "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
@@ -192,7 +193,9 @@ class CircusClustering:
         templates = Templates(
             templates_array, fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe()
         )
-        sparsity = compute_sparsity(templates, get_noise_levels(recording), **params["sparsity"])
+        if params["noise_levels"] is None:
+            params["noise_levels"] = get_noise_levels(recording)
+        sparsity = compute_sparsity(templates, params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
 
         cleaning_matching_params = params["job_kwargs"].copy()

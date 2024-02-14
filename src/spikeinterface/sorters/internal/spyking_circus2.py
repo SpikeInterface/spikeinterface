@@ -111,7 +111,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_f.annotate(is_filtered=True)
 
         recording_f = zscore(recording_f, dtype="float32")
-        noise_levels = get_noise_levels(recording_f)
+        noise_levels = np.ones(recording_f.get_num_channels(), dtype=np.float32)
 
         if recording_f.check_serializability("json"):
             recording_f.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
@@ -160,6 +160,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             clustering_params.update(dict(shared_memory=params["shared_memory"]))
             clustering_params["job_kwargs"] = job_kwargs
+            clustering_params["noise_levels"] = noise_levels
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
 
             if "legacy" in clustering_params:
