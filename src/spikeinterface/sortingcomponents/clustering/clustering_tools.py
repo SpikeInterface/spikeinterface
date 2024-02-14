@@ -553,7 +553,7 @@ def remove_duplicates_via_matching(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    templates_array = templates.templates_array
+    templates_array = templates.get_dense_templates()
 
     nb_templates = len(templates_array)
     duration = templates.nbefore + templates.nafter

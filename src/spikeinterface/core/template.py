@@ -108,20 +108,39 @@ class Templates:
                 if not self._are_passed_templates_sparse():
                     raise ValueError("Sparsity mask passed but the templates are not sparse")
 
-    def to_sparse(self, sparsity):
+    def to_sparse(self, sparsity, remove_empty=True):
+        # Turn a dense representation of templates into a sparse one, given some sparsity. 
+        # Templates that are empty after sparsification can be removed via the remove_empty flag
         assert isinstance(sparsity, ChannelSparsity), "sparsity should be of type ChannelSparsity"
         assert self.sparsity_mask is None, "Templates should be dense"
 
-        return Templates(
-            templates_array=sparsity.sparsify_templates(self.templates_array),
-            sampling_frequency=self.sampling_frequency,
-            nbefore=self.nbefore,
-            sparsity_mask=sparsity.mask,
-            channel_ids=self.channel_ids,
-            unit_ids=self.unit_ids,
-            probe=self.probe,
-            check_for_consistent_sparsity=self.check_for_consistent_sparsity,
-        )
+        if not remove_empty:
+            return Templates(
+                templates_array=sparsity.sparsify_templates(self.templates_array),
+                sampling_frequency=self.sampling_frequency,
+                nbefore=self.nbefore,
+                sparsity_mask=sparsity.mask,
+                channel_ids=self.channel_ids,
+                unit_ids=self.unit_ids,
+                probe=self.probe,
+                check_for_consistent_sparsity=self.check_for_consistent_sparsity,
+            )
+
+        else:
+            templates_array = sparsity.sparsify_templates(self.templates_array)
+            norms = np.linalg.norm(templates_array, axis=(1, 2))
+            not_empty = norms > 0
+            new_sparsity = ChannelSparsity(sparsity.mask[not_empty], sparsity.unit_ids[not_empty], sparsity.channel_ids)
+            return Templates(
+                templates_array=new_sparsity.sparsify_templates(self.templates_array[not_empty]),
+                sampling_frequency=self.sampling_frequency,
+                nbefore=self.nbefore,
+                sparsity_mask=new_sparsity.mask,
+                channel_ids=self.channel_ids,
+                unit_ids=self.unit_ids[not_empty],
+                probe=self.probe,
+                check_for_consistent_sparsity=self.check_for_consistent_sparsity,
+            )
 
     def get_one_template_dense(self, unit_index):
         if self.sparsity is None:
@@ -362,3 +381,8 @@ class Templates:
         assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
         channel_locations = self.probe.contact_positions
         return channel_locations
+
+
+def get_norms_from_templates(templates):
+    assert isinstance(templates, Templates)
+    return np.linalg.norm(templates.get_dense_templates(), axis=(1,2))

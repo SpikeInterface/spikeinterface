@@ -28,7 +28,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "sparsity": {"method": "ptp", "threshold": 0.5},
+        "sparsity": {"method": "ptp", "threshold": 1},
         "filtering": {"freq_min": 150, "dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
@@ -217,7 +217,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             )
 
             sparsity = compute_sparsity(templates, noise_levels, **params["sparsity"])
-            templates = templates.to_sparse(sparsity)
+            templates = templates.to_sparse(sparsity, remove_empty=True)
 
             if params["debug"]:
                 templates.to_zarr(folder_path=clustering_folder / "templates")
