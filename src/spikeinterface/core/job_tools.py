@@ -243,7 +243,7 @@ class ChunkRecordingExecutor:
         * in parallel with ProcessPoolExecutor (higher speed)
 
     The initializer ("init_func") allows to set a global context to avoid heavy serialization
-    (for examples, see implementation in `core.WaveformExtractor`).
+    (for examples, see implementation in `core.waveform_tools`).
 
     Parameters
     ----------

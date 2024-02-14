@@ -16,8 +16,6 @@ from .quality_metric_list import calculate_pc_metrics, _misc_metric_name_to_func
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
 
-# TODO :
-
 
 class ComputeQualityMetrics(ResultExtension):
     """
