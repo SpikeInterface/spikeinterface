@@ -27,6 +27,7 @@ from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDen
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
+from spikeinterface.sortingcomponents.tools import remove_empty_templates
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     ExtractDenseWaveforms,
@@ -139,13 +140,11 @@ class RandomProjectionClustering:
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
 
-        spikes = np.zeros(len(peaks), dtype=minimum_spike_dtype)
-        spikes["sample_index"] = peaks["sample_index"]
-        spikes["segment_index"] = peaks["segment_index"]
-        spikes["unit_index"] = peak_labels
-
-        if verbose:
-            print("We found %d raw clusters, starting to clean with matching..." % (len(labels)))
+        spikes = np.zeros(np.sum(peak_labels > -1), dtype=minimum_spike_dtype)
+        mask = peak_labels > -1
+        spikes["sample_index"] = peaks[mask]["sample_index"]
+        spikes["segment_index"] = peaks[mask]["segment_index"]
+        spikes["unit_index"] = peak_labels[mask]
 
         unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
 
@@ -162,7 +161,11 @@ class RandomProjectionClustering:
         if params["noise_levels"] is None:
             params["noise_levels"] = get_noise_levels(recording)
         sparsity = compute_sparsity(templates, params["noise_levels"], **params["sparsity"])
-        templates = templates.to_sparse(sparsity, remove_empty=True)
+        templates = templates.to_sparse(sparsity)
+        templates = remove_empty_templates(templates)
+
+        if verbose:
+            print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
 
         cleaning_matching_params = params["job_kwargs"].copy()
         for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:

@@ -100,3 +100,24 @@ def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache
         recording = recording.save_to_zarr(**extra_kwargs)
 
     return recording
+
+
+def remove_empty_templates(templates):
+
+    from spikeinterface.core.sparsity import ChannelSparsity
+    from spikeinterface.core.template import Templates
+
+    templates_array = templates.get_dense_templates()
+    not_empty = templates.sparsity_mask.sum(axis=1) > 0
+    sparse = np.zeros((len(not_empty), templates.))
+    new_sparsity = ChannelSparsity(, templates.unit_ids[not_empty], templates.channel_ids)
+    return Templates(
+        templates_array=new_sparsity.sparsify_templates(templates_array[not_empty]),
+        sampling_frequency=templates.sampling_frequency,
+        nbefore=templates.nbefore,
+        sparsity_mask=new_sparsity.mask,
+        channel_ids=templates.channel_ids,
+        unit_ids=templates.unit_ids[not_empty],
+        probe=templates.probe,
+        check_for_consistent_sparsity=templates.check_for_consistent_sparsity,
+    )
