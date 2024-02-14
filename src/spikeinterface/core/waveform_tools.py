@@ -1,7 +1,7 @@
 """
 This module contains low-level functions to extract snippets of traces (aka "spike waveforms").
 
-This is internally used by WaveformExtractor, but can also be used as a sorting component.
+This is internally used by SortingResult, but can also be used as a sorting component.
 
 It is a 2-step approach:
   1. allocate buffers (shared file or memory)

@@ -5,17 +5,8 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.postprocessing import ComputePrincipalComponents, compute_principal_components
-from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
+from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite, cache_folder
 
-
-# from spikeinterface import compute_sparsity
-# from spikeinterface.postprocessing import WaveformPrincipalComponent, compute_principal_components
-# from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
-
-# if hasattr(pytest, "global_test_folder"):
-#     cache_folder = pytest.global_test_folder / "postprocessing"
-# else:
-#     cache_folder = Path("cache_folder") / "postprocessing"
 
 
 DEBUG = False
@@ -38,43 +29,87 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
 
         n_components = 3
         sorting_result.compute("principal_components", mode="concatenated", n_components=n_components)
-        ext = sorting_result.get_extension(self.extension_name)
+        ext = sorting_result.get_extension("principal_components")
         assert ext is not None
         assert len(ext.data) > 0
         pca = ext.data["pca_projection"]
         assert pca.ndim == 2
         assert pca.shape[1] == n_components
+    
+    def test_get_projections(self):
 
-    # def test_compute_for_all_spikes(self):
-    #     sorting_result = self._prepare_sorting_result(format="memory", sparse=False)
+        for sparse in (False, True):
+            
+            sorting_result = self._prepare_sorting_result(format="memory", sparse=sparse)
+            num_chans = sorting_result.get_num_channels()
+            n_components = 2
 
-    #     n_components = 3
-    #     sorting_result.compute("principal_components", mode="by_channel_local", n_components=n_components)
-    #     ext = sorting_result.get_extension(self.extension_name)
-    #     ext.run_for_all_spikes()
+            sorting_result.compute("principal_components", mode="by_channel_global", n_components=n_components)
+            ext = sorting_result.get_extension("principal_components")
 
-    #     pc_file1 = pc.extension_folder / "all_pc1.npy"
-    #     pc.run_for_all_spikes(pc_file1, chunk_size=10000, n_jobs=1)
-    #     all_pc1 = np.load(pc_file1)
+            for unit_id in sorting_result.unit_ids:
+                if not sparse:
+                    one_proj = ext.get_projections_one_unit(unit_id, sparse=False)
+                    assert one_proj.shape[1] == n_components
+                    assert one_proj.shape[2] == num_chans
+                else:
+                    one_proj = ext.get_projections_one_unit(unit_id, sparse=False)
+                    assert one_proj.shape[1] == n_components
+                    assert one_proj.shape[2] == num_chans
 
-    #     pc_file2 = pc.extension_folder / "all_pc2.npy"
-    #     pc.run_for_all_spikes(pc_file2, chunk_size=10000, n_jobs=2)
-    #     all_pc2 = np.load(pc_file2)
+                    one_proj, chan_inds = ext.get_projections_one_unit(unit_id, sparse=True)
+                    assert one_proj.shape[1] == n_components
+                    assert one_proj.shape[2] < num_chans
+                    assert one_proj.shape[2] == chan_inds.size
+            
+            some_unit_ids = sorting_result.unit_ids[::2]
+            some_channel_ids = sorting_result.channel_ids[::2]
+            
 
-    #     assert np.array_equal(all_pc1, all_pc2)
+            # this should be all spikes all channels
+            some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=None)
+            assert some_projections.shape[0] == spike_unit_index.shape[0]
+            assert spike_unit_index.shape[0] == sorting_result.random_spikes_indices.size
+            assert some_projections.shape[1] == n_components
+            assert some_projections.shape[2] == num_chans
 
-    #     # test with sparsity
-    #     sparsity = compute_sparsity(we, method="radius", radius_um=50)
-    #     we_copy = we.save(folder=cache_folder / "we_copy")
-    #     pc_sparse = self.extension_class.get_extension_function()(we_copy, sparsity=sparsity, load_if_exists=False)
-    #     pc_file_sparse = pc.extension_folder / "all_pc_sparse.npy"
-    #     pc_sparse.run_for_all_spikes(pc_file_sparse, chunk_size=10000, n_jobs=1)
-    #     all_pc_sparse = np.load(pc_file_sparse)
-    #     all_spikes_seg0 = we_copy.sorting.to_spike_vector(concatenated=False)[0]
-    #     for unit_index, unit_id in enumerate(we.unit_ids):
-    #         sparse_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-    #         pc_unit = all_pc_sparse[all_spikes_seg0["unit_index"] == unit_index]
-    #         assert np.allclose(pc_unit[:, :, len(sparse_channel_ids) :], 0)
+            # this should be some spikes all channels
+            some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=some_unit_ids)
+            assert some_projections.shape[0] == spike_unit_index.shape[0]
+            assert spike_unit_index.shape[0] < sorting_result.random_spikes_indices.size
+            assert some_projections.shape[1] == n_components
+            assert some_projections.shape[2] == num_chans
+            assert 1 not in spike_unit_index
+
+            # this should be some spikes some channels
+            some_projections, spike_unit_index = ext.get_some_projections(channel_ids=some_channel_ids, unit_ids=some_unit_ids)
+            assert some_projections.shape[0] == spike_unit_index.shape[0]
+            assert spike_unit_index.shape[0] < sorting_result.random_spikes_indices.size
+            assert some_projections.shape[1] == n_components
+            assert some_projections.shape[2] == some_channel_ids.size
+            assert 1 not in spike_unit_index
+
+    def test_compute_for_all_spikes(self):
+
+        for sparse in (True, False):
+            sorting_result = self._prepare_sorting_result(format="memory", sparse=sparse)
+
+            num_spikes = sorting_result.sorting.to_spike_vector().size
+
+            n_components = 3
+            sorting_result.compute("principal_components", mode="by_channel_local", n_components=n_components)
+            ext = sorting_result.get_extension("principal_components")
+
+            pc_file1 = cache_folder / "all_pc1.npy"
+            ext.run_for_all_spikes(pc_file1, chunk_size=10000, n_jobs=1)
+            all_pc1 = np.load(pc_file1)
+            assert all_pc1.shape[0] == num_spikes
+
+            pc_file2 = cache_folder / "all_pc2.npy"
+            ext.run_for_all_spikes(pc_file2, chunk_size=10000, n_jobs=2)
+            all_pc2 = np.load(pc_file2)
+
+            assert np.array_equal(all_pc1, all_pc2)
 
     def test_project_new(self):
         from sklearn.decomposition import IncrementalPCA
@@ -100,10 +135,12 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
 if __name__ == "__main__":
     test = PrincipalComponentsExtensionTest()
     test.setUpClass()
-    test.test_extension()
-    test.test_mode_concatenated()
-    # test.test_compute_for_all_spikes()
-    test.test_project_new()
+    # test.test_extension()
+    # test.test_mode_concatenated()
+    # test.test_get_projections()
+    test.test_compute_for_all_spikes()
+    # test.test_project_new()
+    
 
     # ext = test.sorting_results["sparseTrue_memory"].get_extension("principal_components")
     # pca = ext.data["pca_projection"]

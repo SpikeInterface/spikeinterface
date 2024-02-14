@@ -121,40 +121,29 @@ def calculate_pc_metrics(
 
     run_in_parallel = n_jobs > 1
 
-    units_loop = enumerate(unit_ids)
-    if progress_bar and not run_in_parallel:
-        units_loop = tqdm(units_loop, desc="Computing PCA metrics", total=len(unit_ids))
+    
 
     if run_in_parallel:
         parallel_functions = []
 
-    # all_labels, all_pcs = pca.get_all_projections()
-    # TODO: this is wring all_pcs used to be dense even when the waveform extractor was sparse
-    all_pcs = pca_ext.data["pca_projection"]
-    spikes = sorting.to_spike_vector()
-    some_spikes = spikes[sorting_result.random_spikes_indices]
-    all_labels = sorting.unit_ids[some_spikes["unit_index"]]
+    # this get dense projection for selected unit_ids
+    dense_projections, spike_unit_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)
+    all_labels = sorting.unit_ids[spike_unit_indices]
 
     items = []
     for unit_id in unit_ids:
-        print(sorting_result.is_sparse())
         if sorting_result.is_sparse():
             neighbor_channel_ids = sorting_result.sparsity.unit_id_to_channel_ids[unit_id]
             neighbor_unit_ids = [
                 other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
             ]
-        # elif sparsity is not None:
-        #     neighbor_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-        #     neighbor_unit_ids = [
-        #         other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
-        #     ]
         else:
             neighbor_channel_ids = channel_ids
             neighbor_unit_ids = unit_ids
         neighbor_channel_indices = sorting_result.channel_ids_to_indices(neighbor_channel_ids)
 
         labels = all_labels[np.isin(all_labels, neighbor_unit_ids)]
-        pcs = all_pcs[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
         func_args = (
@@ -165,28 +154,30 @@ def calculate_pc_metrics(
             unit_ids,
             qm_params,
             seed,
-            # we.folder,
             n_spikes_all_units,
             fr_all_units,
         )
         items.append(func_args)
 
     if not run_in_parallel:
+        units_loop = enumerate(unit_ids)
+        if progress_bar:
+            units_loop = tqdm(units_loop, desc="calculate_pc_metrics", total=len(unit_ids))
+
         for unit_ind, unit_id in units_loop:
             pca_metrics_unit = pca_metrics_one_unit(items[unit_ind])
             for metric_name, metric in pca_metrics_unit.items():
                 pc_metrics[metric_name][unit_id] = metric
     else:
-        raise NotImplementedError
-        # with ProcessPoolExecutor(n_jobs) as executor:
-        #     results = executor.map(pca_metrics_one_unit, items)
-        #     if progress_bar:
-        #         results = tqdm(results, total=len(unit_ids))
+        with ProcessPoolExecutor(n_jobs) as executor:
+            results = executor.map(pca_metrics_one_unit, items)
+            if progress_bar:
+                results = tqdm(results, total=len(unit_ids), desc="calculate_pc_metrics")
 
-        #     for ui, pca_metrics_unit in enumerate(results):
-        #         unit_id = unit_ids[ui]
-        #         for metric_name, metric in pca_metrics_unit.items():
-        #             pc_metrics[metric_name][unit_id] = metric
+            for ui, pca_metrics_unit in enumerate(results):
+                unit_id = unit_ids[ui]
+                for metric_name, metric in pca_metrics_unit.items():
+                    pc_metrics[metric_name][unit_id] = metric
 
     return pc_metrics
 

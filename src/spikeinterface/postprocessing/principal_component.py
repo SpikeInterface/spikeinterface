@@ -13,12 +13,7 @@ from spikeinterface.core.sortingresult import register_result_extension, ResultE
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 
-# from spikeinterface.core.globals import get_global_tmp_folder
-
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
-
-
-# TODO handle extra sparsity
 
 
 class ComputePrincipalComponents(ResultExtension):
@@ -51,7 +46,9 @@ class ComputePrincipalComponents(ResultExtension):
     >>> sorting_result.compute("principal_components", n_components=3, mode='by_channel_local')
     >>> ext_pca = sorting_result.get_extension("principal_components")
     >>> # get pre-computed projections for unit_id=1
-    >>> projections = ext_pca.get_projections(unit_id=1)
+    >>> unit_projections = ext_pca.get_projections_one_unit(unit_id=1, sparse=False)
+    >>> # get pre-computed projections for some units on some channels
+    >>> some_projections, spike_unit_indices = ext_pca.get_some_projections(channel_ids=None, unit_ids=None)
     >>> # retrieve fitted pca model(s)
     >>> pca_model = ext_pca.get_pca_model()
     >>> # compute projections on new waveforms
@@ -77,13 +74,8 @@ class ComputePrincipalComponents(ResultExtension):
         mode="by_channel_local",
         whiten=True,
         dtype="float32",
-        sparsity=None,
     ):
         assert mode in _possible_modes, "Invalid mode!"
-
-        if sparsity is not None:
-            # TODO alessio:  implement local sparsity or not ??
-            raise NotImplementedError
 
         # the sparsity in params is ONLY the injected sparsity and not the sorting_result one
         params = dict(
@@ -91,8 +83,6 @@ class ComputePrincipalComponents(ResultExtension):
             mode=mode,
             whiten=whiten,
             dtype=np.dtype(dtype),
-            # sparsity=sparsity,
-            # tmp_folder=tmp_folder,
         )
         return params
 
@@ -111,30 +101,6 @@ class ComputePrincipalComponents(ResultExtension):
                 new_data[k] = v
         return new_data
 
-    def get_projections(self, unit_id, sparse=False):
-        """
-        Returns the computed projections for the sampled waveforms of a unit id.
-
-        Parameters
-        ----------
-        unit_id : int or str
-            The unit id to return PCA projections for
-        sparse: bool, default: False
-            If True, and sparsity is not None, only projections on sparse channels are returned.
-
-        Returns
-        -------
-        projections: np.array
-            The PCA projections (num_waveforms, num_components, num_channels).
-            In case sparsity is used, only the projections on sparse channels are returned.
-        """
-        projections = self.data[f"pca_{unit_id}"]
-        mode = self.params["mode"]
-        if mode in ("by_channel_local", "by_channel_global") and sparse:
-            sparsity = self.get_sparsity()
-            if sparsity is not None:
-                projections = projections[:, :, sparsity.unit_id_to_channel_indices[unit_id]]
-        return projections
 
     def get_pca_model(self):
         """
@@ -155,49 +121,123 @@ class ComputePrincipalComponents(ResultExtension):
             pca_models = self.data[f"pca_model_{mode}"]
         return pca_models
 
-    # def get_all_projections(self, channel_ids=None, unit_ids=None, outputs="id"):
-    #     """
-    #     Returns the computed projections for the sampled waveforms of all units.
+    def get_projections_one_unit(self, unit_id, sparse=False):
+        """
+        Returns the computed projections for the sampled waveforms of a unit id.
 
-    #     Parameters
-    #     ----------
-    #     channel_ids : list, default: None
-    #         List of channel ids on which projections are computed
-    #     unit_ids : list, default: None
-    #         List of unit ids to return projections for
-    #     outputs: str
-    #         * "id": "all_labels" contain unit ids
-    #         * "index": "all_labels" contain unit indices
+        Parameters
+        ----------
+        unit_id : int or str
+            The unit id to return PCA projections for
+        sparse: bool, default: False
+            If True, and SortingResult must be sparse then only projections on sparse channels are returned.
+            Channel indices are also returned.
 
-    #     Returns
-    #     -------
-    #     all_labels: np.array
-    #         Array with labels (ids or indices based on "outputs") of returned PCA projections
-    #     all_projections: np.array
-    #         The PCA projections (num_all_waveforms, num_components, num_channels)
-    #     """
-    #     if unit_ids is None:
-    #         unit_ids = self.sorting_result.sorting.unit_ids
+        Returns
+        -------
+        projections: np.array
+            The PCA projections (num_waveforms, num_components, num_channels).
+            In case sparsity is used, only the projections on sparse channels are returned.
+        channel_indices: np.array
 
-    #     all_labels = []  #  can be unit_id or unit_index
-    #     all_projections = []
-    #     for unit_index, unit_id in enumerate(unit_ids):
-    #         proj = self.get_projections(unit_id, sparse=False)
-    #         if channel_ids is not None:
-    #             chan_inds = self.sorting_result.chanpca_projectionnel_ids_to_indices(channel_ids)
-    #             proj = proj[:, :, chan_inds]
-    #         n = proj.shape[0]
-    #         if outputs == "id":
-    #             labels = np.array([unit_id] * n)
-    #         elif outputs == "index":
-    #             labels = np.ones(n, dtype="int64")
-    #             labels[:] = unit_index
-    #         all_labels.append(labels)
-    #         all_projections.append(proj)
-    #     all_labels = np.concatenate(all_labels, axis=0)
-    #     all_projections = np.concatenate(all_projections, axis=0)
+        """
+        sparsity = self.sorting_result.sparsity
+        sorting = self.sorting_result.sorting
+        
+        if sparse:
+            assert self.params["mode"] != "concatenated", "mode concatenated cannot retrieve sparse projection"
+            assert sparsity is not None, "sparse projection need SortingResult to be sparse"
 
-    #     return all_labels, all_projections
+        spikes = sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+
+        unit_index = sorting.id_to_index(unit_id)
+        spike_mask = some_spikes["unit_index"] == unit_index
+        projections = self.data["pca_projection"][spike_mask]
+
+        if sparsity is None:
+            return projections
+        else:
+            channel_indices = sparsity.unit_id_to_channel_indices[unit_id]
+            projections = projections[:, :, :channel_indices.size]
+            if sparse:
+                return projections, channel_indices
+            else:
+                num_chans = self.sorting_result.get_num_channels()
+                projections_ = np.zeros((projections.shape[0], projections.shape[1], num_chans), dtype=projections.dtype)
+                projections_[:, :, channel_indices] = projections
+                return projections_
+
+    def get_some_projections(self, channel_ids=None, unit_ids=None):
+        """
+        Returns the computed projections for the sampled waveforms of some units and some channels.
+
+        When internally sparse, this function realign  projection on given channel_ids set.
+
+        Parameters
+        ----------
+        channel_ids : list, default: None
+            List of channel ids on which projections must aligned
+        unit_ids : list, default: None
+            List of unit ids to return projections for
+
+        Returns
+        -------
+        some_projections: np.array
+            The PCA projections (num_spikes, num_components, num_sparse_channels)
+        spike_unit_indices: np.array
+            Array a copy of with some_spikes["unit_index"] of returned PCA projections of shape (num_spikes, )
+        """
+        sorting = self.sorting_result.sorting
+        if unit_ids is None:
+            unit_ids = sorting.unit_ids
+        
+        if channel_ids is None:
+            channel_ids = self.sorting_result.channel_ids
+
+        channel_indices = self.sorting_result.channel_ids_to_indices(channel_ids)
+
+        # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
+        all_projections = self.data["pca_projection"]
+        num_components = all_projections.shape[1]
+        dtype = all_projections.dtype
+
+        sparsity = self.sorting_result.sparsity
+
+        spikes = sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+
+        unit_indices = sorting.ids_to_indices(unit_ids)
+        selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
+
+        print(selected_inds.size, unit_indices, some_spikes["unit_index"].size)
+        print(np.min(selected_inds), np.max(selected_inds))
+        spike_unit_indices = some_spikes["unit_index"][selected_inds]
+
+        if sparsity is None:
+            some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+        else:
+            # need re-alignement
+            some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
+
+            for unit_id in unit_ids:
+                unit_index = sorting.id_to_index(unit_id)
+                sparse_projection, local_chan_inds = self.get_projections_one_unit(unit_id, sparse=True)
+
+                # keep only requested channels
+                channel_mask = np.isin(local_chan_inds, channel_indices)
+                sparse_projection = sparse_projection[:, :, channel_mask]
+                local_chan_inds = local_chan_inds[channel_mask]
+
+                spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
+                proj = np.zeros((spike_mask.size, num_components, channel_indices.size), dtype=dtype)
+                # inject in requested channels
+                channel_mask = np.isin(channel_indices, local_chan_inds)
+                proj[:, :, channel_mask] = sparse_projection
+                some_projections[spike_mask, :, :] = proj
+        
+        return some_projections, spike_unit_indices
+
 
     def project_new(self, new_spikes, new_waveforms, progress_bar=True):
         """
@@ -219,11 +259,6 @@ class ComputePrincipalComponents(ResultExtension):
         pca_model = self.get_pca_model()
         new_projections = self._transform_waveforms(new_spikes, new_waveforms, pca_model, progress_bar=progress_bar)
         return new_projections
-
-    def get_sparsity(self):
-        if self.sorting_result.is_sparse():
-            return self.sorting_result.sparsity
-        return self.params["sparsity"]
 
     def _run(self, **job_kwargs):
         """
@@ -265,76 +300,74 @@ class ComputePrincipalComponents(ResultExtension):
     def _get_data(self):
         return self.data["pca_projection"]
 
-    # @staticmethod
-    # def get_extension_function():
-    #     return compute_principal_components
+    def run_for_all_spikes(self, file_path=None, **job_kwargs):
+        """
+        Project all spikes from the sorting on the PCA model.
+        This is a long computation because waveform need to be extracted from each spikes.
 
-    # def run_for_all_spikes(self, file_path=None, **job_kwargs):
-    #     """
-    #     Project all spikes from the sorting on the PCA model.
-    #     This is a long computation because waveform need to be extracted from each spikes.
+        Used mainly for `export_to_phy()`
 
-    #     Used mainly for `export_to_phy()`
+        PCs are exported to a .npy single file.
 
-    #     PCs are exported to a .npy single file.
+        Parameters
+        ----------
+        file_path : str or Path or None
+            Path to npy file that will store the PCA projections.
+        {}
+        """
 
-    #     Parameters
-    #     ----------
-    #     file_path : str or Path or None
-    #         Path to npy file that will store the PCA projections.
-    #         If None, output is saved in principal_components/all_pcs.npy
-    #     {}
-    #     """
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        p = self.params
+        we = self.sorting_result
+        sorting = we.sorting
+        assert (
+            we.has_recording()
+        ), "To compute PCA projections for all spikes, the waveform extractor needs the recording"
+        recording = we.recording
 
-    #     job_kwargs = fix_job_kwargs(job_kwargs)
-    #     p = self.params
-    #     we = self.sorting_result
-    #     sorting = we.sorting
-    #     assert (
-    #         we.has_recording()
-    #     ), "To compute PCA projections for all spikes, the waveform extractor needs the recording"
-    #     recording = we.recording
+        # assert sorting.get_num_segments() == 1
+        assert p["mode"] in ("by_channel_local", "by_channel_global")
 
-    #     assert sorting.get_num_segments() == 1
-    #     assert p["mode"] in ("by_channel_local", "by_channel_global")
+        assert file_path is not None
+        file_path = Path(file_path)
 
-    #     if file_path is None:
-    #         file_path = self.extension_folder / "all_pcs.npy"
-    #     file_path = Path(file_path)
+        sparsity = self.sorting_result.sparsity
+        if sparsity is None:
+            sparse_channels_indices = {unit_id: np.arange(we.get_num_channels()) for unit_id in we.unit_ids}
+            max_channels_per_template = we.get_num_channels()
+        else:
+            sparse_channels_indices = sparsity.unit_id_to_channel_indices
+            max_channels_per_template = max([chan_inds.size for chan_inds in sparse_channels_indices.values()])
 
-    #     sparsity = self.get_sparsity()
-    #     if sparsity is None:
-    #         sparse_channels_indices = {unit_id: np.arange(we.get_num_channels()) for unit_id in we.unit_ids}
-    #         max_channels_per_template = we.get_num_channels()
-    #     else:
-    #         sparse_channels_indices = sparsity.unit_id_to_channel_indices
-    #         max_channels_per_template = max([chan_inds.size for chan_inds in sparse_channels_indices.values()])
+        unit_channels = [sparse_channels_indices[unit_id] for unit_id in sorting.unit_ids]
 
-    #     unit_channels = [sparse_channels_indices[unit_id] for unit_id in sorting.unit_ids]
+        pca_model = self.get_pca_model()
+        if p["mode"] in ["by_channel_global", "concatenated"]:
+            pca_model = [pca_model] * recording.get_num_channels()
 
-    #     pca_model = self.get_pca_model()
-    #     if p["mode"] in ["by_channel_global", "concatenated"]:
-    #         pca_model = [pca_model] * recording.get_num_channels()
+        num_spikes = sorting.to_spike_vector().size
+        shape = (num_spikes, p["n_components"], max_channels_per_template)
+        all_pcs = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
+        all_pcs_args = dict(filename=file_path, mode="r+", dtype="float32", shape=shape)
 
-    #     num_spikes = sorting.to_spike_vector().size
-    #     shape = (num_spikes, p["n_components"], max_channels_per_template)
-    #     all_pcs = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
-    #     all_pcs_args = dict(filename=file_path, mode="r+", dtype="float32", shape=shape)
 
-    #     # and run
-    #     func = _all_pc_extractor_chunk
-    #     init_func = _init_work_all_pc_extractor
-    #     init_args = (
-    #         recording,
-    #         sorting.to_multiprocessing(job_kwargs["n_jobs"]),
-    #         all_pcs_args,
-    #         we.nbefore,
-    #         we.nafter,
-    #         unit_channels,
-    #         pca_model,
-    #     )
-    #     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name="extract PCs", **job_kwargs)
-    #     processor.run()
+        waveforms_ext = self.sorting_result.get_extension("waveforms")
+
+
+        # and run
+        func = _all_pc_extractor_chunk
+        init_func = _init_work_all_pc_extractor
+        init_args = (
+            recording,
+            sorting.to_multiprocessing(job_kwargs["n_jobs"]),
+            all_pcs_args,
+            waveforms_ext.nbefore,
+            waveforms_ext.nafter,
+            unit_channels,
+            pca_model,
+        )
+        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name="extract PCs", **job_kwargs)
+        processor.run()
 
     def _fit_by_channel_local(self, n_jobs, progress_bar):
         from sklearn.decomposition import IncrementalPCA
@@ -368,7 +401,7 @@ class ComputePrincipalComponents(ResultExtension):
                 n_jobs = min(n_jobs, len(items))
 
                 with ProcessPoolExecutor(max_workers=n_jobs) as executor:
-                    results = executor.map(partial_fit_one_channel, items)
+                    results = executor.map(_partial_fit_one_channel, items)
                     for chan_ind, pca_model_updated in results:
                         pca_models[chan_ind] = pca_model_updated
 
@@ -593,24 +626,12 @@ def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafte
     return worker_ctx
 
 
-# WaveformPrincipalComponent.run_for_all_spikes.__doc__ = WaveformPrincipalComponent.run_for_all_spikes.__doc__.format(
-#     _shared_job_kwargs_doc
-# )
-
 register_result_extension(ComputePrincipalComponents)
 compute_principal_components = ComputePrincipalComponents.function_factory()
 
 
-# def partial_fit_one_channel(args):
-#     pca_file, wf_chan = args
-#     with open(pca_file, "rb") as fid:
-#         pca_model = pickle.load(fid)
-#     pca_model.partial_fit(wf_chan)
-#     with pca_file.open("wb") as f:
-#         pickle.dump(pca_model, f)
 
-
-def partial_fit_one_channel(args):
+def _partial_fit_one_channel(args):
     chan_ind, pca_model, wf_chan = args
     pca_model.partial_fit(wf_chan)
     return chan_ind, pca_model

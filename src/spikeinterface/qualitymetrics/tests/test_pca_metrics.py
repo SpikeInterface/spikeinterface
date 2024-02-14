@@ -56,8 +56,17 @@ def sorting_result_simple():
 
 def test_calculate_pc_metrics(sorting_result_simple):
     sorting_result = sorting_result_simple
-    res = calculate_pc_metrics(sorting_result)
-    print(pd.DataFrame(res))
+    res1 = calculate_pc_metrics(sorting_result, n_jobs=1, progress_bar=True)
+    res1 = pd.DataFrame(res1)
+
+    res2 = calculate_pc_metrics(sorting_result, n_jobs=2, progress_bar=True)
+    res2 = pd.DataFrame(res2)
+
+    for k in res1.columns:
+        mask = ~np.isnan(res1[k].values)
+        if np.any(mask):
+            assert np.array_equal(res1[k].values[mask], res2[k].values[mask])
+
 
 
 def test_nearest_neighbors_isolation(sorting_result_simple):

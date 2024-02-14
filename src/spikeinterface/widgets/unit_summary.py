@@ -45,6 +45,8 @@ class UnitSummaryWidget(BaseWidget):
         **backend_kwargs,
     ):
 
+        sorting_result = self.ensure_sorting_result(sorting_result)
+        
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting_result.sorting)
 

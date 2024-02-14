@@ -17,6 +17,7 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "postprocessing"
 
+cache_folder.mkdir(exist_ok=True, parents=True)
 
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
@@ -74,16 +75,8 @@ class ResultExtensionCommonTestSuite:
     @classmethod
     def setUpClass(cls):
         cls.recording, cls.sorting = get_dataset()
-        # sparsity is computed once for all cases to save processing time
-        cls.sparsity = estimate_sparsity(cls.recording, cls.sorting)
-
-    # def tearDown(self):
-    #     for k in list(self.sorting_results.keys()):
-    #         sorting_result = self.sorting_results.pop(k)
-    #         if sorting_result.format != "memory":
-    #             folder = sorting_result.folder
-    #             del sorting_result
-    #             shutil.rmtree(folder)
+        # sparsity is computed once for all cases to save processing time and force a small radius
+        cls.sparsity = estimate_sparsity(cls.recording, cls.sorting, method="radius", radius_um=20)
 
     @property
     def extension_name(self):
