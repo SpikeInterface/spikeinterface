@@ -40,7 +40,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "clustering": {"legacy": False},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
-        "shared_memory": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
@@ -158,7 +157,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             for k in ["ms_before", "ms_after"]:
                 clustering_params["waveforms"][k] = params["general"][k]
 
-            clustering_params.update(dict(shared_memory=params["shared_memory"]))
             clustering_params["job_kwargs"] = job_kwargs
             clustering_params["noise_levels"] = noise_levels
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
