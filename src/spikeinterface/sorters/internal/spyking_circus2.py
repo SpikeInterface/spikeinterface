@@ -38,7 +38,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "select_per_channel": False,
         },
         "clustering": {"legacy": False},
-        "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
+        "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
         "shared_memory": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -220,19 +220,20 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             templates = templates.to_sparse(sparsity)
 
             if params["debug"]:
+                templates.to_zarr(folder_path=clustering_folder / "templates")
                 sorting = sorting.save(folder=clustering_folder / "sorting")
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
-            matching_method = params["matching"]["method"]
-            matching_params = params["matching"]["method_kwargs"].copy()
+            matching_method = params["matching"].pop("method")
+            matching_params = params["matching"].copy()
             matching_params["templates"] = templates
-            matching_job_params = {}
-            matching_job_params.update(job_kwargs)
+            matching_job_params = job_kwargs.copy()
 
             if matching_method == "circus-omp-svd":
+
                 for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
                     if value in matching_job_params:
-                        matching_job_params.pop(value)
+                        matching_job_params[value] = None
                 matching_job_params["chunk_duration"] = "100ms"
 
             spikes = find_spikes_from_templates(

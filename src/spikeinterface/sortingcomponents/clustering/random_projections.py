@@ -52,8 +52,8 @@ class RandomProjectionClustering:
         "sparsity": {"method": "ptp", "threshold": 1},
         "radius_um": 100,
         "nb_projections": 10,
-        "ms_before": 1,
-        "ms_after": 1,
+        "ms_before": 0.5,
+        "ms_after": 0.5,
         "random_seed": 42,
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "debug": False,
@@ -135,18 +135,6 @@ class RandomProjectionClustering:
         clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
         peak_labels = clustering[0]
 
-        # peak_labels = -1 * np.ones(len(peaks), dtype=int)
-        # nb_clusters = 0
-        # for c in np.unique(peaks['channel_index']):
-        #     mask = peaks['channel_index'] == c
-        #     clustering = hdbscan.hdbscan(hdbscan_data[mask], **d['hdbscan_kwargs'])
-        #     local_labels = clustering[0]
-        #     valid_clusters = local_labels > -1
-        #     if np.sum(valid_clusters) > 0:
-        #         local_labels[valid_clusters] += nb_clusters
-        #         peak_labels[mask] = local_labels
-        #         nb_clusters += len(np.unique(local_labels[valid_clusters]))
-
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
 
@@ -176,7 +164,7 @@ class RandomProjectionClustering:
         cleaning_matching_params = params["job_kwargs"].copy()
         for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
             if value in cleaning_matching_params:
-                cleaning_matching_params.pop(value)
+                cleaning_matching_params[value] = None
         cleaning_matching_params["chunk_duration"] = "100ms"
         cleaning_matching_params["n_jobs"] = 1
         cleaning_matching_params["verbose"] = False
