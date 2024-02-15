@@ -14,7 +14,7 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.sparsity import ChannelSparsity
-from spikeinterface import extract_waveforms, NumpySorting
+from spikeinterface import NumpySorting, start_sorting_result
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
@@ -138,25 +138,14 @@ class TemporalPCBaseNode(WaveformsNode):
 
         # Creates a numpy sorting object where the spike times are the peak times and the unit ids are the peak channel
         sorting = NumpySorting.from_peaks(peaks, recording.sampling_frequency, recording.channel_ids)
-        # Create a waveform extractor
-        we = extract_waveforms(
-            recording,
-            sorting,
-            ms_before=ms_before,
-            ms_after=ms_after,
-            folder=None,
-            mode="memory",
-            max_spikes_per_unit=None,
-            **job_kwargs,
-        )
 
-        # compute PCA by_channel_global (with sparsity)
-        sparsity = ChannelSparsity.from_radius(we, radius_um=radius_um) if radius_um else None
-        pc = compute_principal_components(
-            we, n_components=n_components, mode="by_channel_global", sparsity=sparsity, whiten=whiten
-        )
+        # TODO alessio, herberto : the fitting is done with a SortingResult which is a postprocessing object, I think we should not do this for a component
+        sorting_result = start_sorting_result(sorting, recording, sparse=True)
+        sorting_result.select_random_spikes()
+        sorting_result.compute("waveforms", ms_before=ms_before, ms_after=ms_after)
+        sorting_result.compute("principal_components", n_components=n_components, mode="by_channel_global", whiten=whiten)
+        pca_model = sorting_result.get_extension("principal_components").get_pca_model()
 
-        pca_model = pc.get_pca_model()
         params = {
             "ms_before": ms_before,
             "ms_after": ms_after,
