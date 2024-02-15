@@ -167,7 +167,6 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
     return _compute_crosscorr_numba(spike_times1.astype(np.int64), spike_times2.astype(np.int64), window_size, bin_size)
 
 
-
 def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     """
     Computes several cross-correlogram in one course from several clusters.

@@ -9,9 +9,8 @@ from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
-
-
 job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
+
 
 def get_sorting_result():
     recording, sorting = make_dataset()
@@ -53,14 +52,10 @@ def test_find_spikes_from_templates(method, sorting_result):
 
     method_kwargs_ = method_kwargs.get(method, {})
     method_kwargs_.update(method_kwargs_all)
-    spikes = find_spikes_from_templates(
-        recording, method=method, method_kwargs=method_kwargs_, **job_kwargs
-    )
-
-    
+    spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs_, **job_kwargs)
 
     # DEBUG = False
-    
+
     # if DEBUG:
     #     import matplotlib.pyplot as plt
     #     import spikeinterface.full as si
@@ -68,11 +63,10 @@ def test_find_spikes_from_templates(method, sorting_result):
     #     sorting_result.compute("waveforms")
     #     sorting_result.compute("templates")
 
-
     #     gt_sorting = sorting_result.sorting
 
     #     sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
-        
+
     #     metrics = si.compute_quality_metrics(sorting_result, metric_names=["snr"])
 
     #     fig, ax = plt.subplots()
@@ -90,4 +84,3 @@ if __name__ == "__main__":
     method = "circus-omp-svd"
     # method = "wobble"
     test_find_spikes_from_templates(method, sorting_result)
-
