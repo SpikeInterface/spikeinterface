@@ -11,9 +11,6 @@ from spikeinterface.core.sorting_tools import spike_vector_to_indices
 from spikeinterface.core.node_pipeline import SpikeRetriever, run_node_pipeline
 
 
-# TODO job_kwargs
-
-
 class ComputeSpikeLocations(ResultExtension):
     """
     Localize spikes in 2D or 3D with several methods given the template.
@@ -126,7 +123,6 @@ class ComputeSpikeLocations(ResultExtension):
         return nodes
 
     def _run(self, **job_kwargs):
-        # TODO later gather to disk when format="binary_folder"
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         spike_locations = run_node_pipeline(

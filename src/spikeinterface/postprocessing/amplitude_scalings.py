@@ -71,10 +71,6 @@ class ComputeAmplitudeScalings(ResultExtension):
     def __init__(self, sorting_result):
         ResultExtension.__init__(self, sorting_result)
 
-        # extremum_channel_inds = get_template_extremum_channel(self.sorting_result, outputs="index")
-        # self.spikes = self.sorting_result.sorting.to_spike_vector(
-        #     extremum_channel_inds=extremum_channel_inds, use_cache=False
-        # )
         self.collisions = None
 
     def _set_params(
@@ -150,16 +146,14 @@ class ComputeAmplitudeScalings(ResultExtension):
         if self.sorting_result.is_sparse() and self.params["sparsity"] is None:
             sparsity = self.sorting_result.sparsity
         elif self.sorting_result.is_sparse() and self.params["sparsity"] is not None:
-            raise NotImplementedError
             sparsity = self.params["sparsity"]
             # assert provided sparsity is sparser than the one in the waveform extractor
-            waveform_sparsity = we.sparsity
+            waveform_sparsity = self.sorting_result.sparsity
             assert np.all(
                 np.sum(waveform_sparsity.mask, 1) - np.sum(sparsity.mask, 1) > 0
             ), "The provided sparsity needs to be sparser than the one in the waveform extractor!"
         elif not self.sorting_result.is_sparse() and self.params["sparsity"] is not None:
-            raise NotImplementedError
-            # sparsity = self.params["sparsity"]
+            sparsity = self.params["sparsity"]
         else:
             if self.params["max_dense_channels"] is not None:
                 assert recording.get_num_channels() <= self.params["max_dense_channels"], ""
