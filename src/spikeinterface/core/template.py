@@ -110,7 +110,7 @@ class Templates:
 
     def to_sparse(self, sparsity):
         # Turn a dense representation of templates into a sparse one, given some sparsity.
-        # Templates that are empty after sparsification can be removed via the remove_empty flag
+        # Note that nothing prevent Templates tobe empty after sparsification if the sparse mask have no channels for some units
         assert isinstance(sparsity, ChannelSparsity), "sparsity should be of type ChannelSparsity"
         assert self.sparsity_mask is None, "Templates should be dense"
 

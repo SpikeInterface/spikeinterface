@@ -7,7 +7,7 @@ from .wobble import WobbleMatch
 
 matching_methods = {
     "naive": NaiveMatching,
-    "tridesclous": TridesclousPeeler,
+    "tdc-peeler": TridesclousPeeler,
     "circus": CircusPeeler,
     "circus-omp-svd": CircusOMPSVDPeeler,
     "wobble": WobbleMatch,

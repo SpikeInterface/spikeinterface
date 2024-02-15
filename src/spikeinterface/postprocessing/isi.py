@@ -69,47 +69,6 @@ register_result_extension(ComputeISIHistograms)
 compute_isi_histograms = ComputeISIHistograms.function_factory()
 
 
-# def compute_isi_histograms(
-#     waveform_or_sorting_extractor,
-#     load_if_exists=False,
-#     window_ms: float = 50.0,
-#     bin_ms: float = 1.0,
-#     method: str = "auto",
-# ):
-#     """Compute ISI histograms.
-
-#     Parameters
-#     ----------
-#     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-#         If WaveformExtractor, the ISI histograms are saved as WaveformExtensions
-#     load_if_exists : bool, default: False
-#         Whether to load precomputed crosscorrelograms, if they already exist
-#     window_ms : float, default: 50
-#         The window in ms
-#     bin_ms : float, default: 1
-#         The bin size in ms
-#     method : "auto" | "numpy" | "numba", default: "auto"
-#         . If "auto" and numba is installed, numba is used, otherwise numpy is used
-
-#     Returns
-#     -------
-#     isi_histograms : np.array
-#         IDI_histograms with shape (num_units, num_bins)
-#     bins :  np.array
-#         The bin edges in ms
-#     """
-#     if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
-#         if load_if_exists and waveform_or_sorting_extractor.is_extension(ISIHistogramsCalculator.extension_name):
-#             isic = waveform_or_sorting_extractor.load_extension(ISIHistogramsCalculator.extension_name)
-#         else:
-#             isic = ISIHistogramsCalculator(waveform_or_sorting_extractor)
-#             isic.set_params(window_ms=window_ms, bin_ms=bin_ms, method=method)
-#             isic.run()
-#         isi_histograms, bins = isic.get_data()
-#         return isi_histograms, bins
-#     else:
-#         return _compute_isi_histograms(waveform_or_sorting_extractor, window_ms=window_ms, bin_ms=bin_ms, method=method)
-
 
 def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
     """

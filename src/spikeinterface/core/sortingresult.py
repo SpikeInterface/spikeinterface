@@ -153,6 +153,9 @@ class SortingResult:
     This internally save a copy of the Sorting and extract main recording attributes (without traces) so
     the SortingResult object can be reload even if references to the original sorting and/or to the original recording
     are lost.
+
+    SortingResult() should not never be used directly for creating: use instead start_sorting_result(sorting, resording, ...)
+    or eventually SortingResult.create(...)
     """
 
     def __init__(
@@ -970,11 +973,12 @@ class SortingResult:
         if extension_name in self.extensions:
             return self.extensions[extension_name]
 
-        if self.has_extension(extension_name):
+        elif self.format != "memory" and self.has_extension(extension_name):
             self.load_extension(extension_name)
             return self.extensions[extension_name]
 
-        return None
+        else:
+            return None
 
     def load_extension(self, extension_name: str):
         """
