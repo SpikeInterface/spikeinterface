@@ -35,7 +35,7 @@ def test_find_spikes_from_templates(method, sorting_result):
     # assert num_waveforms != 0
 
     templates = sorting_result.get_extension("fast_templates").get_data(outputs="Templates")
-    sparsity = compute_sparsity(sorting_result, method="snr", threshold=2)
+    sparsity = compute_sparsity(sorting_result, method="snr", threshold=0.5)
     templates = templates.to_sparse(sparsity)
 
     noise_levels = sorting_result.get_extension("noise_levels").get_data()
@@ -59,7 +59,7 @@ def test_find_spikes_from_templates(method, sorting_result):
 
     
 
-    # DEBUG = False
+    # DEBUG = True
     
     # if DEBUG:
     #     import matplotlib.pyplot as plt
@@ -85,9 +85,9 @@ def test_find_spikes_from_templates(method, sorting_result):
 if __name__ == "__main__":
     sorting_result = get_sorting_result()
     # method = "naive"
-    # method = "tdc-peeler"
+    # method = "tdc-peeler"
     # method =  "circus"
-    method = "circus-omp-svd"
-    # method = "wobble"
+    # method = "circus-omp-svd"
+    method = "wobble"
     test_find_spikes_from_templates(method, sorting_result)
 

@@ -159,9 +159,6 @@ class ChannelSparsity:
             or a single sparsified waveform (template) with shape (num_samples, num_active_channels).
         """
 
-        if self.are_waveforms_sparse(waveforms=waveforms, unit_id=unit_id):
-            return waveforms
-
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
         sparsified_waveforms = waveforms[..., non_zero_indices]
 
