@@ -641,14 +641,14 @@ class SortingResult:
         Parameters
         ----------
         unit_ids : list or array
-            The unit ids to keep in the new WaveformExtractor object
+            The unit ids to keep in the new SortingResult object
         folder : Path or None
             The new folder where selected waveforms are copied
         format:
         a
         Returns
         -------
-        we :  WaveformExtractor
+        we :  SortingResult
             The newly create waveform extractor with the selected units
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
@@ -1354,7 +1354,7 @@ class ResultExtension:
                 self.data[ext_data_name] = ext_data
 
     def copy(self, new_sorting_result, unit_ids=None):
-        # alessio : please note that this also replace the old BaseWaveformExtractorExtension.select_units!!!
+        # alessio : please note that this also replace the old select_units!!!
         new_extension = self.__class__(new_sorting_result)
         new_extension.params = self.params.copy()
         if unit_ids is None:
