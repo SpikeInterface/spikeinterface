@@ -19,8 +19,6 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
         # mode concatenated cannot be tested here because it do not work with sparse=True
     ]
 
-    # TODO : put back theses tests
-
     def test_mode_concatenated(self):
         # this is tested outside "extension_function_params_list" because it do not support sparsity!
 
@@ -135,11 +133,11 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
 if __name__ == "__main__":
     test = PrincipalComponentsExtensionTest()
     test.setUpClass()
-    # test.test_extension()
-    # test.test_mode_concatenated()
-    # test.test_get_projections()
+    test.test_extension()
+    test.test_mode_concatenated()
+    test.test_get_projections()
     test.test_compute_for_all_spikes()
-    # test.test_project_new()
+    test.test_project_new()
 
     # ext = test.sorting_results["sparseTrue_memory"].get_extension("principal_components")
     # pca = ext.data["pca_projection"]

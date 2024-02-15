@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 import scipy
 from spikeinterface.core import (
-    WaveformExtractor,
     get_noise_levels,
     get_channel_distances,
     compute_sparsity,

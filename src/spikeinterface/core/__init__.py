@@ -109,13 +109,13 @@ from .snippets_tools import snippets_from_sorting
 # waveform extractor
 # Important not for compatibility!!
 # This wil be commented after 0.100 relase but the module will not be removed.
-from .waveform_extractor import (
-    WaveformExtractor,
-    BaseWaveformExtractorExtension,
+# from .waveform_extractor import (
+#     WaveformExtractor,
+#     BaseWaveformExtractorExtension,
     # extract_waveforms,
     # load_waveforms,
-    precompute_sparsity,
-)
+#     precompute_sparsity,
+# )
 
 # retrieve datasets
 from .datasets import download_dataset

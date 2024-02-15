@@ -116,7 +116,6 @@ class ComputeSpikeAmplitudes(ResultExtension):
         return nodes
 
     def _run(self, **job_kwargs):
-        # TODO later gather to disk when format="binary_folder"
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amps = run_node_pipeline(

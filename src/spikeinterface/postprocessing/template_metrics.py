@@ -18,8 +18,6 @@ from ..core.template_tools import _get_dense_templates_array
 
 # DEBUG = False
 
-# TODO handle external sparsity
-
 
 def get_single_channel_template_metric_names():
     return deepcopy(list(_single_channel_metric_name_to_func.keys()))
@@ -116,10 +114,6 @@ class ComputeTemplateMetrics(ResultExtension):
         metrics_kwargs=None,
         include_multi_channel_metrics=False,
     ):
-
-        if sparsity is not None:
-            # TODO handle extra sparsity
-            raise NotImplementedError
 
         # TODO alessio can you check this : this used to be in the function but now we have ComputeTemplateMetrics.function_factory()
         if include_multi_channel_metrics or (
