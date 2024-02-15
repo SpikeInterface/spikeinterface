@@ -164,7 +164,7 @@ def test_empty_units(sorting_result_simple):
         assert np.all(np.isnan(metrics_empty.loc[empty_unit_id]))
 
 
-# @alessio all theses old test should be moved in test_metric_functions.py or test_pca_metrics()
+# TODO @alessio all theses old test should be moved in test_metric_functions.py or test_pca_metrics()
 
 #     def test_amplitude_cutoff(self):
 #         we = self.we_short

@@ -71,26 +71,26 @@ class ChannelSparsity:
     Examples
     --------
 
-    The class can also be used to construct/estimate the sparsity from a Waveformextractor
+    The class can also be used to construct/estimate the sparsity from a SortingResult or a Templates
     with several methods:
 
     Using the N best channels (largest template amplitude):
 
-    >>> sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign="neg")
+    >>> sparsity = ChannelSparsity.from_best_channels(sorting_result, num_channels, peak_sign="neg")
 
     Using a neighborhood by radius:
 
-    >>> sparsity = ChannelSparsity.from_radius(we, radius_um, peak_sign="neg")
+    >>> sparsity = ChannelSparsity.from_radius(sorting_result, radius_um, peak_sign="neg")
 
     Using a SNR threshold:
-    >>> sparsity = ChannelSparsity.from_snr(we, threshold, peak_sign="neg")
+    >>> sparsity = ChannelSparsity.from_snr(sorting_result, threshold, peak_sign="neg")
 
     Using a template energy threshold:
-    >>> sparsity = ChannelSparsity.from_energy(we, threshold)
+    >>> sparsity = ChannelSparsity.from_energy(sorting_result, threshold)
 
     Using a recording/sorting property (e.g. "group"):
 
-    >>> sparsity = ChannelSparsity.from_property(we, by_property="group")
+    >>> sparsity = ChannelSparsity.from_property(sorting_result, by_property="group")
 
     """
 
@@ -481,7 +481,6 @@ def compute_sparsity(
 
     # Can't be done at module because this is a cyclic import, too bad
     from .template import Templates
-    from .waveform_extractor import WaveformExtractor
     from .waveforms_extractor_backwards_compatibility import MockWaveformExtractor
     from .sortingresult import SortingResult
 
@@ -549,7 +548,7 @@ def estimate_sparsity(
     **job_kwargs,
 ):
     """
-    Estimate the sparsity without needing a WaveformExtractor.
+    Estimate the sparsity without needing a SortingResult or Templates object
     This is faster than  `spikeinterface.waveforms_extractor.precompute_sparsity()` and it
     traverses the recording to compute the average templates for each unit.
 

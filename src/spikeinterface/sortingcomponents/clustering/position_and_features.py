@@ -14,12 +14,11 @@ except:
     HAVE_HDBSCAN = False
 
 import random, string, os
-from spikeinterface.core import get_global_tmp_folder, get_noise_levels, get_channel_distances
-from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
+from spikeinterface.core import get_global_tmp_folder, get_noise_levels
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
 from spikeinterface.core import NumpySorting
-from spikeinterface.core import extract_waveforms
+from spikeinterface.core import estimate_templates_average, Templates
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
 
 
@@ -169,18 +168,21 @@ class PositionAndFeaturesClustering:
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
 
             sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["unit_index"], fs)
-            we = extract_waveforms(
-                recording,
-                sorting,
-                tmp_folder,
-                overwrite=True,
-                ms_before=params["ms_before"],
-                ms_after=params["ms_after"],
-                **params["job_kwargs"],
-                return_scaled=False,
+        
+            nbefore = int(params["ms_before"] * fs  / 1000.)
+            nafter = int(params["ms_after"] * fs  / 1000.)
+            templates_array = estimate_templates_average(recording, sorting.to_spike_vector(), sorting.unit_ids,
+                                                        nbefore, nafter, return_scaled=False, **params["job_kwargs"])
+            templates = Templates(
+                templates_array=templates_array,
+                sampling_frequency=fs,
+                nbefore=nbefore,
+                probe=recording.get_probe()
             )
+
+
             labels, peak_labels = remove_duplicates_via_matching(
-                we, peak_labels, job_kwargs=params["job_kwargs"], **params["cleaning_kwargs"]
+                templates, peak_labels, job_kwargs=params["job_kwargs"], **params["cleaning_kwargs"]
             )
             shutil.rmtree(tmp_folder)
 
