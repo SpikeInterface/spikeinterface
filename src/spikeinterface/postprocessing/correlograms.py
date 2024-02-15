@@ -167,50 +167,6 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
     return _compute_crosscorr_numba(spike_times1.astype(np.int64), spike_times2.astype(np.int64), window_size, bin_size)
 
 
-# def compute_correlograms(
-#     waveform_or_sorting_extractor,
-#     load_if_exists=False,
-#     window_ms: float = 50.0,
-#     bin_ms: float = 1.0,
-#     method: str = "auto",
-# ):
-#     """Compute auto and cross correlograms.
-
-#     Parameters
-#     ----------
-#     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-#         If WaveformExtractor, the correlograms are saved as WaveformExtensions
-#     load_if_exists : bool, default: False
-#         Whether to load precomputed crosscorrelograms, if they already exist
-#     window_ms : float, default: 100.0
-#         The window in ms
-#     bin_ms : float, default: 5
-#         The bin size in ms
-#     method : "auto" | "numpy" | "numba", default: "auto"
-#          If "auto" and numba is installed, numba is used, otherwise numpy is used
-
-#     Returns
-#     -------
-#     ccgs : np.array
-#         Correlograms with shape (num_units, num_units, num_bins)
-#         The diagonal of ccgs is the auto correlogram.
-#         ccgs[A, B, :] is the symetrie of ccgs[B, A, :]
-#         ccgs[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
-#     bins :  np.array
-#         The bin edges in ms
-#     """
-#     if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
-#         if load_if_exists and waveform_or_sorting_extractor.is_extension(CorrelogramsCalculator.extension_name):
-#             ccc = waveform_or_sorting_extractor.load_extension(CorrelogramsCalculator.extension_name)
-#         else:
-#             ccc = CorrelogramsCalculator(waveform_or_sorting_extractor)
-#             ccc.set_params(window_ms=window_ms, bin_ms=bin_ms, method=method)
-#             ccc.run()
-#         ccgs, bins = ccc.get_data()
-#         return ccgs, bins
-#     else:
-#         return compute_correlograms_on_sorting(waveform_or_sorting_extractor, window_ms=window_ms, bin_ms=bin_ms, method=method)
-
 
 def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     """

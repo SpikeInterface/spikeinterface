@@ -5,7 +5,7 @@ import inspect
 global default_backend_
 default_backend_ = "matplotlib"
 
-from ..core import SortingResult
+from ..core import SortingResult, BaseSorting
 from ..core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
 
 
@@ -106,13 +106,26 @@ class BaseWidget:
         func(self.data_plot, **self.backend_kwargs)
 
     @classmethod
-    def ensure_sorting_result(cls, sorting_result_or_waveform_extractor):
-        if isinstance(sorting_result_or_waveform_extractor, SortingResult):
-            return sorting_result_or_waveform_extractor
-        elif isinstance(sorting_result_or_waveform_extractor, MockWaveformExtractor):
-            return sorting_result_or_waveform_extractor.sorting_result
+    def ensure_sorting_result(cls, input):
+        # internal help to accept both SortingResult or MockWaveformExtractor for a ploter
+        if isinstance(input, SortingResult):
+            return input
+        elif isinstance(input, MockWaveformExtractor):
+            return input.sorting_result
         else:
-            return sorting_result_or_waveform_extractor
+            return input
+
+    @classmethod
+    def ensure_sorting(cls, input):
+        # internal help to accept both Sorting or SortingResult or MockWaveformExtractor for a ploter
+        if isinstance(input, BaseSorting):
+            return input
+        elif isinstance(input, SortingResult):
+            return input.sorting
+        elif isinstance(input, MockWaveformExtractor):
+            return input.sorting_result.sorting
+        else:
+            return input
 
     @staticmethod
     def check_extensions(sorting_result, extensions):
