@@ -16,7 +16,7 @@ from spikeinterface.core.generate import (
     generate_sorting_to_inject,
 )
 
-# TODO aurelien : this is still using the WaveformExtractor!!! can you change it to use SortingResult ?
+# TODO aurelien : this is still using the WaveformExtractor!!! can you change it to use SortingAnalyzer ?
 
 
 class HybridUnitsRecording(InjectTemplatesRecording):

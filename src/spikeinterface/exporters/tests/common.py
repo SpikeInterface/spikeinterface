@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-from spikeinterface.core import generate_ground_truth_recording, start_sorting_result, compute_sparsity
+from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer, compute_sparsity
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "exporters"
@@ -11,7 +11,7 @@ else:
     cache_folder = Path("cache_folder") / "exporters"
 
 
-def make_sorting_result(sparse=True, with_group=False):
+def make_sorting_analyzer(sparse=True, with_group=False):
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
         sampling_frequency=28000.0,
@@ -33,43 +33,43 @@ def make_sorting_result(sparse=True, with_group=False):
         recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
         sorting.set_property("group", [0, 0, 1, 1])
 
-        sorting_result_unused = start_sorting_result(
+        sorting_analyzer_unused = create_sorting_analyzer(
             sorting=sorting, recording=recording, format="memory", sparse=False, sparsity=None
         )
-        sparsity_group = compute_sparsity(sorting_result_unused, method="by_property", by_property="group")
+        sparsity_group = compute_sparsity(sorting_analyzer_unused, method="by_property", by_property="group")
 
-        sorting_result = start_sorting_result(
+        sorting_analyzer = create_sorting_analyzer(
             sorting=sorting, recording=recording, format="memory", sparse=False, sparsity=sparsity_group
         )
     else:
-        sorting_result = start_sorting_result(sorting=sorting, recording=recording, format="memory", sparse=sparse)
+        sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="memory", sparse=sparse)
 
-    sorting_result.select_random_spikes()
-    sorting_result.compute("waveforms")
-    sorting_result.compute("templates")
-    sorting_result.compute("noise_levels")
-    sorting_result.compute("principal_components")
-    sorting_result.compute("template_similarity")
-    sorting_result.compute("quality_metrics", metric_names=["snr"])
+    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("waveforms")
+    sorting_analyzer.compute("templates")
+    sorting_analyzer.compute("noise_levels")
+    sorting_analyzer.compute("principal_components")
+    sorting_analyzer.compute("template_similarity")
+    sorting_analyzer.compute("quality_metrics", metric_names=["snr"])
 
-    return sorting_result
-
-
-@pytest.fixture(scope="session")
-def sorting_result_dense_for_export():
-    return make_sorting_result(sparse=False)
+    return sorting_analyzer
 
 
 @pytest.fixture(scope="session")
-def sorting_result_with_group_for_export():
-    return make_sorting_result(sparse=False, with_group=True)
+def sorting_analyzer_dense_for_export():
+    return make_sorting_analyzer(sparse=False)
 
 
 @pytest.fixture(scope="session")
-def sorting_result_sparse_for_export():
-    return make_sorting_result(sparse=True)
+def sorting_analyzer_with_group_for_export():
+    return make_sorting_analyzer(sparse=False, with_group=True)
+
+
+@pytest.fixture(scope="session")
+def sorting_analyzer_sparse_for_export():
+    return make_sorting_analyzer(sparse=True)
 
 
 if __name__ == "__main__":
-    sorting_result = make_sorting_result(sparse=False)
-    print(sorting_result)
+    sorting_analyzer = make_sorting_analyzer(sparse=False)
+    print(sorting_analyzer)

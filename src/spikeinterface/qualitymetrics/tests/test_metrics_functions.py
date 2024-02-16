@@ -7,7 +7,7 @@ from spikeinterface.core import (
     synthetize_spike_train_bad_isi,
     add_synchrony_to_sorting,
     generate_ground_truth_recording,
-    start_sorting_result,
+    create_sorting_analyzer,
 )
 
 # from spikeinterface.extractors.toy_example import toy_example
@@ -47,7 +47,7 @@ from spikeinterface.qualitymetrics import (
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
-def _sorting_result_simple():
+def _sorting_analyzer_simple():
     recording, sorting = generate_ground_truth_recording(
         durations=[
             50.0,
@@ -60,21 +60,21 @@ def _sorting_result_simple():
         seed=2205,
     )
 
-    sorting_result = start_sorting_result(sorting, recording, format="memory", sparse=True)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
 
-    sorting_result.select_random_spikes(max_spikes_per_unit=300, seed=2205)
-    sorting_result.compute("noise_levels")
-    sorting_result.compute("waveforms", **job_kwargs)
-    sorting_result.compute("templates")
-    sorting_result.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
-    sorting_result.compute("spike_amplitudes", **job_kwargs)
+    sorting_analyzer.select_random_spikes(max_spikes_per_unit=300, seed=2205)
+    sorting_analyzer.compute("noise_levels")
+    sorting_analyzer.compute("waveforms", **job_kwargs)
+    sorting_analyzer.compute("templates")
+    sorting_analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
+    sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
 
-    return sorting_result
+    return sorting_analyzer
 
 
 @pytest.fixture(scope="module")
-def sorting_result_simple():
-    return _sorting_result_simple()
+def sorting_analyzer_simple():
+    return _sorting_analyzer_simple()
 
 
 def _sorting_violation():
@@ -106,7 +106,7 @@ def _sorting_violation():
     return sorting
 
 
-def _sorting_result_violations():
+def _sorting_analyzer_violations():
 
     sorting = _sorting_violation()
     duration = (sorting.to_spike_vector()["sample_index"][-1] + 1) / sorting.sampling_frequency
@@ -119,14 +119,14 @@ def _sorting_result_violations():
         noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
-    sorting_result = start_sorting_result(sorting, recording, format="memory", sparse=True)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
     # this used only for ISI metrics so no need to compute heavy extensions
-    return sorting_result
+    return sorting_analyzer
 
 
 @pytest.fixture(scope="module")
-def sorting_result_violations():
-    return _sorting_result_violations()
+def sorting_analyzer_violations():
+    return _sorting_analyzer_violations()
 
 
 def test_mahalanobis_metrics():
@@ -191,10 +191,10 @@ def test_simplified_silhouette_score_metrics():
     assert sim_sil_score1 < sim_sil_score2
 
 
-def test_calculate_firing_rate_num_spikes(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    firing_rates = compute_firing_rates(sorting_result)
-    num_spikes = compute_num_spikes(sorting_result)
+def test_calculate_firing_rate_num_spikes(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    firing_rates = compute_firing_rates(sorting_analyzer)
+    num_spikes = compute_num_spikes(sorting_analyzer)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # firing_rates_gt = {0: 10.01, 1: 5.03, 2: 5.09}
@@ -203,20 +203,20 @@ def test_calculate_firing_rate_num_spikes(sorting_result_simple):
     # np.testing.assert_array_equal(list(num_spikes_gt.values()), list(num_spikes.values()))
 
 
-def test_calculate_firing_range(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    firing_ranges = compute_firing_ranges(sorting_result)
+def test_calculate_firing_range(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    firing_ranges = compute_firing_ranges(sorting_analyzer)
     print(firing_ranges)
 
     with pytest.warns(UserWarning) as w:
-        firing_ranges_nan = compute_firing_ranges(sorting_result, bin_size_s=sorting_result.get_total_duration() + 1)
+        firing_ranges_nan = compute_firing_ranges(sorting_analyzer, bin_size_s=sorting_analyzer.get_total_duration() + 1)
         assert np.all([np.isnan(f) for f in firing_ranges_nan.values()])
 
 
-def test_calculate_amplitude_cutoff(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    # spike_amps = sorting_result.get_extension("spike_amplitudes").get_data()
-    amp_cuts = compute_amplitude_cutoffs(sorting_result, num_histogram_bins=10)
+def test_calculate_amplitude_cutoff(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    # spike_amps = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+    amp_cuts = compute_amplitude_cutoffs(sorting_analyzer, num_histogram_bins=10)
     # print(amp_cuts)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -224,10 +224,10 @@ def test_calculate_amplitude_cutoff(sorting_result_simple):
     # assert np.allclose(list(amp_cuts_gt.values()), list(amp_cuts.values()), rtol=0.05)
 
 
-def test_calculate_amplitude_median(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    # spike_amps = sorting_result.get_extension("spike_amplitudes").get_data()
-    amp_medians = compute_amplitude_medians(sorting_result)
+def test_calculate_amplitude_median(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    # spike_amps = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+    amp_medians = compute_amplitude_medians(sorting_analyzer)
     # print(amp_medians)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -235,16 +235,16 @@ def test_calculate_amplitude_median(sorting_result_simple):
     # assert np.allclose(list(amp_medians_gt.values()), list(amp_medians.values()), rtol=0.05)
 
 
-def test_calculate_amplitude_cv_metrics(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    amp_cv_median, amp_cv_range = compute_amplitude_cv_metrics(sorting_result, average_num_spikes_per_bin=20)
+def test_calculate_amplitude_cv_metrics(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    amp_cv_median, amp_cv_range = compute_amplitude_cv_metrics(sorting_analyzer, average_num_spikes_per_bin=20)
     print(amp_cv_median)
     print(amp_cv_range)
 
-    # amps_scalings = compute_amplitude_scalings(sorting_result)
-    sorting_result.compute("amplitude_scalings", **job_kwargs)
+    # amps_scalings = compute_amplitude_scalings(sorting_analyzer)
+    sorting_analyzer.compute("amplitude_scalings", **job_kwargs)
     amp_cv_median_scalings, amp_cv_range_scalings = compute_amplitude_cv_metrics(
-        sorting_result,
+        sorting_analyzer,
         average_num_spikes_per_bin=20,
         amplitude_extension="amplitude_scalings",
         min_num_bins=5,
@@ -253,9 +253,9 @@ def test_calculate_amplitude_cv_metrics(sorting_result_simple):
     print(amp_cv_range_scalings)
 
 
-def test_calculate_snrs(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    snrs = compute_snrs(sorting_result)
+def test_calculate_snrs(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    snrs = compute_snrs(sorting_analyzer)
     print(snrs)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -263,9 +263,9 @@ def test_calculate_snrs(sorting_result_simple):
     # assert np.allclose(list(snrs_gt.values()), list(snrs.values()), rtol=0.05)
 
 
-def test_calculate_presence_ratio(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    ratios = compute_presence_ratios(sorting_result, bin_duration_s=10)
+def test_calculate_presence_ratio(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    ratios = compute_presence_ratios(sorting_analyzer, bin_duration_s=10)
     print(ratios)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -273,9 +273,9 @@ def test_calculate_presence_ratio(sorting_result_simple):
     # np.testing.assert_array_equal(list(ratios_gt.values()), list(ratios.values()))
 
 
-def test_calculate_isi_violations(sorting_result_violations):
-    sorting_result = sorting_result_violations
-    isi_viol, counts = compute_isi_violations(sorting_result, isi_threshold_ms=1, min_isi_ms=0.0)
+def test_calculate_isi_violations(sorting_analyzer_violations):
+    sorting_analyzer = sorting_analyzer_violations
+    isi_viol, counts = compute_isi_violations(sorting_analyzer, isi_threshold_ms=1, min_isi_ms=0.0)
     print(isi_viol)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -285,9 +285,9 @@ def test_calculate_isi_violations(sorting_result_violations):
     # np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
 
-def test_calculate_sliding_rp_violations(sorting_result_violations):
-    sorting_result = sorting_result_violations
-    contaminations = compute_sliding_rp_violations(sorting_result, bin_size_ms=0.25, window_size_s=1)
+def test_calculate_sliding_rp_violations(sorting_analyzer_violations):
+    sorting_analyzer = sorting_analyzer_violations
+    contaminations = compute_sliding_rp_violations(sorting_analyzer, bin_size_ms=0.25, window_size_s=1)
     print(contaminations)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -295,10 +295,10 @@ def test_calculate_sliding_rp_violations(sorting_result_violations):
     # assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
 
-def test_calculate_rp_violations(sorting_result_violations):
-    sorting_result = sorting_result_violations
+def test_calculate_rp_violations(sorting_analyzer_violations):
+    sorting_analyzer = sorting_analyzer_violations
     rp_contamination, counts = compute_refrac_period_violations(
-        sorting_result, refractory_period_ms=1, censored_period_ms=0.0
+        sorting_analyzer, refractory_period_ms=1, censored_period_ms=0.0
     )
     print(rp_contamination, counts)
 
@@ -312,19 +312,19 @@ def test_calculate_rp_violations(sorting_result_violations):
         {0: np.array([28, 150], dtype=np.int16), 1: np.array([], dtype=np.int16)}, 30000
     )
     # we.sorting = sorting
-    sorting_result2 = start_sorting_result(sorting, sorting_result.recording, format="memory", sparse=False)
+    sorting_analyzer2 = create_sorting_analyzer(sorting, sorting_analyzer.recording, format="memory", sparse=False)
 
     rp_contamination, counts = compute_refrac_period_violations(
-        sorting_result2, refractory_period_ms=1, censored_period_ms=0.0
+        sorting_analyzer2, refractory_period_ms=1, censored_period_ms=0.0
     )
     assert np.isnan(rp_contamination[1])
 
 
-def test_synchrony_metrics(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    sorting = sorting_result.sorting
+def test_synchrony_metrics(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    sorting = sorting_analyzer.sorting
     synchrony_sizes = (2, 3, 4)
-    synchrony_metrics = compute_synchrony_metrics(sorting_result, synchrony_sizes=synchrony_sizes)
+    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=synchrony_sizes)
     print(synchrony_metrics)
 
     # check returns
@@ -333,13 +333,13 @@ def test_synchrony_metrics(sorting_result_simple):
 
     # here we test that increasing added synchrony is captured by syncrhony metrics
     added_synchrony_levels = (0.2, 0.5, 0.8)
-    previous_sorting_result = sorting_result
+    previous_sorting_analyzer = sorting_analyzer
     for sync_level in added_synchrony_levels:
         sorting_sync = add_synchrony_to_sorting(sorting, sync_event_ratio=sync_level)
-        sorting_result_sync = start_sorting_result(sorting_sync, sorting_result.recording, format="memory")
+        sorting_analyzer_sync = create_sorting_analyzer(sorting_sync, sorting_analyzer.recording, format="memory")
 
-        previous_synchrony_metrics = compute_synchrony_metrics(previous_sorting_result, synchrony_sizes=synchrony_sizes)
-        current_synchrony_metrics = compute_synchrony_metrics(sorting_result_sync, synchrony_sizes=synchrony_sizes)
+        previous_synchrony_metrics = compute_synchrony_metrics(previous_sorting_analyzer, synchrony_sizes=synchrony_sizes)
+        current_synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_sync, synchrony_sizes=synchrony_sizes)
         print(current_synchrony_metrics)
         # check that all values increased
         for i, col in enumerate(previous_synchrony_metrics._fields):
@@ -351,16 +351,16 @@ def test_synchrony_metrics(sorting_result_simple):
             )
 
         # set new previous waveform extractor
-        previous_sorting_result = sorting_result_sync
+        previous_sorting_analyzer = sorting_analyzer_sync
 
 
 @pytest.mark.sortingcomponents
-def test_calculate_drift_metrics(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    sorting_result.compute("spike_locations", **job_kwargs)
+def test_calculate_drift_metrics(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    sorting_analyzer.compute("spike_locations", **job_kwargs)
 
     drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(
-        sorting_result, interval_s=10, min_spikes_per_interval=10
+        sorting_analyzer, interval_s=10, min_spikes_per_interval=10
     )
 
     # print(drifts_ptps, drifts_stds, drift_mads)
@@ -374,35 +374,35 @@ def test_calculate_drift_metrics(sorting_result_simple):
     # assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
 
 
-def test_calculate_sd_ratio(sorting_result_simple):
+def test_calculate_sd_ratio(sorting_analyzer_simple):
     sd_ratio = compute_sd_ratio(
-        sorting_result_simple,
+        sorting_analyzer_simple,
     )
 
-    assert np.all(list(sd_ratio.keys()) == sorting_result_simple.unit_ids)
+    assert np.all(list(sd_ratio.keys()) == sorting_analyzer_simple.unit_ids)
     # @aurelien can you check this, this is not working anymore
     # assert np.allclose(list(sd_ratio.values()), 1, atol=0.25, rtol=0)
 
 
 if __name__ == "__main__":
 
-    sorting_result = _sorting_result_simple()
-    print(sorting_result)
+    sorting_analyzer = _sorting_analyzer_simple()
+    print(sorting_analyzer)
 
-    # test_calculate_firing_rate_num_spikes(sorting_result)
-    # test_calculate_snrs(sorting_result)
-    test_calculate_amplitude_cutoff(sorting_result)
-    # test_calculate_presence_ratio(sorting_result)
-    # test_calculate_amplitude_median(sorting_result)
-    # test_calculate_sliding_rp_violations(sorting_result)
-    # test_calculate_drift_metrics(sorting_result)
-    # test_synchrony_metrics(sorting_result)
-    # test_calculate_firing_range(sorting_result)
-    # test_calculate_amplitude_cv_metrics(sorting_result)
-    test_calculate_sd_ratio(sorting_result)
+    # test_calculate_firing_rate_num_spikes(sorting_analyzer)
+    # test_calculate_snrs(sorting_analyzer)
+    test_calculate_amplitude_cutoff(sorting_analyzer)
+    # test_calculate_presence_ratio(sorting_analyzer)
+    # test_calculate_amplitude_median(sorting_analyzer)
+    # test_calculate_sliding_rp_violations(sorting_analyzer)
+    # test_calculate_drift_metrics(sorting_analyzer)
+    # test_synchrony_metrics(sorting_analyzer)
+    # test_calculate_firing_range(sorting_analyzer)
+    # test_calculate_amplitude_cv_metrics(sorting_analyzer)
+    test_calculate_sd_ratio(sorting_analyzer)
 
-    # sorting_result_violations = _sorting_result_violations()
-    # print(sorting_result_violations)
-    # test_calculate_isi_violations(sorting_result_violations)
-    # test_calculate_sliding_rp_violations(sorting_result_violations)
-    # test_calculate_rp_violations(sorting_result_violations)
+    # sorting_analyzer_violations = _sorting_analyzer_violations()
+    # print(sorting_analyzer_violations)
+    # test_calculate_isi_violations(sorting_analyzer_violations)
+    # test_calculate_sliding_rp_violations(sorting_analyzer_violations)
+    # test_calculate_rp_violations(sorting_analyzer_violations)

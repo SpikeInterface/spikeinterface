@@ -81,8 +81,8 @@ def test_extract_waveforms():
 
     # test reading old WaveformsExtractor folder
     folder = cache_folder / "old_waveforms_extractor"
-    sorting_result_from_we = load_waveforms_backwards(folder, output="SortingResult")
-    print(sorting_result_from_we)
+    sorting_analyzer_from_we = load_waveforms_backwards(folder, output="SortingAnalyzer")
+    print(sorting_analyzer_from_we)
     mock_loaded_we_old = load_waveforms_backwards(folder, output="MockWaveformExtractor")
     print(mock_loaded_we_old)
 
@@ -90,16 +90,16 @@ def test_extract_waveforms():
 @pytest.mark.skip()
 def test_read_old_waveforms_extractor_binary():
     folder = "/data_local/DataSpikeSorting/waveform_extractor_backward_compatibility/waveforms_extractor_1"
-    sorting_result = _read_old_waveforms_extractor_binary(folder)
+    sorting_analyzer = _read_old_waveforms_extractor_binary(folder)
 
-    print(sorting_result)
+    print(sorting_analyzer)
 
-    for ext_name in sorting_result.get_loaded_extension_names():
+    for ext_name in sorting_analyzer.get_loaded_extension_names():
         print()
         print(ext_name)
-        keys = sorting_result.get_extension(ext_name).data.keys()
+        keys = sorting_analyzer.get_extension(ext_name).data.keys()
         print(keys)
-        data = sorting_result.get_extension(ext_name).get_data()
+        data = sorting_analyzer.get_extension(ext_name).get_data()
         if isinstance(data, np.ndarray):
             print(data.shape)
 

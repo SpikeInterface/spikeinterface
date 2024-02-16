@@ -4,7 +4,7 @@ import numpy as np
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from ..core.sortingresult import SortingResult
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class SpikeLocationsWidget(BaseWidget):
@@ -13,7 +13,7 @@ class SpikeLocationsWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_result : SortingResult
+    sorting_analyzer : SortingAnalyzer
         The object to get spike locations from
     unit_ids : list or None, default: None
         List of unit ids
@@ -40,7 +40,7 @@ class SpikeLocationsWidget(BaseWidget):
 
     def __init__(
         self,
-        sorting_result: SortingResult,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         segment_index=None,
         max_spikes_per_unit=500,
@@ -53,16 +53,16 @@ class SpikeLocationsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        sorting_result = self.ensure_sorting_result(sorting_result)
-        self.check_extensions(sorting_result, "spike_locations")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "spike_locations")
 
-        spike_locations_by_units = sorting_result.get_extension("spike_locations").get_data(outputs="by_unit")
+        spike_locations_by_units = sorting_analyzer.get_extension("spike_locations").get_data(outputs="by_unit")
 
-        sorting = sorting_result.sorting
+        sorting = sorting_analyzer.sorting
 
-        channel_ids = sorting_result.channel_ids
-        channel_locations = sorting_result.get_channel_locations()
-        probegroup = sorting_result.get_probegroup()
+        channel_ids = sorting_analyzer.channel_ids
+        channel_locations = sorting_analyzer.get_channel_locations()
+        probegroup = sorting_analyzer.get_probegroup()
 
         if sorting.get_num_segments() > 1:
             assert segment_index is not None, "Specify segment index for multi-segment object"

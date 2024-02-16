@@ -36,7 +36,7 @@ def setup_module():
 def test_hybrid_units_recording():
     wvf_extractor = load_waveforms(cache_folder / "wvf_extractor")
     print(wvf_extractor)
-    print(wvf_extractor.sorting_result)
+    print(wvf_extractor.sorting_analyzer)
 
     recording = wvf_extractor.recording
     templates = wvf_extractor.get_all_templates()

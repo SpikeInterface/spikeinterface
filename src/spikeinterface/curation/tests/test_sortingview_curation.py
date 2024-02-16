@@ -37,17 +37,17 @@ set_global_tmp_folder(cache_folder)
 #     local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
 #     recording, sorting = read_mearec(local_path)
 
-#     sorting_result = si.start_sorting_result(sorting, recording, format="memory")
-#     sorting_result.select_random_spikes()
-#     sorting_result.compute("waveforms")
-#     sorting_result.compute("templates")
-#     sorting_result.compute("noise_levels")
-#     sorting_result.compute("spike_amplitudes")
-#     sorting_result.compute("template_similarity")
-#     sorting_result.compute("unit_locations")
+#     sorting_analyzer = si.create_sorting_analyzer(sorting, recording, format="memory")
+#     sorting_analyzer.select_random_spikes()
+#     sorting_analyzer.compute("waveforms")
+#     sorting_analyzer.compute("templates")
+#     sorting_analyzer.compute("noise_levels")
+#     sorting_analyzer.compute("spike_amplitudes")
+#     sorting_analyzer.compute("template_similarity")
+#     sorting_analyzer.compute("unit_locations")
 
 #     # plot_sorting_summary with curation
-#     w = sw.plot_sorting_summary(sorting_result, curation=True, backend="sortingview")
+#     w = sw.plot_sorting_summary(sorting_analyzer, curation=True, backend="sortingview")
 
 #     # curation_link:
 #     # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary

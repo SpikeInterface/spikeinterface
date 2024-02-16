@@ -7,7 +7,7 @@ import shutil
 
 from spikeinterface.core import (
     generate_ground_truth_recording,
-    start_sorting_result,
+    create_sorting_analyzer,
     NumpySorting,
     aggregate_units,
 )
@@ -27,7 +27,7 @@ else:
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
-def get_sorting_result(seed=2205):
+def get_sorting_analyzer(seed=2205):
     # we need high firing rate for amplitude_cutoff
     recording, sorting = generate_ground_truth_recording(
         durations=[
@@ -51,30 +51,30 @@ def get_sorting_result(seed=2205):
         seed=seed,
     )
 
-    sorting_result = start_sorting_result(sorting, recording, format="memory", sparse=True)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
 
-    sorting_result.select_random_spikes(max_spikes_per_unit=300, seed=seed)
-    sorting_result.compute("noise_levels")
-    sorting_result.compute("waveforms", **job_kwargs)
-    sorting_result.compute("templates")
-    sorting_result.compute("spike_amplitudes", **job_kwargs)
+    sorting_analyzer.select_random_spikes(max_spikes_per_unit=300, seed=seed)
+    sorting_analyzer.compute("noise_levels")
+    sorting_analyzer.compute("waveforms", **job_kwargs)
+    sorting_analyzer.compute("templates")
+    sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
 
-    return sorting_result
+    return sorting_analyzer
 
 
 @pytest.fixture(scope="module")
-def sorting_result_simple():
-    sorting_result = get_sorting_result(seed=2205)
-    return sorting_result
+def sorting_analyzer_simple():
+    sorting_analyzer = get_sorting_analyzer(seed=2205)
+    return sorting_analyzer
 
 
-def test_compute_quality_metrics(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    print(sorting_result)
+def test_compute_quality_metrics(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    print(sorting_analyzer)
 
     # without PCs
     metrics = compute_quality_metrics(
-        sorting_result,
+        sorting_analyzer,
         metric_names=["snr"],
         qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=True,
@@ -82,15 +82,15 @@ def test_compute_quality_metrics(sorting_result_simple):
     )
     # print(metrics)
 
-    qm = sorting_result.get_extension("quality_metrics")
+    qm = sorting_analyzer.get_extension("quality_metrics")
     assert qm.params["qm_params"]["isi_violation"]["isi_threshold_ms"] == 2
     assert "snr" in metrics.columns
     assert "isolation_distance" not in metrics.columns
 
     # with PCs
-    sorting_result.compute("principal_components")
+    sorting_analyzer.compute("principal_components")
     metrics = compute_quality_metrics(
-        sorting_result,
+        sorting_analyzer,
         metric_names=None,
         qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
@@ -100,11 +100,11 @@ def test_compute_quality_metrics(sorting_result_simple):
     assert "isolation_distance" in metrics.columns
 
 
-def test_compute_quality_metrics_recordingless(sorting_result_simple):
+def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
 
-    sorting_result = sorting_result_simple
+    sorting_analyzer = sorting_analyzer_simple
     metrics = compute_quality_metrics(
-        sorting_result,
+        sorting_analyzer,
         metric_names=None,
         qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
@@ -112,15 +112,15 @@ def test_compute_quality_metrics_recordingless(sorting_result_simple):
     )
 
     # make a copy and make it recordingless
-    sorting_result_norec = sorting_result.save_as(format="memory")
-    sorting_result_norec.delete_extension("quality_metrics")
-    sorting_result_norec._recording = None
-    assert not sorting_result_norec.has_recording()
+    sorting_analyzer_norec = sorting_analyzer.save_as(format="memory")
+    sorting_analyzer_norec.delete_extension("quality_metrics")
+    sorting_analyzer_norec._recording = None
+    assert not sorting_analyzer_norec.has_recording()
 
-    print(sorting_result_norec)
+    print(sorting_analyzer_norec)
 
     metrics_norec = compute_quality_metrics(
-        sorting_result_norec,
+        sorting_analyzer_norec,
         metric_names=None,
         qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
@@ -134,26 +134,26 @@ def test_compute_quality_metrics_recordingless(sorting_result_simple):
         assert np.allclose(metrics[metric_name].values, metrics_norec[metric_name].values, rtol=1e-02)
 
 
-def test_empty_units(sorting_result_simple):
-    sorting_result = sorting_result_simple
+def test_empty_units(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
 
     empty_spike_train = np.array([], dtype="int64")
     empty_sorting = NumpySorting.from_unit_dict(
         {100: empty_spike_train, 200: empty_spike_train, 300: empty_spike_train},
-        sampling_frequency=sorting_result.sampling_frequency,
+        sampling_frequency=sorting_analyzer.sampling_frequency,
     )
-    sorting_empty = aggregate_units([sorting_result.sorting, empty_sorting])
+    sorting_empty = aggregate_units([sorting_analyzer.sorting, empty_sorting])
     assert len(sorting_empty.get_empty_unit_ids()) == 3
 
-    sorting_result_empty = start_sorting_result(sorting_empty, sorting_result.recording, format="memory")
-    sorting_result_empty.select_random_spikes(max_spikes_per_unit=300, seed=2205)
-    sorting_result_empty.compute("noise_levels")
-    sorting_result_empty.compute("waveforms", **job_kwargs)
-    sorting_result_empty.compute("templates")
-    sorting_result_empty.compute("spike_amplitudes", **job_kwargs)
+    sorting_analyzer_empty = create_sorting_analyzer(sorting_empty, sorting_analyzer.recording, format="memory")
+    sorting_analyzer_empty.select_random_spikes(max_spikes_per_unit=300, seed=2205)
+    sorting_analyzer_empty.compute("noise_levels")
+    sorting_analyzer_empty.compute("waveforms", **job_kwargs)
+    sorting_analyzer_empty.compute("templates")
+    sorting_analyzer_empty.compute("spike_amplitudes", **job_kwargs)
 
     metrics_empty = compute_quality_metrics(
-        sorting_result_empty,
+        sorting_analyzer_empty,
         metric_names=None,
         qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=True,
@@ -299,9 +299,9 @@ def test_empty_units(sorting_result_simple):
 
 if __name__ == "__main__":
 
-    sorting_result = get_sorting_result()
-    print(sorting_result)
+    sorting_analyzer = get_sorting_analyzer()
+    print(sorting_analyzer)
 
-    test_compute_quality_metrics(sorting_result)
-    test_compute_quality_metrics_recordingless(sorting_result)
-    test_empty_units(sorting_result)
+    test_compute_quality_metrics(sorting_analyzer)
+    test_compute_quality_metrics_recordingless(sorting_analyzer)
+    test_empty_units(sorting_analyzer)
