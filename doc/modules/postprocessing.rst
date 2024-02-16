@@ -64,10 +64,6 @@ noise_levels
 This extension computes the noise level of each channel using the median absolute deviation.
 As an extension, this expects the :code:`Recording` as input and the computed values are persistent on disk.
 
-The :py:func:`~spikeinterface.core.get_noise_levels(recording)` computes the same values, but starting from a recording
-and without saving the data as an extension.
-
-
 .. code-block:: python
 
     noise = compute_noise_level(recording=recording)
@@ -90,7 +86,7 @@ For dense waveforms, sparsity can also be passed as an argument.
 
 .. code-block:: python
 
-    sorting_analyzer.compute(input="principal_compoents",
+    sorting_analyzer.compute(input="principal_components",
                              n_components=3,
                              mode="by_channel_local")
 
@@ -230,10 +226,10 @@ This extension computes the histograms of inter-spike-intervals. The computed ou
 
 .. code-block:: python
 
-    sorting_analyer.compute_isi_histograms(input="isi_histograms"
-                                            window_ms=50.0,
-                                            bin_ms=1.0,
-                                            method="auto")
+    sorting_analyer.compute(input="isi_histograms"
+                            window_ms=50.0,
+                            bin_ms=1.0,
+                            method="auto")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_isi_histograms`
 
