@@ -617,7 +617,7 @@ class NormalizedTemplateDiff:
         peaks,
         features,
         waveforms_sparse_mask=None,
-        threshold_diff=0.05,
+        threshold_diff=1.5,
         min_cluster_size=50,
         num_shift=5,
     ):
@@ -649,32 +649,67 @@ class NormalizedTemplateDiff:
         num_samples = template0.shape[0]
         # norm = np.mean(np.abs(template0)) + np.mean(np.abs(template1))
         norm = np.mean(np.abs(template0) + np.abs(template1))
+
+        # norm_per_channel = np.max(np.abs(template0) + np.abs(template1), axis=0) / 2.
+        norm_per_channel = (np.max(np.abs(template0), axis=0) + np.max(np.abs(template1), axis=0)) * 0.5
+        # norm_per_channel = np.max(np.abs(template0)) + np.max(np.abs(template1)) / 2.
+        # print(norm_per_channel)
+
         all_shift_diff = []
+        # all_shift_diff_by_channel = []
         for shift in range(-num_shift, num_shift + 1):
             temp0 = template0[num_shift : num_samples - num_shift, :]
             temp1 = template1[num_shift + shift : num_samples - num_shift + shift, :]
-            d = np.mean(np.abs(temp0 - temp1)) / (norm)
-            all_shift_diff.append(d)
+            # d = np.mean(np.abs(temp0 - temp1)) / (norm)
+            # d = np.max(np.abs(temp0 - temp1)) / (norm)
+            diff_per_channel = np.abs(temp0 - temp1) / norm
+
+            diff_max = np.max(diff_per_channel, axis=0)
+
+            # diff = np.max(diff_per_channel)
+            diff = np.average(diff_max, weights=norm_per_channel)
+            # diff = np.average(diff_max)
+            all_shift_diff.append(diff)
+            # diff_by_channel = np.mean(np.abs(temp0 - temp1), axis=0) / (norm)
+            # all_shift_diff_by_channel.append(diff_by_channel)
+            # d = np.mean(diff_by_channel)
+            # all_shift_diff.append(d)
         normed_diff = np.min(all_shift_diff)
 
         is_merge = normed_diff < threshold_diff
+
         if is_merge:
             merge_value = normed_diff
             final_shift = np.argmin(all_shift_diff) - num_shift
+
+            # diff_by_channel = all_shift_diff_by_channel[np.argmin(all_shift_diff)]
         else:
             final_shift = 0
             merge_value = np.nan
 
-        if DEBUG and normed_diff < 0.2:
+        # print('merge_value', merge_value, 'final_shift', final_shift, 'is_merge', is_merge)
+
+        DEBUG = False
+        # DEBUG = True
+        # if DEBUG and ( 0. < normed_diff < .4):
+        # if 0.5 < normed_diff < 4:
+        if DEBUG and is_merge:
             # if DEBUG:
 
             import matplotlib.pyplot as plt
 
-            fig, ax = plt.subplots()
+            fig, axs = plt.subplots(nrows=3)
 
-            m0 = template0.flatten()
-            m1 = template1.flatten()
+            temp0 = template0[num_shift : num_samples - num_shift, :]
+            temp1 = template1[num_shift + final_shift : num_samples - num_shift + final_shift, :]
 
+            diff_per_channel = np.abs(temp0 - temp1) / norm
+            diff = np.max(diff_per_channel)
+
+            m0 = temp0.T.flatten()
+            m1 = temp1.T.flatten()
+
+            ax = axs[0]
             ax.plot(m0, color="C0", label=f"{label0} {inds0.size}")
             ax.plot(m1, color="C1", label=f"{label1} {inds1.size}")
 
@@ -682,6 +717,28 @@ class NormalizedTemplateDiff:
                 f"union{union_chans.size} intersect{target_chans.size} \n {normed_diff:.3f} {final_shift} {is_merge}"
             )
             ax.legend()
+
+            ax = axs[1]
+
+            # ~ temp0 = template0[num_shift : num_samples - num_shift, :]
+            # ~ temp1 = template1[num_shift + shift : num_samples - num_shift + shift, :]
+            ax.plot(np.abs(m0 - m1))
+            # ax.axhline(norm, ls='--', color='k')
+            ax = axs[2]
+            ax.plot(diff_per_channel.T.flatten())
+            ax.axhline(threshold_diff, ls="--")
+            ax.axhline(normed_diff)
+
+            # ax.axhline(normed_diff, ls='-', color='b')
+            # ax.plot(norm, ls='--')
+            # ax.plot(diff_by_channel)
+
+            # ax.plot(np.abs(m0) + np.abs(m1))
+
+            # ax.plot(np.abs(m0 - m1) / (np.abs(m0) + np.abs(m1)))
+
+            # ax.set_title(f"{norm=:.3f}")
+
             plt.show()
 
         return is_merge, label0, label1, final_shift, merge_value
