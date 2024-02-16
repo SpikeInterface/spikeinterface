@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from spikeinterface.core import extract_waveforms
 from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.postprocessing import compute_template_similarity

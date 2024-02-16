@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 
 global default_backend_
