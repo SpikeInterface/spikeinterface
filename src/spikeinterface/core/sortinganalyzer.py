@@ -41,9 +41,9 @@ def create_sorting_analyzer(
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
 
     This object will handle a list of ResultExtension for all the post processing steps like: waveforms,
-    templates, unit locations, spike locations, quality mertics ...
+    templates, unit locations, spike locations, quality metrics ...
 
-    This object will be also use used for ploting purpose.
+    This object will be also use used for plotting purpose.
 
 
     Parameters
@@ -59,12 +59,12 @@ def create_sorting_analyzer(
         The "folder" argument must be specified in case of mode "folder".
         If "memory" is used, the waveforms are stored in RAM. Use this option carefully!
     sparse: bool, default: True
-        If True, then a sparsity mask is computed usingthe `estimate_sparsity()` function is run using
+        If True, then a sparsity mask is computed using the `estimate_sparsity()` function using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
         Then, the sparsity will be propagated to all ResultExtention that handle sparsity (like wavforms, pca, ...)
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity: ChannelSparsity or None, default: None
-        The sparsity used to compute waveforms. If this is given, `sparse` is ignored. Default None.
+        The sparsity used to compute waveforms. If this is given, `sparse` is ignored.
 
     Returns
     -------
@@ -141,17 +141,17 @@ class SortingAnalyzer:
     Class to make a pair of Recording-Sorting which will be used used for all post postprocessing,
     visualization and quality metric computation.
 
-    This internaly maintain a list of computed ResultExtention (waveform, pca, unit position, spike poisition, ...).
+    This internally maintains a list of computed ResultExtention (waveform, pca, unit position, spike position, ...).
 
     This can live in memory and/or can be be persistent to disk in 2 internal formats (folder/json/npz or zarr).
     A SortingAnalyzer can be transfer to another format using `save_as()`
 
     This handle unit sparsity that can be propagated to ResultExtention.
 
-    This handle spike sampling that can be propagated to ResultExtention : work only on a subset of spikes.
+    This handle spike sampling that can be propagated to ResultExtention : works on only a subset of spikes.
 
-    This internally save a copy of the Sorting and extract main recording attributes (without traces) so
-    the SortingAnalyzer object can be reload even if references to the original sorting and/or to the original recording
+    This internally saves a copy of the Sorting and extracts main recording attributes (without traces) so
+    the SortingAnalyzer object can be reloaded even if references to the original sorting and/or to the original recording
     are lost.
 
     SortingAnalyzer() should not never be used directly for creating: use instead create_sorting_analyzer(sorting, resording, ...)
@@ -429,7 +429,7 @@ class SortingAnalyzer:
             zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
         else:
             warnings.warn(
-                "SortingAnalyzer with zarr : the Recording is not json serializable, the recording link will be lost for futur load"
+                "SortingAnalyzer with zarr : the Recording is not json serializable, the recording link will be lost for future load"
             )
 
         # sorting provenance
@@ -483,7 +483,7 @@ class SortingAnalyzer:
         import zarr
 
         folder = Path(folder)
-        assert folder.is_dir(), f"This folder does not exists {folder}"
+        assert folder.is_dir(), f"This folder does not exist {folder}"
 
         zarr_root = zarr.open(folder, mode="r")
 
@@ -587,7 +587,7 @@ class SortingAnalyzer:
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
         else:
-            raise ValueError("SortingAnalyzer.save: wrong format")
+            raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
 
         # propagate random_spikes_indices is already done
         if self.random_spikes_indices is not None:
@@ -620,11 +620,11 @@ class SortingAnalyzer:
     def save_as(self, format="memory", folder=None) -> "SortingAnalyzer":
         """
         Save SortingAnalyzer object into another format.
-        Uselfull for memory to zarr or memory to binray.
+        Uselful for memory to zarr or memory to binary.
 
         Note that the recording provenance or sorting provenance can be lost.
 
-        Mainly propagate the copied sorting and recording property.
+        Mainly propagates the copied sorting and recording properties.
 
         Parameters
         ----------
@@ -638,7 +638,7 @@ class SortingAnalyzer:
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
         This method is equivalent to `save_as()`but with a subset of units.
-        Filters units by creating a new waveform extractor object in a new folder.
+        Filters units by creating a new sorting analyzer object in a new folder.
 
         Extensions are also updated to filter the selected unit ids.
 
@@ -653,7 +653,7 @@ class SortingAnalyzer:
         Returns
         -------
         we :  SortingAnalyzer
-            The newly create waveform extractor with the selected units
+            The newly create sorting_analyzer with the selected units
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         return self._save_or_select(format=format, folder=folder, unit_ids=unit_ids)
@@ -780,14 +780,14 @@ class SortingAnalyzer:
 
     def compute(self, input, save=True, **kwargs):
         """
-        Compute one extension or several extension.
-        Internally calling compute_one_extension() or compute_several_extensions() depending th input type.
+        Compute one extension or several extensiosn.
+        Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
 
         Parameters
         ----------
         input: str or dict
-            If the input is a string then compute one extension with compute_one_extension(extension_name=input, ...)
-            If the input is a dict then compute several extension with compute_several_extensions(extensions=input)
+            If the input is a string then computes one extension with compute_one_extension(extension_name=input, ...)
+            If the input is a dict then compute several extensions with compute_several_extensions(extensions=input)
         """
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, **kwargs)
@@ -808,10 +808,10 @@ class SortingAnalyzer:
         save: bool, default True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
-            save=False is convinient to try some parameters without changing an already saved extension.
+            save=False is convenient to try some parameters without changing an already saved extension.
 
         **kwargs:
-            All other kwargs are transimited to extension.set_params() or job_kwargs
+            All other kwargs are transmitted to extension.set_params() or job_kwargs
 
         Returns
         -------
@@ -840,14 +840,14 @@ class SortingAnalyzer:
 
         # check dependencies
         if extension_class.need_recording:
-            assert self.has_recording(), f"Extension {extension_name} need the recording"
+            assert self.has_recording(), f"Extension {extension_name} requires the recording"
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 # at least one extension must be done : usefull for "templates|fast_templates" for instance
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
             else:
                 ok = self.get_extension(dependency_name) is not None
-            assert ok, f"Extension {extension_name} need {dependency_name} to be computed first"
+            assert ok, f"Extension {extension_name} requires {dependency_name} to be computed first"
 
         extension_instance = extension_class(self)
         extension_instance.set_params(save=save, **params)
@@ -864,11 +864,11 @@ class SortingAnalyzer:
         Parameters
         ----------
         extensions: dict
-            Key are extension_name and values are params.
+            Keys are extension_names and values are params.
         save: bool, default True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
-            save=False is convinient to try some parameters without changing an already saved extension.
+            save=False is convenient to try some parameters without changing an already saved extension.
 
         Returns
         -------
@@ -971,7 +971,7 @@ class SortingAnalyzer:
         Get a ResultExtension.
         If not loaded then load is automatic.
 
-        Return None if the extension is not computed yet (this avoid the use of has_extension() and then get it)
+        Return None if the extension is not computed yet (this avoids the use of has_extension() and then get it)
 
         """
         if extension_name in self.extensions:
@@ -986,7 +986,7 @@ class SortingAnalyzer:
 
     def load_extension(self, extension_name: str):
         """
-        Load an extensionet from folder or zarr into the `ResultSorting.extensions` dict.
+        Load an extension from a folder or zarr into the `ResultSorting.extensions` dict.
 
         Parameters
         ----------
@@ -1001,7 +1001,7 @@ class SortingAnalyzer:
         """
         assert (
             self.format != "memory"
-        ), "SortingAnalyzer.load_extension() do not work for format='memory' use SortingAnalyzer.get_extension()instead"
+        ), "SortingAnalyzer.load_extension() does not work for format='memory' use SortingAnalyzer.get_extension() instead"
 
         extension_class = get_extension_class(extension_name)
 
@@ -1015,7 +1015,7 @@ class SortingAnalyzer:
 
     def load_all_saved_extension(self):
         """
-        Load all saved extension in memory.
+        Load all saved extensions in memory.
         """
         for extension_name in self.get_saved_extension_names():
             self.load_extension(extension_name)
@@ -1073,7 +1073,7 @@ class SortingAnalyzer:
     def get_selected_indices_in_spike_train(self, unit_id, segment_index):
         # usefull for Waveforms extractor backwars compatibility
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) of list (segment_index) of indices of spikes in spiketrain
-        assert self.random_spikes_indices is not None, "random spikes selection is not computeds"
+        assert self.random_spikes_indices is not None, "random spikes selection is not computed"
         unit_index = self.sorting.id_to_index(unit_id)
         spikes = self.sorting.to_spike_vector()
         spike_indices_in_seg = np.flatnonzero(
@@ -1133,7 +1133,7 @@ def get_extension_class(extension_name: str):
     extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
     assert (
         extension_name in extensions_dict
-    ), f"Extension '{extension_name}' is not registered, please import related module before"
+    ), f"Extension '{extension_name}' is not registered, please import related module before use"
     ext_class = extensions_dict[extension_name]
     return ext_class
 
@@ -1141,7 +1141,7 @@ def get_extension_class(extension_name: str):
 class ResultExtension:
     """
     This the base class to extend the SortingAnalyzer.
-    It can handle persistency to disk any computations related
+    It can handle persistency to disk for any computations related to:
 
     For instance:
       * waveforms
@@ -1149,8 +1149,8 @@ class ResultExtension:
       * spike amplitudes
       * quality metrics
 
-    Possible extension can be register on the fly at import time with register_result_extension() mechanism.
-    It also enables any custum computation on top on SortingAnalyzer to be implemented by the user.
+    Possible extension can be registered on-the-fly at import time with register_result_extension() mechanism.
+    It also enables any custom computation on top of the SortingAnalyzer to be implemented by the user.
 
     An extension needs to inherit from this class and implement some attributes and abstract methods:
       * extension_name
@@ -1169,7 +1169,7 @@ class ResultExtension:
     The subclass must also hanle an attribute `data` which is a dict contain the results after the `run()`.
 
     All ResultExtension will have a function associate for instance (this use the function_factory):
-    comptute_unit_location(sorting_analyzer, ...) will be equivalent to sorting_analyzer.compute("unit_location", ...)
+    compute_unit_location(sorting_analyzer, ...) will be equivalent to sorting_analyzer.compute("unit_location", ...)
 
 
     """
@@ -1234,7 +1234,7 @@ class ResultExtension:
                     sorting_analyzer = sorting_analyzer.sorting_analyzer
 
                 if not isinstance(sorting_analyzer, SortingAnalyzer):
-                    raise ValueError(f"compute_{self.extension_name}() need a SortingAnalyzer instance")
+                    raise ValueError(f"compute_{self.extension_name}() needs a SortingAnalyzer instance")
 
                 if load_if_exists is not None:
                     # backward compatibility with "load_if_exists"
@@ -1387,7 +1387,7 @@ class ResultExtension:
             return
 
         if self.sorting_analyzer.is_read_only():
-            raise ValueError(f"The SortingAnalyzer is read only save extension {self.extension_name} is not possible")
+            raise ValueError(f"The SortingAnalyzer is read-only saving extension {self.extension_name} is not possible")
 
         if self.format == "binary_folder":
             import pandas as pd
@@ -1452,7 +1452,7 @@ class ResultExtension:
 
     def _reset_extension_folder(self):
         """
-        Delete the extension in folder (binary or zarr) and create an empty one.
+        Delete the extension in a folder (binary or zarr) and create an empty one.
         """
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
