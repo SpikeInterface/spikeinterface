@@ -120,4 +120,4 @@ def test_klusta(run_kwargs):
 
 if __name__ == "__main__":
     kwargs = generate_run_kwargs()
-    test_spykingcircus(kwargs)
+    test_combinato(kwargs)
