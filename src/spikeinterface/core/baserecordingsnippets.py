@@ -323,7 +323,6 @@ class BaseRecordingSnippets(BaseExtractor):
         if self.get_property("contact_vector") is not None:
             raise ValueError("set_channel_locations(..) destroy the probe description, prefer set_probes(..)")
         self.set_property("location", locations, ids=channel_ids)
-        self.set_dummy_probe_from_locations(locations)
 
     def get_channel_locations(self, channel_ids=None, axes: str = "xy"):
         if channel_ids is None:
