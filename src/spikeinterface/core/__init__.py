@@ -112,8 +112,8 @@ from .snippets_tools import snippets_from_sorting
 # from .waveform_extractor import (
 #     WaveformExtractor,
 #     BaseWaveformExtractorExtension,
-    # extract_waveforms,
-    # load_waveforms,
+# extract_waveforms,
+# load_waveforms,
 #     precompute_sparsity,
 # )
 
