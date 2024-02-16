@@ -702,7 +702,9 @@ def compute_amplitude_cv_metrics(
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
     for unit_id in unit_ids:
         firing_rate = num_spikes[unit_id] / total_duration
-        temporal_bin_size_samples = int((average_num_spikes_per_bin / firing_rate) * sorting_analyzer.sampling_frequency)
+        temporal_bin_size_samples = int(
+            (average_num_spikes_per_bin / firing_rate) * sorting_analyzer.sampling_frequency
+        )
 
         amp_spreads = []
         # bins and amplitude means are computed for each segment

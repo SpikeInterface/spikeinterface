@@ -101,7 +101,9 @@ def export_report(
     # unit list
     units = pd.DataFrame(index=unit_ids)  #  , columns=['max_on_channel_id', 'amplitude'])
     units.index.name = "unit_id"
-    units["max_on_channel_id"] = pd.Series(get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="id"))
+    units["max_on_channel_id"] = pd.Series(
+        get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="id")
+    )
     units["amplitude"] = pd.Series(get_template_extremum_amplitude(sorting_analyzer, peak_sign="neg"))
     units.to_csv(output_folder / "unit list.csv", sep="\t")
 

@@ -69,7 +69,6 @@ register_result_extension(ComputeISIHistograms)
 compute_isi_histograms = ComputeISIHistograms.function_factory()
 
 
-
 def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
     """
     Computes the Inter-Spike Intervals histogram for all

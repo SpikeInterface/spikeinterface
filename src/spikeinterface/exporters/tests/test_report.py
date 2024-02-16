@@ -5,7 +5,11 @@ import pytest
 
 from spikeinterface.exporters import export_report
 
-from spikeinterface.exporters.tests.common import cache_folder, make_sorting_analyzer, sorting_analyzer_sparse_for_export
+from spikeinterface.exporters.tests.common import (
+    cache_folder,
+    make_sorting_analyzer,
+    sorting_analyzer_sparse_for_export,
+)
 
 
 def test_export_report(sorting_analyzer_sparse_for_export):

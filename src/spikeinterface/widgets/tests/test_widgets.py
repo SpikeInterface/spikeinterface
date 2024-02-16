@@ -449,8 +449,12 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.TemplateSimilarityWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_template_similarity(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_template_similarity(self.sorting_analyzer_sparse, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_template_similarity(
+                    self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend]
+                )
+                sw.plot_template_similarity(
+                    self.sorting_analyzer_sparse, backend=backend, **self.backend_kwargs[backend]
+                )
 
     def test_plot_quality_metrics(self):
         possible_backends = list(sw.QualityMetricsWidget.get_possible_backends())

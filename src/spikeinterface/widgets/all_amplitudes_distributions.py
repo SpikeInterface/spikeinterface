@@ -23,7 +23,9 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         Dict of colors with key: unit, value: color, default None
     """
 
-    def __init__(self, sorting_analyzer: SortingAnalyzer, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs):
+    def __init__(
+        self, sorting_analyzer: SortingAnalyzer, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
+    ):
 
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(sorting_analyzer, "spike_amplitudes")

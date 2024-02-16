@@ -300,22 +300,27 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
         # sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")
 
-
-        nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.)
-        nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.)
-        templates_array = estimate_templates_average(recording, sorting_pre_peeler.to_spike_vector(), sorting_pre_peeler.unit_ids,
-                                                     nbefore, nafter, return_scaled=False, **job_kwargs)
+        nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
+        nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
+        templates_array = estimate_templates_average(
+            recording,
+            sorting_pre_peeler.to_spike_vector(),
+            sorting_pre_peeler.unit_ids,
+            nbefore,
+            nafter,
+            return_scaled=False,
+            **job_kwargs,
+        )
         templates_dense = Templates(
             templates_array=templates_array,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
-            probe=recording.get_probe()
+            probe=recording.get_probe(),
         )
         # TODO : try other methods for sparsity
         # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=120.)
-        sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=1.)
+        sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=1.0)
         templates = templates_dense.to_sparse(sparsity)
-
 
         # snrs = compute_snrs(we, peak_sign=params["detection"]["peak_sign"], peak_mode="extremum")
         # print(snrs)

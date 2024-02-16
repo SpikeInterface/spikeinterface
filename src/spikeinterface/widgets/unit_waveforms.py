@@ -115,7 +115,9 @@ class UnitWaveformsWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
-        channel_locations = sorting_analyzer.get_channel_locations()[sorting_analyzer.channel_ids_to_indices(channel_ids)]
+        channel_locations = sorting_analyzer.get_channel_locations()[
+            sorting_analyzer.channel_ids_to_indices(channel_ids)
+        ]
 
         extra_sparsity = False
         if sorting_analyzer.is_sparse():

@@ -209,7 +209,9 @@ def test_calculate_firing_range(sorting_analyzer_simple):
     print(firing_ranges)
 
     with pytest.warns(UserWarning) as w:
-        firing_ranges_nan = compute_firing_ranges(sorting_analyzer, bin_size_s=sorting_analyzer.get_total_duration() + 1)
+        firing_ranges_nan = compute_firing_ranges(
+            sorting_analyzer, bin_size_s=sorting_analyzer.get_total_duration() + 1
+        )
         assert np.all([np.isnan(f) for f in firing_ranges_nan.values()])
 
 
@@ -338,7 +340,9 @@ def test_synchrony_metrics(sorting_analyzer_simple):
         sorting_sync = add_synchrony_to_sorting(sorting, sync_event_ratio=sync_level)
         sorting_analyzer_sync = create_sorting_analyzer(sorting_sync, sorting_analyzer.recording, format="memory")
 
-        previous_synchrony_metrics = compute_synchrony_metrics(previous_sorting_analyzer, synchrony_sizes=synchrony_sizes)
+        previous_synchrony_metrics = compute_synchrony_metrics(
+            previous_sorting_analyzer, synchrony_sizes=synchrony_sizes
+        )
         current_synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_sync, synchrony_sizes=synchrony_sizes)
         print(current_synchrony_metrics)
         # check that all values increased

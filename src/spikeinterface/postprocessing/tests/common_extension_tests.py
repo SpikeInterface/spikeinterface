@@ -54,7 +54,9 @@ def get_sorting_analyzer(recording, sorting, format="memory", sparsity=None, nam
     if folder and folder.exists():
         shutil.rmtree(folder)
 
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity)
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity
+    )
 
     return sorting_analyzer
 

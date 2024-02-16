@@ -143,7 +143,9 @@ class TemporalPCBaseNode(WaveformsNode):
         sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=True)
         sorting_analyzer.select_random_spikes()
         sorting_analyzer.compute("waveforms", ms_before=ms_before, ms_after=ms_after)
-        sorting_analyzer.compute("principal_components", n_components=n_components, mode="by_channel_global", whiten=whiten)
+        sorting_analyzer.compute(
+            "principal_components", n_components=n_components, mode="by_channel_global", whiten=whiten
+        )
         pca_model = sorting_analyzer.get_extension("principal_components").get_pca_model()
 
         params = {

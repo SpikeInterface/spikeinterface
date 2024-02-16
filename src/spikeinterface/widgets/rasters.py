@@ -28,7 +28,7 @@ class RasterWidget(BaseWidget):
         self, sorting, segment_index=None, unit_ids=None, time_range=None, color="k", backend=None, **backend_kwargs
     ):
         sorting = self.ensure_sorting(sorting)
-        
+
         if segment_index is None:
             if sorting.get_num_segments() != 1:
                 raise ValueError("You must provide segment_index=...")

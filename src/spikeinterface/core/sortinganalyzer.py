@@ -570,7 +570,9 @@ class SortingAnalyzer:
 
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
-            new_sorting_analyzer = SortingAnalyzer.create_memory(sorting_provenance, recording, sparsity, self.rec_attributes)
+            new_sorting_analyzer = SortingAnalyzer.create_memory(
+                sorting_provenance, recording, sparsity, self.rec_attributes
+            )
 
         elif format == "binary_folder":
             # create  a new folder
@@ -609,7 +611,9 @@ class SortingAnalyzer:
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         for extension_name, extension in self.extensions.items():
-            new_ext = new_sorting_analyzer.extensions[extension_name] = extension.copy(new_sorting_analyzer, unit_ids=unit_ids)
+            new_ext = new_sorting_analyzer.extensions[extension_name] = extension.copy(
+                new_sorting_analyzer, unit_ids=unit_ids
+            )
 
         return new_sorting_analyzer
 

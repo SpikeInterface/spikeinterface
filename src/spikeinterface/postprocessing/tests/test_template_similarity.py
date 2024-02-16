@@ -1,6 +1,10 @@
 import unittest
 
-from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite, get_sorting_analyzer, get_dataset
+from spikeinterface.postprocessing.tests.common_extension_tests import (
+    ResultExtensionCommonTestSuite,
+    get_sorting_analyzer,
+    get_dataset,
+)
 
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap, ComputeTemplateSimilarity
 
@@ -13,7 +17,7 @@ class SimilarityExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase)
 
 
 def test_check_equal_template_with_distribution_overlap():
-    
+
     recording, sorting = get_dataset()
 
     sorting_analyzer = get_sorting_analyzer(recording, sorting, sparsity=None)
@@ -30,7 +34,6 @@ def test_check_equal_template_with_distribution_overlap():
                 continue
             waveforms1 = wf_ext.get_waveforms_one_unit(unit_id1)
             check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
-
 
 
 if __name__ == "__main__":

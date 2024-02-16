@@ -168,18 +168,21 @@ class PositionAndFeaturesClustering:
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
 
             sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["unit_index"], fs)
-        
-            nbefore = int(params["ms_before"] * fs  / 1000.)
-            nafter = int(params["ms_after"] * fs  / 1000.)
-            templates_array = estimate_templates_average(recording, sorting.to_spike_vector(), sorting.unit_ids,
-                                                        nbefore, nafter, return_scaled=False, **params["job_kwargs"])
-            templates = Templates(
-                templates_array=templates_array,
-                sampling_frequency=fs,
-                nbefore=nbefore,
-                probe=recording.get_probe()
-            )
 
+            nbefore = int(params["ms_before"] * fs / 1000.0)
+            nafter = int(params["ms_after"] * fs / 1000.0)
+            templates_array = estimate_templates_average(
+                recording,
+                sorting.to_spike_vector(),
+                sorting.unit_ids,
+                nbefore,
+                nafter,
+                return_scaled=False,
+                **params["job_kwargs"],
+            )
+            templates = Templates(
+                templates_array=templates_array, sampling_frequency=fs, nbefore=nbefore, probe=recording.get_probe()
+            )
 
             labels, peak_labels = remove_duplicates_via_matching(
                 templates, peak_labels, job_kwargs=params["job_kwargs"], **params["cleaning_kwargs"]

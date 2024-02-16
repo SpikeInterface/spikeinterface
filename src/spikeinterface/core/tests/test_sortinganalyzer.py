@@ -58,7 +58,9 @@ def test_SortingAnalyzer_zarr():
     if folder.exists():
         shutil.rmtree(folder)
 
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None)
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
+    )
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
     _check_sorting_analyzers(sorting_analyzer, sorting)
 

@@ -153,7 +153,9 @@ def test_ComputeFastTemplates(format, sparse):
     # compare ComputeTemplates with dense and ComputeFastTemplates: should give the same on "average"
     other_sorting_analyzer = get_sorting_analyzer(format=format, sparse=False)
     other_sorting_analyzer.select_random_spikes(max_spikes_per_unit=20, seed=2205)
-    other_sorting_analyzer.compute("waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs)
+    other_sorting_analyzer.compute(
+        "waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs
+    )
     other_sorting_analyzer.compute(
         "templates",
         operators=[
