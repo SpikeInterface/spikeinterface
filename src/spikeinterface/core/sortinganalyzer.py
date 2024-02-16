@@ -148,7 +148,7 @@ class SortingAnalyzer:
 
     This handle unit sparsity that can be propagated to ResultExtention.
 
-    This handle spike sampling that can be propagated to ResultExtention : works at only on a subset of spikes.
+    This handle spike sampling that can be propagated to ResultExtention : works on only a subset of spikes.
 
     This internally saves a copy of the Sorting and extracts main recording attributes (without traces) so
     the SortingAnalyzer object can be reloaded even if references to the original sorting and/or to the original recording
