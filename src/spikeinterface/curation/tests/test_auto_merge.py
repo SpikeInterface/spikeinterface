@@ -4,12 +4,12 @@ from pathlib import Path
 import numpy as np
 
 
-from spikeinterface.core import start_sorting_result
+from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core.generate import inject_some_split_units
 from spikeinterface.curation import get_potential_auto_merge
 
 
-from spikeinterface.curation.tests.common import make_sorting_result, sorting_result_for_curation
+from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -18,10 +18,10 @@ else:
     cache_folder = Path("cache_folder") / "curation"
 
 
-def test_get_auto_merge_list(sorting_result_for_curation):
+def test_get_auto_merge_list(sorting_analyzer_for_curation):
 
-    sorting = sorting_result_for_curation.sorting
-    recording = sorting_result_for_curation.recording
+    sorting = sorting_analyzer_for_curation.sorting
+    recording = sorting_analyzer_for_curation.recording
     num_unit_splited = 1
     num_split = 2
 
@@ -35,13 +35,13 @@ def test_get_auto_merge_list(sorting_result_for_curation):
 
     job_kwargs = dict(n_jobs=-1)
 
-    sorting_result = start_sorting_result(sorting_with_split, recording, format="memory")
-    sorting_result.select_random_spikes()
-    sorting_result.compute("waveforms", **job_kwargs)
-    sorting_result.compute("templates")
+    sorting_analyzer = create_sorting_analyzer(sorting_with_split, recording, format="memory")
+    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("waveforms", **job_kwargs)
+    sorting_analyzer.compute("templates")
 
     potential_merges, outs = get_potential_auto_merge(
-        sorting_result,
+        sorting_analyzer,
         minimum_spikes=1000,
         maximum_distance_um=150.0,
         peak_sign="neg",
@@ -119,5 +119,5 @@ def test_get_auto_merge_list(sorting_result_for_curation):
 
 
 if __name__ == "__main__":
-    sorting_result = make_sorting_result(sparse=True)
-    test_get_auto_merge_list(sorting_result)
+    sorting_analyzer = make_sorting_analyzer(sparse=True)
+    test_get_auto_merge_list(sorting_analyzer)

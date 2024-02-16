@@ -4,8 +4,8 @@ from pathlib import Path
 import shutil
 
 from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.core import SortingResult, start_sorting_result, load_sorting_result
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
+from spikeinterface.core import SortingAnalyzer, create_sorting_analyzer, load_sorting_analyzer
+from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
 
 import numpy as np
 
@@ -28,97 +28,99 @@ def get_dataset():
     return recording, sorting
 
 
-def test_SortingResult_memory():
+def test_SortingAnalyzer_memory():
     recording, sorting = get_dataset()
-    sortres = start_sorting_result(sorting, recording, format="memory", sparse=False, sparsity=None)
-    _check_sorting_results(sortres, sorting)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting)
 
-    sortres = start_sorting_result(sorting, recording, format="memory", sparse=True, sparsity=None)
-    _check_sorting_results(sortres, sorting)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting)
 
 
-def test_SortingResult_binary_folder():
+def test_SortingAnalyzer_binary_folder():
     recording, sorting = get_dataset()
 
-    folder = cache_folder / "test_SortingResult_binary_folder"
+    folder = cache_folder / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
         shutil.rmtree(folder)
 
-    sortres = start_sorting_result(
+    sorting_analyzer = create_sorting_analyzer(
         sorting, recording, format="binary_folder", folder=folder, sparse=False, sparsity=None
     )
-    sortres = load_sorting_result(folder, format="auto")
-    _check_sorting_results(sortres, sorting)
+    sorting_analyzer = load_sorting_analyzer(folder, format="auto")
+    _check_sorting_analyzers(sorting_analyzer, sorting)
 
 
-def test_SortingResult_zarr():
+def test_SortingAnalyzer_zarr():
     recording, sorting = get_dataset()
 
-    folder = cache_folder / "test_SortingResult_zarr.zarr"
+    folder = cache_folder / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
         shutil.rmtree(folder)
 
-    sortres = start_sorting_result(sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None)
-    sortres = load_sorting_result(folder, format="auto")
-    _check_sorting_results(sortres, sorting)
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
+    )
+    sorting_analyzer = load_sorting_analyzer(folder, format="auto")
+    _check_sorting_analyzers(sorting_analyzer, sorting)
 
 
-def _check_sorting_results(sortres, original_sorting):
+def _check_sorting_analyzers(sorting_analyzer, original_sorting):
 
     print()
-    print(sortres)
+    print(sorting_analyzer)
 
     register_result_extension(DummyResultExtension)
 
-    assert "channel_ids" in sortres.rec_attributes
-    assert "sampling_frequency" in sortres.rec_attributes
-    assert "num_samples" in sortres.rec_attributes
+    assert "channel_ids" in sorting_analyzer.rec_attributes
+    assert "sampling_frequency" in sorting_analyzer.rec_attributes
+    assert "num_samples" in sorting_analyzer.rec_attributes
 
-    probe = sortres.get_probe()
-    sparsity = sortres.sparsity
+    probe = sorting_analyzer.get_probe()
+    sparsity = sorting_analyzer.sparsity
 
     # compute
-    sortres.compute("dummy", param1=5.5)
+    sorting_analyzer.compute("dummy", param1=5.5)
     # equivalent
-    compute_dummy(sortres, param1=5.5)
-    ext = sortres.get_extension("dummy")
+    compute_dummy(sorting_analyzer, param1=5.5)
+    ext = sorting_analyzer.get_extension("dummy")
     assert ext is not None
     assert ext.params["param1"] == 5.5
-    print(sortres)
+    print(sorting_analyzer)
     # recompute
-    sortres.compute("dummy", param1=5.5)
+    sorting_analyzer.compute("dummy", param1=5.5)
     # and delete
-    sortres.delete_extension("dummy")
-    ext = sortres.get_extension("dummy")
+    sorting_analyzer.delete_extension("dummy")
+    ext = sorting_analyzer.get_extension("dummy")
     assert ext is None
 
-    assert sortres.has_recording()
+    assert sorting_analyzer.has_recording()
 
-    if sortres.random_spikes_indices is None:
-        sortres.select_random_spikes(max_spikes_per_unit=10, seed=2205)
-        assert sortres.random_spikes_indices is not None
-        assert sortres.random_spikes_indices.size == 10 * sortres.sorting.unit_ids.size
+    if sorting_analyzer.random_spikes_indices is None:
+        sorting_analyzer.select_random_spikes(max_spikes_per_unit=10, seed=2205)
+        assert sorting_analyzer.random_spikes_indices is not None
+        assert sorting_analyzer.random_spikes_indices.size == 10 * sorting_analyzer.sorting.unit_ids.size
 
     # save to several format
     for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
             if format == "zarr":
-                folder = cache_folder / f"test_SortingResult_save_as_{format}.zarr"
+                folder = cache_folder / f"test_SortingAnalyzer_save_as_{format}.zarr"
             else:
-                folder = cache_folder / f"test_SortingResult_save_as_{format}"
+                folder = cache_folder / f"test_SortingAnalyzer_save_as_{format}"
             if folder.exists():
                 shutil.rmtree(folder)
         else:
             folder = None
 
         # compute one extension to check the save
-        sortres.compute("dummy")
+        sorting_analyzer.compute("dummy")
 
-        sortres2 = sortres.save_as(format=format, folder=folder)
-        ext = sortres2.get_extension("dummy")
+        sorting_analyzer2 = sorting_analyzer.save_as(format=format, folder=folder)
+        ext = sorting_analyzer2.get_extension("dummy")
         assert ext is not None
 
-        data = sortres2.get_extension("dummy").data
+        data = sorting_analyzer2.get_extension("dummy").data
         assert "result_one" in data
         assert data["result_two"].size == original_sorting.to_spike_vector().size
 
@@ -126,27 +128,27 @@ def _check_sorting_results(sortres, original_sorting):
     for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
             if format == "zarr":
-                folder = cache_folder / f"test_SortingResult_select_units_with_{format}.zarr"
+                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}.zarr"
             else:
-                folder = cache_folder / f"test_SortingResult_select_units_with_{format}"
+                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}"
             if folder.exists():
                 shutil.rmtree(folder)
         else:
             folder = None
         # compute one extension to check the slice
-        sortres.compute("dummy")
+        sorting_analyzer.compute("dummy")
         keep_unit_ids = original_sorting.unit_ids[::2]
-        sortres2 = sortres.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
+        sorting_analyzer2 = sorting_analyzer.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
 
         # check that random_spikes_indices are remmaped
-        assert sortres2.random_spikes_indices is not None
-        some_spikes = sortres2.sorting.to_spike_vector()[sortres2.random_spikes_indices]
+        assert sorting_analyzer2.random_spikes_indices is not None
+        some_spikes = sorting_analyzer2.sorting.to_spike_vector()[sorting_analyzer2.random_spikes_indices]
         assert np.array_equal(np.unique(some_spikes["unit_index"]), np.arange(keep_unit_ids.size))
 
         # check propagation of result data and correct sligin
-        assert np.array_equal(keep_unit_ids, sortres2.unit_ids)
-        data = sortres2.get_extension("dummy").data
-        assert data["result_one"] == sortres.get_extension("dummy").data["result_one"]
+        assert np.array_equal(keep_unit_ids, sorting_analyzer2.unit_ids)
+        data = sorting_analyzer2.get_extension("dummy").data
+        assert data["result_one"] == sorting_analyzer.get_extension("dummy").data["result_one"]
         # unit 1, 3, ... should be removed
         assert np.all(~np.isin(data["result_two"], [1, 3]))
 
@@ -167,13 +169,13 @@ class DummyResultExtension(ResultExtension):
         self.data["result_one"] = "abcd"
         # the result two has the same size of the spike vector!!
         # and represent nothing (the trick is to use unit_index for testing slice)
-        spikes = self.sorting_result.sorting.to_spike_vector()
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
         self.data["result_two"] = spikes["unit_index"].copy()
 
     def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
-        spikes = self.sorting_result.sorting.to_spike_vector()
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
         keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
         # here the first key do not depend on unit_id
         # but the second need to be sliced!!
@@ -205,7 +207,7 @@ def test_extension():
 
 
 if __name__ == "__main__":
-    test_SortingResult_memory()
-    test_SortingResult_binary_folder()
-    test_SortingResult_zarr()
+    test_SortingAnalyzer_memory()
+    test_SortingAnalyzer_binary_folder()
+    test_SortingAnalyzer_zarr()
     test_extension()

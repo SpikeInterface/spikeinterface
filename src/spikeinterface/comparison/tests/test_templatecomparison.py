@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 import numpy as np
 
-from spikeinterface.core import start_sorting_result
+from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.extractors import toy_example
 from spikeinterface.comparison import compare_templates, compare_multiple_templates
 
@@ -41,16 +41,16 @@ def test_compare_multiple_templates():
     sort3 = sort.frame_slice(start_frame=2 / 3 * duration * fs, end_frame=duration * fs)
 
     # compute waveforms
-    sorting_result_1 = start_sorting_result(sort1, rec1, format="memory")
-    sorting_result_2 = start_sorting_result(sort2, rec2, format="memory")
-    sorting_result_3 = start_sorting_result(sort3, rec3, format="memory")
+    sorting_analyzer_1 = create_sorting_analyzer(sort1, rec1, format="memory")
+    sorting_analyzer_2 = create_sorting_analyzer(sort2, rec2, format="memory")
+    sorting_analyzer_3 = create_sorting_analyzer(sort3, rec3, format="memory")
 
-    for sorting_result in (sorting_result_1, sorting_result_2, sorting_result_3):
-        sorting_result.select_random_spikes()
-        sorting_result.compute("fast_templates")
+    for sorting_analyzer in (sorting_analyzer_1, sorting_analyzer_2, sorting_analyzer_3):
+        sorting_analyzer.select_random_spikes()
+        sorting_analyzer.compute("fast_templates")
 
     # paired comparison
-    temp_cmp = compare_templates(sorting_result_1, sorting_result_2)
+    temp_cmp = compare_templates(sorting_analyzer_1, sorting_analyzer_2)
 
     for u1 in temp_cmp.hungarian_match_12.index.values:
         u2 = temp_cmp.hungarian_match_12[u1]
@@ -58,7 +58,7 @@ def test_compare_multiple_templates():
             assert u1 == u2
 
     # multi-comparison
-    temp_mcmp = compare_multiple_templates([sorting_result_1, sorting_result_2, sorting_result_3])
+    temp_mcmp = compare_multiple_templates([sorting_analyzer_1, sorting_analyzer_2, sorting_analyzer_3])
     # assert unit ids are the same across sessions (because of initial slicing)
     for unit_dict in temp_mcmp.units.values():
         unit_ids = unit_dict["unit_ids"].values()

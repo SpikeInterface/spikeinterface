@@ -5,7 +5,7 @@ import inspect
 global default_backend_
 default_backend_ = "matplotlib"
 
-from ..core import SortingResult, BaseSorting
+from ..core import SortingAnalyzer, BaseSorting
 from ..core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
 
 
@@ -106,39 +106,39 @@ class BaseWidget:
         func(self.data_plot, **self.backend_kwargs)
 
     @classmethod
-    def ensure_sorting_result(cls, input):
-        # internal help to accept both SortingResult or MockWaveformExtractor for a ploter
-        if isinstance(input, SortingResult):
+    def ensure_sorting_analyzer(cls, input):
+        # internal help to accept both SortingAnalyzer or MockWaveformExtractor for a ploter
+        if isinstance(input, SortingAnalyzer):
             return input
         elif isinstance(input, MockWaveformExtractor):
-            return input.sorting_result
+            return input.sorting_analyzer
         else:
             return input
 
     @classmethod
     def ensure_sorting(cls, input):
-        # internal help to accept both Sorting or SortingResult or MockWaveformExtractor for a ploter
+        # internal help to accept both Sorting or SortingAnalyzer or MockWaveformExtractor for a ploter
         if isinstance(input, BaseSorting):
             return input
-        elif isinstance(input, SortingResult):
+        elif isinstance(input, SortingAnalyzer):
             return input.sorting
         elif isinstance(input, MockWaveformExtractor):
-            return input.sorting_result.sorting
+            return input.sorting_analyzer.sorting
         else:
             return input
 
     @staticmethod
-    def check_extensions(sorting_result, extensions):
+    def check_extensions(sorting_analyzer, extensions):
         if isinstance(extensions, str):
             extensions = [extensions]
         error_msg = ""
         raise_error = False
         for extension in extensions:
-            if not sorting_result.has_extension(extension):
+            if not sorting_analyzer.has_extension(extension):
                 raise_error = True
                 error_msg += (
                     f"The {extension} waveform extension is required for this widget. "
-                    f"Run the `sorting_result.compute('{extension}', ...)` to compute it.\n"
+                    f"Run the `sorting_analyzer.compute('{extension}', ...)` to compute it.\n"
                 )
         if raise_error:
             raise Exception(error_msg)

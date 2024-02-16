@@ -11,7 +11,7 @@ It also implement:
 
 import numpy as np
 
-from .sortingresult import ResultExtension, register_result_extension
+from .sortinganalyzer import ResultExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_average
 from .recording_tools import get_noise_levels
 from .template import Templates
@@ -21,7 +21,7 @@ class ComputeWaveforms(ResultExtension):
     """
     ResultExtension that extract some waveforms of each units.
 
-    The sparsity is controlled by the SortingResult sparsity.
+    The sparsity is controlled by the SortingAnalyzer sparsity.
     """
 
     extension_name = "waveforms"
@@ -32,25 +32,25 @@ class ComputeWaveforms(ResultExtension):
 
     @property
     def nbefore(self):
-        return int(self.params["ms_before"] * self.sorting_result.sampling_frequency / 1000.0)
+        return int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
 
     @property
     def nafter(self):
-        return int(self.params["ms_after"] * self.sorting_result.sampling_frequency / 1000.0)
+        return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
 
     def _run(self, **job_kwargs):
         self.data.clear()
 
-        if self.sorting_result.random_spikes_indices is None:
-            raise ValueError("compute_waveforms need SortingResult.select_random_spikes() need to be run first")
+        if self.sorting_analyzer.random_spikes_indices is None:
+            raise ValueError("compute_waveforms need SortingAnalyzer.select_random_spikes() need to be run first")
 
-        recording = self.sorting_result.recording
-        sorting = self.sorting_result.sorting
+        recording = self.sorting_analyzer.recording
+        sorting = self.sorting_analyzer.sorting
         unit_ids = sorting.unit_ids
 
         # retrieve spike vector and the sampling
         spikes = sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
 
         if self.format == "binary_folder":
             # in that case waveforms are extacted directly in files
@@ -92,7 +92,7 @@ class ComputeWaveforms(ResultExtension):
         return_scaled: bool = True,
         dtype=None,
     ):
-        recording = self.sorting_result.recording
+        recording = self.sorting_analyzer.recording
         if dtype is None:
             dtype = recording.get_dtype()
 
@@ -116,9 +116,9 @@ class ComputeWaveforms(ResultExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
-        spikes = self.sorting_result.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
@@ -131,15 +131,15 @@ class ComputeWaveforms(ResultExtension):
         unit_id,
         force_dense: bool = False,
     ):
-        sorting = self.sorting_result.sorting
+        sorting = self.sorting_analyzer.sorting
         unit_index = sorting.id_to_index(unit_id)
         spikes = sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = self.data["waveforms"][spike_mask, :, :]
 
-        if self.sorting_result.sparsity is not None:
-            chan_inds = self.sorting_result.sparsity.unit_id_to_channel_indices[unit_id]
+        if self.sorting_analyzer.sparsity is not None:
+            chan_inds = self.sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
             wfs = wfs[:, :, : chan_inds.size]
             if force_dense:
                 num_channels = self.get_num_channels()
@@ -161,12 +161,12 @@ class ComputeTemplates(ResultExtension):
     """
     ResultExtension that compute templates (average, str, median, percentile, ...)
 
-    This must be run after "waveforms" extension (`SortingResult.compute("waveforms")`)
+    This must be run after "waveforms" extension (`SortingAnalyzer.compute("waveforms")`)
 
     Note that when "waveforms" is already done, then the recording is not needed anymore for this extension.
 
     Note: by default only the average is computed. Other operator (std, median, percentile) can be computed on demand
-    after the SortingResult.compute("templates") and then the data dict is updated on demand.
+    after the SortingAnalyzer.compute("templates") and then the data dict is updated on demand.
 
 
     """
@@ -187,7 +187,7 @@ class ComputeTemplates(ResultExtension):
                 assert len(operator) == 2
                 assert operator[0] == "percentile"
 
-        waveforms_extension = self.sorting_result.get_extension("waveforms")
+        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
 
         params = dict(
             operators=operators,
@@ -201,9 +201,9 @@ class ComputeTemplates(ResultExtension):
         self._compute_and_append(self.params["operators"])
 
     def _compute_and_append(self, operators):
-        unit_ids = self.sorting_result.unit_ids
-        channel_ids = self.sorting_result.channel_ids
-        waveforms_extension = self.sorting_result.get_extension("waveforms")
+        unit_ids = self.sorting_analyzer.unit_ids
+        channel_ids = self.sorting_analyzer.channel_ids
+        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
         waveforms = waveforms_extension.data["waveforms"]
 
         num_samples = waveforms.shape[1]
@@ -219,8 +219,8 @@ class ComputeTemplates(ResultExtension):
                 raise ValueError(f"ComputeTemplates: wrong operator {operator}")
             self.data[key] = np.zeros((unit_ids.size, num_samples, channel_ids.size))
 
-        spikes = self.sorting_result.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
+        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
             wfs = waveforms[spike_mask, :, :]
@@ -257,7 +257,7 @@ class ComputeTemplates(ResultExtension):
         return self.params["nafter"]
 
     def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         new_data = dict()
         for key, arr in self.data.items():
@@ -279,11 +279,11 @@ class ComputeTemplates(ResultExtension):
         elif outputs == "Templates":
             return Templates(
                 templates_array=templates_array,
-                sampling_frequency=self.sorting_result.sampling_frequency,
+                sampling_frequency=self.sorting_analyzer.sampling_frequency,
                 nbefore=self.nbefore,
-                channel_ids=self.sorting_result.channel_ids,
-                unit_ids=self.sorting_result.unit_ids,
-                probe=self.sorting_result.get_probe(),
+                channel_ids=self.sorting_analyzer.channel_ids,
+                unit_ids=self.sorting_analyzer.unit_ids,
+                probe=self.sorting_analyzer.get_probe(),
             )
         else:
             raise ValueError("outputs must be numpy or Templates")
@@ -331,7 +331,7 @@ class ComputeTemplates(ResultExtension):
             self.save()
 
         if unit_ids is not None:
-            unit_indices = self.sorting_result.sorting.ids_to_indices(unit_ids)
+            unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
             templates = templates[unit_indices, :, :]
 
         return np.array(templates)
@@ -355,25 +355,25 @@ class ComputeFastTemplates(ResultExtension):
 
     @property
     def nbefore(self):
-        return int(self.params["ms_before"] * self.sorting_result.sampling_frequency / 1000.0)
+        return int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
 
     @property
     def nafter(self):
-        return int(self.params["ms_after"] * self.sorting_result.sampling_frequency / 1000.0)
+        return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
 
     def _run(self, **job_kwargs):
         self.data.clear()
 
-        if self.sorting_result.random_spikes_indices is None:
-            raise ValueError("compute_waveforms need SortingResult.select_random_spikes() need to be run first")
+        if self.sorting_analyzer.random_spikes_indices is None:
+            raise ValueError("compute_waveforms need SortingAnalyzer.select_random_spikes() need to be run first")
 
-        recording = self.sorting_result.recording
-        sorting = self.sorting_result.sorting
+        recording = self.sorting_analyzer.recording
+        sorting = self.sorting_analyzer.sorting
         unit_ids = sorting.unit_ids
 
         # retrieve spike vector and the sampling
         spikes = sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
 
         return_scaled = self.params["return_scaled"]
 
@@ -403,17 +403,17 @@ class ComputeFastTemplates(ResultExtension):
         elif outputs == "Templates":
             return Templates(
                 templates_array=templates_array,
-                sampling_frequency=self.sorting_result.sampling_frequency,
+                sampling_frequency=self.sorting_analyzer.sampling_frequency,
                 nbefore=self.nbefore,
-                channel_ids=self.sorting_result.channel_ids,
-                unit_ids=self.sorting_result.unit_ids,
-                probe=self.sorting_result.get_probe(),
+                channel_ids=self.sorting_analyzer.channel_ids,
+                unit_ids=self.sorting_analyzer.unit_ids,
+                probe=self.sorting_analyzer.get_probe(),
             )
         else:
             raise ValueError("outputs must be numpy or Templates")
 
     def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         new_data = dict()
         new_data["average"] = self.data["average"][keep_unit_indices, :, :]
@@ -439,8 +439,8 @@ class ComputeNoiseLevels(ResultExtension):
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     **params: dict with additional parameters
 
     Returns
@@ -455,8 +455,8 @@ class ComputeNoiseLevels(ResultExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def __init__(self, sorting_result):
-        ResultExtension.__init__(self, sorting_result)
+    def __init__(self, sorting_analyzer):
+        ResultExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, num_chunks_per_segment=20, chunk_size=10000, return_scaled=True, seed=None):
         params = dict(
@@ -469,7 +469,7 @@ class ComputeNoiseLevels(ResultExtension):
         return self.data
 
     def _run(self):
-        self.data["noise_levels"] = get_noise_levels(self.sorting_result.recording, **self.params)
+        self.data["noise_levels"] = get_noise_levels(self.sorting_analyzer.recording, **self.params)
 
     def _get_data(self):
         return self.data["noise_levels"]

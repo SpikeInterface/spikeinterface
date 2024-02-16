@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .metrics import MetricsBaseWidget
-from ..core.sortingresult import SortingResult
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class TemplateMetricsWidget(MetricsBaseWidget):
@@ -10,7 +10,7 @@ class TemplateMetricsWidget(MetricsBaseWidget):
 
     Parameters
     ----------
-    sorting_result : SortingResult
+    sorting_analyzer : SortingAnalyzer
         The object to get quality metrics from
     unit_ids : list or None, default: None
         List of unit ids
@@ -26,7 +26,7 @@ class TemplateMetricsWidget(MetricsBaseWidget):
 
     def __init__(
         self,
-        sorting_result: SortingResult,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         include_metrics=None,
         skip_metrics=None,
@@ -35,11 +35,11 @@ class TemplateMetricsWidget(MetricsBaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        sorting_result = self.ensure_sorting_result(sorting_result)
-        self.check_extensions(sorting_result, "template_metrics")
-        template_metrics = sorting_result.get_extension("template_metrics").get_data()
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "template_metrics")
+        template_metrics = sorting_analyzer.get_extension("template_metrics").get_data()
 
-        sorting = sorting_result.sorting
+        sorting = sorting_analyzer.sorting
 
         MetricsBaseWidget.__init__(
             self,

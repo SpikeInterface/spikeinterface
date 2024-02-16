@@ -9,7 +9,7 @@ from copy import deepcopy
 import numpy as np
 
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
 
 
 from .quality_metric_list import calculate_pc_metrics, _misc_metric_name_to_func, _possible_pc_metric_names
@@ -23,8 +23,8 @@ class ComputeQualityMetrics(ResultExtension):
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     metric_names : list or None
         List of quality metrics to compute.
     qm_params : dict or None
@@ -53,14 +53,14 @@ class ComputeQualityMetrics(ResultExtension):
         if metric_names is None:
             metric_names = list(_misc_metric_name_to_func.keys())
             # if PC is available, PC metrics are automatically added to the list
-            if self.sorting_result.has_extension("principal_components") and not skip_pc_metrics:
+            if self.sorting_analyzer.has_extension("principal_components") and not skip_pc_metrics:
                 # by default 'nearest_neightbor' is removed because too slow
                 pc_metrics = _possible_pc_metric_names.copy()
                 pc_metrics.remove("nn_isolation")
                 pc_metrics.remove("nn_noise_overlap")
                 metric_names += pc_metrics
             # if spike_locations are not available, drift is removed from the list
-            if not self.sorting_result.has_extension("spike_locations"):
+            if not self.sorting_analyzer.has_extension("spike_locations"):
                 if "drift" in metric_names:
                     metric_names.remove("drift")
 
@@ -100,7 +100,7 @@ class ComputeQualityMetrics(ResultExtension):
         n_jobs = job_kwargs["n_jobs"]
         progress_bar = job_kwargs["progress_bar"]
 
-        sorting = self.sorting_result.sorting
+        sorting = self.sorting_analyzer.sorting
         unit_ids = sorting.unit_ids
         non_empty_unit_ids = sorting.get_non_empty_unit_ids()
         empty_unit_ids = unit_ids[~np.isin(unit_ids, non_empty_unit_ids)]
@@ -126,7 +126,7 @@ class ComputeQualityMetrics(ResultExtension):
             func = _misc_metric_name_to_func[metric_name]
 
             params = qm_params[metric_name] if metric_name in qm_params else {}
-            res = func(self.sorting_result, unit_ids=non_empty_unit_ids, **params)
+            res = func(self.sorting_analyzer, unit_ids=non_empty_unit_ids, **params)
             # QM with uninstall dependencies might return None
             if res is not None:
                 if isinstance(res, dict):
@@ -141,10 +141,10 @@ class ComputeQualityMetrics(ResultExtension):
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
         if len(pc_metric_names) > 0 and not self.params["skip_pc_metrics"]:
-            if not self.sorting_result.has_extension("principal_components"):
+            if not self.sorting_analyzer.has_extension("principal_components"):
                 raise ValueError("waveform_principal_component must be provied")
             pc_metrics = calculate_pc_metrics(
-                self.sorting_result,
+                self.sorting_analyzer,
                 unit_ids=non_empty_unit_ids,
                 metric_names=pc_metric_names,
                 # sparsity=sparsity,

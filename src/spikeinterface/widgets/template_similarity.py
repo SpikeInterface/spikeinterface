@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from .base import BaseWidget, to_attr
-from ..core.sortingresult import SortingResult
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class TemplateSimilarityWidget(BaseWidget):
@@ -12,7 +12,7 @@ class TemplateSimilarityWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_result : SortingResult
+    sorting_analyzer : SortingAnalyzer
         The object to get template similarity from
     unit_ids : list or None, default: None
         List of unit ids default: None
@@ -29,7 +29,7 @@ class TemplateSimilarityWidget(BaseWidget):
 
     def __init__(
         self,
-        sorting_result: SortingResult,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         cmap="viridis",
         display_diagonal_values=False,
@@ -38,13 +38,13 @@ class TemplateSimilarityWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        sorting_result = self.ensure_sorting_result(sorting_result)
-        self.check_extensions(sorting_result, "template_similarity")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "template_similarity")
 
-        tsc = sorting_result.get_extension("template_similarity")
+        tsc = sorting_analyzer.get_extension("template_similarity")
         similarity = tsc.get_data().copy()
 
-        sorting = sorting_result.sorting
+        sorting = sorting_analyzer.sorting
         if unit_ids is None:
             unit_ids = sorting.unit_ids
         else:

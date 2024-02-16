@@ -696,14 +696,14 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
 
     Parameters
     ----------
-    sorting_result_1 : SortingResult
-        The first SortingResult to get templates to compare
-    sorting_result_2 : SortingResult
-        The second SortingResult to get templates to compare
+    sorting_analyzer_1 : SortingAnalyzer
+        The first SortingAnalyzer to get templates to compare
+    sorting_analyzer_2 : SortingAnalyzer
+        The second SortingAnalyzer to get templates to compare
     unit_ids1 : list, default: None
-        List of units from sorting_result_1 to compare
+        List of units from sorting_analyzer_1 to compare
     unit_ids2 : list, default: None
-        List of units from sorting_result_2 to compare
+        List of units from sorting_analyzer_2 to compare
     similarity_method : str, default: "cosine_similarity"
         Method for the similaroty matrix
     sparsity_dict : dict, default: None
@@ -719,8 +719,8 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
 
     def __init__(
         self,
-        sorting_result_1,
-        sorting_result_2,
+        sorting_analyzer_1,
+        sorting_analyzer_2,
         name1=None,
         name2=None,
         unit_ids1=None,
@@ -737,8 +737,8 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             name2 = "sess2"
         BasePairComparison.__init__(
             self,
-            object1=sorting_result_1,
-            object2=sorting_result_2,
+            object1=sorting_analyzer_1,
+            object2=sorting_analyzer_2,
             name1=name1,
             name2=name2,
             match_score=match_score,
@@ -747,13 +747,13 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         )
         MixinTemplateComparison.__init__(self, similarity_method=similarity_method, sparsity_dict=sparsity_dict)
 
-        self.sorting_result_1 = sorting_result_1
-        self.sorting_result_2 = sorting_result_2
-        channel_ids1 = sorting_result_1.recording.get_channel_ids()
-        channel_ids2 = sorting_result_2.recording.get_channel_ids()
+        self.sorting_analyzer_1 = sorting_analyzer_1
+        self.sorting_analyzer_2 = sorting_analyzer_2
+        channel_ids1 = sorting_analyzer_1.recording.get_channel_ids()
+        channel_ids2 = sorting_analyzer_2.recording.get_channel_ids()
 
         # two options: all channels are shared or partial channels are shared
-        if sorting_result_1.recording.get_num_channels() != sorting_result_2.recording.get_num_channels():
+        if sorting_analyzer_1.recording.get_num_channels() != sorting_analyzer_2.recording.get_num_channels():
             raise NotImplementedError
         if np.any([ch1 != ch2 for (ch1, ch2) in zip(channel_ids1, channel_ids2)]):
             # TODO: here we can check location and run it on the union. Might be useful for reconfigurable probes
@@ -762,10 +762,10 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         self.matches = dict()
 
         if unit_ids1 is None:
-            unit_ids1 = sorting_result_1.sorting.get_unit_ids()
+            unit_ids1 = sorting_analyzer_1.sorting.get_unit_ids()
 
         if unit_ids2 is None:
-            unit_ids2 = sorting_result_2.sorting.get_unit_ids()
+            unit_ids2 = sorting_analyzer_2.sorting.get_unit_ids()
         self.unit_ids = [unit_ids1, unit_ids2]
 
         if sparsity_dict is not None:
@@ -781,7 +781,7 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             print("Agreement scores...")
 
         agreement_scores = compute_template_similarity_by_pair(
-            self.sorting_result_1, self.sorting_result_2, method=self.similarity_method
+            self.sorting_analyzer_1, self.sorting_analyzer_2, method=self.similarity_method
         )
         import pandas as pd
 

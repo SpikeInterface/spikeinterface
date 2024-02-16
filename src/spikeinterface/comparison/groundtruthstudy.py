@@ -8,7 +8,7 @@ import pickle
 
 import numpy as np
 
-from spikeinterface.core import load_extractor, start_sorting_result, load_sorting_result
+from spikeinterface.core import load_extractor, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.core.core_tools import SIJsonEncoder
 from spikeinterface.core.job_tools import split_job_kwargs
 
@@ -284,13 +284,13 @@ class GroundTruthStudy:
 
         return pd.Series(run_times, name="run_time")
 
-    def start_sorting_result_gt(self, case_keys=None, **kwargs):
+    def create_sorting_analyzer_gt(self, case_keys=None, **kwargs):
         if case_keys is None:
             case_keys = self.cases.keys()
 
         select_params, job_kwargs = split_job_kwargs(kwargs)
 
-        base_folder = self.folder / "sorting_result"
+        base_folder = self.folder / "sorting_analyzer"
         base_folder.mkdir(exist_ok=True)
 
         dataset_keys = [self.cases[key]["dataset"] for key in case_keys]
@@ -299,17 +299,17 @@ class GroundTruthStudy:
             # the waveforms depend on the dataset key
             folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
-            sorting_result = start_sorting_result(gt_sorting, recording, format="binray_folder", folder=folder)
-            sorting_result.select_random_spikes(**select_params)
-            sorting_result.compute("fast_templates", **job_kwargs)
+            sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binray_folder", folder=folder)
+            sorting_analyzer.select_random_spikes(**select_params)
+            sorting_analyzer.compute("fast_templates", **job_kwargs)
 
     def get_waveform_extractor(self, case_key=None, dataset_key=None):
         if case_key is not None:
             dataset_key = self.cases[case_key]["dataset"]
 
-        folder = self.folder / "sorting_result" / self.key_to_str(dataset_key)
-        sorting_result = load_sorting_result(folder)
-        return sorting_result
+        folder = self.folder / "sorting_analyzer" / self.key_to_str(dataset_key)
+        sorting_analyzer = load_sorting_analyzer(folder)
+        return sorting_analyzer
 
     def get_templates(self, key, mode="average"):
         we = self.get_waveform_extractor(case_key=key)

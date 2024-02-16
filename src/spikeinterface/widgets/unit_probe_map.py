@@ -8,7 +8,7 @@ from typing import Union
 from .base import BaseWidget, to_attr
 
 # from .utils import get_unit_colors
-from ..core.sortingresult import SortingResult
+from ..core.sortinganalyzer import SortingAnalyzer
 from ..core.template_tools import _get_dense_templates_array
 
 
@@ -20,7 +20,7 @@ class UnitProbeMapWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_result: SortingResult
+    sorting_analyzer: SortingAnalyzer
     unit_ids: list
         List of unit ids.
     channel_ids: list
@@ -33,7 +33,7 @@ class UnitProbeMapWidget(BaseWidget):
 
     def __init__(
         self,
-        sorting_result,
+        sorting_analyzer,
         unit_ids=None,
         channel_ids=None,
         animated=None,
@@ -42,17 +42,17 @@ class UnitProbeMapWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        sorting_result = self.ensure_sorting_result(sorting_result)
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
 
         if unit_ids is None:
-            unit_ids = sorting_result.unit_ids
+            unit_ids = sorting_analyzer.unit_ids
         self.unit_ids = unit_ids
         if channel_ids is None:
-            channel_ids = sorting_result.channel_ids
+            channel_ids = sorting_analyzer.channel_ids
         self.channel_ids = channel_ids
 
         data_plot = dict(
-            sorting_result=sorting_result,
+            sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             animated=animated,
@@ -76,13 +76,13 @@ class UnitProbeMapWidget(BaseWidget):
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        sorting_result = dp.sorting_result
-        probe = sorting_result.get_probe()
+        sorting_analyzer = dp.sorting_analyzer
+        probe = sorting_analyzer.get_probe()
 
         probe_shape_kwargs = dict(facecolor="w", edgecolor="k", lw=0.5, alpha=1.0)
 
-        templates = _get_dense_templates_array(sorting_result, return_scaled=True)
-        templates = templates[sorting_result.sorting.ids_to_indices(dp.unit_ids), :, :]
+        templates = _get_dense_templates_array(sorting_analyzer, return_scaled=True)
+        templates = templates[sorting_analyzer.sorting.ids_to_indices(dp.unit_ids), :, :]
 
         all_poly_contact = []
         for i, unit_id in enumerate(dp.unit_ids):

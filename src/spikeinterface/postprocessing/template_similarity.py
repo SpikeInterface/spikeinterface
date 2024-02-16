@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
 from ..core.template_tools import _get_dense_templates_array
 
 
@@ -12,8 +12,8 @@ class ComputeTemplateSimilarity(ResultExtension):
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        The SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        The SortingAnalyzer object
     method: str, default: "cosine_similarity"
         The method to compute the similarity
 
@@ -31,8 +31,8 @@ class ComputeTemplateSimilarity(ResultExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def __init__(self, sorting_result):
-        ResultExtension.__init__(self, sorting_result)
+    def __init__(self, sorting_analyzer):
+        ResultExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, method="cosine_similarity"):
         params = dict(method=method)
@@ -40,12 +40,12 @@ class ComputeTemplateSimilarity(ResultExtension):
 
     def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
-        unit_indices = self.sorting_result.sorting.ids_to_indices(unit_ids)
+        unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_similarity = self.data["similarity"][unit_indices][:, unit_indices]
         return dict(similarity=new_similarity)
 
     def _run(self):
-        templates_array = _get_dense_templates_array(self.sorting_result, return_scaled=True)
+        templates_array = _get_dense_templates_array(self.sorting_analyzer, return_scaled=True)
         similarity = compute_similarity_with_templates_array(
             templates_array, templates_array, method=self.params["method"]
         )
@@ -55,7 +55,7 @@ class ComputeTemplateSimilarity(ResultExtension):
         return self.data["similarity"]
 
 
-# @alessio:  compute_template_similarity() is now one inner SortingResult only
+# @alessio:  compute_template_similarity() is now one inner SortingAnalyzer only
 register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
@@ -75,9 +75,9 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
     return similarity
 
 
-def compute_template_similarity_by_pair(sorting_result_1, sorting_result_2, method="cosine_similarity"):
-    templates_array_1 = _get_dense_templates_array(sorting_result_1, return_scaled=True)
-    templates_array_2 = _get_dense_templates_array(sorting_result_2, return_scaled=True)
+def compute_template_similarity_by_pair(sorting_analyzer_1, sorting_analyzer_2, method="cosine_similarity"):
+    templates_array_1 = _get_dense_templates_array(sorting_analyzer_1, return_scaled=True)
+    templates_array_2 = _get_dense_templates_array(sorting_analyzer_2, return_scaled=True)
     similmarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method)
     return similmarity
 

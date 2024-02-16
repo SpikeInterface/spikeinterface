@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 import warnings
 import numpy as np
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension, SortingResult
+from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension, SortingAnalyzer
 
 try:
     import numba
@@ -18,8 +18,8 @@ class ComputeCorrelograms(ResultExtension):
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     window_ms : float, default: 100.0
         The window in ms
     bin_ms : float, default: 5
@@ -52,8 +52,8 @@ class ComputeCorrelograms(ResultExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def __init__(self, sorting_result):
-        ResultExtension.__init__(self, sorting_result)
+    def __init__(self, sorting_analyzer):
+        ResultExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -62,14 +62,14 @@ class ComputeCorrelograms(ResultExtension):
 
     def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
-        unit_indices = self.sorting_result.sorting.ids_to_indices(unit_ids)
+        unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_ccgs = self.data["ccgs"][unit_indices][:, unit_indices]
         new_bins = self.data["bins"]
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
     def _run(self):
-        ccgs, bins = compute_correlograms_on_sorting(self.sorting_result.sorting, **self.params)
+        ccgs, bins = compute_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
         self.data["ccgs"] = ccgs
         self.data["bins"] = bins
 
@@ -78,26 +78,26 @@ class ComputeCorrelograms(ResultExtension):
 
 
 register_result_extension(ComputeCorrelograms)
-compute_correlograms_sorting_result = ComputeCorrelograms.function_factory()
+compute_correlograms_sorting_analyzer = ComputeCorrelograms.function_factory()
 
 
 def compute_correlograms(
-    sorting_result_or_sorting,
+    sorting_analyzer_or_sorting,
     window_ms: float = 50.0,
     bin_ms: float = 1.0,
     method: str = "auto",
 ):
-    if isinstance(sorting_result_or_sorting, SortingResult):
-        return compute_correlograms_sorting_result(
-            sorting_result_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
+    if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+        return compute_correlograms_sorting_analyzer(
+            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
         )
     else:
         return compute_correlograms_on_sorting(
-            sorting_result_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
+            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
         )
 
 
-compute_correlograms.__doc__ = compute_correlograms_sorting_result.__doc__
+compute_correlograms.__doc__ = compute_correlograms_sorting_analyzer.__doc__
 
 
 def _make_bins(sorting, window_ms, bin_ms):
@@ -165,7 +165,6 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
     """
     assert HAVE_NUMBA
     return _compute_crosscorr_numba(spike_times1.astype(np.int64), spike_times2.astype(np.int64), window_size, bin_size)
-
 
 
 def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):

@@ -20,7 +20,9 @@ def extract_dense_waveforms_node(generated_recording):
     )
 
 
-def test_waveform_thresholder_ptp(extract_dense_waveforms_node, generated_recording, detected_peaks, chunk_executor_kwargs):
+def test_waveform_thresholder_ptp(
+    extract_dense_waveforms_node, generated_recording, detected_peaks, chunk_executor_kwargs
+):
     recording = generated_recording
     peaks = detected_peaks
 
@@ -39,7 +41,9 @@ def test_waveform_thresholder_ptp(extract_dense_waveforms_node, generated_record
     assert np.all(data[data != 0] > 3)
 
 
-def test_waveform_thresholder_mean(extract_dense_waveforms_node, generated_recording, detected_peaks, chunk_executor_kwargs):
+def test_waveform_thresholder_mean(
+    extract_dense_waveforms_node, generated_recording, detected_peaks, chunk_executor_kwargs
+):
     recording = generated_recording
     peaks = detected_peaks
 
@@ -56,7 +60,9 @@ def test_waveform_thresholder_mean(extract_dense_waveforms_node, generated_recor
     assert np.all(tresholded_waveforms.mean(axis=1) >= 0)
 
 
-def test_waveform_thresholder_energy(extract_dense_waveforms_node, generated_recording, detected_peaks, chunk_executor_kwargs):
+def test_waveform_thresholder_energy(
+    extract_dense_waveforms_node, generated_recording, detected_peaks, chunk_executor_kwargs
+):
     recording = generated_recording
     peaks = detected_peaks
 
@@ -75,7 +81,9 @@ def test_waveform_thresholder_energy(extract_dense_waveforms_node, generated_rec
     assert np.all(data[data != 0] > 3)
 
 
-def test_waveform_thresholder_operator(extract_dense_waveforms_node, generated_recording, detected_peaks, chunk_executor_kwargs):
+def test_waveform_thresholder_operator(
+    extract_dense_waveforms_node, generated_recording, detected_peaks, chunk_executor_kwargs
+):
     recording = generated_recording
     peaks = detected_peaks
 

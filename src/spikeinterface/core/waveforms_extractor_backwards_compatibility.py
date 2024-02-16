@@ -1,7 +1,7 @@
 """
 This backwards compatibility module aims to:
-  * load old WaveformsExtractor saved with folder or zarr  (version <=0.100) into the  SortingResult (version>0.100)
-  * mock the function extract_waveforms() and the class SortingResult() but based SortingResult
+  * load old WaveformsExtractor saved with folder or zarr  (version <=0.100) into the  SortingAnalyzer (version>0.100)
+  * mock the function extract_waveforms() and the class SortingAnalyzer() but based SortingAnalyzer
 """
 
 from __future__ import annotations
@@ -18,16 +18,16 @@ import probeinterface
 
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
-from .sortingresult import start_sorting_result, get_extension_class
+from .sortinganalyzer import create_sorting_analyzer, get_extension_class
 from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
-from .sortingresult import SortingResult, load_sorting_result
+from .sortinganalyzer import SortingAnalyzer, load_sorting_analyzer
 from .base import load_extractor
-from .result_core import ComputeWaveforms, ComputeTemplates
+from .analyzer_extension_core import ComputeWaveforms, ComputeTemplates
 
 _backwards_compatibility_msg = """####
-# extract_waveforms() and WaveformExtractor() have been replace by SortingResult since version 0.101
-# You should use start_sorting_result() instead.
+# extract_waveforms() and WaveformExtractor() have been replace by SortingAnalyzer since version 0.101
+# You should use create_sorting_analyzer() instead.
 # extract_waveforms() is now mocking the old behavior for backwards compatibility only and will be removed after 0.103
 ####"""
 
@@ -57,7 +57,7 @@ def extract_waveforms(
 ):
     """
     This mock the extract_waveforms() in version <= 0.100 to not break old codes but using
-    the SortingResult (version >0.100) internally.
+    the SortingAnalyzer (version >0.100) internally.
 
     This return a MockWaveformExtractor object that mock the old WaveformExtractor
     """
@@ -92,74 +92,74 @@ def extract_waveforms(
         **other_kwargs,
         **job_kwargs,
     )
-    sorting_result = start_sorting_result(
+    sorting_analyzer = create_sorting_analyzer(
         sorting, recording, format=format, folder=folder, sparse=sparse, sparsity=sparsity, **sparsity_kwargs
     )
 
     # TODO propagate job_kwargs
 
-    sorting_result.select_random_spikes(max_spikes_per_unit=max_spikes_per_unit, seed=seed)
+    sorting_analyzer.select_random_spikes(max_spikes_per_unit=max_spikes_per_unit, seed=seed)
 
     waveforms_params = dict(ms_before=ms_before, ms_after=ms_after, return_scaled=return_scaled, dtype=dtype)
-    sorting_result.compute("waveforms", **waveforms_params, **job_kwargs)
+    sorting_analyzer.compute("waveforms", **waveforms_params, **job_kwargs)
 
     templates_params = dict(operators=list(precompute_template))
-    sorting_result.compute("templates", **templates_params)
+    sorting_analyzer.compute("templates", **templates_params)
 
     # this also done because some metrics need it
-    sorting_result.compute("noise_levels")
+    sorting_analyzer.compute("noise_levels")
 
-    we = MockWaveformExtractor(sorting_result)
+    we = MockWaveformExtractor(sorting_analyzer)
 
     return we
 
 
 class MockWaveformExtractor:
-    def __init__(self, sorting_result):
-        self.sorting_result = sorting_result
+    def __init__(self, sorting_analyzer):
+        self.sorting_analyzer = sorting_analyzer
 
     def __repr__(self):
         txt = "MockWaveformExtractor: mock the old WaveformExtractor with "
-        txt += self.sorting_result.__repr__()
+        txt += self.sorting_analyzer.__repr__()
         return txt
 
     def is_sparse(self) -> bool:
-        return self.sorting_result.is_sparse()
+        return self.sorting_analyzer.is_sparse()
 
     def has_waveforms(self) -> bool:
-        return self.sorting_result.get_extension("waveforms") is not None
+        return self.sorting_analyzer.get_extension("waveforms") is not None
 
     def delete_waveforms(self) -> None:
-        self.sorting_result.delete_extension("waveforms")
+        self.sorting_analyzer.delete_extension("waveforms")
 
     @property
     def recording(self) -> BaseRecording:
-        return self.sorting_result.recording
+        return self.sorting_analyzer.recording
 
     @property
     def sorting(self) -> BaseSorting:
-        return self.sorting_result.sorting
+        return self.sorting_analyzer.sorting
 
     @property
     def channel_ids(self) -> np.ndarray:
-        return self.sorting_result.channel_ids
+        return self.sorting_analyzer.channel_ids
 
     @property
     def sampling_frequency(self) -> float:
-        return self.sorting_result.sampling_frequency
+        return self.sorting_analyzer.sampling_frequency
 
     @property
     def unit_ids(self) -> np.ndarray:
-        return self.sorting_result.unit_ids
+        return self.sorting_analyzer.unit_ids
 
     @property
     def nbefore(self) -> int:
-        ms_before = self.sorting_result.get_extension("waveforms").params["ms_before"]
+        ms_before = self.sorting_analyzer.get_extension("waveforms").params["ms_before"]
         return int(ms_before * self.sampling_frequency / 1000.0)
 
     @property
     def nafter(self) -> int:
-        ms_after = self.sorting_result.get_extension("waveforms").params["ms_after"]
+        ms_after = self.sorting_analyzer.get_extension("waveforms").params["ms_after"]
         return int(ms_after * self.sampling_frequency / 1000.0)
 
     @property
@@ -168,71 +168,71 @@ class MockWaveformExtractor:
 
     @property
     def return_scaled(self) -> bool:
-        return self.sorting_result.get_extension("waveforms").params["return_scaled"]
+        return self.sorting_analyzer.get_extension("waveforms").params["return_scaled"]
 
     @property
     def dtype(self):
-        return self.sorting_result.get_extension("waveforms").params["dtype"]
+        return self.sorting_analyzer.get_extension("waveforms").params["dtype"]
 
     def is_read_only(self) -> bool:
-        return self.sorting_result.is_read_only()
+        return self.sorting_analyzer.is_read_only()
 
     def has_recording(self) -> bool:
-        return self.sorting_result._recording is not None
+        return self.sorting_analyzer._recording is not None
 
     def get_num_samples(self, segment_index: Optional[int] = None) -> int:
-        return self.sorting_result.get_num_samples(segment_index)
+        return self.sorting_analyzer.get_num_samples(segment_index)
 
     def get_total_samples(self) -> int:
-        return self.sorting_result.get_total_samples()
+        return self.sorting_analyzer.get_total_samples()
 
     def get_total_duration(self) -> float:
-        return self.sorting_result.get_total_duration()
+        return self.sorting_analyzer.get_total_duration()
 
     def get_num_channels(self) -> int:
-        return self.sorting_result.get_num_channels()
+        return self.sorting_analyzer.get_num_channels()
 
     def get_num_segments(self) -> int:
-        return self.sorting_result.get_num_segments()
+        return self.sorting_analyzer.get_num_segments()
 
     def get_probegroup(self):
-        return self.sorting_result.get_probegroup()
+        return self.sorting_analyzer.get_probegroup()
 
     def get_probe(self):
-        return self.sorting_result.get_probe()
+        return self.sorting_analyzer.get_probe()
 
     def is_filtered(self) -> bool:
-        return self.sorting_result.rec_attributes["is_filtered"]
+        return self.sorting_analyzer.rec_attributes["is_filtered"]
 
     def get_channel_locations(self) -> np.ndarray:
-        return self.sorting_result.get_channel_locations()
+        return self.sorting_analyzer.get_channel_locations()
 
     def channel_ids_to_indices(self, channel_ids) -> np.ndarray:
-        return self.sorting_result.channel_ids_to_indices(channel_ids)
+        return self.sorting_analyzer.channel_ids_to_indices(channel_ids)
 
     def get_recording_property(self, key) -> np.ndarray:
-        return self.sorting_result.get_recording_property(key)
+        return self.sorting_analyzer.get_recording_property(key)
 
     def get_sorting_property(self, key) -> np.ndarray:
-        return self.sorting_result.get_sorting_property(key)
+        return self.sorting_analyzer.get_sorting_property(key)
 
     @property
     def sparsity(self):
-        return self.sorting_result.sparsity
+        return self.sorting_analyzer.sparsity
 
     @property
     def folder(self):
-        if self.sorting_result.format != "memory":
-            return self.sorting_result.folder
+        if self.sorting_analyzer.format != "memory":
+            return self.sorting_analyzer.folder
 
     def has_extension(self, extension_name: str) -> bool:
-        return self.sorting_result.has_extension(extension_name)
+        return self.sorting_analyzer.has_extension(extension_name)
 
     def get_sampled_indices(self, unit_id):
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) with a complex dtype as follow
         selected_spikes = []
         for segment_index in range(self.get_num_segments()):
-            inds = self.sorting_result.get_selected_indices_in_spike_train(unit_id, segment_index)
+            inds = self.sorting_analyzer.get_selected_indices_in_spike_train(unit_id, segment_index)
             sampled_index = np.zeros(inds.size, dtype=[("spike_index", "int64"), ("segment_index", "int64")])
             sampled_index["spike_index"] = inds
             sampled_index["segment_index"][:] = segment_index
@@ -249,28 +249,28 @@ class MockWaveformExtractor:
         force_dense: bool = False,
     ):
         # lazy and cache are ingnored
-        ext = self.sorting_result.get_extension("waveforms")
+        ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
         spikes = self.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_result.random_spikes_indices]
+        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
         if sparsity is not None:
             assert (
-                self.sorting_result.sparsity is None
+                self.sorting_analyzer.sparsity is None
             ), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
             wfs = wfs[:, :, sparsity.mask[self.sorting.id_to_index(unit_id)]]
 
         if force_dense:
             assert sparsity is None
-            if self.sorting_result.sparsity is None:
+            if self.sorting_analyzer.sparsity is None:
                 # nothing to do
                 pass
             else:
                 num_channels = self.get_num_channels()
                 dense_wfs = np.zeros((wfs.shape[0], wfs.shape[1], num_channels), dtype=np.float32)
-                unit_sparsity = self.sorting_result.sparsity.mask[unit_index]
+                unit_sparsity = self.sorting_analyzer.sparsity.mask[unit_index]
                 dense_wfs[:, :, unit_sparsity] = wfs
                 wfs = dense_wfs
 
@@ -283,7 +283,7 @@ class MockWaveformExtractor:
     def get_all_templates(
         self, unit_ids: list | np.array | tuple | None = None, mode="average", percentile: float | None = None
     ):
-        ext = self.sorting_result.get_extension("templates")
+        ext = self.sorting_analyzer.get_extension("templates")
 
         if mode == "percentile":
             key = f"pencentile_{percentile}"
@@ -315,7 +315,7 @@ def load_waveforms(
     output="MockWaveformExtractor",
 ):
     """
-    This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingResult or MockWaveformExtractor.
+    This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingAnalyzer or MockWaveformExtractor.
 
     It also mimic the old load_waveforms by opening a Sortingresult folder and return a MockWaveformExtractor.
     This later behavior is usefull to no break old code like this in versio >=0.101
@@ -334,23 +334,23 @@ def load_waveforms(
     if (folder / "spikeinterface_info.json").exists:
         with open(folder / "spikeinterface_info.json", mode="r") as f:
             info = json.load(f)
-        if info.get("object", None) == "SortingResult":
+        if info.get("object", None) == "SortingAnalyzer":
             # in this case the folder is already a sorting result from version >= 0.101.0 but create with the MockWaveformExtractor
-            sorting_result = load_sorting_result(folder)
-            sorting_result.load_all_saved_extension()
-            we = MockWaveformExtractor(sorting_result)
+            sorting_analyzer = load_sorting_analyzer(folder)
+            sorting_analyzer.load_all_saved_extension()
+            we = MockWaveformExtractor(sorting_analyzer)
             return we
 
     if folder.suffix == ".zarr":
         raise NotImplementedError
         # Alessio this is for you
     else:
-        sorting_result = _read_old_waveforms_extractor_binary(folder)
+        sorting_analyzer = _read_old_waveforms_extractor_binary(folder)
 
-    if output == "SortingResult":
-        return sorting_result
+    if output == "SortingAnalyzer":
+        return sorting_analyzer
     elif output in ("WaveformExtractor", "MockWaveformExtractor"):
-        return MockWaveformExtractor(sorting_result)
+        return MockWaveformExtractor(sorting_analyzer)
 
 
 def _read_old_waveforms_extractor_binary(folder):
@@ -398,7 +398,7 @@ def _read_old_waveforms_extractor_binary(folder):
     elif (folder / "sorting.pickle").exists():
         sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
 
-    sorting_result = SortingResult.create_memory(sorting, recording, sparsity, rec_attributes=rec_attributes)
+    sorting_analyzer = SortingAnalyzer.create_memory(sorting, recording, sparsity, rec_attributes=rec_attributes)
 
     # waveforms
     # need to concatenate all waveforms in one unique buffer
@@ -439,9 +439,9 @@ def _read_old_waveforms_extractor_binary(folder):
             mask = some_spikes["unit_index"] == unit_index
             waveforms[:, :, : wfs.shape[2]][mask, :, :] = wfs
 
-        sorting_result.random_spikes_indices = random_spikes_indices
+        sorting_analyzer.random_spikes_indices = random_spikes_indices
 
-        ext = ComputeWaveforms(sorting_result)
+        ext = ComputeWaveforms(sorting_analyzer)
         ext.params = dict(
             ms_before=params["ms_before"],
             ms_after=params["ms_after"],
@@ -449,7 +449,7 @@ def _read_old_waveforms_extractor_binary(folder):
             dtype=params["dtype"],
         )
         ext.data["waveforms"] = waveforms
-        sorting_result.extensions["waveforms"] = ext
+        sorting_analyzer.extensions["waveforms"] = ext
 
     # templates saved dense
     # load cached templates
@@ -459,13 +459,13 @@ def _read_old_waveforms_extractor_binary(folder):
         if template_file.is_file():
             templates[mode] = np.load(template_file)
     if len(templates) > 0:
-        ext = ComputeTemplates(sorting_result)
+        ext = ComputeTemplates(sorting_analyzer)
         ext.params = dict(
             nbefore=nbefore, nafter=nafter, return_scaled=params["return_scaled"], operators=list(templates.keys())
         )
         for mode, arr in templates.items():
             ext.data[mode] = arr
-        sorting_result.extensions["templates"] = ext
+        sorting_analyzer.extensions["templates"] = ext
 
     # old extensions with same names and equvalent data except similarity>template_similarity
     old_extension_to_new_class = {
@@ -486,7 +486,7 @@ def _read_old_waveforms_extractor_binary(folder):
         if not ext_folder.is_dir():
             continue
         new_class = get_extension_class(new_name)
-        ext = new_class(sorting_result)
+        ext = new_class(sorting_analyzer)
         with open(ext_folder / "params.json", "r") as f:
             params = json.load(f)
         ext.params = params
@@ -523,6 +523,6 @@ def _read_old_waveforms_extractor_binary(folder):
         # elif new_name == "principal_components":
         #     # TODO: alessio this is for you
         #     pass
-        sorting_result.extensions[new_name] = ext
+        sorting_analyzer.extensions[new_name] = ext
 
-    return sorting_result
+    return sorting_analyzer

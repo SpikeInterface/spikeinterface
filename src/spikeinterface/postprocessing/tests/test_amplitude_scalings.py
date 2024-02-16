@@ -15,14 +15,14 @@ class AmplitudeScalingsExtensionTest(ResultExtensionCommonTestSuite, unittest.Te
     ]
 
     def test_scaling_values(self):
-        sorting_result = self._prepare_sorting_result("memory", True)
-        sorting_result.compute("amplitude_scalings", handle_collisions=False)
+        sorting_analyzer = self._prepare_sorting_analyzer("memory", True)
+        sorting_analyzer.compute("amplitude_scalings", handle_collisions=False)
 
-        spikes = sorting_result.sorting.to_spike_vector()
+        spikes = sorting_analyzer.sorting.to_spike_vector()
 
-        ext = sorting_result.get_extension("amplitude_scalings")
+        ext = sorting_analyzer.get_extension("amplitude_scalings")
 
-        for unit_index, unit_id in enumerate(sorting_result.unit_ids):
+        for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
             mask = spikes["unit_index"] == unit_index
             scalings = ext.data["amplitude_scalings"][mask]
             median_scaling = np.median(scalings)

@@ -7,7 +7,7 @@ from probeinterface import ProbeGroup
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from ..core.sortingresult import SortingResult
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class UnitLocationsWidget(BaseWidget):
@@ -16,8 +16,8 @@ class UnitLocationsWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_result : SortingResult
-        The SortingResult that must contains  "unit_locations" extension
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer that must contains  "unit_locations" extension
     unit_ids : list or None, default: None
         List of unit ids
     with_channel_ids : bool, default: False
@@ -37,7 +37,7 @@ class UnitLocationsWidget(BaseWidget):
 
     def __init__(
         self,
-        sorting_result: SortingResult,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         with_channel_ids=False,
         unit_colors=None,
@@ -48,17 +48,17 @@ class UnitLocationsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        sorting_result = self.ensure_sorting_result(sorting_result)
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
 
-        self.check_extensions(sorting_result, "unit_locations")
-        ulc = sorting_result.get_extension("unit_locations")
+        self.check_extensions(sorting_analyzer, "unit_locations")
+        ulc = sorting_analyzer.get_extension("unit_locations")
         unit_locations = ulc.get_data(outputs="by_unit")
 
-        sorting = sorting_result.sorting
+        sorting = sorting_analyzer.sorting
 
-        channel_ids = sorting_result.channel_ids
-        channel_locations = sorting_result.get_channel_locations()
-        probegroup = sorting_result.get_probegroup()
+        channel_ids = sorting_analyzer.channel_ids
+        channel_locations = sorting_analyzer.get_channel_locations()
+        probegroup = sorting_analyzer.get_probegroup()
 
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)

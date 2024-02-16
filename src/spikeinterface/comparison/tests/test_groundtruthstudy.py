@@ -86,7 +86,7 @@ def test_GroundTruthStudy():
     study.run_comparisons()
     print(study.comparisons)
 
-    study.start_sorting_result_gt(n_jobs=-1)
+    study.create_sorting_analyzer_gt(n_jobs=-1)
 
     study.compute_metrics()
 

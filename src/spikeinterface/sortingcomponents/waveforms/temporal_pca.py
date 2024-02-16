@@ -14,7 +14,7 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.sparsity import ChannelSparsity
-from spikeinterface import NumpySorting, start_sorting_result
+from spikeinterface import NumpySorting, create_sorting_analyzer
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
@@ -139,12 +139,14 @@ class TemporalPCBaseNode(WaveformsNode):
         # Creates a numpy sorting object where the spike times are the peak times and the unit ids are the peak channel
         sorting = NumpySorting.from_peaks(peaks, recording.sampling_frequency, recording.channel_ids)
 
-        # TODO alessio, herberto : the fitting is done with a SortingResult which is a postprocessing object, I think we should not do this for a component
-        sorting_result = start_sorting_result(sorting, recording, sparse=True)
-        sorting_result.select_random_spikes()
-        sorting_result.compute("waveforms", ms_before=ms_before, ms_after=ms_after)
-        sorting_result.compute("principal_components", n_components=n_components, mode="by_channel_global", whiten=whiten)
-        pca_model = sorting_result.get_extension("principal_components").get_pca_model()
+        # TODO alessio, herberto : the fitting is done with a SortingAnalyzer which is a postprocessing object, I think we should not do this for a component
+        sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=True)
+        sorting_analyzer.select_random_spikes()
+        sorting_analyzer.compute("waveforms", ms_before=ms_before, ms_after=ms_after)
+        sorting_analyzer.compute(
+            "principal_components", n_components=n_components, mode="by_channel_global", whiten=whiten
+        )
+        pca_model = sorting_analyzer.get_extension("principal_components").get_pca_model()
 
         params = {
             "ms_before": ms_before,
