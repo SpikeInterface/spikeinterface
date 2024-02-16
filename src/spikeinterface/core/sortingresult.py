@@ -76,21 +76,21 @@ def start_sorting_result(
     >>> import spikeinterface as si
 
     >>> # Extract dense waveforms and save to disk with binary_folder format.
-    >>> sortres = si.start_sorting_result(sorting, recording, format="binary_folder", folder="/path/to_my/result")
+    >>> sorting_result = si.start_sorting_result(sorting, recording, format="binary_folder", folder="/path/to_my/result")
 
     >>> # Can be reload
-    >>> sortres = si.load_sorting_result(folder="/path/to_my/result")
+    >>> sorting_result = si.load_sorting_result(folder="/path/to_my/result")
 
     >>> # Can run extension
-    >>> sortres = si.compute("unit_locations", ...)
+    >>> sorting_result = si.compute("unit_locations", ...)
 
     >>> # Can be copy to another format (extensions are propagated)
-    >>> sortres2 = sortres.save_as(format="memory")
-    >>> sortres3 = sortres.save_as(format="zarr", folder="/path/to_my/result.zarr")
+    >>> sorting_result2 = sorting_result.save_as(format="memory")
+    >>> sorting_result3 = sorting_result.save_as(format="zarr", folder="/path/to_my/result.zarr")
 
     >>> # Can make a copy with a subset of units (extensions are propagated for the unit subset)
-    >>> sortres4 = sortres.select_units(unit_ids=sorting.units_ids[:5], format="memory")
-    >>> sortres5 = sortres.select_units(unit_ids=sorting.units_ids[:5], format="binary_folder", folder="/result_5units")
+    >>> sorting_result4 = sorting_result.select_units(unit_ids=sorting.units_ids[:5], format="memory")
+    >>> sorting_result5 = sorting_result.select_units(unit_ids=sorting.units_ids[:5], format="binary_folder", folder="/result_5units")
     """
 
     # handle sparsity
@@ -209,19 +209,19 @@ class SortingResult:
         check_probe_do_not_overlap(all_probes)
 
         if format == "memory":
-            sortres = cls.create_memory(sorting, recording, sparsity, rec_attributes=None)
+            sorting_result = cls.create_memory(sorting, recording, sparsity, rec_attributes=None)
         elif format == "binary_folder":
             cls.create_binary_folder(folder, sorting, recording, sparsity, rec_attributes=None)
-            sortres = cls.load_from_binary_folder(folder, recording=recording)
-            sortres.folder = folder
+            sorting_result = cls.load_from_binary_folder(folder, recording=recording)
+            sorting_result.folder = folder
         elif format == "zarr":
             cls.create_zarr(folder, sorting, recording, sparsity, rec_attributes=None)
-            sortres = cls.load_from_zarr(folder, recording=recording)
-            sortres.folder = folder
+            sorting_result = cls.load_from_zarr(folder, recording=recording)
+            sorting_result.folder = folder
         else:
             raise ValueError("SortingResult.create: wrong format")
 
-        return sortres
+        return sorting_result
 
     @classmethod
     def load(cls, folder, recording=None, load_extensions=True, format="auto"):
@@ -240,16 +240,16 @@ class SortingResult:
                 format = "binary_folder"
 
         if format == "binary_folder":
-            sortres = SortingResult.load_from_binary_folder(folder, recording=recording)
+            sorting_result = SortingResult.load_from_binary_folder(folder, recording=recording)
         elif format == "zarr":
-            sortres = SortingResult.load_from_zarr(folder, recording=recording)
+            sorting_result = SortingResult.load_from_zarr(folder, recording=recording)
 
-        sortres.folder = folder
+        sorting_result.folder = folder
 
         if load_extensions:
-            sortres.load_all_saved_extension()
+            sorting_result.load_all_saved_extension()
 
-        return sortres
+        return sorting_result
 
     @classmethod
     def create_memory(cls, sorting, recording, sparsity, rec_attributes):
@@ -265,10 +265,10 @@ class SortingResult:
 
         # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
         sorting_copy = SharedMemorySorting.from_sorting(sorting, with_metadata=True)
-        sortres = SortingResult(
+        sorting_result = SortingResult(
             sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes, format="memory", sparsity=sparsity
         )
-        return sortres
+        return sorting_result
 
     @classmethod
     def create_binary_folder(cls, folder, sorting, recording, sparsity, rec_attributes):
@@ -382,7 +382,7 @@ class SortingResult:
         else:
             random_spikes_indices = None
 
-        sortres = SortingResult(
+        sorting_result = SortingResult(
             sorting=sorting,
             recording=recording,
             rec_attributes=rec_attributes,
@@ -391,7 +391,7 @@ class SortingResult:
             random_spikes_indices=random_spikes_indices,
         )
 
-        return sortres
+        return sorting_result
 
     def _get_zarr_root(self, mode="r+"):
         import zarr
@@ -528,7 +528,7 @@ class SortingResult:
         else:
             random_spikes_indices = None
 
-        sortres = SortingResult(
+        sorting_result = SortingResult(
             sorting=sorting,
             recording=recording,
             rec_attributes=rec_attributes,
@@ -537,7 +537,7 @@ class SortingResult:
             random_spikes_indices=random_spikes_indices,
         )
 
-        return sortres
+        return sorting_result
 
     def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingResult":
         """
@@ -570,27 +570,27 @@ class SortingResult:
 
         if format == "memory":
             # This make a copy of actual SortingResult
-            new_sortres = SortingResult.create_memory(sorting_provenance, recording, sparsity, self.rec_attributes)
+            new_sorting_result = SortingResult.create_memory(sorting_provenance, recording, sparsity, self.rec_attributes)
 
         elif format == "binary_folder":
             # create  a new folder
             assert folder is not None, "For format='binary_folder' folder must be provided"
             SortingResult.create_binary_folder(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
-            new_sortres = SortingResult.load_from_binary_folder(folder, recording=recording)
-            new_sortres.folder = folder
+            new_sorting_result = SortingResult.load_from_binary_folder(folder, recording=recording)
+            new_sorting_result.folder = folder
 
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
             SortingResult.create_zarr(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
-            new_sortres = SortingResult.load_from_zarr(folder, recording=recording)
-            new_sortres.folder = folder
+            new_sorting_result = SortingResult.load_from_zarr(folder, recording=recording)
+            new_sorting_result.folder = folder
         else:
             raise ValueError("SortingResult.save: wrong format")
 
         # propagate random_spikes_indices is already done
         if self.random_spikes_indices is not None:
             if unit_ids is None:
-                new_sortres.random_spikes_indices = self.random_spikes_indices.copy()
+                new_sorting_result.random_spikes_indices = self.random_spikes_indices.copy()
             else:
                 # more tricky
                 spikes = self.sorting.to_spike_vector()
@@ -601,17 +601,17 @@ class SortingResult:
                 selected_mask = np.zeros(spikes.size, dtype=bool)
                 selected_mask[self.random_spikes_indices] = True
 
-                new_sortres.random_spikes_indices = np.flatnonzero(selected_mask[keep_spike_mask])
+                new_sorting_result.random_spikes_indices = np.flatnonzero(selected_mask[keep_spike_mask])
 
             # save it
-            new_sortres._save_random_spikes_indices()
+            new_sorting_result._save_random_spikes_indices()
 
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         for extension_name, extension in self.extensions.items():
-            new_ext = new_sortres.extensions[extension_name] = extension.copy(new_sortres, unit_ids=unit_ids)
+            new_ext = new_sorting_result.extensions[extension_name] = extension.copy(new_sorting_result, unit_ids=unit_ids)
 
-        return new_sortres
+        return new_sorting_result
 
     def save_as(self, format="memory", folder=None) -> "SortingResult":
         """
@@ -811,15 +811,18 @@ class SortingResult:
 
         Returns
         -------
-        sorting_result: SortingResult
-            The SortingResult object
+        result_extension: ResultExtension
+            Return the extension instance.
 
         Examples
         --------
 
-        >>> extension = sortres.compute("waveforms", **some_params)
-        >>> extension = sortres.compute_one_extension("waveforms", **some_params)
+        >>> Note that the return is the instance extension.
+        >>> extension = sorting_result.compute("waveforms", **some_params)
+        >>> extension = sorting_result.compute_one_extension("waveforms", **some_params)
         >>> wfs = extension.data["waveforms"]
+        >>> # Note this can be be done in the old way style BUT the return is not the same it return directly data
+        >>> wfs = compute_waveforms(sorting_result, **some_params)
 
         """
 
@@ -848,10 +851,7 @@ class SortingResult:
 
         self.extensions[extension_name] = extension_instance
 
-        # TODO : need discussion
         return extension_instance
-        # OR
-        return extension_instance.data
 
     def compute_several_extensions(self, extensions, save=True, **job_kwargs):
         """
@@ -873,8 +873,8 @@ class SortingResult:
         Examples
         --------
 
-        >>> sortres.compute({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std", ]} })
-        >>> sortres.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
+        >>> sorting_result.compute({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std", ]} })
+        >>> sorting_result.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
         # TODO this is a simple implementation

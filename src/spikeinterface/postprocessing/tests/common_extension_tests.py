@@ -54,9 +54,9 @@ def get_sorting_result(recording, sorting, format="memory", sparsity=None, name=
     if folder and folder.exists():
         shutil.rmtree(folder)
 
-    sortres = start_sorting_result(sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity)
+    sorting_result = start_sorting_result(sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity)
 
-    return sortres
+    return sorting_result
 
 
 class ResultExtensionCommonTestSuite:

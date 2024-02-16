@@ -59,7 +59,7 @@ class ComputeUnitLocations(ResultExtension):
     def __init__(self, sorting_result):
         ResultExtension.__init__(self, sorting_result)
 
-    def _set_params(self, method="center_of_mass", **method_kwargs):
+    def _set_params(self, method="monopolar_triangulation", **method_kwargs):
         params = dict(method=method, method_kwargs=method_kwargs)
         return params
 

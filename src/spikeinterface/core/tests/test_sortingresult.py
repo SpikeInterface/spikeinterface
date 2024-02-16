@@ -30,11 +30,11 @@ def get_dataset():
 
 def test_SortingResult_memory():
     recording, sorting = get_dataset()
-    sortres = start_sorting_result(sorting, recording, format="memory", sparse=False, sparsity=None)
-    _check_sorting_results(sortres, sorting)
+    sorting_result = start_sorting_result(sorting, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_results(sorting_result, sorting)
 
-    sortres = start_sorting_result(sorting, recording, format="memory", sparse=True, sparsity=None)
-    _check_sorting_results(sortres, sorting)
+    sorting_result = start_sorting_result(sorting, recording, format="memory", sparse=True, sparsity=None)
+    _check_sorting_results(sorting_result, sorting)
 
 
 def test_SortingResult_binary_folder():
@@ -44,11 +44,11 @@ def test_SortingResult_binary_folder():
     if folder.exists():
         shutil.rmtree(folder)
 
-    sortres = start_sorting_result(
+    sorting_result = start_sorting_result(
         sorting, recording, format="binary_folder", folder=folder, sparse=False, sparsity=None
     )
-    sortres = load_sorting_result(folder, format="auto")
-    _check_sorting_results(sortres, sorting)
+    sorting_result = load_sorting_result(folder, format="auto")
+    _check_sorting_results(sorting_result, sorting)
 
 
 def test_SortingResult_zarr():
@@ -58,46 +58,46 @@ def test_SortingResult_zarr():
     if folder.exists():
         shutil.rmtree(folder)
 
-    sortres = start_sorting_result(sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None)
-    sortres = load_sorting_result(folder, format="auto")
-    _check_sorting_results(sortres, sorting)
+    sorting_result = start_sorting_result(sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None)
+    sorting_result = load_sorting_result(folder, format="auto")
+    _check_sorting_results(sorting_result, sorting)
 
 
-def _check_sorting_results(sortres, original_sorting):
+def _check_sorting_results(sorting_result, original_sorting):
 
     print()
-    print(sortres)
+    print(sorting_result)
 
     register_result_extension(DummyResultExtension)
 
-    assert "channel_ids" in sortres.rec_attributes
-    assert "sampling_frequency" in sortres.rec_attributes
-    assert "num_samples" in sortres.rec_attributes
+    assert "channel_ids" in sorting_result.rec_attributes
+    assert "sampling_frequency" in sorting_result.rec_attributes
+    assert "num_samples" in sorting_result.rec_attributes
 
-    probe = sortres.get_probe()
-    sparsity = sortres.sparsity
+    probe = sorting_result.get_probe()
+    sparsity = sorting_result.sparsity
 
     # compute
-    sortres.compute("dummy", param1=5.5)
+    sorting_result.compute("dummy", param1=5.5)
     # equivalent
-    compute_dummy(sortres, param1=5.5)
-    ext = sortres.get_extension("dummy")
+    compute_dummy(sorting_result, param1=5.5)
+    ext = sorting_result.get_extension("dummy")
     assert ext is not None
     assert ext.params["param1"] == 5.5
-    print(sortres)
+    print(sorting_result)
     # recompute
-    sortres.compute("dummy", param1=5.5)
+    sorting_result.compute("dummy", param1=5.5)
     # and delete
-    sortres.delete_extension("dummy")
-    ext = sortres.get_extension("dummy")
+    sorting_result.delete_extension("dummy")
+    ext = sorting_result.get_extension("dummy")
     assert ext is None
 
-    assert sortres.has_recording()
+    assert sorting_result.has_recording()
 
-    if sortres.random_spikes_indices is None:
-        sortres.select_random_spikes(max_spikes_per_unit=10, seed=2205)
-        assert sortres.random_spikes_indices is not None
-        assert sortres.random_spikes_indices.size == 10 * sortres.sorting.unit_ids.size
+    if sorting_result.random_spikes_indices is None:
+        sorting_result.select_random_spikes(max_spikes_per_unit=10, seed=2205)
+        assert sorting_result.random_spikes_indices is not None
+        assert sorting_result.random_spikes_indices.size == 10 * sorting_result.sorting.unit_ids.size
 
     # save to several format
     for format in ("memory", "binary_folder", "zarr"):
@@ -112,13 +112,13 @@ def _check_sorting_results(sortres, original_sorting):
             folder = None
 
         # compute one extension to check the save
-        sortres.compute("dummy")
+        sorting_result.compute("dummy")
 
-        sortres2 = sortres.save_as(format=format, folder=folder)
-        ext = sortres2.get_extension("dummy")
+        sorting_result2 = sorting_result.save_as(format=format, folder=folder)
+        ext = sorting_result2.get_extension("dummy")
         assert ext is not None
 
-        data = sortres2.get_extension("dummy").data
+        data = sorting_result2.get_extension("dummy").data
         assert "result_one" in data
         assert data["result_two"].size == original_sorting.to_spike_vector().size
 
@@ -134,19 +134,19 @@ def _check_sorting_results(sortres, original_sorting):
         else:
             folder = None
         # compute one extension to check the slice
-        sortres.compute("dummy")
+        sorting_result.compute("dummy")
         keep_unit_ids = original_sorting.unit_ids[::2]
-        sortres2 = sortres.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
+        sorting_result2 = sorting_result.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
 
         # check that random_spikes_indices are remmaped
-        assert sortres2.random_spikes_indices is not None
-        some_spikes = sortres2.sorting.to_spike_vector()[sortres2.random_spikes_indices]
+        assert sorting_result2.random_spikes_indices is not None
+        some_spikes = sorting_result2.sorting.to_spike_vector()[sorting_result2.random_spikes_indices]
         assert np.array_equal(np.unique(some_spikes["unit_index"]), np.arange(keep_unit_ids.size))
 
         # check propagation of result data and correct sligin
-        assert np.array_equal(keep_unit_ids, sortres2.unit_ids)
-        data = sortres2.get_extension("dummy").data
-        assert data["result_one"] == sortres.get_extension("dummy").data["result_one"]
+        assert np.array_equal(keep_unit_ids, sorting_result2.unit_ids)
+        data = sorting_result2.get_extension("dummy").data
+        assert data["result_one"] == sorting_result.get_extension("dummy").data["result_one"]
         # unit 1, 3, ... should be removed
         assert np.all(~np.isin(data["result_two"], [1, 3]))
 
