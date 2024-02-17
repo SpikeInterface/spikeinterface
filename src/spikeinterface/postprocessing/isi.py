@@ -43,7 +43,7 @@ class ComputeISIHistograms(ResultExtension):
     def __init__(self, sorting_analyzer):
         ResultExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
+    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         return params
