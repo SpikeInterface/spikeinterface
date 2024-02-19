@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
 from spikeinterface.core.sorting_tools import spike_vector_to_indices
@@ -17,8 +17,8 @@ class ComputeSpikeLocations(ResultExtension):
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     ms_before : float, default: 0.5
         The left window, before a peak, in milliseconds
     ms_after : float, default: 0.5
@@ -58,11 +58,11 @@ class ComputeSpikeLocations(ResultExtension):
     nodepipeline_variables = ["spike_locations"]
     need_job_kwargs = True
 
-    def __init__(self, sorting_result):
-        ResultExtension.__init__(self, sorting_result)
+    def __init__(self, sorting_analyzer):
+        ResultExtension.__init__(self, sorting_analyzer)
 
-        extremum_channel_inds = get_template_extremum_channel(self.sorting_result, outputs="index")
-        self.spikes = self.sorting_result.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+        extremum_channel_inds = get_template_extremum_channel(self.sorting_analyzer, outputs="index")
+        self.spikes = self.sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
     def _set_params(
         self,
@@ -89,7 +89,7 @@ class ComputeSpikeLocations(ResultExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
-        old_unit_ids = self.sorting_result.unit_ids
+        old_unit_ids = self.sorting_analyzer.unit_ids
         unit_inds = np.flatnonzero(np.isin(old_unit_ids, unit_ids))
 
         spike_mask = np.isin(self.spikes["unit_index"], unit_inds)
@@ -99,11 +99,11 @@ class ComputeSpikeLocations(ResultExtension):
     def _get_pipeline_nodes(self):
         from spikeinterface.sortingcomponents.peak_localization import get_localization_pipeline_nodes
 
-        recording = self.sorting_result.recording
-        sorting = self.sorting_result.sorting
+        recording = self.sorting_analyzer.recording
+        sorting = self.sorting_analyzer.sorting
         peak_sign = self.params["spike_retriver_kwargs"]["peak_sign"]
         extremum_channels_indices = get_template_extremum_channel(
-            self.sorting_result, peak_sign=peak_sign, outputs="index"
+            self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
         )
 
         retriever = SpikeRetriever(
@@ -126,7 +126,7 @@ class ComputeSpikeLocations(ResultExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         spike_locations = run_node_pipeline(
-            self.sorting_result.recording,
+            self.sorting_analyzer.recording,
             nodes,
             job_kwargs=job_kwargs,
             job_name="spike_locations",
@@ -139,11 +139,11 @@ class ComputeSpikeLocations(ResultExtension):
         if outputs == "numpy":
             return all_spike_locations
         elif outputs == "by_unit":
-            unit_ids = self.sorting_result.unit_ids
-            spike_vector = self.sorting_result.sorting.to_spike_vector(concatenated=False)
+            unit_ids = self.sorting_analyzer.unit_ids
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
             spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
             spike_locations_by_units = {}
-            for segment_index in range(self.sorting_result.sorting.get_num_segments()):
+            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 spike_locations_by_units[segment_index] = {}
                 for unit_id in unit_ids:
                     inds = spike_indices[segment_index][unit_id]

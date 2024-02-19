@@ -8,7 +8,7 @@ import platform
 from pathlib import Path
 
 from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.core import start_sorting_result
+from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core import estimate_sparsity
 
 
@@ -43,7 +43,7 @@ def get_dataset():
     return recording, sorting
 
 
-def get_sorting_result(recording, sorting, format="memory", sparsity=None, name=""):
+def get_sorting_analyzer(recording, sorting, format="memory", sparsity=None, name=""):
     sparse = sparsity is not None
     if format == "memory":
         folder = None
@@ -54,9 +54,11 @@ def get_sorting_result(recording, sorting, format="memory", sparsity=None, name=
     if folder and folder.exists():
         shutil.rmtree(folder)
 
-    sortres = start_sorting_result(sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity)
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity
+    )
 
-    return sortres
+    return sorting_analyzer
 
 
 class ResultExtensionCommonTestSuite:
@@ -83,20 +85,20 @@ class ResultExtensionCommonTestSuite:
     def extension_name(self):
         return self.extension_class.extension_name
 
-    def _prepare_sorting_result(self, format, sparse):
-        # prepare a SortingResult object with depencies already computed
+    def _prepare_sorting_analyzer(self, format, sparse):
+        # prepare a SortingAnalyzer object with depencies already computed
         sparsity_ = self.sparsity if sparse else None
-        sorting_result = get_sorting_result(
+        sorting_analyzer = get_sorting_analyzer(
             self.recording, self.sorting, format=format, sparsity=sparsity_, name=self.extension_class.extension_name
         )
-        sorting_result.select_random_spikes(max_spikes_per_unit=50, seed=2205)
+        sorting_analyzer.select_random_spikes(max_spikes_per_unit=50, seed=2205)
         for dependency_name in self.extension_class.depend_on:
             if "|" in dependency_name:
                 dependency_name = dependency_name.split("|")[0]
-            sorting_result.compute(dependency_name)
-        return sorting_result
+            sorting_analyzer.compute(dependency_name)
+        return sorting_analyzer
 
-    def _check_one(self, sorting_result):
+    def _check_one(self, sorting_analyzer):
         if self.extension_class.need_job_kwargs:
             job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
         else:
@@ -104,16 +106,16 @@ class ResultExtensionCommonTestSuite:
 
         for params in self.extension_function_params_list:
             print("  params", params)
-            ext = sorting_result.compute(self.extension_name, **params, **job_kwargs)
+            ext = sorting_analyzer.compute(self.extension_name, **params, **job_kwargs)
             assert len(ext.data) > 0
             main_data = ext.get_data()
 
-        ext = sorting_result.get_extension(self.extension_name)
+        ext = sorting_analyzer.get_extension(self.extension_name)
         assert ext is not None
 
-        some_unit_ids = sorting_result.unit_ids[::2]
-        sliced = sorting_result.select_units(some_unit_ids, format="memory")
-        assert np.array_equal(sliced.unit_ids, sorting_result.unit_ids[::2])
+        some_unit_ids = sorting_analyzer.unit_ids[::2]
+        sliced = sorting_analyzer.select_units(some_unit_ids, format="memory")
+        assert np.array_equal(sliced.unit_ids, sorting_analyzer.unit_ids[::2])
         # print(sliced)
 
     def test_extension(self):
@@ -121,5 +123,5 @@ class ResultExtensionCommonTestSuite:
             for format in ("memory", "binary_folder", "zarr"):
                 print()
                 print("sparse", sparse, format)
-                sorting_result = self._prepare_sorting_result(format, sparse)
-                self._check_one(sorting_result)
+                sorting_analyzer = self._prepare_sorting_analyzer(format, sparse)
+                self._check_one(sorting_analyzer)

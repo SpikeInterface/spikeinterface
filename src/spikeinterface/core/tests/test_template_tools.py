@@ -1,6 +1,6 @@
 import pytest
 
-from spikeinterface.core import generate_ground_truth_recording, start_sorting_result
+from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
 
 
 from spikeinterface import Templates
@@ -12,7 +12,7 @@ from spikeinterface.core import (
 )
 
 
-def get_sorting_result():
+def get_sorting_analyzer():
     recording, sorting = generate_ground_truth_recording(
         durations=[10.0, 5.0],
         sampling_frequency=10_000.0,
@@ -25,52 +25,52 @@ def get_sorting_result():
     recording.set_channel_groups([0, 0, 1, 1])
     sorting.set_property("group", [0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
 
-    sorting_result = start_sorting_result(sorting, recording, format="memory", sparse=False)
-    sorting_result.select_random_spikes()
-    sorting_result.compute("fast_templates")
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("fast_templates")
 
-    return sorting_result
+    return sorting_analyzer
 
 
 @pytest.fixture(scope="module")
-def sorting_result():
-    return get_sorting_result()
+def sorting_analyzer():
+    return get_sorting_analyzer()
 
 
-def _get_templates_object_from_sorting_result(sorting_result):
-    ext = sorting_result.get_extension("fast_templates")
+def _get_templates_object_from_sorting_analyzer(sorting_analyzer):
+    ext = sorting_analyzer.get_extension("fast_templates")
     templates = Templates(
         templates_array=ext.data["average"],
-        sampling_frequency=sorting_result.sampling_frequency,
+        sampling_frequency=sorting_analyzer.sampling_frequency,
         nbefore=ext.nbefore,
         # this is dense
         sparsity_mask=None,
-        channel_ids=sorting_result.channel_ids,
-        unit_ids=sorting_result.unit_ids,
+        channel_ids=sorting_analyzer.channel_ids,
+        unit_ids=sorting_analyzer.unit_ids,
     )
     return templates
 
 
-def test_get_template_amplitudes(sorting_result):
-    peak_values = get_template_amplitudes(sorting_result)
+def test_get_template_amplitudes(sorting_analyzer):
+    peak_values = get_template_amplitudes(sorting_analyzer)
     print(peak_values)
-    templates = _get_templates_object_from_sorting_result(sorting_result)
+    templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
     peak_values = get_template_amplitudes(templates)
     print(peak_values)
 
 
-def test_get_template_extremum_channel(sorting_result):
-    extremum_channels_ids = get_template_extremum_channel(sorting_result, peak_sign="both")
+def test_get_template_extremum_channel(sorting_analyzer):
+    extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign="both")
     print(extremum_channels_ids)
-    templates = _get_templates_object_from_sorting_result(sorting_result)
+    templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
     extremum_channels_ids = get_template_extremum_channel(templates, peak_sign="both")
     print(extremum_channels_ids)
 
 
-def test_get_template_extremum_channel_peak_shift(sorting_result):
-    shifts = get_template_extremum_channel_peak_shift(sorting_result, peak_sign="neg")
+def test_get_template_extremum_channel_peak_shift(sorting_analyzer):
+    shifts = get_template_extremum_channel_peak_shift(sorting_analyzer, peak_sign="neg")
     print(shifts)
-    templates = _get_templates_object_from_sorting_result(sorting_result)
+    templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
     shifts = get_template_extremum_channel_peak_shift(templates, peak_sign="neg")
 
     # DEBUG
@@ -89,22 +89,22 @@ def test_get_template_extremum_channel_peak_shift(sorting_result):
     #     plt.show()
 
 
-def test_get_template_extremum_amplitude(sorting_result):
+def test_get_template_extremum_amplitude(sorting_analyzer):
 
-    extremum_channels_ids = get_template_extremum_amplitude(sorting_result, peak_sign="both")
+    extremum_channels_ids = get_template_extremum_amplitude(sorting_analyzer, peak_sign="both")
     print(extremum_channels_ids)
 
-    templates = _get_templates_object_from_sorting_result(sorting_result)
+    templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
     extremum_channels_ids = get_template_extremum_amplitude(templates, peak_sign="both")
 
 
 if __name__ == "__main__":
     # setup_module()
 
-    sorting_result = get_sorting_result()
-    print(sorting_result)
+    sorting_analyzer = get_sorting_analyzer()
+    print(sorting_analyzer)
 
-    test_get_template_amplitudes(sorting_result)
-    test_get_template_extremum_channel(sorting_result)
-    test_get_template_extremum_channel_peak_shift(sorting_result)
-    test_get_template_extremum_amplitude(sorting_result)
+    test_get_template_amplitudes(sorting_analyzer)
+    test_get_template_extremum_channel(sorting_analyzer)
+    test_get_template_extremum_channel_peak_shift(sorting_analyzer)
+    test_get_template_extremum_amplitude(sorting_analyzer)

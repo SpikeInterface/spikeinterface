@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
 
 try:
     import numba
@@ -17,8 +17,8 @@ class ComputeISIHistograms(ResultExtension):
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     window_ms : float, default: 50
         The window in ms
     bin_ms : float, default: 1
@@ -40,8 +40,8 @@ class ComputeISIHistograms(ResultExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def __init__(self, sorting_result):
-        ResultExtension.__init__(self, sorting_result)
+    def __init__(self, sorting_analyzer):
+        ResultExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -50,14 +50,14 @@ class ComputeISIHistograms(ResultExtension):
 
     def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
-        unit_indices = self.sorting_result.sorting.ids_to_indices(unit_ids)
+        unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_isi_hists = self.data["isi_histograms"][unit_indices, :]
         new_bins = self.data["bins"]
         new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
         return new_extension_data
 
     def _run(self):
-        isi_histograms, bins = _compute_isi_histograms(self.sorting_result.sorting, **self.params)
+        isi_histograms, bins = _compute_isi_histograms(self.sorting_analyzer.sorting, **self.params)
         self.data["isi_histograms"] = isi_histograms
         self.data["bins"] = bins
 

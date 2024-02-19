@@ -22,11 +22,11 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
     def test_mode_concatenated(self):
         # this is tested outside "extension_function_params_list" because it do not support sparsity!
 
-        sorting_result = self._prepare_sorting_result(format="memory", sparse=False)
+        sorting_analyzer = self._prepare_sorting_analyzer(format="memory", sparse=False)
 
         n_components = 3
-        sorting_result.compute("principal_components", mode="concatenated", n_components=n_components)
-        ext = sorting_result.get_extension("principal_components")
+        sorting_analyzer.compute("principal_components", mode="concatenated", n_components=n_components)
+        ext = sorting_analyzer.get_extension("principal_components")
         assert ext is not None
         assert len(ext.data) > 0
         pca = ext.data["pca_projection"]
@@ -37,14 +37,14 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
 
         for sparse in (False, True):
 
-            sorting_result = self._prepare_sorting_result(format="memory", sparse=sparse)
-            num_chans = sorting_result.get_num_channels()
+            sorting_analyzer = self._prepare_sorting_analyzer(format="memory", sparse=sparse)
+            num_chans = sorting_analyzer.get_num_channels()
             n_components = 2
 
-            sorting_result.compute("principal_components", mode="by_channel_global", n_components=n_components)
-            ext = sorting_result.get_extension("principal_components")
+            sorting_analyzer.compute("principal_components", mode="by_channel_global", n_components=n_components)
+            ext = sorting_analyzer.get_extension("principal_components")
 
-            for unit_id in sorting_result.unit_ids:
+            for unit_id in sorting_analyzer.unit_ids:
                 if not sparse:
                     one_proj = ext.get_projections_one_unit(unit_id, sparse=False)
                     assert one_proj.shape[1] == n_components
@@ -59,20 +59,20 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
                     assert one_proj.shape[2] < num_chans
                     assert one_proj.shape[2] == chan_inds.size
 
-            some_unit_ids = sorting_result.unit_ids[::2]
-            some_channel_ids = sorting_result.channel_ids[::2]
+            some_unit_ids = sorting_analyzer.unit_ids[::2]
+            some_channel_ids = sorting_analyzer.channel_ids[::2]
 
             # this should be all spikes all channels
             some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=None)
             assert some_projections.shape[0] == spike_unit_index.shape[0]
-            assert spike_unit_index.shape[0] == sorting_result.random_spikes_indices.size
+            assert spike_unit_index.shape[0] == sorting_analyzer.random_spikes_indices.size
             assert some_projections.shape[1] == n_components
             assert some_projections.shape[2] == num_chans
 
             # this should be some spikes all channels
             some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=some_unit_ids)
             assert some_projections.shape[0] == spike_unit_index.shape[0]
-            assert spike_unit_index.shape[0] < sorting_result.random_spikes_indices.size
+            assert spike_unit_index.shape[0] < sorting_analyzer.random_spikes_indices.size
             assert some_projections.shape[1] == n_components
             assert some_projections.shape[2] == num_chans
             assert 1 not in spike_unit_index
@@ -82,7 +82,7 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
                 channel_ids=some_channel_ids, unit_ids=some_unit_ids
             )
             assert some_projections.shape[0] == spike_unit_index.shape[0]
-            assert spike_unit_index.shape[0] < sorting_result.random_spikes_indices.size
+            assert spike_unit_index.shape[0] < sorting_analyzer.random_spikes_indices.size
             assert some_projections.shape[1] == n_components
             assert some_projections.shape[2] == some_channel_ids.size
             assert 1 not in spike_unit_index
@@ -90,13 +90,13 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
     def test_compute_for_all_spikes(self):
 
         for sparse in (True, False):
-            sorting_result = self._prepare_sorting_result(format="memory", sparse=sparse)
+            sorting_analyzer = self._prepare_sorting_analyzer(format="memory", sparse=sparse)
 
-            num_spikes = sorting_result.sorting.to_spike_vector().size
+            num_spikes = sorting_analyzer.sorting.to_spike_vector().size
 
             n_components = 3
-            sorting_result.compute("principal_components", mode="by_channel_local", n_components=n_components)
-            ext = sorting_result.get_extension("principal_components")
+            sorting_analyzer.compute("principal_components", mode="by_channel_local", n_components=n_components)
+            ext = sorting_analyzer.get_extension("principal_components")
 
             pc_file1 = cache_folder / "all_pc1.npy"
             ext.run_for_all_spikes(pc_file1, chunk_size=10000, n_jobs=1)
@@ -112,16 +112,16 @@ class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.
     def test_project_new(self):
         from sklearn.decomposition import IncrementalPCA
 
-        sorting_result = self._prepare_sorting_result(format="memory", sparse=False)
+        sorting_analyzer = self._prepare_sorting_analyzer(format="memory", sparse=False)
 
-        waveforms = sorting_result.get_extension("waveforms").data["waveforms"]
+        waveforms = sorting_analyzer.get_extension("waveforms").data["waveforms"]
 
         n_components = 3
-        sorting_result.compute("principal_components", mode="by_channel_local", n_components=n_components)
-        ext_pca = sorting_result.get_extension(self.extension_name)
+        sorting_analyzer.compute("principal_components", mode="by_channel_local", n_components=n_components)
+        ext_pca = sorting_analyzer.get_extension(self.extension_name)
 
         num_spike = 100
-        new_spikes = sorting_result.sorting.to_spike_vector()[:num_spike]
+        new_spikes = sorting_analyzer.sorting.to_spike_vector()[:num_spike]
         new_waveforms = np.random.randn(num_spike, waveforms.shape[1], waveforms.shape[2])
         new_proj = ext_pca.project_new(new_spikes, new_waveforms)
 
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     test.test_compute_for_all_spikes()
     test.test_project_new()
 
-    # ext = test.sorting_results["sparseTrue_memory"].get_extension("principal_components")
+    # ext = test.sorting_analyzers["sparseTrue_memory"].get_extension("principal_components")
     # pca = ext.data["pca_projection"]
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()

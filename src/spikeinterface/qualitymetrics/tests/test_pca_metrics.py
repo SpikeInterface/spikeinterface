@@ -8,7 +8,7 @@ from spikeinterface.core import (
     synthetize_spike_train_bad_isi,
     add_synchrony_to_sorting,
     generate_ground_truth_recording,
-    start_sorting_result,
+    create_sorting_analyzer,
 )
 
 # from spikeinterface.extractors.toy_example import toy_example
@@ -24,7 +24,7 @@ from spikeinterface.qualitymetrics import (
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
-def _sorting_result_simple():
+def _sorting_analyzer_simple():
     recording, sorting = generate_ground_truth_recording(
         durations=[
             50.0,
@@ -37,29 +37,29 @@ def _sorting_result_simple():
         seed=2205,
     )
 
-    sorting_result = start_sorting_result(sorting, recording, format="memory", sparse=True)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
 
-    sorting_result.select_random_spikes(max_spikes_per_unit=300, seed=2205)
-    sorting_result.compute("noise_levels")
-    sorting_result.compute("waveforms", **job_kwargs)
-    sorting_result.compute("templates", operators=["average", "std", "median"])
-    sorting_result.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
-    sorting_result.compute("spike_amplitudes", **job_kwargs)
+    sorting_analyzer.select_random_spikes(max_spikes_per_unit=300, seed=2205)
+    sorting_analyzer.compute("noise_levels")
+    sorting_analyzer.compute("waveforms", **job_kwargs)
+    sorting_analyzer.compute("templates", operators=["average", "std", "median"])
+    sorting_analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
+    sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
 
-    return sorting_result
+    return sorting_analyzer
 
 
 @pytest.fixture(scope="module")
-def sorting_result_simple():
-    return _sorting_result_simple()
+def sorting_analyzer_simple():
+    return _sorting_analyzer_simple()
 
 
-def test_calculate_pc_metrics(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    res1 = calculate_pc_metrics(sorting_result, n_jobs=1, progress_bar=True)
+def test_calculate_pc_metrics(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    res1 = calculate_pc_metrics(sorting_analyzer, n_jobs=1, progress_bar=True)
     res1 = pd.DataFrame(res1)
 
-    res2 = calculate_pc_metrics(sorting_result, n_jobs=2, progress_bar=True)
+    res2 = calculate_pc_metrics(sorting_analyzer, n_jobs=2, progress_bar=True)
     res2 = pd.DataFrame(res2)
 
     for k in res1.columns:
@@ -68,20 +68,20 @@ def test_calculate_pc_metrics(sorting_result_simple):
             assert np.array_equal(res1[k].values[mask], res2[k].values[mask])
 
 
-def test_nearest_neighbors_isolation(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    this_unit_id = sorting_result.unit_ids[0]
-    nearest_neighbors_isolation(sorting_result, this_unit_id)
+def test_nearest_neighbors_isolation(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    this_unit_id = sorting_analyzer.unit_ids[0]
+    nearest_neighbors_isolation(sorting_analyzer, this_unit_id)
 
 
-def test_nearest_neighbors_noise_overlap(sorting_result_simple):
-    sorting_result = sorting_result_simple
-    this_unit_id = sorting_result.unit_ids[0]
-    nearest_neighbors_noise_overlap(sorting_result, this_unit_id)
+def test_nearest_neighbors_noise_overlap(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    this_unit_id = sorting_analyzer.unit_ids[0]
+    nearest_neighbors_noise_overlap(sorting_analyzer, this_unit_id)
 
 
 if __name__ == "__main__":
-    sorting_result = _sorting_result_simple()
-    test_calculate_pc_metrics(sorting_result)
-    test_nearest_neighbors_isolation(sorting_result)
-    test_nearest_neighbors_noise_overlap(sorting_result)
+    sorting_analyzer = _sorting_analyzer_simple()
+    test_calculate_pc_metrics(sorting_analyzer)
+    test_nearest_neighbors_isolation(sorting_analyzer)
+    test_nearest_neighbors_noise_overlap(sorting_analyzer)

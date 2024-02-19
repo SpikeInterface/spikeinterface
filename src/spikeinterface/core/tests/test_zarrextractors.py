@@ -30,7 +30,7 @@ def test_ZarrSortingExtractor():
     sorting = ZarrSortingExtractor(folder)
     sorting = load_extractor(sorting.to_dict())
 
-    # store the sorting in a sub group (for instance SortingResult)
+    # store the sorting in a sub group (for instance SortingAnalyzer)
     folder = cache_folder / "zarr_sorting_sub_group"
     if folder.is_dir():
         shutil.rmtree(folder)

@@ -6,7 +6,7 @@ from warnings import warn
 from .base import BaseWidget, to_attr
 from .utils import get_some_colors
 
-from ..core import SortingResult
+from ..core import SortingAnalyzer
 
 
 class AllAmplitudesDistributionsWidget(BaseWidget):
@@ -15,33 +15,35 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        The SortingResult
+    sorting_analyzer: SortingAnalyzer
+        The SortingAnalyzer
     unit_ids: list
         List of unit ids, default None
     unit_colors: None or dict
         Dict of colors with key: unit, value: color, default None
     """
 
-    def __init__(self, sorting_result: SortingResult, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs):
+    def __init__(
+        self, sorting_analyzer: SortingAnalyzer, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
+    ):
 
-        sorting_result = self.ensure_sorting_result(sorting_result)
-        self.check_extensions(sorting_result, "spike_amplitudes")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "spike_amplitudes")
 
-        amplitudes = sorting_result.get_extension("spike_amplitudes").get_data()
+        amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
 
-        num_segments = sorting_result.get_num_segments()
+        num_segments = sorting_analyzer.get_num_segments()
 
         if unit_ids is None:
-            unit_ids = sorting_result.unit_ids
+            unit_ids = sorting_analyzer.unit_ids
 
         if unit_colors is None:
-            unit_colors = get_some_colors(sorting_result.unit_ids)
+            unit_colors = get_some_colors(sorting_analyzer.unit_ids)
 
         amplitudes_by_units = {}
-        spikes = sorting_result.sorting.to_spike_vector()
+        spikes = sorting_analyzer.sorting.to_spike_vector()
         for unit_id in unit_ids:
-            unit_index = sorting_result.sorting.id_to_index(unit_id)
+            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
             spike_mask = spikes["unit_index"] == unit_index
             amplitudes_by_units[unit_id] = amplitudes[spike_mask]
 

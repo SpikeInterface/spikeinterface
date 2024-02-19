@@ -143,9 +143,9 @@ from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
 
 from .template import Templates
 
-# SortingResult and ResultExtension
-from .sortingresult import SortingResult, ResultExtension, start_sorting_result, load_sorting_result
-from .result_core import (
+# SortingAnalyzer and ResultExtension
+from .sortinganalyzer import SortingAnalyzer, ResultExtension, create_sorting_analyzer, load_sorting_analyzer
+from .analyzer_extension_core import (
     ComputeWaveforms,
     compute_waveforms,
     ComputeTemplates,

@@ -7,7 +7,7 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kw
 
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
 
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 
@@ -21,12 +21,12 @@ from ..core.template_tools import _get_dense_templates_array, _get_nbefore
 
 class ComputeAmplitudeScalings(ResultExtension):
     """
-    Computes the amplitude scalings from a SortingResult.
+    Computes the amplitude scalings from a SortingAnalyzer.
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     sparsity: ChannelSparsity or None, default: None
         If waveforms are not sparse, sparsity is required if the number of channels is greater than
         `max_dense_channels`. If the waveform extractor is sparse, its sparsity is automatically used.
@@ -35,10 +35,10 @@ class ComputeAmplitudeScalings(ResultExtension):
         dense waveforms, set this to None, sparsity to None, and pass dense waveforms as input.
     ms_before : float or None, default: None
         The cut out to apply before the spike peak to extract local waveforms.
-        If None, the SortingResult ms_before is used.
+        If None, the SortingAnalyzer ms_before is used.
     ms_after : float or None, default: None
         The cut out to apply after the spike peak to extract local waveforms.
-        If None, the SortingResult ms_after is used.
+        If None, the SortingAnalyzer ms_after is used.
     handle_collisions: bool, default: True
         Whether to handle collisions between spikes. If True, the amplitude scaling of colliding spikes
         (defined as spikes within `delta_collision_ms` ms and with overlapping sparsity) is computed by fitting a
@@ -68,8 +68,8 @@ class ComputeAmplitudeScalings(ResultExtension):
     nodepipeline_variables = ["amplitude_scalings", "collision_mask"]
     need_job_kwargs = True
 
-    def __init__(self, sorting_result):
-        ResultExtension.__init__(self, sorting_result)
+    def __init__(self, sorting_analyzer):
+        ResultExtension.__init__(self, sorting_analyzer)
 
         self.collisions = None
 
@@ -93,9 +93,9 @@ class ComputeAmplitudeScalings(ResultExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
-        spikes = self.sorting_result.sorting.to_spike_vector()
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
         keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
@@ -106,19 +106,19 @@ class ComputeAmplitudeScalings(ResultExtension):
 
     def _get_pipeline_nodes(self):
 
-        recording = self.sorting_result.recording
-        sorting = self.sorting_result.sorting
+        recording = self.sorting_analyzer.recording
+        sorting = self.sorting_analyzer.sorting
 
-        # TODO return_scaled is not any more a property of SortingResult this is hard coded for now
+        # TODO return_scaled is not any more a property of SortingAnalyzer this is hard coded for now
         return_scaled = True
 
-        all_templates = _get_dense_templates_array(self.sorting_result, return_scaled=return_scaled)
-        nbefore = _get_nbefore(self.sorting_result)
+        all_templates = _get_dense_templates_array(self.sorting_analyzer, return_scaled=return_scaled)
+        nbefore = _get_nbefore(self.sorting_analyzer)
         nafter = all_templates.shape[1] - nbefore
 
         # if ms_before / ms_after are set in params then the original templates are shorten
         if self.params["ms_before"] is not None:
-            cut_out_before = int(self.params["ms_before"] * self.sorting_result.sampling_frequency / 1000.0)
+            cut_out_before = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
             assert (
                 cut_out_before <= nbefore
             ), f"`ms_before` must be smaller than `ms_before` used in ComputeTemplates: {nbefore}"
@@ -126,7 +126,7 @@ class ComputeAmplitudeScalings(ResultExtension):
             cut_out_before = nbefore
 
         if self.params["ms_after"] is not None:
-            cut_out_after = int(self.params["ms_after"] * self.sorting_result.sampling_frequency / 1000.0)
+            cut_out_after = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
             assert (
                 cut_out_after <= nafter
             ), f"`ms_after` must be smaller than `ms_after` used in WaveformExractor: {we._params['ms_after']}"
@@ -135,29 +135,29 @@ class ComputeAmplitudeScalings(ResultExtension):
 
         peak_sign = "neg" if np.abs(np.min(all_templates)) > np.max(all_templates) else "pos"
         extremum_channels_indices = get_template_extremum_channel(
-            self.sorting_result, peak_sign=peak_sign, outputs="index"
+            self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
         )
 
         # collisions
         handle_collisions = self.params["handle_collisions"]
         delta_collision_ms = self.params["delta_collision_ms"]
-        delta_collision_samples = int(delta_collision_ms / 1000 * self.sorting_result.sampling_frequency)
+        delta_collision_samples = int(delta_collision_ms / 1000 * self.sorting_analyzer.sampling_frequency)
 
-        if self.sorting_result.is_sparse() and self.params["sparsity"] is None:
-            sparsity = self.sorting_result.sparsity
-        elif self.sorting_result.is_sparse() and self.params["sparsity"] is not None:
+        if self.sorting_analyzer.is_sparse() and self.params["sparsity"] is None:
+            sparsity = self.sorting_analyzer.sparsity
+        elif self.sorting_analyzer.is_sparse() and self.params["sparsity"] is not None:
             sparsity = self.params["sparsity"]
             # assert provided sparsity is sparser than the one in the waveform extractor
-            waveform_sparsity = self.sorting_result.sparsity
+            waveform_sparsity = self.sorting_analyzer.sparsity
             assert np.all(
                 np.sum(waveform_sparsity.mask, 1) - np.sum(sparsity.mask, 1) > 0
             ), "The provided sparsity needs to be sparser than the one in the waveform extractor!"
-        elif not self.sorting_result.is_sparse() and self.params["sparsity"] is not None:
+        elif not self.sorting_analyzer.is_sparse() and self.params["sparsity"] is not None:
             sparsity = self.params["sparsity"]
         else:
             if self.params["max_dense_channels"] is not None:
                 assert recording.get_num_channels() <= self.params["max_dense_channels"], ""
-            sparsity = ChannelSparsity.create_dense(self.sorting_result)
+            sparsity = ChannelSparsity.create_dense(self.sorting_analyzer)
         sparsity_mask = sparsity.mask
 
         spike_retriever_node = SpikeRetriever(
@@ -188,7 +188,7 @@ class ComputeAmplitudeScalings(ResultExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amp_scalings, collision_mask = run_node_pipeline(
-            self.sorting_result.recording,
+            self.sorting_analyzer.recording,
             nodes,
             job_kwargs=job_kwargs,
             job_name="amplitude_scalings",
@@ -542,8 +542,8 @@ def fit_collision(
 
 #     Parameters
 #     ----------
-#     we : SortingResult
-#         The SortingResult object.
+#     we : SortingAnalyzer
+#         The SortingAnalyzer object.
 #     sparsity : ChannelSparsity, default=None
 #         The ChannelSparsity. If None, only main channels are plotted.
 #     num_collisions : int, default=None

@@ -7,7 +7,7 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
 
-from spikeinterface.core.sortingresult import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 from spikeinterface.core.sorting_tools import spike_vector_to_indices
 
@@ -22,8 +22,8 @@ class ComputeSpikeAmplitudes(ResultExtension):
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     ms_before : float, default: 0.5
         The left window, before a peak, in milliseconds
     ms_after : float, default: 0.5
@@ -63,8 +63,8 @@ class ComputeSpikeAmplitudes(ResultExtension):
     nodepipeline_variables = ["amplitudes"]
     need_job_kwargs = True
 
-    def __init__(self, sorting_result):
-        ResultExtension.__init__(self, sorting_result)
+    def __init__(self, sorting_analyzer):
+        ResultExtension.__init__(self, sorting_analyzer)
 
         self._all_spikes = None
 
@@ -73,9 +73,9 @@ class ComputeSpikeAmplitudes(ResultExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_result.unit_ids, unit_ids))
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
-        spikes = self.sorting_result.sorting.to_spike_vector()
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
         keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
@@ -85,16 +85,16 @@ class ComputeSpikeAmplitudes(ResultExtension):
 
     def _get_pipeline_nodes(self):
 
-        recording = self.sorting_result.recording
-        sorting = self.sorting_result.sorting
+        recording = self.sorting_analyzer.recording
+        sorting = self.sorting_analyzer.sorting
 
         peak_sign = self.params["peak_sign"]
         return_scaled = self.params["return_scaled"]
 
         extremum_channels_indices = get_template_extremum_channel(
-            self.sorting_result, peak_sign=peak_sign, outputs="index"
+            self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
         )
-        peak_shifts = get_template_extremum_channel_peak_shift(self.sorting_result, peak_sign=peak_sign)
+        peak_shifts = get_template_extremum_channel_peak_shift(self.sorting_analyzer, peak_sign=peak_sign)
 
         if return_scaled:
             # check if has scaled values:
@@ -119,7 +119,7 @@ class ComputeSpikeAmplitudes(ResultExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amps = run_node_pipeline(
-            self.sorting_result.recording,
+            self.sorting_analyzer.recording,
             nodes,
             job_kwargs=job_kwargs,
             job_name="spike_amplitudes",
@@ -132,11 +132,11 @@ class ComputeSpikeAmplitudes(ResultExtension):
         if outputs == "numpy":
             return all_amplitudes
         elif outputs == "by_unit":
-            unit_ids = self.sorting_result.unit_ids
-            spike_vector = self.sorting_result.sorting.to_spike_vector(concatenated=False)
+            unit_ids = self.sorting_analyzer.unit_ids
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
             spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
             amplitudes_by_units = {}
-            for segment_index in range(self.sorting_result.sorting.get_num_segments()):
+            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 amplitudes_by_units[segment_index] = {}
                 for unit_id in unit_ids:
                     inds = spike_indices[segment_index][unit_id]

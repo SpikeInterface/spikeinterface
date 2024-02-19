@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 import shutil
 
-from spikeinterface import start_sorting_result, get_template_extremum_channel, generate_ground_truth_recording
+from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
 
 
 # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -77,10 +77,10 @@ def test_run_node_pipeline():
     spikes = sorting.to_spike_vector()
 
     # create peaks from spikes
-    sorting_result = start_sorting_result(sorting, recording, format="memory")
-    sorting_result.select_random_spikes()
-    sorting_result.compute("fast_templates")
-    extremum_channel_inds = get_template_extremum_channel(sorting_result, peak_sign="neg", outputs="index")
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
+    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("fast_templates")
+    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
 
     peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
 

@@ -12,7 +12,7 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from ..core.sortingresult import register_result_extension, ResultExtension
+from ..core.sortinganalyzer import register_result_extension, ResultExtension
 from ..core import compute_sparsity
 from ..core.template_tools import get_template_extremum_channel, _get_nbefore, _get_dense_templates_array
 
@@ -33,8 +33,8 @@ class ComputeUnitLocations(ResultExtension):
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     method: "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The method to use for localization
     outputs: "numpy" | "by_unit", default: "numpy"
@@ -56,15 +56,15 @@ class ComputeUnitLocations(ResultExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def __init__(self, sorting_result):
-        ResultExtension.__init__(self, sorting_result)
+    def __init__(self, sorting_analyzer):
+        ResultExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, method="center_of_mass", **method_kwargs):
+    def _set_params(self, method="monopolar_triangulation", **method_kwargs):
         params = dict(method=method, method_kwargs=method_kwargs)
         return params
 
     def _select_extension_data(self, unit_ids):
-        unit_inds = self.sorting_result.sorting.ids_to_indices(unit_ids)
+        unit_inds = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_unit_location = self.data["unit_locations"][unit_inds]
         return dict(unit_locations=new_unit_location)
 
@@ -75,11 +75,11 @@ class ComputeUnitLocations(ResultExtension):
         assert method in possible_localization_methods
 
         if method == "center_of_mass":
-            unit_location = compute_center_of_mass(self.sorting_result, **method_kwargs)
+            unit_location = compute_center_of_mass(self.sorting_analyzer, **method_kwargs)
         elif method == "grid_convolution":
-            unit_location = compute_grid_convolution(self.sorting_result, **method_kwargs)
+            unit_location = compute_grid_convolution(self.sorting_analyzer, **method_kwargs)
         elif method == "monopolar_triangulation":
-            unit_location = compute_monopolar_triangulation(self.sorting_result, **method_kwargs)
+            unit_location = compute_monopolar_triangulation(self.sorting_analyzer, **method_kwargs)
         self.data["unit_locations"] = unit_location
 
     def get_data(self, outputs="numpy"):
@@ -87,7 +87,7 @@ class ComputeUnitLocations(ResultExtension):
             return self.data["unit_locations"]
         elif outputs == "by_unit":
             locations_by_unit = {}
-            for unit_ind, unit_id in enumerate(self.sorting_result.unit_ids):
+            for unit_ind, unit_id in enumerate(self.sorting_analyzer.unit_ids):
                 locations_by_unit[unit_id] = self.data["unit_locations"][unit_ind]
             return locations_by_unit
 
@@ -184,7 +184,7 @@ def estimate_distance_error_with_log(vec, wf_data, local_contact_locations, max_
 
 
 def compute_monopolar_triangulation(
-    sorting_result,
+    sorting_analyzer,
     optimizer="minimize_with_log_penality",
     radius_um=75,
     max_distance_um=1000,
@@ -211,8 +211,8 @@ def compute_monopolar_triangulation(
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     method: "least_square" | "minimize_with_log_penality", default: "least_square"
        The optimizer to use
     radius_um: float, default: 75
@@ -238,13 +238,13 @@ def compute_monopolar_triangulation(
     assert optimizer in ("least_square", "minimize_with_log_penality")
 
     assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
-    unit_ids = sorting_result.unit_ids
+    unit_ids = sorting_analyzer.unit_ids
 
-    contact_locations = sorting_result.get_channel_locations()
+    contact_locations = sorting_analyzer.get_channel_locations()
 
-    sparsity = compute_sparsity(sorting_result, method="radius", radius_um=radius_um)
-    templates = _get_dense_templates_array(sorting_result)
-    nbefore = _get_nbefore(sorting_result)
+    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=radius_um)
+    templates = _get_dense_templates_array(sorting_analyzer)
+    nbefore = _get_nbefore(sorting_analyzer)
 
     if enforce_decrease:
         neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
@@ -252,7 +252,7 @@ def compute_monopolar_triangulation(
             chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
             neighbours_mask[i, chan_inds] = True
         enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
-        best_channels = get_template_extremum_channel(sorting_result, outputs="index")
+        best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index")
 
     unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
@@ -281,14 +281,14 @@ def compute_monopolar_triangulation(
     return unit_location
 
 
-def compute_center_of_mass(sorting_result, peak_sign="neg", radius_um=75, feature="ptp"):
+def compute_center_of_mass(sorting_analyzer, peak_sign="neg", radius_um=75, feature="ptp"):
     """
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     radius_um: float
@@ -300,15 +300,15 @@ def compute_center_of_mass(sorting_result, peak_sign="neg", radius_um=75, featur
     -------
     unit_location: np.array
     """
-    unit_ids = sorting_result.unit_ids
+    unit_ids = sorting_analyzer.unit_ids
 
-    contact_locations = sorting_result.get_channel_locations()
+    contact_locations = sorting_analyzer.get_channel_locations()
 
     assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
 
-    sparsity = compute_sparsity(sorting_result, peak_sign=peak_sign, method="radius", radius_um=radius_um)
-    templates = _get_dense_templates_array(sorting_result)
-    nbefore = _get_nbefore(sorting_result)
+    sparsity = compute_sparsity(sorting_analyzer, peak_sign=peak_sign, method="radius", radius_um=radius_um)
+    templates = _get_dense_templates_array(sorting_analyzer)
+    nbefore = _get_nbefore(sorting_analyzer)
 
     unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
@@ -334,7 +334,7 @@ def compute_center_of_mass(sorting_result, peak_sign="neg", radius_um=75, featur
 
 
 def compute_grid_convolution(
-    sorting_result,
+    sorting_analyzer,
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
@@ -349,8 +349,8 @@ def compute_grid_convolution(
 
     Parameters
     ----------
-    sorting_result: SortingResult
-        A SortingResult object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     radius_um: float, default: 40.0
@@ -375,14 +375,14 @@ def compute_grid_convolution(
     unit_location: np.array
     """
 
-    contact_locations = sorting_result.get_channel_locations()
-    unit_ids = sorting_result.unit_ids
+    contact_locations = sorting_analyzer.get_channel_locations()
+    unit_ids = sorting_analyzer.unit_ids
 
-    templates = _get_dense_templates_array(sorting_result)
-    nbefore = _get_nbefore(sorting_result)
+    templates = _get_dense_templates_array(sorting_analyzer)
+    nbefore = _get_nbefore(sorting_analyzer)
     nafter = templates.shape[1] - nbefore
 
-    fs = sorting_result.sampling_frequency
+    fs = sorting_analyzer.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
 
@@ -398,7 +398,7 @@ def compute_grid_convolution(
         contact_locations, radius_um, upsampling_um, margin_um, weight_method
     )
 
-    peak_channels = get_template_extremum_channel(sorting_result, peak_sign, outputs="index")
+    peak_channels = get_template_extremum_channel(sorting_analyzer, peak_sign, outputs="index")
 
     weights_sparsity_mask = weights > 0
 
