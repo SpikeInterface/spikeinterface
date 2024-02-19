@@ -233,7 +233,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        margin = 2 * max(kwargs["nbefore"], kwargs["nafter"])
+        margin = 4 * max(kwargs["nbefore"], kwargs["nafter"])
         return margin
 
     @classmethod
