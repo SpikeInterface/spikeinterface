@@ -12,11 +12,7 @@ from spikeinterface.sortingcomponents.tests.common import make_dataset
 job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
 
 
-<<<<<<< HEAD
-def get_sorting_result():
-=======
 def get_sorting_analyzer():
->>>>>>> cb200dd85bc24f2abcd5d4b31aa715f0ad720c25
     recording, sorting = make_dataset()
     sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
     sorting_analyzer.select_random_spikes()
