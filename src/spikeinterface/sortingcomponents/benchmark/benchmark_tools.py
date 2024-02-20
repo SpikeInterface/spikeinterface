@@ -236,10 +236,10 @@ class Benchmark:
     """
     """
     @classmethod
-    def load_folder(cls):
+    def load_folder(cls, folder):
         raise NotImplementedError
 
-    def save_to_folder(self, folder):
+    def save_to_folder(self, folder, result):
         raise NotImplementedError
     
     def run(self):

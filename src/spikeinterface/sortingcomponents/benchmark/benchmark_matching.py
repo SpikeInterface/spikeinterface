@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from spikeinterface.core import extract_waveforms
 from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.postprocessing import compute_template_similarity
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
+from spikeinterface import load_extractor
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
     plot_agreement_matrix,
@@ -15,6 +15,7 @@ from spikeinterface.widgets import (
 
 import time
 import os
+import pickle
 from pathlib import Path
 import string, random
 import pylab as plt
@@ -24,16 +25,106 @@ import pandas as pd
 import shutil
 import copy
 from tqdm.auto import tqdm
+from .benchmark_tools import BenchmarkStudy, Benchmark
+from spikeinterface.core.basesorting import minimum_spike_dtype
 
 
-def running_in_notebook():
-    try:
-        shell = get_ipython().__class__.__name__
-        notebook_shells = {"ZMQInteractiveShell", "TerminalInteractiveShell"}
-        # if a shell is missing from this set just check get_ipython().__class__.__name__ and add it to the set
-        return shell in notebook_shells
-    except NameError:
-        return False
+class MatchingBenchmark(Benchmark):
+
+    def __init__(self, recording, gt_sorting, params):
+        self.recording = recording
+        self.gt_sorting = gt_sorting
+        self.method = params['method']
+        self.templates = params["method_kwargs"]['templates']
+        self.method_kwargs = params['method_kwargs']
+    
+    def run(self, **job_kwargs):
+        spikes = find_spikes_from_templates(
+            self.recording, 
+            method=self.method, 
+            method_kwargs=self.method_kwargs, 
+            **job_kwargs
+        )
+        unit_ids = self.templates.unit_ids
+        sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+        sorting["sample_index"] = spikes["sample_index"]
+        sorting["unit_index"] = spikes["cluster_index"]
+        sorting["segment_index"] = spikes["segment_index"]
+        sorting = NumpySorting(sorting, self.recording.sampling_frequency, unit_ids)
+        result = {'sorting' : sorting}
+
+        ## Add metrics
+        
+        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
+        result['gt_comparison'] = comp
+
+        ## To do add collisions
+        #comparison = CollisionGTComparison(gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt, **kwargs)
+        return result
+    
+    def save_to_folder(self, folder, result):
+        result['sorting'].save(folder = folder / "sorting", format="numpy_folder")
+
+        comparison_file = folder / "gt_comparison.pickle"
+        with open(comparison_file, mode="wb") as f:
+            pickle.dump(result['gt_comparison'], f)
+    
+    @classmethod
+    def load_folder(cls, folder):
+        result = {}
+        result['sorting'] = load_extractor(folder / "sorting")
+        with open(folder / "gt_comparison.pickle", "rb") as f:
+            result['gt_comparison'] = pickle.load(f)
+        return result
+
+class MatchingStudy(BenchmarkStudy):
+
+    benchmark_class = MatchingBenchmark
+
+    def _run(self, keys, **job_kwargs):
+        for key in keys:
+            
+            dataset_key = self.cases[key]["dataset"]
+            recording, gt_sorting = self.datasets[dataset_key]
+            params = self.cases[key]["params"]
+            benchmark = MatchingBenchmark(recording, gt_sorting, params)
+            result = benchmark.run()
+            self.results[key] = result
+            benchmark.save_to_folder(self.folder / "results" / self.key_to_str(key), result)
+
+
+    def plot_agreements(self, keys=None, figsize=(15,15)):
+        if keys is None:
+            keys = list(self.cases.keys())
+
+        fig, axs = plt.subplots(ncols=1, nrows=len(keys), figsize=figsize)
+
+        for count, key in enumerate(keys):
+            ax = axs[count]
+            ax.set_title(self.cases[key]['label'])
+            plot_agreement_matrix(self.results[key]['gt_comparison'], ax=ax)
+    
+    def plot_performances_vs_snr(self, keys=None, figsize=(15,15)):
+        if keys is None:
+            keys = list(self.cases.keys())
+
+        fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
+
+        for count, k in enumerate(("accuracy", "recall", "precision")):
+            
+            ax = axs[count]
+            for key in keys:
+                label = self.cases[key]["label"]
+                
+                analyzer = self.get_sorting_analyzer(key)
+                metrics = analyzer.get_extension('quality_metrics').get_data()
+                x = metrics["snr"].values
+
+                y = self.results[key]['gt_comparison'].get_performance()[k].values
+                
+                ax.scatter(x, y, marker=".", label=label)
+            if count == 2:
+                ax.legend()
 
 
 class BenchmarkMatching:

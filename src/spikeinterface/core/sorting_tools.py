@@ -140,7 +140,7 @@ def get_numba_vector_to_list_of_spiketrain():
 # TODO later : implement other method like "maximum_rate", "by_percent", ...
 def random_spikes_selection(
     sorting: BaseSorting,
-    num_samples: int,
+    num_samples: int | None = None,
     method: str = "uniform",
     max_spikes_per_unit: int = 500,
     margin_size: int | None = None,
@@ -189,6 +189,7 @@ def random_spikes_selection(
             raise ValueError(f"random_spikes_selection wrong method {method}, currently only 'uniform' can be used.")
 
         if margin_size is not None:
+            assert num_samples is not None
             margin_size = int(margin_size)
             keep = np.ones(selected_unit_indices.size, dtype=bool)
             # left margin
