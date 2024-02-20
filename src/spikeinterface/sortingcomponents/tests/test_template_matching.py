@@ -54,7 +54,6 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     method_kwargs_.update(method_kwargs_all)
     spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs_, **job_kwargs)
 
-
     # DEBUG = True
 
     # if DEBUG:
