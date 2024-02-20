@@ -299,9 +299,11 @@ class GroundTruthStudy:
             # the waveforms depend on the dataset key
             folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
-            sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binray_folder", folder=folder)
+            sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
             sorting_analyzer.select_random_spikes(**select_params)
-            sorting_analyzer.compute("fast_templates", **job_kwargs)
+            sorting_analyzer.compute("waveforms", **job_kwargs)
+            sorting_analyzer.compute("templates")
+            sorting_analyzer.compute("noise_levels")
 
     def get_waveform_extractor(self, case_key=None, dataset_key=None):
         if case_key is not None:
