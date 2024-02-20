@@ -211,8 +211,6 @@ class ComputePrincipalComponents(ResultExtension):
         unit_indices = sorting.ids_to_indices(unit_ids)
         selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
 
-        print(selected_inds.size, unit_indices, some_spikes["unit_index"].size)
-        print(np.min(selected_inds), np.max(selected_inds))
         spike_unit_indices = some_spikes["unit_index"][selected_inds]
 
         if sparsity is None:

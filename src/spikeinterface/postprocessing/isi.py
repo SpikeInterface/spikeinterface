@@ -43,7 +43,7 @@ class ComputeISIHistograms(ResultExtension):
     def __init__(self, sorting_analyzer):
         ResultExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
+    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         return params
@@ -103,7 +103,7 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     window_size = int(round(fs * window_ms * 1e-3))
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
-    bins = np.arange(0, window_size + bin_size, bin_size) * 1e3 / fs
+    bins = np.arange(0, window_size + bin_size, bin_size)# * 1e3 / fs
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
 
     # TODO: There might be a better way than a double for loop?
@@ -113,7 +113,7 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
             ISI = np.histogram(np.diff(spike_train), bins=bins)[0]
             ISIs[i] += ISI
 
-    return ISIs, bins
+    return ISIs, bins * 1e3 / fs
 
 
 def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
@@ -137,7 +137,7 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
 
-    bins = np.arange(0, window_size + bin_size, bin_size) * 1e3 / fs
+    bins = np.arange(0, window_size + bin_size, bin_size)# * 1e3 / fs
     spikes = sorting.to_spike_vector(concatenated=False)
 
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
@@ -153,13 +153,13 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
             bins,
         )
 
-    return ISIs, bins
+    return ISIs, bins * 1e3 / fs
 
 
 if HAVE_NUMBA:
 
     @numba.jit(
-        (numba.int64[:, ::1], numba.int64[::1], numba.int32[::1], numba.float64[::1]),
+        (numba.int64[:, ::1], numba.int64[::1], numba.int32[::1], numba.int64[::1]),            
         nopython=True,
         nogil=True,
         cache=True,
