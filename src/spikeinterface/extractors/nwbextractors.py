@@ -531,13 +531,17 @@ class NwbRecordingExtractor(BaseRecording):
         self.electrical_series_path = electrical_series_path
 
         if nwbfile is None:
-            if self.stream_mode is None:
-                self.backend = _get_backend_from_local_file(file_path)
-            else:
-                if self.stream_mode == "zarr":
-                    self.backend = "zarr"
+            if file is None:
+                if self.stream_mode is None:
+                    self.backend = _get_backend_from_local_file(file_path)
                 else:
-                    self.backend = "hdf5"
+                    if self.stream_mode == "zarr":
+                        self.backend = "zarr"
+                    else:
+                        self.backend = "hdf5"
+            else:
+                # if a file is used, we assume it's a HDF5 object
+                self.backend = "hdf5"
         else:
             from pynwb import NWBHDF5IO
 
