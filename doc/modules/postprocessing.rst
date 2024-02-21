@@ -86,7 +86,7 @@ For dense waveforms, sparsity can also be passed as an argument.
 
 .. code-block:: python
 
-    sorting_analyzer.compute(input="principal_components",
+    pc = sorting_analyzer.compute(input="principal_components",
                              n_components=3,
                              mode="by_channel_local")
 
@@ -103,7 +103,7 @@ and is not well suited for high-density probes.
 
 .. code-block:: python
 
-    sorting_analyzer.compute(input="template_similarity", method='cosine_similarity')
+    similarity = sorting_analyzer.compute(input="template_similarity", method='cosine_similarity')
 
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_template_similarity`
@@ -121,7 +121,7 @@ each spike.
 
 .. code-block:: python
 
-    sorting_analyzer.compute(input="spike_amplitudes",
+    amplitudes = sorting_analyzer.compute(input="spike_amplitudes",
                              peak_sign="neg",
                              outputs="concatenated")
 
@@ -141,7 +141,7 @@ with center of mass (:code:`method="center_of_mass"` - fast, but less accurate),
 
 .. code-block:: python
 
-    sorting_analyzer.compute(input="spike_locations",
+    spike_locations = sorting_analyzer.compute(input="spike_locations",
                              ms_before=0.5,
                              ms_after=0.5,
                              spike_retriever_kwargs=dict(
@@ -166,7 +166,7 @@ based on individual waveforms, it calculates at the unit level using templates. 
 
 .. code-block:: python
 
-    sorting_analyzer.compute(input="unit_locations", method="monopolar_triangulation")
+    unit_locations = sorting_analyzer.compute(input="unit_locations", method="monopolar_triangulation")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_unit_locations`
 
@@ -209,7 +209,7 @@ with shape (num_units, num_units, num_bins) with all correlograms for each pair 
 
 .. code-block:: python
 
-    sorting_analyer.compute(input="correlograms",
+    ccg = sorting_analyzer.compute(input="correlograms",
                             window_ms=50.0,
                             bin_ms=1.0,
                             method="auto")
@@ -226,7 +226,7 @@ This extension computes the histograms of inter-spike-intervals. The computed ou
 
 .. code-block:: python
 
-    sorting_analyer.compute(input="isi_histograms"
+   isi =  sorting_analyer.compute(input="isi_histograms"
                             window_ms=50.0,
                             bin_ms=1.0,
                             method="auto")

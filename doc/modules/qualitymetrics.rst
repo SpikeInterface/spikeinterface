@@ -51,16 +51,18 @@ This code snippet shows how to compute quality metrics (with or without principa
     sorting_analyzer = si.load_sorting_analyzer(folder='waveforms') # start from a sorting_analyzer
 
     # without PC (depends on "waveforms", "templates", and "noise_levels")
-    sorting_analyzer.compute(input="quality_metrics", metric_names=['snr'], skip_pc_metrics=False)
-    metrics = sorting_analyzer.get_extension(extension_name="quality_metrics")
+    qm_ext = sorting_analyzer.compute(input="quality_metrics", metric_names=['snr'], skip_pc_metrics=True)
+    metrics = qm_ext.get_data()
     assert 'snr' in metrics.columns
 
     # with PCs (depends on "pca" in addition to the above metrics)
 
-    sorting_analyzer.compute(input={"pca": dict(n_components=5, mode="by_channel_local"),
+    qm_ext = sorting_analyzer.compute(input={"pca": dict(n_components=5, mode="by_channel_local"),
                                     "quality_metrics": dict(skip_pc_metrics=False)})
+     metrics = qm_ext.get_data()
+     assert 'isolation_distance' in metrics.columns
 
-
+ 
 
 For more information about quality metrics, check out this excellent
 `documentation <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html>`_
