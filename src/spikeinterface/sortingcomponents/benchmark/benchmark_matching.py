@@ -111,6 +111,7 @@ class MatchingStudy(BenchmarkStudy):
                 x = metrics["snr"].values
                 y = self.get_result(key)['gt_comparison'].get_performance()[k].values
                 ax.scatter(x, y, marker=".", label=label)
+                ax.set_title(k)
 
             if count == 2:
                 ax.legend()

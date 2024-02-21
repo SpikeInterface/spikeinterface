@@ -31,15 +31,27 @@ from .benchmark_tools import BenchmarkStudy, Benchmark
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
+from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
 class ClusteringBenchmark(Benchmark):
 
-    def __init__(self, recording, gt_sorting, params, peaks):
+    def __init__(self, recording, gt_sorting, params, indices, exhaustive_gt=True):
         self.recording = recording
         self.gt_sorting = gt_sorting
-        self.peaks = peaks
+        self.indices = indices
+
+        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format='memory', sparse=False)
+        sorting_analyzer.select_random_spikes()
+        ext = sorting_analyzer.compute('fast_templates')
+        extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
+
+        peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+        if self.indices is None:
+            self.indices = np.arange(len(peaks))
+        self.peaks = peaks[self.indices]
         self.params = params
+        self.exhaustive_gt = exhaustive_gt
         self.method = params['method']
         self.method_kwargs = params['method_kwargs']
         self.result = {}
@@ -51,20 +63,45 @@ class ClusteringBenchmark(Benchmark):
         self.result['peak_labels'] = peak_labels
 
     def compute_result(self, **result_params):
-        pass
+        self.noise = self.result['peak_labels'] < 0
 
-    def save_run(self, folder):
-        np.save(folder / "peak_labels", self.result['peak_labels'])
+        spikes = self.gt_sorting.to_spike_vector()
+        self.result['sliced_gt_sorting'] = NumpySorting(spikes[self.indices], 
+                                              self.recording.sampling_frequency, 
+                                              self.gt_sorting.unit_ids)
 
-    def save_result(self, folder):
-        pass
+        data = spikes[self.indices][~self.noise]
+        data["unit_index"] = self.result['peak_labels'][~self.noise]
 
-    @classmethod
-    def load_folder(cls, folder):
-        result = {}
-        if (folder / "peak_labels.npy").exists():
-            result["peak_labels"] = np.load(folder / "peak_labels.npy")        
-        return result
+        self.result['clustering'] = NumpySorting.from_times_labels(data["sample_index"], 
+                                                         self.result['peak_labels'][~self.noise], 
+                                                         self.recording.sampling_frequency)
+        
+        self.result['gt_comparison'] = GroundTruthComparison(self.result['sliced_gt_sorting'], 
+                                                             self.result['clustering'], 
+                                                             exhaustive_gt=self.exhaustive_gt)
+
+        sorting_analyzer = create_sorting_analyzer(self.result['sliced_gt_sorting'], self.recording, format='memory', sparse=False)
+        sorting_analyzer.select_random_spikes()
+        ext = sorting_analyzer.compute('fast_templates')
+        self.result['sliced_gt_templates'] = ext.get_data(outputs="Templates")
+
+        sorting_analyzer = create_sorting_analyzer(self.result['clustering'], self.recording, format='memory', sparse=False)
+        sorting_analyzer.select_random_spikes()
+        ext = sorting_analyzer.compute('fast_templates')
+        self.result['clustering_templates'] = ext.get_data(outputs="Templates")
+
+    _run_key_saved = [
+        ("peak_labels", "npy")
+    ]
+
+    _result_key_saved = [
+        ("gt_comparison", "pickle"),
+        ("sliced_gt_sorting", "sorting"),
+        ("clustering", "sorting"),
+        ("sliced_gt_templates", "zarr_templates"),
+        ("clustering_templates", "zarr_templates")
+    ]
 
 
 class ClusteringStudy(BenchmarkStudy):
@@ -79,186 +116,133 @@ class ClusteringStudy(BenchmarkStudy):
         benchmark = ClusteringBenchmark(recording, gt_sorting, params, **init_kwargs)
         return benchmark
 
+    def homogeneity_score(self, ignore_noise=True, case_keys=None):
+        
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+        
+        for count, key in enumerate(case_keys):
+            result = self.get_result(key)
+            noise = result["peak_labels"] < 0
+            from sklearn.metrics import homogeneity_score
+            gt_labels = self.benchmarks[key].gt_sorting.to_spike_vector()["unit_index"]
+            gt_labels = gt_labels[self.benchmarks[key].indices]
+            found_labels = result['peak_labels']
+            if ignore_noise:
+                gt_labels = gt_labels[~noise]
+                found_labels = found_labels[~noise]
+            print(self.cases[key]['label'], homogeneity_score(gt_labels, found_labels), np.mean(noise))
 
-# class BenchmarkClustering:
-#     def __init__(self, recording, gt_sorting, method, exhaustive_gt=True, tmp_folder=None, job_kwargs={}, verbose=True):
-#         self.method = method
+    def plot_agreements(self, case_keys=None, figsize=(15,15)):
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
 
-#         self.waveforms = {}
-#         self.pcas = {}
-#         self.templates = {}
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
 
-#     def __del__(self):
-#         import shutil
+        for count, key in enumerate(case_keys):
+            ax = axs[count]
+            ax.set_title(self.cases[key]['label'])
+            plot_agreement_matrix(self.get_result(key)['gt_comparison'], ax=ax)
 
-#         shutil.rmtree(self.tmp_folder)
+    def plot_performances_vs_snr(self, case_keys=None, figsize=(15,15)):
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
 
-#     def set_peaks(self, peaks):
-#         self._peaks = peaks
+        fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
 
-#     def set_positions(self, positions):
-#         self._positions = positions
+        for count, k in enumerate(("accuracy", "recall", "precision")):
+            
+            ax = axs[count]
+            for key in case_keys:
+                label = self.cases[key]["label"]
+                
+                analyzer = self.get_sorting_analyzer(key)
+                metrics = analyzer.get_extension('quality_metrics').get_data()
+                x = metrics["snr"].values
+                y = self.get_result(key)['gt_comparison'].get_performance()[k].values
+                ax.scatter(x, y, marker=".", label=label)
+                ax.set_title(k)
 
-#     def set_gt_positions(self, gt_positions):
-#         self._gt_positions = gt_positions
+            if count == 2:
+                ax.legend()
+    
+    def plot_error_metrics(self, metric='cosine', case_keys=None, figsize=(15,5)):
 
-#     @property
-#     def peaks(self):
-#         if self._peaks is None:
-#             self.detect_peaks()
-#         return self._peaks
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
 
-#     @property
-#     def selected_peaks(self):
-#         if self._selected_peaks is None:
-#             self.select_peaks()
-#         return self._selected_peaks
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
 
-#     @property
-#     def positions(self):
-#         if self._positions is None:
-#             self.localize_peaks()
-#         return self._positions
+        for count, key in enumerate(case_keys):
 
-#     @property
-#     def gt_positions(self):
-#         if self._gt_positions is None:
-#             self.localize_gt_peaks()
-#         return self._gt_positions
+            result = self.get_result(key)
+            scores = result['gt_comparison'].get_ordered_agreement_scores()
 
-#     def detect_peaks(self, method_kwargs={"method": "locally_exclusive"}):
-#         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+            unit_ids1 = scores.index.values
+            unit_ids2 = scores.columns.values
+            inds_1 = result['gt_comparison'].sorting1.ids_to_indices(unit_ids1)
+            inds_2 = result['gt_comparison'].sorting2.ids_to_indices(unit_ids2)
+            t1 = result["sliced_gt_templates"].templates_array
+            t2 = result['clustering_templates'].templates_array
+            a = t1.reshape(len(t1), -1)[inds_1]
+            b = t2.reshape(len(t2), -1)[inds_2]
 
-#         if self.verbose:
-#             method = method_kwargs["method"]
-#             print(f"Detecting peaks with method {method}")
-#         self._peaks = detect_peaks(self.recording_f, **method_kwargs, **self.job_kwargs)
+            import sklearn
 
-#     def select_peaks(self, method_kwargs={"method": "uniform", "n_peaks": 100}):
-#         from spikeinterface.sortingcomponents.peak_selection import select_peaks
+            if metric == "cosine":
+                distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
+            else:
+                distances = sklearn.metrics.pairwise_distances(a, b, metric)
 
-#         if self.verbose:
-#             method = method_kwargs["method"]
-#             print(f"Selecting peaks with method {method}")
-#         self._selected_peaks = select_peaks(self.peaks, **method_kwargs, **self.job_kwargs)
-#         if self.verbose:
-#             ratio = len(self._selected_peaks) / len(self.peaks)
-#             print(f"The ratio of peaks kept for clustering is {ratio}%")
+            im = axs[count].imshow(distances, aspect="auto")
+            axs[count].set_title(metric)
+            fig.colorbar(im, ax=axs[count])
+            label = self.cases[key]["label"]
+            axs[count].set_title(label)
 
-#     def localize_peaks(self, method_kwargs={"method": "center_of_mass"}):
-#         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-#         if self.verbose:
-#             method = method_kwargs["method"]
-#             print(f"Localizing peaks with method {method}")
-#         self._positions = localize_peaks(self.recording_f, self.selected_peaks, **method_kwargs, **self.job_kwargs)
+    def plot_metrics_vs_snr(self, metric='cosine', case_keys=None, figsize=(15,5)):
 
-#     def localize_gt_peaks(self, method_kwargs={"method": "center_of_mass"}):
-#         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
 
-#         if self.verbose:
-#             method = method_kwargs["method"]
-#             print(f"Localizing gt peaks with method {method}")
-#         self._gt_positions = localize_peaks(self.recording_f, self.gt_peaks, **method_kwargs, **self.job_kwargs)
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
 
-#     def run(self, peaks=None, positions=None, method=None, method_kwargs={}, delta=0.2):
-#         t_start = time.time()
-#         if method is not None:
-#             self.method = method
-#         if peaks is not None:
-#             self._peaks = peaks
-#             self._selected_peaks = peaks
+        for count, key in enumerate(case_keys):
 
-#         nb_peaks = len(self.selected_peaks)
-#         if self.verbose:
-#             print(f"Launching the {self.method} clustering algorithm with {nb_peaks} peaks")
+            result = self.get_result(key)
+            scores = result['gt_comparison'].get_ordered_agreement_scores()
 
-#         if positions is not None:
-#             self._positions = positions
+            analyzer = self.get_sorting_analyzer(key)
+            metrics = analyzer.get_extension('quality_metrics').get_data()
+        
+            unit_ids1 = scores.index.values
+            unit_ids2 = scores.columns.values
+            inds_1 = result['gt_comparison'].sorting1.ids_to_indices(unit_ids1)
+            inds_2 = result['gt_comparison'].sorting2.ids_to_indices(unit_ids2)
+            t1 = result["sliced_gt_templates"].templates_array
+            t2 = result['clustering_templates'].templates_array
+            a = t1.reshape(len(t1), -1)
+            b = t2.reshape(len(t2), -1)
 
-#         labels, peak_labels = find_cluster_from_peaks(
-#             self.recording_f, self.selected_peaks, method=self.method, method_kwargs=method_kwargs, **self.job_kwargs
-#         )
-#         nb_clusters = len(labels)
-#         if self.verbose:
-#             print(f"{nb_clusters} clusters have been found")
-#         self.noise = peak_labels == -1
-#         self.run_time = time.time() - t_start
-#         self.selected_peaks_labels = peak_labels
-#         self.labels = labels
+            import sklearn
 
-#         self.clustering = NumpySorting.from_times_labels(
-#             self.selected_peaks["sample_index"][~self.noise],
-#             self.selected_peaks_labels[~self.noise],
-#             self.sampling_rate,
-#         )
-#         if self.verbose:
-#             print("Performing the comparison with (sliced) ground truth")
+            if metric == "cosine":
+                distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
+            else:
+                distances = sklearn.metrics.pairwise_distances(a, b, metric)
+            
+            snr = metrics["snr"][unit_ids1][inds_1[: len(inds_2)]]
+            to_plot = []
+            for found, real in zip(inds_2, inds_1):
+                to_plot += [distances[real, found]]
+            axs[count].plot(snr, to_plot, '.')
+            axs[count].set_xlabel('snr')
+            axs[count].set_ylabel(metric)
+            label = self.cases[key]["label"]
+            axs[count].set_title(label)
 
-#         spikes1 = self.gt_sorting.to_spike_vector(concatenated=False)[0]
-#         spikes2 = self.clustering.to_spike_vector(concatenated=False)[0]
 
-#         matches = make_matching_events(
-#             spikes1["sample_index"], spikes2["sample_index"], int(delta * self.sampling_rate / 1000)
-#         )
-
-#         self.matches = matches
-#         idx = matches["index1"]
-#         self.sliced_gt_sorting = NumpySorting(spikes1[idx], self.sampling_rate, self.gt_sorting.unit_ids)
-
-#         self.comp = GroundTruthComparison(self.sliced_gt_sorting, self.clustering, exhaustive_gt=self.exhaustive_gt)
-
-#         for label, sorting in zip(
-#             ["gt", "clustering", "full_gt"], [self.sliced_gt_sorting, self.clustering, self.gt_sorting]
-#         ):
-#             tmp_folder = os.path.join(self.tmp_folder, label)
-#             if os.path.exists(tmp_folder):
-#                 import shutil
-
-#                 shutil.rmtree(tmp_folder)
-
-#             if not (label == "full_gt" and label in self.waveforms):
-#                 if self.verbose:
-#                     print(f"Extracting waveforms for {label}")
-
-#                 self.waveforms[label] = extract_waveforms(
-#                     self.recording_f,
-#                     sorting,
-#                     tmp_folder,
-#                     load_if_exists=True,
-#                     ms_before=2.5,
-#                     ms_after=3.5,
-#                     max_spikes_per_unit=500,
-#                     return_scaled=False,
-#                     **self.job_kwargs,
-#                 )
-
-#                 # self.pcas[label] = compute_principal_components(self.waveforms[label], load_if_exists=True,
-#                 #                     n_components=5, mode='by_channel_local',
-#                 #                     whiten=True, dtype='float32')
-
-#                 self.templates[label] = self.waveforms[label].get_all_templates(mode="median")
-
-#         if self.gt_peaks is None:
-#             if self.verbose:
-#                 print("Computing gt peaks")
-#             gt_peaks_ = self.gt_sorting.to_spike_vector()
-#             self.gt_peaks = np.zeros(
-#                 gt_peaks_.size, dtype=[("sample_index", "<i8"), ("channel_index", "<i8"), ("segment_index", "<i8")]
-#             )
-#             self.gt_peaks["sample_index"] = gt_peaks_["sample_index"]
-#             self.gt_peaks["segment_index"] = gt_peaks_["segment_index"]
-#             max_channels = get_template_extremum_channel(self.waveforms["full_gt"], peak_sign="neg", outputs="index")
-
-#             for unit_ind, unit_id in enumerate(self.waveforms["full_gt"].sorting.unit_ids):
-#                 mask = gt_peaks_["unit_index"] == unit_ind
-#                 max_channel = max_channels[unit_id]
-#                 self.gt_peaks["channel_index"][mask] = max_channel
-
-#         self.sliced_gt_peaks = self.gt_peaks[idx]
-#         self.sliced_gt_positions = self.gt_positions[idx]
-#         self.sliced_gt_labels = self.sliced_gt_sorting.to_spike_vector()["unit_index"]
-#         self.gt_labels = self.gt_sorting.to_spike_vector()["unit_index"]
 
 #     def _scatter_clusters(
 #         self,
