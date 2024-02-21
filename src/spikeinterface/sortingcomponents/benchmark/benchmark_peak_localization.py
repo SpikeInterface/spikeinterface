@@ -35,16 +35,22 @@ class PeakLocalizationBenchmark(Benchmark):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.gt_positions = gt_positions
-        self.method = params['method']
-        self.method_kwargs = params['method_kwargs']
+        self.params = params
         self.result = {}
+        self.templates_params = {}
+        for key in ["ms_before", "ms_after"]:
+            if key in self.params:
+                self.templates_params[key] = self.params[key]
+            else:
+                self.templates_params[key] = 2
+                self.params[key] = 2
 
     def run(self, **job_kwargs):
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format='memory', sparse=False)
         sorting_analyzer.select_random_spikes()
-        ext = sorting_analyzer.compute('fast_templates')
+        ext = sorting_analyzer.compute('fast_templates', **self.templates_params)
         templates = ext.get_data(outputs='Templates')
-        ext = sorting_analyzer.compute("spike_locations", method=self.method, **self.method_kwargs)
+        ext = sorting_analyzer.compute("spike_locations", **self.params)
         spikes_locations = ext.get_data(outputs="by_unit")
         self.result = {'spikes_locations' : spikes_locations}
         self.result['templates'] = templates
@@ -124,7 +130,11 @@ class PeakLocalizationStudy(BenchmarkStudy):
             snrs = metrics["snr"].values
             result = self.get_result(key)
             norms = np.linalg.norm(result['templates'].templates_array, axis=(1, 2))
-            distances_to_center = np.linalg.norm(self.benchmarks[key].gt_positions[:, :2], axis=1)
+
+            coordinates = self.benchmarks[key].gt_positions[:, :2].copy()   
+            coordinates[:, 0] -= coordinates[:, 0].mean()
+            coordinates[:, 1] -= coordinates[:, 1].mean()
+            distances_to_center = np.linalg.norm(coordinates, axis=1)
             zdx = np.argsort(distances_to_center)
             idx = np.argsort(norms)
 
@@ -142,9 +152,6 @@ class PeakLocalizationStudy(BenchmarkStudy):
             axs[0].fill_between(snrs[wdx], ymin, ymax, alpha=0.5)
             axs[0].set_xlabel("snr")
             axs[0].set_ylabel("error (um)")
-            # ymin, ymax = ax.get_ylim()
-            # ax.set_ylim(0, ymax)
-            # ax.set_yscale('log')
 
             axs[1].plot(
                 distances_to_center[zdx],
@@ -180,6 +187,7 @@ class PeakLocalizationStudy(BenchmarkStudy):
         axs[2].set_xlabel("error medians (um)")
         ymin, ymax = axs[2].get_ylim()
         axs[2].set_ylim(0, 12)
+        axs[1].legend()
 
 
 
@@ -192,15 +200,18 @@ class UnitLocalizationBenchmark(Benchmark):
         self.method = params['method']
         self.method_kwargs = params['method_kwargs']
         self.result = {}
-
-    def run(self, **job_kwargs):
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format='memory', sparse=False)
-        sorting_analyzer.select_random_spikes()
-        params = {}
+        self.waveforms_params = {}
         for key in ["ms_before", "ms_after"]:
             if key in self.method_kwargs:
-                params[key] = self.method_kwargs[key]
-        sorting_analyzer.compute('waveforms', **params, **job_kwargs)
+                self.waveforms_params[key] = self.method_kwargs.pop(key)
+            else:
+                self.waveforms_params[key] = 2
+
+    def run(self, **job_kwargs):
+        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format='memory')
+        sorting_analyzer.select_random_spikes()
+        
+        sorting_analyzer.compute('waveforms', **self.waveforms_params, **job_kwargs)
         ext = sorting_analyzer.compute('templates')
         templates = ext.get_data(outputs='Templates')
 
@@ -218,7 +229,7 @@ class UnitLocalizationBenchmark(Benchmark):
         self.result['templates'] = templates
 
     def compute_result(self, **result_params):
-        errors = np.linalg.norm(self.gt_positions - self.result['unit_locations'], axis=1)
+        errors = np.linalg.norm(self.gt_positions[:, :2] - self.result['unit_locations'][:, :2], axis=1)
         self.result['errors'] = errors
 
     def save_run(self, folder):
@@ -251,7 +262,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
         return benchmark
 
     def plot_template_errors(self, case_keys=None):
-        
+
         if case_keys is None:
             case_keys = list(self.cases.keys())
         fig, axs = plt.subplots(ncols=1, nrows=1, figsize=(15, 5))
@@ -271,132 +282,49 @@ class UnitLocalizationStudy(BenchmarkStudy):
         axs.legend()
 
 
-# def plot_comparison_positions(benchmarks, mode="average"):
-#     norms = np.linalg.norm(benchmarks[0].waveforms.get_all_templates(mode=mode), axis=(1, 2))
-#     distances_to_center = np.linalg.norm(benchmarks[0].gt_positions[:, :2], axis=1)
-#     zdx = np.argsort(distances_to_center)
-#     idx = np.argsort(norms)
+    def plot_comparison_positions(self, case_keys=None, smoothing_factor=5):
 
-#     snrs_tmp = compute_snrs(benchmarks[0].waveforms)
-#     snrs = np.zeros(len(snrs_tmp))
-#     for k, v in snrs_tmp.items():
-#         snrs[int(k[1:])] = v
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
 
-#     wdx = np.argsort(snrs)
+        fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
-#     plt.rc("font", size=13)
-#     plt.rc("xtick", labelsize=12)
-#     plt.rc("ytick", labelsize=12)
+        for count, key in enumerate(case_keys):
+            analyzer = self.get_sorting_analyzer(key)
+            metrics = analyzer.get_extension('quality_metrics').get_data()
+            snrs = metrics["snr"].values
+            result = self.get_result(key)
+            norms = np.linalg.norm(result['templates'].templates_array, axis=(1, 2))
 
-#     fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
-#     ax = axs[0, 0]
-#     ax.spines["top"].set_visible(False)
-#     ax.spines["right"].set_visible(False)
-#     # ax.set_title(title)
+            coordinates = self.benchmarks[key].gt_positions[:, :2].copy()   
+            coordinates[:, 0] -= coordinates[:, 0].mean()
+            coordinates[:, 1] -= coordinates[:, 1].mean()
+            distances_to_center = np.linalg.norm(coordinates, axis=1)
+            zdx = np.argsort(distances_to_center)
+            idx = np.argsort(norms)
 
-#     from scipy.signal import savgol_filter
+            from scipy.signal import savgol_filter
+            wdx = np.argsort(snrs)
 
-#     smoothing_factor = 31
+            data = result["errors"]
 
-#     for bench in benchmarks:
-#         errors = np.linalg.norm(bench.template_positions[:, :2] - bench.gt_positions[:, :2], axis=1)
-#         ax.plot(snrs[wdx], savgol_filter(errors[wdx], smoothing_factor, 3), label=bench.title)
+            axs[0].plot(
+                snrs[wdx], savgol_filter(data[wdx], smoothing_factor, 3), lw=2, label=self.cases[key]['label']
+            )
+            
+            axs[0].set_xlabel("snr")
+            axs[0].set_ylabel("error (um)")
 
-#     ax.legend()
-#     # ax.set_xlabel('norm')
-#     ax.set_ylabel("error (um)")
-#     ymin, ymax = ax.get_ylim()
-#     ax.set_ylim(0, ymax)
+            axs[1].plot(
+                distances_to_center[zdx],
+                savgol_filter(data[zdx], smoothing_factor, 3),
+                lw=2,
+                label=self.cases[key]['label'],
+            )
 
-#     ax = axs[0, 1]
-#     ax.spines["top"].set_visible(False)
-#     ax.spines["right"].set_visible(False)
-
-#     for bench in benchmarks:
-#         errors = np.linalg.norm(bench.template_positions[:, :2] - bench.gt_positions[:, :2], axis=1)
-#         ax.plot(distances_to_center[zdx], savgol_filter(errors[zdx], smoothing_factor, 3), label=bench.title)
-
-#     # ax.set_xlabel('distance to center (um)')
-#     # ax.set_yticks([])
-
-#     ax = axs[0, 2]
-#     ax.spines["top"].set_visible(False)
-#     ax.spines["right"].set_visible(False)
-#     # ax.set_title(title)
-
-#     for count, bench in enumerate(benchmarks):
-#         errors = np.linalg.norm(bench.template_positions[:, :2] - bench.gt_positions[:, :2], axis=1)
-#         ax.bar([count], np.mean(errors), yerr=np.std(errors))
-
-#     # ax.set_xlabel('norms')
-#     # ax.set_yticks([])
-#     # ax.set_ylim(ymin, ymax)
-
-#     ax = axs[1, 0]
-#     ax.spines["top"].set_visible(False)
-#     ax.spines["right"].set_visible(False)
-
-#     for bench in benchmarks:
-#         ax.plot(
-#             snrs[wdx], savgol_filter(bench.medians_over_templates[wdx], smoothing_factor, 3), lw=2, label=bench.title
-#         )
-#         ymin = savgol_filter((bench.medians_over_templates - bench.mads_over_templates)[wdx], smoothing_factor, 3)
-#         ymax = savgol_filter((bench.medians_over_templates + bench.mads_over_templates)[wdx], smoothing_factor, 3)
-
-#         ax.fill_between(snrs[wdx], ymin, ymax, alpha=0.5)
-
-#     ax.set_xlabel("snr")
-#     ax.set_ylabel("error (um)")
-#     # ymin, ymax = ax.get_ylim()
-#     # ax.set_ylim(0, ymax)
-#     # ax.set_yscale('log')
-
-#     ax = axs[1, 1]
-#     ax.spines["top"].set_visible(False)
-#     ax.spines["right"].set_visible(False)
-
-#     for bench in benchmarks:
-#         ax.plot(
-#             distances_to_center[zdx],
-#             savgol_filter(bench.medians_over_templates[zdx], smoothing_factor, 3),
-#             lw=2,
-#             label=bench.title,
-#         )
-#         ymin = savgol_filter((bench.medians_over_templates - bench.mads_over_templates)[zdx], smoothing_factor, 3)
-#         ymax = savgol_filter((bench.medians_over_templates + bench.mads_over_templates)[zdx], smoothing_factor, 3)
-
-#         ax.fill_between(distances_to_center[zdx], ymin, ymax, alpha=0.5)
-
-#     ax.set_xlabel("distance to center (um)")
-
-#     x_means = []
-#     x_stds = []
-#     for count, bench in enumerate(benchmarks):
-#         x_means += [np.median(bench.medians_over_templates)]
-#         x_stds += [np.std(bench.medians_over_templates)]
-
-#     # ax.set_yticks([])
-#     # ax.set_ylim(ymin, ymax)
-
-#     ax = axs[1, 2]
-#     ax.spines["top"].set_visible(False)
-#     ax.spines["right"].set_visible(False)
-
-#     y_means = []
-#     y_stds = []
-#     for count, bench in enumerate(benchmarks):
-#         y_means += [np.median(bench.mads_over_templates)]
-#         y_stds += [np.std(bench.mads_over_templates)]
-
-#     colors = [f"C{i}" for i in range(len(x_means))]
-#     ax.errorbar(x_means, y_means, xerr=x_stds, yerr=y_stds, fmt=".", c="0.5", alpha=0.5)
-#     ax.scatter(x_means, y_means, c=colors, s=200)
-
-#     ax.set_ylabel("error mads (um)")
-#     ax.set_xlabel("error medians (um)")
-#     # ax.set_yticks([]
-#     ymin, ymax = ax.get_ylim()
-#     ax.set_ylim(0, 12)
+            axs[1].legend()
+            axs[1].set_xlabel("distance to center (um)")
+            axs[2].bar([count], np.mean(data), yerr=np.std(data))
 
 
 # def plot_comparison_inferences(benchmarks, bin_size=np.arange(0.1, 20, 1)):
