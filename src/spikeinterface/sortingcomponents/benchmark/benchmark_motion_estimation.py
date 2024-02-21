@@ -1,31 +1,33 @@
 from __future__ import annotations
 
 import json
-import numpy as np
 import time
 from pathlib import Path
-
 import pickle
 
+import numpy as np
+import scipy.interpolate
+
 from spikeinterface.core import get_noise_levels
-from spikeinterface.extractors import read_mearec
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
-from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference
-
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
 
 
+import matplotlib.pyplot as plt
 from spikeinterface.widgets import plot_probe_map
 
-import scipy.interpolate
+# import MEArec as mr
 
-import matplotlib.pyplot as plt
+# TODO : plot_peaks
+# TODO : plot_motion_corrected_peaks
+# TODO : plot_error_map_several_benchmarks
+# TODO : plot_speed_several_benchmarks
+# TODO : read from mearec
 
-import MEArec as mr
+
 
 
 class MotionEstimationBenchmark(Benchmark):
@@ -79,40 +81,10 @@ class MotionEstimationBenchmark(Benchmark):
         self.result["temporal_bins"] = temporal_bins
         self.result["spatial_bins"] = spatial_bins
 
-
-        # self.compute_gt_motion()
-
-        # align globally gt_motion and motion to avoid offsets
-        # self.motion += np.median(self.gt_motion - self.motion)
-
-
-
-
-        # self.result = {'sorting' : sorting}
-        # self.result['templates'] = self.templates
-
     def compute_result(self, **result_params):
         raw_motion = self.result["raw_motion"]
         temporal_bins = self.result["temporal_bins"]
         spatial_bins = self.result["spatial_bins"]
-
-        # interpolation units to gt_motion
-        num_units = self.unit_locations.shape[0]
-
-        print(self.unit_locations.shape)
-        # self.unit_displacements = unit_displacements
-        # self.displacement_sampling_frequency = displacement_sampling_frequency
-
-
-        # self.gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filename, time_vector=self.temporal_bins)
-
-        # template_locations = np.array(mr.load_recordings(self.mearec_filename).template_locations)
-        # assert len(template_locations.shape) == 3
-        # mid = template_locations.shape[1] // 2
-        # unit_mid_positions = template_locations[:, mid, 2]
-
-        # unit_motions = self.gt_unit_positions - unit_mid_positions
-        # # unit_positions = np.mean(self.gt_unit_positions, axis=0)
 
         # time interpolatation of unit displacements
         times = np.arange(self.unit_displacements.shape[0]) / self.displacement_sampling_frequency
@@ -124,11 +96,11 @@ class MotionEstimationBenchmark(Benchmark):
             # rigid
             gt_motion = np.mean(unit_displacements, axis=1)[:, None]
         else:
+            # non rigid
             gt_motion = np.zeros_like(raw_motion)
             for t in range(temporal_bins.shape[0]):
                 f = scipy.interpolate.interp1d(self.unit_locations[:, self.direction_dim], unit_displacements[t, :], fill_value="extrapolate")
                 gt_motion[t, :] = f(spatial_bins)
-        # print("gt_motion", gt_motion.shape, raw_motion.shape)
 
         # align globally gt_motion and motion to avoid offsets
         motion = raw_motion.copy()
@@ -136,36 +108,19 @@ class MotionEstimationBenchmark(Benchmark):
         self.result["gt_motion"] = gt_motion
         self.result["motion"] = motion
 
-    def save_run(self, folder):
-        for k in ("raw_motion", "temporal_bins", "spatial_bins"):
-            np.save(folder / f"{k}.npy", self.result[k])
-        
-        for k in ('step_run_times', ):
-            with open(folder  / f"{k}.pickle", mode="wb") as f:
-                pickle.dump(self.result[k], f)
-    
-    def save_result(self, folder):
-        for k in ("gt_motion", "motion"):
-            np.save(folder / f"{k}.npy", self.result[k])
 
-    @classmethod
-    def load_folder(cls, folder):
-        result = {}
-        # run
-        for k in ("raw_motion", "temporal_bins", "spatial_bins"):
-            result[k] = np.load(folder / f"{k}.npy")
-        
-        for k in ('step_run_times', ):
-            with open(folder / f"{k}.pickle", "rb") as f:
-                result[k] = pickle.load(f)
-        
-        # result
-        for k in ("gt_motion", "motion"):
-            file = folder / f"{k}.npy"
-            if file.exists():
-                result[k] = np.load(file)
+    _run_key_saved = [
+        ("raw_motion", "npy"),
+        ("temporal_bins", "npy"),
+        ("spatial_bins", "npy"),
+        ("step_run_times", "pickle"),
+    ]
+    _result_key_saved = [
+        ("gt_motion", "npy",),
+        ("motion", "npy",)
+    ]
 
-        return result
+
 
 
 
@@ -182,6 +137,8 @@ class MotionEstimationStudy(BenchmarkStudy):
         return benchmark
 
     def plot_true_drift(self, case_keys=None, scaling_probe=1.5, figsize=(8, 6)):
+        
+
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
@@ -367,9 +324,7 @@ class MotionEstimationStudy(BenchmarkStudy):
         # ax2.sharey(ax0)
 
 
-# TODO : plot_peaks
-# TODO : plot_motion_corrected_peaks
-# TODO : plot_error_map_several_benchmarks
+
 
 
 # class BenchmarkMotionEstimationMearec(BenchmarkBase):

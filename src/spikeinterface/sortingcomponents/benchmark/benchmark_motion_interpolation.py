@@ -6,10 +6,7 @@ import pandas as pd
 from pathlib import Path
 import shutil
 
-from spikeinterface.core import extract_waveforms, precompute_sparsity, WaveformExtractor
 
-
-from spikeinterface.extractors import read_mearec
 from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference, scale, highpass_filter, whiten
 from spikeinterface.sorters import run_sorter, read_sorter_folder
 
@@ -24,9 +21,48 @@ from spikeinterface.core import get_template_extremum_channel
 
 import sklearn
 
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
+
+
 import matplotlib.pyplot as plt
 
 import MEArec as mr
+
+
+
+
+class MotionInterpolationBenchmark(Benchmark):
+    def __init__(self, recording, gt_sorting, params,
+                 unit_locations, unit_displacements, displacement_sampling_frequency,
+                 direction="y"):
+        Benchmark.__init__(self)
+        self.recording = recording
+        self.gt_sorting = gt_sorting
+        self.params = params
+        self.unit_locations = unit_locations
+        self.unit_displacements = unit_displacements
+        self.displacement_sampling_frequency = displacement_sampling_frequency
+        self.direction = direction
+        self.direction_dim = ["x", "y"].index(direction)
+
+    def run(self, **job_kwargs):
+        p = self.params
+
+
+class MotionInterpolationStudy(BenchmarkStudy):
+
+    benchmark_class = MotionInterpolationBenchmark
+
+    def create_benchmark(self, key):
+        dataset_key = self.cases[key]["dataset"]
+        recording, gt_sorting = self.datasets[dataset_key]
+        params = self.cases[key]["params"]
+        init_kwargs = self.cases[key]["init_kwargs"]
+        benchmark = MotionInterpolationBenchmark(recording, gt_sorting, params, **init_kwargs)
+        return benchmark
+
+
+
 
 
 class BenchmarkMotionInterpolationMearec(BenchmarkBase):

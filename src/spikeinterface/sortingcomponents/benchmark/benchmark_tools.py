@@ -258,17 +258,48 @@ class Benchmark:
     def __init__(self):
         self.result = {}
 
+    _run_key_saved = []
+    _result_key_saved = []
+
+    def _save_keys(self, saved_keys, folder):
+        for k, format in saved_keys:
+            if format == "npy":
+                np.save(folder / f"{k}.npy", self.result[k])
+            elif format =="pickle":
+                with open(folder  / f"{k}.pickle", mode="wb") as f:
+                    pickle.dump(self.result[k], f)
+            else:
+                raise ValueError(f"Save error {k} {format}")
+
+    def save_run(self, folder):
+        self._save_keys(self._run_key_saved)
+    
+    def save_result(self, folder):
+        self._save_keys(self._result_key_saved)
+
     @classmethod
     def load_folder(cls, folder):
-        raise NotImplementedError
+        result = {}
+        for k, format in cls._run_key_saved + cls._result_key_saved:
+            if format == "npy":
+                file = folder / f"{k}.npy"
+                if file.exists():
+                    result[k] = np.load(file)
+            elif format =="pickle":
+                file = folder / f"{k}.pickle"
+                if file.exists():
+                    with open(file, mode="rb") as f:
+                        result[k] = pickle.load(f)
 
-    def save_to_folder(self, folder, result):
-        raise NotImplementedError
+        return result
     
     def run(self):
-        # run method and metrics!!
+        # run method
         raise NotImplementedError
 
+    def compute_result(self):
+        # run becnhmark result
+        raise NotImplementedError
 
 
 
