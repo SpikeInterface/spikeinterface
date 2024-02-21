@@ -103,7 +103,7 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     window_size = int(round(fs * window_ms * 1e-3))
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
-    bins = np.arange(0, window_size + bin_size, bin_size)# * 1e3 / fs
+    bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
 
     # TODO: There might be a better way than a double for loop?
@@ -137,7 +137,7 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
 
-    bins = np.arange(0, window_size + bin_size, bin_size)# * 1e3 / fs
+    bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
     spikes = sorting.to_spike_vector(concatenated=False)
 
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
@@ -159,7 +159,7 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
 if HAVE_NUMBA:
 
     @numba.jit(
-        (numba.int64[:, ::1], numba.int64[::1], numba.int32[::1], numba.int64[::1]),            
+        (numba.int64[:, ::1], numba.int64[::1], numba.int32[::1], numba.int64[::1]),
         nopython=True,
         nogil=True,
         cache=True,

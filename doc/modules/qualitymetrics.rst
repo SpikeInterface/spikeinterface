@@ -62,7 +62,7 @@ This code snippet shows how to compute quality metrics (with or without principa
      metrics = qm_ext.get_data()
      assert 'isolation_distance' in metrics.columns
 
- 
+
 
 For more information about quality metrics, check out this excellent
 `documentation <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html>`_
