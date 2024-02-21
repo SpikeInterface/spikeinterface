@@ -61,32 +61,15 @@ class MatchingBenchmark(Benchmark):
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
         self.result['gt_comparison'] = comp
         self.result['gt_collision'] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
-
-    def save_run(self, folder):
-        self.result['sorting'].save(folder = folder / "sorting", format="numpy_folder")
-        self.result['templates'].to_zarr(folder / "templates")
     
-    def save_result(self, folder):
-        comparison_file = folder / "gt_comparison.pickle"
-        with open(comparison_file, mode="wb") as f:
-            pickle.dump(self.result['gt_comparison'], f)
-
-        collision_file = folder / "gt_collision.pickle"
-        with open(collision_file, mode="wb") as f:
-            pickle.dump(self.result['gt_collision'], f)
-
-    @classmethod
-    def load_folder(cls, folder):
-        result = {}
-        result['sorting'] = load_extractor(folder / "sorting")
-        result['templates'] = Templates.from_zarr(folder / "templates")
-        if (folder / "gt_comparison.pickle").exists():
-            with open(folder / "gt_comparison.pickle", "rb") as f:
-                result['gt_comparison'] = pickle.load(f)
-        if (folder / "gt_collision.pickle").exists():
-            with open(folder / "gt_collision.pickle", "rb") as f:
-                result['gt_collision'] = pickle.load(f)
-        return result
+    _run_key_saved = [
+        ("sorting", "sorting"),
+        ("templates", "zarr_templates"),
+    ]
+    _result_key_saved = [
+        ("gt_collision", "pickle"),
+        ("gt_comparison", "pickle")
+    ]
 
 
 class MatchingStudy(BenchmarkStudy):

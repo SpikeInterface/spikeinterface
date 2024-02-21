@@ -31,7 +31,7 @@ from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
 class PeakLocalizationBenchmark(Benchmark):
 
-    def __init__(self, recording, gt_sorting, gt_positions, params):
+    def __init__(self, recording, gt_sorting, params, gt_positions):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.gt_positions = gt_positions
@@ -75,33 +75,15 @@ class PeakLocalizationBenchmark(Benchmark):
         )
         self.result['errors'] = errors
 
-    def save_run(self, folder):
-        self.result['templates'].to_zarr(folder / "templates")
-        locations_file = folder / "spikes_locations.pickle"
-        with open(locations_file, mode="wb") as f:
-            pickle.dump(self.result['spikes_locations'], f)
-
-    def save_result(self, folder):
-        errors_file = folder / "errors.pickle"
-        with open(errors_file, mode="wb") as f:
-            pickle.dump(self.result['errors'], f)
-        np.save(folder / "medians_over_templates", self.result['medians_over_templates'])
-        np.save(folder / "mads_over_templates", self.result['mads_over_templates'])
-
-    @classmethod
-    def load_folder(cls, folder):
-        result = {}
-        result['templates'] = Templates.from_zarr(folder / "templates")
-        if (folder / "errors.pickle").exists():
-            with open(folder / "errors.pickle", "rb") as f:
-                result['errors'] = pickle.load(f)
-        if (folder / "spikes_locations.pickle").exists():
-            with open(folder / "spikes_locations.pickle", "rb") as f:
-                result['spikes_locations'] = pickle.load(f)
-        if (folder / "medians_over_templates.npy").exists():
-            result["medians_over_templates"] = np.load(folder / "medians_over_templates.npy")
-            result["mads_over_templates"] = np.load(folder / "mads_over_templates.npy")
-        return result
+    _run_key_saved = [
+        ("spikes_locations", "pickle"),
+        ("templates", "zarr_templates"),
+    ]
+    _result_key_saved = [
+        ("errors", "pickle"),
+        ("medians_over_templates", "npy"),
+        ("mads_over_templates", "npy"),
+    ]
 
 
 class PeakLocalizationStudy(BenchmarkStudy):
@@ -111,9 +93,9 @@ class PeakLocalizationStudy(BenchmarkStudy):
     def create_benchmark(self, key):
         dataset_key = self.cases[key]["dataset"]
         recording, gt_sorting = self.datasets[dataset_key]
-        gt_positions = self.cases[key]["gt_positions"]
         params = self.cases[key]["params"]
-        benchmark = PeakLocalizationBenchmark(recording, gt_sorting, gt_positions, params)
+        init_kwargs = self.cases[key]["init_kwargs"]
+        benchmark = PeakLocalizationBenchmark(recording, gt_sorting, params, **init_kwargs)
         return benchmark
 
     def plot_comparison_positions(self, case_keys=None, smoothing_factor=5):
@@ -230,23 +212,15 @@ class UnitLocalizationBenchmark(Benchmark):
 
     def compute_result(self, **result_params):
         errors = np.linalg.norm(self.gt_positions[:, :2] - self.result['unit_locations'][:, :2], axis=1)
-        self.result['errors'] = errors
-
-    def save_run(self, folder):
-        self.result['templates'].to_zarr(folder / "templates")
-        np.save(folder / "unit_locations", self.result['unit_locations'])
-
-    def save_result(self, folder):
-        np.save(folder / "errors", self.result['errors'])
-
-    @classmethod
-    def load_folder(cls, folder):
-        result = {}
-        result['templates'] = Templates.from_zarr(folder / "templates")
-        result["unit_locations"] = np.load(folder / "unit_locations.npy")
-        if (folder / "errors.npy").exists():
-            result["errors"] = np.load(folder / "errors.npy")
-        return result
+        self.result['errors'] = errors  
+    
+    _run_key_saved = [
+        ("unit_locations", "npy"),
+        ("templates", "zarr_templates"),
+    ]
+    _result_key_saved = [
+        ("errors", "npy")
+    ]
 
 
 class UnitLocalizationStudy(BenchmarkStudy):

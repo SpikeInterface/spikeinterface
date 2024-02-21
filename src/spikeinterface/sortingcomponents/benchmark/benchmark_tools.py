@@ -268,14 +268,20 @@ class Benchmark:
             elif format =="pickle":
                 with open(folder  / f"{k}.pickle", mode="wb") as f:
                     pickle.dump(self.result[k], f)
+            elif format == 'sorting':
+                self.result[k].save(folder = folder / k, format="numpy_folder")
+            elif format == 'zarr_templates':
+                self.result[k].to_zarr(folder / k)
+            elif format == 'sorting_analyzer':
+                pass
             else:
                 raise ValueError(f"Save error {k} {format}")
 
     def save_run(self, folder):
-        self._save_keys(self._run_key_saved)
+        self._save_keys(self._run_key_saved, folder)
     
     def save_result(self, folder):
-        self._save_keys(self._result_key_saved)
+        self._save_keys(self._result_key_saved, folder)
 
     @classmethod
     def load_folder(cls, folder):
@@ -290,6 +296,12 @@ class Benchmark:
                 if file.exists():
                     with open(file, mode="rb") as f:
                         result[k] = pickle.load(f)
+            elif format =="sorting":
+                from spikeinterface.core import load_extractor
+                result[k] = load_extractor(folder / k)
+            elif format =="zarr_templates":
+                from spikeinterface.core.template import Templates
+                result[k] = Templates.from_zarr(folder / k)
 
         return result
     
