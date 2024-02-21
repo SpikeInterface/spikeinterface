@@ -23,7 +23,7 @@ class BenchmarkStudy:
         self.folder = Path(study_folder)
         self.datasets = {}
         self.cases = {}
-        self.results = {}
+        self.benchmarks = {}
         self.scan_folder()
 
     @classmethod
@@ -80,6 +80,9 @@ class BenchmarkStudy:
 
         return cls(study_folder)
 
+    def create_benchmark(self):
+        raise NotImplementedError
+
     def scan_folder(self):
         if not (self.folder / "datasets").exists():
             raise ValueError(f"This is folder is not a GroundTruthStudy : {self.folder.absolute()}")
@@ -98,19 +101,22 @@ class BenchmarkStudy:
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
 
-        self.results = {}
+        self.benchmarks = {}
         for key in self.cases:
             result_folder = self.folder / "results" / self.key_to_str(key)
             if result_folder.exists():
-                self.results[key] = self.benchmark_class.load_folder(result_folder)
+                result = self.benchmark_class.load_folder(result_folder)
+                benchmark = self.create_benchmark(key)
+                benchmark.result.update(result)
+                self.benchmarks[key] = benchmark
             else:
-                self.results[key] = None
+                self.benchmarks[key] = None
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
         t += f"  datasets: {len(self.datasets)} {list(self.datasets.keys())}\n"
         t += f"  cases: {len(self.cases)} {list(self.cases.keys())}\n"
-        num_computed = sum([1 for result in self.results.values() if result is not None])
+        num_computed = sum([1 for benchmark in self.benchmarks.values() if benchmark is not None])
         t += f"  computed: {num_computed}\n"
         return t
 
@@ -122,7 +128,7 @@ class BenchmarkStudy:
         else:
             raise ValueError("Keys for cases must str or tuple")
 
-    def remove_result(self, key):
+    def remove_benchmark(self, key):
         result_folder = self.folder / "results" / self.key_to_str(key)
         log_file = self.folder / "run_logs" / f"{self.key_to_str(key)}.json"
 
@@ -131,9 +137,9 @@ class BenchmarkStudy:
         for f in (log_file, ):
             if f.exists():
                 f.unlink()
-        self.results[key] = None
+        self.benchmarks[key] = None
 
-    def run(self, case_keys=None, keep=True, verbose=False):
+    def run(self, case_keys=None, keep=True, verbose=False, **job_kwargs):
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -145,17 +151,25 @@ class BenchmarkStudy:
             if keep and result_folder.exists():
                 continue
             elif not keep and result_folder.exists():
-                self.remove_result(key)
+                self.remove_benchmark(key)
             job_keys.append(key)
 
-        self._run(job_keys)
+        for key in job_keys:
+            benchmark = self.create_benchmark(key)
+            benchmark.run()
+            self.benchmarks[key] = benchmark
+            benchmark.save_run(self.folder / "results" / self.key_to_str(key))
+    
+    def compute_results(self, case_keys=None, verbose=False, **result_params):
+        if case_keys is None:
+            case_keys = self.cases.keys()
 
-        # save log
-        # TODO
-
-    def _run(self, job_keys):
-        raise NotImplemented
-
+        job_keys = []
+        for key in case_keys:
+            benchmark = self.benchmarks[key]
+            assert benchmark is not None
+            benchmark.compute_result(**result_params)
+            benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
     def create_sorting_analyzer_gt(self, case_keys=None, **kwargs):
         if case_keys is None:
@@ -230,6 +244,10 @@ class BenchmarkStudy:
     def get_units_snr(self, key):
         """ """
         return self.get_metrics(key)["snr"]
+    
+    def get_result(self, key):
+        return self.benchmarks[key].result
+
 
 
 class Benchmark:
