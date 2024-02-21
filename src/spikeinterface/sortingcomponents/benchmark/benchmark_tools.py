@@ -124,7 +124,7 @@ class BenchmarkStudy:
         if isinstance(key, str):
             return key
         elif isinstance(key, tuple):
-            return _key_separator.join(key)
+            return _key_separator.join([str(k) for k in key])
         else:
             raise ValueError("Keys for cases must str or tuple")
 

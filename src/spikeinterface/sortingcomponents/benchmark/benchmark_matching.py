@@ -177,12 +177,14 @@ class MatchingStudy(BenchmarkStudy):
                     ax.spines[["right", "top"]].set_visible(False)
                     ax.set_aspect("equal")
 
+                    label1 = self.cases[key1]['label']
+                    label2 = self.cases[key2]['label']
                     if j == i:
-                        ax.set_ylabel(f"{key1}")
+                        ax.set_ylabel(f"{label1}")
                     else:
                         ax.set_yticks([])
                     if i == j:
-                        ax.set_xlabel(f"{key2}")
+                        ax.set_xlabel(f"{label2}")
                     else:
                         ax.set_xticks([])
                     if i == num_methods - 1 and j == num_methods - 1:

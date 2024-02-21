@@ -27,6 +27,66 @@ import os
 import numpy as np
 
 
+from .benchmark_tools import BenchmarkStudy, Benchmark
+from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
+
+
+class ClusteringBenchmark(Benchmark):
+
+    def __init__(self, recording, gt_sorting, gt_positions, params):
+        self.recording = recording
+        self.gt_sorting = gt_sorting
+        self.gt_positions = gt_positions
+        self.params = params
+        self.result = {}
+        self.templates_params = {}
+        for key in ["ms_before", "ms_after"]:
+            if key in self.params:
+                self.templates_params[key] = self.params[key]
+            else:
+                self.templates_params[key] = 2
+                self.params[key] = 2
+
+    def run(self, **job_kwargs):
+        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format='memory', sparse=False)
+        sorting_analyzer.select_random_spikes()
+        ext = sorting_analyzer.compute('fast_templates', **self.templates_params)
+        templates = ext.get_data(outputs='Templates')
+        ext = sorting_analyzer.compute("spike_locations", **self.params)
+        spikes_locations = ext.get_data(outputs="by_unit")
+        self.result = {'spikes_locations' : spikes_locations}
+        self.result['templates'] = templates
+
+    def compute_result(self, **result_params):
+        
+
+    def save_run(self, folder):
+        
+
+    def save_result(self, folder):
+        
+
+    @classmethod
+    def load_folder(cls, folder):
+        
+        return result
+
+
+class ClusteringStudy(BenchmarkStudy):
+
+    benchmark_class = ClusteringBenchmark
+
+    def create_benchmark(self, key):
+        dataset_key = self.cases[key]["dataset"]
+        recording, gt_sorting = self.datasets[dataset_key]
+        gt_positions = self.cases[key]["gt_positions"]
+        params = self.cases[key]["params"]
+        benchmark = ClusteringBenchmark(recording, gt_sorting, gt_positions, params)
+        return benchmark
+
+
 class BenchmarkClustering:
     def __init__(self, recording, gt_sorting, method, exhaustive_gt=True, tmp_folder=None, job_kwargs={}, verbose=True):
         self.method = method
