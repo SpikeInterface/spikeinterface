@@ -323,7 +323,6 @@ class ZScoreRecording(BasePreprocessor):
         self.set_property(key="gain_to_uV", values=np.ones(num_chans, dtype="float32"))
         self.set_property(key="offset_to_uV", values=np.zeros(num_chans, dtype="float32"))
 
-
         for parent_segment in recording._recording_segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
