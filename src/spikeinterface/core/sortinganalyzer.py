@@ -132,7 +132,6 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
         The loaded SortingAnalyzer
 
     """
-
     return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format)
 
 
@@ -577,12 +576,14 @@ class SortingAnalyzer:
         elif format == "binary_folder":
             # create  a new folder
             assert folder is not None, "For format='binary_folder' folder must be provided"
+            folder = Path(folder)
             SortingAnalyzer.create_binary_folder(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
             new_sorting_analyzer = SortingAnalyzer.load_from_binary_folder(folder, recording=recording)
             new_sorting_analyzer.folder = folder
 
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
+            folder = Path(folder)
             SortingAnalyzer.create_zarr(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
