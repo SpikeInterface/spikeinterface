@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from spikeinterface.core import extract_waveforms
-from spikeinterface.preprocessing import bandpass_filter, common_reference
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.core import NumpySorting
-from spikeinterface.qualitymetrics import compute_quality_metrics, compute_snrs
+from spikeinterface.qualitymetrics import compute_snrs
 from spikeinterface.widgets import (
     plot_probe_map,
     plot_agreement_matrix,
@@ -13,19 +10,12 @@ from spikeinterface.widgets import (
     plot_unit_templates,
     plot_unit_waveforms,
 )
-from spikeinterface.postprocessing import compute_spike_locations
 from spikeinterface.postprocessing.unit_localization import compute_center_of_mass, compute_monopolar_triangulation, compute_grid_convolution
 from spikeinterface.core import get_noise_levels
 
-import time
-import string, random
 import pylab as plt
-from spikeinterface.core.template import Templates
-import os
 import numpy as np
-import pickle
 from .benchmark_tools import BenchmarkStudy, Benchmark
-from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
 

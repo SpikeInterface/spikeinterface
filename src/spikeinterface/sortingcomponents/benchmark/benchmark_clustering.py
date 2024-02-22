@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-from spikeinterface.core import extract_waveforms
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks, clustering_methods
-from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-from spikeinterface.extractors import read_mearec
 from spikeinterface.core import NumpySorting
-from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.widgets import (
     plot_probe_map,
@@ -15,7 +10,6 @@ from spikeinterface.widgets import (
     plot_unit_templates,
     plot_unit_waveforms,
 )
-from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.comparison.comparisontools import make_matching_events
 #from spikeinterface.postprocessing import get_template_extremum_channel
 from spikeinterface.core import get_noise_levels
