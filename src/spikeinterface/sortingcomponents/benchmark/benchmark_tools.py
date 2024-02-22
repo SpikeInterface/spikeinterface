@@ -272,10 +272,10 @@ class Benchmark:
                 raise ValueError(f"Save error {k} {format}")
 
     def save_run(self, folder):
-        self._save_keys(self._run_key_saved)
+        self._save_keys(self._run_key_saved, folder)
     
     def save_result(self, folder):
-        self._save_keys(self._result_key_saved)
+        self._save_keys(self._result_key_saved, folder)
 
     @classmethod
     def load_folder(cls, folder):
