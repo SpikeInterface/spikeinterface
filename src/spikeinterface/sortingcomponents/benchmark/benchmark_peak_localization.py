@@ -165,7 +165,7 @@ class PeakLocalizationStudy(BenchmarkStudy):
 
 class UnitLocalizationBenchmark(Benchmark):
 
-    def __init__(self, recording, gt_sorting, gt_positions, params):
+    def __init__(self, recording, gt_sorting, params, gt_positions):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.gt_positions = gt_positions
@@ -220,9 +220,9 @@ class UnitLocalizationStudy(BenchmarkStudy):
     def create_benchmark(self, key):
         dataset_key = self.cases[key]["dataset"]
         recording, gt_sorting = self.datasets[dataset_key]
-        gt_positions = self.cases[key]["gt_positions"]
+        init_kwargs = self.cases[key]["init_kwargs"]
         params = self.cases[key]["params"]
-        benchmark = UnitLocalizationBenchmark(recording, gt_sorting, gt_positions, params)
+        benchmark = UnitLocalizationBenchmark(recording, gt_sorting, params, **init_kwargs)
         return benchmark
 
     def plot_template_errors(self, case_keys=None):
