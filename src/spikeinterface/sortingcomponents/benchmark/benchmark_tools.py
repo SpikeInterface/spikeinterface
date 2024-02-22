@@ -4,6 +4,9 @@ from pathlib import Path
 import shutil
 import json
 import numpy as np
+import pandas as pd
+
+import time
 
 import os
 
@@ -16,7 +19,17 @@ _key_separator = "_-°°-_"
 
 class BenchmarkStudy:
     """
-    Manage a list of Benchmark
+    Generic study for sorting components.
+    This manage a list of Benchmark.
+    This manage a dict of "cases" every case is one Benchmark.
+
+    Benchmark is responsible for run() and compute_result()
+    BenchmarkStudy is the main API for:
+      * running (re-running) some cases
+      * save (run + compute_result) in results dict
+      * make some plots in inherited classes.
+
+
     """
     benchmark_class = None
     def __init__(self, study_folder):
@@ -156,15 +169,42 @@ class BenchmarkStudy:
 
         for key in job_keys:
             benchmark = self.create_benchmark(key)
+            t0 = time.perf_counter()
             benchmark.run()
+            t1 = time.perf_counter()
             self.benchmarks[key] = benchmark
             bench_folder = self.folder / "results" / self.key_to_str(key)
             bench_folder.mkdir(exist_ok=True)
             benchmark.save_run(bench_folder)
+            benchmark.result["run_time"] = float(t1 - t0)
+            benchmark.save_main(bench_folder)
     
+    def get_run_times(self, case_keys=None):
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+        
+        run_times = {}
+        for key in case_keys:
+            benchmark = self.benchmarks[key]
+            assert benchmark is not None
+            run_times[key] = benchmark.result["run_time"]
+        
+        df = pd.DataFrame(dict(run_times=run_times))
+        df.index.names = self.levels
+        return df
+
+    def plot_run_times(self, case_keys=None):
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+        run_times = self.get_run_times(case_keys=case_keys)
+
+        run_times.plot(kind='bar')
+
+
+
     def compute_results(self, case_keys=None, verbose=False, **result_params):
         if case_keys is None:
-            case_keys = self.cases.keys()
+            case_keys = list(self.cases.keys())
 
         job_keys = []
         for key in case_keys:
@@ -173,7 +213,7 @@ class BenchmarkStudy:
             benchmark.compute_result(**result_params)
             benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
-    def create_sorting_analyzer_gt(self, case_keys=None, **kwargs):
+    def create_sorting_analyzer_gt(self, case_keys=None, return_scaled=True, **kwargs):
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -190,9 +230,9 @@ class BenchmarkStudy:
             recording, gt_sorting = self.datasets[dataset_key]
             sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
             sorting_analyzer.select_random_spikes(**select_params)
-            sorting_analyzer.compute("waveforms", **job_kwargs)
+            sorting_analyzer.compute("waveforms", return_scaled=return_scaled, **job_kwargs)
             sorting_analyzer.compute("templates")
-            sorting_analyzer.compute("noise_levels")
+            sorting_analyzer.compute("noise_levels", return_scaled=return_scaled)
 
     def get_sorting_analyzer(self, case_key=None, dataset_key=None):
         if case_key is not None:
@@ -254,10 +294,16 @@ class BenchmarkStudy:
 
 class Benchmark:
     """
+    Responsible to make a unique run() and compute_result() for one case.
     """
     def __init__(self):
         self.result = {}
 
+    # this must not be changed in inherited
+    _main_key_saved = [
+        ("run_time", "pickle"),
+    ]
+    # this must be updated in hirerited
     _run_key_saved = []
     _result_key_saved = []
 
@@ -277,6 +323,10 @@ class Benchmark:
             else:
                 raise ValueError(f"Save error {k} {format}")
 
+    def save_main(self, folder):
+        # used for run time
+        self._save_keys(self._main_key_saved, folder)
+
     def save_run(self, folder):
         self._save_keys(self._run_key_saved, folder)
     
@@ -286,7 +336,7 @@ class Benchmark:
     @classmethod
     def load_folder(cls, folder):
         result = {}
-        for k, format in cls._run_key_saved + cls._result_key_saved:
+        for k, format in cls._run_key_saved + cls._result_key_saved + cls._main_key_saved:
             if format == "npy":
                 file = folder / f"{k}.npy"
                 if file.exists():
@@ -314,156 +364,8 @@ class Benchmark:
         raise NotImplementedError
 
 
-
-
-
-
 def _simpleaxis(ax):
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-
-
-# class BenchmarkBaseOld:
-#     _array_names = ()
-#     _waveform_names = ()
-#     _sorting_names = ()
-
-#     _array_names_from_parent = ()
-#     _waveform_names_from_parent = ()
-#     _sorting_names_from_parent = ()
-
-#     def __init__(
-#         self,
-#         folder=None,
-#         title="",
-#         overwrite=None,
-#         job_kwargs={"chunk_duration": "1s", "n_jobs": -1, "progress_bar": True, "verbose": True},
-#         parent_benchmark=None,
-#     ):
-#         self.folder = Path(folder)
-#         self.title = title
-#         self.overwrite = overwrite
-#         self.job_kwargs = job_kwargs
-#         self.run_times = None
-
-#         self._args = []
-#         self._kwargs = dict(title=title, overwrite=overwrite, job_kwargs=job_kwargs)
-
-#         self.waveforms = {}
-#         self.sortings = {}
-
-#         self.parent_benchmark = parent_benchmark
-
-#         if self.parent_benchmark is not None:
-#             for name in self._array_names_from_parent:
-#                 setattr(self, name, getattr(parent_benchmark, name))
-
-#             for name in self._waveform_names_from_parent:
-#                 self.waveforms[name] = parent_benchmark.waveforms[name]
-
-#             for key in parent_benchmark.sortings.keys():
-#                 if isinstance(key, str) and key in self._sorting_names_from_parent:
-#                     self.sortings[key] = parent_benchmark.sortings[key]
-#                 elif isinstance(key, tuple) and key[0] in self._sorting_names_from_parent:
-#                     self.sortings[key] = parent_benchmark.sortings[key]
-
-#     def save_to_folder(self):
-#         if self.folder.exists():
-#             import glob, os
-
-#             pattern = "*.*"
-#             files = self.folder.glob(pattern)
-#             for file in files:
-#                 if file.is_file():
-#                     os.remove(file)
-#         else:
-#             self.folder.mkdir(parents=True)
-
-#         if self.parent_benchmark is None:
-#             parent_folder = None
-#         else:
-#             parent_folder = str(self.parent_benchmark.folder)
-
-#         info = {
-#             "args": self._args,
-#             "kwargs": self._kwargs,
-#             "parent_folder": parent_folder,
-#         }
-#         info = check_json(info)
-#         (self.folder / "info.json").write_text(json.dumps(info, indent=4), encoding="utf8")
-
-#         for name in self._array_names:
-#             if self.parent_benchmark is not None and name in self._array_names_from_parent:
-#                 continue
-#             value = getattr(self, name)
-#             if value is not None:
-#                 np.save(self.folder / f"{name}.npy", value)
-
-#         if self.run_times is not None:
-#             run_times_filename = self.folder / "run_times.json"
-#             run_times_filename.write_text(json.dumps(self.run_times, indent=4), encoding="utf8")
-
-#         for key, sorting in self.sortings.items():
-#             (self.folder / "sortings").mkdir(exist_ok=True)
-#             if isinstance(key, str):
-#                 npz_file = self.folder / "sortings" / (str(key) + ".npz")
-#             elif isinstance(key, tuple):
-#                 npz_file = self.folder / "sortings" / ("_###_".join(key) + ".npz")
-#             NpzSortingExtractor.write_sorting(sorting, npz_file)
-
-#     @classmethod
-#     def load_from_folder(cls, folder, parent_benchmark=None):
-#         folder = Path(folder)
-#         assert folder.exists()
-
-#         with open(folder / "info.json", "r") as f:
-#             info = json.load(f)
-#         args = info["args"]
-#         kwargs = info["kwargs"]
-
-#         if info["parent_folder"] is None:
-#             parent_benchmark = None
-#         else:
-#             if parent_benchmark is None:
-#                 parent_benchmark = cls.load_from_folder(info["parent_folder"])
-
-#         import os
-
-#         kwargs["folder"] = folder
-
-#         bench = cls(*args, **kwargs, parent_benchmark=parent_benchmark)
-
-#         for name in cls._array_names:
-#             filename = folder / f"{name}.npy"
-#             if filename.exists():
-#                 arr = np.load(filename)
-#             else:
-#                 arr = None
-#             setattr(bench, name, arr)
-
-#         if (folder / "run_times.json").exists():
-#             with open(folder / "run_times.json", "r") as f:
-#                 bench.run_times = json.load(f)
-#         else:
-#             bench.run_times = None
-
-#         for key in bench._waveform_names:
-#             if parent_benchmark is not None and key in bench._waveform_names_from_parent:
-#                 continue
-#             waveforms_folder = folder / "waveforms" / key
-#             if waveforms_folder.exists():
-#                 bench.waveforms[key] = load_waveforms(waveforms_folder, with_recording=True)
-
-#         sorting_folder = folder / "sortings"
-#         if sorting_folder.exists():
-#             for npz_file in sorting_folder.glob("*.npz"):
-#                 name = npz_file.stem
-#                 if "_###_" in name:
-#                     key = tuple(name.split("_###_"))
-#                 else:
-#                     key = name
-#                 bench.sortings[key] = NpzSortingExtractor(npz_file)
-
-#         return bench
