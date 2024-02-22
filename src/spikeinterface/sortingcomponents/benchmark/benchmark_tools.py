@@ -190,7 +190,8 @@ class BenchmarkStudy:
             run_times[key] = benchmark.result["run_time"]
         
         df = pd.DataFrame(dict(run_times=run_times))
-        df.index.names = self.levels
+        if not isinstance(self.levels, str):
+            df.index.names = self.levels
         return df
 
     def plot_run_times(self, case_keys=None):
