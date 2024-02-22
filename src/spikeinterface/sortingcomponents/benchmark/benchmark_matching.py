@@ -61,32 +61,15 @@ class MatchingBenchmark(Benchmark):
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
         self.result['gt_comparison'] = comp
         self.result['gt_collision'] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
-
-    def save_run(self, folder):
-        self.result['sorting'].save(folder = folder / "sorting", format="numpy_folder")
-        self.result['templates'].to_zarr(folder / "templates")
     
-    def save_result(self, folder):
-        comparison_file = folder / "gt_comparison.pickle"
-        with open(comparison_file, mode="wb") as f:
-            pickle.dump(self.result['gt_comparison'], f)
-
-        collision_file = folder / "gt_collision.pickle"
-        with open(collision_file, mode="wb") as f:
-            pickle.dump(self.result['gt_collision'], f)
-
-    @classmethod
-    def load_folder(cls, folder):
-        result = {}
-        result['sorting'] = load_extractor(folder / "sorting")
-        result['templates'] = Templates.from_zarr(folder / "templates")
-        if (folder / "gt_comparison.pickle").exists():
-            with open(folder / "gt_comparison.pickle", "rb") as f:
-                result['gt_comparison'] = pickle.load(f)
-        if (folder / "gt_collision.pickle").exists():
-            with open(folder / "gt_collision.pickle", "rb") as f:
-                result['gt_collision'] = pickle.load(f)
-        return result
+    _run_key_saved = [
+        ("sorting", "sorting"),
+        ("templates", "zarr_templates"),
+    ]
+    _result_key_saved = [
+        ("gt_collision", "pickle"),
+        ("gt_comparison", "pickle")
+    ]
 
 
 class MatchingStudy(BenchmarkStudy):
@@ -128,6 +111,7 @@ class MatchingStudy(BenchmarkStudy):
                 x = metrics["snr"].values
                 y = self.get_result(key)['gt_comparison'].get_performance()[k].values
                 ax.scatter(x, y, marker=".", label=label)
+                ax.set_title(k)
 
             if count == 2:
                 ax.legend()
@@ -177,12 +161,14 @@ class MatchingStudy(BenchmarkStudy):
                     ax.spines[["right", "top"]].set_visible(False)
                     ax.set_aspect("equal")
 
+                    label1 = self.cases[key1]['label']
+                    label2 = self.cases[key2]['label']
                     if j == i:
-                        ax.set_ylabel(f"{key1}")
+                        ax.set_ylabel(f"{label1}")
                     else:
                         ax.set_yticks([])
                     if i == j:
-                        ax.set_xlabel(f"{key2}")
+                        ax.set_xlabel(f"{label2}")
                     else:
                         ax.set_xticks([])
                     if i == num_methods - 1 and j == num_methods - 1:
