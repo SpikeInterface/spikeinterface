@@ -1,31 +1,20 @@
 from __future__ import annotations
 
-from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.postprocessing import compute_template_similarity
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core.template import Templates
 from spikeinterface.core import NumpySorting
-from spikeinterface.qualitymetrics import compute_quality_metrics
-from spikeinterface import load_extractor
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
     plot_agreement_matrix,
     plot_comparison_collision_by_similarity,
-    plot_unit_waveforms,
 )
 
-import time
-import os
-import pickle
 from pathlib import Path
-import string, random
 import pylab as plt
 import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
-import shutil
-import copy
-from tqdm.auto import tqdm
 from .benchmark_tools import BenchmarkStudy, Benchmark
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
