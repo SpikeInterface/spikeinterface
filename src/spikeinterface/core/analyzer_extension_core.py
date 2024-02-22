@@ -98,7 +98,7 @@ class ComputeWaveforms(ResultExtension):
 
         if return_scaled:
             # check if has scaled values:
-            if not recording.has_scaled():
+            if not recording.has_scaled() and recording.get_dtype().kind == 'i':
                 print("Setting 'return_scaled' to False")
                 return_scaled = False
 
