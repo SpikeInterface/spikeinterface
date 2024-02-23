@@ -189,7 +189,7 @@ def test_fix_job_kwargs():
     with pytest.raises(AssertionError):
         job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s", other_param="other")
         fixed_job_kwargs = fix_job_kwargs(job_kwargs)
-    
+
     # test mutually exclusive
     set_global_job_kwargs(chunk_memory="50M")
     job_kwargs = dict()
@@ -200,7 +200,6 @@ def test_fix_job_kwargs():
     fixed_job_kwargs = fixed_job_kwargs = fix_job_kwargs(job_kwargs)
     assert "chunk_memory" not in fixed_job_kwargs
     assert fixed_job_kwargs["chunk_duration"] == "300ms"
-
 
 
 def test_split_job_kwargs():

@@ -58,6 +58,7 @@ _mutually_exclusive = (
     "chunk_duration",
 )
 
+
 def fix_job_kwargs(runtime_job_kwargs):
     from .globals import get_global_job_kwargs
 
@@ -67,7 +68,7 @@ def fix_job_kwargs(runtime_job_kwargs):
         assert k in job_keys, (
             f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
         )
-    
+
     # remove mutually exclusive from global job kwargs
     for k in runtime_job_kwargs:
         if k in _mutually_exclusive:
