@@ -576,7 +576,7 @@ if __name__ == '__main__':
         os.remove(parent_folder / "in_container_params.json")
         os.remove(parent_folder / "in_container_sorter_script.py")
         if mode == "singularity":
-            shutil.rmtree(py_user_base_folder)
+            shutil.rmtree(py_user_base_folder, ignore_errors=True)
 
     # check error
     output_folder = Path(output_folder)
