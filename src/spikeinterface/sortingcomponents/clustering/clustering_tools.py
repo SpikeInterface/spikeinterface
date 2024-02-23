@@ -539,9 +539,8 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor
     from spikeinterface.core import NumpySorting
-    from spikeinterface.core import extract_waveforms
     from spikeinterface.core import get_global_tmp_folder
-    import string, random, shutil, os
+    import os
     from pathlib import Path
 
     job_kwargs = fix_job_kwargs(job_kwargs)
@@ -578,8 +577,6 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
 
     margin = 2 * max(templates.nbefore, templates.nafter)
     half_marging = margin // 2
-
-    chunk_size = duration + 3 * margin
 
     local_params = method_kwargs.copy()
 

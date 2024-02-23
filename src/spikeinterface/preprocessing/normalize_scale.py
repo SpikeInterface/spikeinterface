@@ -281,19 +281,19 @@ class ZScoreRecording(BasePreprocessor):
         if dtype_.kind == "i":
             assert int_scale is not None, "For recording with dtype=int you must set dtype=float32 OR set a scale"
 
+        num_chans = recording.get_num_channels()
         if gain is not None:
             assert offset is not None
             gain = np.asarray(gain)
             offset = np.asarray(offset)
-            n = recording.get_num_channels()
             if gain.ndim == 1:
                 gain = gain[None, :]
-            assert gain.shape[1] == n
+            assert gain.shape[1] == num_chans
             if offset.ndim == 1:
                 offset = offset[None, :]
-            assert offset.shape[1] == n
+            assert offset.shape[1] == num_chans
         else:
-            random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
+            random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
 
             if mode == "median+mad":
                 medians = np.median(random_data, axis=0)
@@ -319,6 +319,9 @@ class ZScoreRecording(BasePreprocessor):
         self.offset = offset
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
+        # the gain/offset must be reset
+        self.set_property(key="gain_to_uV", values=np.ones(num_chans, dtype="float32"))
+        self.set_property(key="offset_to_uV", values=np.zeros(num_chans, dtype="float32"))
 
         for parent_segment in recording._recording_segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)

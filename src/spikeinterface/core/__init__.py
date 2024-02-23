@@ -101,7 +101,7 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
-from .sorting_tools import spike_vector_to_spike_trains
+from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection
 
 from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_average
 from .snippets_tools import snippets_from_sorting
