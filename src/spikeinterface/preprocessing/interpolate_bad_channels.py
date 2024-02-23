@@ -77,7 +77,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
         if bad_channel_ids.ndim != 1:
             raise TypeError("'bad_channel_ids' must be a 1d array or list.")
 
-        if recording.get_property("contact_vector") is None:
+        if not recording.has_channel_location():
             raise ValueError("A probe must be attached to use bad channel interpolation. Use set_probe(...)")
 
         if recording.get_probe().si_units != "um":
