@@ -72,7 +72,7 @@ class MatchingStudy(BenchmarkStudy):
         benchmark = MatchingBenchmark(recording, gt_sorting, params)
         return benchmark
     
-    def plot_agreements(self, case_keys=None, figsize=(15,15)):
+    def plot_agreements(self, case_keys=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
@@ -83,7 +83,7 @@ class MatchingStudy(BenchmarkStudy):
             ax.set_title(self.cases[key]['label'])
             plot_agreement_matrix(self.get_result(key)['gt_comparison'], ax=ax)
     
-    def plot_performances_vs_snr(self, case_keys=None, figsize=(15,15)):
+    def plot_performances_vs_snr(self, case_keys=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
@@ -105,7 +105,7 @@ class MatchingStudy(BenchmarkStudy):
             if count == 2:
                 ax.legend()
 
-    def plot_collisions(self, case_keys=None, figsize=(15,15)):
+    def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
         
@@ -122,7 +122,7 @@ class MatchingStudy(BenchmarkStudy):
         performance_names=["accuracy", "recall", "precision"],
         colors=["g", "b", "r"],
         ylim=(-0.1, 1.1),
-        figsize=(15,15)
+        figsize=None
     ):
         
         if case_keys is None:
