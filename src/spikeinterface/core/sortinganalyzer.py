@@ -104,7 +104,7 @@ def create_sorting_analyzer(
             sorting.unit_ids, sparsity.unit_ids
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
         assert np.array_equal(
-            recording.channel_ids, recording.channel_ids
+            recording.channel_ids, sparsity.channel_ids
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
     elif sparse:
         sparsity = estimate_sparsity(recording, sorting, **sparsity_kwargs)
