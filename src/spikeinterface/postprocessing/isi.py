@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 try:
     import numba
@@ -12,7 +12,7 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-class ComputeISIHistograms(ResultExtension):
+class ComputeISIHistograms(AnalyzerExtension):
     """Compute ISI histograms.
 
     Parameters
@@ -41,7 +41,7 @@ class ComputeISIHistograms(ResultExtension):
     need_job_kwargs = False
 
     def __init__(self, sorting_analyzer):
-        ResultExtension.__init__(self, sorting_analyzer)
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)

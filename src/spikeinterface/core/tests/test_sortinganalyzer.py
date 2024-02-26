@@ -5,7 +5,7 @@ import shutil
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import SortingAnalyzer, create_sorting_analyzer, load_sorting_analyzer
-from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 import numpy as np
 
@@ -70,7 +70,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting):
     print()
     print(sorting_analyzer)
 
-    register_result_extension(DummyResultExtension)
+    register_result_extension(DummyAnalyzerExtension)
 
     assert "channel_ids" in sorting_analyzer.rec_attributes
     assert "sampling_frequency" in sorting_analyzer.rec_attributes
@@ -143,7 +143,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting):
         assert np.all(~np.isin(data["result_two"], [1, 3]))
 
 
-class DummyResultExtension(ResultExtension):
+class DummyAnalyzerExtension(AnalyzerExtension):
     extension_name = "dummy"
     depend_on = []
     need_recording = False
@@ -179,21 +179,21 @@ class DummyResultExtension(ResultExtension):
         return self.data["result_one"]
 
 
-compute_dummy = DummyResultExtension.function_factory()
+compute_dummy = DummyAnalyzerExtension.function_factory()
 
 
-class DummyResultExtension2(ResultExtension):
+class DummyAnalyzerExtension2(AnalyzerExtension):
     extension_name = "dummy"
 
 
 def test_extension():
-    register_result_extension(DummyResultExtension)
+    register_result_extension(DummyAnalyzerExtension)
     # can be register twice without error
-    register_result_extension(DummyResultExtension)
+    register_result_extension(DummyAnalyzerExtension)
 
     # other extension with same name should trigger an error
     with pytest.raises(AssertionError):
-        register_result_extension(DummyResultExtension2)
+        register_result_extension(DummyAnalyzerExtension2)
 
 
 if __name__ == "__main__":

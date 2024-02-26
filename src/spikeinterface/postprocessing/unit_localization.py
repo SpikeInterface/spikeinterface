@@ -12,7 +12,7 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from ..core.sortinganalyzer import register_result_extension, ResultExtension
+from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core import compute_sparsity
 from ..core.template_tools import get_template_extremum_channel, _get_nbefore, _get_dense_templates_array
 
@@ -27,7 +27,7 @@ dtype_localize_by_method = {
 possible_localization_methods = list(dtype_localize_by_method.keys())
 
 
-class ComputeUnitLocations(ResultExtension):
+class ComputeUnitLocations(AnalyzerExtension):
     """
     Localize units in 2D or 3D with several methods given the template.
 
@@ -57,7 +57,7 @@ class ComputeUnitLocations(ResultExtension):
     need_job_kwargs = False
 
     def __init__(self, sorting_analyzer):
-        ResultExtension.__init__(self, sorting_analyzer)
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, method="monopolar_triangulation", **method_kwargs):
         params = dict(method=method, method_kwargs=method_kwargs)

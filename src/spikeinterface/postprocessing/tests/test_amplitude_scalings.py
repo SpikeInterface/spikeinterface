@@ -2,12 +2,12 @@ import unittest
 import numpy as np
 
 
-from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
 from spikeinterface.postprocessing import ComputeAmplitudeScalings
 
 
-class AmplitudeScalingsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
+class AmplitudeScalingsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeAmplitudeScalings
     extension_function_params_list = [
         dict(handle_collisions=True),

@@ -9,7 +9,7 @@ from copy import deepcopy
 import numpy as np
 
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 
 from .quality_metric_list import calculate_pc_metrics, _misc_metric_name_to_func, _possible_pc_metric_names
@@ -17,7 +17,7 @@ from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
 
 
-class ComputeQualityMetrics(ResultExtension):
+class ComputeQualityMetrics(AnalyzerExtension):
     """
     Compute quality metrics on sorting_.
 

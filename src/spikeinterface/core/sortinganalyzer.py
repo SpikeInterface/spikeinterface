@@ -36,7 +36,7 @@ def create_sorting_analyzer(
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
 
-    This object will handle a list of ResultExtension for all the post processing steps like: waveforms,
+    This object will handle a list of AnalyzerExtension for all the post processing steps like: waveforms,
     templates, unit locations, spike locations, quality metrics ...
 
     This object will be also use used for plotting purpose.
@@ -785,7 +785,7 @@ class SortingAnalyzer:
 
         Returns
         -------
-        result_extension: ResultExtension
+        result_extension: AnalyzerExtension
             Return the extension instance.
 
         Examples
@@ -938,7 +938,7 @@ class SortingAnalyzer:
 
     def get_extension(self, extension_name: str):
         """
-        Get a ResultExtension.
+        Get a AnalyzerExtension.
         If not loaded then load is automatic.
 
         Return None if the extension is not computed yet (this avoids the use of has_extension() and then get it)
@@ -1040,7 +1040,7 @@ def register_result_extension(extension_class):
     import spikeinterface.postprocessing
     more extensions will be available
     """
-    assert issubclass(extension_class, ResultExtension)
+    assert issubclass(extension_class, AnalyzerExtension)
     assert extension_class.extension_name is not None, "extension_name must not be None"
     global _possible_extensions
 
@@ -1076,7 +1076,7 @@ def get_extension_class(extension_name: str):
     return ext_class
 
 
-class ResultExtension:
+class AnalyzerExtension:
     """
     This the base class to extend the SortingAnalyzer.
     It can handle persistency to disk for any computations related to:
@@ -1106,7 +1106,7 @@ class ResultExtension:
 
     The subclass must also hanle an attribute `data` which is a dict contain the results after the `run()`.
 
-    All ResultExtension will have a function associate for instance (this use the function_factory):
+    All AnalyzerExtension will have a function associate for instance (this use the function_factory):
     compute_unit_location(sorting_analyzer, ...) will be equivalent to sorting_analyzer.compute("unit_location", ...)
 
 
@@ -1127,7 +1127,7 @@ class ResultExtension:
 
     #######
     # This 3 methods must be implemented in the subclass!!!
-    # See DummyResultExtension in test_sortinganalyzer.py as a simple example
+    # See DummyAnalyzerExtension in test_sortinganalyzer.py as a simple example
     def _run(self, **kwargs):
         # must be implemented in subclass
         # must populate the self.data dictionary
@@ -1193,8 +1193,8 @@ class ResultExtension:
 
     @property
     def sorting_analyzer(self):
-        # Important : to avoid the SortingAnalyzer referencing a ResultExtension
-        # and ResultExtension referencing a SortingAnalyzer we need a weakref.
+        # Important : to avoid the SortingAnalyzer referencing a AnalyzerExtension
+        # and AnalyzerExtension referencing a SortingAnalyzer we need a weakref.
         # Otherwise the garbage collector is not working properly.
         # and so the SortingAnalyzer + its recording are still alive even after deleting explicitly
         # the SortingAnalyzer which makes it impossible to delete the folder when using memmap.
@@ -1455,7 +1455,7 @@ class ResultExtension:
     def get_pipeline_nodes(self):
         assert (
             self.use_nodepipeline
-        ), "ResultExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
+        ), "AnalyzerExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):

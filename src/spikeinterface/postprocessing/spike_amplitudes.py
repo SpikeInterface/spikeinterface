@@ -7,14 +7,14 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
 
-from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 from spikeinterface.core.sorting_tools import spike_vector_to_indices
 
 
-class ComputeSpikeAmplitudes(ResultExtension):
+class ComputeSpikeAmplitudes(AnalyzerExtension):
     """
-    ResultExtension
+    AnalyzerExtension
     Computes the spike amplitudes.
 
     Need "templates" or "fast_templates" to be computed first.
@@ -64,7 +64,7 @@ class ComputeSpikeAmplitudes(ResultExtension):
     need_job_kwargs = True
 
     def __init__(self, sorting_analyzer):
-        ResultExtension.__init__(self, sorting_analyzer)
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
         self._all_spikes = None
 

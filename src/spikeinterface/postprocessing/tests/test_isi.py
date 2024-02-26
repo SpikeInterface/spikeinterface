@@ -3,7 +3,7 @@ import numpy as np
 from typing import List
 
 
-from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.postprocessing import compute_isi_histograms, ComputeISIHistograms
 from spikeinterface.postprocessing.isi import _compute_isi_histograms
 
@@ -16,7 +16,7 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-class ComputeISIHistogramsTest(ResultExtensionCommonTestSuite, unittest.TestCase):
+class ComputeISIHistogramsTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeISIHistograms
     extension_function_params_list = [
         dict(method="numpy"),

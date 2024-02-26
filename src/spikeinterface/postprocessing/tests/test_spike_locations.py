@@ -2,10 +2,10 @@ import unittest
 import numpy as np
 
 from spikeinterface.postprocessing import ComputeSpikeLocations
-from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
 
-class SpikeLocationsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
+class SpikeLocationsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeSpikeLocations
     extension_function_params_list = [
         dict(

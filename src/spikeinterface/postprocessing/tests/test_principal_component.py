@@ -5,13 +5,13 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.postprocessing import ComputePrincipalComponents, compute_principal_components
-from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite, cache_folder
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite, cache_folder
 
 
 DEBUG = False
 
 
-class PrincipalComponentsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
+class PrincipalComponentsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputePrincipalComponents
     extension_function_params_list = [
         dict(mode="by_channel_local"),

@@ -1,7 +1,7 @@
 import unittest
 
 from spikeinterface.postprocessing.tests.common_extension_tests import (
-    ResultExtensionCommonTestSuite,
+    AnalyzerExtensionCommonTestSuite,
     get_sorting_analyzer,
     get_dataset,
 )
@@ -9,7 +9,7 @@ from spikeinterface.postprocessing.tests.common_extension_tests import (
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap, ComputeTemplateSimilarity
 
 
-class SimilarityExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
+class SimilarityExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeTemplateSimilarity
     extension_function_params_list = [
         dict(method="cosine_similarity"),

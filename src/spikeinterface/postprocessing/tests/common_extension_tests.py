@@ -61,7 +61,7 @@ def get_sorting_analyzer(recording, sorting, format="memory", sparsity=None, nam
     return sorting_analyzer
 
 
-class ResultExtensionCommonTestSuite:
+class AnalyzerExtensionCommonTestSuite:
     """
     Common tests with class approach to compute extension on several cases (3 format x 2 sparsity)
 
