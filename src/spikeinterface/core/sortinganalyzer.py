@@ -409,12 +409,14 @@ class SortingAnalyzer:
 
         # the recording
         rec_dict = recording.to_dict(relative_to=folder, recursive=True)
-        zarr_rec = np.array([rec_dict], dtype=object)
+        
         if recording.check_serializability("json"):
             # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
+            zarr_rec = np.array([check_json(rec_dict)], dtype=object)
             zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
         elif recording.check_serializability("pickle"):
             # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
+            zarr_rec = np.array([rec_dict], dtype=object)
             zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
         else:
             warnings.warn(

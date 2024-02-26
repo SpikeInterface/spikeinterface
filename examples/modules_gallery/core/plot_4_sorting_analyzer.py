@@ -1,23 +1,33 @@
 '''
-Waveform Extractor
-==================
+SortingAnalyzer
+===============
 
-SpikeInterface provides an efficient mechanism to extract waveform snippets.
+SpikeInterface provides an object to gather a Recording and a Sorting to make
+analyzer and visualization of the sorting : :py:class:`~spikeinterface.core.SortingAnalyzer`.
 
-The :py:class:`~spikeinterface.core.WaveformExtractor` class:
+This :py:class:`~spikeinterface.core.SortingAnalyzer` class:
 
-  * randomly samples a subset spikes with max_spikes_per_unit
-  * extracts all waveforms snippets for each unit
-  * saves waveforms in a local folder
-  * can load stored waveforms
-  * retrieves template (average or median waveform) for each unit
+  * is the first step for all post post processing, quality metrics, and visualization.
+  * gather a recording and a sorting
+  * can be sparse or dense : all channel are used for all units or not.
+  * handle a list of "extensions"
+  * "core extensions" are the one to extract some waveforms to compute templates:
+    * "random_spikes" : select randomly a subset of spikes per unit
+    * "waveforms" : extract waveforms per unit
+    * "templates": compute template using average or median
+    * "noise_levels" : compute noise level from traces (usefull to get snr of units)
+  * can be in memory or persistent to disk (2 formats binary/npy or zarr)
+
+More extesions are available in `spikeinterface.postprocessing` like "principal_components", "spike_amplitudes", 
+"unit_lcations", ...
+
 
 Here the how!
 '''
 import matplotlib.pyplot as plt
 
 from spikeinterface import download_dataset
-from spikeinterface import WaveformExtractor, extract_waveforms
+from spikeinterface import create_sorting_analyzer, load_sorting_analyzer
 import spikeinterface.extractors as se
 
 ##############################################################################
@@ -48,184 +58,102 @@ from probeinterface.plotting import plot_probe
 plot_probe(probe)
 
 ###############################################################################
-# A :py:class:`~spikeinterface.core.WaveformExtractor` object can be created with the
-# :py:func:`~spikeinterface.core.extract_waveforms` function (this defaults to a sparse
-# representation of the waveforms):
+# A :py:class:`~spikeinterface.core.SortingAnalyzer` object can be created with the
+# :py:func:`~spikeinterface.core.create_sorting_analyzer` function (this defaults to a sparse
+# representation of the waveforms)
+# Here the format is "memory".
 
-folder = 'waveform_folder'
-we = extract_waveforms(
-    recording,
-    sorting,
-    folder,
-    ms_before=1.5,
-    ms_after=2.,
-    max_spikes_per_unit=500,
-    overwrite=True
-)
-print(we)
+analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="memory")
+print(analyzer)
 
 ###############################################################################
-# Alternatively, the :py:class:`~spikeinterface.core.WaveformExtractor` object can be instantiated
-# directly. In this case, we need to :py:func:`~spikeinterface.core.WaveformExtractor.set_params` to set the desired
-# parameters:
+# A :py:class:`~spikeinterface.core.SortingAnalyzer` object can be persistane to disk
+# when using format="binary_folder" or format="zarr"
 
-folder = 'waveform_folder2'
-we = WaveformExtractor.create(recording, sorting, folder, remove_if_exists=True)
-we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=1000)
-we.run_extract_waveforms(n_jobs=1, chunk_size=30000, progress_bar=True)
-print(we)
+folder = "analyzer_folder"
+analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="binary_folder", folder=folder)
+print(analyzer)
 
+# then it can be load back
+analyzer = load_sorting_analyzer(folder)
+print(analyzer)
 
 ###############################################################################
-# To speed up computation, waveforms can also be extracted using parallel
-# processing (recommended!). We can define some :code:`'job_kwargs'` to pass
-# to the function as extra arguments:
+# No extension are computed yet.
+# Lets compute the most basic ones : select some random spikes per units,
+# extract waveforms (sparse in this examples) and compute templates.
+# You can see that printing the object indicate which extension are computed yet.
 
-job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
+analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500,)
+analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True)
+analyzer.compute("templates", operators=["average", "median", "std"])
+print(analyzer)
 
-folder = 'waveform_folder_parallel'
-we = extract_waveforms(
-    recording,
-    sorting,
-    folder,
-    sparse=False,
-    ms_before=3.,
-    ms_after=4.,
-    max_spikes_per_unit=500,
-    overwrite=True,
-    **job_kwargs
-)
-print(we)
 
 
 ###############################################################################
-# The :code:`'waveform_folder'` folder contains:
-#  * the dumped recording (json)
-#  * the dumped sorting (json)
-#  * the parameters (json)
-#  * a subfolder with "waveforms_XXX.npy" and "sampled_index_XXX.npy"
+# To speed up computation, some steps like ""waveforms" can also be extracted 
+# using parallel processing (recommended!). Like this
 
-import os
+analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True,
+                 n_jobs=8, chunk_duration="1s", progress_bar=True)
 
-print(os.listdir(folder))
-print(os.listdir(folder + '/waveforms'))
+# which is equivalent of this
+job_kwargs = dict(n_jobs=8, chunk_duration="1s", progress_bar=True)
+analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True, **job_kwargs)
+
 
 ###############################################################################
-# Now we can retrieve waveforms per unit on-the-fly. The waveforms shape
-# is (num_spikes, num_sample, num_channel):
+# Each extension can retrieve some data
+# For instance "waveforms" extension can retrieve wavfroms per units
+# which is a numpy array of shape (num_spikes, num_sample, num_channel):
 
-unit_ids = sorting.unit_ids
-
-for unit_id in unit_ids:
-    wfs = we.get_waveforms(unit_id)
+ext_wf = analyzer.get_extension("waveforms")
+for unit_id in analyzer.unit_ids:
+    wfs = ext_wf.get_waveforms_one_unit(unit_id)
     print(unit_id, ':', wfs.shape)
 
 ###############################################################################
-# We can also get the template for each units either using the median or the
-# average:
+# Same for the "templates" extension. Here we can get all templates at once
+# with shape (num_units, num_sample, num_channel):
+# For this extension, we can get the template for all units either using the median
+# or the average
 
-for unit_id in unit_ids[:3]:
+ext_templates = analyzer.get_extension("templates")
+
+av_templates = ext_templates.get_data(operator="average")
+print(av_templates.shape)
+
+median_templates = ext_templates.get_data(operator="median")
+print(median_templates.shape)
+
+
+
+###############################################################################
+# This can be plot easily.
+
+for unit_index, unit_id in enumerate(analyzer.unit_ids[:3]):
     fig, ax = plt.subplots()
-    template = we.get_template(unit_id=unit_id, mode='median')
-    print(template.shape)
+    template = av_templates[unit_index]
     ax.plot(template)
     ax.set_title(f'{unit_id}')
 
 
 ###############################################################################
-# Or retrieve templates for all units at once:
+# The SortingAnalyzer can be saved as to another format using save_as()
+# So the computation can be done with format="memory" and
 
-all_templates = we.get_all_templates()
-print(all_templates.shape)
-
-
-'''
-Sparse Waveform Extractor
--------------------------
-
-'''
-###############################################################################
-# For high-density probes, such as Neuropixels, we may want to work with sparse
-# waveforms, i.e., waveforms computed on a subset of channels. To do so, we
-# two options.
-#
-# Option 1) Save a dense waveform extractor to sparse:
-#
-# In this case, from an existing (dense) waveform extractor, we can first estimate a
-# sparsity (which channels each unit is defined on) and then save to a new
-# folder in sparse mode:
-
-from spikeinterface import compute_sparsity
-
-# define sparsity within a radius of 40um
-sparsity = compute_sparsity(we, method="radius", radius_um=40)
-print(sparsity)
-
-# save sparse waveforms
-folder = 'waveform_folder_sparse'
-we_sparse = we.save(folder=folder, sparsity=sparsity, overwrite=True)
-
-# we_sparse is a sparse WaveformExtractor
-print(we_sparse)
-
-wf_full = we.get_waveforms(we.sorting.unit_ids[0])
-print(f"Dense waveforms shape for unit {we.sorting.unit_ids[0]}: {wf_full.shape}")
-wf_sparse = we_sparse.get_waveforms(we.sorting.unit_ids[0])
-print(f"Sparse waveforms shape for unit {we.sorting.unit_ids[0]}: {wf_sparse.shape}")
+analyzer.save_as(folder="analyzer.zarr", format="zarr")
 
 
 ###############################################################################
-# Option 2) Directly extract sparse waveforms (current spikeinterface default):
-#
-# We can also directly extract sparse waveforms. To do so, dense waveforms are
-# extracted first using a small number of spikes (:code:`'num_spikes_for_sparsity'`)
+# The SortingAnalyzer offer also select_units() method wich allows to export
+# only some relevant units for instance to a new SortingAnalyzer instance.
 
-folder = 'waveform_folder_sparse_direct'
-we_sparse_direct = extract_waveforms(
-    recording,
-    sorting,
-    folder,
-    ms_before=3.,
-    ms_after=4.,
-    max_spikes_per_unit=500,
-    overwrite=True,
-    sparse=True,
-    num_spikes_for_sparsity=100,
-    method="radius",
-    radius_um=40,
-    **job_kwargs
-)
-print(we_sparse_direct)
-
-template_full = we.get_template(we.sorting.unit_ids[0])
-print(f"Dense template shape for unit {we.sorting.unit_ids[0]}: {template_full.shape}")
-template_sparse = we_sparse_direct.get_template(we.sorting.unit_ids[0])
-print(f"Sparse template shape for unit {we.sorting.unit_ids[0]}: {template_sparse.shape}")
+analyzer_some_units = analyzer.select_units(unit_ids=analyzer.unit_ids[:5],
+                                            format="binary_folder", folder="analyzer_some_units")
+print(analyzer_some_units)
 
 
-###############################################################################
-# As shown above, when retrieving waveforms/template for a unit from a sparse
-# :code:`'WaveformExtractor'`, the waveforms are returned on a subset of channels.
-# To retrieve which channels each unit is associated with, we can use the sparsity
-# object:
-
-# retrive channel ids for first unit:
-unit_ids = we_sparse.unit_ids
-channel_ids_0 = we_sparse.sparsity.unit_id_to_channel_ids[unit_ids[0]]
-print(f"Channel ids associated to {unit_ids[0]}: {channel_ids_0}")
-
-
-###############################################################################
-# However, when retrieving all templates, a dense shape is returned. This is
-# because different channels might have a different number of sparse channels!
-# In this case, values on channels not belonging to a unit are filled with 0s.
-
-all_sparse_templates = we_sparse.get_all_templates()
-
-# this is a boolean mask with sparse channels for the 1st unit
-mask0 = we_sparse.sparsity.mask[0]
-# Let's plot values for the first 5 samples inside and outside sparsity mask
-print("Values inside sparsity:\n", all_sparse_templates[0, :5, mask0])
-print("Values outside sparsity:\n", all_sparse_templates[0, :5, ~mask0])
 
 plt.show()
