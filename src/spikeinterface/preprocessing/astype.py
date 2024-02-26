@@ -37,6 +37,7 @@ class AstypeRecording(BasePreprocessor):
         self._kwargs = dict(
             recording=recording,
             dtype=dtype_.str,
+            round=round,
         )
 
 
@@ -49,12 +50,13 @@ class AstypeRecordingSegment(BasePreprocessorSegment):
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.dtype = dtype
+        self.round = round
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
             channel_indices = slice(None)
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        if round:
+        if self.round:
             np.round(traces, out=traces)
         return traces.astype(self.dtype, copy=False)
 
