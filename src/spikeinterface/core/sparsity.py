@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 
+
 from .basesorting import BaseSorting
 from .baserecording import BaseRecording
-from .recording_tools import get_noise_levels
 from .sorting_tools import random_spikes_selection
 from .job_tools import _shared_job_kwargs_doc
 from .waveform_tools import estimate_templates_average
@@ -588,10 +588,15 @@ def estimate_sparsity(
     from .template import Templates
 
     assert method in ("radius", "best_channels"), "estimate_sparsity() handle only method='radius' or 'best_channel'"
-    if method == "radius":
-        assert (
-            len(recording.get_probes()) == 1
-        ), "The 'radius' method of `estimate_sparsity()` can handle only one probe"
+
+    if recording.get_probes() == 1:
+        # standard case
+        probe = recording.get_probe()
+    else:
+        # if many probe or no probe then we use channel location and create a dummy probe with all channels
+        # note that get_channel_locations() is checking that channel are not spatialy overlapping so the radius method is OK.
+        chan_locs = recording.get_channel_locations()
+        probe = recording.create_dummy_probe_from_locations(chan_locs)
 
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
@@ -625,7 +630,7 @@ def estimate_sparsity(
         sparsity_mask=None,
         channel_ids=recording.channel_ids,
         unit_ids=sorting.unit_ids,
-        probe=recording.get_probe(),
+        probe=probe,
     )
 
     sparsity = compute_sparsity(

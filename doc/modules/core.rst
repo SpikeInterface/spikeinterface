@@ -9,7 +9,7 @@ The :py:mod:`spikeinterface.core` module provides the basic classes and tools of
 Several Base classes are implemented here and inherited throughout the SI code-base.
 The core classes are: :py:class:`~spikeinterface.core.BaseRecording` (for raw data),
 :py:class:`~spikeinterface.core.BaseSorting` (for spike-sorted data), and
-:py:class:`~spikeinterface.core.WaveformExtractor` (for waveform extraction and postprocessing).
+:py:class:`~spikeinterface.core.SortingAnalyzer` (for postprocessing, quality metrics, and waveform extraction).
 
 There are additional classes to allow to retrieve events (:py:class:`~spikeinterface.core.BaseEvent`) and to
 handle unsorted waveform cutouts, or *snippets*, which are recorded by some acquisition systems
@@ -824,13 +824,14 @@ various formats:
     rec = read_spikeglx(local_folder_path)
 
 
-WaveformExtractor (deprecated)
-------------------------------
+LEGACY objects
+--------------
 
-.. warning::
+WaveformExtractor
+^^^^^^^^^^^^^^^^^
 
-      The :py:class:`~spikeinterface.core.WaveformExtractor` class is deprecated and will be removed in future versions.
-      Please use the :py:class:`~spikeinterface.core.SortingAnalyzer` class instead.
+This is now a legacy object that can still be accessed through the :py:class:`MockWaveformExtractor`. It is kept
+for backward compatibility.
 
 The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core object to combine a
 :py:class:`~spikeinterface.core.BaseRecording` and a :py:class:`~spikeinterface.core.BaseSorting` object.

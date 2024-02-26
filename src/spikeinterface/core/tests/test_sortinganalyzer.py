@@ -96,11 +96,6 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting):
 
     assert sorting_analyzer.has_recording()
 
-    if sorting_analyzer.random_spikes_indices is None:
-        sorting_analyzer.select_random_spikes(max_spikes_per_unit=10, seed=2205)
-        assert sorting_analyzer.random_spikes_indices is not None
-        assert sorting_analyzer.random_spikes_indices.size == 10 * sorting_analyzer.sorting.unit_ids.size
-
     # save to several format
     for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
@@ -139,11 +134,6 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting):
         sorting_analyzer.compute("dummy")
         keep_unit_ids = original_sorting.unit_ids[::2]
         sorting_analyzer2 = sorting_analyzer.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
-
-        # check that random_spikes_indices are remmaped
-        assert sorting_analyzer2.random_spikes_indices is not None
-        some_spikes = sorting_analyzer2.sorting.to_spike_vector()[sorting_analyzer2.random_spikes_indices]
-        assert np.array_equal(np.unique(some_spikes["unit_index"]), np.arange(keep_unit_ids.size))
 
         # check propagation of result data and correct sligin
         assert np.array_equal(keep_unit_ids, sorting_analyzer2.unit_ids)

@@ -15,7 +15,7 @@ job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
 def get_sorting_analyzer():
     recording, sorting = make_dataset()
     sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
-    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute("fast_templates", **job_kwargs)
     sorting_analyzer.compute("noise_levels")
     return sorting_analyzer

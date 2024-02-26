@@ -27,7 +27,7 @@ def make_sorting_analyzer(sparse=True):
     )
 
     sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="memory", sparse=sparse)
-    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute("waveforms", **job_kwargs)
     sorting_analyzer.compute("templates")
     sorting_analyzer.compute("noise_levels")
