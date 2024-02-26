@@ -588,10 +588,6 @@ def estimate_sparsity(
     from .template import Templates
 
     assert method in ("radius", "best_channels"), "estimate_sparsity() handle only method='radius' or 'best_channel'"
-    if method == "radius":
-        assert (
-            len(recording.get_probes()) == 1
-        ), "The 'radius' method of `estimate_sparsity()` can handle only one probe"
 
     if recording.get_probes() == 1:
         # standard case
