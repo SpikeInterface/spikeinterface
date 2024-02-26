@@ -30,12 +30,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "sparsity": {"method": "ptp", "threshold": 0.25},
-        "sparsity": {"method": "ptp", "threshold": 0.25},
-        "filtering": {"freq_min": 150},
+        "filtering": {"freq_min": 150, "dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "smart_sampling_amplitudes",
             "n_peaks_per_channel": 5000,
+            "min_n_peaks": 100000,
             "min_n_peaks": 100000,
             "select_per_channel": False,
         },
