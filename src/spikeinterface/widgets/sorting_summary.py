@@ -61,7 +61,9 @@ class SortingSummaryWidget(BaseWidget):
         **backend_kwargs,
     ):
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
-        self.check_extensions(sorting_analyzer, ["correlograms", "spike_amplitudes", "unit_locations", "template_similarity"])
+        self.check_extensions(
+            sorting_analyzer, ["correlograms", "spike_amplitudes", "unit_locations", "template_similarity"]
+        )
         sorting = sorting_analyzer.sorting
 
         if unit_ids is None:
@@ -183,10 +185,9 @@ class SortingSummaryWidget(BaseWidget):
     def plot_spikeinterface_gui(self, data_plot, **backend_kwargs):
         sorting_analyzer = data_plot["sorting_analyzer"]
 
-
         import spikeinterface_gui
-        app = spikeinterface_gui.mkQApp() 
+
+        app = spikeinterface_gui.mkQApp()
         win = spikeinterface_gui.MainWindow(sorting_analyzer)
         win.show()
         app.exec_()
-

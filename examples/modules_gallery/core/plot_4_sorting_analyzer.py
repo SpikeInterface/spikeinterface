@@ -18,7 +18,7 @@ This :py:class:`~spikeinterface.core.SortingAnalyzer` class:
     * "noise_levels" : compute noise level from traces (usefull to get snr of units)
   * can be in memory or persistent to disk (2 formats binary/npy or zarr)
 
-More extesions are available in `spikeinterface.postprocessing` like "principal_components", "spike_amplitudes", 
+More extesions are available in `spikeinterface.postprocessing` like "principal_components", "spike_amplitudes",
 "unit_lcations", ...
 
 
@@ -92,7 +92,7 @@ print(analyzer)
 
 
 ###############################################################################
-# To speed up computation, some steps like ""waveforms" can also be extracted 
+# To speed up computation, some steps like ""waveforms" can also be extracted
 # using parallel processing (recommended!). Like this
 
 analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True,

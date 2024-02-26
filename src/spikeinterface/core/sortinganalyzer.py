@@ -161,7 +161,12 @@ class SortingAnalyzer:
     """
 
     def __init__(
-        self, sorting=None, recording=None, rec_attributes=None, format=None, sparsity=None,
+        self,
+        sorting=None,
+        recording=None,
+        rec_attributes=None,
+        format=None,
+        sparsity=None,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -409,7 +414,7 @@ class SortingAnalyzer:
 
         # the recording
         rec_dict = recording.to_dict(relative_to=folder, recursive=True)
-        
+
         if recording.check_serializability("json"):
             # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
             zarr_rec = np.array([check_json(rec_dict)], dtype=object)
@@ -760,11 +765,10 @@ class SortingAnalyzer:
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
-            extensions = {k : {} for k in input}
-            self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)        
+            extensions = {k: {} for k in input}
+            self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
-
 
     def compute_one_extension(self, extension_name, save=True, **kwargs):
         """

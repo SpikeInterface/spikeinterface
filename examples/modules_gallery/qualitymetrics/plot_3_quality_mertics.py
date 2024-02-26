@@ -32,7 +32,7 @@ analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recording, form
 print(analyzer)
 
 ##############################################################################
-# Depending on which metrics we want to compute we will need first to compute 
+# Depending on which metrics we want to compute we will need first to compute
 # some necessary extensions. (if not computed an error message will be raised)
 
 analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=600, seed=2205)
