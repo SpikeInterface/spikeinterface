@@ -141,7 +141,7 @@ class TemporalPCBaseNode(WaveformsNode):
 
         # TODO alessio, herberto : the fitting is done with a SortingAnalyzer which is a postprocessing object, I think we should not do this for a component
         sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=True)
-        sorting_analyzer.select_random_spikes()
+        sorting_analyzer.compute("random_spikes")
         sorting_analyzer.compute("waveforms", ms_before=ms_before, ms_after=ms_after)
         sorting_analyzer.compute(
             "principal_components", n_components=n_components, mode="by_channel_global", whiten=whiten

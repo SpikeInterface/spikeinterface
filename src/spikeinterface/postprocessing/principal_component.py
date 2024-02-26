@@ -59,6 +59,7 @@ class ComputePrincipalComponents(ResultExtension):
 
     extension_name = "principal_components"
     depend_on = [
+        "random_spikes",
         "waveforms",
     ]
     need_recording = False
@@ -89,8 +90,7 @@ class ComputePrincipalComponents(ResultExtension):
     def _select_extension_data(self, unit_ids):
 
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
-        spikes = self.sorting_analyzer.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
@@ -147,8 +147,7 @@ class ComputePrincipalComponents(ResultExtension):
             assert self.params["mode"] != "concatenated", "mode concatenated cannot retrieve sparse projection"
             assert sparsity is not None, "sparse projection need SortingAnalyzer to be sparse"
 
-        spikes = sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
 
         unit_index = sorting.id_to_index(unit_id)
         spike_mask = some_spikes["unit_index"] == unit_index
@@ -205,8 +204,7 @@ class ComputePrincipalComponents(ResultExtension):
 
         sparsity = self.sorting_analyzer.sparsity
 
-        spikes = sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
 
         unit_indices = sorting.ids_to_indices(unit_ids)
         selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
@@ -288,8 +286,7 @@ class ComputePrincipalComponents(ResultExtension):
         # transform
         waveforms_ext = self.sorting_analyzer.get_extension("waveforms")
         some_waveforms = waveforms_ext.data["waveforms"]
-        spikes = self.sorting_analyzer.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
 
         pca_projection = self._transform_waveforms(some_spikes, some_waveforms, pca_model, progress_bar)
 
@@ -541,8 +538,7 @@ class ComputePrincipalComponents(ResultExtension):
         waveforms_ext = self.sorting_analyzer.get_extension("waveforms")
         some_waveforms = waveforms_ext.data["waveforms"]
 
-        spikes = self.sorting_analyzer.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
 
         return self._get_slice_waveforms(unit_id, some_spikes, some_waveforms)
 

@@ -38,7 +38,7 @@ set_global_tmp_folder(cache_folder)
 #     recording, sorting = read_mearec(local_path)
 
 #     sorting_analyzer = si.create_sorting_analyzer(sorting, recording, format="memory")
-#     sorting_analyzer.select_random_spikes()
+#     sorting_analyzer.compute("random_spikes")
 #     sorting_analyzer.compute("waveforms")
 #     sorting_analyzer.compute("templates")
 #     sorting_analyzer.compute("noise_levels")

@@ -284,11 +284,9 @@ class GroundTruthStudy:
 
         return pd.Series(run_times, name="run_time")
 
-    def create_sorting_analyzer_gt(self, case_keys=None, **kwargs):
+    def create_sorting_analyzer_gt(self, case_keys=None, random_params={}, waveforms_params={}, **job_kwargs):
         if case_keys is None:
             case_keys = self.cases.keys()
-
-        select_params, job_kwargs = split_job_kwargs(kwargs)
 
         base_folder = self.folder / "sorting_analyzer"
         base_folder.mkdir(exist_ok=True)
@@ -300,8 +298,8 @@ class GroundTruthStudy:
             folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
             sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
-            sorting_analyzer.select_random_spikes(**select_params)
-            sorting_analyzer.compute("waveforms", **job_kwargs)
+            sorting_analyzer.compute("random_spikes", **random_params)
+            sorting_analyzer.compute("waveforms", **waveforms_params, **job_kwargs)
             sorting_analyzer.compute("templates")
             sorting_analyzer.compute("noise_levels")
 
