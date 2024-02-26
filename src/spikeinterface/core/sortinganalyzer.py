@@ -20,7 +20,6 @@ from .basesorting import BaseSorting
 
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
-# from .sorting_tools import random_spikes_selection
 from .core_tools import check_json
 from .job_tools import split_job_kwargs
 from .numpyextractors import SharedMemorySorting
@@ -88,6 +87,13 @@ def create_sorting_analyzer(
     >>> # Can make a copy with a subset of units (extensions are propagated for the unit subset)
     >>> sorting_analyzer4 = sorting_analyzer.select_units(unit_ids=sorting.units_ids[:5], format="memory")
     >>> sorting_analyzer5 = sorting_analyzer.select_units(unit_ids=sorting.units_ids[:5], format="binary_folder", folder="/result_5units")
+
+    Notes
+    -----
+
+    By default creating a SortingAnalyzer can be slow because the sparsity is estimated by default.
+    In some situation, sparsity is not needed, so to make it fast creation, you need to turn
+    sparsity off (or give external sparsity) like this.
     """
 
     # handle sparsity
