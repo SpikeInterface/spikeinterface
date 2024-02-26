@@ -18,6 +18,8 @@ def test_astype():
     np.testing.assert_array_equal(traces_int16, astype(rec_float32, "int16").get_traces())
     traces_float64 = traces.astype("float64")
     np.testing.assert_array_equal(traces_float64, astype(rec_float32, "float64").get_traces())
+    traces_int16_rounded = traces.round().astype("int16")
+    np.testing.assert_array_equal(traces_int16_rounded, astype(rec_float32, "int16", round=True).get_traces())
 
 
 if __name__ == "__main__":

@@ -19,6 +19,7 @@ class AstypeRecording(BasePreprocessor):
         self,
         recording,
         dtype=None,
+        round: bool = False,
     ):
         dtype_ = fix_dtype(recording, dtype)
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
@@ -27,6 +28,7 @@ class AstypeRecording(BasePreprocessor):
             rec_segment = AstypeRecordingSegment(
                 parent_segment,
                 dtype,
+                round,
             )
             self.add_recording_segment(rec_segment)
 
@@ -41,6 +43,7 @@ class AstypeRecordingSegment(BasePreprocessorSegment):
         self,
         parent_recording_segment,
         dtype,
+        round: bool,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.dtype = dtype
@@ -49,6 +52,8 @@ class AstypeRecordingSegment(BasePreprocessorSegment):
         if channel_indices is None:
             channel_indices = slice(None)
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
+        if round:
+            np.round(traces, out=traces)
         return traces.astype(self.dtype, copy=False)
 
 
