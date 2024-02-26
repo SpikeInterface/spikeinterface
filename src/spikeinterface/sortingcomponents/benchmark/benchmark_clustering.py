@@ -14,10 +14,7 @@ from spikeinterface.comparison.comparisontools import make_matching_events
 #from spikeinterface.postprocessing import get_template_extremum_channel
 from spikeinterface.core import get_noise_levels
 
-import time
-import string, random
 import pylab as plt
-import os
 import numpy as np
 
 
