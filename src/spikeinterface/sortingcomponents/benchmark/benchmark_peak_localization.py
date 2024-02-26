@@ -90,6 +90,7 @@ class PeakLocalizationStudy(BenchmarkStudy):
         return benchmark
 
     def plot_comparison_positions(self, case_keys=None):
+    def plot_comparison_positions(self, case_keys=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -114,7 +115,9 @@ class PeakLocalizationStudy(BenchmarkStudy):
 
             data = result["medians_over_templates"]
 
-            axs[0].plot(snrs[wdx], data[wdx], lw=2, label=self.cases[key]["label"])
+            axs[0].plot(
+                snrs[wdx], data[wdx], lw=2, label=self.cases[key]['label']
+            )
             ymin = (data - result["mads_over_templates"])[wdx]
             ymax = (data + result["mads_over_templates"])[wdx]
 
@@ -125,9 +128,12 @@ class PeakLocalizationStudy(BenchmarkStudy):
             axs[1].plot(
                 distances_to_center[zdx],
                 data[zdx],
+                data[zdx],
                 lw=2,
                 label=self.cases[key]["label"],
             )
+            ymin = (data - result["mads_over_templates"])[zdx]
+            ymax = (data + result["mads_over_templates"])[zdx]
             ymin = (data - result["mads_over_templates"])[zdx]
             ymax = (data + result["mads_over_templates"])[zdx]
 
@@ -239,6 +245,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
             )
         axs.legend()
 
+
     def plot_comparison_positions(self, case_keys=None):
 
         if case_keys is None:
@@ -266,13 +273,16 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
             data = result["errors"]
 
-            axs[0].plot(snrs[wdx], data[wdx], lw=2, label=self.cases[key]["label"])
-
+            axs[0].plot(
+                snrs[wdx], data[wdx], lw=2, label=self.cases[key]['label']
+            )
+            
             axs[0].set_xlabel("snr")
             axs[0].set_ylabel("error (um)")
 
             axs[1].plot(
                 distances_to_center[zdx],
+                data[zdx],
                 data[zdx],
                 lw=2,
                 label=self.cases[key]["label"],
