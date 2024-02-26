@@ -562,6 +562,8 @@ class SortingAnalyzer:
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
             folder = Path(folder)
+            if folder.suffix != ".zarr":
+                folder = folder.parent / f"{folder.stem}.zarr"
             SortingAnalyzer.create_zarr(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
