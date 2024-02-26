@@ -74,12 +74,25 @@ def _check_result_extension(sorting_analyzer, extension_name):
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("sparse", [False, ])
+def test_SelectRandomSpikes(format, sparse):
+    sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
+
+    ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
+    indices = ext.data["random_spikes_indices"]
+    assert indices.size == 10 * sorting_analyzer.sorting.unit_ids.size
+    # print(indices)
+
+    _check_result_extension(sorting_analyzer, "random_spikes")
+
+
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeWaveforms(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
     job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
-    sorting_analyzer.select_random_spikes(max_spikes_per_unit=50, seed=2205)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
     ext = sorting_analyzer.compute("waveforms", **job_kwargs)
     wfs = ext.data["waveforms"]
     _check_result_extension(sorting_analyzer, "waveforms")
@@ -90,7 +103,7 @@ def test_ComputeWaveforms(format, sparse):
 def test_ComputeTemplates(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
-    sorting_analyzer.select_random_spikes(max_spikes_per_unit=20, seed=2205)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
 
     with pytest.raises(AssertionError):
         # This require "waveforms first and should trig an error
@@ -145,14 +158,15 @@ def test_ComputeFastTemplates(format, sparse):
     ms_before = 1.0
     ms_after = 2.5
 
-    sorting_analyzer.select_random_spikes(max_spikes_per_unit=20, seed=2205)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
+
     sorting_analyzer.compute("fast_templates", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs)
 
     _check_result_extension(sorting_analyzer, "fast_templates")
 
     # compare ComputeTemplates with dense and ComputeFastTemplates: should give the same on "average"
     other_sorting_analyzer = get_sorting_analyzer(format=format, sparse=False)
-    other_sorting_analyzer.select_random_spikes(max_spikes_per_unit=20, seed=2205)
+    other_sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
     other_sorting_analyzer.compute(
         "waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs
     )
@@ -191,18 +205,21 @@ def test_ComputeNoiseLevels(format, sparse):
 
 
 if __name__ == "__main__":
-    # test_ComputeWaveforms(format="memory", sparse=True)
-    # test_ComputeWaveforms(format="memory", sparse=False)
-    # test_ComputeWaveforms(format="binary_folder", sparse=True)
-    # test_ComputeWaveforms(format="binary_folder", sparse=False)
-    # test_ComputeWaveforms(format="zarr", sparse=True)
-    # test_ComputeWaveforms(format="zarr", sparse=False)
+
+    test_SelectRandomSpikes(format="memory", sparse=True)
+
+    test_ComputeWaveforms(format="memory", sparse=True)
+    test_ComputeWaveforms(format="memory", sparse=False)
+    test_ComputeWaveforms(format="binary_folder", sparse=True)
+    test_ComputeWaveforms(format="binary_folder", sparse=False)
+    test_ComputeWaveforms(format="zarr", sparse=True)
+    test_ComputeWaveforms(format="zarr", sparse=False)
 
     test_ComputeTemplates(format="memory", sparse=True)
-    # test_ComputeTemplates(format="memory", sparse=False)
-    # test_ComputeTemplates(format="binary_folder", sparse=True)
-    # test_ComputeTemplates(format="zarr", sparse=True)
+    test_ComputeTemplates(format="memory", sparse=False)
+    test_ComputeTemplates(format="binary_folder", sparse=True)
+    test_ComputeTemplates(format="zarr", sparse=True)
 
-    # test_ComputeFastTemplates(format="memory", sparse=True)
+    test_ComputeFastTemplates(format="memory", sparse=True)
 
-    # test_ComputeNoiseLevels(format="memory", sparse=False)
+    test_ComputeNoiseLevels(format="memory", sparse=False)

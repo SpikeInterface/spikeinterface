@@ -78,7 +78,7 @@ def test_run_node_pipeline():
 
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
-    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute("fast_templates")
     extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
 

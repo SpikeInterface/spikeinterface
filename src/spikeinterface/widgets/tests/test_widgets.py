@@ -77,7 +77,7 @@ class TestWidgets(unittest.TestCase):
 
         # create dense
         cls.sorting_analyzer_dense = create_sorting_analyzer(cls.sorting, cls.recording, format="memory", sparse=False)
-        cls.sorting_analyzer_dense.select_random_spikes()
+        cls.sorting_analyzer_dense.compute("random_spikes")
         cls.sorting_analyzer_dense.compute(extensions_to_compute, **job_kwargs)
 
         sw.set_default_plotter_backend("matplotlib")
@@ -92,7 +92,7 @@ class TestWidgets(unittest.TestCase):
         cls.sorting_analyzer_sparse = create_sorting_analyzer(
             cls.sorting, cls.recording, format="memory", sparsity=cls.sparsity_radius
         )
-        cls.sorting_analyzer_sparse.select_random_spikes()
+        cls.sorting_analyzer_sparse.compute("random_spikes")
         cls.sorting_analyzer_sparse.compute(extensions_to_compute, **job_kwargs)
 
         cls.skip_backends = ["ipywidgets", "ephyviewer"]

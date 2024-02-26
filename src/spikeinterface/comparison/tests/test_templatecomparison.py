@@ -46,7 +46,7 @@ def test_compare_multiple_templates():
     sorting_analyzer_3 = create_sorting_analyzer(sort3, rec3, format="memory")
 
     for sorting_analyzer in (sorting_analyzer_1, sorting_analyzer_2, sorting_analyzer_3):
-        sorting_analyzer.select_random_spikes()
+        sorting_analyzer.compute("random_spikes")
         sorting_analyzer.compute("fast_templates")
 
     # paired comparison

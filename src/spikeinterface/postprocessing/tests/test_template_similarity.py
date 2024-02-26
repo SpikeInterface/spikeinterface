@@ -21,7 +21,7 @@ def test_check_equal_template_with_distribution_overlap():
     recording, sorting = get_dataset()
 
     sorting_analyzer = get_sorting_analyzer(recording, sorting, sparsity=None)
-    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute("waveforms")
     sorting_analyzer.compute("templates")
 

@@ -53,7 +53,7 @@ def get_sorting_analyzer(seed=2205):
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
 
-    sorting_analyzer.select_random_spikes(max_spikes_per_unit=300, seed=seed)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=300, seed=seed)
     sorting_analyzer.compute("noise_levels")
     sorting_analyzer.compute("waveforms", **job_kwargs)
     sorting_analyzer.compute("templates")
@@ -146,7 +146,7 @@ def test_empty_units(sorting_analyzer_simple):
     assert len(sorting_empty.get_empty_unit_ids()) == 3
 
     sorting_analyzer_empty = create_sorting_analyzer(sorting_empty, sorting_analyzer.recording, format="memory")
-    sorting_analyzer_empty.select_random_spikes(max_spikes_per_unit=300, seed=2205)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=300, seed=2205)
     sorting_analyzer_empty.compute("noise_levels")
     sorting_analyzer_empty.compute("waveforms", **job_kwargs)
     sorting_analyzer_empty.compute("templates")

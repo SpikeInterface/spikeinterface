@@ -105,5 +105,5 @@ def test_read_old_waveforms_extractor_binary():
 
 
 if __name__ == "__main__":
-    # test_extract_waveforms()
-    test_read_old_waveforms_extractor_binary()
+    test_extract_waveforms()
+    # test_read_old_waveforms_extractor_binary()
