@@ -163,84 +163,123 @@ Internally, any sorting object can construct 2 internal caches:
      time, like for extracting amplitudes from a recording.
 
 
-WaveformExtractor
------------------
+SortingAnalyzer
+---------------
 
-The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core object to combine a
+The :py:class:`~spikeinterface.core.SortingAnalyzer` class is the core object to combine a
 :py:class:`~spikeinterface.core.BaseRecording` and a :py:class:`~spikeinterface.core.BaseSorting` object.
-Waveforms are very important for additional analyses, and the basis of several postprocessing and quality metrics
+This is the first step for additional analyses, and the basis of several postprocessing and quality metrics
 computations.
 
-The :py:class:`~spikeinterface.core.WaveformExtractor` allows us to:
+The :py:class:`~spikeinterface.core.SortingAnalyzer` is provides a convenient API to access the underlying
+:py:class:`~spikeinterface.core.BaseSorting` and :py:class:`~spikeinterface.core.BaseRecording` information,
+and it supports several extensions (derived from the :py:class:`~spikeinterface.core.AnalyzerExtension` class)
+to perform further analysis.
 
-* extract waveforms
-* sub-sample spikes for waveform extraction
-* compute templates (i.e. average extracellular waveforms) with different modes
-* save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_) for easy retrieval
-* save sparse waveforms or *sparsify* dense waveforms
-* select units and associated waveforms
+Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* (see [Sparsity]_ section), i.e.,
+the channels on which waveforms and templates are defined on, for example, based on a physical distance from the
+channel with the largest peak amplitude.
 
-In the default format (:code:`mode='folder'`) waveforms are saved to a folder structure with waveforms as
-:code:`.npy` files.
-In addition, waveforms can also be extracted in-memory for fast computations (:code:`mode='memory'`).
-Note that this mode can quickly fill up your RAM... Use it wisely!
-Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be saved also in :code:`zarr` format.
+Most of the extensions live in the :code:`postprocessing` module, but there are some *core* extensions to:
+
+* select random spikes for downstream analysis (e.g., extracting waveforms or fit a PCA model)
+* estimate templates
+* extract waveforms for single spikes
+* compute channel-wise noise levels
+
+.. note::
+
+    Some extensions depend on others, which must be pre-computed. For example:code:`waveforms`, the :code:`waveforms` extension depends on
+    the :code:`random_spikes` one. If the latter is not computed, computing :code:`waveforms` will throw an error.:code:`waveforms`
+
+# TODO: make `get_available_extensions`
+
+# TODO: docs -> access recording and sorting attributes
 
 .. code-block:: python
+    from spikeinterface import create_sorting_analyzer
 
-    # extract dense waveforms on 500 spikes per unit
-    we = extract_waveforms(recording=recording,
-                           sorting=sorting,
-                           sparse=False,
-                           folder="waveforms",
-                           max_spikes_per_unit=500
-                           overwrite=True)
-    # same, but with parallel processing! (1s chunks processed by 8 jobs)
-    job_kwargs = dict(n_jobs=8, chunk_duration="1s")
-    we = extract_waveforms(recording=recording,
-                           sorting=sorting,
-                           sparse=False,
-                           folder="waveforms_parallel",
-                           max_spikes_per_unit=500,
-                           overwrite=True,
-                           **job_kwargs)
-    # same, but in-memory
-    we_mem = extract_waveforms(recording=recording,
-                               sorting=sorting,
-                               sparse=False,
-                               folder=None,
-                               mode="memory",
-                               max_spikes_per_unit=500,
-                               **job_kwargs)
+    # create in-memory sorting analyzer object
+    sorting_analyzer = create_sorting_analyzer(
+        sorting=sorting,
+        recording=recording,
+        sparse=True, # default
+        format="memory", # default
+    )
 
-    # load pre-computed waveforms
-    we_loaded = load_waveforms(folder="waveforms")
+    print(sorting_analyzer)
 
-    # retrieve waveforms and templates for a unit
-    waveforms0 = we.get_waveforms(unit_id=unit0)
-    template0 = we.get_template(unit_id=unit0)
+.. code-block:: bash
 
-    # compute template standard deviations (average is computed by default)
-    # (this can also be done within the 'extract_waveforms')
-    we.precompute_templates(modes=("std",))
+    >>> SortingAnalyzer: 4 channels - 10 units - 1 segments - memory - sparse - has recording
+    >>> Loaded 0 extenstions:
 
-    # retrieve all template means and standard deviations
-    template_means = we.get_all_templates(mode="average")
-    template_stds = we.get_all_templates(mode="std")
+Once the :code:`sorting_analyzer` is instantiated, additional extensions can be computed:
 
-    # save to Zarr
-    we_zarr = we.save(folder="waveforms_zarr", format="zarr")
+# TODO: implement get_extension_params
 
-    # extract sparse waveforms (see Sparsity section)
-    # this will use 50 spikes per unit to estimate the sparsity within a 40um radius from that unit
-    we_sparse = extract_waveforms(recording=recording,
-                                  sorting=sorting,
-                                  folder="waveforms_sparse",
-                                  max_spikes_per_unit=500,
-                                  method="radius",
-                                  radius_um=40,
-                                  num_spikes_for_sparsity=50)
+.. code-block:: python
+    # compute some additional extensions
 
+    # create in-memory sorting analyzer object
+    random_spikes_extension = sorting_analyzer.compute("random_spikes")
+    templates_extension = sorting_analyzer.compute("fast_templates")
+    waveforms_extension = sorting_analyzer.compute("waveforms")
+
+    # each extension has a .data field: a dictionary with computed data
+    print(templates_extension.data.keys())
+
+.. code-block:: bash
+
+    >>> dict_keys(['average'])
+
+# TODO: extension __repr__
+
+.. code-block:: python
+    # arguments can be passed directly to the compute function
+    # note that re-computing an extension will overwrite the existing one
+    waveform_extension_2 = sorting_analyzer.compute("waveforms", ms_before=2, ms_after=5)
+
+    # multiple extensions can be computedwithin the same `compute` call
+    ext1, ext2, ext3 = sorting_analyzer.compute("random_spikes", "waveforms", "templates", "noise_levels")
+
+The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in memory*, but it can be saved at any time
+(or upon instantiation) to one of the following backends:
+
+* | :code:`zarr`: the sorting analyzer is saved to a [Zarr]() folder, and each extension is a Zarr group. This is the
+  | recommended backend, since Zarr files can be writter to/read from the cloud and compression is applied.
+* | :code:`binary_folder`: the sorting analyzer is saved to a folder, and each extension creates a sub-folder. The extension
+  | data are saved to either :code:`npy` (for arrays), `csv` (for dataframes), or `pickle` (for everything else).
+
+
+The :code:`SortingAnalyzer.save_as` function will save the object **and all its extension** to disk.
+
+.. code-block:: python
+    # create a "processed" folder
+    processed_folder = Path("processed")
+
+    sorting_analyzer_zarr = sorting_analyzer.save_as(
+        folder=processed_folder / "sorting_analyzer.zarr",
+        format="zarr"
+    )
+    sorting_analyzer_binary = sorting_analyzer.save_as(
+        folder=processed_folder / "sorting_analyzer_bin",
+        format="binary_folder"
+    )
+    # sorting_analyzer_zarr and sorting_analyzer_binary are valid SortingAnalyzers,
+    # now associated to a Zarr storage / binary folder backend
+
+    # create sorting analyzer associated to a backend upon instantiation
+    # create in-memory sorting analyzer object
+    sorting_analyzer_with_backend = create_sorting_analyzer(
+        sorting=sorting,
+        recording=recording,
+        sparse=True, # default
+        format="zarr", # default
+    )
+
+
+# TODO: loading / with recording
 
 **IMPORTANT:** to load a waveform extractor object from disk, it needs to be able to reload the associated
 :code:`sorting` object (the :code:`recording` is optional, using :code:`with_recording=False`).
@@ -783,3 +822,109 @@ various formats:
     # SpikeGLX format
     local_folder_path = download_dataset(remote_path='/spikeglx/multi_trigger_multi_gate')
     rec = read_spikeglx(local_folder_path)
+
+
+WaveformExtractor (deprecated)
+------------------------------
+
+.. warning::
+
+      The :py:class:`~spikeinterface.core.WaveformExtractor` class is deprecated and will be removed in future versions.
+      Please use the :py:class:`~spikeinterface.core.SortingAnalyzer` class instead.
+
+The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core object to combine a
+:py:class:`~spikeinterface.core.BaseRecording` and a :py:class:`~spikeinterface.core.BaseSorting` object.
+Waveforms are very important for additional analyses, and the basis of several postprocessing and quality metrics
+computations.
+
+The :py:class:`~spikeinterface.core.WaveformExtractor` allows us to:
+
+* extract waveforms
+* sub-sample spikes for waveform extraction
+* compute templates (i.e. average extracellular waveforms) with different modes
+* save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_) for easy retrieval
+* save sparse waveforms or *sparsify* dense waveforms
+* select units and associated waveforms
+
+In the default format (:code:`mode='folder'`) waveforms are saved to a folder structure with waveforms as
+:code:`.npy` files.
+In addition, waveforms can also be extracted in-memory for fast computations (:code:`mode='memory'`).
+Note that this mode can quickly fill up your RAM... Use it wisely!
+Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be saved also in :code:`zarr` format.
+
+.. code-block:: python
+
+    # extract dense waveforms on 500 spikes per unit
+    we = extract_waveforms(recording=recording,
+                           sorting=sorting,
+                           sparse=False,
+                           folder="waveforms",
+                           max_spikes_per_unit=500
+                           overwrite=True)
+    # same, but with parallel processing! (1s chunks processed by 8 jobs)
+    job_kwargs = dict(n_jobs=8, chunk_duration="1s")
+    we = extract_waveforms(recording=recording,
+                           sorting=sorting,
+                           sparse=False,
+                           folder="waveforms_parallel",
+                           max_spikes_per_unit=500,
+                           overwrite=True,
+                           **job_kwargs)
+    # same, but in-memory
+    we_mem = extract_waveforms(recording=recording,
+                               sorting=sorting,
+                               sparse=False,
+                               folder=None,
+                               mode="memory",
+                               max_spikes_per_unit=500,
+                               **job_kwargs)
+
+    # load pre-computed waveforms
+    we_loaded = load_waveforms(folder="waveforms")
+
+    # retrieve waveforms and templates for a unit
+    waveforms0 = we.get_waveforms(unit_id=unit0)
+    template0 = we.get_template(unit_id=unit0)
+
+    # compute template standard deviations (average is computed by default)
+    # (this can also be done within the 'extract_waveforms')
+    we.precompute_templates(modes=("std",))
+
+    # retrieve all template means and standard deviations
+    template_means = we.get_all_templates(mode="average")
+    template_stds = we.get_all_templates(mode="std")
+
+    # save to Zarr
+    we_zarr = we.save(folder="waveforms_zarr", format="zarr")
+
+    # extract sparse waveforms (see Sparsity section)
+    # this will use 50 spikes per unit to estimate the sparsity within a 40um radius from that unit
+    we_sparse = extract_waveforms(recording=recording,
+                                  sorting=sorting,
+                                  folder="waveforms_sparse",
+                                  max_spikes_per_unit=500,
+                                  method="radius",
+                                  radius_um=40,
+                                  num_spikes_for_sparsity=50)
+
+
+**IMPORTANT:** to load a waveform extractor object from disk, it needs to be able to reload the associated
+:code:`sorting` object (the :code:`recording` is optional, using :code:`with_recording=False`).
+In order to make a waveform folder portable (e.g. copied to another location or machine), one can do:
+
+.. code-block:: python
+
+    # create a "processed" folder
+    processed_folder = Path("processed")
+
+    # save the sorting object in the "processed" folder
+    sorting = sorting.save(folder=processed_folder / "sorting")
+    # extract waveforms using relative paths
+    we = extract_waveforms(recording=recording,
+                           sorting=sorting,
+                           folder=processed_folder / "waveforms",
+                           use_relative_path=True)
+    # the "processed" folder is now portable, and the waveform extractor can be reloaded
+    # from a different location/machine (without loading the recording)
+    we_loaded = si.load_waveforms(folder=processed_folder / "waveforms",
+                                  with_recording=False)
