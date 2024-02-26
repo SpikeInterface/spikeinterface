@@ -1,5 +1,5 @@
 """
-Implement ResultExtension that are essential and imported in core
+Implement AnalyzerExtension that are essential and imported in core
   * ComputeWaveforms
   * ComputeTemplates
 Theses two classes replace the WaveformExtractor
@@ -11,16 +11,16 @@ It also implement:
 
 import numpy as np
 
-from .sortinganalyzer import ResultExtension, register_result_extension
+from .sortinganalyzer import AnalyzerExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_average
 from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection
 
 
-class SelectRandomSpikes(ResultExtension):
+class SelectRandomSpikes(AnalyzerExtension):
     """
-    ResultExtension that select some random spikes.
+    AnalyzerExtension that select some random spikes.
 
     This will be used by "compute_waveforms" and so "compute_templates" or "compute_fast_templates"
 
@@ -113,9 +113,9 @@ register_result_extension(SelectRandomSpikes)
 
 
 
-class ComputeWaveforms(ResultExtension):
+class ComputeWaveforms(AnalyzerExtension):
     """
-    ResultExtension that extract some waveforms of each units.
+    AnalyzerExtension that extract some waveforms of each units.
 
     The sparsity is controlled by the SortingAnalyzer sparsity.
     """
@@ -260,9 +260,9 @@ compute_waveforms = ComputeWaveforms.function_factory()
 register_result_extension(ComputeWaveforms)
 
 
-class ComputeTemplates(ResultExtension):
+class ComputeTemplates(AnalyzerExtension):
     """
-    ResultExtension that compute templates (average, str, median, percentile, ...)
+    AnalyzerExtension that compute templates (average, str, median, percentile, ...)
 
     This must be run after "waveforms" extension (`SortingAnalyzer.compute("waveforms")`)
 
@@ -445,9 +445,9 @@ compute_templates = ComputeTemplates.function_factory()
 register_result_extension(ComputeTemplates)
 
 
-class ComputeFastTemplates(ResultExtension):
+class ComputeFastTemplates(AnalyzerExtension):
     """
-    ResultExtension which is similar to the extension "templates" (ComputeTemplates) **but only for average**.
+    AnalyzerExtension which is similar to the extension "templates" (ComputeTemplates) **but only for average**.
     This is way faster because it do not need "waveforms" to be computed first.
     """
 
@@ -530,7 +530,7 @@ compute_fast_templates = ComputeFastTemplates.function_factory()
 register_result_extension(ComputeFastTemplates)
 
 
-class ComputeNoiseLevels(ResultExtension):
+class ComputeNoiseLevels(AnalyzerExtension):
     """
     Computes the noise level associated to each recording channel.
 
@@ -561,7 +561,7 @@ class ComputeNoiseLevels(ResultExtension):
     need_job_kwargs = False
 
     def __init__(self, sorting_analyzer):
-        ResultExtension.__init__(self, sorting_analyzer)
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, num_chunks_per_segment=20, chunk_size=10000, return_scaled=True, seed=None):
         params = dict(

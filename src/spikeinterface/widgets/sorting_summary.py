@@ -16,7 +16,9 @@ from ..core import SortingAnalyzer
 
 class SortingSummaryWidget(BaseWidget):
     """
-    Plots spike sorting summary
+    Plots spike sorting summary.
+    This is the main viewer to visualize the final result with several sub view.
+    This use sortingview (in a web browser) or spikeinterface-gui (with Qt).
 
     Parameters
     ----------
@@ -59,7 +61,7 @@ class SortingSummaryWidget(BaseWidget):
         **backend_kwargs,
     ):
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
-        self.check_extensions(sorting_analyzer, ["correlograms", "spike_amplitudes", "unit_locations", "similarity"])
+        self.check_extensions(sorting_analyzer, ["correlograms", "spike_amplitudes", "unit_locations", "template_similarity"])
         sorting = sorting_analyzer.sorting
 
         if unit_ids is None:
@@ -177,3 +179,14 @@ class SortingSummaryWidget(BaseWidget):
         self.view = vv.Splitter(direction="horizontal", item1=vv.LayoutItem(v1), item2=vv.LayoutItem(v2))
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
+
+    def plot_spikeinterface_gui(self, data_plot, **backend_kwargs):
+        sorting_analyzer = data_plot["sorting_analyzer"]
+
+
+        import spikeinterface_gui
+        app = spikeinterface_gui.mkQApp() 
+        win = spikeinterface_gui.MainWindow(sorting_analyzer)
+        win.show()
+        app.exec_()
+

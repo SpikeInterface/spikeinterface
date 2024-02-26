@@ -9,14 +9,14 @@ from tqdm.auto import tqdm
 
 import numpy as np
 
-from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
 
-class ComputePrincipalComponents(ResultExtension):
+class ComputePrincipalComponents(AnalyzerExtension):
     """
     Compute PC scores from waveform extractor. The PCA projections are pre-computed only
     on the sampled waveforms available from the extensions "waveforms".
@@ -67,7 +67,7 @@ class ComputePrincipalComponents(ResultExtension):
     need_job_kwargs = True
 
     def __init__(self, sorting_analyzer):
-        ResultExtension.__init__(self, sorting_analyzer)
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(
         self,

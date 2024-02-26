@@ -11,12 +11,12 @@ except ModuleNotFoundError as err:
 
 
 from spikeinterface import NumpySorting, generate_sorting
-from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.postprocessing import ComputeCorrelograms
 from spikeinterface.postprocessing.correlograms import compute_correlograms_on_sorting, _make_bins
 
 
-class ComputeCorrelogramsTest(ResultExtensionCommonTestSuite, unittest.TestCase):
+class ComputeCorrelogramsTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeCorrelograms
     extension_function_params_list = [
         dict(method="numpy"),
