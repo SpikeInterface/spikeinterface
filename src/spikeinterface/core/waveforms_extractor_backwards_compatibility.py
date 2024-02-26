@@ -331,7 +331,7 @@ def load_waveforms(
     folder = Path(folder)
     assert folder.is_dir(), "Waveform folder does not exists"
 
-    if (folder / "spikeinterface_info.json").exists:
+    if (folder / "spikeinterface_info.json").exists():
         with open(folder / "spikeinterface_info.json", mode="r") as f:
             info = json.load(f)
         if info.get("object", None) == "SortingAnalyzer":
