@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
-from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
 from spikeinterface.core.sorting_tools import spike_vector_to_indices
@@ -11,7 +11,7 @@ from spikeinterface.core.sorting_tools import spike_vector_to_indices
 from spikeinterface.core.node_pipeline import SpikeRetriever, run_node_pipeline
 
 
-class ComputeSpikeLocations(ResultExtension):
+class ComputeSpikeLocations(AnalyzerExtension):
     """
     Localize spikes in 2D or 3D with several methods given the template.
 
@@ -59,7 +59,7 @@ class ComputeSpikeLocations(ResultExtension):
     need_job_kwargs = True
 
     def __init__(self, sorting_analyzer):
-        ResultExtension.__init__(self, sorting_analyzer)
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
         extremum_channel_inds = get_template_extremum_channel(self.sorting_analyzer, outputs="index")
         self.spikes = self.sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)

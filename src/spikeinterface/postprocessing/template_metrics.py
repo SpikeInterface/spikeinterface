@@ -11,7 +11,7 @@ import warnings
 from typing import Optional
 from copy import deepcopy
 
-from ..core.sortinganalyzer import register_result_extension, ResultExtension
+from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core import ChannelSparsity
 from ..core.template_tools import get_template_extremum_channel
 from ..core.template_tools import _get_dense_templates_array
@@ -31,7 +31,7 @@ def get_template_metric_names():
     return get_single_channel_template_metric_names() + get_multi_channel_template_metric_names()
 
 
-class ComputeTemplateMetrics(ResultExtension):
+class ComputeTemplateMetrics(AnalyzerExtension):
     """
     Compute template metrics including:
         * peak_to_valley

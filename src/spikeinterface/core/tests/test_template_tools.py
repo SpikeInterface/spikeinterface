@@ -26,7 +26,7 @@ def get_sorting_analyzer():
     sorting.set_property("group", [0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
-    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute("fast_templates")
 
     return sorting_analyzer

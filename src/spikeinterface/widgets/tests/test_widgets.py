@@ -77,7 +77,7 @@ class TestWidgets(unittest.TestCase):
 
         # create dense
         cls.sorting_analyzer_dense = create_sorting_analyzer(cls.sorting, cls.recording, format="memory", sparse=False)
-        cls.sorting_analyzer_dense.select_random_spikes()
+        cls.sorting_analyzer_dense.compute("random_spikes")
         cls.sorting_analyzer_dense.compute(extensions_to_compute, **job_kwargs)
 
         sw.set_default_plotter_backend("matplotlib")
@@ -92,10 +92,10 @@ class TestWidgets(unittest.TestCase):
         cls.sorting_analyzer_sparse = create_sorting_analyzer(
             cls.sorting, cls.recording, format="memory", sparsity=cls.sparsity_radius
         )
-        cls.sorting_analyzer_sparse.select_random_spikes()
+        cls.sorting_analyzer_sparse.compute("random_spikes")
         cls.sorting_analyzer_sparse.compute(extensions_to_compute, **job_kwargs)
 
-        cls.skip_backends = ["ipywidgets", "ephyviewer"]
+        cls.skip_backends = ["ipywidgets", "ephyviewer", "spikeinterface_gui"]
         # cls.skip_backends = ["ipywidgets", "ephyviewer", "sortingview"]
 
         if ON_GITHUB and not KACHERY_CLOUD_SET:
@@ -103,7 +103,7 @@ class TestWidgets(unittest.TestCase):
 
         print(f"Widgets tests: skipping backends - {cls.skip_backends}")
 
-        cls.backend_kwargs = {"matplotlib": {}, "sortingview": {}, "ipywidgets": {"display": False}}
+        cls.backend_kwargs = {"matplotlib": {}, "sortingview": {}, "ipywidgets": {"display": False}, "spikeinterface_gui": {}}
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
@@ -573,7 +573,7 @@ if __name__ == "__main__":
     TestWidgets.setUpClass()
     mytest = TestWidgets()
 
-    mytest.test_plot_unit_waveforms_density_map()
+    # mytest.test_plot_unit_waveforms_density_map()
     # mytest.test_plot_unit_summary()
     # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_traces()
@@ -598,7 +598,7 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_presence()
     # mytest.test_plot_peak_activity()
     # mytest.test_plot_multicomparison()
-    # mytest.test_plot_sorting_summary()
-    plt.show()
+    mytest.test_plot_sorting_summary()
+    # plt.show()
 
     # TestWidgets.tearDownClass()

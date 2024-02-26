@@ -46,6 +46,7 @@ backend_kwargs_desc = {
         # "controllers": ""
     },
     "ephyviewer": {},
+    "spikeinterface_gui": {},
 }
 
 default_backend_kwargs = {
@@ -53,6 +54,7 @@ default_backend_kwargs = {
     "sortingview": {"generate_url": True, "display": True, "figlabel": None, "height": None},
     "ipywidgets": {"width_cm": 25, "height_cm": 10, "display": True, "controllers": None},
     "ephyviewer": {},
+    "spikeinterface_gui": {},
 }
 
 

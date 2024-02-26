@@ -1,11 +1,11 @@
 import unittest
 
 
-from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.postprocessing import ComputeTemplateMetrics
 
 
-class TemplateMetricsTest(ResultExtensionCommonTestSuite, unittest.TestCase):
+class TemplateMetricsTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeTemplateMetrics
     extension_function_params_list = [
         dict(),

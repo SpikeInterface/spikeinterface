@@ -1,9 +1,9 @@
 import unittest
-from spikeinterface.postprocessing.tests.common_extension_tests import ResultExtensionCommonTestSuite
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.postprocessing import ComputeUnitLocations
 
 
-class UnitLocationsExtensionTest(ResultExtensionCommonTestSuite, unittest.TestCase):
+class UnitLocationsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeUnitLocations
     extension_function_params_list = [
         dict(method="center_of_mass", radius_um=100),

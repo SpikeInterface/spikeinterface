@@ -20,7 +20,6 @@ from .basesorting import BaseSorting
 
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
-from .sorting_tools import random_spikes_selection
 from .core_tools import check_json
 from .job_tools import split_job_kwargs
 from .numpyextractors import SharedMemorySorting
@@ -30,9 +29,6 @@ from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
 from .node_pipeline import run_node_pipeline
 
 
-# TODO make some_spikes a method of SortingAnalyzer
-
-
 # high level function
 def create_sorting_analyzer(
     sorting, recording, format="memory", folder=None, sparse=True, sparsity=None, **sparsity_kwargs
@@ -40,7 +36,7 @@ def create_sorting_analyzer(
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
 
-    This object will handle a list of ResultExtension for all the post processing steps like: waveforms,
+    This object will handle a list of AnalyzerExtension for all the post processing steps like: waveforms,
     templates, unit locations, spike locations, quality metrics ...
 
     This object will be also use used for plotting purpose.
@@ -91,6 +87,13 @@ def create_sorting_analyzer(
     >>> # Can make a copy with a subset of units (extensions are propagated for the unit subset)
     >>> sorting_analyzer4 = sorting_analyzer.select_units(unit_ids=sorting.units_ids[:5], format="memory")
     >>> sorting_analyzer5 = sorting_analyzer.select_units(unit_ids=sorting.units_ids[:5], format="binary_folder", folder="/result_5units")
+
+    Notes
+    -----
+
+    By default creating a SortingAnalyzer can be slow because the sparsity is estimated by default.
+    In some situation, sparsity is not needed, so to make it fast creation, you need to turn
+    sparsity off (or give external sparsity) like this.
     """
 
     # handle sparsity
@@ -101,7 +104,7 @@ def create_sorting_analyzer(
             sorting.unit_ids, sparsity.unit_ids
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
         assert np.array_equal(
-            recording.channel_ids, recording.channel_ids
+            recording.channel_ids, sparsity.channel_ids
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
     elif sparse:
         sparsity = estimate_sparsity(recording, sorting, **sparsity_kwargs)
@@ -158,7 +161,7 @@ class SortingAnalyzer:
     """
 
     def __init__(
-        self, sorting=None, recording=None, rec_attributes=None, format=None, sparsity=None, random_spikes_indices=None
+        self, sorting=None, recording=None, rec_attributes=None, format=None, sparsity=None,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -167,7 +170,6 @@ class SortingAnalyzer:
         self.rec_attributes = rec_attributes
         self.format = format
         self.sparsity = sparsity
-        self.random_spikes_indices = random_spikes_indices
 
         # extensions are not loaded at init
         self.extensions = dict()
@@ -323,8 +325,6 @@ class SortingAnalyzer:
 
         if sparsity is not None:
             np.save(folder / "sparsity_mask.npy", sparsity.mask)
-            # with open(folder / "sparsity.json", mode="w") as f:
-            #     json.dump(check_json(sparsity.to_dict()), f)
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None):
@@ -365,21 +365,12 @@ class SortingAnalyzer:
             rec_attributes["probegroup"] = None
 
         # sparsity
-        # sparsity_file = folder / "sparsity.json"
         sparsity_file = folder / "sparsity_mask.npy"
         if sparsity_file.is_file():
             sparsity_mask = np.load(sparsity_file)
-            # with open(sparsity_file, mode="r") as f:
-            #     sparsity = ChannelSparsity.from_dict(json.load(f))
             sparsity = ChannelSparsity(sparsity_mask, sorting.unit_ids, rec_attributes["channel_ids"])
         else:
             sparsity = None
-
-        selected_spike_file = folder / "random_spikes_indices.npy"
-        if selected_spike_file.is_file():
-            random_spikes_indices = np.load(selected_spike_file)
-        else:
-            random_spikes_indices = None
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -387,7 +378,6 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="binary_folder",
             sparsity=sparsity,
-            random_spikes_indices=random_spikes_indices,
         )
 
         return sorting_analyzer
@@ -419,12 +409,14 @@ class SortingAnalyzer:
 
         # the recording
         rec_dict = recording.to_dict(relative_to=folder, recursive=True)
-        zarr_rec = np.array([rec_dict], dtype=object)
+        
         if recording.check_serializability("json"):
             # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
+            zarr_rec = np.array([check_json(rec_dict)], dtype=object)
             zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
         elif recording.check_serializability("pickle"):
             # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
+            zarr_rec = np.array([rec_dict], dtype=object)
             zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
         else:
             warnings.warn(
@@ -434,11 +426,9 @@ class SortingAnalyzer:
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
         if sorting.check_serializability("json"):
-            # zarr_root.attrs["sorting_provenance"] = check_json(sort_dict)
             zarr_sort = np.array([sort_dict], dtype=object)
             zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
         elif sorting.check_serializability("pickle"):
-            # zarr_root.create_dataset("sorting_provenance", data=sort_dict, object_codec=numcodecs.Pickle())
             zarr_sort = np.array([sort_dict], dtype=object)
             zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.Pickle())
 
@@ -456,15 +446,11 @@ class SortingAnalyzer:
             probegroup = rec_attributes.pop("probegroup")
 
         recording_info.attrs["recording_attributes"] = check_json(rec_attributes)
-        # recording_info.create_dataset("recording_attributes", data=check_json(rec_attributes), object_codec=numcodecs.JSON())
 
         if probegroup is not None:
             recording_info.attrs["probegroup"] = check_json(probegroup.to_dict())
-            # recording_info.create_dataset("probegroup", data=check_json(probegroup.to_dict()), object_codec=numcodecs.JSON())
 
         if sparsity is not None:
-            # zarr_root.attrs["sparsity"] = check_json(sparsity.to_dict())
-            # zarr_root.create_dataset("sparsity", data=check_json(sparsity.to_dict()), object_codec=numcodecs.JSON())
             zarr_root.create_dataset("sparsity_mask", data=sparsity.mask)
 
         # write sorting copy
@@ -507,10 +493,8 @@ class SortingAnalyzer:
 
         # recording attributes
         rec_attributes = zarr_root["recording_info"].attrs["recording_attributes"]
-        # rec_attributes = zarr_root["recording_info"]["recording_attributes"]
         if "probegroup" in zarr_root["recording_info"].attrs:
             probegroup_dict = zarr_root["recording_info"].attrs["probegroup"]
-            # probegroup_dict = zarr_root["recording_info"]["probegroup"]
             rec_attributes["probegroup"] = probeinterface.ProbeGroup.from_dict(probegroup_dict)
         else:
             rec_attributes["probegroup"] = None
@@ -522,18 +506,12 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
-        if "random_spikes_indices" in zarr_root.keys():
-            random_spikes_indices = zarr_root["random_spikes_indices"]
-        else:
-            random_spikes_indices = None
-
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
             recording=recording,
             rec_attributes=rec_attributes,
             format="zarr",
             sparsity=sparsity,
-            random_spikes_indices=random_spikes_indices,
         )
 
         return sorting_analyzer
@@ -584,30 +562,13 @@ class SortingAnalyzer:
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
             folder = Path(folder)
+            if folder.suffix != ".zarr":
+                folder = folder.parent / f"{folder.stem}.zarr"
             SortingAnalyzer.create_zarr(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
         else:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
-
-        # propagate random_spikes_indices is already done
-        if self.random_spikes_indices is not None:
-            if unit_ids is None:
-                new_sorting_analyzer.random_spikes_indices = self.random_spikes_indices.copy()
-            else:
-                # more tricky
-                spikes = self.sorting.to_spike_vector()
-
-                keep_unit_indices = np.flatnonzero(np.isin(self.unit_ids, unit_ids))
-                keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
-
-                selected_mask = np.zeros(spikes.size, dtype=bool)
-                selected_mask[self.random_spikes_indices] = True
-
-                new_sorting_analyzer.random_spikes_indices = np.flatnonzero(selected_mask[keep_spike_mask])
-
-            # save it
-            new_sorting_analyzer._save_random_spikes_indices()
 
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
@@ -796,6 +757,14 @@ class SortingAnalyzer:
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
             self.compute_several_extensions(extensions=input, save=save, **job_kwargs)
+        elif isinstance(input, list):
+            params_, job_kwargs = split_job_kwargs(kwargs)
+            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
+            extensions = {k : {} for k in input}
+            self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)        
+        else:
+            raise ValueError("SortingAnalyzer.compute() need str, dict or list")
+
 
     def compute_one_extension(self, extension_name, save=True, **kwargs):
         """
@@ -816,7 +785,7 @@ class SortingAnalyzer:
 
         Returns
         -------
-        result_extension: ResultExtension
+        result_extension: AnalyzerExtension
             Return the extension instance.
 
         Examples
@@ -969,7 +938,7 @@ class SortingAnalyzer:
 
     def get_extension(self, extension_name: str):
         """
-        Get a ResultExtension.
+        Get a AnalyzerExtension.
         If not loaded then load is automatic.
 
         Return None if the extension is not computed yet (this avoids the use of has_extension() and then get it)
@@ -1054,38 +1023,6 @@ class SortingAnalyzer:
         else:
             return False
 
-    ## random_spikes_selection zone
-    def select_random_spikes(self, **random_kwargs):
-        # random_spikes_indices is a vector that refer to the spike vector of the sorting in absolut index
-        assert self.random_spikes_indices is None, "select random spikes is already computed"
-
-        self.random_spikes_indices = random_spikes_selection(
-            self.sorting, self.rec_attributes["num_samples"], **random_kwargs
-        )
-        self._save_random_spikes_indices()
-
-    def _save_random_spikes_indices(self):
-        if self.format == "binary_folder":
-            np.save(self.folder / "random_spikes_indices.npy", self.random_spikes_indices)
-        elif self.format == "zarr":
-            zarr_root = self._get_zarr_root()
-            zarr_root.create_dataset("random_spikes_indices", data=self.random_spikes_indices)
-
-    def get_selected_indices_in_spike_train(self, unit_id, segment_index):
-        # usefull for Waveforms extractor backwars compatibility
-        # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) of list (segment_index) of indices of spikes in spiketrain
-        assert self.random_spikes_indices is not None, "random spikes selection is not computed"
-        unit_index = self.sorting.id_to_index(unit_id)
-        spikes = self.sorting.to_spike_vector()
-        spike_indices_in_seg = np.flatnonzero(
-            (spikes["segment_index"] == segment_index) & (spikes["unit_index"] == unit_index)
-        )
-        common_element, inds_left, inds_right = np.intersect1d(
-            spike_indices_in_seg, self.random_spikes_indices, return_indices=True
-        )
-        selected_spikes_in_spike_train = inds_left
-        return selected_spikes_in_spike_train
-
 
 global _possible_extensions
 _possible_extensions = []
@@ -1103,7 +1040,7 @@ def register_result_extension(extension_class):
     import spikeinterface.postprocessing
     more extensions will be available
     """
-    assert issubclass(extension_class, ResultExtension)
+    assert issubclass(extension_class, AnalyzerExtension)
     assert extension_class.extension_name is not None, "extension_name must not be None"
     global _possible_extensions
 
@@ -1139,7 +1076,7 @@ def get_extension_class(extension_name: str):
     return ext_class
 
 
-class ResultExtension:
+class AnalyzerExtension:
     """
     This the base class to extend the SortingAnalyzer.
     It can handle persistency to disk for any computations related to:
@@ -1169,7 +1106,7 @@ class ResultExtension:
 
     The subclass must also hanle an attribute `data` which is a dict contain the results after the `run()`.
 
-    All ResultExtension will have a function associate for instance (this use the function_factory):
+    All AnalyzerExtension will have a function associate for instance (this use the function_factory):
     compute_unit_location(sorting_analyzer, ...) will be equivalent to sorting_analyzer.compute("unit_location", ...)
 
 
@@ -1190,7 +1127,7 @@ class ResultExtension:
 
     #######
     # This 3 methods must be implemented in the subclass!!!
-    # See DummyResultExtension in test_sortinganalyzer.py as a simple example
+    # See DummyAnalyzerExtension in test_sortinganalyzer.py as a simple example
     def _run(self, **kwargs):
         # must be implemented in subclass
         # must populate the self.data dictionary
@@ -1256,8 +1193,8 @@ class ResultExtension:
 
     @property
     def sorting_analyzer(self):
-        # Important : to avoid the SortingAnalyzer referencing a ResultExtension
-        # and ResultExtension referencing a SortingAnalyzer we need a weakref.
+        # Important : to avoid the SortingAnalyzer referencing a AnalyzerExtension
+        # and AnalyzerExtension referencing a SortingAnalyzer we need a weakref.
         # Otherwise the garbage collector is not working properly.
         # and so the SortingAnalyzer + its recording are still alive even after deleting explicitly
         # the SortingAnalyzer which makes it impossible to delete the folder when using memmap.
@@ -1518,7 +1455,7 @@ class ResultExtension:
     def get_pipeline_nodes(self):
         assert (
             self.use_nodepipeline
-        ), "ResultExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
+        ), "AnalyzerExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):

@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 import warnings
 import numpy as np
-from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension, SortingAnalyzer
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension, SortingAnalyzer
 
 try:
     import numba
@@ -12,7 +12,7 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-class ComputeCorrelograms(ResultExtension):
+class ComputeCorrelograms(AnalyzerExtension):
     """
     Compute auto and cross correlograms.
 
@@ -53,7 +53,7 @@ class ComputeCorrelograms(ResultExtension):
     need_job_kwargs = False
 
     def __init__(self, sorting_analyzer):
-        ResultExtension.__init__(self, sorting_analyzer)
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)

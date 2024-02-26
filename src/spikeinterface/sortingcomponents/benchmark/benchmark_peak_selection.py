@@ -40,7 +40,7 @@ class PeakSelectionBenchmark(Benchmark):
         self.indices = indices
 
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format='memory', sparse=False)
-        sorting_analyzer.select_random_spikes()
+        sorting_analyzer.compute("random_spikes")
         ext = sorting_analyzer.compute('fast_templates')
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
 
@@ -80,12 +80,12 @@ class PeakSelectionBenchmark(Benchmark):
                                                              exhaustive_gt=self.exhaustive_gt)
 
         sorting_analyzer = create_sorting_analyzer(self.result['sliced_gt_sorting'], self.recording, format='memory', sparse=False)
-        sorting_analyzer.select_random_spikes()
+        sorting_analyzer.compute("random_spikes")
         ext = sorting_analyzer.compute('fast_templates')
         self.result['sliced_gt_templates'] = ext.get_data(outputs="Templates")
 
         sorting_analyzer = create_sorting_analyzer(self.result['clustering'], self.recording, format='memory', sparse=False)
-        sorting_analyzer.select_random_spikes()
+        sorting_analyzer.compute("random_spikes")
         ext = sorting_analyzer.compute('fast_templates')
         self.result['clustering_templates'] = ext.get_data(outputs="Templates")
 
