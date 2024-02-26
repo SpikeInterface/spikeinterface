@@ -747,6 +747,14 @@ class SortingAnalyzer:
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
             self.compute_several_extensions(extensions=input, save=save, **job_kwargs)
+        elif isinstance(input, list):
+            params_, job_kwargs = split_job_kwargs(kwargs)
+            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
+            extensions = {k : {} for k in input}
+            self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)        
+        else:
+            raise ValueError("SortingAnalyzer.compute() need str, dict or list")
+
 
     def compute_one_extension(self, extension_name, save=True, **kwargs):
         """
