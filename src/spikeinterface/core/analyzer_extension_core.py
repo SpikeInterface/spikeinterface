@@ -106,7 +106,6 @@ class SelectRandomSpikes(AnalyzerExtension):
         return selected_spikes_in_spike_train
 
 
-compute_select_random_spikes = SelectRandomSpikes.function_factory()
 register_result_extension(SelectRandomSpikes)
 
 

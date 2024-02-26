@@ -12,8 +12,6 @@ from spikeinterface.widgets import (
 )
 from spikeinterface.comparison.comparisontools import make_matching_events
 
-import matplotlib.patches as mpatches
-
 # from spikeinterface.postprocessing import get_template_extremum_channel
 from spikeinterface.core import get_noise_levels
 
@@ -36,7 +34,8 @@ class ClusteringBenchmark(Benchmark):
         self.indices = indices
 
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute(["random_spikes", "fast_templates"])
+        sorting_analyzer.compute("random_spikes")
+        ext = sorting_analyzer.compute("fast_templates")
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
 
         peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
@@ -127,13 +126,7 @@ class ClusteringStudy(BenchmarkStudy):
             if ignore_noise:
                 gt_labels = gt_labels[~noise]
                 found_labels = found_labels[~noise]
-            print(
-                self.cases[key]["label"],
-                "Homogeneity:",
-                homogeneity_score(gt_labels, found_labels),
-                "Noise (%):",
-                np.mean(noise),
-            )
+            print(self.cases[key]["label"], homogeneity_score(gt_labels, found_labels), np.mean(noise))
 
     def plot_agreements(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
@@ -142,7 +135,7 @@ class ClusteringStudy(BenchmarkStudy):
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
-            ax = axs[0, count]
+            ax = axs[count]
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
 
@@ -237,9 +230,9 @@ class ClusteringStudy(BenchmarkStudy):
             to_plot = []
             for found, real in zip(inds_2, inds_1):
                 to_plot += [distances[real, found]]
-            axs[0, count].plot(snr, to_plot, ".")
-            axs[0, count].set_xlabel("snr")
-            axs[0, count].set_ylabel(metric)
+            axs[count].plot(snr, to_plot, ".")
+            axs[count].set_xlabel("snr")
+            axs[count].set_ylabel(metric)
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
 
@@ -300,7 +293,6 @@ class ClusteringStudy(BenchmarkStudy):
                     ax.set_xticks([])
                     ax.set_yticks([])
         plt.tight_layout(h_pad=0, w_pad=0)
-
 
 #     def _scatter_clusters(
 #         self,
