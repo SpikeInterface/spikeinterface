@@ -79,7 +79,7 @@ si.set_global_job_kwargs(**global_job_kwargs)
 # Then we can open it. Note that [MEArec](https://mearec.readthedocs.io>) simulated file
 # contains both a "recording" and a "sorting" object.
 
-local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
 recording, sorting_true = se.read_mearec(local_path)
 print(recording)
 print(sorting_true)
@@ -103,10 +103,10 @@ fs = recording.get_sampling_frequency()
 num_chan = recording.get_num_channels()
 num_seg = recording.get_num_segments()
 
-print('Channel ids:', channel_ids)
-print('Sampling frequency:', fs)
-print('Number of channels:', num_chan)
-print('Number of segments:', num_seg)
+print("Channel ids:", channel_ids)
+print("Sampling frequency:", fs)
+print("Number of channels:", num_chan)
+print("Number of segments:", num_seg)
 # -
 
 # ...and from a `BaseSorting`
@@ -116,9 +116,9 @@ num_seg = recording.get_num_segments()
 unit_ids = sorting_true.get_unit_ids()
 spike_train = sorting_true.get_unit_spike_train(unit_id=unit_ids[0])
 
-print('Number of segments:', num_seg)
-print('Unit ids:', unit_ids)
-print('Spike train of first unit:', spike_train)
+print("Number of segments:", num_seg)
+print("Unit ids:", unit_ids)
+print("Spike train of first unit:", spike_train)
 # -
 
 # SpikeInterface internally uses the [`ProbeInterface`](https://probeinterface.readthedocs.io/en/main/) to handle `probeinterface.Probe` and
@@ -144,19 +144,19 @@ _ = plot_probe(probe)
 recording_cmr = recording
 recording_f = si.bandpass_filter(recording, freq_min=300, freq_max=6000)
 print(recording_f)
-recording_cmr = si.common_reference(recording_f, reference='global', operator='median')
+recording_cmr = si.common_reference(recording_f, reference="global", operator="median")
 print(recording_cmr)
 
 # this computes and saves the recording after applying the preprocessing chain
-recording_preprocessed = recording_cmr.save(format='binary')
+recording_preprocessed = recording_cmr.save(format="binary")
 print(recording_preprocessed)
 # -
 
 # Now you are ready to spike sort using the `spikeinterface.sorters` module!
 # Let's first check which sorters are implemented and which are installed
 
-print('Available sorters', ss.available_sorters())
-print('Installed sorters', ss.installed_sorters())
+print("Available sorters", ss.available_sorters())
+print("Installed sorters", ss.installed_sorters())
 
 # The `ss.installed_sorters()` will list the sorters installed on the machine.
 # We can see we have HerdingSpikes and Tridesclous installed.
@@ -164,9 +164,9 @@ print('Installed sorters', ss.installed_sorters())
 # The available parameters are dictionaries and can be accessed with:
 
 print("Tridesclous params:")
-pprint(ss.get_default_sorter_params('tridesclous'))
+pprint(ss.get_default_sorter_params("tridesclous"))
 print("SpykingCircus2 params:")
-pprint(ss.get_default_sorter_params('spykingcircus2'))
+pprint(ss.get_default_sorter_params("spykingcircus2"))
 
 # Let's run `tridesclous` and change one of the parameters, say, the `detect_threshold`:
 
@@ -176,12 +176,13 @@ print(sorting_TDC)
 # Alternatively we can pass a full dictionary containing the parameters:
 
 # +
-other_params = ss.get_default_sorter_params('tridesclous')
-other_params['detect_threshold'] = 6
+other_params = ss.get_default_sorter_params("tridesclous")
+other_params["detect_threshold"] = 6
 
 # parameters set by params dictionary
-sorting_TDC_2 = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed,
-                              output_folder="tdc_output2", **other_params)
+sorting_TDC_2 = ss.run_sorter(
+    sorter_name="tridesclous", recording=recording_preprocessed, output_folder="tdc_output2", **other_params
+)
 print(sorting_TDC_2)
 # -
 
@@ -192,13 +193,12 @@ print(sorting_SC2)
 
 # The `sorting_TDC` and `sorting_SC2` are `BaseSorting` objects. We can print the units found using:
 
-print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
-print('Units found by spyking-circus2:', sorting_SC2.get_unit_ids())
+print("Units found by tridesclous:", sorting_TDC.get_unit_ids())
+print("Units found by spyking-circus2:", sorting_SC2.get_unit_ids())
 
 # If a sorter is not installed locally, we can also avoid installing it and run it anyways, using a container (Docker or Singularity). For example, let's run `Kilosort2` using Docker:
 
-sorting_KS2 = ss.run_sorter(sorter_name="kilosort2", recording=recording_preprocessed,
-                            docker_image=True, verbose=True)
+sorting_KS2 = ss.run_sorter(sorter_name="kilosort2", recording=recording_preprocessed, docker_image=True, verbose=True)
 print(sorting_KS2)
 
 # SpikeInterface provides a efficient way to extract waveforms from paired recording/sorting objects.
@@ -206,7 +206,7 @@ print(sorting_KS2)
 # for each unit, extracts their waveforms, and stores them to disk. These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
 
 # +
-we_TDC = si.extract_waveforms(recording_preprocessed, sorting_TDC, 'waveforms_folder', overwrite=True)
+we_TDC = si.extract_waveforms(recording_preprocessed, sorting_TDC, "waveforms_folder", overwrite=True)
 print(we_TDC)
 
 unit_id0 = sorting_TDC.unit_ids[0]
@@ -236,7 +236,7 @@ print(we_TDC.get_available_extension_names())
 
 # Importantly, waveform extractors (and all extensions) can be reloaded at later times:
 
-we_loaded = si.load_waveforms('waveforms_folder')
+we_loaded = si.load_waveforms("waveforms_folder")
 print(we_loaded.get_available_extension_names())
 
 # Once we have computed all of the postprocessing information, we can compute quality metrics (different quality metrics require different extensions - e.g., drift metrics require `spike_locations`):
@@ -277,21 +277,21 @@ print(sorting_curated_sv.get_property("accept"))
 # Alternatively, we can export the data locally to Phy. [Phy](<https://github.com/cortex-lab/phy>) is a GUI for manual
 # curation of the spike sorting output. To export to phy you can run:
 
-sexp.export_to_phy(we_TDC, 'phy_folder_for_TDC', verbose=True)
+sexp.export_to_phy(we_TDC, "phy_folder_for_TDC", verbose=True)
 
 # Then you can run the template-gui with: `phy template-gui phy_folder_for_TDC/params.py`
 # and manually curate the results.
 
 # After curating with Phy, the curated sorting can be reloaded to SpikeInterface. In this case, we exclude the units that have been labeled as "noise":
 
-sorting_curated_phy = se.read_phy('phy_folder_for_TDC', exclude_cluster_groups=["noise"])
+sorting_curated_phy = se.read_phy("phy_folder_for_TDC", exclude_cluster_groups=["noise"])
 
 # Quality metrics can be also used to automatically curate the spike sorting
 # output. For example, you can select sorted units with a SNR above a
 # certain threshold:
 
 # +
-keep_mask = (qm['snr'] > 10) & (qm['isi_violations_ratio'] < 0.01)
+keep_mask = (qm["snr"] > 10) & (qm["isi_violations_ratio"] < 0.01)
 print("Mask:", keep_mask.values)
 
 sorting_curated_auto = sorting_TDC.select_units(sorting_TDC.unit_ids[keep_mask])
@@ -310,8 +310,9 @@ print(sorting_curated_auto)
 
 comp_gt = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
 comp_pair = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_SC2)
-comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_SC2, sorting_KS2],
-                                         name_list=['tdc', 'sc2', 'ks2'])
+comp_multi = sc.compare_multiple_sorters(
+    sorting_list=[sorting_TDC, sorting_SC2, sorting_KS2], name_list=["tdc", "sc2", "ks2"]
+)
 
 # When comparing with a ground-truth sorting (1,), you can get the sorting performance and plot a confusion
 # matrix
@@ -335,7 +336,7 @@ comp_pair.hungarian_match_21
 # +
 sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
 
-print('Units in agreement between TDC, SC2, and KS2:', sorting_agreement.get_unit_ids())
+print("Units in agreement between TDC, SC2, and KS2:", sorting_agreement.get_unit_ids())
 
 w_multi = sw.plot_multicomparison_agreement(comp_multi)
 w_multi = sw.plot_multicomparison_agreement_by_sorter(comp_multi)

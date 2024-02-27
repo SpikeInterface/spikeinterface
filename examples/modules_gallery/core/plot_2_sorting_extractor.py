@@ -1,4 +1,4 @@
-'''
+"""
 Sorting objects
 ===============
 
@@ -11,7 +11,7 @@ A SortingExtractor handles:
   * dumping to/loading from dict-json
   * saving (caching)
 
-'''
+"""
 
 import numpy as np
 import spikeinterface.extractors as se
@@ -22,8 +22,8 @@ import spikeinterface.extractors as se
 #
 # Let's define the properties of the dataset:
 
-sampling_frequency = 30000.
-duration = 20.
+sampling_frequency = 30000.0
+duration = 20.0
 num_timepoints = int(sampling_frequency * duration)
 num_units = 4
 num_spikes = 1000
@@ -47,18 +47,18 @@ print(sorting)
 # We can now print properties that the :code:`SortingExtractor` retrieves from
 # the underlying sorted dataset.
 
-print('Unit ids = {}'.format(sorting.get_unit_ids()))
+print("Unit ids = {}".format(sorting.get_unit_ids()))
 st = sorting.get_unit_spike_train(unit_id=1, segment_index=0)
-print('Num. events for unit 1seg0 = {}'.format(len(st)))
+print("Num. events for unit 1seg0 = {}".format(len(st)))
 st1 = sorting.get_unit_spike_train(unit_id=1, start_frame=0, end_frame=30000, segment_index=1)
-print('Num. events for first second of unit 1 seg1 = {}'.format(len(st1)))
+print("Num. events for first second of unit 1 seg1 = {}".format(len(st1)))
 
 ##############################################################################
 # Some extractors also implement a :code:`write` function. We can for example
 # save our newly created sorting object to NPZ format (a simple format based
 # on numpy used in :code:`spikeinterface`):
 
-file_path = 'my_sorting.npz'
+file_path = "my_sorting.npz"
 se.NpzSortingExtractor.write_sorting(sorting, file_path)
 
 ##############################################################################
@@ -76,9 +76,9 @@ firing_rates = []
 for unit_id in sorting2.get_unit_ids():
     st = sorting2.get_unit_spike_train(unit_id=unit_id, segment_index=0)
     firing_rates.append(st.size / duration)
-sorting2.set_property('firing_rate', firing_rates)
+sorting2.set_property("firing_rate", firing_rates)
 
-print(sorting2.get_property('firing_rate'))
+print(sorting2.get_property("firing_rate"))
 
 ##############################################################################
 # You can also get a a sorting with a subset of unit. Properties are
@@ -87,7 +87,7 @@ print(sorting2.get_property('firing_rate'))
 sorting3 = sorting2.select_units(unit_ids=[1, 4])
 print(sorting3)
 
-print(sorting3.get_property('firing_rate'))
+print(sorting3.get_property("firing_rate"))
 
 # which is equivalent to
 from spikeinterface import UnitsSelectionSorting
@@ -115,9 +115,9 @@ print(sorting2_loaded)
 ###############################################################################
 # The dictionary can also be dumped directly to a JSON file on disk:
 
-sorting2.dump('my_sorting.json')
+sorting2.dump("my_sorting.json")
 
-sorting2_loaded = load_extractor('my_sorting.json')
+sorting2_loaded = load_extractor("my_sorting.json")
 print(sorting2_loaded)
 
 ###############################################################################
@@ -127,11 +127,11 @@ print(sorting2_loaded)
 # :code:`save()` function:
 
 
-sorting2.save(folder='./my_sorting')
+sorting2.save(folder="./my_sorting")
 
 import os
 
-pprint(os.listdir('./my_sorting'))
+pprint(os.listdir("./my_sorting"))
 
-sorting2_cached = load_extractor('./my_sorting')
+sorting2_cached = load_extractor("./my_sorting")
 print(sorting2_cached)

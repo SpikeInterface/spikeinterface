@@ -74,7 +74,12 @@ def _check_result_extension(sorting_analyzer, extension_name):
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
-@pytest.mark.parametrize("sparse", [False, ])
+@pytest.mark.parametrize(
+    "sparse",
+    [
+        False,
+    ],
+)
 def test_SelectRandomSpikes(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
