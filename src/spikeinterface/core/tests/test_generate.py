@@ -449,6 +449,36 @@ def test_add_insertions_no_replacement():
     assert len(spike_train_replace) == train_length + len(insertions)
 
 
+def test_structured_insertions():
+
+    correct_format = np.array( [(15,12,4), (1,2,3)],  dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')])
+    
+    insertion_tuple_of_tuples = ((15,12,4), (1,2,3))
+    assert insertion_tuple_of_tuples == correct_format
+
+    insertion_tuple_of_lists = ([15,12,4], [1,2,3])
+    assert insertion_tuple_of_lists == correct_format
+
+    insertion_list_of_tuples = ([15,12,4], [1,2,3])
+    assert insertion_list_of_tuples == correct_format
+
+    insertion_list_of_lists = ([15,12,4], [1,2,3])
+    assert insertion_list_of_lists == correct_format
+    
+    correct_format_no_seg = np.array( [(15,12,0), (1,2,0)],  dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')])
+    
+    insertion_tuple_of_tuples = ((15,12), (1,2))
+    assert insertion_tuple_of_tuples == correct_format_no_seg
+
+    insertion_tuple_of_lists = ([15,12], [1,2])
+    assert insertion_tuple_of_lists == correct_format_no_seg
+
+    insertion_list_of_tuples = ([15,12], [1,2])
+    assert insertion_list_of_tuples == correct_format_no_seg
+
+    insertion_list_of_lists = ([15,12], [1,2])
+    assert insertion_list_of_lists == correct_format_no_seg
+
 def test_inject_templates():
     num_channels = 4
     num_units = 3
