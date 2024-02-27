@@ -241,7 +241,9 @@ Once the :code:`sorting_analyzer` is instantiated, additional extensions can be 
     waveform_extension_2 = sorting_analyzer.compute("waveforms", ms_before=2, ms_after=5)
 
     # multiple extensions can be computedwithin the same `compute` call
-    ext1, ext2, ext3 = sorting_analyzer.compute("random_spikes", "waveforms", "templates", "noise_levels")
+    sorting_analyzer.compute(
+        ["random_spikes", "waveforms", "templates", "noise_levels"]
+    )
 
 The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in memory*, but it can be saved at any time
 (or upon instantiation) to one of the following backends:
@@ -274,8 +276,9 @@ The :code:`SortingAnalyzer.save_as` function will save the object **and all its 
     sorting_analyzer_with_backend = create_sorting_analyzer(
         sorting=sorting,
         recording=recording,
-        sparse=True, # default
-        format="zarr", # default
+        sparse=True,
+        format="zarr",
+        folder="my-sorting-analyzer.zarr"
     )
 
 
