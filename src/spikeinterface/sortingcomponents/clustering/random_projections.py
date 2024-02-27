@@ -44,7 +44,7 @@ class RandomProjectionClustering:
     _default_params = {
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
-            "min_samples" : 10,
+            "min_samples": 10,
             "allow_single_cluster": True,
             "core_dist_n_jobs": os.cpu_count(),
             "cluster_selection_method": "leaf",
