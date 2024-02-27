@@ -1,9 +1,10 @@
-'''
+"""
 Waveforms Widgets Gallery
 =========================
 
 Here is a gallery of all the available widgets using a pair of RecordingExtractor-SortingExtractor objects.
-'''
+"""
+
 import matplotlib.pyplot as plt
 
 import spikeinterface as si
@@ -15,7 +16,7 @@ import spikeinterface.widgets as sw
 # First, let's download a simulated dataset
 #  from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
-local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
 recording, sorting = si.read_mearec(local_path)
 print(recording)
 print(sorting)
@@ -42,7 +43,7 @@ analyzer.compute(["spike_amplitudes", "unit_locations", "spike_locations", "temp
 
 unit_ids = sorting.unit_ids[:4]
 
-sw.plot_unit_waveforms(analyzer, unit_ids=unit_ids, figsize=(16,4))
+sw.plot_unit_waveforms(analyzer, unit_ids=unit_ids, figsize=(16, 4))
 
 ##############################################################################
 # plot_unit_templates()
@@ -50,21 +51,21 @@ sw.plot_unit_waveforms(analyzer, unit_ids=unit_ids, figsize=(16,4))
 
 unit_ids = sorting.unit_ids
 
-sw.plot_unit_templates(analyzer, unit_ids=unit_ids, ncols=5, figsize=(16,8))
+sw.plot_unit_templates(analyzer, unit_ids=unit_ids, ncols=5, figsize=(16, 8))
 
 
 ##############################################################################
 # plot_amplitudes()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_amplitudes(analyzer, plot_histograms=True, figsize=(12,8))
+sw.plot_amplitudes(analyzer, plot_histograms=True, figsize=(12, 8))
 
 
 ##############################################################################
 # plot_unit_locations()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_unit_locations(analyzer, figsize=(4,8))
+sw.plot_unit_locations(analyzer, figsize=(4, 8))
 
 
 ##############################################################################
@@ -74,21 +75,20 @@ sw.plot_unit_locations(analyzer, figsize=(4,8))
 # This is your best friend to check over merge
 
 unit_ids = sorting.unit_ids[:4]
-sw.plot_unit_waveforms_density_map(analyzer, unit_ids=unit_ids, figsize=(14,8))
-
+sw.plot_unit_waveforms_density_map(analyzer, unit_ids=unit_ids, figsize=(14, 8))
 
 
 ##############################################################################
 # plot_amplitudes_distribution()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_all_amplitudes_distributions(analyzer, figsize=(10,10))
+sw.plot_all_amplitudes_distributions(analyzer, figsize=(10, 10))
 
 ##############################################################################
 # plot_units_depths()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_unit_depths(analyzer, figsize=(10,10))
+sw.plot_unit_depths(analyzer, figsize=(10, 10))
 
 
 ##############################################################################
@@ -96,8 +96,7 @@ sw.plot_unit_depths(analyzer, figsize=(10,10))
 # ~~~~~~~~~~~~~~~~~~~~~
 
 unit_ids = sorting.unit_ids[:4]
-sw.plot_unit_probe_map(analyzer, unit_ids=unit_ids, figsize=(20,8))
-
+sw.plot_unit_probe_map(analyzer, unit_ids=unit_ids, figsize=(20, 8))
 
 
 plt.show()

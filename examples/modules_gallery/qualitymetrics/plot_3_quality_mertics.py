@@ -10,14 +10,19 @@ After spike sorting, you might want to validate the 'goodness' of the sorted uni
 import spikeinterface.core as si
 import spikeinterface.extractors as se
 from spikeinterface.postprocessing import compute_principal_components
-from spikeinterface.qualitymetrics import (compute_snrs, compute_firing_rates,
-    compute_isi_violations, calculate_pc_metrics, compute_quality_metrics)
+from spikeinterface.qualitymetrics import (
+    compute_snrs,
+    compute_firing_rates,
+    compute_isi_violations,
+    calculate_pc_metrics,
+    compute_quality_metrics,
+)
 
 ##############################################################################
 # First, let's download a simulated dataset
 # from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
-local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
 recording, sorting = se.read_mearec(local_path)
 print(recording)
 print(sorting)
@@ -32,11 +37,11 @@ analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recording, form
 print(analyzer)
 
 ##############################################################################
-# Depending on which metrics we want to compute we will need first to compute 
+# Depending on which metrics we want to compute we will need first to compute
 # some necessary extensions. (if not computed an error message will be raised)
 
 analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=600, seed=2205)
-analyzer.compute("waveforms",ms_before=1.3, ms_after=2.6, n_jobs=2)
+analyzer.compute("waveforms", ms_before=1.3, ms_after=2.6, n_jobs=2)
 analyzer.compute("templates", operators=["average", "median", "std"])
 analyzer.compute("noise_levels")
 
@@ -69,5 +74,11 @@ print(metrics)
 
 analyzer.compute("principal_components", n_components=3, mode="by_channel_global", whiten=True)
 
-metrics = compute_quality_metrics(analyzer, metric_names=["isolation_distance", "d_prime",])
+metrics = compute_quality_metrics(
+    analyzer,
+    metric_names=[
+        "isolation_distance",
+        "d_prime",
+    ],
+)
 print(metrics)

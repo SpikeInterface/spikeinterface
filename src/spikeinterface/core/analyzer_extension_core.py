@@ -41,24 +41,24 @@ class SelectRandomSpikes(AnalyzerExtension):
     -------
 
     """
+
     extension_name = "random_spikes"
     depend_on = []
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _run(self, 
+    def _run(
+        self,
     ):
-        self.data["random_spikes_indices"] =  random_spikes_selection(
-            self.sorting_analyzer.sorting, num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
-            **self.params)
+        self.data["random_spikes_indices"] = random_spikes_selection(
+            self.sorting_analyzer.sorting,
+            num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
+            **self.params,
+        )
 
     def _set_params(self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None):
-        params = dict(
-            method=method,
-            max_spikes_per_unit=max_spikes_per_unit,
-            margin_size=margin_size,
-            seed=seed)
+        params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -76,7 +76,6 @@ class SelectRandomSpikes(AnalyzerExtension):
         new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_spike_mask])
         return new_data
 
-
     def _get_data(self):
         return self.data["random_spikes_indices"]
 
@@ -87,7 +86,6 @@ class SelectRandomSpikes(AnalyzerExtension):
             spikes = self.sorting_analyzer.sorting.to_spike_vector()
             self._some_spikes = spikes[self.data["random_spikes_indices"]]
         return self._some_spikes
-
 
     def get_selected_indices_in_spike_train(self, unit_id, segment_index):
         # usefull for Waveforms extractor backwars compatibility
@@ -107,10 +105,7 @@ class SelectRandomSpikes(AnalyzerExtension):
         return selected_spikes_in_spike_train
 
 
-
 register_result_extension(SelectRandomSpikes)
-
-
 
 
 class ComputeWaveforms(AnalyzerExtension):
@@ -197,7 +192,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         if return_scaled:
             # check if has scaled values:
-            if not recording.has_scaled() and recording.get_dtype().kind == 'i':
+            if not recording.has_scaled() and recording.get_dtype().kind == "i":
                 print("Setting 'return_scaled' to False")
                 return_scaled = False
 

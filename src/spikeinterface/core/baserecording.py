@@ -310,7 +310,7 @@ class BaseRecording(BaseRecordingSnippets):
                     warnings.warn(message)
 
             if not self.has_scaled():
-                if self._dtype.kind == 'f':
+                if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
                     # this helps a lot for simulated data
                     pass

@@ -28,9 +28,9 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 # +
-base_folder = Path('/mnt/data/sam/DataSpikeSorting/neuropixel_example/')
+base_folder = Path("/mnt/data/sam/DataSpikeSorting/neuropixel_example/")
 
-spikeglx_folder = base_folder / 'Rec_1_10_11_2021_g0'
+spikeglx_folder = base_folder / "Rec_1_10_11_2021_g0"
 
 # -
 
@@ -40,11 +40,11 @@ spikeglx_folder = base_folder / 'Rec_1_10_11_2021_g0'
 # We need to specify which one to read:
 #
 
-stream_names, stream_ids = si.get_neo_streams('spikeglx', spikeglx_folder)
+stream_names, stream_ids = si.get_neo_streams("spikeglx", spikeglx_folder)
 stream_names
 
 # we do not load the sync channel, so the probe is automatically loaded
-raw_rec = si.read_spikeglx(spikeglx_folder, stream_name='imec0.ap', load_sync_channel=False)
+raw_rec = si.read_spikeglx(spikeglx_folder, stream_name="imec0.ap", load_sync_channel=False)
 raw_rec
 
 # we automatically have the probe loaded!
@@ -63,10 +63,10 @@ ax.set_ylim(-100, 100)
 #
 
 # +
-rec1 = si.highpass_filter(raw_rec, freq_min=400.)
+rec1 = si.highpass_filter(raw_rec, freq_min=400.0)
 bad_channel_ids, channel_labels = si.detect_bad_channels(rec1)
 rec2 = rec1.remove_channels(bad_channel_ids)
-print('bad_channel_ids', bad_channel_ids)
+print("bad_channel_ids", bad_channel_ids)
 
 rec3 = si.phase_shift(rec2)
 rec4 = si.common_reference(rec3, operator="median", reference="global")
@@ -94,17 +94,23 @@ rec
 # here we use a static plot using matplotlib backend
 fig, axs = plt.subplots(ncols=3, figsize=(20, 10))
 
-si.plot_traces(rec1, backend='matplotlib',  clim=(-50, 50), ax=axs[0])
-si.plot_traces(rec4, backend='matplotlib',  clim=(-50, 50), ax=axs[1])
-si.plot_traces(rec, backend='matplotlib',  clim=(-50, 50), ax=axs[2])
-for i, label in enumerate(('filter', 'cmr', 'final')):
+si.plot_traces(rec1, backend="matplotlib", clim=(-50, 50), ax=axs[0])
+si.plot_traces(rec4, backend="matplotlib", clim=(-50, 50), ax=axs[1])
+si.plot_traces(rec, backend="matplotlib", clim=(-50, 50), ax=axs[2])
+for i, label in enumerate(("filter", "cmr", "final")):
     axs[i].set_title(label)
 # -
 
 # plot some channels
 fig, ax = plt.subplots(figsize=(20, 10))
-some_chans = rec.channel_ids[[100, 150, 200, ]]
-si.plot_traces({'filter':rec1, 'cmr': rec4}, backend='matplotlib', mode='line', ax=ax, channel_ids=some_chans)
+some_chans = rec.channel_ids[
+    [
+        100,
+        150,
+        200,
+    ]
+]
+si.plot_traces({"filter": rec1, "cmr": rec4}, backend="matplotlib", mode="line", ax=ax, channel_ids=some_chans)
 
 
 # ### Should we save the preprocessed data to a binary file?
@@ -118,9 +124,9 @@ si.plot_traces({'filter':rec1, 'cmr': rec4}, backend='matplotlib', mode='line', 
 # Depending on the complexity of the preprocessing chain, this operation can take a while. However, we can make use of the powerful parallelization mechanism of SpikeInterface.
 
 # +
-job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
+job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
 
-rec = rec.save(folder=base_folder / 'preprocess', format='binary', **job_kwargs)
+rec = rec.save(folder=base_folder / "preprocess", format="binary", **job_kwargs)
 # -
 
 # our recording now points to the new binary folder
@@ -149,7 +155,7 @@ noise_levels_int16 = si.get_noise_levels(rec, return_scaled=False)
 
 fig, ax = plt.subplots()
 _ = ax.hist(noise_levels_microV, bins=np.arange(5, 30, 2.5))
-ax.set_xlabel('noise  [microV]')
+ax.set_xlabel("noise  [microV]")
 
 # ### Detect and localize peaks
 #
@@ -168,15 +174,16 @@ ax.set_xlabel('noise  [microV]')
 # +
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
-                     detect_threshold=5, radius_um=50., **job_kwargs)
+job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
+peaks = detect_peaks(
+    rec, method="locally_exclusive", noise_levels=noise_levels_int16, detect_threshold=5, radius_um=50.0, **job_kwargs
+)
 peaks
 
 # +
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
+peak_locations = localize_peaks(rec, peaks, method="center_of_mass", radius_um=50.0, **job_kwargs)
 # -
 
 # ### Check for drift
@@ -190,7 +197,7 @@ peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=5
 # check for drift
 fs = rec.sampling_frequency
 fig, ax = plt.subplots(figsize=(10, 8))
-ax.scatter(peaks['sample_index'] / fs, peak_locations['y'], color='k', marker='.',  alpha=0.002)
+ax.scatter(peaks["sample_index"] / fs, peak_locations["y"], color="k", marker=".", alpha=0.002)
 
 
 # +
@@ -199,7 +206,7 @@ fig, ax = plt.subplots(figsize=(15, 10))
 si.plot_probe_map(rec, ax=ax, with_channel_ids=True)
 ax.set_ylim(-100, 150)
 
-ax.scatter(peak_locations['x'], peak_locations['y'], color='purple', alpha=0.002)
+ax.scatter(peak_locations["x"], peak_locations["y"], color="purple", alpha=0.002)
 # -
 
 # ## Run a spike sorter
@@ -222,18 +229,24 @@ ax.scatter(peak_locations['x'], peak_locations['y'], color='purple', alpha=0.002
 #
 
 # check default params for kilosort2.5
-si.get_default_sorter_params('kilosort2_5')
+si.get_default_sorter_params("kilosort2_5")
 
 # +
 # run kilosort2.5 without drift correction
-params_kilosort2_5 = {'do_correction': False}
+params_kilosort2_5 = {"do_correction": False}
 
-sorting = si.run_sorter('kilosort2_5', rec, output_folder=base_folder / 'kilosort2.5_output',
-                        docker_image=True, verbose=True, **params_kilosort2_5)
+sorting = si.run_sorter(
+    "kilosort2_5",
+    rec,
+    output_folder=base_folder / "kilosort2.5_output",
+    docker_image=True,
+    verbose=True,
+    **params_kilosort2_5,
+)
 # -
 
 # the results can be read back for future sessions
-sorting = si.read_sorter_folder(base_folder / 'kilosort2.5_output')
+sorting = si.read_sorter_folder(base_folder / "kilosort2.5_output")
 
 # here we have 31 units in our recording
 sorting
@@ -247,16 +260,23 @@ sorting
 # Note that we use the `sparse=True` option. This option is important because the waveforms will be extracted only for a few channels around the main channel of each unit. This saves tons of disk space and speeds up the waveforms extraction and further processing.
 #
 
-we = si.extract_waveforms(rec, sorting, folder=base_folder / 'waveforms_kilosort2.5',
-                          sparse=True, max_spikes_per_unit=500, ms_before=1.5,ms_after=2.,
-                          **job_kwargs)
+we = si.extract_waveforms(
+    rec,
+    sorting,
+    folder=base_folder / "waveforms_kilosort2.5",
+    sparse=True,
+    max_spikes_per_unit=500,
+    ms_before=1.5,
+    ms_after=2.0,
+    **job_kwargs,
+)
 
 # the `WaveformExtractor` contains all information and is persistent on disk
 print(we)
 print(we.folder)
 
 # the `WaveformExtrator` can be easily loaded back from its folder
-we = si.load_waveforms(base_folder / 'waveforms_kilosort2.5')
+we = si.load_waveforms(base_folder / "waveforms_kilosort2.5")
 we
 
 # Many additional computations rely on the `WaveformExtractor`.
@@ -281,8 +301,9 @@ _ = si.compute_template_similarity(we)
 #
 # `si.compute_principal_components(waveform_extractor)`
 
-metrics = si.compute_quality_metrics(we, metric_names=['firing_rate', 'presence_ratio', 'snr',
-                                                       'isi_violation', 'amplitude_cutoff'])
+metrics = si.compute_quality_metrics(
+    we, metric_names=["firing_rate", "presence_ratio", "snr", "isi_violation", "amplitude_cutoff"]
+)
 metrics
 
 # ## Curation using metrics
@@ -306,16 +327,16 @@ keep_unit_ids
 #
 # In order to export the final results we need to make a copy of the the waveforms, but only for the selected units (so we can avoid computing them again).
 
-we_clean = we.select_units(keep_unit_ids, new_folder=base_folder / 'waveforms_clean')
+we_clean = we.select_units(keep_unit_ids, new_folder=base_folder / "waveforms_clean")
 
 we_clean
 
 # Then we export figures to a report folder
 
 # export spike sorting report to a folder
-si.export_report(we_clean, base_folder / 'report', format='png')
+si.export_report(we_clean, base_folder / "report", format="png")
 
-we_clean = si.load_waveforms(base_folder / 'waveforms_clean')
+we_clean = si.load_waveforms(base_folder / "waveforms_clean")
 we_clean
 
 # And push the results to sortingview webased viewer

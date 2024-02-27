@@ -1,4 +1,4 @@
-'''
+"""
 SortingAnalyzer
 ===============
 
@@ -23,7 +23,8 @@ More extesions are available in `spikeinterface.postprocessing` like "principal_
 
 
 Here the how!
-'''
+"""
+
 import matplotlib.pyplot as plt
 
 from spikeinterface import download_dataset
@@ -35,8 +36,8 @@ import spikeinterface.extractors as se
 # to download a MEArec dataset. It is a simulated dataset that contains "ground truth"
 # sorting information:
 
-repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-remote_path = 'mearec/mearec_test_10s.h5'
+repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+remote_path = "mearec/mearec_test_10s.h5"
 local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
 
 ##############################################################################
@@ -84,19 +85,23 @@ print(analyzer)
 # extract waveforms (sparse in this examples) and compute templates.
 # You can see that printing the object indicate which extension are computed yet.
 
-analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500,)
+analyzer.compute(
+    "random_spikes",
+    method="uniform",
+    max_spikes_per_unit=500,
+)
 analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True)
 analyzer.compute("templates", operators=["average", "median", "std"])
 print(analyzer)
 
 
-
 ###############################################################################
-# To speed up computation, some steps like ""waveforms" can also be extracted 
+# To speed up computation, some steps like ""waveforms" can also be extracted
 # using parallel processing (recommended!). Like this
 
-analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True,
-                 n_jobs=8, chunk_duration="1s", progress_bar=True)
+analyzer.compute(
+    "waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True, n_jobs=8, chunk_duration="1s", progress_bar=True
+)
 
 # which is equivalent of this
 job_kwargs = dict(n_jobs=8, chunk_duration="1s", progress_bar=True)
@@ -111,7 +116,7 @@ analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True, *
 ext_wf = analyzer.get_extension("waveforms")
 for unit_id in analyzer.unit_ids:
     wfs = ext_wf.get_waveforms_one_unit(unit_id)
-    print(unit_id, ':', wfs.shape)
+    print(unit_id, ":", wfs.shape)
 
 ###############################################################################
 # Same for the "templates" extension. Here we can get all templates at once
@@ -128,7 +133,6 @@ median_templates = ext_templates.get_data(operator="median")
 print(median_templates.shape)
 
 
-
 ###############################################################################
 # This can be plot easily.
 
@@ -136,7 +140,7 @@ for unit_index, unit_id in enumerate(analyzer.unit_ids[:3]):
     fig, ax = plt.subplots()
     template = av_templates[unit_index]
     ax.plot(template)
-    ax.set_title(f'{unit_id}')
+    ax.set_title(f"{unit_id}")
 
 
 ###############################################################################
@@ -150,10 +154,10 @@ analyzer.save_as(folder="analyzer.zarr", format="zarr")
 # The SortingAnalyzer offer also select_units() method wich allows to export
 # only some relevant units for instance to a new SortingAnalyzer instance.
 
-analyzer_some_units = analyzer.select_units(unit_ids=analyzer.unit_ids[:5],
-                                            format="binary_folder", folder="analyzer_some_units")
+analyzer_some_units = analyzer.select_units(
+    unit_ids=analyzer.unit_ids[:5], format="binary_folder", folder="analyzer_some_units"
+)
 print(analyzer_some_units)
-
 
 
 plt.show()

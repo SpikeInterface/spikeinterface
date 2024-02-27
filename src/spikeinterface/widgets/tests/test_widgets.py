@@ -103,7 +103,12 @@ class TestWidgets(unittest.TestCase):
 
         print(f"Widgets tests: skipping backends - {cls.skip_backends}")
 
-        cls.backend_kwargs = {"matplotlib": {}, "sortingview": {}, "ipywidgets": {"display": False}, "spikeinterface_gui": {}}
+        cls.backend_kwargs = {
+            "matplotlib": {},
+            "sortingview": {},
+            "ipywidgets": {"display": False},
+            "spikeinterface_gui": {},
+        }
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 

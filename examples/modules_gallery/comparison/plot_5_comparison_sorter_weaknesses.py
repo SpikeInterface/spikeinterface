@@ -31,7 +31,6 @@ We duplicate the results and modify it a bit to inject some "errors":
 
 """
 
-
 ##############################################################################
 # Import
 
@@ -55,43 +54,42 @@ sw.plot_agreement_matrix(comp, ordered=False)
 
 ##############################################################################
 # Here the same matrix but **ordered**
-# It is now quite trivial to check that fake injected errors are enlighted here.
+# It is now quite trivial to check that fake injected errors are enlighted here.
 
 sw.plot_agreement_matrix(comp, ordered=True)
 
 ##############################################################################
 # Here we can see that only Units 1 2 and 3 are well detected with 'accuracy'>0.75
 
-print('well_detected', comp.get_well_detected_units(well_detected_score=0.75))
+print("well_detected", comp.get_well_detected_units(well_detected_score=0.75))
 
 
 ##############################################################################
 # Here we can explore **"false positive units"** units that do not exists in ground truth
 
-print('false_positive', comp.get_false_positive_units(redundant_score=0.2))
+print("false_positive", comp.get_false_positive_units(redundant_score=0.2))
 
 ##############################################################################
 # Here we can explore **"redundant units"** units that do not exists in ground truth
 
-print('redundant', comp.get_redundant_units(redundant_score=0.2))
+print("redundant", comp.get_redundant_units(redundant_score=0.2))
 
 ##############################################################################
 # Here we can explore **"overmerged units"** units that do not exists in ground truth
 
-print('overmerged', comp.get_overmerged_units(overmerged_score=0.2))
+print("overmerged", comp.get_overmerged_units(overmerged_score=0.2))
 
 
 ##############################################################################
 # Here we can explore **"bad units"** units that a mixed a several possible errors.
 
-print('bad', comp.get_bad_units())
+print("bad", comp.get_bad_units())
 
 
 ##############################################################################
 # There is a convenient function to summary everything.
 
 comp.print_summary(well_detected_score=0.75, redundant_score=0.2, overmerged_score=0.2)
-
 
 
 plt.show()
