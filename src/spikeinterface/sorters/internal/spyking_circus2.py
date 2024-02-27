@@ -93,8 +93,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs["verbose"] = verbose
-        job_kwargs["progress_bar"] = verbose
+        job_kwargs.update({"verbose": verbose, "progress_bar": verbose})
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
