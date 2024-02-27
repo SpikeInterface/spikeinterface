@@ -6,7 +6,7 @@ import os
 import shutil
 import numpy as np
 
-from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms
+from spikeinterface.core import NumpySorting, load_extractor, BaseRecording
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import estimate_templates
@@ -90,10 +90,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 
-        job_kwargs = params["job_kwargs"].copy()
+        job_kwargs = params["job_kwargs"]
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs["verbose"] = verbose
-        job_kwargs["progress_bar"] = verbose
+        job_kwargs.update({'verbose' : verbose, 'progress_bar' : verbose})
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
