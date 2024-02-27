@@ -19,6 +19,9 @@ from spikeinterface.core.generate import (
     generate_unit_locations,
     generate_ground_truth_recording,
     generate_sorting_to_inject,
+    add_insertions,
+    synthesize_random_firings,
+    synthesize_poisson_spike_vector,
 )
 
 from spikeinterface.core.numpyextractors import NumpySorting
@@ -393,6 +396,57 @@ def test_generate_templates():
     # for f in range(templates.shape[3]):
     #     ax.plot(templates[0, :, :, f].T.flatten())
     # plt.show()
+
+
+## spiketrain test zone ##
+
+def test_synthesize_random_firings_length():
+
+    firing_rates=[2.0,3.0]
+    duration = 2
+    num_units = 2
+
+    spike_train = synthesize_random_firings(num_units=num_units, duration=duration, firing_rates=firing_rates)
+
+    assert len(spike_train) == int( np.sum(firing_rates)*duration )
+
+    units, counts = np.unique(spike_train['unit_index'], return_counts=True)
+
+    assert len(units) == num_units
+    assert np.sum(counts) == int(  np.sum(firing_rates)*duration )
+
+def test_add_insertions_replacement():
+
+    train_length = 10
+
+    spike_train = np.zeros(train_length, dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')] )
+
+    insertion_1 = (15,12,0)
+    insertion_2 = (1,2,3)
+
+    insertions = [insertion_1, insertion_2 ]
+
+    spike_train_replace = add_insertions(spike_train, insertions=insertions, insertions_replace=True)
+    
+    assert np.array( insertion_1,  dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')]) in spike_train_replace
+    assert len(spike_train_replace) == train_length
+
+
+def test_add_insertions_no_replacement():
+
+    train_length = 10
+
+    spike_train = np.zeros(train_length, dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')] )
+
+    insertion_1 = (15,12,0)
+    insertion_2 = (1,2,3)
+
+    insertions = [insertion_1, insertion_2 ]
+
+    spike_train_replace = add_insertions(spike_train, insertions=insertions, insertions_replace=False)
+    
+    assert np.array( insertion_1,  dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')]) in spike_train_replace
+    assert len(spike_train_replace) == train_length + len(insertions)
 
 
 def test_inject_templates():

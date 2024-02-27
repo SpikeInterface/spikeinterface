@@ -138,7 +138,7 @@ def generate_sorting(
     spikes = []
     for segment_index in range(num_segments):
         num_samples = int(sampling_frequency * durations[segment_index])
-        samples, labels = synthesize_poisson_spike_vector(
+        spikes_in_seg = synthesize_poisson_spike_vector(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
             duration=durations[segment_index],
@@ -147,15 +147,12 @@ def generate_sorting(
             seed=seed + segment_index,
         )
 
-        if empty_units is not None:
-            keep = ~np.isin(labels, empty_units)
-            samples = samples[keep]
-            labels = labels[keep]
-
-        spikes_in_seg = np.zeros(samples.size, dtype=minimum_spike_dtype)
-        spikes_in_seg["sample_index"] = samples
-        spikes_in_seg["unit_index"] = labels
         spikes_in_seg["segment_index"] = segment_index
+
+        if empty_units is not None:
+            keep = ~np.isin(spikes_in_seg['unit_index'], empty_units)
+            spikes_in_seg = spikes_in_seg[keep]
+        
         spikes.append(spikes_in_seg)
 
         if add_spikes_on_borders:
@@ -615,7 +612,10 @@ def synthesize_poisson_spike_vector(
     duration=60.0,
     refractory_period_ms=4.0,
     firing_rates=3.0,
+    segments=1,
     seed=0,
+    insertions=None,
+    insertions_replace=True
 ):
     """
     Generate random spike frames for neuronal units using a Poisson process.
@@ -638,15 +638,20 @@ def synthesize_poisson_spike_vector(
     firing_rates : float or array_like, default: 3.0
         Firing rate(s) in Hz. Can be a single value for all units or an array of firing rates with
         each element being the firing rate for one unit
+    segments : int, default: 1
+        Number of segments. Train is evenly spread between segments.
     seed : int, default: 0
         Seed for random number generator
+    insertions: array-like
+        List of manually inserted spikes, each spike formatted as [sample index, unit index]. Intended for
+        use in testing.
+    insertions_replace: bool
+        If True, randomly replace generated spikes. If False, add to generated spikes.
 
     Returns
     -------
-    spike_frames : ndarray
-        1D array of spike frames.
-    unit_indices : ndarray
-        1D array of unit indices corresponding to each spike.
+    spike_train: np.ndarray
+        Structured numpy array ("sample_index", "unit_index", "segment_index").
 
     Notes
     -----
@@ -709,14 +714,21 @@ def synthesize_poisson_spike_vector(
     spike_frames[:num_correct_frames] = spike_frames[mask]  # Avoids a malloc
     unit_indices = unit_indices[mask]
 
-    # Sort globaly
-    spike_frames = spike_frames[:num_correct_frames]
-    sort_indices = np.argsort(spike_frames, kind="stable")  # I profiled the different kinds, this is the fastest.
+    train_length = len(unit_indices)
 
-    unit_indices = unit_indices[sort_indices]
-    spike_frames = spike_frames[sort_indices]
+    spike_train = np.zeros( train_length,  dtype=minimum_spike_dtype)
+    spike_train['sample_index'] = spike_frames[:num_correct_frames]
+    spike_train['unit_index'] = unit_indices
 
-    return spike_frames, unit_indices
+    spike_train = add_insertions(spike_train, insertions, insertions_replace, rng)
+
+    spike_train.sort(order=['sample_index'])
+
+    segment_length = train_length // segments
+    for i in range(train_length):
+        spike_train['segment_index'][i] = min(i // segment_length, segments-1)
+        
+    return spike_train
 
 
 def synthesize_random_firings(
@@ -725,8 +737,11 @@ def synthesize_random_firings(
     duration=60,
     refractory_period_ms=4.0,
     firing_rates=3.0,
+    segments=1,
     add_shift_shuffle=False,
     seed=None,
+    insertions=None,
+    insertions_replace=True
 ):
     """ "
     Generate some spiketrain with random firing for one segment.
@@ -744,17 +759,22 @@ def synthesize_random_firings(
     firing_rates: float or list[float]
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
+    segments : int, default: 1
+        Number of segments. Train is evenly spread between segments.
     add_shift_shuffle: bool, default: False
         Optionally add a small shuffle on half of the spikes to make the autocorrelogram less flat.
     seed: int, default: None
         seed for the generator
+    insertions: array-like
+        List of manually inserted spikes, each spike formatted as [sample index, unit index]. Intended for
+        use in testing.
+    insertions_replace: bool
+        If True, randomly replace generated spikes. If False, add to generated spikes.
 
     Returns
     -------
-    times:
-        Concatenated and sorted times vector
-    labels:
-        Concatenated and sorted label vector
+    spike_train: np.ndarray
+        Structured numpy array ("sample_index", "unit_index", "segment_index").
 
     """
 
@@ -801,12 +821,82 @@ def synthesize_random_firings(
     times = np.concatenate(times)
     labels = np.concatenate(labels)
 
-    sort_inds = np.argsort(times)
-    times = times[sort_inds]
-    labels = labels[sort_inds]
+    train_length = len(times)
 
-    return (times, labels)
+    spike_train = np.zeros( train_length,  dtype=minimum_spike_dtype)
+    spike_train['sample_index'] = times
+    spike_train['unit_index'] = labels
 
+    spike_train = add_insertions(spike_train, insertions, insertions_replace, rng)
+
+    spike_train.sort(order=['sample_index'])
+
+    segment_length = train_length // segments
+    for i in range(train_length):
+        spike_train['segment_index'][i] = min(i // segment_length, segments-1)
+
+    return spike_train
+
+
+def add_insertions(spike_train, insertions, insertions_replace, rng=None, seed=None):
+    """
+    Add specified insertions into a list of times and unit labels.
+
+    Parameters
+    ----------
+    spike_train: np.ndarray
+        Structured numpy array ("sample_index", "unit_index", "segment_index").
+    insertions: array-like
+        List of manually inserted spikes, each spike formatted as [sample index, unit index]. Intended for
+        use in testing.
+    insertions_replace: bool
+        If True, randomly replace generated spikes. If False, add to generated spikes.
+    rng: numpy.random.Generator
+        A random number generator
+    seed: int, default: None
+        seed for the generator
+
+    Returns
+    -------
+    spike_train: np.ndarray
+        Structured numpy array ("sample_index", "unit_index", "segment_index").
+        Including insertions.
+
+    """
+
+    if insertions is None:
+        return spike_train
+    
+    new_spike_train = spike_train
+
+    if rng is None:
+        rng = np.random.default_rng(seed=seed)
+
+    insertions = get_structured_insertions(insertions)
+    if insertions_replace:
+        replacement_indices = rng.choice(len(spike_train), len(insertions), replace=False)
+        new_spike_train[replacement_indices] = insertions
+    else:
+        new_spike_train = np.append(spike_train, insertions) 
+
+    return new_spike_train
+
+def get_structured_insertions(insertions):
+    
+    structured_insertions =  np.zeros( len(insertions), dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')] ) 
+
+    insertions = np.array(insertions)
+    for i, insert in enumerate(insertions):
+        
+        structured_insertions['sample_index'][i] = insert[0]
+        structured_insertions['unit_index'][i] = insert[1]
+        if len(insert) == 3:
+            structured_insertions['segment_index'][i] = insert[2]
+        else:
+            structured_insertions['segment_index'][i] = 0
+
+    return structured_insertions
+    
 
 def clean_refractory_period(times, refractory_period):
     """

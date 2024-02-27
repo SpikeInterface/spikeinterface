@@ -39,6 +39,7 @@ from .generate import (
     create_sorting_npz,
     generate_snippets,
     synthesize_random_firings,
+    synthesize_poisson_spike_vector,
     inject_some_duplicate_units,
     inject_some_split_units,
     synthetize_spike_train_bad_isi,
