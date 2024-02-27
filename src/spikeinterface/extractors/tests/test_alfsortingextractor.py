@@ -14,8 +14,8 @@ def test_alf_sorting_extractor():
     spike_times = []
     spike_clusters = []
     for i, fr in enumerate([123, 78, 145]):
-        st = np.cumsum(- np.log(np.random.rand(int(rec_len_secs * firing_rate * 1.5))) / firing_rate)
-        st = st[:np.searchsorted(st, rec_len_secs)]
+        st = np.cumsum(-np.log(np.random.rand(int(rec_len_secs * firing_rate * 1.5))) / firing_rate)
+        st = st[: np.searchsorted(st, rec_len_secs)]
         spike_times.append(st)
         spike_clusters.append(st * 0 + i)
     spike_times = np.concatenate(spike_times)
@@ -25,9 +25,9 @@ def test_alf_sorting_extractor():
 
     with tempfile.TemporaryDirectory() as td:
         folder_path = Path(td)
-        np.save(folder_path.joinpath('spikes.times.npy'), spike_times)
-        np.save(folder_path.joinpath('spikes.clusters.npy'), spike_clusters)
-        np.save(folder_path.joinpath('clusters.channels.npy'), np.arange(3))
+        np.save(folder_path.joinpath("spikes.times.npy"), spike_times)
+        np.save(folder_path.joinpath("spikes.clusters.npy"), spike_clusters)
+        np.save(folder_path.joinpath("clusters.channels.npy"), np.arange(3))
 
         sorting = read_alf_sorting(folder_path, sampling_frequency=30000)
         assert sorting.get_unit_spike_train(0).size > 50_000
