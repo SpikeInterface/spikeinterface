@@ -44,7 +44,6 @@ class RandomProjectionClustering:
     _default_params = {
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
-            "min_samples" : 10,
             "allow_single_cluster": True,
             "core_dist_n_jobs": os.cpu_count(),
             "cluster_selection_method": "leaf",
@@ -53,7 +52,7 @@ class RandomProjectionClustering:
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "ptp", "threshold": 0.25},
         "radius_um": 100,
-        "nb_projections": 20,
+        "nb_projections": 10,
         "ms_before": 0.5,
         "ms_after": 0.5,
         "random_seed": 42,
