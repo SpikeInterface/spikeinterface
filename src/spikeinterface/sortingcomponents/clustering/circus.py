@@ -55,7 +55,7 @@ class CircusClustering:
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "ptp", "threshold": 0.25},
-        "radius_um": 100,
+        "radius_um": 50,
         "n_svd": [5, 10],
         "ms_before": 0.5,
         "ms_after": 0.5,

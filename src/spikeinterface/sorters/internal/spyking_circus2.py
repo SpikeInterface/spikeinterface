@@ -28,7 +28,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 50},
         "sparsity": {"method": "ptp", "threshold": 0.25},
         "sparsity": {"method": "ptp", "threshold": 0.25},
         "filtering": {"freq_min": 150},

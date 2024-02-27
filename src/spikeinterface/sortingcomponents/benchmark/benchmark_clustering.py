@@ -235,7 +235,7 @@ class ClusteringStudy(BenchmarkStudy):
             axs[count].set_xlabel("snr")
             axs[count].set_ylabel(metric)
             label = self.cases[key]["label"]
-            axs[0, count].set_title(label)
+            axs[count].set_title(label)
 
     def plot_comparison_clustering(
         self,
