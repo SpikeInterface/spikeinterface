@@ -1,5 +1,5 @@
 from re import escape
-from unittest import TestCase
+from unittest import TestCase, mock
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -15,7 +15,7 @@ PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 
 
 @pytest.mark.streaming_extractors
-class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
+class TestDefaultIblRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.session = EID
@@ -169,11 +169,7 @@ class TestIblSortingExtractor(TestCase):
         spikes = sorting.to_spike_vector()
         spikes = {"samples": spikes["sample_index"], "clusters": spikes["unit_index"]}
         clusters = {"amps": np.ones(3) * 50 / 1e6}
-        from unittest import mock
-
         one = IblRecordingExtractor._get_default_one()
-        from brainbox.io.one import SpikeSortingLoader
-
         with mock.patch("brainbox.io.one.SpikeSortingLoader.load_spike_sorting", side_effect=((spikes, clusters, {}),)):
             sorting = read_ibl_sorting(pid=PID, one=one)
         self.assertEqual(sorting.to_spike_vector()["sample_index"].size, spikes["samples"].size)
@@ -181,7 +177,7 @@ class TestIblSortingExtractor(TestCase):
 
 if __name__ == "__main__":
     TestDefaultIblStreamingRecordingExtractorApBand.setUpClass()
-    test1 = TestDefaultIblStreamingRecordingExtractorApBand()
+    test1 = TestDefaultIblStreamingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
     test1.test_dtype()
@@ -196,7 +192,7 @@ if __name__ == "__main__":
     test1.test_unscaled_trace_dtype()
 
     TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel.setUpClass()
-    test2 = TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel()
+    test2 = TestIblStreamingExtractorApBandWithLoadSyncChannel()
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()
