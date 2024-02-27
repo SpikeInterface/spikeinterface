@@ -47,7 +47,7 @@ class CircusClustering:
     _default_params = {
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
-            "min_samples": 1,
+            "min_samples" : 1,
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "eom",
@@ -55,7 +55,7 @@ class CircusClustering:
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "ptp", "threshold": 0.25},
-        "radius_um": 100,
+        "radius_um": 50,
         "n_svd": [5, 10],
         "ms_before": 0.5,
         "ms_after": 0.5,
@@ -103,6 +103,7 @@ class CircusClustering:
         tmp_folder.mkdir(parents=True, exist_ok=True)
 
         # SVD for time compression
+        few_peaks = select_peaks(peaks, method="uniform", n_peaks=10000)
         few_peaks = select_peaks(peaks, method="uniform", n_peaks=10000)
         few_wfs = extract_waveform_at_max_channel(
             recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **params["job_kwargs"]
@@ -165,6 +166,7 @@ class CircusClustering:
                 clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
                 local_labels = clustering[0]
             except Exception:
+                local_labels = np.zeros(len(hdbscan_data))
                 local_labels = np.zeros(len(hdbscan_data))
             valid_clusters = local_labels > -1
             if np.sum(valid_clusters) > 0:

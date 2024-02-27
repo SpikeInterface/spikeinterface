@@ -12,6 +12,7 @@ from spikeinterface.widgets import (
 )
 from spikeinterface.comparison.comparisontools import make_matching_events
 
+import matplotlib.patches as mpatches
 # from spikeinterface.postprocessing import get_template_extremum_channel
 from spikeinterface.core import get_noise_levels
 
@@ -126,7 +127,7 @@ class ClusteringStudy(BenchmarkStudy):
             if ignore_noise:
                 gt_labels = gt_labels[~noise]
                 found_labels = found_labels[~noise]
-            print(self.cases[key]["label"], homogeneity_score(gt_labels, found_labels), np.mean(noise))
+            print(self.cases[key]["label"], "Homogeneity:", homogeneity_score(gt_labels, found_labels), "Noise (%):", np.mean(noise))
 
     def plot_agreements(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
@@ -293,6 +294,8 @@ class ClusteringStudy(BenchmarkStudy):
                     ax.set_xticks([])
                     ax.set_yticks([])
         plt.tight_layout(h_pad=0, w_pad=0)
+
+
 
 #     def _scatter_clusters(
 #         self,
