@@ -22,9 +22,11 @@ def correct_motion_on_peaks(
     peaks,
     peak_locations,
     sampling_frequency,
+    # TODO use add Motion
     motion,
     temporal_bins,
     spatial_bins,
+    ###
     direction="y",
 ):
     """
@@ -74,9 +76,11 @@ def interpolate_motion_on_traces(
     traces,
     times,
     channel_locations,
+    # TODO : add Motion object here
     motion,
     temporal_bins,
     spatial_bins,
+    ###
     direction=1,
     channel_inds=None,
     spatial_interpolation_method="kriging",
@@ -132,6 +136,8 @@ def interpolate_motion_on_traces(
 
     # inperpolation kernel will be the same per temporal bin
     for bin_ind in np.unique(bin_inds):
+        # TODO use # TODO : add Motion.get_displacement_at_time_and_depth() instead
+
         # Step 1 : channel motion
         if spatial_bins.shape[0] == 1:
             # rigid motion : same motion for all channels
@@ -364,9 +370,12 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         self,
         parent_recording_segment,
         channel_locations,
+        # TODO : add Motion object here
         motion,
         temporal_bins,
         spatial_bins,
+        ###
+
         direction,
         spatial_interpolation_method,
         spatial_interpolation_kwargs,

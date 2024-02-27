@@ -15,6 +15,9 @@ except ImportError:
 from .tools import make_multi_method_doc
 
 
+
+
+
 def estimate_motion(
     recording,
     peaks,
@@ -182,10 +185,14 @@ def estimate_motion(
         non_rigid_window_centers = spatial_bin_edges[:-1] + bin_um / 2
         motion = motion @ non_rigid_windows
 
+
+    # TODO : add Motion object here
     if output_extra_check:
         return motion, temporal_bins, non_rigid_window_centers, extra_check
     else:
         return motion, temporal_bins, non_rigid_window_centers
+
+
 
 
 class DecentralizedRegistration:

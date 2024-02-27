@@ -293,6 +293,8 @@ def correct_motion(
         Optional output if `output_motion_info=True`
     """
 
+    # TODO : Use motion object
+
     # local import are important because "sortingcomponents" is not important by default
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
@@ -401,7 +403,8 @@ def correct_motion(
 
     if folder is not None:
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-
+        
+        # TODO save Motion
         np.save(folder / "temporal_bins.npy", temporal_bins)
         np.save(folder / "motion.npy", motion)
         if spatial_bins is not None:
@@ -413,6 +416,7 @@ def correct_motion(
             run_times=run_times,
             peaks=peaks,
             peak_locations=peak_locations,
+            # TODO use Motion
             temporal_bins=temporal_bins,
             spatial_bins=spatial_bins,
             motion=motion,
