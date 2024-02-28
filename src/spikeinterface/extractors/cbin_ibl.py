@@ -42,7 +42,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
     name = "cbin_ibl"
 
-    def __init__(self, folder_path, load_sync_channel=False, stream_name="ap"):
+    def __init__(self, folder_path=None, load_sync_channel=False, stream_name="ap", cbin_file=None):
         # this work only for future neo
         from neo.rawio.spikeglxrawio import read_meta_file
 
@@ -50,20 +50,21 @@ class CompressedBinaryIblExtractor(BaseRecording):
             import mtscomp
         except:
             raise ImportError(self.installation_mesg)
-        folder_path = Path(folder_path)
-
-        # check bands
-        assert stream_name in ["ap", "lf"], "stream_name must be one of: 'ap', 'lf'"
-
-        # explore files
-        cbin_files = list(folder_path.glob(f"*{stream_name}.cbin"))
-        # snippets downloaded from IBL have the .stream.cbin suffix
-        cbin_stream_files = list(folder_path.glob(f"*.{stream_name}.stream.cbin"))
-        curr_cbin_files = cbin_stream_files if len(cbin_stream_files) > len(cbin_files) else cbin_files
-        assert (
-            len(curr_cbin_files) == 1
-        ), f"There should only be one `*.cbin` file in the folder, but {print(curr_cbin_files)} have been found"
-        cbin_file = curr_cbin_files[0]
+        if cbin_file is None:
+            folder_path = Path(folder_path)
+            # check bands
+            assert stream_name in ["ap", "lp"], "stream_name must be one of: 'ap', 'lp'"
+            # explore files
+            cbin_files = list(folder_path.glob(f"*{stream_name}.cbin"))
+            # snippets downloaded from IBL have the .stream.cbin suffix
+            cbin_stream_files = list(folder_path.glob(f"*.{stream_name}.stream.cbin"))
+            curr_cbin_files = cbin_stream_files if len(cbin_stream_files) > len(cbin_files) else cbin_files
+            assert (
+                len(curr_cbin_files) == 1
+            ), f"There should only be one `*.cbin` file in the folder, but {print(curr_cbin_files)} have been found"
+            cbin_file = curr_cbin_files[0]
+        else:
+            folder_path = cbin_file.parent
         ch_file = cbin_file.with_suffix(".ch")
         meta_file = cbin_file.with_suffix(".meta")
 
