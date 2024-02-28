@@ -64,7 +64,9 @@ class CompressedBinaryIblExtractor(BaseRecording):
             ), f"There should only be one `*.cbin` file in the folder, but {print(curr_cbin_files)} have been found"
             cbin_file = curr_cbin_files[0]
         else:
+            cbin_file = Path(cbin_file)
             folder_path = cbin_file.parent
+
         ch_file = cbin_file.with_suffix(".ch")
         meta_file = cbin_file.with_suffix(".meta")
 
@@ -119,6 +121,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
         self._kwargs = {
             "folder_path": str(Path(folder_path).absolute()),
             "load_sync_channel": load_sync_channel,
+            "cbin_file": str(Path(cbin_file).absolute()),
         }
 
 
