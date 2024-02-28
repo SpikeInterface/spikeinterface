@@ -225,8 +225,7 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         """
 
         num_channels = waveforms.shape[2]
-
-        if len(waveforms) > 0:
+        if waveforms.shape[0] > 0:
             temporal_waveforms = to_temporal_representation(waveforms)
             projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
             projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
