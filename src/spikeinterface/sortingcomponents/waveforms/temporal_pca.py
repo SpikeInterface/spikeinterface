@@ -225,13 +225,14 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         """
 
         num_channels = waveforms.shape[2]
-        if waveforms.shape[0] > 0:
+
+        if len(waveforms) > 0:
             temporal_waveforms = to_temporal_representation(waveforms)
             projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
             projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
         else:
-            projected_waveforms = np.zeros((0, self.n_components, num_channels), dtype=np.float32)
-        return projected_waveforms.astype(self.dtype, copy=False)
+            projected_waveforms = np.zeros((0, self.pca_model.n_components, num_channels), dtype=np.float32)
+        return projected_waveforms
 
 
 class TemporalPCADenoising(TemporalPCBaseNode):
@@ -289,12 +290,6 @@ class TemporalPCADenoising(TemporalPCBaseNode):
             denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
         else:
             denoised_waveforms = waveforms
-        if len(waveforms) > 0:
-            temporal_waveform = to_temporal_representation(waveforms)
-            projected_temporal_waveforms = self.pca_model.transform(temporal_waveform)
-            temporal_denoised_waveforms = self.pca_model.inverse_transform(projected_temporal_waveforms)
-            denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
-        else:
             denoised_waveforms = waveforms
 
         return denoised_waveforms
