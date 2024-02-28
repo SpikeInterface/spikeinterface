@@ -21,6 +21,7 @@ from .external.yass import YassSorter
 # based on spikeinertface.sortingcomponents
 from .internal.spyking_circus2 import Spykingcircus2Sorter
 from .internal.tridesclous2 import Tridesclous2Sorter
+from .internal.simplesorter import SimpleSorter
 
 sorter_full_list = [
     # external
@@ -44,6 +45,7 @@ sorter_full_list = [
     # internal
     Spykingcircus2Sorter,
     Tridesclous2Sorter,
+    SimpleSorter,
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
