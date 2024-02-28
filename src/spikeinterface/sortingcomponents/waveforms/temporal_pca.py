@@ -191,11 +191,13 @@ class TemporalPCAProjection(TemporalPCBaseNode):
     """
 
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
+        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, dtype="float32", return_output=True
     ):
         TemporalPCBaseNode.__init__(
             self, recording=recording, parents=parents, return_output=return_output, model_folder_path=model_folder_path
         )
+        self.n_components = self.pca_model.n_components
+        self.dtype = np.dtype(dtype)
 
     def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
         """
@@ -218,12 +220,14 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         """
 
         num_channels = waveforms.shape[2]
+        if waveforms.shape[0] > 0:
+            temporal_waveforms = to_temporal_representation(waveforms)
+            projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
+            projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
+        else:
+            projected_waveforms = np.zeros((0, self.n_components, num_channels), dtype=self.dtype)
 
-        temporal_waveforms = to_temporal_representation(waveforms)
-        projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
-        projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
-
-        return projected_waveforms
+        return projected_waveforms.astype(self.dtype, copy=False)
 
 
 class TemporalPCADenoising(TemporalPCBaseNode):
@@ -274,9 +278,12 @@ class TemporalPCADenoising(TemporalPCBaseNode):
         """
         num_channels = waveforms.shape[2]
 
-        temporal_waveform = to_temporal_representation(waveforms)
-        projected_temporal_waveforms = self.pca_model.transform(temporal_waveform)
-        temporal_denoised_waveforms = self.pca_model.inverse_transform(projected_temporal_waveforms)
-        denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
+        if waveforms.shape[0] > 0:
+            temporal_waveform = to_temporal_representation(waveforms)
+            projected_temporal_waveforms = self.pca_model.transform(temporal_waveform)
+            temporal_denoised_waveforms = self.pca_model.inverse_transform(projected_temporal_waveforms)
+            denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
+        else:
+            denoised_waveforms = np.zeros_like(waveforms)
 
         return denoised_waveforms
