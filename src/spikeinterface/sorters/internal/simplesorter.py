@@ -18,15 +18,15 @@ class SimpleSorter(ComponentsBasedSorter):
       * detect peaks
       * project waveforms with SVD or PCA
       * apply a well known clustering algos from scikit-learn
-    
+
       No template matching. No auto cleaning.
 
       Mainly usefull for few channels (1 to 8), teaching and testing.
     """
+
     sorter_name = "simple"
 
     handle_multi_segment = True
-
 
     _default_params = {
         "apply_preprocessing": False,
@@ -34,7 +34,7 @@ class SimpleSorter(ComponentsBasedSorter):
         "filtering": {"freq_min": 300, "freq_max": 8000.0},
         "detection": {"peak_sign": "neg", "detect_threshold": 5.0, "exclude_sweep_ms": 0.4},
         "features": {"n_components": 3},
-        "clustering" :{
+        "clustering": {
             "method": "hdbscan",
             "min_cluster_size": 25,
             "allow_single_cluster": True,
@@ -57,7 +57,6 @@ class SimpleSorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel, cache_preprocessing
 
-
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
@@ -68,8 +67,6 @@ class SimpleSorter(ComponentsBasedSorter):
         )
 
         from sklearn.decomposition import TruncatedSVD
-
-        
 
         recording_raw = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
         num_chans = recording_raw.get_num_channels()
@@ -83,7 +80,6 @@ class SimpleSorter(ComponentsBasedSorter):
         else:
             recording = recording_raw
             noise_levels = get_noise_levels(recording, return_scaled=False)
-
 
         # detection
         detection_params = params["detection"].copy()
@@ -161,30 +157,36 @@ class SimpleSorter(ComponentsBasedSorter):
 
         if clust_method == "hdbscan":
             import hdbscan
+
             out = hdbscan.hdbscan(features_flat, **clust_params)
             peak_labels = out[0]
         elif clust_method in ("kmeans"):
             from sklearn.cluster import MiniBatchKMeans
+
             peak_labels = MiniBatchKMeans(**clust_params).fit_predict(features_flat)
         elif clust_method in ("mean_shift"):
             from sklearn.cluster import MeanShift
+
             peak_labels = MeanShift().fit_predict(features_flat)
         elif clust_method in ("affinity_propagation"):
             from sklearn.cluster import AffinityPropagation
+
             peak_labels = AffinityPropagation().fit_predict(features_flat)
         elif clust_method in ("gaussian_mixture"):
             from sklearn.mixture import GaussianMixture
+
             # n_components = clust_params["n_clusters"]
             peak_labels = GaussianMixture(**clust_params).fit_predict(features_flat)
         else:
             raise ValueError(f"simple_sorter : unkown clustering method {clust_method}")
 
-
         np.save(features_folder / "peak_labels.npy", peak_labels)
 
         # keep positive labels
         keep = peak_labels >= 0
-        sorting_final = NumpySorting.from_times_labels(peaks["sample_index"][keep], peak_labels[keep], sampling_frequency)
+        sorting_final = NumpySorting.from_times_labels(
+            peaks["sample_index"][keep], peak_labels[keep], sampling_frequency
+        )
         sorting_final = sorting_final.save(folder=sorter_output_folder / "sorting")
 
         return sorting_final

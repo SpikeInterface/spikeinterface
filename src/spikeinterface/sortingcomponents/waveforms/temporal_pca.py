@@ -191,7 +191,12 @@ class TemporalPCAProjection(TemporalPCBaseNode):
     """
 
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, dtype="float32", return_output=True
+        self,
+        recording: BaseRecording,
+        parents: List[PipelineNode],
+        model_folder_path: str,
+        dtype="float32",
+        return_output=True,
     ):
         TemporalPCBaseNode.__init__(
             self, recording=recording, parents=parents, return_output=return_output, model_folder_path=model_folder_path
