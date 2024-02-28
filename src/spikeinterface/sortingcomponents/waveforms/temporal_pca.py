@@ -230,7 +230,7 @@ class TemporalPCAProjection(TemporalPCBaseNode):
             projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
             projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
         else:
-            projected_waveforms = np.zeros((0, self.n_components, num_channels), dtype=np.float32)
+            projected_waveforms = np.zeros((0, self.n_components, num_channels), dtype=self.dtype)
         return projected_waveforms.astype(self.dtype, copy=False)
 
 
