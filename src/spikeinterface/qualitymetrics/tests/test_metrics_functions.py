@@ -8,6 +8,7 @@ from spikeinterface.core import (
     add_synchrony_to_sorting,
     generate_ground_truth_recording,
     create_sorting_analyzer,
+    synthesize_random_firings
 )
 
 # from spikeinterface.extractors.toy_example import toy_example
@@ -35,6 +36,7 @@ from spikeinterface.qualitymetrics import (
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
     compute_sd_ratio,
+    get_synchrony_counts
 )
 
 
@@ -128,6 +130,11 @@ def _sorting_analyzer_violations():
 def sorting_analyzer_violations():
     return _sorting_analyzer_violations()
 
+def test_synchrony_counts_no_sync():
+    one_spike = synthesize_random_firings(num_units=1, duration=1, firing_rates=1.0)
+    sync_count = get_synchrony_counts(one_spike, (2,),[0])
+
+    assert sync_count == {2: 0}
 
 def test_mahalanobis_metrics():
     all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
