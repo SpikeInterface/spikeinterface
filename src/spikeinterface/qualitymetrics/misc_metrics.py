@@ -589,9 +589,6 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
         for synchrony_size in synchrony_sizes
     }
 
-    # Convert dict to named tuple
-    synchrony_metrics_tuple = namedtuple("synchrony_metrics", synchrony_metrics_dict.keys())
-    synchrony_metrics = synchrony_metrics_tuple(**synchrony_metrics_dict)
     return synchrony_metrics
 
 
