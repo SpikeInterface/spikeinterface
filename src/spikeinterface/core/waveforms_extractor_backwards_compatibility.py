@@ -362,7 +362,7 @@ def _read_old_waveforms_extractor_binary(folder):
         params = json.load(f)
 
     sparsity_file = folder / "sparsity.json"
-    if params_file.exists():
+    if sparsity_file.exists():
         with open(sparsity_file, "r") as f:
             sparsity_dict = json.load(f)
             sparsity = ChannelSparsity.from_dict(sparsity_dict)
