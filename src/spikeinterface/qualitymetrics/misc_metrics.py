@@ -496,6 +496,54 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
+def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
+    """Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`
+
+    Parameters
+    ----------
+    spikes : memmap
+        The spike train
+    synchrony_sizes : list or tuple, default: (2, 4, 8)
+        The synchrony sizes to compute.
+    unit_ids : list or None, default: None
+        List of unit ids to compute the synchrony metrics. Expecting all units.
+
+    Returns
+    -------
+    synchrony_counts : dict
+        The synchrony counts for the synchrony sizes.
+
+    References
+    ----------
+    Based on concepts described in [Gruen]_
+    This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
+    """
+
+    # Pre-allocate synchrony counts
+    synchrony_counts = {}
+    for synchrony_size in synchrony_sizes:
+        synchrony_counts[synchrony_size] = np.zeros(len(all_unit_ids), dtype=np.int64)
+
+
+    for segment_index in range(len(spikes)):
+        spikes_in_segment = spikes[segment_index]
+
+        # we compute just by counting the occurrence of each sample_index
+        unique_spike_index, complexity = np.unique(spikes_in_segment["sample_index"], return_counts=True)
+
+        # add counts for this segment
+        for unit_id in all_unit_ids:
+            unit_index = all_unit_ids.index(unit_id)
+            spikes_per_unit = spikes_in_segment[spikes_in_segment["unit_index"] == unit_index]
+            # some segments/units might have no spikes
+            if len(spikes_per_unit) == 0:
+                continue
+            spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
+            for synchrony_size in synchrony_sizes:
+                synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
+
+    return synchrony_counts
+
 def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None, **kwargs):
     """Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
     "synchrony_size" spikes at the exact same sample index.
@@ -528,28 +576,9 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
-    # Pre-allocate synchrony counts
-    synchrony_counts = {}
-    for synchrony_size in synchrony_sizes:
-        synchrony_counts[synchrony_size] = np.zeros(len(sorting_analyzer.unit_ids), dtype=np.int64)
+    all_unit_ids = list(sorting_analyzer.unit_ids)
 
-    all_unit_ids = list(sorting.unit_ids)
-    for segment_index in range(sorting.get_num_segments()):
-        spikes_in_segment = spikes[segment_index]
-
-        # we compute just by counting the occurrence of each sample_index
-        unique_spike_index, complexity = np.unique(spikes_in_segment["sample_index"], return_counts=True)
-
-        # add counts for this segment
-        for unit_id in unit_ids:
-            unit_index = all_unit_ids.index(unit_id)
-            spikes_per_unit = spikes_in_segment[spikes_in_segment["unit_index"] == unit_index]
-            # some segments/units might have no spikes
-            if len(spikes_per_unit) == 0:
-                continue
-            spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
-            for synchrony_size in synchrony_sizes:
-                synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
+    synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids)
 
     # add counts for this segment
     synchrony_metrics_dict = {
