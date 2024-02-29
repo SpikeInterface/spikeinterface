@@ -7,7 +7,7 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kw
 
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
-from spikeinterface.core.sortinganalyzer import register_result_extension, ResultExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 
@@ -19,7 +19,7 @@ from ..core.template_tools import _get_dense_templates_array, _get_nbefore
 # TODO extra sparsity and job_kwargs handling
 
 
-class ComputeAmplitudeScalings(ResultExtension):
+class ComputeAmplitudeScalings(AnalyzerExtension):
     """
     Computes the amplitude scalings from a SortingAnalyzer.
 
@@ -69,7 +69,7 @@ class ComputeAmplitudeScalings(ResultExtension):
     need_job_kwargs = True
 
     def __init__(self, sorting_analyzer):
-        ResultExtension.__init__(self, sorting_analyzer)
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
         self.collisions = None
 

@@ -12,10 +12,9 @@ from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing i
 from spikeinterface.sortingcomponents.benchmark.benchmark_clustering import ClusteringStudy
 
 
-
 @pytest.mark.skip()
 def test_benchmark_clustering():
-    
+
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
     recording, gt_sorting = make_dataset()
@@ -23,19 +22,18 @@ def test_benchmark_clustering():
     num_spikes = gt_sorting.to_spike_vector().size
     spike_indices = np.arange(0, num_spikes, 5)
 
-
     # create study
-    study_folder = cache_folder / 'study_clustering'
-    datasets = {"toy" : (recording, gt_sorting)}
+    study_folder = cache_folder / "study_clustering"
+    datasets = {"toy": (recording, gt_sorting)}
     cases = {}
-    for method in ['random_projections', 'circus']:
+    for method in ["random_projections", "circus"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
-            "init_kwargs": {'indices' : spike_indices},
-            "params" : {"method" : method, "method_kwargs" : {}},
+            "init_kwargs": {"indices": spike_indices},
+            "params": {"method": method, "method_kwargs": {}},
         }
-    
+
     if study_folder.exists():
         shutil.rmtree(study_folder)
     study = ClusteringStudy.create(study_folder, datasets=datasets, cases=cases)
@@ -45,7 +43,6 @@ def test_benchmark_clustering():
     study.create_sorting_analyzer_gt(**job_kwargs)
     study.compute_metrics()
 
-    
     study = ClusteringStudy(study_folder)
 
     # run and result
@@ -64,8 +61,5 @@ def test_benchmark_clustering():
     plt.show()
 
 
-
 if __name__ == "__main__":
     test_benchmark_clustering()
-
-

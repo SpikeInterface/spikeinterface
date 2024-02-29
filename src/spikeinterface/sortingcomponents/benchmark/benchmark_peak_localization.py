@@ -10,7 +10,11 @@ from spikeinterface.widgets import (
     plot_unit_templates,
     plot_unit_waveforms,
 )
-from spikeinterface.postprocessing.unit_localization import compute_center_of_mass, compute_monopolar_triangulation, compute_grid_convolution
+from spikeinterface.postprocessing.unit_localization import (
+    compute_center_of_mass,
+    compute_monopolar_triangulation,
+    compute_grid_convolution,
+)
 from spikeinterface.core import get_noise_levels
 
 import pylab as plt
@@ -36,34 +40,31 @@ class PeakLocalizationBenchmark(Benchmark):
                 self.params[key] = 2
 
     def run(self, **job_kwargs):
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format='memory', sparse=False)
+        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
         sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute('fast_templates', **self.templates_params)
-        templates = ext.get_data(outputs='Templates')
+        ext = sorting_analyzer.compute("fast_templates", **self.templates_params)
+        templates = ext.get_data(outputs="Templates")
         ext = sorting_analyzer.compute("spike_locations", **self.params)
         spikes_locations = ext.get_data(outputs="by_unit")
-        self.result = {'spikes_locations' : spikes_locations}
-        self.result['templates'] = templates
+        self.result = {"spikes_locations": spikes_locations}
+        self.result["templates"] = templates
 
     def compute_result(self, **result_params):
         errors = {}
 
         for unit_ind, unit_id in enumerate(self.gt_sorting.unit_ids):
-            data = self.result['spikes_locations'][0][unit_id]
+            data = self.result["spikes_locations"][0][unit_id]
             errors[unit_id] = np.sqrt(
                 (data["x"] - self.gt_positions[unit_ind, 0]) ** 2 + (data["y"] - self.gt_positions[unit_ind, 1]) ** 2
             )
 
-        self.result['medians_over_templates'] = np.array(
+        self.result["medians_over_templates"] = np.array(
             [np.median(errors[unit_id]) for unit_id in self.gt_sorting.unit_ids]
         )
-        self.result['mads_over_templates'] = np.array(
-            [
-                np.median(np.abs(errors[unit_id] - np.median(errors[unit_id])))
-                for unit_id in self.gt_sorting.unit_ids
-            ]
+        self.result["mads_over_templates"] = np.array(
+            [np.median(np.abs(errors[unit_id] - np.median(errors[unit_id]))) for unit_id in self.gt_sorting.unit_ids]
         )
-        self.result['errors'] = errors
+        self.result["errors"] = errors
 
     _run_key_saved = [
         ("spikes_locations", "pickle"),
@@ -95,15 +96,14 @@ class PeakLocalizationStudy(BenchmarkStudy):
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
-
         for count, key in enumerate(case_keys):
             analyzer = self.get_sorting_analyzer(key)
-            metrics = analyzer.get_extension('quality_metrics').get_data()
+            metrics = analyzer.get_extension("quality_metrics").get_data()
             snrs = metrics["snr"].values
             result = self.get_result(key)
-            norms = np.linalg.norm(result['templates'].templates_array, axis=(1, 2))
+            norms = np.linalg.norm(result["templates"].templates_array, axis=(1, 2))
 
-            coordinates = self.benchmarks[key].gt_positions[:, :2].copy()   
+            coordinates = self.benchmarks[key].gt_positions[:, :2].copy()
             coordinates[:, 0] -= coordinates[:, 0].mean()
             coordinates[:, 1] -= coordinates[:, 1].mean()
             distances_to_center = np.linalg.norm(coordinates, axis=1)
@@ -111,13 +111,12 @@ class PeakLocalizationStudy(BenchmarkStudy):
             idx = np.argsort(norms)
 
             from scipy.signal import savgol_filter
+
             wdx = np.argsort(snrs)
 
             data = result["medians_over_templates"]
 
-            axs[0].plot(
-                snrs[wdx], savgol_filter(data[wdx], smoothing_factor, 3), lw=2, label=self.cases[key]['label']
-            )
+            axs[0].plot(snrs[wdx], savgol_filter(data[wdx], smoothing_factor, 3), lw=2, label=self.cases[key]["label"])
             ymin = savgol_filter((data - result["mads_over_templates"])[wdx], smoothing_factor, 3)
             ymax = savgol_filter((data + result["mads_over_templates"])[wdx], smoothing_factor, 3)
 
@@ -129,7 +128,7 @@ class PeakLocalizationStudy(BenchmarkStudy):
                 distances_to_center[zdx],
                 savgol_filter(data[zdx], smoothing_factor, 3),
                 lw=2,
-                label=self.cases[key]['label'],
+                label=self.cases[key]["label"],
             )
             ymin = savgol_filter((data - result["mads_over_templates"])[zdx], smoothing_factor, 3)
             ymax = savgol_filter((data + result["mads_over_templates"])[zdx], smoothing_factor, 3)
@@ -140,14 +139,14 @@ class PeakLocalizationStudy(BenchmarkStudy):
         x_means = []
         x_stds = []
         for count, key in enumerate(case_keys):
-            result = self.get_result(key)['medians_over_templates']
+            result = self.get_result(key)["medians_over_templates"]
             x_means += [result.mean()]
             x_stds += [result.std()]
 
         y_means = []
         y_stds = []
         for count, key in enumerate(case_keys):
-            result = self.get_result(key)['mads_over_templates']
+            result = self.get_result(key)["mads_over_templates"]
             y_means += [result.mean()]
             y_stds += [result.std()]
 
@@ -162,15 +161,14 @@ class PeakLocalizationStudy(BenchmarkStudy):
         axs[1].legend()
 
 
-
 class UnitLocalizationBenchmark(Benchmark):
 
     def __init__(self, recording, gt_sorting, params, gt_positions):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.gt_positions = gt_positions
-        self.method = params['method']
-        self.method_kwargs = params['method_kwargs']
+        self.method = params["method"]
+        self.method_kwargs = params["method_kwargs"]
         self.result = {}
         self.waveforms_params = {}
         for key in ["ms_before", "ms_after"]:
@@ -180,11 +178,11 @@ class UnitLocalizationBenchmark(Benchmark):
                 self.waveforms_params[key] = 2
 
     def run(self, **job_kwargs):
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format='memory')
+        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory")
         sorting_analyzer.compute("random_spikes")
-        sorting_analyzer.compute('waveforms', **self.waveforms_params, **job_kwargs)
-        ext = sorting_analyzer.compute('templates')
-        templates = ext.get_data(outputs='Templates')
+        sorting_analyzer.compute("waveforms", **self.waveforms_params, **job_kwargs)
+        ext = sorting_analyzer.compute("templates")
+        templates = ext.get_data(outputs="Templates")
 
         if self.method == "center_of_mass":
             unit_locations = compute_center_of_mass(sorting_analyzer, **self.method_kwargs)
@@ -193,23 +191,21 @@ class UnitLocalizationBenchmark(Benchmark):
         elif self.method == "grid_convolution":
             unit_locations = compute_grid_convolution(sorting_analyzer, **self.method_kwargs)
 
-        if (unit_locations.shape[1] == 2):
+        if unit_locations.shape[1] == 2:
             unit_locations = np.hstack((unit_locations, np.zeros((len(unit_locations), 1))))
-        
-        self.result = {'unit_locations' : unit_locations}
-        self.result['templates'] = templates
+
+        self.result = {"unit_locations": unit_locations}
+        self.result["templates"] = templates
 
     def compute_result(self, **result_params):
-        errors = np.linalg.norm(self.gt_positions[:, :2] - self.result['unit_locations'][:, :2], axis=1)
-        self.result['errors'] = errors  
-    
+        errors = np.linalg.norm(self.gt_positions[:, :2] - self.result["unit_locations"][:, :2], axis=1)
+        self.result["errors"] = errors
+
     _run_key_saved = [
         ("unit_locations", "npy"),
         ("templates", "zarr_templates"),
     ]
-    _result_key_saved = [
-        ("errors", "npy")
-    ]
+    _result_key_saved = [("errors", "npy")]
 
 
 class UnitLocalizationStudy(BenchmarkStudy):
@@ -230,20 +226,20 @@ class UnitLocalizationStudy(BenchmarkStudy):
             case_keys = list(self.cases.keys())
         fig, axs = plt.subplots(ncols=1, nrows=1, figsize=(15, 5))
         from spikeinterface.widgets import plot_probe_map
-        #plot_probe_map(self.benchmarks[case_keys[0]].recording, ax=axs)
+
+        # plot_probe_map(self.benchmarks[case_keys[0]].recording, ax=axs)
         axs.scatter(self.gt_positions[:, 0], self.gt_positions[:, 1], c=np.arange(len(self.gt_positions)), cmap="jet")
-            
+
         for count, key in enumerate(case_keys):
             result = self.get_result(key)
             axs.scatter(
-                result['unit_locations'][:, 0],
-                result['unit_locations'][:, 1],
-                c=f'C{count}',
+                result["unit_locations"][:, 0],
+                result["unit_locations"][:, 1],
+                c=f"C{count}",
                 marker="v",
-                label=self.cases[key]['label']
+                label=self.cases[key]["label"],
             )
         axs.legend()
-
 
     def plot_comparison_positions(self, case_keys=None, smoothing_factor=5):
 
@@ -254,12 +250,12 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
         for count, key in enumerate(case_keys):
             analyzer = self.get_sorting_analyzer(key)
-            metrics = analyzer.get_extension('quality_metrics').get_data()
+            metrics = analyzer.get_extension("quality_metrics").get_data()
             snrs = metrics["snr"].values
             result = self.get_result(key)
-            norms = np.linalg.norm(result['templates'].templates_array, axis=(1, 2))
+            norms = np.linalg.norm(result["templates"].templates_array, axis=(1, 2))
 
-            coordinates = self.benchmarks[key].gt_positions[:, :2].copy()   
+            coordinates = self.benchmarks[key].gt_positions[:, :2].copy()
             coordinates[:, 0] -= coordinates[:, 0].mean()
             coordinates[:, 1] -= coordinates[:, 1].mean()
             distances_to_center = np.linalg.norm(coordinates, axis=1)
@@ -267,14 +263,13 @@ class UnitLocalizationStudy(BenchmarkStudy):
             idx = np.argsort(norms)
 
             from scipy.signal import savgol_filter
+
             wdx = np.argsort(snrs)
 
             data = result["errors"]
 
-            axs[0].plot(
-                snrs[wdx], savgol_filter(data[wdx], smoothing_factor, 3), lw=2, label=self.cases[key]['label']
-            )
-            
+            axs[0].plot(snrs[wdx], savgol_filter(data[wdx], smoothing_factor, 3), lw=2, label=self.cases[key]["label"])
+
             axs[0].set_xlabel("snr")
             axs[0].set_ylabel("error (um)")
 
@@ -282,7 +277,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
                 distances_to_center[zdx],
                 savgol_filter(data[zdx], smoothing_factor, 3),
                 lw=2,
-                label=self.cases[key]['label'],
+                label=self.cases[key]["label"],
             )
 
             axs[1].legend()
