@@ -539,7 +539,7 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
     return synchrony_counts
 
-def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None, **kwargs):
+def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None):
     """Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
     "synchrony_size" spikes at the exact same sample index.
 
@@ -564,17 +564,16 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
     assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
-    
     # Sort the synchrony times so we can slice numpy arrays, instead of using dicts
     synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int64)
     synchrony_sizes_np.sort()
 
     sorting = sorting_analyzer.sorting
-    
-    spikes = sorting.to_spike_vector()
-    all_unit_ids = sorting_analyzer.unit_ids
 
     spike_counts = sorting.count_num_spikes_per_unit(outputs="dict")
+    
+    spikes = sorting.to_spike_vector()
+    all_unit_ids = sorting.unit_ids
     synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes_np, all_unit_ids)
 
     synchrony_metrics_dict = {
