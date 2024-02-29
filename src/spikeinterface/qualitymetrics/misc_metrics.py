@@ -521,19 +521,21 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
     synchrony_counts = np.zeros((len(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
 
-    # we compute just by counting the occurrence of each sample_index
-    unique_spike_index, complexity = np.unique(spikes["sample_index"], return_counts=True)
+    # compute the occurrence of each sample_index. Count >2 means there's synchrony
+    _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
 
-    # add counts for this segment
-    for unit_id in all_unit_ids:
-        unit_index = all_unit_ids.index(unit_id)
-        spikes_per_unit = spikes[spikes["unit_index"] == unit_index]
-        # some segments/units might have no spikes
-        if len(spikes_per_unit) == 0:
-            continue
-        spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
-        for i, synchrony_size in enumerate(synchrony_sizes):
-            synchrony_counts[i][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
+    sync_indices = unique_spike_index[counts >= 2]
+    sync_counts = counts[counts >= 2]
+
+    for i, sync_index in enumerate(sync_indices):
+
+        num_of_syncs = sync_counts[i]
+        units_with_sync = [spikes[sync_index + a][1] for a in range(0, num_of_syncs)]
+
+        # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
+        # to the 2 simultaneous spike bins.
+        how_many_bins_to_add_to = len(synchrony_sizes[synchrony_sizes <= num_of_syncs])
+        synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
 
     return synchrony_counts
 
@@ -563,16 +565,17 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     """
     assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
     
-    spike_counts = sorting_analyzer.sorting.count_num_spikes_per_unit(outputs="dict")
+    # Sort the synchrony times so we can slice numpy arrays, instead of using dicts
+    synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int64)
+    synchrony_sizes_np.sort()
+
     sorting = sorting_analyzer.sorting
+    
     spikes = sorting.to_spike_vector()
+    all_unit_ids = sorting_analyzer.unit_ids
 
-    if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
-
-    all_unit_ids = list(sorting_analyzer.unit_ids)
-
-    synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids)
+    spike_counts = sorting.count_num_spikes_per_unit(outputs="dict")
+    synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes_np, all_unit_ids)
 
     synchrony_metrics_dict = {
         f"sync_spike_{synchrony_size}": {
@@ -581,7 +584,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
         for sync_idx, synchrony_size in enumerate(synchrony_sizes)
     }
 
-    if np.all(unit_ids == all_unit_ids):
+    if (unit_ids == None) or (len(unit_ids) == len(all_unit_ids)):
         return synchrony_metrics_dict
     else:
         reduced_synchrony_metrics_dict = {}    
