@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment, read_python
+from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.core_tools import define_function_from_class
 
 
@@ -177,6 +178,13 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         self.annotate(phy_folder=str(phy_folder.resolve()))
 
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
+
+        # Caching spike vector for faster computation.
+        spike_vector = np.zeros(len(spike_times_clean), dtype=minimum_spike_dtype)
+        spike_vector["sample_index"] = spike_times_clean
+        spike_vector["unit_index"] = np.searchsorted(unit_ids, spike_clusters_clean)
+        spike_vector["segment_index"][:] = 0
+        self._cached_spike_vector = spike_vector
 
 
 class PhySortingSegment(BaseSortingSegment):
