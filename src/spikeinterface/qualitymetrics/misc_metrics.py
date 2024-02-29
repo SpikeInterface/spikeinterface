@@ -525,22 +525,19 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
         synchrony_counts[synchrony_size] = np.zeros(len(all_unit_ids), dtype=np.int64)
 
 
-    for segment_index in range(len(spikes)):
-        spikes_in_segment = spikes[segment_index]
+    # we compute just by counting the occurrence of each sample_index
+    unique_spike_index, complexity = np.unique(spikes["sample_index"], return_counts=True)
 
-        # we compute just by counting the occurrence of each sample_index
-        unique_spike_index, complexity = np.unique(spikes_in_segment["sample_index"], return_counts=True)
-
-        # add counts for this segment
-        for unit_id in all_unit_ids:
-            unit_index = all_unit_ids.index(unit_id)
-            spikes_per_unit = spikes_in_segment[spikes_in_segment["unit_index"] == unit_index]
-            # some segments/units might have no spikes
-            if len(spikes_per_unit) == 0:
-                continue
-            spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
-            for synchrony_size in synchrony_sizes:
-                synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
+    # add counts for this segment
+    for unit_id in all_unit_ids:
+        unit_index = all_unit_ids.index(unit_id)
+        spikes_per_unit = spikes[spikes["unit_index"] == unit_index]
+        # some segments/units might have no spikes
+        if len(spikes_per_unit) == 0:
+            continue
+        spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
+        for synchrony_size in synchrony_sizes:
+            synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
 
     return synchrony_counts
 
@@ -571,7 +568,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
     spike_counts = sorting_analyzer.sorting.count_num_spikes_per_unit(outputs="dict")
     sorting = sorting_analyzer.sorting
-    spikes = sorting.to_spike_vector(concatenated=False)
+    spikes = sorting.to_spike_vector()
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids

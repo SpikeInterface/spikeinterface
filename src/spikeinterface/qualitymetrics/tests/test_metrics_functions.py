@@ -131,7 +131,7 @@ def sorting_analyzer_violations():
     return _sorting_analyzer_violations()
 
 def test_synchrony_counts_no_sync():
-    one_spike = [synthesize_random_firings(num_units=1, duration=1, firing_rates=1.0)]
+    one_spike = synthesize_random_firings(num_units=1, duration=1, firing_rates=1.0)
     sync_count = get_synchrony_counts(one_spike, (2,),[0])
 
     print(sync_count)
@@ -140,14 +140,14 @@ def test_synchrony_counts_no_sync():
 
 def test_synchrony_counts_one_sync():
     # a spike train containing two synchronized spikes
-    two_spikes = [synthesize_random_firings(num_units=2, duration=1, firing_rates=1.0, insertions = [[100,1],[100,0]])]
+    two_spikes = synthesize_random_firings(num_units=2, duration=1, firing_rates=1.0, insertions = [[100,1],[100,0]])
     sync_count = get_synchrony_counts(two_spikes, (2,),[0,1])
 
     assert np.all(sync_count[2] == np.array([1,1]))
 
 def test_synchrony_counts_one_quad_sync():
     # a spike train containing four synchronized spikes
-    four_spikes = [synthesize_random_firings(num_units=4, duration=1, firing_rates=1.0, insertions = [[100,0],[100,1],[100,2],[100,3]])]
+    four_spikes = synthesize_random_firings(num_units=4, duration=1, firing_rates=1.0, insertions = [[100,0],[100,1],[100,2],[100,3]])
     sync_count = get_synchrony_counts(four_spikes, (2,4),[0,1,2,3])
     
     assert list(sync_count.keys()) == [2,4]
@@ -157,7 +157,7 @@ def test_synchrony_counts_one_quad_sync():
 
 def test_synchrony_counts_not_all_units():
     # a spike train containing two synchronized spikes
-    three_spikes = [synthesize_random_firings(num_units=3, duration=1, firing_rates=1.0, insertions = [[50,0],[100,1],[100,2]])]
+    three_spikes = synthesize_random_firings(num_units=3, duration=1, firing_rates=1.0, insertions = [[50,0],[100,1],[100,2]])
     sync_count = get_synchrony_counts(three_spikes, (2,),[0,1,2])
 
     assert np.all(sync_count[2] == np.array([0, 1, 1]))
