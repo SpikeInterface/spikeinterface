@@ -192,7 +192,7 @@ Most of the extensions live in the :code:`postprocessing` module, but there are 
 .. note::
 
     Some extensions depend on others, which must be pre-computed. For example:code:`waveforms`, the :code:`waveforms` extension depends on
-    the :code:`random_spikes` one. If the latter is not computed, computing :code:`waveforms` will throw an error.:code:`waveforms`
+    the :code:`random_spikes` one. If the latter is not computed, computing :code:`waveforms` will throw an error.
 
 # TODO: make `get_available_extensions`
 
@@ -215,6 +215,24 @@ Most of the extensions live in the :code:`postprocessing` module, but there are 
 
     >>> SortingAnalyzer: 4 channels - 10 units - 1 segments - memory - sparse - has recording
     >>> Loaded 0 extenstions:
+
+The :code:`sorting_analyzer` object implements convenient functions to access the underlying :code:`recording` and
+:code:`sorting` objects information:
+
+.. code-block:: python
+
+    num_channels = sorting_analyzer.get_num_channels()
+    num_units = sorting_analyzer.get_num_units()
+    sampling_frequency = sorting_analyzer.sampling_frequency
+    total_num_samples = sorting_analyzer.get_total_samples()
+    total_duration = sorting_analyzer.get_total_duration()
+    ### NOTE ###
+    # 'segment_index' is required for multi-segment objects
+    num_samples = sorting_analyzer.get_num_samples(segment_index=0)
+
+    # channel_ids and unit_ids
+    channel_ids = sorting_analyzer.channel_ids
+    unit_ids = sorting_analyzer.unit_ids
 
 Once the :code:`sorting_analyzer` is instantiated, additional extensions can be computed:
 
