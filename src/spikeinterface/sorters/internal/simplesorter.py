@@ -158,19 +158,24 @@ class SimpleSorter(ComponentsBasedSorter):
 
         if clust_method == "hdbscan":
             import hdbscan
+
             out = hdbscan.hdbscan(features_flat, **clust_params)
             peak_labels = out[0]
         elif clust_method in ("kmeans"):
             from sklearn.cluster import MiniBatchKMeans
+
             peak_labels = MiniBatchKMeans(**clust_params).fit_predict(features_flat)
         elif clust_method in ("mean_shift"):
             from sklearn.cluster import MeanShift
+
             peak_labels = MeanShift().fit_predict(features_flat)
         elif clust_method in ("affinity_propagation"):
             from sklearn.cluster import AffinityPropagation
+
             peak_labels = AffinityPropagation().fit_predict(features_flat)
         elif clust_method in ("gaussian_mixture"):
             from sklearn.mixture import GaussianMixture
+
             peak_labels = GaussianMixture(**clust_params).fit_predict(features_flat)
         else:
             raise ValueError(f"simple_sorter : unkown clustering method {clust_method}")
