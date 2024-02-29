@@ -384,6 +384,25 @@ def test_synchrony_metrics(sorting_analyzer_simple):
         # set new previous waveform extractor
         previous_sorting_analyzer = sorting_analyzer_sync
 
+def test_synchrony_metrics_unit_id_subset(sorting_analyzer_simple):
+
+    unit_ids_subset = [3,7]
+
+    synchrony_sizes = (2,)
+    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_simple, synchrony_sizes=synchrony_sizes, unit_ids = unit_ids_subset)
+
+    assert list(synchrony_metrics['sync_spike_2'].keys()) == [3,7]
+
+def test_synchrony_metrics_no_unit_ids(sorting_analyzer_simple):
+
+    all_unit_ids = sorting_analyzer_simple.sorting.unit_ids
+
+    synchrony_sizes = (2,)
+    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_simple, synchrony_sizes=synchrony_sizes)
+
+    assert np.all( list(synchrony_metrics['sync_spike_2'].keys()) == sorting_analyzer_simple.unit_ids )
+
+
 
 @pytest.mark.sortingcomponents
 def test_calculate_drift_metrics(sorting_analyzer_simple):
@@ -427,7 +446,9 @@ if __name__ == "__main__":
     # test_calculate_amplitude_median(sorting_analyzer)
     # test_calculate_sliding_rp_violations(sorting_analyzer)
     # test_calculate_drift_metrics(sorting_analyzer)
-    # test_synchrony_metrics(sorting_analyzer)
+    test_synchrony_metrics(sorting_analyzer)
+    test_synchrony_metrics_unit_id_subset(sorting_analyzer_simple)
+    test_synchrony_metrics_no_unit_ids(sorting_analyzer_simple)
     # test_calculate_firing_range(sorting_analyzer)
     # test_calculate_amplitude_cv_metrics(sorting_analyzer)
     test_calculate_sd_ratio(sorting_analyzer)
