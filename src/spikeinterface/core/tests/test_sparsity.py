@@ -200,7 +200,7 @@ def test_compute_sparsity():
     recording, sorting = get_dataset()
 
     sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False)
-    sorting_analyzer.select_random_spikes()
+    sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute("fast_templates", return_scaled=True)
     sorting_analyzer.compute("noise_levels", return_scaled=True)
     # this is needed for method="energy"

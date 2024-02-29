@@ -1,5 +1,5 @@
 """
-Implement ResultExtension that are essential and imported in core
+Implement AnalyzerExtension that are essential and imported in core
   * ComputeWaveforms
   * ComputeTemplates
 Theses two classes replace the WaveformExtractor
@@ -11,21 +11,112 @@ It also implement:
 
 import numpy as np
 
-from .sortinganalyzer import ResultExtension, register_result_extension
+from .sortinganalyzer import AnalyzerExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_average
 from .recording_tools import get_noise_levels
 from .template import Templates
+from .sorting_tools import random_spikes_selection
 
 
-class ComputeWaveforms(ResultExtension):
+class SelectRandomSpikes(AnalyzerExtension):
     """
-    ResultExtension that extract some waveforms of each units.
+    AnalyzerExtension that select some random spikes.
+
+    This will be used by "compute_waveforms" and so "compute_templates" or "compute_fast_templates"
+
+    This internally use `random_spikes_selection()` parameters are the same.
+
+    Parameters
+    ----------
+    unit_ids: list or None
+        Unit ids to retrieve waveforms for
+    mode: "average" | "median" | "std" | "percentile", default: "average"
+        The mode to compute the templates
+    percentile: float, default: None
+        Percentile to use for mode="percentile"
+    save: bool, default True
+        In case, the operator is not computed yet it can be saved to folder or zarr.
+
+    Returns
+    -------
+
+    """
+
+    extension_name = "random_spikes"
+    depend_on = []
+    need_recording = False
+    use_nodepipeline = False
+    need_job_kwargs = False
+
+    def _run(
+        self,
+    ):
+        self.data["random_spikes_indices"] = random_spikes_selection(
+            self.sorting_analyzer.sorting,
+            num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
+            **self.params,
+        )
+
+    def _set_params(self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None):
+        params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
+        return params
+
+    def _select_extension_data(self, unit_ids):
+        random_spikes_indices = self.data["random_spikes_indices"]
+
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
+
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
+
+        selected_mask = np.zeros(spikes.size, dtype=bool)
+        selected_mask[random_spikes_indices] = True
+
+        new_data = dict()
+        new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_spike_mask])
+        return new_data
+
+    def _get_data(self):
+        return self.data["random_spikes_indices"]
+
+    def some_spikes(self):
+        # utils to get the some_spikes vector
+        # use internal cache
+        if not hasattr(self, "_some_spikes"):
+            spikes = self.sorting_analyzer.sorting.to_spike_vector()
+            self._some_spikes = spikes[self.data["random_spikes_indices"]]
+        return self._some_spikes
+
+    def get_selected_indices_in_spike_train(self, unit_id, segment_index):
+        # usefull for Waveforms extractor backwars compatibility
+        # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) of list (segment_index) of indices of spikes in spiketrain
+        sorting = self.sorting_analyzer.sorting
+        random_spikes_indices = self.data["random_spikes_indices"]
+
+        unit_index = sorting.id_to_index(unit_id)
+        spikes = sorting.to_spike_vector()
+        spike_indices_in_seg = np.flatnonzero(
+            (spikes["segment_index"] == segment_index) & (spikes["unit_index"] == unit_index)
+        )
+        common_element, inds_left, inds_right = np.intersect1d(
+            spike_indices_in_seg, random_spikes_indices, return_indices=True
+        )
+        selected_spikes_in_spike_train = inds_left
+        return selected_spikes_in_spike_train
+
+
+register_result_extension(SelectRandomSpikes)
+
+
+class ComputeWaveforms(AnalyzerExtension):
+    """
+    AnalyzerExtension that extract some waveforms of each units.
 
     The sparsity is controlled by the SortingAnalyzer sparsity.
     """
 
     extension_name = "waveforms"
-    depend_on = []
+    depend_on = ["random_spikes"]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = True
@@ -41,16 +132,19 @@ class ComputeWaveforms(ResultExtension):
     def _run(self, **job_kwargs):
         self.data.clear()
 
-        if self.sorting_analyzer.random_spikes_indices is None:
-            raise ValueError("compute_waveforms need SortingAnalyzer.select_random_spikes() need to be run first")
+        # if self.sorting_analyzer.random_spikes_indices is None:
+        #     raise ValueError("compute_waveforms need SortingAnalyzer.select_random_spikes() need to be run first")
+
+        # random_spikes_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
         unit_ids = sorting.unit_ids
 
         # retrieve spike vector and the sampling
-        spikes = sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        # spikes = sorting.to_spike_vector()
+        # some_spikes = spikes[random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
 
         if self.format == "binary_folder":
             # in that case waveforms are extacted directly in files
@@ -98,7 +192,7 @@ class ComputeWaveforms(ResultExtension):
 
         if return_scaled:
             # check if has scaled values:
-            if not recording.has_scaled() and recording.get_dtype().kind == 'i':
+            if not recording.has_scaled() and recording.get_dtype().kind == "i":
                 print("Setting 'return_scaled' to False")
                 return_scaled = False
 
@@ -116,9 +210,12 @@ class ComputeWaveforms(ResultExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
+        # random_spikes_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        # some_spikes = spikes[random_spikes_indices]
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
@@ -133,8 +230,9 @@ class ComputeWaveforms(ResultExtension):
     ):
         sorting = self.sorting_analyzer.sorting
         unit_index = sorting.id_to_index(unit_id)
-        spikes = sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        # spikes = sorting.to_spike_vector()
+        # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = self.data["waveforms"][spike_mask, :, :]
 
@@ -157,9 +255,9 @@ compute_waveforms = ComputeWaveforms.function_factory()
 register_result_extension(ComputeWaveforms)
 
 
-class ComputeTemplates(ResultExtension):
+class ComputeTemplates(AnalyzerExtension):
     """
-    ResultExtension that compute templates (average, str, median, percentile, ...)
+    AnalyzerExtension that compute templates (average, str, median, percentile, ...)
 
     This must be run after "waveforms" extension (`SortingAnalyzer.compute("waveforms")`)
 
@@ -219,8 +317,9 @@ class ComputeTemplates(ResultExtension):
                 raise ValueError(f"ComputeTemplates: wrong operator {operator}")
             self.data[key] = np.zeros((unit_ids.size, num_samples, channel_ids.size))
 
-        spikes = self.sorting_analyzer.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        # spikes = self.sorting_analyzer.sorting.to_spike_vector()
+        # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
             wfs = waveforms[spike_mask, :, :]
@@ -341,14 +440,14 @@ compute_templates = ComputeTemplates.function_factory()
 register_result_extension(ComputeTemplates)
 
 
-class ComputeFastTemplates(ResultExtension):
+class ComputeFastTemplates(AnalyzerExtension):
     """
-    ResultExtension which is similar to the extension "templates" (ComputeTemplates) **but only for average**.
+    AnalyzerExtension which is similar to the extension "templates" (ComputeTemplates) **but only for average**.
     This is way faster because it do not need "waveforms" to be computed first.
     """
 
     extension_name = "fast_templates"
-    depend_on = []
+    depend_on = ["random_spikes"]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = True
@@ -364,16 +463,17 @@ class ComputeFastTemplates(ResultExtension):
     def _run(self, **job_kwargs):
         self.data.clear()
 
-        if self.sorting_analyzer.random_spikes_indices is None:
-            raise ValueError("compute_waveforms need SortingAnalyzer.select_random_spikes() need to be run first")
+        # if self.sorting_analyzer.random_spikes_indices is None:
+        #     raise ValueError("compute_waveforms need SortingAnalyzer.select_random_spikes() need to be run first")
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
         unit_ids = sorting.unit_ids
 
         # retrieve spike vector and the sampling
-        spikes = sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        # spikes = sorting.to_spike_vector()
+        # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
 
         return_scaled = self.params["return_scaled"]
 
@@ -425,7 +525,7 @@ compute_fast_templates = ComputeFastTemplates.function_factory()
 register_result_extension(ComputeFastTemplates)
 
 
-class ComputeNoiseLevels(ResultExtension):
+class ComputeNoiseLevels(AnalyzerExtension):
     """
     Computes the noise level associated to each recording channel.
 
@@ -456,7 +556,7 @@ class ComputeNoiseLevels(ResultExtension):
     need_job_kwargs = False
 
     def __init__(self, sorting_analyzer):
-        ResultExtension.__init__(self, sorting_analyzer)
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, num_chunks_per_segment=20, chunk_size=10000, return_scaled=True, seed=None):
         params = dict(

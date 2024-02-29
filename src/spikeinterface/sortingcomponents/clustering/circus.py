@@ -47,40 +47,35 @@ class CircusClustering:
     _default_params = {
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
+            "min_samples": 1,
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "eom",
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
-        "sparsity": {"method": "ptp", "threshold": 1},
+        "sparsity": {"method": "ptp", "threshold": 0.25},
         "radius_um": 100,
         "n_svd": [5, 10],
         "ms_before": 0.5,
         "ms_after": 0.5,
         "random_seed": 42,
         "noise_levels": None,
-        "debug": False,
         "tmp_folder": None,
-        "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {},
     }
 
     @classmethod
     def main_function(cls, recording, peaks, params):
         assert HAVE_HDBSCAN, "random projections clustering needs hdbscan to be installed"
 
-        if "n_jobs" in params["job_kwargs"]:
-            if params["job_kwargs"]["n_jobs"] == -1:
-                params["job_kwargs"]["n_jobs"] = os.cpu_count()
-
-        if "core_dist_n_jobs" in params["hdbscan_kwargs"]:
-            if params["hdbscan_kwargs"]["core_dist_n_jobs"] == -1:
-                params["hdbscan_kwargs"]["core_dist_n_jobs"] = os.cpu_count()
-
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        verbose = d["job_kwargs"]["verbose"]
+        if "verbose" in job_kwargs:
+            verbose = job_kwargs["verbose"]
+        else:
+            verbose = False
 
         peak_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
 
@@ -102,7 +97,7 @@ class CircusClustering:
         tmp_folder.mkdir(parents=True, exist_ok=True)
 
         # SVD for time compression
-        few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
+        few_peaks = select_peaks(peaks, method="uniform", n_peaks=10000)
         few_wfs = extract_waveform_at_max_channel(
             recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **params["job_kwargs"]
         )
@@ -164,7 +159,7 @@ class CircusClustering:
                 clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
                 local_labels = clustering[0]
             except Exception:
-                local_labels = -1 * np.ones(len(hdbscan_data))
+                local_labels = np.zeros(len(hdbscan_data))
             valid_clusters = local_labels > -1
             if np.sum(valid_clusters) > 0:
                 local_labels[valid_clusters] += nb_clusters
@@ -193,7 +188,7 @@ class CircusClustering:
             templates_array, fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe()
         )
         if params["noise_levels"] is None:
-            params["noise_levels"] = get_noise_levels(recording)
+            params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
         sparsity = compute_sparsity(templates, params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         templates = remove_empty_templates(templates)

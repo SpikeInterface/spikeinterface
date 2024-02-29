@@ -23,7 +23,7 @@ from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
 from .sortinganalyzer import SortingAnalyzer, load_sorting_analyzer
 from .base import load_extractor
-from .analyzer_extension_core import ComputeWaveforms, ComputeTemplates
+from .analyzer_extension_core import SelectRandomSpikes, ComputeWaveforms, ComputeTemplates
 
 _backwards_compatibility_msg = """####
 # extract_waveforms() and WaveformExtractor() have been replace by SortingAnalyzer since version 0.101
@@ -96,9 +96,7 @@ def extract_waveforms(
         sorting, recording, format=format, folder=folder, sparse=sparse, sparsity=sparsity, **sparsity_kwargs
     )
 
-    # TODO propagate job_kwargs
-
-    sorting_analyzer.select_random_spikes(max_spikes_per_unit=max_spikes_per_unit, seed=seed)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=max_spikes_per_unit, seed=seed)
 
     waveforms_params = dict(ms_before=ms_before, ms_after=ms_after, return_scaled=return_scaled, dtype=dtype)
     sorting_analyzer.compute("waveforms", **waveforms_params, **job_kwargs)
@@ -232,7 +230,10 @@ class MockWaveformExtractor:
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) with a complex dtype as follow
         selected_spikes = []
         for segment_index in range(self.get_num_segments()):
-            inds = self.sorting_analyzer.get_selected_indices_in_spike_train(unit_id, segment_index)
+            # inds = self.sorting_analyzer.get_selected_indices_in_spike_train(unit_id, segment_index)
+            inds = self.sorting_analyzer.get_extension("random_spikes").get_selected_indices_in_spike_train(
+                unit_id, segment_index
+            )
             sampled_index = np.zeros(inds.size, dtype=[("spike_index", "int64"), ("segment_index", "int64")])
             sampled_index["spike_index"] = inds
             sampled_index["segment_index"][:] = segment_index
@@ -251,8 +252,7 @@ class MockWaveformExtractor:
         # lazy and cache are ingnored
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
-        spikes = self.sorting.to_spike_vector()
-        some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
@@ -439,7 +439,9 @@ def _read_old_waveforms_extractor_binary(folder):
             mask = some_spikes["unit_index"] == unit_index
             waveforms[:, :, : wfs.shape[2]][mask, :, :] = wfs
 
-        sorting_analyzer.random_spikes_indices = random_spikes_indices
+        ext = SelectRandomSpikes(sorting_analyzer)
+        ext.params = dict()
+        ext.data = dict(random_spikes_indices=random_spikes_indices)
 
         ext = ComputeWaveforms(sorting_analyzer)
         ext.params = dict(

@@ -17,6 +17,7 @@ import pickle
 
 _key_separator = "_-°°-_"
 
+
 class BenchmarkStudy:
     """
     Generic study for sorting components.
@@ -31,7 +32,9 @@ class BenchmarkStudy:
 
 
     """
+
     benchmark_class = None
+
     def __init__(self, study_folder):
         self.folder = Path(study_folder)
         self.datasets = {}
@@ -147,7 +150,7 @@ class BenchmarkStudy:
 
         if result_folder.exists():
             shutil.rmtree(result_folder)
-        for f in (log_file, ):
+        for f in (log_file,):
             if f.exists():
                 f.unlink()
         self.benchmarks[key] = None
@@ -178,17 +181,17 @@ class BenchmarkStudy:
             benchmark.save_run(bench_folder)
             benchmark.result["run_time"] = float(t1 - t0)
             benchmark.save_main(bench_folder)
-    
+
     def get_run_times(self, case_keys=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        
+
         run_times = {}
         for key in case_keys:
             benchmark = self.benchmarks[key]
             assert benchmark is not None
             run_times[key] = benchmark.result["run_time"]
-        
+
         df = pd.DataFrame(dict(run_times=run_times))
         if not isinstance(self.levels, str):
             df.index.names = self.levels
@@ -199,9 +202,7 @@ class BenchmarkStudy:
             case_keys = list(self.cases.keys())
         run_times = self.get_run_times(case_keys=case_keys)
 
-        run_times.plot(kind='bar')
-
-
+        run_times.plot(kind="bar")
 
     def compute_results(self, case_keys=None, verbose=False, **result_params):
         if case_keys is None:
@@ -214,11 +215,9 @@ class BenchmarkStudy:
             benchmark.compute_result(**result_params)
             benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
-    def create_sorting_analyzer_gt(self, case_keys=None, return_scaled=True, **kwargs):
+    def create_sorting_analyzer_gt(self, case_keys=None, return_scaled=True, random_params={}, **job_kwargs):
         if case_keys is None:
             case_keys = self.cases.keys()
-
-        select_params, job_kwargs = split_job_kwargs(kwargs)
 
         base_folder = self.folder / "sorting_analyzer"
         base_folder.mkdir(exist_ok=True)
@@ -230,7 +229,7 @@ class BenchmarkStudy:
             folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
             sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
-            sorting_analyzer.select_random_spikes(**select_params)
+            sorting_analyzer.compute("random_spikes", **random_params)
             sorting_analyzer.compute("waveforms", return_scaled=return_scaled, **job_kwargs)
             sorting_analyzer.compute("templates")
             sorting_analyzer.compute("noise_levels", return_scaled=return_scaled)
@@ -266,7 +265,7 @@ class BenchmarkStudy:
                 else:
                     continue
             sorting_analyzer = self.get_sorting_analyzer(key)
-            qm_ext = sorting_analyzer.compute("quality_metrics", metric_names=metric_names) 
+            qm_ext = sorting_analyzer.compute("quality_metrics", metric_names=metric_names)
             metrics = qm_ext.get_data()
             metrics.to_csv(filename, sep="\t", index=True)
 
@@ -287,16 +286,16 @@ class BenchmarkStudy:
     def get_units_snr(self, key):
         """ """
         return self.get_metrics(key)["snr"]
-    
+
     def get_result(self, key):
         return self.benchmarks[key].result
-
 
 
 class Benchmark:
     """
     Responsible to make a unique run() and compute_result() for one case.
     """
+
     def __init__(self):
         self.result = {}
 
@@ -312,14 +311,14 @@ class Benchmark:
         for k, format in saved_keys:
             if format == "npy":
                 np.save(folder / f"{k}.npy", self.result[k])
-            elif format =="pickle":
-                with open(folder  / f"{k}.pickle", mode="wb") as f:
+            elif format == "pickle":
+                with open(folder / f"{k}.pickle", mode="wb") as f:
                     pickle.dump(self.result[k], f)
-            elif format == 'sorting':
-                self.result[k].save(folder = folder / k, format="numpy_folder")
-            elif format == 'zarr_templates':
+            elif format == "sorting":
+                self.result[k].save(folder=folder / k, format="numpy_folder")
+            elif format == "zarr_templates":
                 self.result[k].to_zarr(folder / k)
-            elif format == 'sorting_analyzer':
+            elif format == "sorting_analyzer":
                 pass
             else:
                 raise ValueError(f"Save error {k} {format}")
@@ -330,7 +329,7 @@ class Benchmark:
 
     def save_run(self, folder):
         self._save_keys(self._run_key_saved, folder)
-    
+
     def save_result(self, folder):
         self._save_keys(self._result_key_saved, folder)
 
@@ -342,20 +341,22 @@ class Benchmark:
                 file = folder / f"{k}.npy"
                 if file.exists():
                     result[k] = np.load(file)
-            elif format =="pickle":
+            elif format == "pickle":
                 file = folder / f"{k}.pickle"
                 if file.exists():
                     with open(file, mode="rb") as f:
                         result[k] = pickle.load(f)
-            elif format =="sorting":
+            elif format == "sorting":
                 from spikeinterface.core import load_extractor
+
                 result[k] = load_extractor(folder / k)
-            elif format =="zarr_templates":
+            elif format == "zarr_templates":
                 from spikeinterface.core.template import Templates
+
                 result[k] = Templates.from_zarr(folder / k)
 
         return result
-    
+
     def run(self):
         # run method
         raise NotImplementedError

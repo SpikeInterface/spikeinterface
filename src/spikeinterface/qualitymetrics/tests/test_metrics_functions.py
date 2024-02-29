@@ -62,7 +62,7 @@ def _sorting_analyzer_simple():
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
 
-    sorting_analyzer.select_random_spikes(max_spikes_per_unit=300, seed=2205)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=300, seed=2205)
     sorting_analyzer.compute("noise_levels")
     sorting_analyzer.compute("waveforms", **job_kwargs)
     sorting_analyzer.compute("templates")

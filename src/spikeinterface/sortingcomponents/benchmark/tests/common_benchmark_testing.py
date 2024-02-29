@@ -3,6 +3,7 @@ Important : this benchmark machinery is very heavy.
 This is not tested on github because not relevant at all.
 This only a local testing.
 """
+
 import pytest
 from pathlib import Path
 import os
@@ -18,11 +19,7 @@ from spikeinterface.core import (
     NoiseGeneratorRecording,
 )
 from spikeinterface.core.generate import generate_unit_locations
-from spikeinterface.generation import (
-    DriftingTemplates,
-    make_linear_displacement,
-    InjectDriftingTemplatesRecording
-)
+from spikeinterface.generation import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 
 
 from probeinterface import generate_multi_columns_probe
@@ -35,7 +32,6 @@ if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "sortingcomponents_benchmark"
 else:
     cache_folder = Path("cache_folder") / "sortingcomponents_benchmark"
-
 
 
 def make_dataset():
@@ -57,26 +53,31 @@ def make_dataset():
     )
     return recording, gt_sorting
 
-def compute_gt_templates(recording, gt_sorting, ms_before=2., ms_after=3., return_scaled=False, **job_kwargs):
-    spikes = gt_sorting.to_spike_vector()#[spike_indices]
+
+def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_scaled=False, **job_kwargs):
+    spikes = gt_sorting.to_spike_vector()  # [spike_indices]
     fs = recording.sampling_frequency
     nbefore = int(ms_before * fs / 1000)
     nafter = int(ms_after * fs / 1000)
     templates_array = estimate_templates(
-        recording, spikes, 
-        gt_sorting.unit_ids, nbefore, nafter, return_scaled=return_scaled,
+        recording,
+        spikes,
+        gt_sorting.unit_ids,
+        nbefore,
+        nafter,
+        return_scaled=return_scaled,
         **job_kwargs,
     )
-    
+
     gt_templates = Templates(
-         templates_array=templates_array,
-         sampling_frequency=fs,
-         nbefore=nbefore,
-         sparsity_mask=None,
-         channel_ids=recording.channel_ids,
-         unit_ids=gt_sorting.unit_ids,
-         probe=recording.get_probe(),
-         )
+        templates_array=templates_array,
+        sampling_frequency=fs,
+        nbefore=nbefore,
+        sparsity_mask=None,
+        channel_ids=recording.channel_ids,
+        unit_ids=gt_sorting.unit_ids,
+        probe=recording.get_probe(),
+    )
     return gt_templates
 
 
@@ -84,11 +85,10 @@ def make_drifting_dataset():
 
     num_units = 15
     duration = 125.5
-    sampling_frequency = 30000.
-    ms_before = 1.
-    ms_after = 3.
-    displacement_sampling_frequency = 5.
-
+    sampling_frequency = 30000.0
+    ms_before = 1.0
+    ms_after = 3.0
+    displacement_sampling_frequency = 5.0
 
     probe = generate_multi_columns_probe(
         num_columns=3,
@@ -99,8 +99,6 @@ def make_drifting_dataset():
         contact_shape_params={"width": 10},
     )
     probe.set_device_channel_indices(np.arange(probe.contact_ids.size))
-
-
 
     channel_locations = probe.contact_positions
 
@@ -116,9 +114,7 @@ def make_drifting_dataset():
         seed=None,
     )
 
-
-
-    nbefore = int(sampling_frequency * ms_before / 1000.)
+    nbefore = int(sampling_frequency * ms_before / 1000.0)
 
     generate_kwargs = dict(
         sampling_frequency=sampling_frequency,
@@ -130,12 +126,9 @@ def make_drifting_dataset():
             repolarization_ms=np.ones(num_units) * 0.8,
         ),
         unit_params_range=dict(
-            alpha=(4_000., 8_000.),
+            alpha=(4_000.0, 8_000.0),
             depolarization_ms=(0.09, 0.16),
-
         ),
-
-
     )
     templates_array = generate_templates(channel_locations, unit_locations, **generate_kwargs)
 
@@ -149,20 +142,19 @@ def make_drifting_dataset():
     drifting_templates = DriftingTemplates.from_static(templates)
     channel_locations = probe.contact_positions
 
-    start = np.array([0, -15.])
+    start = np.array([0, -15.0])
     stop = np.array([0, 12])
     displacements = make_linear_displacement(start, stop, num_step=29)
 
-    
     sorting = generate_sorting(
         num_units=num_units,
         sampling_frequency=sampling_frequency,
-        durations = [duration,],
-        firing_rates=25.)
+        durations=[
+            duration,
+        ],
+        firing_rates=25.0,
+    )
     sorting
-
-
-    
 
     times = np.arange(0, duration, 1 / displacement_sampling_frequency)
     times
@@ -170,7 +162,7 @@ def make_drifting_dataset():
     # 2 rythm
     mid = (start + stop) / 2
     freq0 = 0.1
-    displacement_vector0 = np.sin(2 * np.pi * freq0 *times)[:, np.newaxis] * (start - stop) + mid
+    displacement_vector0 = np.sin(2 * np.pi * freq0 * times)[:, np.newaxis] * (start - stop) + mid
     # freq1 = 0.01
     # displacement_vector1 = 0.2 * np.sin(2 * np.pi * freq1 *times)[:, np.newaxis] * (start - stop) + mid
 
@@ -182,7 +174,6 @@ def make_drifting_dataset():
     num_motion = displacement_vectors.shape[2]
     displacement_unit_factor = np.zeros((num_units, num_motion))
     displacement_unit_factor[:, 0] = 1
-
 
     drifting_templates.precompute_displacements(displacements)
 
@@ -196,7 +187,7 @@ def make_drifting_dataset():
         num_channels=probe.contact_ids.size,
         sampling_frequency=sampling_frequency,
         durations=[duration],
-        noise_level=1.,
+        noise_level=1.0,
         dtype="float32",
     )
 
@@ -207,7 +198,7 @@ def make_drifting_dataset():
         displacement_vectors=[displacement_vectors],
         displacement_sampling_frequency=displacement_sampling_frequency,
         displacement_unit_factor=displacement_unit_factor,
-        num_samples=[int(duration*sampling_frequency)],
+        num_samples=[int(duration * sampling_frequency)],
         amplitude_factor=None,
     )
 
@@ -218,19 +209,23 @@ def make_drifting_dataset():
         displacement_vectors=[displacement_vectors],
         displacement_sampling_frequency=displacement_sampling_frequency,
         displacement_unit_factor=np.zeros_like(displacement_unit_factor),
-        num_samples=[int(duration*sampling_frequency)],
+        num_samples=[int(duration * sampling_frequency)],
         amplitude_factor=None,
     )
 
-    my_dict = _variable_from_namespace([
-        drifting_rec,
-        static_rec,
-        sorting,
-        displacement_vectors,
-        displacement_sampling_frequency,
-        unit_locations, displacement_unit_factor,
-        unit_displacements
-    ], locals())
+    my_dict = _variable_from_namespace(
+        [
+            drifting_rec,
+            static_rec,
+            sorting,
+            displacement_vectors,
+            displacement_sampling_frequency,
+            unit_locations,
+            displacement_unit_factor,
+            unit_displacements,
+        ],
+        locals(),
+    )
     return my_dict
 
 
@@ -241,5 +236,3 @@ def _variable_from_namespace(objs, namespace):
             if namespace[name] is obj:
                 d[name] = obj
     return d
-
-

@@ -22,22 +22,23 @@ def test_benchmark_peak_localization():
 
     recording, gt_sorting = make_dataset()
 
-
     # create study
-    study_folder = cache_folder / 'study_peak_localization'
-    datasets = {"toy" : (recording, gt_sorting)}
+    study_folder = cache_folder / "study_peak_localization"
+    datasets = {"toy": (recording, gt_sorting)}
     cases = {}
-    for method in ['center_of_mass', 'grid_convolution', 'monopolar_triangulation']:
+    for method in ["center_of_mass", "grid_convolution", "monopolar_triangulation"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
-            "init_kwargs": {"gt_positions" : gt_sorting.get_property('gt_unit_locations')},
-            "params" : {"ms_before" : 2, 
-                        "method" : method, 
-                        "method_kwargs" : {},
-                        "spike_retriver_kwargs" : {"channel_from_template" : False}}
+            "init_kwargs": {"gt_positions": gt_sorting.get_property("gt_unit_locations")},
+            "params": {
+                "ms_before": 2,
+                "method": method,
+                "method_kwargs": {},
+                "spike_retriver_kwargs": {"channel_from_template": False},
+            },
         }
-    
+
     if study_folder.exists():
         shutil.rmtree(study_folder)
     study = PeakLocalizationStudy.create(study_folder, datasets=datasets, cases=cases)
@@ -53,7 +54,7 @@ def test_benchmark_peak_localization():
 
     # load study to check persistency
     study = PeakLocalizationStudy(study_folder)
-    study.plot_comparison_positions(smoothing_factor=31)
+    study.plot_comparison_positions()
     study.plot_run_times()
 
     plt.show()
@@ -66,20 +67,22 @@ def test_benchmark_unit_localization():
     recording, gt_sorting = make_dataset()
 
     # create study
-    study_folder = cache_folder / 'study_unit_localization'
-    datasets = {"toy" : (recording, gt_sorting)}
+    study_folder = cache_folder / "study_unit_localization"
+    datasets = {"toy": (recording, gt_sorting)}
     cases = {}
-    for method in ['center_of_mass', 'grid_convolution', 'monopolar_triangulation']:
+    for method in ["center_of_mass", "grid_convolution", "monopolar_triangulation"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
-            "init_kwargs": {"gt_positions" : gt_sorting.get_property('gt_unit_locations')},
-            "params" : {"ms_before" : 2, 
-                        "method" : method, 
-                        "method_kwargs" : {},
-                        "spike_retriver_kwargs" : {"channel_from_template" : False}}
+            "init_kwargs": {"gt_positions": gt_sorting.get_property("gt_unit_locations")},
+            "params": {
+                "ms_before": 2,
+                "method": method,
+                "method_kwargs": {},
+                "spike_retriver_kwargs": {"channel_from_template": False},
+            },
         }
-    
+
     if study_folder.exists():
         shutil.rmtree(study_folder)
     study = UnitLocalizationStudy.create(study_folder, datasets=datasets, cases=cases)
@@ -95,14 +98,12 @@ def test_benchmark_unit_localization():
 
     # load study to check persistency
     study = UnitLocalizationStudy(study_folder)
-    study.plot_comparison_positions(smoothing_factor=31)
+    study.plot_comparison_positions()
     study.plot_run_times()
 
     plt.show()
 
 
-
 if __name__ == "__main__":
     # test_benchmark_peak_localization()
     test_benchmark_unit_localization()
-
