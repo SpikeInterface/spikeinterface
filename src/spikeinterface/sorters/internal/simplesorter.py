@@ -50,9 +50,9 @@ class SimpleSorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-        job_kwargs = params["job_kwargs"].copy()
+        job_kwargs = params["job_kwargs"]
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs["progress_bar"] = verbose
+        job_kwargs.update({"verbose": verbose, "progress_bar": verbose})
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel, cache_preprocessing
@@ -144,6 +144,7 @@ class SimpleSorter(ComponentsBasedSorter):
             gather_mode="npy",
             gather_kwargs=dict(exist_ok=True),
             folder=features_folder,
+            job_name="extracting features",
             names=["features_tsvd"],
         )
 
@@ -157,25 +158,19 @@ class SimpleSorter(ComponentsBasedSorter):
 
         if clust_method == "hdbscan":
             import hdbscan
-
             out = hdbscan.hdbscan(features_flat, **clust_params)
             peak_labels = out[0]
         elif clust_method in ("kmeans"):
             from sklearn.cluster import MiniBatchKMeans
-
             peak_labels = MiniBatchKMeans(**clust_params).fit_predict(features_flat)
         elif clust_method in ("mean_shift"):
             from sklearn.cluster import MeanShift
-
             peak_labels = MeanShift().fit_predict(features_flat)
         elif clust_method in ("affinity_propagation"):
             from sklearn.cluster import AffinityPropagation
-
             peak_labels = AffinityPropagation().fit_predict(features_flat)
         elif clust_method in ("gaussian_mixture"):
             from sklearn.mixture import GaussianMixture
-
-            # n_components = clust_params["n_clusters"]
             peak_labels = GaussianMixture(**clust_params).fit_predict(features_flat)
         else:
             raise ValueError(f"simple_sorter : unkown clustering method {clust_method}")
