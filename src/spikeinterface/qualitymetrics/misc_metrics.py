@@ -589,7 +589,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
         for synchrony_size in synchrony_sizes
     }
 
-    return synchrony_metrics
+    return synchrony_metrics_dict
 
 
 _default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))
