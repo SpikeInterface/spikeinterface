@@ -49,7 +49,8 @@ class ALFSortingExtractor(BaseSorting):
         total_units = clusters[next(iter(clusters))].shape[0]
         unit_ids = np.arange(total_units)  # in alf format, spikes.clusters index directly into clusters
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
-        sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["times"], sampling_frequency)
+        sorting_segment = ALFSortingSegment(
+            spikes["clusters"], spikes["samples"] / sampling_frequency, sampling_frequency)
         self.add_sorting_segment(sorting_segment)
         self.extra_requirements.append("pandas")
         self.extra_requirements.append("ONE-api")
