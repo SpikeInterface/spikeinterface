@@ -331,7 +331,7 @@ def test_synchrony_metrics(sorting_analyzer_simple):
 
     # check returns
     for size in synchrony_sizes:
-        assert f"sync_spike_{size}" in synchrony_metrics._fields
+        assert f"sync_spike_{size}" in synchrony_metrics
 
     # here we test that increasing added synchrony is captured by syncrhony metrics
     added_synchrony_levels = (0.2, 0.5, 0.8)
@@ -346,13 +346,8 @@ def test_synchrony_metrics(sorting_analyzer_simple):
         current_synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_sync, synchrony_sizes=synchrony_sizes)
         print(current_synchrony_metrics)
         # check that all values increased
-        for i, col in enumerate(previous_synchrony_metrics._fields):
-            assert np.all(
-                v_prev < v_curr
-                for (v_prev, v_curr) in zip(
-                    previous_synchrony_metrics[i].values(), current_synchrony_metrics[i].values()
-                )
-            )
+        for syncs in previous_synchrony_metrics:
+            assert list(previous_synchrony_metrics[syncs].values()) < list(current_synchrony_metrics[syncs].values()) 
 
         # set new previous waveform extractor
         previous_sorting_analyzer = sorting_analyzer_sync
