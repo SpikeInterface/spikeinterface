@@ -233,7 +233,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        if kwargs['vicinity'] > 0:
+        if kwargs["vicinity"] > 0:
             margin = kwargs["vicinity"]
         else:
             margin = 2 * kwargs["num_samples"]
