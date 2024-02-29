@@ -400,35 +400,42 @@ def test_generate_templates():
 
 ## spiketrain test zone ##
 
+
 def test_synthesize_random_firings_length():
 
-    firing_rates=[2.0,3.0]
+    firing_rates = [2.0, 3.0]
     duration = 2
     num_units = 2
 
     spike_train = synthesize_random_firings(num_units=num_units, duration=duration, firing_rates=firing_rates)
 
-    assert len(spike_train) == int( np.sum(firing_rates)*duration )
+    assert len(spike_train) == int(np.sum(firing_rates) * duration)
 
-    units, counts = np.unique(spike_train['unit_index'], return_counts=True)
+    units, counts = np.unique(spike_train["unit_index"], return_counts=True)
 
     assert len(units) == num_units
-    assert np.sum(counts) == int(  np.sum(firing_rates)*duration )
+    assert np.sum(counts) == int(np.sum(firing_rates) * duration)
+
 
 def test_add_insertions_replacement():
 
     train_length = 10
 
-    spike_train = np.zeros(train_length, dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')] )
+    spike_train = np.zeros(
+        train_length, dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+    )
 
-    insertion_1 = (15,12,0)
-    insertion_2 = (1,2,3)
+    insertion_1 = (15, 12, 0)
+    insertion_2 = (1, 2, 3)
 
-    insertions = [insertion_1, insertion_2 ]
+    insertions = [insertion_1, insertion_2]
 
     spike_train_replace = add_insertions(spike_train, insertions=insertions, insertions_replace=True)
-    
-    assert np.array( insertion_1,  dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')]) in spike_train_replace
+
+    assert (
+        np.array(insertion_1, dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")])
+        in spike_train_replace
+    )
     assert len(spike_train_replace) == train_length
 
 
@@ -436,48 +443,58 @@ def test_add_insertions_no_replacement():
 
     train_length = 10
 
-    spike_train = np.zeros(train_length, dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')] )
+    spike_train = np.zeros(
+        train_length, dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+    )
 
-    insertion_1 = (15,12,0)
-    insertion_2 = (1,2,3)
+    insertion_1 = (15, 12, 0)
+    insertion_2 = (1, 2, 3)
 
-    insertions = [insertion_1, insertion_2 ]
+    insertions = [insertion_1, insertion_2]
 
     spike_train_replace = add_insertions(spike_train, insertions=insertions, insertions_replace=False)
-    
-    assert np.array( insertion_1,  dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')]) in spike_train_replace
+
+    assert (
+        np.array(insertion_1, dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")])
+        in spike_train_replace
+    )
     assert len(spike_train_replace) == train_length + len(insertions)
 
 
 def test_structured_insertions():
 
-    correct_format = np.array( [(15,12,4), (1,2,3)],  dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')])
-    
-    insertion_tuple_of_tuples = ((15,12,4), (1,2,3))
+    correct_format = np.array(
+        [(15, 12, 4), (1, 2, 3)], dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+    )
+
+    insertion_tuple_of_tuples = ((15, 12, 4), (1, 2, 3))
     assert insertion_tuple_of_tuples == correct_format
 
-    insertion_tuple_of_lists = ([15,12,4], [1,2,3])
+    insertion_tuple_of_lists = ([15, 12, 4], [1, 2, 3])
     assert insertion_tuple_of_lists == correct_format
 
-    insertion_list_of_tuples = ([15,12,4], [1,2,3])
+    insertion_list_of_tuples = ([15, 12, 4], [1, 2, 3])
     assert insertion_list_of_tuples == correct_format
 
-    insertion_list_of_lists = ([15,12,4], [1,2,3])
+    insertion_list_of_lists = ([15, 12, 4], [1, 2, 3])
     assert insertion_list_of_lists == correct_format
-    
-    correct_format_no_seg = np.array( [(15,12,0), (1,2,0)],  dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')])
-    
-    insertion_tuple_of_tuples = ((15,12), (1,2))
+
+    correct_format_no_seg = np.array(
+        [(15, 12, 0), (1, 2, 0)], dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+    )
+
+    insertion_tuple_of_tuples = ((15, 12), (1, 2))
     assert insertion_tuple_of_tuples == correct_format_no_seg
 
-    insertion_tuple_of_lists = ([15,12], [1,2])
+    insertion_tuple_of_lists = ([15, 12], [1, 2])
     assert insertion_tuple_of_lists == correct_format_no_seg
 
-    insertion_list_of_tuples = ([15,12], [1,2])
+    insertion_list_of_tuples = ([15, 12], [1, 2])
     assert insertion_list_of_tuples == correct_format_no_seg
 
-    insertion_list_of_lists = ([15,12], [1,2])
+    insertion_list_of_lists = ([15, 12], [1, 2])
     assert insertion_list_of_lists == correct_format_no_seg
+
 
 def test_inject_templates():
     num_channels = 4

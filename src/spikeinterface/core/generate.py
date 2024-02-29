@@ -150,9 +150,9 @@ def generate_sorting(
         spikes_in_seg["segment_index"] = segment_index
 
         if empty_units is not None:
-            keep = ~np.isin(spikes_in_seg['unit_index'], empty_units)
+            keep = ~np.isin(spikes_in_seg["unit_index"], empty_units)
             spikes_in_seg = spikes_in_seg[keep]
-        
+
         spikes.append(spikes_in_seg)
 
         if add_spikes_on_borders:
@@ -615,7 +615,7 @@ def synthesize_poisson_spike_vector(
     segments=1,
     seed=0,
     insertions=None,
-    insertions_replace=True
+    insertions_replace=True,
 ):
     """
     Generate random spike frames for neuronal units using a Poisson process.
@@ -716,18 +716,18 @@ def synthesize_poisson_spike_vector(
 
     train_length = len(unit_indices)
 
-    spike_train = np.zeros( train_length,  dtype=minimum_spike_dtype)
-    spike_train['sample_index'] = spike_frames[:num_correct_frames]
-    spike_train['unit_index'] = unit_indices
+    spike_train = np.zeros(train_length, dtype=minimum_spike_dtype)
+    spike_train["sample_index"] = spike_frames[:num_correct_frames]
+    spike_train["unit_index"] = unit_indices
 
     spike_train = add_insertions(spike_train, insertions, insertions_replace, rng)
 
-    spike_train.sort(order=['sample_index'])
+    spike_train.sort(order=["sample_index"])
 
     segment_length = train_length // segments
     for i in range(train_length):
-        spike_train['segment_index'][i] = min(i // segment_length, segments-1)
-        
+        spike_train["segment_index"][i] = min(i // segment_length, segments - 1)
+
     return spike_train
 
 
@@ -741,7 +741,7 @@ def synthesize_random_firings(
     add_shift_shuffle=False,
     seed=None,
     insertions=None,
-    insertions_replace=True
+    insertions_replace=True,
 ):
     """ "
     Generate some spiketrain with random firing for one segment.
@@ -823,17 +823,17 @@ def synthesize_random_firings(
 
     train_length = len(times)
 
-    spike_train = np.zeros( train_length,  dtype=minimum_spike_dtype)
-    spike_train['sample_index'] = times
-    spike_train['unit_index'] = labels
+    spike_train = np.zeros(train_length, dtype=minimum_spike_dtype)
+    spike_train["sample_index"] = times
+    spike_train["unit_index"] = labels
 
     spike_train = add_insertions(spike_train, insertions, insertions_replace, rng)
 
-    spike_train.sort(order=['sample_index'])
+    spike_train.sort(order=["sample_index"])
 
     segment_length = train_length // segments
     for i in range(train_length):
-        spike_train['segment_index'][i] = min(i // segment_length, segments-1)
+        spike_train["segment_index"][i] = min(i // segment_length, segments - 1)
 
     return spike_train
 
@@ -866,7 +866,7 @@ def add_insertions(spike_train, insertions, insertions_replace, rng=None, seed=N
 
     if insertions is None:
         return spike_train
-    
+
     new_spike_train = spike_train
 
     if rng is None:
@@ -877,26 +877,29 @@ def add_insertions(spike_train, insertions, insertions_replace, rng=None, seed=N
         replacement_indices = rng.choice(len(spike_train), len(insertions), replace=False)
         new_spike_train[replacement_indices] = insertions
     else:
-        new_spike_train = np.append(spike_train, insertions) 
+        new_spike_train = np.append(spike_train, insertions)
 
     return new_spike_train
 
+
 def get_structured_insertions(insertions):
-    
-    structured_insertions =  np.zeros( len(insertions), dtype=[('sample_index', 'int64'), ('unit_index', 'int64'), ('segment_index', 'int64')] ) 
+
+    structured_insertions = np.zeros(
+        len(insertions), dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+    )
 
     insertions = np.array(insertions)
     for i, insert in enumerate(insertions):
-        
-        structured_insertions['sample_index'][i] = insert[0]
-        structured_insertions['unit_index'][i] = insert[1]
+
+        structured_insertions["sample_index"][i] = insert[0]
+        structured_insertions["unit_index"][i] = insert[1]
         if len(insert) == 3:
-            structured_insertions['segment_index'][i] = insert[2]
+            structured_insertions["segment_index"][i] = insert[2]
         else:
-            structured_insertions['segment_index'][i] = 0
+            structured_insertions["segment_index"][i] = 0
 
     return structured_insertions
-    
+
 
 def clean_refractory_period(times, refractory_period):
     """

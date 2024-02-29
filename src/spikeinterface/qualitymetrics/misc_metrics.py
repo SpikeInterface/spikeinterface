@@ -539,6 +539,7 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
     return synchrony_counts
 
+
 def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None):
     """Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
     "synchrony_size" spikes at the exact same sample index.
@@ -571,7 +572,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     sorting = sorting_analyzer.sorting
 
     spike_counts = sorting.count_num_spikes_per_unit(outputs="dict")
-    
+
     spikes = sorting.to_spike_vector()
     all_unit_ids = sorting.unit_ids
     synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes_np, all_unit_ids)
@@ -586,12 +587,12 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     if (unit_ids == None) or (len(unit_ids) == len(all_unit_ids)):
         return synchrony_metrics_dict
     else:
-        reduced_synchrony_metrics_dict = {}    
+        reduced_synchrony_metrics_dict = {}
         for key in synchrony_metrics_dict:
-            reduced_synchrony_metrics_dict[key] = {unit_id:synchrony_metrics_dict[key][unit_id] for unit_id in unit_ids}
+            reduced_synchrony_metrics_dict[key] = {
+                unit_id: synchrony_metrics_dict[key][unit_id] for unit_id in unit_ids
+            }
         return reduced_synchrony_metrics_dict
-
-        
 
 
 _default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))

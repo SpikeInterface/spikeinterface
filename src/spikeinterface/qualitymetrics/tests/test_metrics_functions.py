@@ -8,7 +8,7 @@ from spikeinterface.core import (
     add_synchrony_to_sorting,
     generate_ground_truth_recording,
     create_sorting_analyzer,
-    synthesize_random_firings
+    synthesize_random_firings,
 )
 
 # from spikeinterface.extractors.toy_example import toy_example
@@ -130,6 +130,7 @@ def _sorting_analyzer_violations():
 def sorting_analyzer_violations():
     return _sorting_analyzer_violations()
 
+
 def test_synchrony_counts_no_sync():
     one_spike = synthesize_random_firings(num_units=1, duration=1, firing_rates=1.0)
     sync_count = get_synchrony_counts(one_spike, np.array((2)), [0])
@@ -138,28 +139,35 @@ def test_synchrony_counts_no_sync():
 
     assert np.all(sync_count[0] == np.array([0]))
 
+
 def test_synchrony_counts_one_sync():
     # a spike train containing two synchronized spikes
-    two_spikes = synthesize_random_firings(num_units=2, duration=1, firing_rates=1.0, insertions = [[100,1],[100,0]])
-    sync_count = get_synchrony_counts(two_spikes, np.array((2)), [0,1])
+    two_spikes = synthesize_random_firings(num_units=2, duration=1, firing_rates=1.0, insertions=[[100, 1], [100, 0]])
+    sync_count = get_synchrony_counts(two_spikes, np.array((2)), [0, 1])
 
-    assert np.all(sync_count[0] == np.array([1,1]))
+    assert np.all(sync_count[0] == np.array([1, 1]))
+
 
 def test_synchrony_counts_one_quad_sync():
     # a spike train containing four synchronized spikes
-    four_spikes = synthesize_random_firings(num_units=4, duration=1, firing_rates=1.0, insertions = [[100,0],[100,1],[100,2],[100,3]])
-    sync_count = get_synchrony_counts(four_spikes,  np.array((2,4)),[0,1,2,3])
-    
-    assert np.all( sync_count[0] == np.array([1,1,1,1]) )
-    assert np.all( sync_count[1] == np.array([1,1,1,1]) )
+    four_spikes = synthesize_random_firings(
+        num_units=4, duration=1, firing_rates=1.0, insertions=[[100, 0], [100, 1], [100, 2], [100, 3]]
+    )
+    sync_count = get_synchrony_counts(four_spikes, np.array((2, 4)), [0, 1, 2, 3])
+
+    assert np.all(sync_count[0] == np.array([1, 1, 1, 1]))
+    assert np.all(sync_count[1] == np.array([1, 1, 1, 1]))
 
 
 def test_synchrony_counts_not_all_units():
     # a spike train containing two synchronized spikes
-    three_spikes = synthesize_random_firings(num_units=3, duration=1, firing_rates=1.0, insertions = [[50,0],[100,1],[100,2]])
-    sync_count = get_synchrony_counts(three_spikes, np.array((2)), [0,1,2])
+    three_spikes = synthesize_random_firings(
+        num_units=3, duration=1, firing_rates=1.0, insertions=[[50, 0], [100, 1], [100, 2]]
+    )
+    sync_count = get_synchrony_counts(three_spikes, np.array((2)), [0, 1, 2])
 
     assert np.all(sync_count[0] == np.array([0, 1, 1]))
+
 
 def test_mahalanobis_metrics():
     all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
@@ -379,19 +387,23 @@ def test_synchrony_metrics(sorting_analyzer_simple):
         print(current_synchrony_metrics)
         # check that all values increased
         for syncs in previous_synchrony_metrics:
-            assert list(previous_synchrony_metrics[syncs].values()) < list(current_synchrony_metrics[syncs].values()) 
+            assert list(previous_synchrony_metrics[syncs].values()) < list(current_synchrony_metrics[syncs].values())
 
         # set new previous waveform extractor
         previous_sorting_analyzer = sorting_analyzer_sync
 
+
 def test_synchrony_metrics_unit_id_subset(sorting_analyzer_simple):
 
-    unit_ids_subset = [3,7]
+    unit_ids_subset = [3, 7]
 
     synchrony_sizes = (2,)
-    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_simple, synchrony_sizes=synchrony_sizes, unit_ids = unit_ids_subset)
+    synchrony_metrics = compute_synchrony_metrics(
+        sorting_analyzer_simple, synchrony_sizes=synchrony_sizes, unit_ids=unit_ids_subset
+    )
 
-    assert list(synchrony_metrics['sync_spike_2'].keys()) == [3,7]
+    assert list(synchrony_metrics["sync_spike_2"].keys()) == [3, 7]
+
 
 def test_synchrony_metrics_no_unit_ids(sorting_analyzer_simple):
 
@@ -400,8 +412,7 @@ def test_synchrony_metrics_no_unit_ids(sorting_analyzer_simple):
     synchrony_sizes = (2,)
     synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_simple, synchrony_sizes=synchrony_sizes)
 
-    assert np.all( list(synchrony_metrics['sync_spike_2'].keys()) == sorting_analyzer_simple.unit_ids )
-
+    assert np.all(list(synchrony_metrics["sync_spike_2"].keys()) == sorting_analyzer_simple.unit_ids)
 
 
 @pytest.mark.sortingcomponents
