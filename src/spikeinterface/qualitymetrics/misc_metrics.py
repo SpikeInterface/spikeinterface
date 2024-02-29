@@ -503,8 +503,8 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     ----------
     spikes : memmap
         The spike train
-    synchrony_sizes : list or tuple, default: (2, 4, 8)
-        The synchrony sizes to compute.
+    synchrony_sizes : numpy array
+        The synchrony sizes to compute. Should be pre-sorted.
     unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. Expecting all units.
 
@@ -519,7 +519,7 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
 
-    synchrony_counts = np.zeros((len(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
+    synchrony_counts = np.zeros((np.size(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
 
     # compute the occurrence of each sample_index. Count >2 means there's synchrony
     _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
@@ -534,7 +534,7 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
         # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
         # to the 2 simultaneous spike bins.
-        how_many_bins_to_add_to = len(synchrony_sizes[synchrony_sizes <= num_of_syncs])
+        how_many_bins_to_add_to = np.size(synchrony_sizes[synchrony_sizes <= num_of_syncs])
         synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
 
     return synchrony_counts
@@ -581,7 +581,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
         f"sync_spike_{synchrony_size}": {
             unit_id: synchrony_counts[sync_idx][unit_id] / spike_counts[unit_id] for unit_id in all_unit_ids
         }
-        for sync_idx, synchrony_size in enumerate(synchrony_sizes)
+        for sync_idx, synchrony_size in enumerate(synchrony_sizes_np)
     }
 
     if (unit_ids == None) or (len(unit_ids) == len(all_unit_ids)):
