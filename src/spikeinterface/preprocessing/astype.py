@@ -21,10 +21,13 @@ class AstypeRecording(BasePreprocessor):
         self,
         recording,
         dtype=None,
-        round: bool = False,
+        round: bool | None = None,
     ):
         dtype_ = fix_dtype(recording, dtype)
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
+
+        if round is None:
+            round = np.issubdtype(dtype, np.integer)
 
         for parent_segment in recording._recording_segments:
             rec_segment = AstypeRecordingSegment(
