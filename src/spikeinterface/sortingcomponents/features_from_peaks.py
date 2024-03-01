@@ -170,7 +170,13 @@ class RandomProjectionsFeature(PipelineNode):
         self.sparse = sparse
         self.noise_threshold = noise_threshold
         self._kwargs.update(
-            dict(projections=projections, radius_um=radius_um, sparse=sparse, noise_threshold=noise_threshold)
+            dict(
+                projections=projections,
+                radius_um=radius_um,
+                sparse=sparse,
+                noise_threshold=noise_threshold,
+                feature=feature,
+            )
         )
         self._dtype = recording.get_dtype()
 

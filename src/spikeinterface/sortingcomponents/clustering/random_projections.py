@@ -121,9 +121,8 @@ class RandomProjectionClustering:
         nafter = int(params["ms_after"] * fs / 1000)
         nsamples = nbefore + nafter
 
-        noise_ptps = np.linalg.norm(np.random.randn(1000, nsamples), axis=1)
-        noise_threshold = np.mean(noise_ptps) + 3 * np.std(noise_ptps)
-        print(noise_threshold)
+        # noise_ptps = np.linalg.norm(np.random.randn(1000, nsamples), axis=1)
+        # noise_threshold = np.mean(noise_ptps) + 3 * np.std(noise_ptps)
 
         node3 = RandomProjectionsEnergyFeature(
         node3 = RandomProjectionsEnergyFeature(
