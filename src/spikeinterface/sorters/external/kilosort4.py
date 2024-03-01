@@ -11,7 +11,7 @@ PathType = Union[str, Path]
 
 
 class Kilosort4Sorter(BaseSorter):
-    """Kilosort3 Sorter object."""
+    """Kilosort4 Sorter object."""
 
     sorter_name: str = "kilosort4"
     requires_locations = True
