@@ -36,8 +36,7 @@ class ClusteringBenchmark(Benchmark):
         self.indices = indices
 
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("fast_templates")
+        sorting_analyzer.compute(["random_spikes", "fast_templates"])
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
 
         peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
@@ -140,10 +139,10 @@ class ClusteringStudy(BenchmarkStudy):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
-            ax = axs[count]
+            ax = axs[0, count]
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
 
@@ -174,7 +173,7 @@ class ClusteringStudy(BenchmarkStudy):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
 
@@ -201,14 +200,14 @@ class ClusteringStudy(BenchmarkStudy):
             axs[count].set_title(metric)
             fig.colorbar(im, ax=axs[count])
             label = self.cases[key]["label"]
-            axs[count].set_title(label)
+            axs[0, count].set_title(label)
 
     def plot_metrics_vs_snr(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
 
@@ -238,11 +237,11 @@ class ClusteringStudy(BenchmarkStudy):
             to_plot = []
             for found, real in zip(inds_2, inds_1):
                 to_plot += [distances[real, found]]
-            axs[count].plot(snr, to_plot, ".")
-            axs[count].set_xlabel("snr")
-            axs[count].set_ylabel(metric)
+            axs[0, count].plot(snr, to_plot, ".")
+            axs[0, count].set_xlabel("snr")
+            axs[0, count].set_ylabel(metric)
             label = self.cases[key]["label"]
-            axs[count].set_title(label)
+            axs[0, count].set_title(label)
 
     def plot_comparison_clustering(
         self,
