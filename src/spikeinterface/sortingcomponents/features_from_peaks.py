@@ -154,8 +154,9 @@ class RandomProjectionsFeature(PipelineNode):
         parents=None,
         projections=None,
         radius_um=None,
+        radius_um=None,
         sparse=True,
-        noise_threshold=None,
+        noise_threshold=None
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -168,15 +169,7 @@ class RandomProjectionsFeature(PipelineNode):
         self.radius_um = radius_um
         self.sparse = sparse
         self.noise_threshold = noise_threshold
-        self._kwargs.update(
-            dict(
-                projections=projections,
-                radius_um=radius_um,
-                sparse=sparse,
-                noise_threshold=noise_threshold,
-                feature=feature,
-            )
-        )
+        self._kwargs.update(dict(projections=projections, radius_um=radius_um, sparse=sparse, noise_threshold=noise_threshold))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
@@ -207,6 +200,8 @@ class RandomProjectionsFeature(PipelineNode):
             if self.noise_threshold is not None:
                 local_map = np.median(wf_ptp, axis=0) < self.noise_threshold
                 wf_ptp[wf_ptp < local_map] = 0
+                local_map = np.median(wf_ptp, axis=0) < self.noise_threshold
+                wf_ptp[wf_ptp < local_map] = 0
 
             denom = np.sum(features, axis=1)
             mask = denom != 0
@@ -225,8 +220,8 @@ class RandomProjectionsEnergyFeature(PipelineNode):
         projections=None,
         radius_um=150.0,
         min_values=None,
-        sparse=True,
-        noise_threshold=None,
+        sparse=True, 
+        noise_threshold=None
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -235,14 +230,10 @@ class RandomProjectionsEnergyFeature(PipelineNode):
         self.neighbours_mask = self.channel_distance <= radius_um
         self.sparse = sparse
         self.noise_threshold = noise_threshold
-        self.sparse = sparse
-        self.noise_threshold = noise_threshold
         self.projections = projections
         self.min_values = min_values
         self.radius_um = radius_um
-        self._kwargs.update(
-            dict(projections=projections, radius_um=radius_um, sparse=sparse, noise_threshold=noise_threshold)
-        )
+        self._kwargs.update(dict(projections=projections, radius_um=radius_um, sparse=sparse, noise_threshold=noise_threshold))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
@@ -255,10 +246,10 @@ class RandomProjectionsEnergyFeature(PipelineNode):
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
             local_projections = self.projections[chan_inds, :]
             if self.sparse:
-                energies = np.linalg.norm(waveforms[idx][:, :, : len(chan_inds)], axis=1)
+                energies = np.linalg.norm(waveforms[idx][:, :, :len(chan_inds)], axis=1)
             else:
                 energies = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
-
+            
             if self.noise_threshold is not None:
                 local_map = np.median(energies, axis=0) < self.noise_threshold
                 energies[energies < local_map] = 0
@@ -273,6 +264,8 @@ class RandomProjectionsEnergyFeature(PipelineNode):
 _features_class = {
     "amplitude": AmplitudeFeature,
     "ptp": PeakToPeakFeature,
+    "random_projections_ptp": RandomProjectionsFeature,
+    "random_projections_energy": RandomProjectionsEnergyFeature,
     "random_projections_ptp": RandomProjectionsFeature,
     "random_projections_energy": RandomProjectionsEnergyFeature,
 }
