@@ -315,7 +315,7 @@ class Benchmark:
                 with open(folder / f"{k}.pickle", mode="wb") as f:
                     pickle.dump(self.result[k], f)
             elif format == "sorting":
-                self.result[k].save(folder=folder / k, format="numpy_folder")
+                self.result[k].save(folder=folder / k, format="numpy_folder", overwrite=True)
             elif format == "zarr_templates":
                 self.result[k].to_zarr(folder / k)
             elif format == "sorting_analyzer":
