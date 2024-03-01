@@ -193,13 +193,35 @@ class Kilosort4Sorter(BaseSorter):
         filename, data_dir, results_dir, probe = set_files(settings, filename, probe, probe_name, data_dir, results_dir)
         ops = initialize_ops(settings, probe, recording.get_dtype(), do_CAR, invert_sign, device)
 
+        n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact = (
+            get_run_parameters(ops)
+        )
         # Set preprocessing and drift correction parameters
         if not params["skip_kilosort_preprocessing"]:
             ops = compute_preprocessing(ops, device, tic0=tic0, file_object=file_object)
         else:
             print("Skipping kilosort preprocessing.")
+            bfile = BinaryFiltered(
+                ops["filename"],
+                n_chan_bin,
+                fs,
+                NT,
+                nt,
+                twav_min,
+                chan_map,
+                hp_filter=None,
+                device=device,
+                do_CAR=do_CAR,
+                invert_sign=invert,
+                dtype=dtype,
+                tmin=tmin,
+                tmax=tmax,
+                artifact_threshold=artifact,
+                file_object=file_object,
+            )
             ops["preprocessing"] = dict(hp_filter=None, whiten_mat=None)
             ops["Wrot"] = torch.as_tensor(np.eye(recording.get_num_channels()))
+            ops["Nbatches"] = bfile.n_batches
 
         np.random.seed(1)
         torch.cuda.manual_seed_all(1)
@@ -212,9 +234,6 @@ class Kilosort4Sorter(BaseSorter):
             )
         else:
             print("Skipping drift correction.")
-            n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact = (
-                get_run_parameters(ops)
-            )
             hp_filter = ops["preprocessing"]["hp_filter"]
             whiten_mat = ops["preprocessing"]["whiten_mat"]
 
