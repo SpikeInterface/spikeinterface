@@ -42,6 +42,7 @@ class PeakDetectionBenchmark(Benchmark):
         self.method = params["method"]
         self.method_kwargs = params["method_kwargs"]
         self.result = {"gt_peaks": self.gt_peaks}
+        self.result["gt_amplitudes"] = sorting_analyzer.get_extension("spike_amplitudes").get_data()
 
     def run(self, **job_kwargs):
         peaks = detect_peaks(self.recording, method=self.method, **self.method_kwargs, **job_kwargs)
@@ -106,7 +107,7 @@ class PeakDetectionBenchmark(Benchmark):
 
         # print("The peaks have {0:.2f}% of garbage (without gt around)".format(ratio))
 
-    _run_key_saved = [("peaks", "npy"), ("gt_peaks", "npy")]
+    _run_key_saved = [("peaks", "npy"), ("gt_peaks", "npy"), ("gt_amplitudes", "npy")]
 
     _result_key_saved = [
         ("gt_comparison", "pickle"),
