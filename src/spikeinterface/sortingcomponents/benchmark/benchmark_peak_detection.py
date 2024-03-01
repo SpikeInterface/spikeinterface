@@ -41,23 +41,21 @@ class PeakDetectionBenchmark(Benchmark):
         self.exhaustive_gt = exhaustive_gt
         self.method = params["method"]
         self.method_kwargs = params["method_kwargs"]
-        self.result = {"gt_peaks" : self.gt_peaks}
+        self.result = {"gt_peaks": self.gt_peaks}
 
     def run(self, **job_kwargs):
-        peaks = detect_peaks(
-            self.recording, method=self.method, **self.method_kwargs, **job_kwargs
-        )
+        peaks = detect_peaks(self.recording, method=self.method, **self.method_kwargs, **job_kwargs)
         self.result["peaks"] = peaks
 
     def compute_result(self, **result_params):
         spikes = self.result["peaks"]
-        self.result["peak_on_channels"] = NumpySorting.from_peaks(spikes, 
-            self.recording.sampling_frequency, 
-            unit_ids=self.recording.channel_ids)
+        self.result["peak_on_channels"] = NumpySorting.from_peaks(
+            spikes, self.recording.sampling_frequency, unit_ids=self.recording.channel_ids
+        )
         spikes = self.result["gt_peaks"]
-        self.result["gt_on_channels"] = NumpySorting.from_peaks(spikes, 
-            self.recording.sampling_frequency,
-            unit_ids=self.recording.channel_ids)
+        self.result["gt_on_channels"] = NumpySorting.from_peaks(
+            spikes, self.recording.sampling_frequency, unit_ids=self.recording.channel_ids
+        )
 
         self.result["gt_comparison"] = GroundTruthComparison(
             self.result["gt_on_channels"], self.result["peak_on_channels"], exhaustive_gt=self.exhaustive_gt
@@ -73,13 +71,13 @@ class PeakDetectionBenchmark(Benchmark):
         self.matches = matches
         self.gt_matches = matches["index1"]
 
-        self.deltas = {"labels": [], "channels" : [], "delta": matches["delta_frame"]}
+        self.deltas = {"labels": [], "channels": [], "delta": matches["delta_frame"]}
         self.deltas["labels"] = gt_peaks["unit_index"][self.gt_matches]
         self.deltas["channels"] = self.result["gt_peaks"]["unit_index"][self.gt_matches]
 
-        self.result["sliced_gt_sorting"] = NumpySorting(gt_peaks[self.gt_matches], 
-            self.recording.sampling_frequency, 
-            self.gt_sorting.unit_ids)
+        self.result["sliced_gt_sorting"] = NumpySorting(
+            gt_peaks[self.gt_matches], self.recording.sampling_frequency, self.gt_sorting.unit_ids
+        )
 
         ratio = 100 * len(self.gt_matches) / len(times1)
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
@@ -97,8 +95,7 @@ class PeakDetectionBenchmark(Benchmark):
 
         # print("The peaks have {0:.2f}% of garbage (without gt around)".format(ratio))
 
-    _run_key_saved = [("peaks", "npy"),
-                      ("gt_peaks", "npy")]
+    _run_key_saved = [("peaks", "npy"), ("gt_peaks", "npy")]
 
     _result_key_saved = [
         ("gt_comparison", "pickle"),
@@ -254,7 +251,6 @@ class PeakDetectionStudy(BenchmarkStudy):
 #         self.gt_labels = self.gt_sorting.to_spike_vector()["unit_index"]
 #         self.garbage_positions = self.positions[garbage_matches]
 #         self.garbage_peaks = self.peaks[garbage_matches]
-
 
 
 #     def plot_statistics(self, metric="cosine", annotations=True, detect_threshold=5):
