@@ -41,8 +41,8 @@ class PeakDetectionBenchmark(Benchmark):
         self.exhaustive_gt = exhaustive_gt
         self.method = params["method"]
         self.method_kwargs = params["method_kwargs"]
-        self.result = {"gt_peaks" : self.gt_peaks}
-        self.result['gt_amplitudes'] = sorting_analyzer.get_extension('spike_amplitudes').get_data()
+        self.result = {"gt_peaks": self.gt_peaks}
+        self.result["gt_amplitudes"] = sorting_analyzer.get_extension("spike_amplitudes").get_data()
 
     def run(self, **job_kwargs):
         peaks = detect_peaks(self.recording, method=self.method, **self.method_kwargs, **job_kwargs)
@@ -96,9 +96,7 @@ class PeakDetectionBenchmark(Benchmark):
 
         # print("The peaks have {0:.2f}% of garbage (without gt around)".format(ratio))
 
-    _run_key_saved = [("peaks", "npy"),
-                      ("gt_peaks", "npy"),
-                      ("gt_amplitudes", "npy")]
+    _run_key_saved = [("peaks", "npy"), ("gt_peaks", "npy"), ("gt_amplitudes", "npy")]
 
     _result_key_saved = [
         ("gt_comparison", "pickle"),
@@ -153,7 +151,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             if count == 2:
                 ax.legend()
 
-    def plot_detected_amplitudes(self, case_keys=None, figsize=(15,5)):
+    def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -162,11 +160,11 @@ class PeakDetectionStudy(BenchmarkStudy):
 
         for count, key in enumerate(case_keys):
             ax = axs[0, count]
-            data1 = self.get_result(key)['peaks']['amplitude']
-            data2 = self.get_result(key)['gt_amplitudes']
+            data1 = self.get_result(key)["peaks"]["amplitude"]
+            data2 = self.get_result(key)["gt_amplitudes"]
             bins = np.linspace(data2.min(), data2.max(), 100)
-            ax.hist(data1, bins=bins, alpha=0.5, label='detected')
-            ax.hist(data2, bins=bins, alpha=0.5, label='gt')
+            ax.hist(data1, bins=bins, alpha=0.5, label="detected")
+            ax.hist(data2, bins=bins, alpha=0.5, label="gt")
             ax.set_title(self.cases[key]["label"])
             ax.legend()
 
