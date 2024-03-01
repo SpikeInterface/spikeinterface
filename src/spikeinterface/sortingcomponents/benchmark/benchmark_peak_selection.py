@@ -42,7 +42,7 @@ class PeakSelectionBenchmark(Benchmark):
         self.exhaustive_gt = exhaustive_gt
         self.method = params["method"]
         self.method_kwargs = params["method_kwargs"]
-        self.result = {}
+        self.result = {"gt_peaks": self.gt_peaks}
 
     def run(self, **job_kwargs):
         labels, peak_labels = find_cluster_from_peaks(
@@ -83,7 +83,9 @@ class PeakSelectionBenchmark(Benchmark):
         ext = sorting_analyzer.compute("fast_templates")
         self.result["clustering_templates"] = ext.get_data(outputs="Templates")
 
-    _run_key_saved = [("peak_labels", "npy")]
+    _run_key_saved = [
+        ("peak_labels", "npy"),
+    ]
 
     _result_key_saved = [
         ("gt_comparison", "pickle"),
