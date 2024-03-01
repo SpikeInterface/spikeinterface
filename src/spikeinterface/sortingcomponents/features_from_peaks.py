@@ -160,6 +160,7 @@ class RandomProjectionsFeature(PipelineNode):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         assert feature in ["ptp", "energy"]
+        assert feature in ["ptp", "energy"]
         self.projections = projections
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -168,7 +169,13 @@ class RandomProjectionsFeature(PipelineNode):
         self.sparse = sparse
         self.noise_threshold = noise_threshold
         self._kwargs.update(
-            dict(projections=projections, radius_um=radius_um, sparse=sparse, noise_threshold=noise_threshold)
+            dict(
+                projections=projections,
+                radius_um=radius_um,
+                sparse=sparse,
+                noise_threshold=noise_threshold,
+                feature=feature,
+            )
         )
         self._dtype = recording.get_dtype()
 
@@ -184,12 +191,16 @@ class RandomProjectionsFeature(PipelineNode):
             local_projections = self.projections[chan_inds, :]
             if self.sparse:
                 if self.feature == "ptp":
+                if self.feature == "ptp":
                     features = np.ptp(waveforms[idx][:, :, : len(chan_inds)], axis=1)
+                elif self.feature == "energy":
                 elif self.feature == "energy":
                     features = np.linalg.norm(waveforms[idx][:, :, : len(chan_inds)], axis=1)
             else:
                 if self.feature == "ptp":
+                if self.feature == "ptp":
                     features = np.ptp(waveforms[idx][:, :, chan_inds], axis=1)
+                elif self.feature == "energy":
                 elif self.feature == "energy":
                     features = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
 
