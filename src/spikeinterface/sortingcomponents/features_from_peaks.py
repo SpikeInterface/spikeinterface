@@ -155,7 +155,7 @@ class RandomProjectionsFeature(PipelineNode):
         projections=None,
         radius_um=100,
         sparse=True,
-        noise_threshold=None
+        noise_threshold=None,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -168,8 +168,9 @@ class RandomProjectionsFeature(PipelineNode):
         self.radius_um = radius_um
         self.sparse = sparse
         self.noise_threshold = noise_threshold
-        self._kwargs.update(dict(projections=projections, radius_um=radius_um, sparse=sparse, 
-            noise_threshold=noise_threshold, feature=feature))
+        self._kwargs.update(
+            dict(projections=projections, radius_um=radius_um, sparse=sparse, noise_threshold=noise_threshold)
+        )
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
@@ -201,6 +202,59 @@ class RandomProjectionsFeature(PipelineNode):
             mask = denom != 0
             all_projections[idx[mask]] = np.dot(features[mask], local_projections) / (denom[mask][:, np.newaxis])
 
+        return all_projections
+
+
+class RandomProjectionsEnergyFeature(PipelineNode):
+    def __init__(
+        self,
+        recording,
+        name="random_projections_energy_feature",
+        return_output=True,
+        parents=None,
+        projections=None,
+        radius_um=150.0,
+        min_values=None,
+        sparse=True,
+        noise_threshold=None,
+    ):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance <= radius_um
+        self.sparse = sparse
+        self.noise_threshold = noise_threshold
+        self.projections = projections
+        self.min_values = min_values
+        self.radius_um = radius_um
+        self._kwargs.update(
+            dict(projections=projections, radius_um=radius_um, sparse=sparse, noise_threshold=noise_threshold)
+        )
+        self._dtype = recording.get_dtype()
+
+    def get_dtype(self):
+        return self._dtype
+
+    def compute(self, traces, peaks, waveforms):
+        all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
+        for main_chan in np.unique(peaks["channel_index"]):
+            (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
+            (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
+            local_projections = self.projections[chan_inds, :]
+            if self.sparse:
+                energies = np.linalg.norm(waveforms[idx][:, :, : len(chan_inds)], axis=1)
+            else:
+                energies = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
+
+            if self.noise_threshold is not None:
+                local_map = np.median(energies, axis=0) < self.noise_threshold
+                energies[energies < local_map] = 0
+
+            denom = np.sum(energies, axis=1)
+            mask = denom != 0
+
+            all_projections[idx[mask]] = np.dot(energies[mask], local_projections) / (denom[mask][:, np.newaxis])
         return all_projections
 
 
