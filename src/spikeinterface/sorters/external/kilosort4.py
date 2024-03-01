@@ -107,7 +107,7 @@ class Kilosort4Sorter(BaseSorter):
         https://github.com/MouseLand/Kilosort
     """
 
-    handle_multi_segment = True
+    handle_multi_segment = False
 
     @classmethod
     def is_installed(cls):
