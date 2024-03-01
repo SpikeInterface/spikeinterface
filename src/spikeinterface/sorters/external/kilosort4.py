@@ -88,14 +88,10 @@ class Kilosort4Sorter(BaseSorter):
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
     }
 
-    sorter_description = """Kilosort4 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
-    predecessor Kilosort, it implements a drift-correction strategy. Kilosort3 improves on Kilosort2 primarily in the
-    type of drift correction we use. Where Kilosort2 modified templates as a function of time/drift (a drift tracking
-    approach), Kilosort3 corrects the raw data directly via a sub-pixel registration process (a drift correction
-    approach). Kilosort3 has not been as broadly tested as Kilosort2, but is expected to work out of the box on
-    Neuropixels 1.0 and 2.0 probes, as well as other probes with vertical pitch <=40um. For other recording methods,
-    like tetrodes or single-channel recordings, you should test empirically if v3 or v2.0 works better for you (use
-    the "releases" on the github page to download older versions).
+    sorter_description = """Kilosort4 is a Python package for spike sorting on GPUs with template matching.
+    The software uses new graph-based approaches to clustering that improve performance compared to previous versions.
+    For detailed comparisons to past versions of Kilosort and to other spike-sorting methods, please see the pre-print
+    at https://www.biorxiv.org/content/10.1101/2023.01.07.523036v1
     For more information see https://github.com/MouseLand/Kilosort"""
 
     installation_mesg = """\nTo use Kilosort4 run:\n
