@@ -24,7 +24,7 @@ from spikeinterface.core import extract_waveforms
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
-from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature, RandomProjectionsEnergyFeature
+from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
@@ -113,15 +113,14 @@ class RandomProjectionClustering:
 
         noise_ptps = np.linalg.norm(np.random.randn(1000, nsamples), axis=1)
         noise_threshold = np.mean(noise_ptps) + 3*np.std(noise_ptps)
-        print(noise_threshold)
 
-        node3 = RandomProjectionsEnergyFeature(
+        node3 = RandomProjectionsFeature(
             recording,
             parents=[node0, node2],
             return_output=True,
             projections=projections,
             radius_um=params["radius_um"],
-            noise_threshold=noise_threshold,
+            noise_threshold=None,
             sparse=True,
         )
 
