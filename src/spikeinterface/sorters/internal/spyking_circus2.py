@@ -31,7 +31,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "sparsity": {"method": "ptp", "threshold": 0.25},
         "sparsity": {"method": "ptp", "threshold": 0.25},
-        "filtering": {"freq_min": 150, "dtype": "float32"},
+        "filtering": {"freq_min": 150},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "smart_sampling_amplitudes",
@@ -103,7 +103,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
         if params["apply_preprocessing"]:
-            recording_f = highpass_filter(recording, **filtering_params)
+            recording_f = highpass_filter(recording, **filtering_params, dtype="float32")
             if num_channels > 1:
                 recording_f = common_reference(recording_f)
         else:
