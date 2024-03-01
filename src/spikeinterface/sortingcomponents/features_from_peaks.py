@@ -155,7 +155,7 @@ class RandomProjectionsFeature(PipelineNode):
         projections=None,
         radius_um=100,
         sparse=True,
-        noise_threshold=None
+        noise_threshold=None,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
