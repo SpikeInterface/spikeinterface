@@ -42,7 +42,7 @@ class SimpleSorter(ComponentsBasedSorter):
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "leaf",
         },
-        "cache_preprocessing": {"mode": None, "memory_limit": 0.5, "delete_cache": True},
+        # "cache_preprocessing": {"mode": None, "memory_limit": 0.5, "delete_cache": True},
         "job_kwargs": {"n_jobs": -1, "chunk_duration": "1s"},
     }
 
@@ -57,7 +57,7 @@ class SimpleSorter(ComponentsBasedSorter):
         job_kwargs.update({"verbose": verbose, "progress_bar": verbose})
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-        from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel, cache_preprocessing
+        from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
@@ -83,7 +83,7 @@ class SimpleSorter(ComponentsBasedSorter):
             recording = recording_raw
             noise_levels = get_noise_levels(recording, return_scaled=False)
 
-        recording = cache_preprocessing(recording, **job_kwargs, **params["cache_preprocessing"])
+        # recording = cache_preprocessing(recording, **job_kwargs, **params["cache_preprocessing"])
 
         # detection
         detection_params = params["detection"].copy()
@@ -186,24 +186,24 @@ class SimpleSorter(ComponentsBasedSorter):
 
         np.save(features_folder / "peak_labels.npy", peak_labels)
 
-        folder_to_delete = None
+        # folder_to_delete = None
 
-        if "mode" in params["cache_preprocessing"]:
-            cache_mode = params["cache_preprocessing"]["mode"]
-        else:
-            cache_mode = "memory"
+        # if "mode" in params["cache_preprocessing"]:
+        #     cache_mode = params["cache_preprocessing"]["mode"]
+        # else:
+        #     cache_mode = "memory"
 
-        if "delete_cache" in params["cache_preprocessing"]:
-            delete_cache = params["cache_preprocessing"]
-        else:
-            delete_cache = True
+        # if "delete_cache" in params["cache_preprocessing"]:
+        #     delete_cache = params["cache_preprocessing"]
+        # else:
+        #     delete_cache = True
 
-        if cache_mode in ["folder", "zarr"] and delete_cache:
-            folder_to_delete = recording._kwargs["folder_path"]
+        # if cache_mode in ["folder", "zarr"] and delete_cache:
+        #     folder_to_delete = recording._kwargs["folder_path"]
 
-        del recording
-        if folder_to_delete is not None:
-            shutil.rmtree(folder_to_delete)
+        # del recording
+        # if folder_to_delete is not None:
+        #     shutil.rmtree(folder_to_delete)
 
         # keep positive labels
         keep = peak_labels >= 0
