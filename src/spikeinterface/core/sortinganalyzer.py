@@ -1331,8 +1331,14 @@ class AnalyzerExtension:
         if self.sorting_analyzer.is_read_only():
             raise ValueError(f"The SortingAnalyzer is read-only saving extension {self.extension_name} is not possible")
 
-        if self.format == "binary_folder":
+        try:
+            # pandas is a weak dependency for spikeinterface.core
             import pandas as pd
+            HAS_PANDAS = True
+        except:
+            HAS_PANDAS = False
+
+        if self.format == "binary_folder":
 
             extension_folder = self._get_binary_extension_folder()
             for ext_data_name, ext_data in self.data.items():
@@ -1347,7 +1353,7 @@ class AnalyzerExtension:
                         pass
                     else:
                         np.save(data_file, ext_data)
-                elif isinstance(ext_data, pd.DataFrame):
+                elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
                     ext_data.to_csv(extension_folder / f"{ext_data_name}.csv", index=True)
                 else:
                     try:
@@ -1357,7 +1363,6 @@ class AnalyzerExtension:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
 
-            import pandas as pd
             import numcodecs
 
             extension_group = self._get_zarr_extension_group(mode="r+")
@@ -1375,7 +1380,7 @@ class AnalyzerExtension:
                     )
                 elif isinstance(ext_data, np.ndarray):
                     extension_group.create_dataset(name=ext_data_name, data=ext_data, compressor=compressor)
-                elif isinstance(ext_data, pd.DataFrame):
+                elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
                     ext_data.to_xarray().to_zarr(
                         store=extension_group.store,
                         group=f"{extension_group.name}/{ext_data_name}",
