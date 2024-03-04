@@ -1334,6 +1334,7 @@ class AnalyzerExtension:
         try:
             # pandas is a weak dependency for spikeinterface.core
             import pandas as pd
+
             HAS_PANDAS = True
         except:
             HAS_PANDAS = False
