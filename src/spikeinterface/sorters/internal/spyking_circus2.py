@@ -6,7 +6,7 @@ import os
 import shutil
 import numpy as np
 
-from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms
+from spikeinterface.core import NumpySorting, load_extractor, BaseRecording
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import estimate_templates
@@ -29,19 +29,19 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "sparsity": {"method": "ptp", "threshold": 5},
-        "filtering": {"freq_min": 150, "dtype": "float32"},
+        "sparsity": {"method": "ptp", "threshold": 0.25},
+        "filtering": {"freq_min": 150},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "smart_sampling_amplitudes",
             "n_peaks_per_channel": 5000,
-            "min_n_peaks": 20000,
+            "min_n_peaks": 100000,
             "select_per_channel": False,
         },
         "clustering": {"legacy": False},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
-        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
+        "cache_preprocessing": {"mode": None, "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
@@ -90,10 +90,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 
-        job_kwargs = params["job_kwargs"].copy()
+        job_kwargs = params["job_kwargs"]
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs["verbose"] = verbose
-        job_kwargs["progress_bar"] = verbose
+        job_kwargs.update({"verbose": verbose, "progress_bar": verbose})
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -103,7 +102,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
         if params["apply_preprocessing"]:
-            recording_f = highpass_filter(recording, **filtering_params)
+            recording_f = highpass_filter(recording, **filtering_params, dtype="float32")
             if num_channels > 1:
                 recording_f = common_reference(recording_f)
         else:
@@ -261,8 +260,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(sorting_folder)
 
         folder_to_delete = None
-        cache_mode = params["cache_preprocessing"]["mode"]
-        delete_cache = params["cache_preprocessing"]["delete_cache"]
+
+        if "mode" in params["cache_preprocessing"]:
+            cache_mode = params["cache_preprocessing"]["mode"]
+        else:
+            cache_mode = "memory"
+
+        if "delete_cache" in params["cache_preprocessing"]:
+            delete_cache = params["cache_preprocessing"]
+        else:
+            delete_cache = True
+
         if cache_mode in ["folder", "zarr"] and delete_cache:
             folder_to_delete = recording_f._kwargs["folder_path"]
 

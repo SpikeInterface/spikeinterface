@@ -111,7 +111,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "templates": None,
         "rank": 5,
         "ignored_ids": [],
-        "vicinity": 0,
+        "vicinity": 3,
     }
 
     @classmethod
@@ -233,7 +233,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        margin = 2 * max(kwargs["nbefore"], kwargs["nafter"])
+        if kwargs["vicinity"] > 0:
+            margin = kwargs["vicinity"]
+        else:
+            margin = 2 * kwargs["num_samples"]
         return margin
 
     @classmethod
@@ -371,11 +374,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             selection = all_selections[:, :num_selection]
             res_sps = full_sps[selection[0], selection[1]]
 
-            if True:  # vicinity == 0:
+            if vicinity == 0:
                 all_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps, lower=True, overwrite_b=False)
                 all_amplitudes /= norms[selection[0]]
             else:
-                # This is not working, need to figure out why
                 is_in_vicinity = np.append(is_in_vicinity, num_selection - 1)
                 all_amplitudes = np.append(all_amplitudes, np.float32(1))
                 L = M[is_in_vicinity, :][:, is_in_vicinity]

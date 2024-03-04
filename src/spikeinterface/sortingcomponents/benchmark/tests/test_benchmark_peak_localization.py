@@ -54,7 +54,7 @@ def test_benchmark_peak_localization():
 
     # load study to check persistency
     study = PeakLocalizationStudy(study_folder)
-    study.plot_comparison_positions(smoothing_factor=31)
+    study.plot_comparison_positions()
     study.plot_run_times()
 
     plt.show()
@@ -98,7 +98,7 @@ def test_benchmark_unit_localization():
 
     # load study to check persistency
     study = UnitLocalizationStudy(study_folder)
-    study.plot_comparison_positions(smoothing_factor=31)
+    study.plot_comparison_positions()
     study.plot_run_times()
 
     plt.show()

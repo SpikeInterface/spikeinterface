@@ -70,10 +70,10 @@ class MatchingStudy(BenchmarkStudy):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
-            ax = axs[count]
+            ax = axs[0, count]
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
 
@@ -103,14 +103,14 @@ class MatchingStudy(BenchmarkStudy):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
             templates_array = self.get_result(key)["templates"].templates_array
             plot_comparison_collision_by_similarity(
                 self.get_result(key)["gt_collision"],
                 templates_array,
-                ax=axs[count],
+                ax=axs[0, count],
                 show_legend=True,
                 mode="lines",
                 good_only=False,
