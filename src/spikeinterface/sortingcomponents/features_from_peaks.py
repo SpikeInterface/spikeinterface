@@ -215,4 +215,5 @@ _features_class = {
     "amplitude": AmplitudeFeature,
     "ptp": PeakToPeakFeature,
     "random_projections": RandomProjectionsFeature,
+    "center_of_mass": LocalizeCenterOfMass,
 }
