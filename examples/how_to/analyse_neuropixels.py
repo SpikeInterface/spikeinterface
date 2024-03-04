@@ -159,7 +159,7 @@ ax.set_xlabel('noise  [microV]')
 #
 # The two functions (detect + localize):
 #
-#   * can be run parallel 
+#   * can be run parallel
 #   * are very fast when the preprocessed recording is already saved (and a bit slower otherwise)
 #   * implement several methods
 #
@@ -169,7 +169,7 @@ ax.set_xlabel('noise  [microV]')
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16, 
+peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
                      detect_threshold=5, radius_um=50., **job_kwargs)
 peaks
 
@@ -214,7 +214,7 @@ ax.scatter(peak_locations['x'], peak_locations['y'], color='purple', alpha=0.002
 #
 # Please carwfully read the `spikeinterface.sorters` documentation for more information.
 #
-# In this example: 
+# In this example:
 #
 #   * we will run kilosort2.5
 #   * we apply no drift correction (because we don't have drift)
@@ -288,7 +288,7 @@ analyzer_saved
 #
 # We have a single function `compute_quality_metrics(SortingAnalyzer)` that returns a `pandas.Dataframe` with the desired metrics.
 #
-# Note that this function is also an extension and so can be saved. And so this is equivalent to do : 
+# Note that this function is also an extension and so can be saved. And so this is equivalent to do :
 # `metrics = analyzer.compute("quality_metrics").get_data()`
 #
 #
@@ -349,5 +349,3 @@ analyzer_clean
 # ```python
 # si.plot_sorting_summary(analyzer_clean, backend='sortingview')
 # ```
-
-
