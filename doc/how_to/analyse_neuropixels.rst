@@ -11,7 +11,7 @@ including custom pre- and post-processing.
 .. code:: ipython3
 
     import spikeinterface.full as si
-    
+
     import numpy as np
     import matplotlib.pyplot as plt
     from pathlib import Path
@@ -19,7 +19,7 @@ including custom pre- and post-processing.
 .. code:: ipython3
 
     base_folder = Path('/mnt/data/sam/DataSpikeSorting/howto_si/neuropixel_example/')
-    
+
     spikeglx_folder = base_folder / 'Rec_1_10_11_2021_g0'
 
 
@@ -54,7 +54,7 @@ We need to specify which one to read:
 
 .. parsed-literal::
 
-    SpikeGLXRecordingExtractor: 384 channels - 30.0kHz - 1 segments - 34,145,070 samples 
+    SpikeGLXRecordingExtractor: 384 channels - 30.0kHz - 1 segments - 34,145,070 samples
                                 1,138.15s (18.97 minutes) - int16 dtype - 24.42 GiB
 
 
@@ -74,11 +74,11 @@ We need to specify which one to read:
         .dataframe tbody tr th:only-of-type {
             vertical-align: middle;
         }
-    
+
         .dataframe tbody tr th {
             vertical-align: top;
         }
-    
+
         .dataframe thead th {
             text-align: right;
         }
@@ -236,7 +236,7 @@ Let’s do something similar to the IBL destriping chain (See
     bad_channel_ids, channel_labels = si.detect_bad_channels(rec1)
     rec2 = rec1.remove_channels(bad_channel_ids)
     print('bad_channel_ids', bad_channel_ids)
-    
+
     rec3 = si.phase_shift(rec2)
     rec4 = si.common_reference(rec3, operator="median", reference="global")
     rec = rec4
@@ -252,7 +252,7 @@ Let’s do something similar to the IBL destriping chain (See
 
 .. parsed-literal::
 
-    CommonReferenceRecording: 383 channels - 30.0kHz - 1 segments - 34,145,070 samples 
+    CommonReferenceRecording: 383 channels - 30.0kHz - 1 segments - 34,145,070 samples
                               1,138.15s (18.97 minutes) - int16 dtype - 24.36 GiB
 
 
@@ -277,7 +277,7 @@ is lazy, so you can change the previsous cell (parameters, step order,
 
     # here we use static plot using matplotlib backend
     fig, axs = plt.subplots(ncols=3, figsize=(20, 10))
-    
+
     si.plot_traces(rec1, backend='matplotlib',  clim=(-50, 50), ax=axs[0])
     si.plot_traces(rec4, backend='matplotlib',  clim=(-50, 50), ax=axs[1])
     si.plot_traces(rec, backend='matplotlib',  clim=(-50, 50), ax=axs[2])
@@ -331,7 +331,7 @@ parallelization mechanism of SpikeInterface.
 .. code:: ipython3
 
     job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-    
+
     rec = rec.save(folder=base_folder / 'preprocess', format='binary', **job_kwargs)
 
 .. code:: ipython3
@@ -344,7 +344,7 @@ parallelization mechanism of SpikeInterface.
 
 .. parsed-literal::
 
-    BinaryFolderRecording: 383 channels - 30.0kHz - 1 segments - 34,145,070 samples 
+    BinaryFolderRecording: 383 channels - 30.0kHz - 1 segments - 34,145,070 samples
                            1,138.15s (18.97 minutes) - int16 dtype - 24.36 GiB
 
 
@@ -414,9 +414,9 @@ Let’s use here the ``locally_exclusive`` method for detection and the
 .. code:: ipython3
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-    
+
     job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-    peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16, 
+    peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
                          detect_threshold=5, radius_um=50., **job_kwargs)
     peaks
 
@@ -441,7 +441,7 @@ Let’s use here the ``locally_exclusive`` method for detection and the
 .. code:: ipython3
 
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-    
+
     peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
 
 
@@ -489,7 +489,7 @@ documentation for motion estimation and correction for more details.
     fig, ax = plt.subplots(figsize=(15, 10))
     si.plot_probe_map(rec, ax=ax, with_channel_ids=True)
     ax.set_ylim(-100, 150)
-    
+
     ax.scatter(peak_locations['x'], peak_locations['y'], color='purple', alpha=0.002)
 
 
@@ -566,7 +566,7 @@ In this example:
 
     # run kilosort2.5 without drift correction
     params_kilosort2_5 = {'do_correction': False}
-    
+
     sorting = si.run_sorter('kilosort2_5', rec, output_folder=base_folder / 'kilosort2.5_output',
                             docker_image=True, verbose=True, **params_kilosort2_5)
 
@@ -612,7 +612,7 @@ Note that our object is not persistent to disk because we use
 
 .. code:: ipython3
 
-    
+
     analyzer = si.create_sorting_analyzer(sorting, rec, sparse=True, format="memory")
     analyzer
 
@@ -628,7 +628,7 @@ Note that our object is not persistent to disk because we use
 .. parsed-literal::
 
     SortingAnalyzer: 383 channels - 31 units - 1 segments - memory - sparse - has recording
-    Loaded 0 extenstions: 
+    Loaded 0 extenstions:
 
 
 
@@ -719,12 +719,12 @@ PCA for their computation. This can be achieved with:
 .. code:: ipython3
 
     metric_names=['firing_rate', 'presence_ratio', 'snr', 'isi_violation', 'amplitude_cutoff']
-    
-    
+
+
     # metrics = analyzer.compute("quality_metrics").get_data()
     # equivalent to
     metrics = si.compute_quality_metrics(analyzer, metric_names=metric_names)
-    
+
     metrics
 
 
@@ -743,11 +743,11 @@ PCA for their computation. This can be achieved with:
         .dataframe tbody tr th:only-of-type {
             vertical-align: middle;
         }
-    
+
         .dataframe tbody tr th {
             vertical-align: top;
         }
-    
+
         .dataframe thead th {
             text-align: right;
         }
@@ -1061,7 +1061,7 @@ A very common curation approach is to threshold these metrics to select
     amplitude_cutoff_thresh = 0.1
     isi_violations_ratio_thresh = 1
     presence_ratio_thresh = 0.9
-    
+
     our_query = f"(amplitude_cutoff < {amplitude_cutoff_thresh}) & (isi_violations_ratio < {isi_violations_ratio_thresh}) & (presence_ratio > {presence_ratio_thresh})"
     print(our_query)
 
@@ -1138,4 +1138,3 @@ And push the results to sortingview webased viewer
 .. code:: python
 
    si.plot_sorting_summary(analyzer_clean, backend='sortingview')
-
