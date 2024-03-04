@@ -26,7 +26,11 @@ def test_features_from_peaks():
         **job_kwargs,
     )
 
-    feature_list = ["amplitude", "ptp", "center_of_mass",]
+    feature_list = [
+        "amplitude",
+        "ptp",
+        "center_of_mass",
+    ]
     feature_params = {
         "amplitude": {"all_channels": False, "peak_sign": "neg"},
         "ptp": {"all_channels": False},
@@ -44,9 +48,11 @@ def test_features_from_peaks():
 
     # split feature variable
     job_kwargs["n_jobs"] = 2
-    amplitude, ptp, com, = compute_features_from_peaks(
-        recording, peaks, feature_list, feature_params=feature_params, **job_kwargs
-    )
+    (
+        amplitude,
+        ptp,
+        com,
+    ) = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
     assert amplitude.ndim == 1  # because all_channels=False
     assert ptp.ndim == 1  # because all_channels=False
     assert com.ndim == 1
