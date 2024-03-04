@@ -17,7 +17,6 @@ class Kilosort4Sorter(BaseSorter):
     requires_locations = True
 
     _default_params = {
-        "n_chan_bin": 385,
         "nblocks": 1,
         "Th_universal": 9,
         "Th_learned": 8,
@@ -53,7 +52,6 @@ class Kilosort4Sorter(BaseSorter):
     }
 
     _params_description = {
-        "batch_size": "Number of samples included in each batch of data. Default value: 60000.",
         "nblocks": "Number of non-overlapping blocks for drift correction (additional nblocks-1 blocks are created in the overlaps). Default value: 1.",
         "Th_universal": "Spike detection threshold for universal templates. Th(1) in previous versions of Kilosort. Default value: 9.",
         "Th_learned": "Spike detection threshold for learned templates. Th(2) in previous versions of Kilosort. Default value: 8.",
@@ -95,11 +93,9 @@ class Kilosort4Sorter(BaseSorter):
     For more information see https://github.com/MouseLand/Kilosort"""
 
     installation_mesg = """\nTo use Kilosort4 run:\n
-        >>> git clone https://github.com/MouseLand/Kilosort
-        >>> cd Kilosort
-        >>> pip install .
+        >>> pip install kilosort==4.0
 
-    More information on Kilosort4 and its installation procedure at:
+    More information on Kilosort4 at:
         https://github.com/MouseLand/Kilosort
     """
 
