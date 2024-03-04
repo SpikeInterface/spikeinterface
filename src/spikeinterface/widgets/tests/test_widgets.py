@@ -584,7 +584,7 @@ if __name__ == "__main__":
     # mytest.test_plot_traces()
     # mytest.test_plot_spikes_on_traces()
     # mytest.test_plot_unit_waveforms()
-    # mytest.test_plot_unit_templates()
+    mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_autocorrelograms()
     # mytest.test_plot_crosscorrelograms()
@@ -603,7 +603,7 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_presence()
     # mytest.test_plot_peak_activity()
     # mytest.test_plot_multicomparison()
-    mytest.test_plot_sorting_summary()
-    # plt.show()
+    # mytest.test_plot_sorting_summary()
+    plt.show()
 
     # TestWidgets.tearDownClass()
