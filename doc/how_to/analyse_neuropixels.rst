@@ -266,7 +266,7 @@ the ipywydgets interactive ploter
 .. code:: python
 
    %matplotlib widget
-   si.plot_timeseries({'filter':rec1, 'cmr': rec4}, backend='ipywidgets')
+   si.plot_traces({'filter':rec1, 'cmr': rec4}, backend='ipywidgets')
 
 Note that using this ipywydgets make possible to explore diffrents
 preprocessing chain wihtout to save the entire file to disk. Everything
@@ -417,7 +417,7 @@ Let’s use here the ``locally_exclusive`` method for detection and the
     
     job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
     peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16, 
-                         detect_threshold=5, local_radius_um=50., **job_kwargs)
+                         detect_threshold=5, radius_um=50., **job_kwargs)
     peaks
 
 
@@ -442,7 +442,7 @@ Let’s use here the ``locally_exclusive`` method for detection and the
 
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
     
-    peak_locations = localize_peaks(rec, peaks, method='center_of_mass', local_radius_um=50., **job_kwargs)
+    peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
 
 
 
