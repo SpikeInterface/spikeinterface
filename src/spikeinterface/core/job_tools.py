@@ -70,8 +70,8 @@ def fix_job_kwargs(runtime_job_kwargs):
         )
 
     # remove mutually exclusive from global job kwargs
-    for k in runtime_job_kwargs:
-        if k in _mutually_exclusive:
+    for k, v in runtime_job_kwargs.items():
+        if k in _mutually_exclusive and v is not None:
             for key_to_remove in _mutually_exclusive:
                 if key_to_remove in job_kwargs:
                     job_kwargs.pop(key_to_remove)
