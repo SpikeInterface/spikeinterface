@@ -34,6 +34,7 @@ REGISTRY = "spikeinterface"
 SORTER_DOCKER_MAP = dict(
     combinato="combinato",
     herdingspikes="herdingspikes",
+    kilosort4="kilosort4",
     klusta="klusta",
     mountainsort4="mountainsort4",
     mountainsort5="mountainsort5",
