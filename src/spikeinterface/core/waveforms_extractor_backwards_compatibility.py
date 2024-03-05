@@ -222,6 +222,13 @@ class MockWaveformExtractor:
     def folder(self):
         if self.sorting_analyzer.format != "memory":
             return self.sorting_analyzer.folder
+        
+    @property
+    def format(self):
+        if self.sorting_analyzer.format == "binary_folder":
+            return "binary"
+        else:
+            return self.sorting_analyzer.format
 
     def has_extension(self, extension_name: str) -> bool:
         return self.sorting_analyzer.has_extension(extension_name)
