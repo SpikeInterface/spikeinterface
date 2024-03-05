@@ -248,7 +248,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         gains = signal_channels["gain"]
         offsets = signal_channels["offset"]
 
-        if dtype.kind == "i" and np.all(gains <0) and np.all(offsets == 0):
+        if dtype.kind == "i" and np.all(gains < 0) and np.all(offsets == 0):
             # special hack when all channel have negative gain: we put back the gain positive
             # this help the end user experience
             self.inverted_gain = True
@@ -296,7 +296,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         nseg = self.neo_reader.segment_count(block_index=self.block_index)
         for segment_index in range(nseg):
-            rec_segment = NeoRecordingSegment(self.neo_reader, self.block_index, segment_index, self.stream_index, self.inverted_gain)
+            rec_segment = NeoRecordingSegment(
+                self.neo_reader, self.block_index, segment_index, self.stream_index, self.inverted_gain
+            )
             self.add_recording_segment(rec_segment)
 
         self._kwargs.update(kwargs)
