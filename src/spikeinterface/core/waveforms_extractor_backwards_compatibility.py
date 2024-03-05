@@ -213,6 +213,9 @@ class MockWaveformExtractor:
 
     def get_sorting_property(self, key) -> np.ndarray:
         return self.sorting_analyzer.get_sorting_property(key)
+    
+    def get_available_extension_names(self):
+        return self.sorting_analyzer.get_loaded_extension_names()
 
     @property
     def sparsity(self):
