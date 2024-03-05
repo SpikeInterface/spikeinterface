@@ -241,9 +241,11 @@ class MockWaveformExtractor:
         selected_spikes = []
         for segment_index in range(self.get_num_segments()):
             # inds = self.sorting_analyzer.get_selected_indices_in_spike_train(unit_id, segment_index)
+            assert self.sorting_analyzer.has_extension("random_spikes"), "get_sampled_indices() requires the 'random_spikes' extension."
             inds = self.sorting_analyzer.get_extension("random_spikes").get_selected_indices_in_spike_train(
                 unit_id, segment_index
             )
+
             sampled_index = np.zeros(inds.size, dtype=[("spike_index", "int64"), ("segment_index", "int64")])
             sampled_index["spike_index"] = inds
             sampled_index["segment_index"][:] = segment_index
