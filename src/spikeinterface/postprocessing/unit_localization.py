@@ -12,9 +12,9 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
+from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core import compute_sparsity
-from ..core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
-from ..core.template_tools import get_template_extremum_channel
+from ..core.template_tools import get_template_extremum_channel, _get_nbefore, _get_dense_templates_array
 
 
 dtype_localize_by_method = {
@@ -27,88 +27,14 @@ dtype_localize_by_method = {
 possible_localization_methods = list(dtype_localize_by_method.keys())
 
 
-class UnitLocationsCalculator(BaseWaveformExtractorExtension):
-    """
-    Comput unit locations from WaveformExtractor.
-
-    Parameters
-    ----------
-    waveform_extractor: WaveformExtractor
-        A waveform extractor object
-    """
-
-    extension_name = "unit_locations"
-
-    def __init__(self, waveform_extractor):
-        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
-
-    def _set_params(self, method="center_of_mass", method_kwargs={}):
-        params = dict(method=method, method_kwargs=method_kwargs)
-        return params
-
-    def _select_extension_data(self, unit_ids):
-        unit_inds = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
-        new_unit_location = self._extension_data["unit_locations"][unit_inds]
-        return dict(unit_locations=new_unit_location)
-
-    def _run(self, **job_kwargs):
-        method = self._params["method"]
-        method_kwargs = self._params["method_kwargs"]
-
-        assert method in possible_localization_methods
-
-        if method == "center_of_mass":
-            unit_location = compute_center_of_mass(self.waveform_extractor, **method_kwargs)
-        elif method == "grid_convolution":
-            unit_location = compute_grid_convolution(self.waveform_extractor, **method_kwargs)
-        elif method == "monopolar_triangulation":
-            unit_location = compute_monopolar_triangulation(self.waveform_extractor, **method_kwargs)
-        self._extension_data["unit_locations"] = unit_location
-
-    def get_data(self, outputs="numpy"):
-        """
-        Get the computed unit locations.
-
-        Parameters
-        ----------
-        outputs : "numpy" | "by_unit", default: "numpy"
-            The output format
-
-        Returns
-        -------
-        unit_locations : np.array or dict
-            The unit locations as a Nd array (outputs="numpy") or
-            as a dict with units as key and locations as values.
-        """
-        if outputs == "numpy":
-            return self._extension_data["unit_locations"]
-
-        elif outputs == "by_unit":
-            locations_by_unit = {}
-            for unit_ind, unit_id in enumerate(self.waveform_extractor.sorting.unit_ids):
-                locations_by_unit[unit_id] = self._extension_data["unit_locations"][unit_ind]
-            return locations_by_unit
-
-    @staticmethod
-    def get_extension_function():
-        return compute_unit_locations
-
-
-WaveformExtractor.register_extension(UnitLocationsCalculator)
-
-
-def compute_unit_locations(
-    waveform_extractor, load_if_exists=False, method="monopolar_triangulation", outputs="numpy", **method_kwargs
-):
+class ComputeUnitLocations(AnalyzerExtension):
     """
     Localize units in 2D or 3D with several methods given the template.
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        A waveform extractor object
-    load_if_exists : bool, default: False
-        Whether to load precomputed unit locations, if they already exist
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     method: "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The method to use for localization
     outputs: "numpy" | "by_unit", default: "numpy"
@@ -121,15 +47,53 @@ def compute_unit_locations(
     unit_locations: np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
-    if load_if_exists and waveform_extractor.is_extension(UnitLocationsCalculator.extension_name):
-        ulc = waveform_extractor.load_extension(UnitLocationsCalculator.extension_name)
-    else:
-        ulc = UnitLocationsCalculator(waveform_extractor)
-        ulc.set_params(method=method, method_kwargs=method_kwargs)
-        ulc.run()
 
-    unit_locations = ulc.get_data(outputs=outputs)
-    return unit_locations
+    extension_name = "unit_locations"
+    depend_on = [
+        "fast_templates|templates",
+    ]
+    need_recording = True
+    use_nodepipeline = False
+    need_job_kwargs = False
+
+    def __init__(self, sorting_analyzer):
+        AnalyzerExtension.__init__(self, sorting_analyzer)
+
+    def _set_params(self, method="monopolar_triangulation", **method_kwargs):
+        params = dict(method=method, method_kwargs=method_kwargs)
+        return params
+
+    def _select_extension_data(self, unit_ids):
+        unit_inds = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+        new_unit_location = self.data["unit_locations"][unit_inds]
+        return dict(unit_locations=new_unit_location)
+
+    def _run(self):
+        method = self.params["method"]
+        method_kwargs = self.params["method_kwargs"]
+
+        assert method in possible_localization_methods
+
+        if method == "center_of_mass":
+            unit_location = compute_center_of_mass(self.sorting_analyzer, **method_kwargs)
+        elif method == "grid_convolution":
+            unit_location = compute_grid_convolution(self.sorting_analyzer, **method_kwargs)
+        elif method == "monopolar_triangulation":
+            unit_location = compute_monopolar_triangulation(self.sorting_analyzer, **method_kwargs)
+        self.data["unit_locations"] = unit_location
+
+    def get_data(self, outputs="numpy"):
+        if outputs == "numpy":
+            return self.data["unit_locations"]
+        elif outputs == "by_unit":
+            locations_by_unit = {}
+            for unit_ind, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                locations_by_unit[unit_id] = self.data["unit_locations"][unit_ind]
+            return locations_by_unit
+
+
+register_result_extension(ComputeUnitLocations)
+compute_unit_locations = ComputeUnitLocations.function_factory()
 
 
 def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um, initial_z=20):
@@ -220,7 +184,7 @@ def estimate_distance_error_with_log(vec, wf_data, local_contact_locations, max_
 
 
 def compute_monopolar_triangulation(
-    waveform_extractor,
+    sorting_analyzer,
     optimizer="minimize_with_log_penality",
     radius_um=75,
     max_distance_um=1000,
@@ -247,8 +211,8 @@ def compute_monopolar_triangulation(
 
     Parameters
     ----------
-    waveform_extractor:WaveformExtractor
-        A waveform extractor object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     method: "least_square" | "minimize_with_log_penality", default: "least_square"
        The optimizer to use
     radius_um: float, default: 75
@@ -274,13 +238,13 @@ def compute_monopolar_triangulation(
     assert optimizer in ("least_square", "minimize_with_log_penality")
 
     assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
-    unit_ids = waveform_extractor.sorting.unit_ids
+    unit_ids = sorting_analyzer.unit_ids
 
-    contact_locations = waveform_extractor.get_channel_locations()
-    nbefore = waveform_extractor.nbefore
+    contact_locations = sorting_analyzer.get_channel_locations()
 
-    sparsity = compute_sparsity(waveform_extractor, method="radius", radius_um=radius_um)
-    templates = waveform_extractor.get_all_templates(mode="average")
+    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=radius_um)
+    templates = _get_dense_templates_array(sorting_analyzer)
+    nbefore = _get_nbefore(sorting_analyzer)
 
     if enforce_decrease:
         neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
@@ -288,7 +252,7 @@ def compute_monopolar_triangulation(
             chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
             neighbours_mask[i, chan_inds] = True
         enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
-        best_channels = get_template_extremum_channel(waveform_extractor, outputs="index")
+        best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index")
 
     unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
@@ -317,14 +281,14 @@ def compute_monopolar_triangulation(
     return unit_location
 
 
-def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, feature="ptp"):
+def compute_center_of_mass(sorting_analyzer, peak_sign="neg", radius_um=75, feature="ptp"):
     """
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     radius_um: float
@@ -336,15 +300,15 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
     -------
     unit_location: np.array
     """
-    unit_ids = waveform_extractor.sorting.unit_ids
+    unit_ids = sorting_analyzer.unit_ids
 
-    recording = waveform_extractor.recording
-    contact_locations = recording.get_channel_locations()
+    contact_locations = sorting_analyzer.get_channel_locations()
 
     assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
 
-    sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method="radius", radius_um=radius_um)
-    templates = waveform_extractor.get_all_templates(mode="average")
+    sparsity = compute_sparsity(sorting_analyzer, peak_sign=peak_sign, method="radius", radius_um=radius_um)
+    templates = _get_dense_templates_array(sorting_analyzer)
+    nbefore = _get_nbefore(sorting_analyzer)
 
     unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
@@ -360,7 +324,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
         elif feature == "energy":
             wf_data = np.linalg.norm(wf[:, chan_inds], axis=0)
         elif feature == "peak_voltage":
-            wf_data = wf[waveform_extractor.nbefore, chan_inds]
+            wf_data = wf[nbefore, chan_inds]
 
         # center of mass
         com = np.sum(wf_data[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_data)
@@ -370,7 +334,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
 
 
 def compute_grid_convolution(
-    waveform_extractor,
+    sorting_analyzer,
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
@@ -385,8 +349,8 @@ def compute_grid_convolution(
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     radius_um: float, default: 40.0
@@ -411,11 +375,14 @@ def compute_grid_convolution(
     unit_location: np.array
     """
 
-    contact_locations = waveform_extractor.get_channel_locations()
+    contact_locations = sorting_analyzer.get_channel_locations()
+    unit_ids = sorting_analyzer.unit_ids
 
-    nbefore = waveform_extractor.nbefore
-    nafter = waveform_extractor.nafter
-    fs = waveform_extractor.sampling_frequency
+    templates = _get_dense_templates_array(sorting_analyzer)
+    nbefore = _get_nbefore(sorting_analyzer)
+    nafter = templates.shape[1] - nbefore
+
+    fs = sorting_analyzer.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
 
@@ -431,16 +398,13 @@ def compute_grid_convolution(
         contact_locations, radius_um, upsampling_um, margin_um, weight_method
     )
 
-    # print(template_positions.shape)
-    templates = waveform_extractor.get_all_templates(mode="average")
-
-    peak_channels = get_template_extremum_channel(waveform_extractor, peak_sign, outputs="index")
-    unit_ids = waveform_extractor.sorting.unit_ids
+    peak_channels = get_template_extremum_channel(sorting_analyzer, peak_sign, outputs="index")
 
     weights_sparsity_mask = weights > 0
 
     nb_weights = weights.shape[0]
     unit_location = np.zeros((unit_ids.size, 3), dtype="float64")
+
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]
         wf = templates[i, :, :]

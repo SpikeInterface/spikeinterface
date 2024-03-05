@@ -2,96 +2,85 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-from spikeinterface import NumpySorting
-from spikeinterface import extract_waveforms
-from spikeinterface.core import get_noise_levels
+from spikeinterface import NumpySorting, create_sorting_analyzer, get_noise_levels, compute_sparsity
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-DEBUG = False
+
+job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
 
 
-def make_waveform_extractor():
+def get_sorting_analyzer():
     recording, sorting = make_dataset()
-    waveform_extractor = extract_waveforms(
-        recording=recording,
-        sorting=sorting,
-        folder=None,
-        mode="memory",
-        ms_before=1,
-        ms_after=2.0,
-        max_spikes_per_unit=500,
-        return_scaled=False,
-        n_jobs=1,
-        chunk_size=30000,
-    )
-
-    return waveform_extractor
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
+    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute("fast_templates", **job_kwargs)
+    sorting_analyzer.compute("noise_levels")
+    return sorting_analyzer
 
 
-@pytest.fixture(name="waveform_extractor", scope="module")
-def waveform_extractor_fixture():
-    return make_waveform_extractor()
+@pytest.fixture(name="sorting_analyzer", scope="module")
+def sorting_analyzer_fixture():
+    return get_sorting_analyzer()
 
 
 @pytest.mark.parametrize("method", matching_methods.keys())
-def test_find_spikes_from_templates(method, waveform_extractor):
-    recording = waveform_extractor._recording
-    waveform = waveform_extractor.get_waveforms(waveform_extractor.unit_ids[0])
-    num_waveforms, _, _ = waveform.shape
-    assert num_waveforms != 0
-    method_kwargs_all = {"waveform_extractor": waveform_extractor, "noise_levels": get_noise_levels(recording)}
+def test_find_spikes_from_templates(method, sorting_analyzer):
+    recording = sorting_analyzer.recording
+    # waveform = waveform_extractor.get_waveforms(waveform_extractor.unit_ids[0])
+    # num_waveforms, _, _ = waveform.shape
+    # assert num_waveforms != 0
+
+    templates = sorting_analyzer.get_extension("fast_templates").get_data(outputs="Templates")
+    sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=0.5)
+    templates = templates.to_sparse(sparsity)
+
+    noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
+
+    # sorting_analyzer
+    method_kwargs_all = {"templates": templates, "noise_levels": noise_levels}
     method_kwargs = {}
-    method_kwargs["wobble"] = {
-        "templates": waveform_extractor.get_all_templates(),
-        "nbefore": waveform_extractor.nbefore,
-        "nafter": waveform_extractor.nafter,
-    }
+    # method_kwargs["wobble"] = {
+    #     "templates": waveform_extractor.get_all_templates(),
+    #     "nbefore": waveform_extractor.nbefore,
+    #     "nafter": waveform_extractor.nafter,
+    # }
 
     sampling_frequency = recording.get_sampling_frequency()
 
-    result = {}
-
     method_kwargs_ = method_kwargs.get(method, {})
     method_kwargs_.update(method_kwargs_all)
-    spikes = find_spikes_from_templates(
-        recording, method=method, method_kwargs=method_kwargs_, n_jobs=2, chunk_size=1000, progress_bar=True
-    )
+    spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs_, **job_kwargs)
 
-    result[method] = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
+    # DEBUG = True
 
-    # debug
-    if DEBUG:
-        import matplotlib.pyplot as plt
-        import spikeinterface.full as si
+    # if DEBUG:
+    #     import matplotlib.pyplot as plt
+    #     import spikeinterface.full as si
 
-        plt.ion()
+    #     sorting_analyzer.compute("waveforms")
+    #     sorting_analyzer.compute("templates")
 
-        metrics = si.compute_quality_metrics(
-            waveform_extractor,
-            metric_names=["snr"],
-            load_if_exists=True,
-        )
+    #     gt_sorting = sorting_analyzer.sorting
 
-        comparisons = {}
-        for method in matching_methods.keys():
-            comp = si.compare_sorter_to_ground_truth(gt_sorting, result[method])
-            comparisons[method] = comp
-            si.plot_agreement_matrix(comp)
-            plt.title(method)
-            si.plot_sorting_performance(
-                comp,
-                metrics,
-                performance_name="accuracy",
-                metric_name="snr",
-            )
-            plt.title(method)
-        plt.show()
+    #     sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
+
+    #     metrics = si.compute_quality_metrics(sorting_analyzer, metric_names=["snr"])
+
+    #     fig, ax = plt.subplots()
+    #     comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
+    #     si.plot_agreement_matrix(comp, ax=ax)
+    #     ax.set_title(method)
+    #     plt.show()
 
 
 if __name__ == "__main__":
-    waveform_extractor = make_waveform_extractor()
-    method = "naive"
-    test_find_spikes_from_templates(method, waveform_extractor)
+    sorting_analyzer = get_sorting_analyzer()
+    # method = "naive"
+    # method = "tdc-peeler"
+    # method =  "circus"
+    # method = "circus-omp-svd"
+    method = "wobble"
+    test_find_spikes_from_templates(method, sorting_analyzer)

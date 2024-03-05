@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 import shutil
 
-from spikeinterface import extract_waveforms, get_template_extremum_channel, generate_ground_truth_recording
+from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
 
 
 # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -14,6 +14,7 @@ from spikeinterface.core.node_pipeline import (
     PipelineNode,
     ExtractDenseWaveforms,
     sorting_to_peaks,
+    spike_peak_dtype,
 )
 
 
@@ -76,9 +77,12 @@ def test_run_node_pipeline():
     spikes = sorting.to_spike_vector()
 
     # create peaks from spikes
-    we = extract_waveforms(recording, sorting, mode="memory", **job_kwargs)
-    extremum_channel_inds = get_template_extremum_channel(we, peak_sign="neg", outputs="index")
-    peaks = sorting_to_peaks(sorting, extremum_channel_inds)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
+    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute("fast_templates", **job_kwargs)
+    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
+
+    peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
 
     peak_retriever = PeakRetriever(recording, peaks)
     # channel index is from template

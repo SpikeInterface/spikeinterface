@@ -898,5 +898,6 @@ def get_rec_attributes(recording):
         num_samples=[recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())],
         is_filtered=recording.is_filtered(),
         properties=properties_to_attrs,
+        dtype=recording.get_dtype(),
     )
     return rec_attributes
