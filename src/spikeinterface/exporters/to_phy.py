@@ -184,7 +184,9 @@ def export_to_phy(
     if templates_ext is None:
         templates_ext = sorting_analyzer.get_extension("fast_templates")
         if templates_ext is not None and template_mode != "average":
-            raise ValueError("export_to_phy with SortingAnalyzer with extension 'fast_templates' can only work with template_mode='average'")
+            raise ValueError(
+                "export_to_phy with SortingAnalyzer with extension 'fast_templates' can only work with template_mode='average'"
+            )
         dense_templates = templates_ext.get_templates(unit_ids=unit_ids)
     else:
         dense_templates = templates_ext.get_templates(unit_ids=unit_ids, operator=template_mode)
