@@ -1168,7 +1168,7 @@ class AnalyzerExtension:
             def __init__(self, extension_name):
                 self.extension_name = extension_name
 
-            def __call__(self, waveform_extractor = None, sorting_analyzer = None, load_if_exists=None, *args, **kwargs):
+            def __call__(self, waveform_extractor=None, sorting_analyzer=None, load_if_exists=None, *args, **kwargs):
                 from .waveforms_extractor_backwards_compatibility import MockWaveformExtractor
 
                 if isinstance(waveform_extractor, MockWaveformExtractor):

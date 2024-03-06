@@ -219,7 +219,7 @@ class MockWaveformExtractor:
 
     def get_sorting_property(self, key) -> np.ndarray:
         return self.sorting_analyzer.get_sorting_property(key)
-    
+
     def get_available_extension_names(self):
         return self.sorting_analyzer.get_loaded_extension_names()
 
@@ -231,7 +231,7 @@ class MockWaveformExtractor:
     def folder(self):
         if self.sorting_analyzer.format != "memory":
             return self.sorting_analyzer.folder
-        
+
     @property
     def format(self):
         if self.sorting_analyzer.format == "binary_folder":
@@ -241,31 +241,32 @@ class MockWaveformExtractor:
 
     def has_extension(self, extension_name: str) -> bool:
         return self.sorting_analyzer.has_extension(extension_name)
-    
+
     def precompute_templates(self, modes=("average", "std", "median", "percentile"), percentile=None):
-        
+
         modes = list(modes)
         for i, mode in enumerate(modes):
             if mode == "percentile":
                 assert percentile is not None, "percentile must be specified for mode='percentile'"
                 assert 0 <= percentile <= 100, "percentile must be between 0 and 100 inclusive"
                 modes[i] = (mode, percentile)
-        
+
         templates_params = dict(operators=list(modes))
         self.sorting_analyzer.compute("templates", **templates_params)
 
     def sample_spikes(self):
 
-        assert self.sorting_analyzer.has_extension("random_spikes"), "sample_spikes() requires the 'random_spikes' extension."
+        assert self.sorting_analyzer.has_extension(
+            "random_spikes"
+        ), "sample_spikes() requires the 'random_spikes' extension."
 
-        sample_spikes = dict.fromkeys(self.sorting_analyzer.unit_ids, np.array([], 'int') )
+        sample_spikes = dict.fromkeys(self.sorting_analyzer.unit_ids, np.array([], "int"))
         spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
-        spike_indices = self.sorting_analyzer.get_extension("random_spikes").data['random_spikes_indices']
+        spike_indices = self.sorting_analyzer.get_extension("random_spikes").data["random_spikes_indices"]
         for i, spike in enumerate(spikes):
-            sample_spikes[ spike['unit_index'] ] = np.append(sample_spikes[ spike['unit_index'] ], spike_indices[i] )
+            sample_spikes[spike["unit_index"]] = np.append(sample_spikes[spike["unit_index"]], spike_indices[i])
 
         return sample_spikes
-    
 
     def run_extract_waveforms(self):
         self.sorting_analyzer.compute("waveforms")
@@ -278,7 +279,9 @@ class MockWaveformExtractor:
         selected_spikes = []
         for segment_index in range(self.get_num_segments()):
             # inds = self.sorting_analyzer.get_selected_indices_in_spike_train(unit_id, segment_index)
-            assert self.sorting_analyzer.has_extension("random_spikes"), "get_sampled_indices() requires the 'random_spikes' extension."
+            assert self.sorting_analyzer.has_extension(
+                "random_spikes"
+            ), "get_sampled_indices() requires the 'random_spikes' extension."
             inds = self.sorting_analyzer.get_extension("random_spikes").get_selected_indices_in_spike_train(
                 unit_id, segment_index
             )
@@ -302,9 +305,11 @@ class MockWaveformExtractor:
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
 
-        assert self.sorting_analyzer.has_extension("random_spikes"), "get_sampled_indices() requires the 'random_spikes' extension."
+        assert self.sorting_analyzer.has_extension(
+            "random_spikes"
+        ), "get_sampled_indices() requires the 'random_spikes' extension."
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
-        
+
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
