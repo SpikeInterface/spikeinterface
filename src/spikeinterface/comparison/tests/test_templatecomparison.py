@@ -3,24 +3,24 @@ import pytest
 from pathlib import Path
 import numpy as np
 
-from spikeinterface.core import extract_waveforms
+from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.extractors import toy_example
 from spikeinterface.comparison import compare_templates, compare_multiple_templates
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "comparison"
-else:
-    cache_folder = Path("cache_folder") / "comparison"
+# if hasattr(pytest, "global_test_folder"):
+#     cache_folder = pytest.global_test_folder / "comparison"
+# else:
+#     cache_folder = Path("cache_folder") / "comparison"
 
 
-test_dir = cache_folder / "temp_comp_test"
+# test_dir = cache_folder / "temp_comp_test"
 
 
-def setup_module():
-    if test_dir.is_dir():
-        shutil.rmtree(test_dir)
-    test_dir.mkdir(exist_ok=True)
+# def setup_module():
+#     if test_dir.is_dir():
+#         shutil.rmtree(test_dir)
+#     test_dir.mkdir(exist_ok=True)
 
 
 def test_compare_multiple_templates():
@@ -28,8 +28,8 @@ def test_compare_multiple_templates():
     num_channels = 8
 
     rec, sort = toy_example(duration=duration, num_segments=1, num_channels=num_channels)
-    rec = rec.save(folder=test_dir / "rec")
-    sort = sort.save(folder=test_dir / "sort")
+    # rec = rec.save(folder=test_dir / "rec")
+    # sort = sort.save(folder=test_dir / "sort")
 
     # split recording in 3 equal slices
     fs = rec.get_sampling_frequency()
@@ -39,13 +39,17 @@ def test_compare_multiple_templates():
     sort1 = sort.frame_slice(start_frame=0 * fs, end_frame=duration / 3 * fs)
     sort2 = sort.frame_slice(start_frame=duration / 3 * fs, end_frame=2 / 3 * duration * fs)
     sort3 = sort.frame_slice(start_frame=2 / 3 * duration * fs, end_frame=duration * fs)
+
     # compute waveforms
-    we1 = extract_waveforms(rec1, sort1, test_dir / "wf1", n_jobs=1)
-    we2 = extract_waveforms(rec2, sort2, test_dir / "wf2", n_jobs=1)
-    we3 = extract_waveforms(rec3, sort3, test_dir / "wf3", n_jobs=1)
+    sorting_analyzer_1 = create_sorting_analyzer(sort1, rec1, format="memory")
+    sorting_analyzer_2 = create_sorting_analyzer(sort2, rec2, format="memory")
+    sorting_analyzer_3 = create_sorting_analyzer(sort3, rec3, format="memory")
+
+    for sorting_analyzer in (sorting_analyzer_1, sorting_analyzer_2, sorting_analyzer_3):
+        sorting_analyzer.compute(["random_spikes", "fast_templates"])
 
     # paired comparison
-    temp_cmp = compare_templates(we1, we2)
+    temp_cmp = compare_templates(sorting_analyzer_1, sorting_analyzer_2)
 
     for u1 in temp_cmp.hungarian_match_12.index.values:
         u2 = temp_cmp.hungarian_match_12[u1]
@@ -53,7 +57,7 @@ def test_compare_multiple_templates():
             assert u1 == u2
 
     # multi-comparison
-    temp_mcmp = compare_multiple_templates([we1, we2, we3])
+    temp_mcmp = compare_multiple_templates([sorting_analyzer_1, sorting_analyzer_2, sorting_analyzer_3])
     # assert unit ids are the same across sessions (because of initial slicing)
     for unit_dict in temp_mcmp.units.values():
         unit_ids = unit_dict["unit_ids"].values()

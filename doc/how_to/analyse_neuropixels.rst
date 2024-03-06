@@ -4,11 +4,11 @@ Analyse Neuropixels datasets
 This example shows how to perform Neuropixels-specific analysis,
 including custom pre- and post-processing.
 
-.. code:: ipython
+.. code:: ipython3
 
     %matplotlib inline
 
-.. code:: ipython
+.. code:: ipython3
 
     import spikeinterface.full as si
 
@@ -16,9 +16,9 @@ including custom pre- and post-processing.
     import matplotlib.pyplot as plt
     from pathlib import Path
 
-.. code:: ipython
+.. code:: ipython3
 
-    base_folder = Path('/mnt/data/sam/DataSpikeSorting/neuropixel_example/')
+    base_folder = Path('/mnt/data/sam/DataSpikeSorting/howto_si/neuropixel_example/')
 
     spikeglx_folder = base_folder / 'Rec_1_10_11_2021_g0'
 
@@ -29,7 +29,7 @@ Read the data
 The ``SpikeGLX`` folder can contain several “streams” (AP, LF and NIDQ).
 We need to specify which one to read:
 
-.. code:: ipython
+.. code:: ipython3
 
     stream_names, stream_ids = si.get_neo_streams('spikeglx', spikeglx_folder)
     stream_names
@@ -43,7 +43,7 @@ We need to specify which one to read:
 
 
 
-.. code:: ipython
+.. code:: ipython3
 
     # we do not load the sync channel, so the probe is automatically loaded
     raw_rec = si.read_spikeglx(spikeglx_folder, stream_name='imec0.ap', load_sync_channel=False)
@@ -54,11 +54,12 @@ We need to specify which one to read:
 
 .. parsed-literal::
 
-    SpikeGLXRecordingExtractor: 384 channels - 1 segments - 30.0kHz - 1138.145s
+    SpikeGLXRecordingExtractor: 384 channels - 30.0kHz - 1 segments - 34,145,070 samples
+                                1,138.15s (18.97 minutes) - int16 dtype - 24.42 GiB
 
 
 
-.. code:: ipython
+.. code:: ipython3
 
     # we automaticaly have the probe loaded!
     raw_rec.get_probe().to_dataframe()
@@ -201,7 +202,7 @@ We need to specify which one to read:
 
 
 
-.. code:: ipython
+.. code:: ipython3
 
     fig, ax = plt.subplots(figsize=(15, 10))
     si.plot_probe_map(raw_rec, ax=ax, with_channel_ids=True)
@@ -229,7 +230,7 @@ Let’s do something similar to the IBL destriping chain (See
 -  instead of interpolating bad channels, we remove then.
 -  instead of highpass_spatial_filter() we use common_reference()
 
-.. code:: ipython
+.. code:: ipython3
 
     rec1 = si.highpass_filter(raw_rec, freq_min=400.)
     bad_channel_ids, channel_labels = si.detect_bad_channels(rec1)
@@ -251,7 +252,8 @@ Let’s do something similar to the IBL destriping chain (See
 
 .. parsed-literal::
 
-    CommonReferenceRecording: 383 channels - 1 segments - 30.0kHz - 1138.145s
+    CommonReferenceRecording: 383 channels - 30.0kHz - 1 segments - 34,145,070 samples
+                              1,138.15s (18.97 minutes) - int16 dtype - 24.36 GiB
 
 
 
@@ -271,7 +273,7 @@ preprocessing chain wihtout to save the entire file to disk. Everything
 is lazy, so you can change the previsous cell (parameters, step order,
 …) and visualize it immediatly.
 
-.. code:: ipython
+.. code:: ipython3
 
     # here we use static plot using matplotlib backend
     fig, axs = plt.subplots(ncols=3, figsize=(20, 10))
@@ -287,7 +289,7 @@ is lazy, so you can change the previsous cell (parameters, step order,
 .. image:: analyse_neuropixels_files/analyse_neuropixels_13_0.png
 
 
-.. code:: ipython
+.. code:: ipython3
 
     # plot some channels
     fig, ax = plt.subplots(figsize=(20, 10))
@@ -299,7 +301,7 @@ is lazy, so you can change the previsous cell (parameters, step order,
 
 .. parsed-literal::
 
-    <spikeinterface.widgets.matplotlib.timeseries.TimeseriesPlotter at 0x7fe9275ef0a0>
+    <spikeinterface.widgets.traces.TracesWidget at 0x7f35829cc790>
 
 
 
@@ -326,25 +328,13 @@ Depending on the complexity of the preprocessing chain, this operation
 can take a while. However, we can make use of the powerful
 parallelization mechanism of SpikeInterface.
 
-.. code:: ipython
+.. code:: ipython3
 
     job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
 
     rec = rec.save(folder=base_folder / 'preprocess', format='binary', **job_kwargs)
 
-
-.. parsed-literal::
-
-    write_binary_recording with n_jobs = 40 and chunk_size = 30000
-
-
-
-.. parsed-literal::
-
-    write_binary_recording:   0%|          | 0/1139 [00:00<?, ?it/s]
-
-
-.. code:: ipython
+.. code:: ipython3
 
     # our recording now points to the new binary folder
     rec
@@ -354,7 +344,8 @@ parallelization mechanism of SpikeInterface.
 
 .. parsed-literal::
 
-    BinaryFolderRecording: 383 channels - 1 segments - 30.0kHz - 1138.145s
+    BinaryFolderRecording: 383 channels - 30.0kHz - 1 segments - 34,145,070 samples
+                           1,138.15s (18.97 minutes) - int16 dtype - 24.36 GiB
 
 
 
@@ -376,13 +367,13 @@ Check noise level
 Noise levels can be estimated on the scaled traces or on the raw
 (``int16``) traces.
 
-.. code:: ipython
+.. code:: ipython3
 
     # we can estimate the noise on the scaled traces (microV) or on the raw one (which is in our case int16).
     noise_levels_microV = si.get_noise_levels(rec, return_scaled=True)
     noise_levels_int16 = si.get_noise_levels(rec, return_scaled=False)
 
-.. code:: ipython
+.. code:: ipython3
 
     fig, ax = plt.subplots()
     _ = ax.hist(noise_levels_microV, bins=np.arange(5, 30, 2.5))
@@ -420,7 +411,7 @@ The two functions (detect + localize):
 Let’s use here the ``locally_exclusive`` method for detection and the
 ``center_of_mass`` for peak localization:
 
-.. code:: ipython
+.. code:: ipython3
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
@@ -472,7 +463,7 @@ In case we notice apparent drifts in the recording, one can use the
 SpikeInterface modules to estimate and correct motion. See the
 documentation for motion estimation and correction for more details.
 
-.. code:: ipython
+.. code:: ipython3
 
     # check for drifts
     fs = rec.sampling_frequency
@@ -492,7 +483,7 @@ documentation for motion estimation and correction for more details.
 .. image:: analyse_neuropixels_files/analyse_neuropixels_26_1.png
 
 
-.. code:: ipython
+.. code:: ipython3
 
     # we can also use the peak location estimates to have an insight of cluster separation before sorting
     fig, ax = plt.subplots(figsize=(15, 10))
@@ -538,7 +529,7 @@ In this example:
 -  we apply no drift correction (because we don’t have drift)
 -  we use the docker image because we don’t want to pay for MATLAB :)
 
-.. code:: ipython
+.. code:: ipython3
 
     # check default params for kilosort2.5
     si.get_default_sorter_params('kilosort2_5')
@@ -571,7 +562,7 @@ In this example:
 
 
 
-.. code:: ipython
+.. code:: ipython3
 
     # run kilosort2.5 without drift correction
     params_kilosort2_5 = {'do_correction': False}
@@ -579,12 +570,12 @@ In this example:
     sorting = si.run_sorter('kilosort2_5', rec, output_folder=base_folder / 'kilosort2.5_output',
                             docker_image=True, verbose=True, **params_kilosort2_5)
 
-.. code:: ipython
+.. code:: ipython3
 
     # the results can be read back for futur session
     sorting = si.read_sorter_folder(base_folder / 'kilosort2.5_output')
 
-.. code:: ipython
+.. code:: ipython3
 
     # here we have 31 untis in our recording
     sorting
@@ -601,93 +592,119 @@ In this example:
 Post processing
 ---------------
 
-All the postprocessing step is based on the **WaveformExtractor**
-object.
+All the postprocessing step is based on the **SortingAnalyzer** object.
 
-This object combines a ``recording`` and a ``sorting`` object and
-extracts some waveform snippets (500 by default) for each units.
+This object combines a ``sorting`` and a ``recording`` object. It will
+also help to run some computation aka “extensions” to get an insight on
+the qulity of units.
+
+The first extentions we will run are: \* select some spikes per units \*
+etxract waveforms \* compute templates \* compute noise levels
 
 Note that we use the ``sparse=True`` option. This option is important
 because the waveforms will be extracted only for a few channels around
 the main channel of each unit. This saves tons of disk space and speeds
 up the waveforms extraction and further processing.
 
-.. code:: ipython
+Note that our object is not persistent to disk because we use
+``format="memory"`` we could use ``format="binary_folder"`` or
+``format="zarr"``.
 
-    we = si.extract_waveforms(rec, sorting, folder=base_folder / 'waveforms_kilosort2.5',
-                              sparse=True, max_spikes_per_unit=500, ms_before=1.5,ms_after=2.,
-                              **job_kwargs)
+.. code:: ipython3
 
 
-
-.. parsed-literal::
-
-    extract waveforms shared_memory:   0%|          | 0/1139 [00:00<?, ?it/s]
+    analyzer = si.create_sorting_analyzer(sorting, rec, sparse=True, format="memory")
+    analyzer
 
 
 
 .. parsed-literal::
 
-    extract waveforms memmap:   0%|          | 0/1139 [00:00<?, ?it/s]
-
-
-.. code:: ipython
-
-    # the WaveformExtractor contains all information and is persistent on disk
-    print(we)
-    print(we.folder)
-
-
-.. parsed-literal::
-
-    WaveformExtractor: 383 channels - 31 units - 1 segments
-      before:45 after:60 n_per_units:500 - sparse
-    /mnt/data/sam/DataSpikeSorting/neuropixel_example/waveforms_kilosort2.5
-
-
-.. code:: ipython
-
-    # the waveform extractor can be easily loaded back from folder
-    we = si.load_waveforms(base_folder / 'waveforms_kilosort2.5')
-    we
+    estimate_sparsity:   0%|          | 0/1139 [00:00<?, ?it/s]
 
 
 
 
 .. parsed-literal::
 
-    WaveformExtractor: 383 channels - 31 units - 1 segments
-      before:45 after:60 n_per_units:500 - sparse
+    SortingAnalyzer: 383 channels - 31 units - 1 segments - memory - sparse - has recording
+    Loaded 0 extenstions:
 
 
 
-Many additional computations rely on the ``WaveformExtractor``. Some
+.. code:: ipython3
+
+    analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500)
+    analyzer.compute("waveforms",  ms_before=1.5,ms_after=2., **job_kwargs)
+    analyzer.compute("templates", operators=["average", "median", "std"])
+    analyzer.compute("noise_levels")
+    analyzer
+
+
+
+
+.. parsed-literal::
+
+    SortingAnalyzer: 383 channels - 31 units - 1 segments - memory - sparse - has recording
+    Loaded 4 extenstions: random_spikes, waveforms, templates, noise_levels
+
+
+
+Many additional computations rely on the ``SortingAnalyzer``. Some
 computations are slower than others, but can be performed in parallel
 using the ``**job_kwargs`` mechanism.
 
-Every computation will also be persistent on disk in the same folder,
-since they represent waveform extensions.
+.. code:: ipython3
 
-.. code:: ipython
-
-    _ = si.compute_noise_levels(we)
-    _ = si.compute_correlograms(we)
-    _ = si.compute_unit_locations(we)
-    _ = si.compute_spike_amplitudes(we, **job_kwargs)
-    _ = si.compute_template_similarity(we)
+    analyzer.compute("correlograms")
+    analyzer.compute("unit_locations")
+    analyzer.compute("spike_amplitudes", **job_kwargs)
+    analyzer.compute("template_similarity")
+    analyzer
 
 
 
 .. parsed-literal::
 
-    extract amplitudes:   0%|          | 0/1139 [00:00<?, ?it/s]
+    spike_amplitudes:   0%|          | 0/1139 [00:00<?, ?it/s]
+
+
+
+
+.. parsed-literal::
+
+    SortingAnalyzer: 383 channels - 31 units - 1 segments - memory - sparse - has recording
+    Loaded 8 extenstions: random_spikes, waveforms, templates, noise_levels, correlograms, unit_locations, spike_amplitudes, template_similarity
+
+
+
+Our ``SortingAnalyzer`` can be saved to disk using ``save_as()`` which
+make a copy of the analyzer and all computed extensions.
+
+.. code:: ipython3
+
+    analyzer_saved = analyzer.save_as(folder=base_folder / "analyzer", format="binary_folder")
+    analyzer_saved
+
+
+
+
+.. parsed-literal::
+
+    SortingAnalyzer: 383 channels - 31 units - 1 segments - binary_folder - sparse - has recording
+    Loaded 8 extenstions: random_spikes, waveforms, templates, noise_levels, correlograms, unit_locations, spike_amplitudes, template_similarity
+
 
 
 Quality metrics
 ---------------
 
-We have a single function ``compute_quality_metrics(WaveformExtractor)``
+We have a single function ``compute_quality_metrics(SortingAnalyzer)``
 that returns a ``pandas.Dataframe`` with the desired metrics.
+
+Note that this function is also an extension and so can be saved. And so
+this is equivalent to do :
+``metrics = analyzer.compute("quality_metrics").get_data()``
 
 Please visit the `metrics
 documentation <https://spikeinterface.readthedocs.io/en/latest/modules/qualitymetrics.html>`__
@@ -697,19 +714,24 @@ Some metrics are based on PCA (like
 ``'isolation_distance', 'l_ratio', 'd_prime'``) and require to estimate
 PCA for their computation. This can be achieved with:
 
-``si.compute_principal_components(waveform_extractor)``
+``analyzer.compute("principal_components")``
 
-.. code:: ipython
+.. code:: ipython3
 
-    metrics = si.compute_quality_metrics(we, metric_names=['firing_rate', 'presence_ratio', 'snr',
-                                                           'isi_violation', 'amplitude_cutoff'])
+    metric_names=['firing_rate', 'presence_ratio', 'snr', 'isi_violation', 'amplitude_cutoff']
+
+
+    # metrics = analyzer.compute("quality_metrics").get_data()
+    # equivalent to
+    metrics = si.compute_quality_metrics(analyzer, metric_names=metric_names)
+
     metrics
 
 
 .. parsed-literal::
 
-    /home/samuel.garcia/Documents/SpikeInterface/spikeinterface/spikeinterface/qualitymetrics/misc_metrics.py:511: UserWarning: Units [11, 13, 15, 18, 21, 22] have too few spikes and amplitude_cutoff is set to NaN
-      warnings.warn(f"Units {nan_units} have too few spikes and "
+    /home/samuel.garcia/Documents/SpikeInterface/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:846: UserWarning: Some units have too few spikes : amplitude_cutoff is set to NaN
+      warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
 
 
 
@@ -734,293 +756,293 @@ PCA for their computation. This can be achieved with:
       <thead>
         <tr style="text-align: right;">
           <th></th>
+          <th>amplitude_cutoff</th>
           <th>firing_rate</th>
-          <th>presence_ratio</th>
-          <th>snr</th>
           <th>isi_violations_ratio</th>
           <th>isi_violations_count</th>
-          <th>amplitude_cutoff</th>
+          <th>presence_ratio</th>
+          <th>snr</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <th>0</th>
-          <td>0.798668</td>
-          <td>1.000000</td>
-          <td>1.324698</td>
-          <td>4.591437</td>
-          <td>10</td>
           <td>0.011528</td>
+          <td>0.798668</td>
+          <td>4.591436</td>
+          <td>10.0</td>
+          <td>1.000000</td>
+          <td>1.430458</td>
         </tr>
         <tr>
           <th>1</th>
-          <td>9.886261</td>
-          <td>1.000000</td>
-          <td>1.959527</td>
-          <td>5.333803</td>
-          <td>1780</td>
           <td>0.000062</td>
+          <td>9.886262</td>
+          <td>5.333802</td>
+          <td>1780.0</td>
+          <td>1.000000</td>
+          <td>1.938214</td>
         </tr>
         <tr>
           <th>2</th>
-          <td>2.849373</td>
-          <td>1.000000</td>
-          <td>1.467690</td>
-          <td>3.859813</td>
-          <td>107</td>
           <td>0.002567</td>
+          <td>2.849373</td>
+          <td>3.859813</td>
+          <td>107.0</td>
+          <td>1.000000</td>
+          <td>1.586939</td>
         </tr>
         <tr>
           <th>3</th>
+          <td>0.000099</td>
           <td>5.404408</td>
+          <td>3.519589</td>
+          <td>351.0</td>
           <td>1.000000</td>
-          <td>1.253708</td>
-          <td>3.519590</td>
-          <td>351</td>
-          <td>0.000188</td>
+          <td>2.073651</td>
         </tr>
         <tr>
           <th>4</th>
-          <td>4.772678</td>
-          <td>1.000000</td>
-          <td>1.722377</td>
-          <td>3.947255</td>
-          <td>307</td>
           <td>0.001487</td>
+          <td>4.772678</td>
+          <td>3.947255</td>
+          <td>307.0</td>
+          <td>1.000000</td>
+          <td>1.595303</td>
         </tr>
         <tr>
           <th>5</th>
+          <td>0.001190</td>
           <td>1.802055</td>
-          <td>1.000000</td>
-          <td>2.358286</td>
           <td>6.403293</td>
-          <td>71</td>
-          <td>0.001422</td>
+          <td>71.0</td>
+          <td>1.000000</td>
+          <td>2.411436</td>
         </tr>
         <tr>
           <th>6</th>
+          <td>0.003508</td>
           <td>0.531567</td>
+          <td>94.320694</td>
+          <td>91.0</td>
           <td>0.888889</td>
-          <td>3.359229</td>
-          <td>94.320701</td>
-          <td>91</td>
-          <td>0.004900</td>
+          <td>3.377035</td>
         </tr>
         <tr>
           <th>7</th>
-          <td>5.400014</td>
-          <td>1.000000</td>
-          <td>4.653080</td>
-          <td>0.612662</td>
-          <td>61</td>
           <td>0.000119</td>
+          <td>5.400015</td>
+          <td>0.612662</td>
+          <td>61.0</td>
+          <td>1.000000</td>
+          <td>4.631496</td>
         </tr>
         <tr>
           <th>8</th>
-          <td>10.563679</td>
-          <td>1.000000</td>
-          <td>8.267220</td>
-          <td>0.073487</td>
-          <td>28</td>
           <td>0.000265</td>
+          <td>10.563680</td>
+          <td>0.073487</td>
+          <td>28.0</td>
+          <td>1.000000</td>
+          <td>8.178637</td>
         </tr>
         <tr>
           <th>9</th>
-          <td>8.181734</td>
-          <td>1.000000</td>
-          <td>4.546735</td>
-          <td>0.730646</td>
-          <td>167</td>
           <td>0.000968</td>
+          <td>8.181734</td>
+          <td>0.730646</td>
+          <td>167.0</td>
+          <td>1.000000</td>
+          <td>3.900670</td>
         </tr>
         <tr>
           <th>10</th>
-          <td>16.839681</td>
-          <td>1.000000</td>
-          <td>5.094325</td>
-          <td>0.298477</td>
-          <td>289</td>
           <td>0.000259</td>
+          <td>16.839682</td>
+          <td>0.298477</td>
+          <td>289.0</td>
+          <td>1.000000</td>
+          <td>5.044798</td>
         </tr>
         <tr>
           <th>11</th>
-          <td>0.007029</td>
-          <td>0.388889</td>
-          <td>4.032887</td>
-          <td>0.000000</td>
-          <td>0</td>
           <td>NaN</td>
+          <td>0.007029</td>
+          <td>0.000000</td>
+          <td>0.0</td>
+          <td>0.388889</td>
+          <td>4.032886</td>
         </tr>
         <tr>
           <th>12</th>
-          <td>10.184114</td>
-          <td>1.000000</td>
-          <td>4.780558</td>
-          <td>0.720070</td>
-          <td>255</td>
           <td>0.000264</td>
+          <td>10.184115</td>
+          <td>0.720070</td>
+          <td>255.0</td>
+          <td>1.000000</td>
+          <td>4.767068</td>
         </tr>
         <tr>
           <th>13</th>
+          <td>NaN</td>
           <td>0.005272</td>
+          <td>0.000000</td>
+          <td>0.0</td>
           <td>0.222222</td>
           <td>4.627749</td>
-          <td>0.000000</td>
-          <td>0</td>
-          <td>NaN</td>
         </tr>
         <tr>
           <th>14</th>
-          <td>10.047928</td>
-          <td>1.000000</td>
-          <td>4.984704</td>
-          <td>0.771631</td>
-          <td>266</td>
           <td>0.000371</td>
+          <td>10.047929</td>
+          <td>0.771631</td>
+          <td>266.0</td>
+          <td>1.000000</td>
+          <td>5.185702</td>
         </tr>
         <tr>
           <th>15</th>
+          <td>NaN</td>
           <td>0.107192</td>
+          <td>0.000000</td>
+          <td>0.0</td>
           <td>0.888889</td>
           <td>4.248180</td>
-          <td>0.000000</td>
-          <td>0</td>
-          <td>NaN</td>
         </tr>
         <tr>
           <th>16</th>
-          <td>0.535081</td>
-          <td>0.944444</td>
-          <td>2.326990</td>
-          <td>8.183362</td>
-          <td>8</td>
           <td>0.000452</td>
+          <td>0.535081</td>
+          <td>8.183362</td>
+          <td>8.0</td>
+          <td>0.944444</td>
+          <td>2.309993</td>
         </tr>
         <tr>
           <th>17</th>
-          <td>4.650549</td>
-          <td>1.000000</td>
-          <td>1.998918</td>
-          <td>6.391674</td>
-          <td>472</td>
           <td>0.000196</td>
+          <td>4.650550</td>
+          <td>6.391673</td>
+          <td>472.0</td>
+          <td>1.000000</td>
+          <td>2.064208</td>
         </tr>
         <tr>
           <th>18</th>
+          <td>NaN</td>
           <td>0.077319</td>
+          <td>293.942411</td>
+          <td>6.0</td>
           <td>0.722222</td>
           <td>6.619197</td>
-          <td>293.942433</td>
-          <td>6</td>
-          <td>NaN</td>
         </tr>
         <tr>
           <th>19</th>
-          <td>7.088727</td>
-          <td>1.000000</td>
-          <td>1.715093</td>
+          <td>0.000053</td>
+          <td>7.088728</td>
           <td>5.146421</td>
-          <td>883</td>
-          <td>0.000268</td>
+          <td>883.0</td>
+          <td>1.000000</td>
+          <td>2.057868</td>
         </tr>
         <tr>
           <th>20</th>
-          <td>9.821243</td>
+          <td>0.000071</td>
+          <td>9.821244</td>
+          <td>5.322676</td>
+          <td>1753.0</td>
           <td>1.000000</td>
-          <td>1.575338</td>
-          <td>5.322677</td>
-          <td>1753</td>
-          <td>0.000059</td>
+          <td>1.688922</td>
         </tr>
         <tr>
           <th>21</th>
-          <td>0.046567</td>
-          <td>0.666667</td>
-          <td>5.899877</td>
-          <td>405.178035</td>
-          <td>3</td>
           <td>NaN</td>
+          <td>0.046567</td>
+          <td>405.178005</td>
+          <td>3.0</td>
+          <td>0.666667</td>
+          <td>5.899876</td>
         </tr>
         <tr>
           <th>22</th>
+          <td>NaN</td>
           <td>0.094891</td>
+          <td>65.051727</td>
+          <td>2.0</td>
           <td>0.722222</td>
           <td>6.476350</td>
-          <td>65.051732</td>
-          <td>2</td>
-          <td>NaN</td>
         </tr>
         <tr>
           <th>23</th>
-          <td>1.849501</td>
-          <td>1.000000</td>
-          <td>2.493723</td>
-          <td>13.699104</td>
-          <td>160</td>
           <td>0.002927</td>
+          <td>1.849501</td>
+          <td>13.699103</td>
+          <td>160.0</td>
+          <td>1.000000</td>
+          <td>2.282473</td>
         </tr>
         <tr>
           <th>24</th>
+          <td>0.003143</td>
           <td>1.420733</td>
-          <td>1.000000</td>
-          <td>1.549977</td>
           <td>4.352889</td>
-          <td>30</td>
-          <td>0.004044</td>
+          <td>30.0</td>
+          <td>1.000000</td>
+          <td>1.573989</td>
         </tr>
         <tr>
           <th>25</th>
-          <td>0.675661</td>
-          <td>0.944444</td>
-          <td>4.110071</td>
-          <td>56.455515</td>
-          <td>88</td>
           <td>0.002457</td>
+          <td>0.675661</td>
+          <td>56.455510</td>
+          <td>88.0</td>
+          <td>0.944444</td>
+          <td>4.107643</td>
         </tr>
         <tr>
           <th>26</th>
-          <td>0.642273</td>
-          <td>1.000000</td>
-          <td>1.981111</td>
-          <td>2.129918</td>
-          <td>3</td>
           <td>0.003152</td>
+          <td>0.642273</td>
+          <td>2.129918</td>
+          <td>3.0</td>
+          <td>1.000000</td>
+          <td>1.902601</td>
         </tr>
         <tr>
           <th>27</th>
-          <td>1.012173</td>
-          <td>0.888889</td>
-          <td>1.843515</td>
-          <td>6.860925</td>
-          <td>24</td>
           <td>0.000229</td>
+          <td>1.012173</td>
+          <td>6.860924</td>
+          <td>24.0</td>
+          <td>0.888889</td>
+          <td>1.854307</td>
         </tr>
         <tr>
           <th>28</th>
-          <td>0.804818</td>
-          <td>0.888889</td>
-          <td>3.662210</td>
-          <td>38.433006</td>
-          <td>85</td>
           <td>0.002856</td>
+          <td>0.804818</td>
+          <td>38.433003</td>
+          <td>85.0</td>
+          <td>0.888889</td>
+          <td>3.755829</td>
         </tr>
         <tr>
           <th>29</th>
+          <td>0.002854</td>
           <td>1.012173</td>
-          <td>1.000000</td>
-          <td>1.097260</td>
           <td>1.143487</td>
-          <td>4</td>
-          <td>0.000845</td>
+          <td>4.0</td>
+          <td>1.000000</td>
+          <td>1.345607</td>
         </tr>
         <tr>
           <th>30</th>
-          <td>0.649302</td>
-          <td>0.888889</td>
-          <td>4.243889</td>
-          <td>63.910958</td>
-          <td>92</td>
           <td>0.005439</td>
+          <td>0.649302</td>
+          <td>63.910953</td>
+          <td>92.0</td>
+          <td>0.888889</td>
+          <td>4.168347</td>
         </tr>
       </tbody>
     </table>
@@ -1034,7 +1056,7 @@ Curation using metrics
 A very common curation approach is to threshold these metrics to select
 *good* units:
 
-.. code:: ipython
+.. code:: ipython3
 
     amplitude_cutoff_thresh = 0.1
     isi_violations_ratio_thresh = 1
@@ -1049,7 +1071,7 @@ A very common curation approach is to threshold these metrics to select
     (amplitude_cutoff < 0.1) & (isi_violations_ratio < 1) & (presence_ratio > 0.9)
 
 
-.. code:: ipython
+.. code:: ipython3
 
     keep_units = metrics.query(our_query)
     keep_unit_ids = keep_units.index.values
@@ -1071,43 +1093,43 @@ In order to export the final results we need to make a copy of the the
 waveforms, but only for the selected units (so we can avoid to compute
 them again).
 
-.. code:: ipython
+.. code:: ipython3
 
-    we_clean = we.select_units(keep_unit_ids, new_folder=base_folder / 'waveforms_clean')
+    analyzer_clean = analyzer.select_units(keep_unit_ids, folder=base_folder / 'analyzer_clean', format='binary_folder')
 
-.. code:: ipython
+.. code:: ipython3
 
-    we_clean
+    analyzer_clean
 
 
 
 
 .. parsed-literal::
 
-    WaveformExtractor: 383 channels - 6 units - 1 segments
-      before:45 after:60 n_per_units:500 - sparse
+    SortingAnalyzer: 383 channels - 6 units - 1 segments - binary_folder - sparse - has recording
+    Loaded 9 extenstions: random_spikes, waveforms, templates, noise_levels, correlograms, unit_locations, spike_amplitudes, template_similarity, quality_metrics
 
 
 
 Then we export figures to a report folder
 
-.. code:: ipython
+.. code:: ipython3
 
     # export spike sorting report to a folder
-    si.export_report(we_clean, base_folder / 'report', format='png')
+    si.export_report(analyzer_clean, base_folder / 'report', format='png')
 
-.. code:: ipython
+.. code:: ipython3
 
-    we_clean = si.load_waveforms(base_folder / 'waveforms_clean')
-    we_clean
+    analyzer_clean = si.load_sorting_analyzer(base_folder / 'analyzer_clean')
+    analyzer_clean
 
 
 
 
 .. parsed-literal::
 
-    WaveformExtractor: 383 channels - 6 units - 1 segments
-      before:45 after:60 n_per_units:500 - sparse
+    SortingAnalyzer: 383 channels - 6 units - 1 segments - binary_folder - sparse - has recording
+    Loaded 9 extenstions: random_spikes, waveforms, templates, noise_levels, template_similarity, spike_amplitudes, correlograms, unit_locations, quality_metrics
 
 
 
@@ -1115,4 +1137,4 @@ And push the results to sortingview webased viewer
 
 .. code:: python
 
-   si.plot_sorting_summary(we_clean, backend='sortingview')
+   si.plot_sorting_summary(analyzer_clean, backend='sortingview')

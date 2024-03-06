@@ -22,9 +22,9 @@ Example code
 
 	import spikeinterface.qualitymetrics as sqm
 
-	# It is also recommended to run `compute_spike_amplitudes(wvf_extractor)`
+	# It is also recommended to run sorting_analyzer.compute(input="spike_amplitudes")
 	# in order to use amplitude values from all spikes.
-	amplitude_medians = sqm.compute_amplitude_medians(waveform_extractor=wvf_extractor)
+	amplitude_medians = sqm.compute_amplitude_medians(sorting_analyzer)
 	# amplitude_medians is a dict containing the unit IDs as keys,
 	# and their estimated amplitude medians as values.
 

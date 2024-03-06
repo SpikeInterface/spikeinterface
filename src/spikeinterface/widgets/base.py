@@ -5,6 +5,9 @@ import inspect
 global default_backend_
 default_backend_ = "matplotlib"
 
+from ..core import SortingAnalyzer, BaseSorting
+from ..core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+
 
 def get_default_plotter_backend():
     """Return the default backend for spikeinterface widgets.
@@ -43,6 +46,7 @@ backend_kwargs_desc = {
         # "controllers": ""
     },
     "ephyviewer": {},
+    "spikeinterface_gui": {},
 }
 
 default_backend_kwargs = {
@@ -50,6 +54,7 @@ default_backend_kwargs = {
     "sortingview": {"generate_url": True, "display": True, "figlabel": None, "height": None},
     "ipywidgets": {"width_cm": 25, "height_cm": 10, "display": True, "controllers": None},
     "ephyviewer": {},
+    "spikeinterface_gui": {},
 }
 
 
@@ -102,18 +107,40 @@ class BaseWidget:
         func = getattr(self, f"plot_{self.backend}")
         func(self.data_plot, **self.backend_kwargs)
 
+    @classmethod
+    def ensure_sorting_analyzer(cls, input):
+        # internal help to accept both SortingAnalyzer or MockWaveformExtractor for a ploter
+        if isinstance(input, SortingAnalyzer):
+            return input
+        elif isinstance(input, MockWaveformExtractor):
+            return input.sorting_analyzer
+        else:
+            return input
+
+    @classmethod
+    def ensure_sorting(cls, input):
+        # internal help to accept both Sorting or SortingAnalyzer or MockWaveformExtractor for a ploter
+        if isinstance(input, BaseSorting):
+            return input
+        elif isinstance(input, SortingAnalyzer):
+            return input.sorting
+        elif isinstance(input, MockWaveformExtractor):
+            return input.sorting_analyzer.sorting
+        else:
+            return input
+
     @staticmethod
-    def check_extensions(waveform_extractor, extensions):
+    def check_extensions(sorting_analyzer, extensions):
         if isinstance(extensions, str):
             extensions = [extensions]
         error_msg = ""
         raise_error = False
         for extension in extensions:
-            if not waveform_extractor.has_extension(extension):
+            if not sorting_analyzer.has_extension(extension):
                 raise_error = True
                 error_msg += (
                     f"The {extension} waveform extension is required for this widget. "
-                    f"Run the `compute_{extension}` to compute it.\n"
+                    f"Run the `sorting_analyzer.compute('{extension}', ...)` to compute it.\n"
                 )
         if raise_error:
             raise Exception(error_msg)

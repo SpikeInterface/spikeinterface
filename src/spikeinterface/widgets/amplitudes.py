@@ -6,7 +6,7 @@ from warnings import warn
 from .base import BaseWidget, to_attr
 from .utils import get_some_colors
 
-from ..core.waveform_extractor import WaveformExtractor
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class AmplitudesWidget(BaseWidget):
@@ -15,7 +15,7 @@ class AmplitudesWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
+    sorting_analyzer : SortingAnalyzer
         The input waveform extractor
     unit_ids : list or None, default: None
         List of unit ids
@@ -38,7 +38,7 @@ class AmplitudesWidget(BaseWidget):
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         unit_colors=None,
         segment_index=None,
@@ -50,10 +50,13 @@ class AmplitudesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        sorting = waveform_extractor.sorting
-        self.check_extensions(waveform_extractor, "spike_amplitudes")
-        sac = waveform_extractor.load_extension("spike_amplitudes")
-        amplitudes = sac.get_data(outputs="by_unit")
+
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+
+        sorting = sorting_analyzer.sorting
+        self.check_extensions(sorting_analyzer, "spike_amplitudes")
+
+        amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(outputs="by_unit")
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
@@ -68,7 +71,7 @@ class AmplitudesWidget(BaseWidget):
         else:
             segment_index = 0
         amplitudes_segment = amplitudes[segment_index]
-        total_duration = waveform_extractor.get_num_samples(segment_index) / waveform_extractor.sampling_frequency
+        total_duration = sorting_analyzer.get_num_samples(segment_index) / sorting_analyzer.sampling_frequency
 
         spiketrains_segment = {}
         for i, unit_id in enumerate(sorting.unit_ids):
@@ -98,7 +101,7 @@ class AmplitudesWidget(BaseWidget):
             bins = 100
 
         plot_data = dict(
-            waveform_extractor=waveform_extractor,
+            sorting_analyzer=sorting_analyzer,
             amplitudes=amplitudes_to_plot,
             unit_ids=unit_ids,
             unit_colors=unit_colors,
@@ -186,7 +189,7 @@ class AmplitudesWidget(BaseWidget):
         self.next_data_plot = data_plot.copy()
 
         cm = 1 / 2.54
-        we = data_plot["waveform_extractor"]
+        we = data_plot["sorting_analyzer"]
 
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
