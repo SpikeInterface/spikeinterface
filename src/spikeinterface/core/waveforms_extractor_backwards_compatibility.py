@@ -130,6 +130,9 @@ class MockWaveformExtractor:
     def delete_waveforms(self) -> None:
         self.sorting_analyzer.delete_extension("waveforms")
 
+    def delete_extension(self, extension) -> None:
+        self.sorting_analyzer.delete_extension(extension)
+
     @property
     def recording(self) -> BaseRecording:
         return self.sorting_analyzer.recording
