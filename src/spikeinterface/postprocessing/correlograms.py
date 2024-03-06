@@ -89,7 +89,7 @@ def compute_correlograms(
     bin_ms: float = 1.0,
     method: str = "auto",
 ):
-    
+
     if isinstance(sorting_analyzer_or_sorting, MockWaveformExtractor):
         sorting_analyzer_or_sorting = sorting_analyzer_or_sorting.sorting
 
