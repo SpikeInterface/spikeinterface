@@ -195,7 +195,9 @@ def get_potential_auto_merge(
             templates = templates_ext.get_templates()
         else:
             templates = templates_ext.get_templates(operator="average")
-        assert templates_ext is not None, "auto_merge with template_similarity requires a SortingAnalyzer with extension templates or fast_templates"
+        assert (
+            templates_ext is not None
+        ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates or fast_templates"
 
         templates_diff = compute_templates_diff(
             sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask
