@@ -319,6 +319,7 @@ class ComputeTemplates(AnalyzerExtension):
 
         # spikes = self.sorting_analyzer.sorting.to_spike_vector()
         # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+        assert self.sorting_analyzer.has_extension("random_spikes"), "compute templates requires the random_spikes extension."
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
