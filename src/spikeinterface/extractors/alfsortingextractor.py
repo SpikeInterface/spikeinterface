@@ -45,12 +45,14 @@ class ALFSortingExtractor(BaseSorting):
         # check correct parent folder:
         self._folder_path = Path(folder_path)
         spikes = alfio.load_object(self._folder_path, "spikes", short_keys=True)
-        clusters = alfio.load_object(self._folder_path, "clusters", short_keys=True)
-        total_units = clusters[next(iter(clusters))].shape[0]
+        # TODO: is there a way to add context data to the sorting extractor?
+        self.alf_clusters = alfio.load_object(self._folder_path, "clusters", short_keys=True)
+        total_units = self.alf_clusters[next(iter(self.alf_clusters))].shape[0]
         unit_ids = np.arange(total_units)  # in alf format, spikes.clusters index directly into clusters
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
         sorting_segment = ALFSortingSegment(
-            spikes["clusters"], spikes["samples"] / sampling_frequency, sampling_frequency)
+            spikes["clusters"], spikes["samples"] / sampling_frequency, sampling_frequency
+        )
         self.add_sorting_segment(sorting_segment)
         self.extra_requirements.append("pandas")
         self.extra_requirements.append("ONE-api")
