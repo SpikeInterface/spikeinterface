@@ -248,6 +248,18 @@ class MockWaveformExtractor:
         templates_params = dict(operators=list(modes))
         self.sorting_analyzer.compute("templates", **templates_params)
 
+    def sample_spikes(self):
+
+        assert self.sorting_analyzer.has_extension("random_spikes"), "sample_spikes() requires the 'random_spikes' extension."
+
+        sample_spikes = dict.fromkeys(self.sorting_analyzer.unit_ids, np.array([], 'int') )
+        spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        spike_indices = self.sorting_analyzer.get_extension("random_spikes").data['random_spikes_indices']
+        for i, spike in enumerate(spikes):
+            sample_spikes[ spike['unit_index'] ] = np.append(sample_spikes[ spike['unit_index'] ], spike_indices[i] )
+
+        return sample_spikes
+
     def get_sampled_indices(self, unit_id):
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) with a complex dtype as follow
         selected_spikes = []
