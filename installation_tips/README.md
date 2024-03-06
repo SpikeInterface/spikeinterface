@@ -67,5 +67,5 @@ This script tests the following:
 ## Installing before release
 
 Some tools in the spikeinteface ecosystem are getting regular bug fixes (spikeinterface, spikeinterface-gui, probeinterface, python-neo, sortingview).
-We are making releases 2 to 4 times a year. In between releases if you want to install from source you can use the `full_spikeinterface_environement_rolling_updates.yml` file to create the environement. This will install packages of the ecosystem from source.
+We are making releases 2 to 4 times a year. In between releases if you want to install from source you can use the `full_spikeinterface_environment_rolling_updates.yml` file to create the environment. This will install the packages of the ecosystem from source.
 This is a good way to test if patch fix your issue.

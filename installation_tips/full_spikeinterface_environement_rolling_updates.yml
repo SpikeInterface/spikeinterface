@@ -1,4 +1,4 @@
-name: si_env
+name: si_env_rolling
 channels:
   - conda-forge
   - defaults
