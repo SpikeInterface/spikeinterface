@@ -17,17 +17,17 @@ Other weaknesses:
   * several units are merged into one units (overmerged units)
 
 
-To demonstrate this the script `generate_erroneous_sorting.py` generate a ground truth sorting with 10 units.
+To demonstrate this the script `generate_erroneous_sorting.py` generates a ground truth sorting with 10 units.
 We duplicate the results and modify it a bit to inject some "errors":
 
   * unit 1 2 are perfect
   * unit 3 4 have medium agreement
-  * unit 5 6 are over merge
-  * unit 7 is over split in 2 part
+  * unit 5 6 are overmerged
+  * unit 7 is oversplit in 2 parts
   * unit 8 is redundant 3 times
   * unit 9 is missing
-  * unit 10 have low agreement
-  * some units in tested do not exist at all in GT (15, 16, 17)
+  * unit 10 has low agreement
+  * some units in the tested data do not exist at all in GT (15, 16, 17)
 
 """
 
@@ -46,15 +46,15 @@ from generate_erroneous_sorting import generate_erroneous_sorting
 
 
 ##############################################################################
-# Here the agreement matrix
+# Here is the agreement matrix
 
 sorting_true, sorting_err = generate_erroneous_sorting()
 comp = compare_sorter_to_ground_truth(sorting_true, sorting_err, exhaustive_gt=True)
 sw.plot_agreement_matrix(comp, ordered=False)
 
 ##############################################################################
-# Here the same matrix but **ordered**
-# It is now quite trivial to check that fake injected errors are enlighted here.
+# Here is the same matrix but **ordered**
+# It is now quite trivial to check that fake injected errors are here.
 
 sw.plot_agreement_matrix(comp, ordered=True)
 
@@ -81,13 +81,13 @@ print("overmerged", comp.get_overmerged_units(overmerged_score=0.2))
 
 
 ##############################################################################
-# Here we can explore **"bad units"** units that a mixed a several possible errors.
+# Here we can explore **"bad units"** units that have a mix of several possible errors.
 
 print("bad", comp.get_bad_units())
 
 
 ##############################################################################
-# There is a convenient function to summary everything.
+# Here is a convenient function to summarize everything.
 
 comp.print_summary(well_detected_score=0.75, redundant_score=0.2, overmerged_score=0.2)
 
