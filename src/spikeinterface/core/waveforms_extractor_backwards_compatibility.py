@@ -131,7 +131,10 @@ class MockWaveformExtractor:
         self.sorting_analyzer.delete_extension("waveforms")
 
     def delete_extension(self, extension) -> None:
-        self.sorting_analyzer.delete_extension(extension)
+        self.sorting_analyzer.delete_extension()
+
+    def get_random_spikes(self) -> None:
+        self.sorting_analyzer.compute("random_spikes")
 
     @property
     def recording(self) -> BaseRecording:
