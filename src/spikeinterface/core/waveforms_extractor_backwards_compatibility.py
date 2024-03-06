@@ -264,7 +264,10 @@ class MockWaveformExtractor:
         # lazy and cache are ingnored
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
+
+        assert self.sorting_analyzer.has_extension("random_spikes"), "get_sampled_indices() requires the 'random_spikes' extension."
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
