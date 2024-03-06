@@ -6,7 +6,7 @@ from warnings import warn
 from .base import BaseWidget, to_attr
 from .utils import get_some_colors
 
-from ..core.waveform_extractor import WaveformExtractor
+from ..core import SortingAnalyzer
 
 
 class AllAmplitudesDistributionsWidget(BaseWidget):
@@ -15,8 +15,8 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The input waveform extractor
+    sorting_analyzer: SortingAnalyzer
+        The SortingAnalyzer
     unit_ids: list
         List of unit ids, default None
     unit_colors: None or dict
@@ -24,26 +24,34 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
     """
 
     def __init__(
-        self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
+        self, sorting_analyzer: SortingAnalyzer, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
     ):
-        we = waveform_extractor
 
-        self.check_extensions(we, "spike_amplitudes")
-        amplitudes = we.load_extension("spike_amplitudes").get_data(outputs="by_unit")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "spike_amplitudes")
 
-        num_segments = we.get_num_segments()
+        amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+
+        num_segments = sorting_analyzer.get_num_segments()
 
         if unit_ids is None:
-            unit_ids = we.unit_ids
+            unit_ids = sorting_analyzer.unit_ids
 
         if unit_colors is None:
-            unit_colors = get_some_colors(we.unit_ids)
+            unit_colors = get_some_colors(sorting_analyzer.unit_ids)
+
+        amplitudes_by_units = {}
+        spikes = sorting_analyzer.sorting.to_spike_vector()
+        for unit_id in unit_ids:
+            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+            spike_mask = spikes["unit_index"] == unit_index
+            amplitudes_by_units[unit_id] = amplitudes[spike_mask]
 
         plot_data = dict(
             unit_ids=unit_ids,
             unit_colors=unit_colors,
             num_segments=num_segments,
-            amplitudes=amplitudes,
+            amplitudes_by_units=amplitudes_by_units,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -58,14 +66,9 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
 
         ax = self.ax
 
-        unit_amps = []
-        for i, unit_id in enumerate(dp.unit_ids):
-            amps = []
-            for segment_index in range(dp.num_segments):
-                amps.append(dp.amplitudes[segment_index][unit_id])
-            amps = np.concatenate(amps)
-            unit_amps.append(amps)
-        parts = ax.violinplot(unit_amps, showmeans=False, showmedians=False, showextrema=False)
+        parts = ax.violinplot(
+            list(dp.amplitudes_by_units.values()), showmeans=False, showmedians=False, showextrema=False
+        )
 
         for i, pc in enumerate(parts["bodies"]):
             color = dp.unit_colors[dp.unit_ids[i]]

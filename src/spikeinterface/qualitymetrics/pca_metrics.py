@@ -18,17 +18,12 @@ try:
 except:
     pass
 
-from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
-from ..core.template_tools import get_template_extremum_channel
-
-from ..postprocessing import WaveformPrincipalComponent
 import warnings
 
 from .misc_metrics import compute_num_spikes, compute_firing_rates
 
-from ..core import get_random_data_chunks, load_waveforms, compute_sparsity, WaveformExtractor
+from ..core import get_random_data_chunks, compute_sparsity
 from ..core.template_tools import get_template_extremum_channel
-from ..postprocessing import WaveformPrincipalComponent
 
 
 _possible_pc_metric_names = [
@@ -63,21 +58,17 @@ def get_quality_pca_metric_list():
 
 
 def calculate_pc_metrics(
-    pca, metric_names=None, sparsity=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
+    sorting_analyzer, metric_names=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
 ):
     """Calculate principal component derived metrics.
 
     Parameters
     ----------
-    pca : WaveformPrincipalComponent
-        Waveform object with principal components computed.
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     metric_names : list of str, default: None
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
-    sparsity: ChannelSparsity or None, default: None
-        The sparsity object. This is used also to identify neighbor
-        units and speed up computations. If None all channels and all units are used
-        for each unit.
     qm_params : dict or None
         Dictionary with parameters for each PC metric function.
     unit_ids : list of int or None
@@ -94,18 +85,21 @@ def calculate_pc_metrics(
     pc_metrics : dict
         The computed PC metrics.
     """
+    pca_ext = sorting_analyzer.get_extension("principal_components")
+    assert pca_ext is not None, "calculate_pc_metrics() need extension 'principal_components'"
+
+    sorting = sorting_analyzer.sorting
+
     if metric_names is None:
         metric_names = _possible_pc_metric_names
     if qm_params is None:
         qm_params = _default_params
 
-    assert isinstance(pca, WaveformPrincipalComponent)
-    we = pca.waveform_extractor
-    extremum_channels = get_template_extremum_channel(we)
+    extremum_channels = get_template_extremum_channel(sorting_analyzer)
 
     if unit_ids is None:
-        unit_ids = we.unit_ids
-    channel_ids = we.channel_ids
+        unit_ids = sorting_analyzer.unit_ids
+    channel_ids = sorting_analyzer.channel_ids
 
     # create output dict of dict  pc_metrics['metric_name'][unit_id]
     pc_metrics = {k: {} for k in metric_names}
@@ -119,42 +113,35 @@ def calculate_pc_metrics(
 
     # Compute nspikes and firing rate outside of main loop for speed
     if any([n in metric_names for n in ["nn_isolation", "nn_noise_overlap"]]):
-        n_spikes_all_units = compute_num_spikes(we, unit_ids=unit_ids)
-        fr_all_units = compute_firing_rates(we, unit_ids=unit_ids)
+        n_spikes_all_units = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
+        fr_all_units = compute_firing_rates(sorting_analyzer, unit_ids=unit_ids)
     else:
         n_spikes_all_units = None
         fr_all_units = None
 
     run_in_parallel = n_jobs > 1
 
-    units_loop = enumerate(unit_ids)
-    if progress_bar and not run_in_parallel:
-        units_loop = tqdm(units_loop, desc="Computing PCA metrics", total=len(unit_ids))
-
     if run_in_parallel:
         parallel_functions = []
 
-    all_labels, all_pcs = pca.get_all_projections()
+    # this get dense projection for selected unit_ids
+    dense_projections, spike_unit_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)
+    all_labels = sorting.unit_ids[spike_unit_indices]
 
     items = []
     for unit_id in unit_ids:
-        if we.is_sparse():
-            neighbor_channel_ids = we.sparsity.unit_id_to_channel_ids[unit_id]
-            neighbor_unit_ids = [
-                other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
-            ]
-        elif sparsity is not None:
-            neighbor_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
+        if sorting_analyzer.is_sparse():
+            neighbor_channel_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
             neighbor_unit_ids = [
                 other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
             ]
         else:
             neighbor_channel_ids = channel_ids
             neighbor_unit_ids = unit_ids
-        neighbor_channel_indices = we.channel_ids_to_indices(neighbor_channel_ids)
+        neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
 
         labels = all_labels[np.isin(all_labels, neighbor_unit_ids)]
-        pcs = all_pcs[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
         func_args = (
@@ -165,13 +152,16 @@ def calculate_pc_metrics(
             unit_ids,
             qm_params,
             seed,
-            we.folder,
             n_spikes_all_units,
             fr_all_units,
         )
         items.append(func_args)
 
     if not run_in_parallel:
+        units_loop = enumerate(unit_ids)
+        if progress_bar:
+            units_loop = tqdm(units_loop, desc="calculate_pc_metrics", total=len(unit_ids))
+
         for unit_ind, unit_id in units_loop:
             pca_metrics_unit = pca_metrics_one_unit(items[unit_ind])
             for metric_name, metric in pca_metrics_unit.items():
@@ -180,7 +170,7 @@ def calculate_pc_metrics(
         with ProcessPoolExecutor(n_jobs) as executor:
             results = executor.map(pca_metrics_one_unit, items)
             if progress_bar:
-                results = tqdm(results, total=len(unit_ids))
+                results = tqdm(results, total=len(unit_ids), desc="calculate_pc_metrics")
 
             for ui, pca_metrics_unit in enumerate(results):
                 unit_id = unit_ids[ui]
@@ -361,8 +351,8 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
 
 
 def nearest_neighbors_isolation(
-    waveform_extractor: WaveformExtractor,
-    this_unit_id: int,
+    sorting_analyzer,
+    this_unit_id: int | str,
     n_spikes_all_units: dict = None,
     fr_all_units: dict = None,
     max_spikes: int = 1000,
@@ -379,9 +369,9 @@ def nearest_neighbors_isolation(
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    this_unit_id : int
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    this_unit_id : int | str
         The ID for the unit to calculate these metrics for.
     n_spikes_all_units: dict, default: None
         Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
@@ -406,10 +396,10 @@ def nearest_neighbors_isolation(
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
     peak_sign: "neg" | "pos" | "both", default: "neg"
-        The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
+        The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
     min_spatial_overlap : float, default: 100
-        In case waveform_extractor is sparse, other units are selected if they share at least
+        In case sorting_analyzer is sparse, other units are selected if they share at least
         `min_spatial_overlap` times `n_target_unit_channels` with the target unit
     seed : int, default: None
         Seed for random subsampling of spikes.
@@ -454,12 +444,15 @@ def nearest_neighbors_isolation(
     """
     rng = np.random.default_rng(seed=seed)
 
-    sorting = waveform_extractor.sorting
+    waveforms_ext = sorting_analyzer.get_extension("waveforms")
+    assert waveforms_ext is not None, "nearest_neighbors_isolation() need extension 'waveforms'"
+
+    sorting = sorting_analyzer.sorting
     all_units_ids = sorting.get_unit_ids()
     if n_spikes_all_units is None:
-        n_spikes_all_units = compute_num_spikes(waveform_extractor)
+        n_spikes_all_units = compute_num_spikes(sorting_analyzer)
     if fr_all_units is None:
-        fr_all_units = compute_firing_rates(waveform_extractor)
+        fr_all_units = compute_firing_rates(sorting_analyzer)
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
@@ -489,15 +482,17 @@ def nearest_neighbors_isolation(
         other_units_ids = np.setdiff1d(all_units_ids, this_unit_id)
 
         # get waveforms of target unit
-        waveforms_target_unit = waveform_extractor.get_waveforms(unit_id=this_unit_id)
+        # waveforms_target_unit = sorting_analyzer.get_waveforms(unit_id=this_unit_id)
+        waveforms_target_unit = waveforms_ext.get_waveforms_one_unit(unit_id=this_unit_id, force_dense=False)
+
         n_spikes_target_unit = waveforms_target_unit.shape[0]
 
         # find units whose signal channels (i.e. channels inside some radius around
         # the channel with largest amplitude) overlap with signal channels of the target unit
-        if waveform_extractor.is_sparse():
-            sparsity = waveform_extractor.sparsity
+        if sorting_analyzer.is_sparse():
+            sparsity = sorting_analyzer.sparsity
         else:
-            sparsity = compute_sparsity(waveform_extractor, method="radius", peak_sign=peak_sign, radius_um=radius_um)
+            sparsity = compute_sparsity(sorting_analyzer, method="radius", peak_sign=peak_sign, radius_um=radius_um)
         closest_chans_target_unit = sparsity.unit_id_to_channel_indices[this_unit_id]
         n_channels_target_unit = len(closest_chans_target_unit)
         # select other units that have a minimum spatial overlap with target unit
@@ -518,7 +513,9 @@ def nearest_neighbors_isolation(
                 len(other_units_ids),
             )
             for other_unit_id in other_units_ids:
-                waveforms_other_unit = waveform_extractor.get_waveforms(unit_id=other_unit_id)
+                # waveforms_other_unit = sorting_analyzer.get_waveforms(unit_id=other_unit_id)
+                waveforms_other_unit = waveforms_ext.get_waveforms_one_unit(unit_id=other_unit_id, force_dense=False)
+
                 n_spikes_other_unit = waveforms_other_unit.shape[0]
                 closest_chans_other_unit = sparsity.unit_id_to_channel_indices[other_unit_id]
                 n_snippets = np.min([n_spikes_target_unit, n_spikes_other_unit, max_spikes])
@@ -531,7 +528,7 @@ def nearest_neighbors_isolation(
 
                 # project this unit and other unit waveforms on common subspace
                 common_channel_idxs = np.intersect1d(closest_chans_target_unit, closest_chans_other_unit)
-                if waveform_extractor.is_sparse():
+                if sorting_analyzer.is_sparse():
                     # in this case, waveforms are sparse so we need to do some smart indexing
                     waveforms_target_unit_sampled = waveforms_target_unit_sampled[
                         :, :, np.isin(closest_chans_target_unit, common_channel_idxs)
@@ -568,8 +565,8 @@ def nearest_neighbors_isolation(
 
 
 def nearest_neighbors_noise_overlap(
-    waveform_extractor: WaveformExtractor,
-    this_unit_id: int,
+    sorting_analyzer,
+    this_unit_id: int | str,
     n_spikes_all_units: dict = None,
     fr_all_units: dict = None,
     max_spikes: int = 1000,
@@ -585,9 +582,9 @@ def nearest_neighbors_noise_overlap(
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    this_unit_id : int
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    this_unit_id : int | str
         The ID of the unit to calculate this metric on.
     n_spikes_all_units: dict, default: None
         Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
@@ -610,7 +607,7 @@ def nearest_neighbors_noise_overlap(
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
     peak_sign: "neg" | "pos" | "both", default: "neg"
-        The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
+        The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
     seed : int, default: 0
         Random seed for subsampling spikes.
@@ -641,10 +638,16 @@ def nearest_neighbors_noise_overlap(
     """
     rng = np.random.default_rng(seed=seed)
 
+    waveforms_ext = sorting_analyzer.get_extension("waveforms")
+    assert waveforms_ext is not None, "nearest_neighbors_isolation() need extension 'waveforms'"
+
+    templates_ext = sorting_analyzer.get_extension("templates")
+    assert templates_ext is not None, "nearest_neighbors_isolation() need extension 'templates'"
+
     if n_spikes_all_units is None:
-        n_spikes_all_units = compute_num_spikes(waveform_extractor)
+        n_spikes_all_units = compute_num_spikes(sorting_analyzer)
     if fr_all_units is None:
-        fr_all_units = compute_firing_rates(waveform_extractor)
+        fr_all_units = compute_firing_rates(sorting_analyzer)
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
@@ -661,18 +664,20 @@ def nearest_neighbors_noise_overlap(
         return np.nan
     else:
         # get random snippets from the recording to create a noise cluster
-        recording = waveform_extractor.recording
+        nsamples = waveforms_ext.nbefore + waveforms_ext.nafter
+        recording = sorting_analyzer.recording
         noise_cluster = get_random_data_chunks(
             recording,
-            return_scaled=waveform_extractor.return_scaled,
+            return_scaled=waveforms_ext.params["return_scaled"],
             num_chunks_per_segment=max_spikes,
-            chunk_size=waveform_extractor.nsamples,
+            chunk_size=nsamples,
             seed=seed,
         )
-        noise_cluster = np.reshape(noise_cluster, (max_spikes, waveform_extractor.nsamples, -1))
+        noise_cluster = np.reshape(noise_cluster, (max_spikes, nsamples, -1))
 
         # get waveforms for target cluster
-        waveforms = waveform_extractor.get_waveforms(unit_id=this_unit_id).copy()
+        # waveforms = sorting_analyzer.get_waveforms(unit_id=this_unit_id).copy()
+        waveforms = waveforms_ext.get_waveforms_one_unit(unit_id=this_unit_id, force_dense=False).copy()
 
         # adjust the size of the target and noise clusters to be equal
         if waveforms.shape[0] > max_spikes:
@@ -687,17 +692,21 @@ def nearest_neighbors_noise_overlap(
             n_snippets = max_spikes
 
         # restrict to channels with significant signal
-        if waveform_extractor.is_sparse():
-            sparsity = waveform_extractor.sparsity
+        if sorting_analyzer.is_sparse():
+            sparsity = sorting_analyzer.sparsity
         else:
-            sparsity = compute_sparsity(waveform_extractor, method="radius", peak_sign=peak_sign, radius_um=radius_um)
+            sparsity = compute_sparsity(sorting_analyzer, method="radius", peak_sign=peak_sign, radius_um=radius_um)
         noise_cluster = noise_cluster[:, :, sparsity.unit_id_to_channel_indices[this_unit_id]]
 
         # compute weighted noise snippet (Z)
-        median_waveform = waveform_extractor.get_template(unit_id=this_unit_id, mode="median")
+        # median_waveform = sorting_analyzer.get_template(unit_id=this_unit_id, mode="median")
+        all_templates = templates_ext.get_data(operator="median")
+        this_unit_index = sorting_analyzer.sorting.id_to_index(this_unit_id)
+        median_waveform = all_templates[this_unit_index, :, :]
 
-        # in case waveform_extractor is sparse, waveforms and templates are already sparse
-        if not waveform_extractor.is_sparse():
+        # in case sorting_analyzer is sparse, waveforms and templates are already sparse
+        if not sorting_analyzer.is_sparse():
+            # @alessio : this next line is suspicious because the waveforms is already sparse no ? Am i wrong ?
             waveforms = waveforms[:, :, sparsity.unit_id_to_channel_indices[this_unit_id]]
             median_waveform = median_waveform[:, sparsity.unit_id_to_channel_indices[this_unit_id]]
 
@@ -897,13 +906,13 @@ def pca_metrics_one_unit(args):
         unit_ids,
         qm_params,
         seed,
-        we_folder,
+        # we_folder,
         n_spikes_all_units,
         fr_all_units,
     ) = args
 
-    if "nn_isolation" in metric_names or "nn_noise_overlap" in metric_names:
-        we = load_waveforms(we_folder)
+    # if "nn_isolation" in metric_names or "nn_noise_overlap" in metric_names:
+    #     we = load_waveforms(we_folder)
 
     pc_metrics = {}
     # metrics

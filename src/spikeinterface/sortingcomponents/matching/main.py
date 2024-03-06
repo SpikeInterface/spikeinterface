@@ -30,10 +30,6 @@ def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extr
     method_kwargs:
         Optionaly returns for debug purpose.
 
-    Notes
-    -----
-    For all methods except "wobble", templates are represented as a WaveformExtractor in method_kwargs
-    so statistics can be extracted.  For "wobble" templates are represented as a numpy.ndarray.
     """
     from .method_list import matching_methods
 

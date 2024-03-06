@@ -535,39 +535,25 @@ def remove_duplicates(
     return labels, new_labels
 
 
-def remove_duplicates_via_matching(
-    waveform_extractor,
-    peak_labels,
-    method_kwargs={},
-    job_kwargs={},
-    tmp_folder=None,
-    method="circus-omp-svd",
-):
+def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor
     from spikeinterface.core import NumpySorting
-    from spikeinterface.core import extract_waveforms
     from spikeinterface.core import get_global_tmp_folder
-    import string, random, shutil, os
+    import os
     from pathlib import Path
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    if waveform_extractor.is_sparse():
-        sparsity = waveform_extractor.sparsity.mask
+    templates_array = templates.get_dense_templates()
 
-    templates = waveform_extractor.get_all_templates(mode="median").copy()
-    nb_templates = len(templates)
-    duration = waveform_extractor.nbefore + waveform_extractor.nafter
+    nb_templates = len(templates_array)
+    duration = templates.nbefore + templates.nafter
 
-    fs = waveform_extractor.recording.get_sampling_frequency()
-    num_chans = waveform_extractor.recording.get_num_channels()
+    fs = templates.sampling_frequency
+    num_chans = len(templates.channel_ids)
 
-    if waveform_extractor.is_sparse():
-        for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
-            templates[count][:, ~sparsity[count]] = 0
-
-    zdata = templates.reshape(nb_templates, -1)
+    zdata = templates_array.reshape(nb_templates, -1)
 
     padding = 2 * duration
     blanck = np.zeros(padding * num_chans, dtype=np.float32)
@@ -586,58 +572,40 @@ def remove_duplicates_via_matching(
     f.close()
 
     recording = BinaryRecordingExtractor(tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype="float32")
-    recording = recording.set_probe(waveform_extractor.recording.get_probe())
+    recording = recording.set_probe(templates.probe)
     recording.annotate(is_filtered=True)
 
-    margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
+    margin = 2 * max(templates.nbefore, templates.nafter)
     half_marging = margin // 2
-
-    chunk_size = duration + 3 * margin
 
     local_params = method_kwargs.copy()
 
-    local_params.update(
-        {"waveform_extractor": waveform_extractor, "amplitudes": [0.975, 1.025], "optimize_amplitudes": False}
-    )
-
-    spikes_per_units, counts = np.unique(waveform_extractor.sorting.to_spike_vector()["unit_index"], return_counts=True)
-    indices = np.argsort(counts)
+    local_params.update({"templates": templates, "amplitudes": [0.975, 1.025]})
 
     ignore_ids = []
     similar_templates = [[], []]
 
-    for i in indices:
+    for i in range(nb_templates):
         t_start = padding + i * duration
         t_stop = padding + (i + 1) * duration
 
         sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
         local_params.update({"ignored_ids": ignore_ids + [i]})
         spikes, computed = find_spikes_from_templates(
-            sub_recording, method=method, method_kwargs=local_params, extra_outputs=True, **job_kwargs
+            sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
         )
-        if method == "circus-omp-svd":
-            local_params.update(
-                {
-                    "overlaps": computed["overlaps"],
-                    "templates": computed["templates"],
-                    "norms": computed["norms"],
-                    "temporal": computed["temporal"],
-                    "spatial": computed["spatial"],
-                    "singular": computed["singular"],
-                    "units_overlaps": computed["units_overlaps"],
-                    "unit_overlaps_indices": computed["unit_overlaps_indices"],
-                    "sparsity_mask": computed["sparsity_mask"],
-                }
-            )
-        elif method == "circus-omp":
-            local_params.update(
-                {
-                    "overlaps": computed["overlaps"],
-                    "templates": computed["templates"],
-                    "norms": computed["norms"],
-                    "sparsities": computed["sparsities"],
-                }
-            )
+        local_params.update(
+            {
+                "overlaps": computed["overlaps"],
+                "normed_templates": computed["normed_templates"],
+                "norms": computed["norms"],
+                "temporal": computed["temporal"],
+                "spatial": computed["spatial"],
+                "singular": computed["singular"],
+                "units_overlaps": computed["units_overlaps"],
+                "unit_overlaps_indices": computed["unit_overlaps_indices"],
+            }
+        )
         valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
@@ -662,7 +630,7 @@ def remove_duplicates_via_matching(
     labels = np.unique(new_labels)
     labels = labels[labels >= 0]
 
-    del recording, sub_recording, local_params, waveform_extractor
+    del recording, sub_recording, local_params, templates
     os.remove(tmp_filename)
 
     return labels, new_labels
