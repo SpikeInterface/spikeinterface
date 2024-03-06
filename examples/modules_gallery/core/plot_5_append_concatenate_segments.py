@@ -8,7 +8,7 @@ Sometimes a recording can be split into several subparts, for instance a baselin
 
 Similarly to `NEO <https://github.com/NeuralEnsemble/python-neo>`_ we define each subpart as a "segment".
 
-SpikeInterface has tools to interacct with these segments. There are two ways:
+SpikeInterface has tools to interact with these segments. There are two ways:
 
   1. :py:func:`~spikeinterface.core.append_recordings()` and :py:func:`~spikeinterface.core.append_sortings()`
 
