@@ -33,10 +33,10 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         See neo documentation.
         Detect gaps using strict mode or not.
           * strict_gap_mode = True then a gap is consider when timstamp difference between two
-            consequtive data packet is more than one sample interval.
-          * strict_gap_mode = False then a gap has an increased tolerance. Some new system with different clock need this option
+            consecutive data packets is more than one sample interval.
+          * strict_gap_mode = False then a gap has an increased tolerance. Some new systems with different clocks need this option
             otherwise, too many gaps are detected
-        Note hat here the default is False contrary to neo.
+        Note that here the default is False contrary to neo.
     """
 
     mode = "folder"
