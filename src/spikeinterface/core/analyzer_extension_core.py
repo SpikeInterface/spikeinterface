@@ -537,7 +537,7 @@ class ComputeFastTemplates(AnalyzerExtension):
             The returned templates (num_units, num_samples, num_channels)
         """
 
-        templates = self.data['average']
+        templates = self.data["average"]
 
         if save:
             self.save()
