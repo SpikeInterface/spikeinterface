@@ -549,7 +549,7 @@ class ComputeFastTemplates(AnalyzerExtension):
 
         Parameters
         ----------
-        unit_id:
+        unit_id: str | int
             Unit id to retrieve waveforms for
 
         Returns
