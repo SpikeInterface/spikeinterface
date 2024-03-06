@@ -10,8 +10,6 @@ from spikeinterface.core.core_tools import define_function_from_class
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
-
-
 class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading neuralynx folder
@@ -34,7 +32,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     strict_gap_mode: bool, default: False
         See neo documentation.
         Detect gaps using strict mode or not.
-          * strict_gap_mode = True then a gap is consider when timstamp difference between two 
+          * strict_gap_mode = True then a gap is consider when timstamp difference between two
             consequtive data packet is more than one sample interval.
           * strict_gap_mode = False then a gap has an increased tolerance. Some new system with different clock need this option
             otherwise, too many gaps are detected
@@ -45,12 +43,23 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = "NeuralynxRawIO"
     name = "neuralynx"
 
-    def __init__(self, folder_path, stream_id=None, stream_name=None, all_annotations=False, exclude_filename=None, strict_gap_mode=False):
+    def __init__(
+        self,
+        folder_path,
+        stream_id=None,
+        stream_name=None,
+        all_annotations=False,
+        exclude_filename=None,
+        strict_gap_mode=False,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(folder_path, exclude_filename, strict_gap_mode)
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), exclude_filename=exclude_filename), strict_gap_mode=strict_gap_mode)
+        self._kwargs.update(
+            dict(folder_path=str(Path(folder_path).absolute()), exclude_filename=exclude_filename),
+            strict_gap_mode=strict_gap_mode,
+        )
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, exclude_filename, strict_gap_mode):
