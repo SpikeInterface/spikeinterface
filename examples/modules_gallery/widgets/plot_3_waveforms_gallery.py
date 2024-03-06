@@ -17,7 +17,7 @@ import spikeinterface.widgets as sw
 #  from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
 local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-recording, sorting = si.read_mearec(local_path)
+recording, sorting = se.read_mearec(local_path)
 print(recording)
 print(sorting)
 
@@ -25,8 +25,8 @@ print(sorting)
 # Extract spike waveforms
 # -----------------------
 #
-# For convenience, metrics are computed on the WaveformExtractor object that gather recording/sorting and
-# extracted waveforms in a single object
+# For convenience, metrics are computed on the SortingAnalyzer object that gathers recording/sorting and
+# the extracted waveforms in a single object
 
 
 analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recording, format="memory")
@@ -72,7 +72,7 @@ sw.plot_unit_locations(analyzer, figsize=(4, 8))
 # plot_unit_waveform_density_map()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# This is your best friend to check over merge
+# This is your best friend to check for overmerge
 
 unit_ids = sorting.unit_ids[:4]
 sw.plot_unit_waveforms_density_map(analyzer, unit_ids=unit_ids, figsize=(14, 8))
