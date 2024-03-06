@@ -37,4 +37,3 @@ dependencies:
     - spikeinterface-gui
     - tridesclous
     # - phy==2.0b5
-
