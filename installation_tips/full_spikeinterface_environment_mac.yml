@@ -27,8 +27,6 @@ dependencies:
   - ipympl
   - pip:
     - ephyviewer
-    - neo>=0.13
-    - probeinterface
     - MEArec
     - spikeinterface[full,widgets]
     - spikeinterface-gui
