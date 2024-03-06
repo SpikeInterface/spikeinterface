@@ -407,6 +407,7 @@ def load_waveforms(
     if output == "SortingAnalyzer":
         return sorting_analyzer
     elif output in ("WaveformExtractor", "MockWaveformExtractor"):
+        sorting_analyzer.compute("random_spikes")
         return MockWaveformExtractor(sorting_analyzer)
 
 
