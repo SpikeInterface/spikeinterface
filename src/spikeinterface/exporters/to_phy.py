@@ -183,9 +183,13 @@ def export_to_phy(
     templates_ext = sorting_analyzer.get_extension("templates")
     if templates_ext is None:
         templates_ext = sorting_analyzer.get_extension("fast_templates")
+        if templates_ext is not None and template_mode != "average":
+            assert False, "export_to_phy with SortingAnalyzer with extension 'fast_templates' can only work with template_mode='average'"
+        dense_templates = templates_ext.get_templates(unit_ids=unit_ids)
+    else:
+        dense_templates = templates_ext.get_templates(unit_ids=unit_ids, operator=template_mode)
     assert templates_ext is not None, "export_to_phy need SortingAnalyzer with extension 'templates' or 'fast_templates'"
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
-    dense_templates = templates_ext.get_templates(unit_ids=unit_ids, operator=template_mode)
     num_samples = dense_templates.shape[1]
     templates = np.zeros((len(unit_ids), num_samples, max_num_channels), dtype="float64")
     # here we pad template inds with -1 if len of sparse channels is unequal
