@@ -2,8 +2,8 @@
 SortingAnalyzer
 ===============
 
-SpikeInterface provides an object to gather a Recording and a Sorting to make
-analysis and visualization of the sorting : :py:class:`~spikeinterface.core.SortingAnalyzer`.
+SpikeInterface provides an object to gather a Recording and a Sorting to perform various
+analyses and visualizations of the sorting : :py:class:`~spikeinterface.core.SortingAnalyzer`.
 
 This :py:class:`~spikeinterface.core.SortingAnalyzer` class:
 
@@ -152,7 +152,7 @@ analyzer.save_as(folder="analyzer.zarr", format="zarr")
 
 
 ###############################################################################
-# The SortingAnalyzer also offeres select_units() method wich allows exporting
+# The SortingAnalyzer also offers select_units() method which allows exporting
 # only some relevant units for instance to a new SortingAnalyzer instance.
 
 analyzer_some_units = analyzer.select_units(
