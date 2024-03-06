@@ -235,6 +235,18 @@ class MockWaveformExtractor:
 
     def has_extension(self, extension_name: str) -> bool:
         return self.sorting_analyzer.has_extension(extension_name)
+    
+    def precompute_templates(self, modes=("average", "std", "median", "percentile"), percentile=None):
+        
+        modes = list(modes)
+        for i, mode in enumerate(modes):
+            if mode == "percentile":
+                assert percentile is not None, "percentile must be specified for mode='percentile'"
+                assert 0 <= percentile <= 100, "percentile must be between 0 and 100 inclusive"
+                modes[i] = (mode, percentile)
+        
+        templates_params = dict(operators=list(modes))
+        self.sorting_analyzer.compute("templates", **templates_params)
 
     def get_sampled_indices(self, unit_id):
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) with a complex dtype as follow
