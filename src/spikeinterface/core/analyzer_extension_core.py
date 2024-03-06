@@ -526,7 +526,7 @@ class ComputeFastTemplates(AnalyzerExtension):
 
         Parameters
         ----------
-        unit_ids: list or None
+        unit_ids: list or None, default: None
             Unit ids to retrieve waveforms for
 
         Returns
