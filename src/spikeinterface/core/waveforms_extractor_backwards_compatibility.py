@@ -264,6 +264,9 @@ class MockWaveformExtractor:
     def run_extract_waveforms(self):
         self.sorting_analyzer.compute("waveforms")
 
+    def select_units(self, unit_ids):
+        return self.sorting_analyzer.select_units(unit_ids)
+
     def get_sampled_indices(self, unit_id):
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) with a complex dtype as follow
         selected_spikes = []
