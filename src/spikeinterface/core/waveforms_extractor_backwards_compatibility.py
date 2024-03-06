@@ -259,6 +259,10 @@ class MockWaveformExtractor:
             sample_spikes[ spike['unit_index'] ] = np.append(sample_spikes[ spike['unit_index'] ], spike_indices[i] )
 
         return sample_spikes
+    
+
+    def run_extract_waveforms(self):
+        self.sorting_analyzer.compute("waveforms")
 
     def get_sampled_indices(self, unit_id):
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) with a complex dtype as follow
