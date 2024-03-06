@@ -21,22 +21,22 @@ class UnitSummaryWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer object
     unit_id : int or str
         The unit id to plot the summary of
     unit_colors : dict or None, default: None
         If given, a dictionary with unit ids as keys and colors as values,
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply.
-        If WaveformExtractor is already sparse, the argument is ignored
+        If SortingAnalyzer is already sparse, the argument is ignored
     """
 
     # possible_backends = {}
 
     def __init__(
         self,
-        waveform_extractor,
+        sorting_analyzer,
         unit_id,
         unit_colors=None,
         sparsity=None,
@@ -44,13 +44,14 @@ class UnitSummaryWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        we = waveform_extractor
+
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
 
         if unit_colors is None:
-            unit_colors = get_unit_colors(we.sorting)
+            unit_colors = get_unit_colors(sorting_analyzer.sorting)
 
         plot_data = dict(
-            we=we,
+            sorting_analyzer=sorting_analyzer,
             unit_id=unit_id,
             unit_colors=unit_colors,
             sparsity=sparsity,
@@ -65,7 +66,7 @@ class UnitSummaryWidget(BaseWidget):
         dp = to_attr(data_plot)
 
         unit_id = dp.unit_id
-        we = dp.we
+        sorting_analyzer = dp.sorting_analyzer
         unit_colors = dp.unit_colors
         sparsity = dp.sparsity
 
@@ -82,20 +83,25 @@ class UnitSummaryWidget(BaseWidget):
         fig = self.figure
         nrows = 2
         ncols = 3
-        if we.has_extension("correlograms") or we.has_extension("spike_amplitudes"):
+        if sorting_analyzer.has_extension("correlograms") or sorting_analyzer.has_extension("spike_amplitudes"):
             ncols += 1
-        if we.has_extension("spike_amplitudes"):
+        if sorting_analyzer.has_extension("spike_amplitudes"):
             nrows += 1
         gs = fig.add_gridspec(nrows, ncols)
 
-        if we.has_extension("unit_locations"):
+        if sorting_analyzer.has_extension("unit_locations"):
             ax1 = fig.add_subplot(gs[:2, 0])
             # UnitLocationsPlotter().do_plot(dp.plot_data_unit_locations, ax=ax1)
             w = UnitLocationsWidget(
-                we, unit_ids=[unit_id], unit_colors=unit_colors, plot_legend=False, backend="matplotlib", ax=ax1
+                sorting_analyzer,
+                unit_ids=[unit_id],
+                unit_colors=unit_colors,
+                plot_legend=False,
+                backend="matplotlib",
+                ax=ax1,
             )
 
-            unit_locations = we.load_extension("unit_locations").get_data(outputs="by_unit")
+            unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
             unit_location = unit_locations[unit_id]
             x, y = unit_location[0], unit_location[1]
             ax1.set_xlim(x - 80, x + 80)
@@ -106,7 +112,7 @@ class UnitSummaryWidget(BaseWidget):
 
         ax2 = fig.add_subplot(gs[:2, 1])
         w = UnitWaveformsWidget(
-            we,
+            sorting_analyzer,
             unit_ids=[unit_id],
             unit_colors=unit_colors,
             plot_templates=True,
@@ -121,7 +127,7 @@ class UnitSummaryWidget(BaseWidget):
 
         ax3 = fig.add_subplot(gs[:2, 2])
         UnitWaveformDensityMapWidget(
-            we,
+            sorting_analyzer,
             unit_ids=[unit_id],
             unit_colors=unit_colors,
             use_max_channel=True,
@@ -131,10 +137,10 @@ class UnitSummaryWidget(BaseWidget):
         )
         ax3.set_ylabel(None)
 
-        if we.has_extension("correlograms"):
+        if sorting_analyzer.has_extension("correlograms"):
             ax4 = fig.add_subplot(gs[:2, 3])
             AutoCorrelogramsWidget(
-                we,
+                sorting_analyzer,
                 unit_ids=[unit_id],
                 unit_colors=unit_colors,
                 backend="matplotlib",
@@ -144,12 +150,12 @@ class UnitSummaryWidget(BaseWidget):
             ax4.set_title(None)
             ax4.set_yticks([])
 
-        if we.has_extension("spike_amplitudes"):
+        if sorting_analyzer.has_extension("spike_amplitudes"):
             ax5 = fig.add_subplot(gs[2, :3])
             ax6 = fig.add_subplot(gs[2, 3])
             axes = np.array([ax5, ax6])
             AmplitudesWidget(
-                we,
+                sorting_analyzer,
                 unit_ids=[unit_id],
                 unit_colors=unit_colors,
                 plot_legend=False,

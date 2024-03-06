@@ -7,7 +7,7 @@ from .utils import get_unit_colors
 from .traces import TracesWidget
 from ..core import ChannelSparsity
 from ..core.template_tools import get_template_extremum_channel
-from ..core.waveform_extractor import WaveformExtractor
+from ..core.sortinganalyzer import SortingAnalyzer
 from ..core.baserecording import BaseRecording
 from ..core.basesorting import BaseSorting
 from ..postprocessing import compute_unit_locations
@@ -19,8 +19,8 @@ class SpikesOnTracesWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer
     channel_ids : list or None, default: None
         The channel ids to display
     unit_ids : list or None, default: None
@@ -31,7 +31,7 @@ class SpikesOnTracesWidget(BaseWidget):
         List with start time and end time in seconds
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply
-        If WaveformExtractor is already sparse, the argument is ignored
+        If SortingAnalyzer is already sparse, the argument is ignored
     unit_colors : dict or None, default: None
         If given, a dictionary with unit ids as keys and colors as values
         If None, then the get_unit_colors() is internally used. (matplotlib backend)
@@ -62,7 +62,7 @@ class SpikesOnTracesWidget(BaseWidget):
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_analyzer: SortingAnalyzer,
         segment_index=None,
         channel_ids=None,
         unit_ids=None,
@@ -83,8 +83,10 @@ class SpikesOnTracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        we = waveform_extractor
-        sorting: BaseSorting = we.sorting
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "unit_locations")
+
+        sorting: BaseSorting = sorting_analyzer.sorting
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
@@ -94,21 +96,22 @@ class SpikesOnTracesWidget(BaseWidget):
             unit_colors = get_unit_colors(sorting)
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
-        if waveform_extractor.is_sparse():
-            sparsity = waveform_extractor.sparsity
+        if sorting_analyzer.is_sparse():
+            sparsity = sorting_analyzer.sparsity
         else:
             if sparsity is None:
                 # in this case, we construct a sparsity dictionary only with the best channel
-                extremum_channel_ids = get_template_extremum_channel(we)
+                extremum_channel_ids = get_template_extremum_channel(sorting_analyzer)
                 unit_id_to_channel_ids = {u: [ch] for u, ch in extremum_channel_ids.items()}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
-                    unit_id_to_channel_ids=unit_id_to_channel_ids, unit_ids=we.unit_ids, channel_ids=we.channel_ids
+                    unit_id_to_channel_ids=unit_id_to_channel_ids,
+                    unit_ids=sorting_analyzer.unit_ids,
+                    channel_ids=sorting_analyzer.channel_ids,
                 )
             else:
                 assert isinstance(sparsity, ChannelSparsity)
 
-        # get templates
-        unit_locations = compute_unit_locations(we, outputs="by_unit")
+        unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
 
         options = dict(
             segment_index=segment_index,
@@ -127,7 +130,7 @@ class SpikesOnTracesWidget(BaseWidget):
         )
 
         plot_data = dict(
-            waveform_extractor=waveform_extractor,
+            sorting_analyzer=sorting_analyzer,
             options=options,
             unit_ids=unit_ids,
             sparsity=sparsity,
@@ -145,9 +148,9 @@ class SpikesOnTracesWidget(BaseWidget):
         from matplotlib.lines import Line2D
 
         dp = to_attr(data_plot)
-        we = dp.waveform_extractor
-        recording = we.recording
-        sorting = we.sorting
+        sorting_analyzer = dp.sorting_analyzer
+        recording = sorting_analyzer.recording
+        sorting = sorting_analyzer.sorting
 
         # first plot time series
         traces_widget = TracesWidget(recording, **dp.options, backend="matplotlib", **backend_kwargs)
@@ -210,7 +213,10 @@ class SpikesOnTracesWidget(BaseWidget):
                     vspacing = traces_widget.data_plot["vspacing"]
                     traces = traces_widget.data_plot["list_traces"][0]
 
-                    waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-we.nbefore, we.nafter) - frame_range[0]
+                    # TODO find a better way
+                    nbefore = 30
+                    nafter = 60
+                    waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-nbefore, nafter) - frame_range[0]
                     waveform_idxs = np.clip(waveform_idxs, 0, len(traces_widget.data_plot["times"]) - 1)
 
                     times = traces_widget.data_plot["times"][waveform_idxs]
@@ -242,7 +248,7 @@ class SpikesOnTracesWidget(BaseWidget):
         self.next_data_plot = data_plot.copy()
 
         dp = to_attr(data_plot)
-        we = dp.waveform_extractor
+        sorting_analyzer = dp.sorting_analyzer
 
         ratios = [0.2, 0.8]
 
@@ -253,7 +259,9 @@ class SpikesOnTracesWidget(BaseWidget):
         width_cm = backend_kwargs["width_cm"]
 
         # plot timeseries
-        self._traces_widget = TracesWidget(we.recording, **dp.options, backend="ipywidgets", **backend_kwargs_ts)
+        self._traces_widget = TracesWidget(
+            sorting_analyzer.recording, **dp.options, backend="ipywidgets", **backend_kwargs_ts
+        )
         self.ax = self._traces_widget.ax
         self.axes = self._traces_widget.axes
         self.figure = self._traces_widget.figure

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import numpy as np
-from ..core import WaveformExtractor
-from ..core.waveform_extractor import BaseWaveformExtractorExtension
+
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 try:
     import numba
@@ -12,76 +12,13 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
-    """Compute ISI histograms of spike trains.
-
-    Parameters
-    ----------
-    waveform_extractor: WaveformExtractor
-        A waveform extractor object
-    """
-
-    extension_name = "isi_histograms"
-
-    def __init__(self, waveform_extractor):
-        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
-
-    def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
-        params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
-
-        return params
-
-    def _select_extension_data(self, unit_ids):
-        # filter metrics dataframe
-        unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
-        new_isi_hists = self._extension_data["isi_histograms"][unit_indices, :]
-        new_bins = self._extension_data["bins"]
-        new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
-        return new_extension_data
-
-    def _run(self):
-        isi_histograms, bins = _compute_isi_histograms(self.waveform_extractor.sorting, **self._params)
-        self._extension_data["isi_histograms"] = isi_histograms
-        self._extension_data["bins"] = bins
-
-    def get_data(self):
-        """
-        Get the computed ISI histograms.
-
-        Returns
-        -------
-        isi_histograms : np.array
-            2D array with ISI histograms (num_units, num_bins)
-        bins : np.array
-            1D array with bins in ms
-        """
-        msg = "ISI histograms are not computed. Use the 'run()' function."
-        assert self._extension_data["isi_histograms"] is not None and self._extension_data["bins"] is not None, msg
-        return self._extension_data["isi_histograms"], self._extension_data["bins"]
-
-    @staticmethod
-    def get_extension_function():
-        return compute_isi_histograms
-
-
-WaveformExtractor.register_extension(ISIHistogramsCalculator)
-
-
-def compute_isi_histograms(
-    waveform_or_sorting_extractor,
-    load_if_exists=False,
-    window_ms: float = 50.0,
-    bin_ms: float = 1.0,
-    method: str = "auto",
-):
+class ComputeISIHistograms(AnalyzerExtension):
     """Compute ISI histograms.
 
     Parameters
     ----------
-    waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-        If WaveformExtractor, the ISI histograms are saved as WaveformExtensions
-    load_if_exists : bool, default: False
-        Whether to load precomputed crosscorrelograms, if they already exist
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     window_ms : float, default: 50
         The window in ms
     bin_ms : float, default: 1
@@ -96,17 +33,40 @@ def compute_isi_histograms(
     bins :  np.array
         The bin edges in ms
     """
-    if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
-        if load_if_exists and waveform_or_sorting_extractor.is_extension(ISIHistogramsCalculator.extension_name):
-            isic = waveform_or_sorting_extractor.load_extension(ISIHistogramsCalculator.extension_name)
-        else:
-            isic = ISIHistogramsCalculator(waveform_or_sorting_extractor)
-            isic.set_params(window_ms=window_ms, bin_ms=bin_ms, method=method)
-            isic.run()
-        isi_histograms, bins = isic.get_data()
-        return isi_histograms, bins
-    else:
-        return _compute_isi_histograms(waveform_or_sorting_extractor, window_ms=window_ms, bin_ms=bin_ms, method=method)
+
+    extension_name = "isi_histograms"
+    depend_on = []
+    need_recording = False
+    use_nodepipeline = False
+    need_job_kwargs = False
+
+    def __init__(self, sorting_analyzer):
+        AnalyzerExtension.__init__(self, sorting_analyzer)
+
+    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
+        params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
+
+        return params
+
+    def _select_extension_data(self, unit_ids):
+        # filter metrics dataframe
+        unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+        new_isi_hists = self.data["isi_histograms"][unit_indices, :]
+        new_bins = self.data["bins"]
+        new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
+        return new_extension_data
+
+    def _run(self):
+        isi_histograms, bins = _compute_isi_histograms(self.sorting_analyzer.sorting, **self.params)
+        self.data["isi_histograms"] = isi_histograms
+        self.data["bins"] = bins
+
+    def _get_data(self):
+        return self.data["isi_histograms"], self.data["bins"]
+
+
+register_result_extension(ComputeISIHistograms)
+compute_isi_histograms = ComputeISIHistograms.function_factory()
 
 
 def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
@@ -143,7 +103,7 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     window_size = int(round(fs * window_ms * 1e-3))
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
-    bins = np.arange(0, window_size + bin_size, bin_size) * 1e3 / fs
+    bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
 
     # TODO: There might be a better way than a double for loop?
@@ -153,7 +113,7 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
             ISI = np.histogram(np.diff(spike_train), bins=bins)[0]
             ISIs[i] += ISI
 
-    return ISIs, bins
+    return ISIs, bins * 1e3 / fs
 
 
 def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
@@ -177,7 +137,7 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
 
-    bins = np.arange(0, window_size + bin_size, bin_size) * 1e3 / fs
+    bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
     spikes = sorting.to_spike_vector(concatenated=False)
 
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
@@ -193,13 +153,13 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
             bins,
         )
 
-    return ISIs, bins
+    return ISIs, bins * 1e3 / fs
 
 
 if HAVE_NUMBA:
 
     @numba.jit(
-        (numba.int64[:, ::1], numba.int64[::1], numba.int32[::1], numba.float64[::1]),
+        (numba.int64[:, ::1], numba.int64[::1], numba.int32[::1], numba.int64[::1]),
         nopython=True,
         nogil=True,
         cache=True,

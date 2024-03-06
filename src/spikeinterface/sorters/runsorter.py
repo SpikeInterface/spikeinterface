@@ -34,6 +34,7 @@ REGISTRY = "spikeinterface"
 SORTER_DOCKER_MAP = dict(
     combinato="combinato",
     herdingspikes="herdingspikes",
+    kilosort4="kilosort4",
     klusta="klusta",
     mountainsort4="mountainsort4",
     mountainsort5="mountainsort5",
@@ -576,7 +577,7 @@ if __name__ == '__main__':
         os.remove(parent_folder / "in_container_params.json")
         os.remove(parent_folder / "in_container_sorter_script.py")
         if mode == "singularity":
-            shutil.rmtree(py_user_base_folder)
+            shutil.rmtree(py_user_base_folder, ignore_errors=True)
 
     # check error
     output_folder = Path(output_folder)

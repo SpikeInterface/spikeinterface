@@ -5,30 +5,30 @@ Postprocessing module
 
 After spike sorting, we can use the :py:mod:`~spikeinterface.postprocessing` module to further post-process
 the spike sorting output. Most of the post-processing functions require a
-:py:class:`~spikeinterface.core.WaveformExtractor` as input.
+:py:class:`~spikeinterface.core.SortingAnalyzer` as input.
 
 .. _waveform_extensions:
 
-WaveformExtractor extensions
+ResultExtensions
 ----------------------------
 
 There are several postprocessing tools available, and all
-of them are implemented as a :py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`. All computations on top
-of a :code:`WaveformExtractor` will be saved along side the :code:`WaveformExtractor` itself (sub folder, zarr path or sub dict).
+of them are implemented as a :py:class:`~spikeinterface.core.ResultExtension`. All computations on top
+of a :code:`SortingAnalyzer` will be saved along side the :code:`SortingAnalyzer` itself (sub folder, zarr path or sub dict).
 This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a
-:code:`WaveformExtractor`.
+:code:`SortingAnalyzer`.
 
-:py:class:`~spikeinterface.core.BaseWaveformExtractorExtension` objects are tightly connected to the
-parent :code:`WaveformExtractor` object, so that operations done on the :code:`WaveformExtractor`, such as saving,
+:py:class:`~spikeinterface.core.ResultExtension` objects are tightly connected to the
+parent :code:`SortingAnalyzer` object, so that operations done on the :code:`SortingAnalyzer`, such as saving,
 loading, or selecting units, will be automatically applied to all extensions.
 
-To check what extensions are available for a :code:`WaveformExtractor` named :code:`we`, you can use:
+To check what extensions are available for a :code:`SortingAnalyzer` named :code:`sorting_analyzer`, you can use:
 
 .. code-block:: python
 
     import spikeinterface as si
 
-    available_extension_names = we.get_available_extension_names()
+    available_extension_names = sorting_analyzer.get_load_extension_names()
     print(available_extension_names)
 
 .. code-block:: bash
@@ -40,7 +40,7 @@ To load the extension object you can run:
 
 .. code-block:: python
 
-    ext = we.load_extension("spike_amplitudes")
+    ext = sorting_analyzer.get_extension("spike_amplitudes")
     ext_data = ext.get_data()
 
 Here :code:`ext` is the extension object (in this case the :code:`SpikeAmplitudeCalculator`), and :code:`ext_data` will
@@ -52,12 +52,8 @@ We can also delete an extension:
 
 .. code-block:: python
 
-    we.delete_extension("spike_amplitudes")
+    sorting_analyzer.delete_extension("spike_amplitudes")
 
-
-
-Finally, the waveform extensions can be loaded rather than recalculated by using the :code:`load_if_exists` argument in
-any post-processing function.
 
 Available postprocessing extensions
 -----------------------------------
@@ -66,18 +62,13 @@ noise_levels
 ^^^^^^^^^^^^
 
 This extension computes the noise level of each channel using the median absolute deviation.
-As an extension, this expects the :code:`WaveformExtractor` as input and the computed values are persistent on disk.
-
-The :py:func:`~spikeinterface.core.get_noise_levels(recording)` computes the same values, but starting from a recording
-and without saving the data as an extension.
-
+As an extension, this expects the :code:`Recording` as input and the computed values are persistent on disk.
 
 .. code-block:: python
 
-    noise = compute_noise_level(waveform_extractor=we)
+    noise = compute_noise_level(recording=recording)
 
 
-For more information, see :py:func:`~spikeinterface.postprocessing.compute_noise_levels`
 
 
 
@@ -95,9 +86,9 @@ For dense waveforms, sparsity can also be passed as an argument.
 
 .. code-block:: python
 
-    pc = compute_principal_components(waveform_extractor=we,
-                                      n_components=3,
-                                      mode="by_channel_local")
+    pc = sorting_analyzer.compute(input="principal_components",
+                             n_components=3,
+                             mode="by_channel_local")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_principal_components`
 
@@ -112,7 +103,7 @@ and is not well suited for high-density probes.
 
 .. code-block:: python
 
-    similarity = compute_template_similarity(waveform_extractor=we, method='cosine_similarity')
+    similarity = sorting_analyzer.compute(input="template_similarity", method='cosine_similarity')
 
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_template_similarity`
@@ -130,9 +121,9 @@ each spike.
 
 .. code-block:: python
 
-    amplitudes = computer_spike_amplitudes(waveform_extractor=we,
-                                           peak_sign="neg",
-                                           outputs="concatenated")
+    amplitudes = sorting_analyzer.compute(input="spike_amplitudes",
+                             peak_sign="neg",
+                             outputs="concatenated")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_amplitudes`
 
@@ -150,15 +141,15 @@ with center of mass (:code:`method="center_of_mass"` - fast, but less accurate),
 
 .. code-block:: python
 
-    spike_locations = compute_spike_locations(waveform_extractor=we,
-                                              ms_before=0.5,
-                                              ms_after=0.5,
-                                              spike_retriever_kwargs=dict(
-                                                  channel_from_template=True,
-                                                  radius_um=50,
-                                                  peak_sign="neg"
+    spike_locations = sorting_analyzer.compute(input="spike_locations",
+                             ms_before=0.5,
+                             ms_after=0.5,
+                             spike_retriever_kwargs=dict(
+                                channel_from_template=True,
+                                radius_um=50,
+                                peak_sign="neg"
                                               ),
-                                              method="center_of_mass")
+                             method="center_of_mass")
 
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_locations`
@@ -175,8 +166,7 @@ based on individual waveforms, it calculates at the unit level using templates. 
 
 .. code-block:: python
 
-    unit_locations = compute_unit_locations(waveform_extractor=we,
-                                            method="monopolar_triangulation")
+    unit_locations = sorting_analyzer.compute(input="unit_locations", method="monopolar_triangulation")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_unit_locations`
 
@@ -219,10 +209,10 @@ with shape (num_units, num_units, num_bins) with all correlograms for each pair 
 
 .. code-block:: python
 
-    ccgs, bins = compute_correlograms(waveform_or_sorting_extractor=we,
-                                      window_ms=50.0,
-                                      bin_ms=1.0,
-                                      method="auto")
+    ccg = sorting_analyzer.compute(input="correlograms",
+                            window_ms=50.0,
+                            bin_ms=1.0,
+                            method="auto")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_correlograms`
 
@@ -236,10 +226,10 @@ This extension computes the histograms of inter-spike-intervals. The computed ou
 
 .. code-block:: python
 
-    isi_histogram, bins =  compute_isi_histograms(waveform_or_sorting_extractor=we,
-                                                  window_ms=50.0,
-                                                  bin_ms=1.0,
-                                                  method="auto")
+   isi =  sorting_analyer.compute(input="isi_histograms"
+                            window_ms=50.0,
+                            bin_ms=1.0,
+                            method="auto")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_isi_histograms`
 
