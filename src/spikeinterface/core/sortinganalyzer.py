@@ -219,11 +219,11 @@ class SortingAnalyzer:
         elif format == "binary_folder":
             cls.create_binary_folder(folder, sorting, recording, sparsity, rec_attributes=None)
             sorting_analyzer = cls.load_from_binary_folder(folder, recording=recording)
-            sorting_analyzer.folder = folder
+            sorting_analyzer.folder = Path(folder)
         elif format == "zarr":
             cls.create_zarr(folder, sorting, recording, sparsity, rec_attributes=None)
             sorting_analyzer = cls.load_from_zarr(folder, recording=recording)
-            sorting_analyzer.folder = folder
+            sorting_analyzer.folder = Path(folder)
         else:
             raise ValueError("SortingAnalyzer.create: wrong format")
 
@@ -752,7 +752,7 @@ class SortingAnalyzer:
 
         Parameters
         ----------
-        input: str or dict
+        input: str or dict or list
             If the input is a string then computes one extension with compute_one_extension(extension_name=input, ...)
             If the input is a dict then compute several extensions with compute_several_extensions(extensions=input)
         """
