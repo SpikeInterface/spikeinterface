@@ -142,10 +142,8 @@ def get_template_extremum_channel(
     unit_ids = templates_or_sorting_analyzer.unit_ids
     channel_ids = templates_or_sorting_analyzer.channel_ids
 
-    return_scaled = templates_or_sorting_analyzer.get_extension("templates").params["return_scaled"]
-
     peak_values = get_template_amplitudes(
-        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode
     )
     extremum_channels_id = {}
     extremum_channels_index = {}
