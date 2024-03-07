@@ -51,7 +51,7 @@ class ALFSortingExtractor(BaseSorting):
         unit_ids = np.arange(total_units)  # in alf format, spikes.clusters index directly into clusters
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
         sorting_segment = ALFSortingSegment(
-            spikes["clusters"], spikes["samples"] / sampling_frequency, sampling_frequency
+            spikes["clusters"], spikes["samples"], sampling_frequency
         )
         self.add_sorting_segment(sorting_segment)
         self.extra_requirements.append("pandas")
@@ -60,9 +60,9 @@ class ALFSortingExtractor(BaseSorting):
 
 
 class ALFSortingSegment(BaseSortingSegment):
-    def __init__(self, spike_clusters, spike_times, sampling_frequency):
+    def __init__(self, spike_clusters, spike_samples, sampling_frequency=None):
         self._spike_clusters = spike_clusters
-        self._spike_times = spike_times
+        self._spike_samples = spike_samples
         self._sampling_frequency = sampling_frequency
         BaseSortingSegment.__init__(self)
 
@@ -78,8 +78,7 @@ class ALFSortingSegment(BaseSortingSegment):
         if end_frame is None:
             end_frame = np.inf
 
-        spike_times = self._spike_times[self._spike_clusters == unit_id]
-        spike_frames = spike_times * self._sampling_frequency
+        spike_frames = self._spike_samples[self._spike_clusters == unit_id]
         return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)].astype("int64", copy=False)
 
 

@@ -278,7 +278,7 @@ class IblSortingExtractor(BaseSorting):
         total_units = clusters[next(iter(clusters))].size
         unit_ids = np.arange(total_units)  # in alf format, spikes.clusters index directly into clusters
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sr.fs)
-        sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"] / sr.fs, sr.fs)
+        sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"], sampling_frequency=sr.fs)
         self.add_sorting_segment(sorting_segment)
         self.extra_requirements.append("pandas")
         self.extra_requirements.append("ibllib")

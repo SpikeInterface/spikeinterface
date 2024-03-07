@@ -10,7 +10,7 @@ def test_alf_sorting_extractor():
     Here we generate spike train with 3 clusters in a very basic ALF format\
     and read it with the spikeinterface extractor
     """
-    rec_len_secs, firing_rate = (1000, 123)
+    rec_len_secs, firing_rate, fs = (1000, 123, 30_000)
     spike_times = []
     spike_clusters = []
     for i, fr in enumerate([123, 78, 145]):
@@ -25,9 +25,9 @@ def test_alf_sorting_extractor():
 
     with tempfile.TemporaryDirectory() as td:
         folder_path = Path(td)
-        np.save(folder_path.joinpath("spikes.times.npy"), spike_times)
+        np.save(folder_path.joinpath("spikes.samples.npy"), (spike_times * fs).astype(int))
         np.save(folder_path.joinpath("spikes.clusters.npy"), spike_clusters)
         np.save(folder_path.joinpath("clusters.channels.npy"), np.arange(3))
 
-        sorting = read_alf_sorting(folder_path, sampling_frequency=30000)
+        sorting = read_alf_sorting(folder_path, sampling_frequency=fs)
         assert sorting.get_unit_spike_train(0).size > 50_000
