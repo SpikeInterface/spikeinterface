@@ -251,6 +251,8 @@ class IblSortingExtractor(BaseSorting):
     ----------
     one: One = None
         instance of ONE.api to use for data loading
+        for multi-processing applications, this can also be a dictionary of ONE.api arguments
+        for example: one={} or one=dict(base_url='https://alyx.internationalbrainlab.org', mode='remote')
     pid: str = None
         probe insertion UUID in Alyx
     eid: str = ''
@@ -270,10 +272,15 @@ class IblSortingExtractor(BaseSorting):
     installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
 
     def __init__(self, one=None, pid=None, eid="", pname="", **kwargs):
-        # check correct parent folder:
+        self._kwargs = dict(one=one, pid=pid, eid=eid, pname=pname, **kwargs)
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
+
+            if isinstance(one, dict):
+                one = ONE(**one)
+            elif one is None:
+                raise ValueError("one must be either an instance of ONE or a dictionary of ONE arguments")
         except ImportError:
             raise ImportError(self.installation_mesg)
         self.ssl = SpikeSortingLoader(one=one, pid=pid, eid=eid, pname=pname, **kwargs)
@@ -287,7 +294,6 @@ class IblSortingExtractor(BaseSorting):
         self.add_sorting_segment(sorting_segment)
         self.extra_requirements.append("pandas")
         self.extra_requirements.append("ibllib")
-        self._kwargs = kwargs
 
 
 read_ibl_recording = define_function_from_class(source_class=IblRecordingExtractor, name="read_ibl_streaming_recording")
