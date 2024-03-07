@@ -250,10 +250,15 @@ class IblSortingExtractor(BaseSorting):
     Parameters
     ----------
     one: One = None
+        instance of ONE.api to use for data loading
     pid: str = None
+        probe insertion UUID in Alyx
     eid: str = ''
+        session UUID in Alyx (optional if pid is provided)
     pname: str = ''
-
+        probe name in Alyx (optional if pid is provided)
+    kwargs:
+        additional keyword arguments for brainbox.io.one.SpikeSortingLoader
     Returns
     -------
     extractor : IBLSortingExtractor
