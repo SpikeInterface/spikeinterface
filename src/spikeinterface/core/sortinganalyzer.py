@@ -431,7 +431,7 @@ class SortingAnalyzer:
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
         if sorting.check_serializability("json"):
-            zarr_sort = np.array([sort_dict], dtype=object)
+            zarr_sort = np.array([check_json(sort_dict)], dtype=object)
             zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
         elif sorting.check_serializability("pickle"):
             zarr_sort = np.array([sort_dict], dtype=object)
