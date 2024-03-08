@@ -310,10 +310,15 @@ class BaseRecording(BaseRecordingSnippets):
                     warnings.warn(message)
 
             if not self.has_scaled():
-                raise ValueError(
-                    "This recording does not support return_scaled=True (need gain_to_uV and offset_"
-                    "to_uV properties)"
-                )
+                if self._dtype.kind == "f":
+                    # here we do not truely have scale but we assume this is scaled
+                    # this helps a lot for simulated data
+                    pass
+                else:
+                    raise ValueError(
+                        "This recording does not support return_scaled=True (need gain_to_uV and offset_"
+                        "to_uV properties)"
+                    )
             else:
                 gains = self.get_property("gain_to_uV")
                 offsets = self.get_property("offset_to_uV")

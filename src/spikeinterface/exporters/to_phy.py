@@ -11,9 +11,9 @@ import spikeinterface
 from spikeinterface.core import (
     write_binary_recording,
     BinaryRecordingExtractor,
-    WaveformExtractor,
     BinaryFolderRecording,
     ChannelSparsity,
+    SortingAnalyzer,
 )
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.postprocessing import (
@@ -24,7 +24,7 @@ from spikeinterface.postprocessing import (
 
 
 def export_to_phy(
-    waveform_extractor: WaveformExtractor,
+    sorting_analyzer: SortingAnalyzer,
     output_folder: str | Path,
     compute_pc_features: bool = True,
     compute_amplitudes: bool = True,
@@ -43,8 +43,8 @@ def export_to_phy(
 
     Parameters
     ----------
-    waveform_extractor: a WaveformExtractor or None
-        If WaveformExtractor is provide then the compute is faster otherwise
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     output_folder: str | Path
         The output folder where the phy template-gui files are saved
     compute_pc_features: bool, default: True
@@ -60,7 +60,7 @@ def export_to_phy(
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Used by compute_spike_amplitudes
     template_mode: str, default: "median"
-        Parameter "mode" to be given to WaveformExtractor.get_template()
+        Parameter "mode" to be given to SortingAnalyzer.get_template()
     dtype: dtype or None, default: None
         Dtype to save binary data
     verbose: bool, default: True
@@ -73,36 +73,34 @@ def export_to_phy(
     """
     import pandas as pd
 
-    assert isinstance(
-        waveform_extractor, spikeinterface.core.waveform_extractor.WaveformExtractor
-    ), "waveform_extractor must be a WaveformExtractor object"
-    sorting = waveform_extractor.sorting
+    assert isinstance(sorting_analyzer, SortingAnalyzer), "sorting_analyzer must be a SortingAnalyzer object"
+    sorting = sorting_analyzer.sorting
 
     assert (
-        waveform_extractor.get_num_segments() == 1
-    ), f"Export to phy only works with one segment, your extractor has {waveform_extractor.get_num_segments()} segments"
-    num_chans = waveform_extractor.get_num_channels()
-    fs = waveform_extractor.sampling_frequency
+        sorting_analyzer.get_num_segments() == 1
+    ), f"Export to phy only works with one segment, your extractor has {sorting_analyzer.get_num_segments()} segments"
+    num_chans = sorting_analyzer.get_num_channels()
+    fs = sorting_analyzer.sampling_frequency
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     # check sparsity
-    if (num_chans > 64) and (sparsity is None and not waveform_extractor.is_sparse()):
+    if (num_chans > 64) and (sparsity is None and not sorting_analyzer.is_sparse()):
         warnings.warn(
             "Exporting to Phy with many channels and without sparsity might result in a heavy and less "
-            "informative visualization. You can use use a sparse WaveformExtractor or you can use the 'sparsity' "
+            "informative visualization. You can use use a sparse SortingAnalyzer or you can use the 'sparsity' "
             "argument to enforce sparsity (see compute_sparsity())"
         )
 
     save_sparse = True
-    if waveform_extractor.is_sparse():
-        used_sparsity = waveform_extractor.sparsity
+    if sorting_analyzer.is_sparse():
+        used_sparsity = sorting_analyzer.sparsity
         if sparsity is not None:
-            warnings.warn("If the waveform_extractor is sparse the 'sparsity' argument is ignored")
+            warnings.warn("If the sorting_analyzer is sparse the 'sparsity' argument is ignored")
     elif sparsity is not None:
         used_sparsity = sparsity
     else:
-        used_sparsity = ChannelSparsity.create_dense(waveform_extractor)
+        used_sparsity = ChannelSparsity.create_dense(sorting_analyzer)
         save_sparse = False
     # convenient sparsity dict for the 3 cases to retrieve channl_inds
     sparse_dict = used_sparsity.unit_id_to_channel_indices
@@ -121,7 +119,7 @@ def export_to_phy(
     if len(unit_ids) == 0:
         raise Exception("No non-empty units in the sorting result, can't save to Phy.")
 
-    output_folder = Path(output_folder).absolute()
+    output_folder = Path(output_folder).resolve()
     if output_folder.is_dir():
         if remove_if_exists:
             shutil.rmtree(output_folder)
@@ -132,22 +130,19 @@ def export_to_phy(
 
     # save dat file
     if dtype is None:
-        if waveform_extractor.has_recording():
-            dtype = waveform_extractor.recording.get_dtype()
-        else:
-            dtype = waveform_extractor.dtype
+        dtype = sorting_analyzer.get_dtype()
 
-    if waveform_extractor.has_recording():
+    if sorting_analyzer.has_recording():
         if copy_binary:
             rec_path = output_folder / "recording.dat"
-            write_binary_recording(waveform_extractor.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)
-        elif isinstance(waveform_extractor.recording, BinaryRecordingExtractor):
-            if isinstance(waveform_extractor.recording, BinaryFolderRecording):
-                bin_kwargs = waveform_extractor.recording._bin_kwargs
+            write_binary_recording(sorting_analyzer.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)
+        elif isinstance(sorting_analyzer.recording, BinaryRecordingExtractor):
+            if isinstance(sorting_analyzer.recording, BinaryFolderRecording):
+                bin_kwargs = sorting_analyzer.recording._bin_kwargs
             else:
-                bin_kwargs = waveform_extractor.recording._kwargs
+                bin_kwargs = sorting_analyzer.recording._kwargs
             rec_path = bin_kwargs["file_paths"][0]
-            dtype = waveform_extractor.recording.get_dtype()
+            dtype = sorting_analyzer.recording.get_dtype()
         else:
             rec_path = "None"
     else:  # don't save recording.dat
@@ -172,7 +167,7 @@ def export_to_phy(
         f.write(f"dtype = '{dtype_str}'\n")
         f.write(f"offset = 0\n")
         f.write(f"sample_rate = {fs}\n")
-        f.write(f"hp_filtered = {waveform_extractor.is_filtered()}")
+        f.write(f"hp_filtered = {sorting_analyzer.recording.is_filtered()}")
 
     # export spike_times/spike_templates/spike_clusters
     # here spike_labels is a remapping to unit_index
@@ -185,22 +180,23 @@ def export_to_phy(
 
     # export templates/templates_ind/similar_templates
     # shape (num_units, num_samples, max_num_channels)
+    templates_ext = sorting_analyzer.get_extension("templates")
+    templates_ext is not None, "export_to_phy need SortingAnalyzer with extension 'templates'"
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
-    num_samples = waveform_extractor.nbefore + waveform_extractor.nafter
+    dense_templates = templates_ext.get_templates(unit_ids=unit_ids, operator=template_mode)
+    num_samples = dense_templates.shape[1]
     templates = np.zeros((len(unit_ids), num_samples, max_num_channels), dtype="float64")
     # here we pad template inds with -1 if len of sparse channels is unequal
     templates_ind = -np.ones((len(unit_ids), max_num_channels), dtype="int64")
     for unit_ind, unit_id in enumerate(unit_ids):
         chan_inds = sparse_dict[unit_id]
-        template = waveform_extractor.get_template(unit_id, mode=template_mode, sparsity=sparsity)
+        template = dense_templates[unit_ind][:, chan_inds]
         templates[unit_ind, :, :][:, : len(chan_inds)] = template
         templates_ind[unit_ind, : len(chan_inds)] = chan_inds
 
-    if waveform_extractor.has_extension("similarity"):
-        tmc = waveform_extractor.load_extension("similarity")
-        template_similarity = tmc.get_data()
-    else:
-        template_similarity = compute_template_similarity(waveform_extractor, method="cosine_similarity")
+    if not sorting_analyzer.has_extension("template_similarity"):
+        sorting_analyzer.compute("template_similarity")
+    template_similarity = sorting_analyzer.get_extension("template_similarity").get_data()
 
     np.save(str(output_folder / "templates.npy"), templates)
     if save_sparse:
@@ -208,9 +204,9 @@ def export_to_phy(
     np.save(str(output_folder / "similar_templates.npy"), template_similarity)
 
     channel_maps = np.arange(num_chans, dtype="int32")
-    channel_map_si = waveform_extractor.channel_ids
-    channel_positions = waveform_extractor.get_channel_locations().astype("float32")
-    channel_groups = waveform_extractor.get_recording_property("group")
+    channel_map_si = sorting_analyzer.channel_ids
+    channel_positions = sorting_analyzer.get_channel_locations().astype("float32")
+    channel_groups = sorting_analyzer.get_recording_property("group")
     if channel_groups is None:
         channel_groups = np.zeros(num_chans, dtype="int32")
     np.save(str(output_folder / "channel_map.npy"), channel_maps)
@@ -219,34 +215,24 @@ def export_to_phy(
     np.save(str(output_folder / "channel_groups.npy"), channel_groups)
 
     if compute_amplitudes:
-        if waveform_extractor.has_extension("spike_amplitudes"):
-            sac = waveform_extractor.load_extension("spike_amplitudes")
-            amplitudes = sac.get_data(outputs="concatenated")
-        else:
-            amplitudes = compute_spike_amplitudes(
-                waveform_extractor, peak_sign=peak_sign, outputs="concatenated", **job_kwargs
-            )
-        # one segment only
-        amplitudes = amplitudes[0][:, np.newaxis]
+        if not sorting_analyzer.has_extension("spike_amplitudes"):
+            sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
+        amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+        amplitudes = amplitudes[:, np.newaxis]
         np.save(str(output_folder / "amplitudes.npy"), amplitudes)
 
     if compute_pc_features:
-        if waveform_extractor.has_extension("principal_components"):
-            pc = waveform_extractor.load_extension("principal_components")
-        else:
-            pc = compute_principal_components(
-                waveform_extractor, n_components=5, mode="by_channel_local", sparsity=sparsity
-            )
-        pc_sparsity = pc.get_sparsity()
-        if pc_sparsity is None:
-            pc_sparsity = used_sparsity
-        max_num_channels_pc = max(len(chan_inds) for chan_inds in pc_sparsity.unit_id_to_channel_indices.values())
+        if not sorting_analyzer.has_extension("principal_components"):
+            sorting_analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
 
-        pc.run_for_all_spikes(output_folder / "pc_features.npy", **job_kwargs)
+        pca_extension = sorting_analyzer.get_extension("principal_components")
 
+        pca_extension.run_for_all_spikes(output_folder / "pc_features.npy", **job_kwargs)
+
+        max_num_channels_pc = max(len(chan_inds) for chan_inds in used_sparsity.unit_id_to_channel_indices.values())
         pc_feature_ind = -np.ones((len(unit_ids), max_num_channels_pc), dtype="int64")
         for unit_ind, unit_id in enumerate(unit_ids):
-            chan_inds = pc_sparsity.unit_id_to_channel_indices[unit_id]
+            chan_inds = used_sparsity.unit_id_to_channel_indices[unit_id]
             pc_feature_ind[unit_ind, : len(chan_inds)] = chan_inds
         np.save(str(output_folder / "pc_feature_ind.npy"), pc_feature_ind)
 
@@ -264,9 +250,8 @@ def export_to_phy(
     channel_group = pd.DataFrame({"cluster_id": [i for i in range(len(unit_ids))], "channel_group": unit_groups})
     channel_group.to_csv(output_folder / "cluster_channel_group.tsv", sep="\t", index=False)
 
-    if waveform_extractor.has_extension("quality_metrics"):
-        qm = waveform_extractor.load_extension("quality_metrics")
-        qm_data = qm.get_data()
+    if sorting_analyzer.has_extension("quality_metrics"):
+        qm_data = sorting_analyzer.get_extension("quality_metrics").get_data()
         for column_name in qm_data.columns:
             # already computed by phy
             if column_name not in ["num_spikes", "firing_rate"]:

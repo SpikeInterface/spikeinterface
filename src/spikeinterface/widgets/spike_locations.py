@@ -4,7 +4,7 @@ import numpy as np
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from ..core.waveform_extractor import WaveformExtractor
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class SpikeLocationsWidget(BaseWidget):
@@ -13,8 +13,8 @@ class SpikeLocationsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The object to compute/get spike locations from
+    sorting_analyzer : SortingAnalyzer
+        The object to get spike locations from
     unit_ids : list or None, default: None
         List of unit ids
     segment_index : int or None, default: None
@@ -40,7 +40,7 @@ class SpikeLocationsWidget(BaseWidget):
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         segment_index=None,
         max_spikes_per_unit=500,
@@ -53,15 +53,16 @@ class SpikeLocationsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, "spike_locations")
-        slc = waveform_extractor.load_extension("spike_locations")
-        spike_locations = slc.get_data(outputs="by_unit")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "spike_locations")
 
-        sorting = waveform_extractor.sorting
+        spike_locations_by_units = sorting_analyzer.get_extension("spike_locations").get_data(outputs="by_unit")
 
-        channel_ids = waveform_extractor.channel_ids
-        channel_locations = waveform_extractor.get_channel_locations()
-        probegroup = waveform_extractor.get_probegroup()
+        sorting = sorting_analyzer.sorting
+
+        channel_ids = sorting_analyzer.channel_ids
+        channel_locations = sorting_analyzer.get_channel_locations()
+        probegroup = sorting_analyzer.get_probegroup()
 
         if sorting.get_num_segments() > 1:
             assert segment_index is not None, "Specify segment index for multi-segment object"
@@ -74,7 +75,7 @@ class SpikeLocationsWidget(BaseWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
-        all_spike_locs = spike_locations[segment_index]
+        all_spike_locs = spike_locations_by_units[segment_index]
         if max_spikes_per_unit is None:
             spike_locs = all_spike_locs
         else:

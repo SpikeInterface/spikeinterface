@@ -504,7 +504,7 @@ class SharedMemorySorting(BaseSorting):
             self.shm.unlink()
 
     @staticmethod
-    def from_sorting(source_sorting):
+    def from_sorting(source_sorting, with_metadata=False):
         spikes = source_sorting.to_spike_vector()
         shm_spikes, shm = make_shared_array(spikes.shape, spikes.dtype)
         shm_spikes[:] = spikes
@@ -517,6 +517,8 @@ class SharedMemorySorting(BaseSorting):
             main_shm_owner=True,
         )
         shm.close()
+        if with_metadata:
+            source_sorting.copy_metadata(sorting)
         return sorting
 
 

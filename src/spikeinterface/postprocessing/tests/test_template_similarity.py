@@ -1,28 +1,44 @@
 import unittest
 
-from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap, TemplateSimilarityCalculator
+from spikeinterface.postprocessing.tests.common_extension_tests import (
+    AnalyzerExtensionCommonTestSuite,
+    get_sorting_analyzer,
+    get_dataset,
+)
 
-from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
+from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap, ComputeTemplateSimilarity
 
 
-class SimilarityExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
-    extension_class = TemplateSimilarityCalculator
-    extension_data_names = ["similarity"]
+class SimilarityExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
+    extension_class = ComputeTemplateSimilarity
+    extension_function_params_list = [
+        dict(method="cosine_similarity"),
+    ]
 
-    # extend common test
-    def test_check_equal_template_with_distribution_overlap(self):
-        we = self.we1
-        for unit_id0 in we.unit_ids:
-            waveforms0 = we.get_waveforms(unit_id0)
-            for unit_id1 in we.unit_ids:
-                if unit_id0 == unit_id1:
-                    continue
-                waveforms1 = we.get_waveforms(unit_id1)
-                check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
+
+def test_check_equal_template_with_distribution_overlap():
+
+    recording, sorting = get_dataset()
+
+    sorting_analyzer = get_sorting_analyzer(recording, sorting, sparsity=None)
+    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute("waveforms")
+    sorting_analyzer.compute("templates")
+
+    wf_ext = sorting_analyzer.get_extension("waveforms")
+
+    for unit_id0 in sorting_analyzer.unit_ids:
+        waveforms0 = wf_ext.get_waveforms_one_unit(unit_id0)
+        for unit_id1 in sorting_analyzer.unit_ids:
+            if unit_id0 == unit_id1:
+                continue
+            waveforms1 = wf_ext.get_waveforms_one_unit(unit_id1)
+            check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
 
 
 if __name__ == "__main__":
-    test = SimilarityExtensionTest()
-    test.setUp()
-    test.test_extension()
-    test.test_check_equal_template_with_distribution_overlap()
+    # test = SimilarityExtensionTest()
+    # test.setUpClass()
+    # test.test_extension()
+
+    test_check_equal_template_with_distribution_overlap()
