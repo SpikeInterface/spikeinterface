@@ -507,7 +507,7 @@ class SortingAnalyzer:
         # sparsity
         if "sparsity_mask" in zarr_root.attrs:
             # sparsity = zarr_root.attrs["sparsity"]
-            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], self.unit_ids, rec_attributes["channel_ids"])
+            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], cls.unit_ids, rec_attributes["channel_ids"])
         else:
             sparsity = None
 
