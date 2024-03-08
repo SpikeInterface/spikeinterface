@@ -114,7 +114,7 @@ to combine the separate channel group recordings back together.
     combined_preprocessed_recording = aggregate_channels(preprocessed_recordings)
 
 Now, when this recording is used in sorting, plotting, or whenever
-calling it's :py:func:`~get_traces` method, the data will have been
+calling its :py:func:`~get_traces` method, the data will have been
 preprocessed separately per-channel group (then concatenated
 back together under the hood).
 
