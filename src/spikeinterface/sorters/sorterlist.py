@@ -8,6 +8,7 @@ from .external.kilosort import KilosortSorter
 from .external.kilosort2 import Kilosort2Sorter
 from .external.kilosort2_5 import Kilosort2_5Sorter
 from .external.kilosort3 import Kilosort3Sorter
+from .external.kilosort4 import Kilosort4Sorter
 from .external.pykilosort import PyKilosortSorter
 from .external.klusta import KlustaSorter
 from .external.mountainsort4 import Mountainsort4Sorter
@@ -33,6 +34,7 @@ sorter_full_list = [
     Kilosort2Sorter,
     Kilosort2_5Sorter,
     Kilosort3Sorter,
+    Kilosort4Sorter,
     PyKilosortSorter,
     KlustaSorter,
     Mountainsort4Sorter,

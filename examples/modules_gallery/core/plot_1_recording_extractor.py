@@ -48,7 +48,7 @@ print(recording)
 ##############################################################################
 # We can now print properties that the :code:`RecordingExtractor` retrieves from the underlying recording.
 
-print(f"Number of channels = {recording.get_channel_ids()}")
+print(f"Number of channels = {len(recording.get_channel_ids())}")
 print(f"Sampling frequency = {recording.get_sampling_frequency()} Hz")
 print(f"Number of segments= {recording.get_num_segments()}")
 print(f"Number of timepoints in seg0= {recording.get_num_frames(segment_index=0)}")

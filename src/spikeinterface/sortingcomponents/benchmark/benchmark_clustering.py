@@ -12,13 +12,12 @@ from spikeinterface.widgets import (
 )
 from spikeinterface.comparison.comparisontools import make_matching_events
 
+import matplotlib.patches as mpatches
+
 # from spikeinterface.postprocessing import get_template_extremum_channel
 from spikeinterface.core import get_noise_levels
 
-import time
-import string, random
 import pylab as plt
-import os
 import numpy as np
 
 
@@ -37,8 +36,7 @@ class ClusteringBenchmark(Benchmark):
         self.indices = indices
 
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("fast_templates")
+        sorting_analyzer.compute(["random_spikes", "fast_templates"])
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
 
         peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
@@ -129,16 +127,22 @@ class ClusteringStudy(BenchmarkStudy):
             if ignore_noise:
                 gt_labels = gt_labels[~noise]
                 found_labels = found_labels[~noise]
-            print(self.cases[key]["label"], homogeneity_score(gt_labels, found_labels), np.mean(noise))
+            print(
+                self.cases[key]["label"],
+                "Homogeneity:",
+                homogeneity_score(gt_labels, found_labels),
+                "Noise (%):",
+                np.mean(noise),
+            )
 
     def plot_agreements(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
-            ax = axs[count]
+            ax = axs[0, count]
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
 
@@ -169,7 +173,7 @@ class ClusteringStudy(BenchmarkStudy):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
 
@@ -196,14 +200,14 @@ class ClusteringStudy(BenchmarkStudy):
             axs[count].set_title(metric)
             fig.colorbar(im, ax=axs[count])
             label = self.cases[key]["label"]
-            axs[count].set_title(label)
+            axs[0, count].set_title(label)
 
     def plot_metrics_vs_snr(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize)
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
 
@@ -233,11 +237,69 @@ class ClusteringStudy(BenchmarkStudy):
             to_plot = []
             for found, real in zip(inds_2, inds_1):
                 to_plot += [distances[real, found]]
-            axs[count].plot(snr, to_plot, ".")
-            axs[count].set_xlabel("snr")
-            axs[count].set_ylabel(metric)
+            axs[0, count].plot(snr, to_plot, ".")
+            axs[0, count].set_xlabel("snr")
+            axs[0, count].set_ylabel(metric)
             label = self.cases[key]["label"]
-            axs[count].set_title(label)
+            axs[0, count].set_title(label)
+
+    def plot_comparison_clustering(
+        self,
+        case_keys=None,
+        performance_names=["accuracy", "recall", "precision"],
+        colors=["g", "b", "r"],
+        ylim=(-0.1, 1.1),
+        figsize=None,
+    ):
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        num_methods = len(case_keys)
+        fig, axs = plt.subplots(ncols=num_methods, nrows=num_methods, figsize=(10, 10))
+        for i, key1 in enumerate(case_keys):
+            for j, key2 in enumerate(case_keys):
+                if len(axs.shape) > 1:
+                    ax = axs[i, j]
+                else:
+                    ax = axs[j]
+                comp1 = self.get_result(key1)["gt_comparison"]
+                comp2 = self.get_result(key2)["gt_comparison"]
+                if i <= j:
+                    for performance, color in zip(performance_names, colors):
+                        perf1 = comp1.get_performance()[performance]
+                        perf2 = comp2.get_performance()[performance]
+                        ax.plot(perf2, perf1, ".", label=performance, color=color)
+
+                    ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
+                    ax.set_ylim(ylim)
+                    ax.set_xlim(ylim)
+                    ax.spines[["right", "top"]].set_visible(False)
+                    ax.set_aspect("equal")
+
+                    label1 = self.cases[key1]["label"]
+                    label2 = self.cases[key2]["label"]
+                    if j == i:
+                        ax.set_ylabel(f"{label1}")
+                    else:
+                        ax.set_yticks([])
+                    if i == j:
+                        ax.set_xlabel(f"{label2}")
+                    else:
+                        ax.set_xticks([])
+                    if i == num_methods - 1 and j == num_methods - 1:
+                        patches = []
+                        for color, name in zip(colors, performance_names):
+                            patches.append(mpatches.Patch(color=color, label=name))
+                        ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+                else:
+                    ax.spines["bottom"].set_visible(False)
+                    ax.spines["left"].set_visible(False)
+                    ax.spines["top"].set_visible(False)
+                    ax.spines["right"].set_visible(False)
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+        plt.tight_layout(h_pad=0, w_pad=0)
 
 
 #     def _scatter_clusters(

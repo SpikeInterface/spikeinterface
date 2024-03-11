@@ -2,27 +2,27 @@
 SortingAnalyzer
 ===============
 
-SpikeInterface provides an object to gather a Recording and a Sorting to make
-analyzer and visualization of the sorting : :py:class:`~spikeinterface.core.SortingAnalyzer`.
+SpikeInterface provides an object to gather a Recording and a Sorting to perform various
+analyses and visualizations of the sorting : :py:class:`~spikeinterface.core.SortingAnalyzer`.
 
 This :py:class:`~spikeinterface.core.SortingAnalyzer` class:
 
   * is the first step for all post post processing, quality metrics, and visualization.
-  * gather a recording and a sorting
-  * can be sparse or dense : all channel are used for all units or not.
+  * gathers a recording and a sorting
+  * can be sparse or dense : (i.e. whether all channel are used for all units or not).
   * handle a list of "extensions"
-  * "core extensions" are the one to extract some waveforms to compute templates:
+  * "core extensions" are the ones to extract some waveforms to compute templates:
     * "random_spikes" : select randomly a subset of spikes per unit
     * "waveforms" : extract waveforms per unit
-    * "templates": compute template using average or median
-    * "noise_levels" : compute noise level from traces (usefull to get snr of units)
+    * "templates": compute templates using average or median
+    * "noise_levels" : compute noise levels from traces (useful to get the snr of units)
   * can be in memory or persistent to disk (2 formats binary/npy or zarr)
 
-More extesions are available in `spikeinterface.postprocessing` like "principal_components", "spike_amplitudes", 
+More extensions are available in `spikeinterface.postprocessing` like "principal_components", "spike_amplitudes",
 "unit_lcations", ...
 
 
-Here the how!
+Here is the how!
 """
 
 import matplotlib.pyplot as plt
@@ -46,11 +46,11 @@ local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=N
 recording = se.MEArecRecordingExtractor(local_path)
 print(recording)
 sorting = se.MEArecSortingExtractor(local_path)
-print(recording)
+print(sorting)
 
 ###############################################################################
 # The MEArec dataset already contains a probe object that you can retrieve
-# an plot:
+# and plot:
 
 probe = recording.get_probe()
 print(probe)
@@ -68,22 +68,22 @@ analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format=
 print(analyzer)
 
 ###############################################################################
-# A :py:class:`~spikeinterface.core.SortingAnalyzer` object can be persistane to disk
+# A :py:class:`~spikeinterface.core.SortingAnalyzer` object can be persistant to disk
 # when using format="binary_folder" or format="zarr"
 
 folder = "analyzer_folder"
 analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="binary_folder", folder=folder)
 print(analyzer)
 
-# then it can be load back
+# then it can be loaded back
 analyzer = load_sorting_analyzer(folder)
 print(analyzer)
 
 ###############################################################################
-# No extension are computed yet.
+# No extensions are computed yet.
 # Lets compute the most basic ones : select some random spikes per units,
-# extract waveforms (sparse in this examples) and compute templates.
-# You can see that printing the object indicate which extension are computed yet.
+# extract waveforms (sparse in this example) and compute templates.
+# You can see that printing the object indicates which extension are already computed.
 
 analyzer.compute(
     "random_spikes",
@@ -103,14 +103,14 @@ analyzer.compute(
     "waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True, n_jobs=8, chunk_duration="1s", progress_bar=True
 )
 
-# which is equivalent of this
+# which is equivalent to this:
 job_kwargs = dict(n_jobs=8, chunk_duration="1s", progress_bar=True)
 analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True, **job_kwargs)
 
 
 ###############################################################################
 # Each extension can retrieve some data
-# For instance "waveforms" extension can retrieve wavfroms per units
+# For instance the "waveforms" extension can retrieve waveforms per units
 # which is a numpy array of shape (num_spikes, num_sample, num_channel):
 
 ext_wf = analyzer.get_extension("waveforms")
@@ -134,7 +134,7 @@ print(median_templates.shape)
 
 
 ###############################################################################
-# This can be plot easily.
+# This can be plotted easily.
 
 for unit_index, unit_id in enumerate(analyzer.unit_ids[:3]):
     fig, ax = plt.subplots()
@@ -144,14 +144,15 @@ for unit_index, unit_id in enumerate(analyzer.unit_ids[:3]):
 
 
 ###############################################################################
-# The SortingAnalyzer can be saved as to another format using save_as()
-# So the computation can be done with format="memory" and
+# The SortingAnalyzer can be saved to another format using save_as()
+# So the computation can be done with format="memory" and then saved to disk
+# in the zarr format by using save_as()
 
 analyzer.save_as(folder="analyzer.zarr", format="zarr")
 
 
 ###############################################################################
-# The SortingAnalyzer offer also select_units() method wich allows to export
+# The SortingAnalyzer also offers select_units() method which allows exporting
 # only some relevant units for instance to a new SortingAnalyzer instance.
 
 analyzer_some_units = analyzer.select_units(

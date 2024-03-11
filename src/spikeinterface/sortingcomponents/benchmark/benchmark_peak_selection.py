@@ -12,13 +12,7 @@ from spikeinterface.widgets import (
     plot_unit_templates,
     plot_unit_waveforms,
 )
-from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.comparison.comparisontools import make_matching_events
-from spikeinterface.postprocessing import (
-    get_template_extremum_channel,
-    get_template_extremum_amplitude,
-    compute_center_of_mass,
-)
 from spikeinterface.core import get_noise_levels
 
 import time
@@ -40,19 +34,14 @@ class PeakSelectionBenchmark(Benchmark):
         self.indices = indices
 
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("fast_templates")
+        sorting_analyzer.compute(["random_spikes", "fast_templates"])
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
-
-        peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-        if self.indices is None:
-            self.indices = np.arange(len(peaks))
-        self.peaks = peaks[self.indices]
+        self.gt_peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         self.params = params
         self.exhaustive_gt = exhaustive_gt
         self.method = params["method"]
         self.method_kwargs = params["method_kwargs"]
-        self.result = {}
+        self.result = {"gt_peaks": self.gt_peaks}
 
     def run(self, **job_kwargs):
         labels, peak_labels = find_cluster_from_peaks(
@@ -93,7 +82,9 @@ class PeakSelectionBenchmark(Benchmark):
         ext = sorting_analyzer.compute("fast_templates")
         self.result["clustering_templates"] = ext.get_data(outputs="Templates")
 
-    _run_key_saved = [("peak_labels", "npy")]
+    _run_key_saved = [
+        ("peak_labels", "npy"),
+    ]
 
     _result_key_saved = [
         ("gt_comparison", "pickle"),

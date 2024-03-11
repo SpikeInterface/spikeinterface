@@ -119,8 +119,9 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                     if self.mode == "zeros":
                         traces[onset:offset, :] = 0
                     elif self.mode == "noise":
+                        num_samples = traces[onset:offset, :].shape[0]
                         traces[onset:offset, :] = self.noise_levels[channel_indices] * np.random.randn(
-                            offset - onset, num_channels
+                            num_samples, num_channels
                         )
 
         return traces

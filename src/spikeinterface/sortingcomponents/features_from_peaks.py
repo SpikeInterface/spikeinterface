@@ -144,81 +144,43 @@ class PeakToPeakFeature(PipelineNode):
         return all_ptps
 
 
-class PeakToPeakLagsFeature(PipelineNode):
-    def __init__(
-        self,
-        recording,
-        name="ptp_lag_feature",
-        return_output=True,
-        parents=None,
-        radius_um=150.0,
-        all_channels=True,
-    ):
-        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
-
-        self.all_channels = all_channels
-        self.radius_um = radius_um
-
-        self.contact_locations = recording.get_channel_locations()
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance <= radius_um
-
-        self._kwargs.update(dict(radius_um=radius_um, all_channels=all_channels))
-        self._dtype = recording.get_dtype()
-
-    def get_dtype(self):
-        return self._dtype
-
-    def compute(self, traces, peaks, waveforms):
-        if self.all_channels:
-            all_maxs = np.argmax(waveforms, axis=1)
-            all_mins = np.argmin(waveforms, axis=1)
-            all_lags = all_maxs - all_mins
-        else:
-            all_lags = np.zeros(peaks.size)
-            for main_chan in np.unique(peaks["channel_index"]):
-                (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
-                (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
-                wfs = waveforms[idx][:, :, chan_inds]
-                maxs = np.argmax(wfs, axis=1)
-                mins = np.argmin(wfs, axis=1)
-                lags = maxs - mins
-                ptps = np.argmax(np.ptp(wfs, axis=1), axis=1)
-                all_lags[idx] = lags[np.arange(len(idx)), ptps]
-        return all_lags
-
-
 class RandomProjectionsFeature(PipelineNode):
     def __init__(
         self,
         recording,
         name="random_projections_feature",
+        feature="ptp",
         return_output=True,
         parents=None,
         projections=None,
-        sigmoid=None,
-        radius_um=None,
+        radius_um=100,
         sparse=True,
+        noise_threshold=None,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
+        assert feature in ["ptp", "energy"]
         self.projections = projections
-        self.sigmoid = sigmoid
+        self.feature = feature
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance <= radius_um
         self.radius_um = radius_um
         self.sparse = sparse
-        self._kwargs.update(dict(projections=projections, sigmoid=sigmoid, radius_um=radius_um, sparse=sparse))
+        self.noise_threshold = noise_threshold
+        self._kwargs.update(
+            dict(
+                projections=projections,
+                radius_um=radius_um,
+                sparse=sparse,
+                noise_threshold=noise_threshold,
+                feature=feature,
+            )
+        )
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
-
-    def _sigmoid(self, x):
-        L, x0, k, b = self.sigmoid
-        y = L / (1 + np.exp(-k * (x - x0))) + b
-        return y
 
     def compute(self, traces, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
@@ -228,175 +190,30 @@ class RandomProjectionsFeature(PipelineNode):
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
             local_projections = self.projections[chan_inds, :]
             if self.sparse:
-                wf_ptp = np.ptp(waveforms[idx][:, :, : len(chan_inds)], axis=1)
+                if self.feature == "ptp":
+                    features = np.ptp(waveforms[idx][:, :, : len(chan_inds)], axis=1)
+                elif self.feature == "energy":
+                    features = np.linalg.norm(waveforms[idx][:, :, : len(chan_inds)], axis=1)
             else:
-                wf_ptp = np.ptp(waveforms[idx][:, :, chan_inds], axis=1)
+                if self.feature == "ptp":
+                    features = np.ptp(waveforms[idx][:, :, chan_inds], axis=1)
+                elif self.feature == "energy":
+                    features = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
 
-            if self.sigmoid is not None:
-                wf_ptp *= self._sigmoid(wf_ptp)
+            if self.noise_threshold is not None:
+                local_map = np.median(features, axis=0) < self.noise_threshold
+                features[features < local_map] = 0
 
-            denom = np.sum(wf_ptp, axis=1)
+            denom = np.sum(features, axis=1)
             mask = denom != 0
-            all_projections[idx[mask]] = np.dot(wf_ptp[mask], local_projections) / (denom[mask][:, np.newaxis])
+            all_projections[idx[mask]] = np.dot(features[mask], local_projections) / (denom[mask][:, np.newaxis])
 
         return all_projections
-
-
-class RandomProjectionsEnergyFeature(PipelineNode):
-    def __init__(
-        self,
-        recording,
-        name="random_projections_energy_feature",
-        return_output=True,
-        parents=None,
-        projections=None,
-        radius_um=150.0,
-        min_values=None,
-    ):
-        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
-
-        self.contact_locations = recording.get_channel_locations()
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance <= radius_um
-
-        self.projections = projections
-        self.min_values = min_values
-        self.radius_um = radius_um
-        self._kwargs.update(dict(projections=projections, min_values=min_values, radius_um=radius_um))
-        self._dtype = recording.get_dtype()
-
-    def get_dtype(self):
-        return self._dtype
-
-    def compute(self, traces, peaks, waveforms):
-        all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
-        for main_chan in np.unique(peaks["channel_index"]):
-            (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
-            (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
-            local_projections = self.projections[chan_inds, :]
-            energies = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
-
-            if self.min_values is not None:
-                energies = (energies / self.min_values[chan_inds]) ** 4
-
-            denom = np.sum(energies, axis=1)
-            mask = denom != 0
-
-            all_projections[idx[mask]] = np.dot(energies[mask], local_projections) / (denom[mask][:, np.newaxis])
-        return all_projections
-
-
-class StdPeakToPeakFeature(PipelineNode):
-    def __init__(self, recording, name="std_ptp_feature", return_output=True, parents=None, radius_um=150.0):
-        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
-
-        self.contact_locations = recording.get_channel_locations()
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance <= radius_um
-
-        self._kwargs.update(dict(radius_um=radius_um))
-
-        self._dtype = recording.get_dtype()
-
-    def get_dtype(self):
-        return self._dtype
-
-    def compute(self, traces, peaks, waveforms):
-        all_ptps = np.zeros(peaks.size)
-        for main_chan in np.unique(peaks["channel_index"]):
-            (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
-            (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
-            wfs = waveforms[idx][:, :, chan_inds]
-            all_ptps[idx] = np.std(np.ptp(wfs, axis=1), axis=1)
-        return all_ptps
-
-
-class GlobalPeakToPeakFeature(PipelineNode):
-    def __init__(self, recording, name="global_ptp_feature", return_output=True, parents=None, radius_um=150.0):
-        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
-
-        self.contact_locations = recording.get_channel_locations()
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance <= radius_um
-
-        self._kwargs.update(dict(radius_um=radius_um))
-
-        self._dtype = recording.get_dtype()
-
-    def get_dtype(self):
-        return self._dtype
-
-    def compute(self, traces, peaks, waveforms):
-        all_ptps = np.zeros(peaks.size)
-        for main_chan in np.unique(peaks["channel_index"]):
-            (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
-            (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
-            wfs = waveforms[idx][:, :, chan_inds]
-            all_ptps[idx] = np.max(wfs, axis=(1, 2)) - np.min(wfs, axis=(1, 2))
-        return all_ptps
-
-
-class KurtosisPeakToPeakFeature(PipelineNode):
-    def __init__(self, recording, name="kurtosis_ptp_feature", return_output=True, parents=None, radius_um=150.0):
-        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
-
-        self.contact_locations = recording.get_channel_locations()
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance <= radius_um
-
-        self._kwargs.update(dict(radius_um=radius_um))
-
-        self._dtype = recording.get_dtype()
-
-    def get_dtype(self):
-        return self._dtype
-
-    def compute(self, traces, peaks, waveforms):
-        all_ptps = np.zeros(peaks.size)
-        import scipy
-
-        for main_chan in np.unique(peaks["channel_index"]):
-            (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
-            (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
-            wfs = waveforms[idx][:, :, chan_inds]
-            all_ptps[idx] = scipy.stats.kurtosis(np.ptp(wfs, axis=1), axis=1)
-        return all_ptps
-
-
-class EnergyFeature(PipelineNode):
-    def __init__(self, recording, name="energy_feature", return_output=True, parents=None, radius_um=50.0):
-        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
-
-        self.contact_locations = recording.get_channel_locations()
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance <= radius_um
-
-        self._kwargs.update(dict(radius_um=radius_um))
-
-    def get_dtype(self):
-        return np.dtype("float32")
-
-    def compute(self, traces, peaks, waveforms):
-        energy = np.zeros(peaks.size, dtype="float32")
-        for main_chan in np.unique(peaks["channel_index"]):
-            (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
-            (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
-
-            wfs = waveforms[idx][:, :, chan_inds]
-            energy[idx] = np.linalg.norm(wfs, axis=(1, 2)) / chan_inds.size
-        return energy
 
 
 _features_class = {
     "amplitude": AmplitudeFeature,
     "ptp": PeakToPeakFeature,
+    "random_projections": RandomProjectionsFeature,
     "center_of_mass": LocalizeCenterOfMass,
-    "monopolar_triangulation": LocalizeMonopolarTriangulation,
-    "energy": EnergyFeature,
-    "std_ptp": StdPeakToPeakFeature,
-    "kurtosis_ptp": KurtosisPeakToPeakFeature,
-    "random_projections_ptp": RandomProjectionsFeature,
-    "random_projections_energy": RandomProjectionsEnergyFeature,
-    "ptp_lag": PeakToPeakLagsFeature,
-    "global_ptp": GlobalPeakToPeakFeature,
 }

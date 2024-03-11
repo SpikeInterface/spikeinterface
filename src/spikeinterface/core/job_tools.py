@@ -50,6 +50,14 @@ job_keys = (
     "max_threads_per_process",
 )
 
+# theses key are the same and should not be in th final dict
+_mutually_exclusive = (
+    "total_memory",
+    "chunk_size",
+    "chunk_memory",
+    "chunk_duration",
+)
+
 
 def fix_job_kwargs(runtime_job_kwargs):
     from .globals import get_global_job_kwargs
@@ -60,6 +68,14 @@ def fix_job_kwargs(runtime_job_kwargs):
         assert k in job_keys, (
             f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
         )
+
+    # remove mutually exclusive from global job kwargs
+    for k, v in runtime_job_kwargs.items():
+        if k in _mutually_exclusive and v is not None:
+            for key_to_remove in _mutually_exclusive:
+                if key_to_remove in job_kwargs:
+                    job_kwargs.pop(key_to_remove)
+
     # remove None
     runtime_job_kwargs_exclude_none = runtime_job_kwargs.copy()
     for job_key, job_value in runtime_job_kwargs.items():

@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.14.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -28,9 +28,9 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 # +
-base_folder = Path("/mnt/data/sam/DataSpikeSorting/neuropixel_example/")
+base_folder = Path('/mnt/data/sam/DataSpikeSorting/howto_si/neuropixel_example/')
 
-spikeglx_folder = base_folder / "Rec_1_10_11_2021_g0"
+spikeglx_folder = base_folder / 'Rec_1_10_11_2021_g0'
 
 # -
 
@@ -40,14 +40,14 @@ spikeglx_folder = base_folder / "Rec_1_10_11_2021_g0"
 # We need to specify which one to read:
 #
 
-stream_names, stream_ids = si.get_neo_streams("spikeglx", spikeglx_folder)
+stream_names, stream_ids = si.get_neo_streams('spikeglx', spikeglx_folder)
 stream_names
 
 # we do not load the sync channel, so the probe is automatically loaded
-raw_rec = si.read_spikeglx(spikeglx_folder, stream_name="imec0.ap", load_sync_channel=False)
+raw_rec = si.read_spikeglx(spikeglx_folder, stream_name='imec0.ap', load_sync_channel=False)
 raw_rec
 
-# we automatically have the probe loaded!
+# we automaticaly have the probe loaded!
 raw_rec.get_probe().to_dataframe()
 
 fig, ax = plt.subplots(figsize=(15, 10))
@@ -58,15 +58,15 @@ ax.set_ylim(-100, 100)
 #
 # Let's do something similar to the IBL destriping chain (See :ref:`ibl_destripe`) to preprocess the data but:
 #
-#  * instead of interpolating bad channels, we remove them.
+#  * instead of interpolating bad channels, we remove then.
 #  * instead of highpass_spatial_filter() we use common_reference()
 #
 
 # +
-rec1 = si.highpass_filter(raw_rec, freq_min=400.0)
+rec1 = si.highpass_filter(raw_rec, freq_min=400.)
 bad_channel_ids, channel_labels = si.detect_bad_channels(rec1)
 rec2 = rec1.remove_channels(bad_channel_ids)
-print("bad_channel_ids", bad_channel_ids)
+print('bad_channel_ids', bad_channel_ids)
 
 rec3 = si.phase_shift(rec2)
 rec4 = si.common_reference(rec3, operator="median", reference="global")
@@ -78,39 +78,33 @@ rec
 
 #
 #
-# The preprocessing steps can be interactively explored with the ipywidgets interactive plotter
+# Interactive explore the preprocess steps could de done with this with the ipywydgets interactive ploter
 #
 # ```python
 # # %matplotlib widget
 # si.plot_traces({'filter':rec1, 'cmr': rec4}, backend='ipywidgets')
 # ```
 #
-# Note that using this ipywidgets make possible to explore different preprocessing chains without saving the entire file to disk.
-# Everything is lazy, so you can change the previous cell (parameters, step order, ...) and visualize it immediately.
+# Note that using this ipywydgets make possible to explore diffrents preprocessing chain wihtout to save the entire file to disk.
+# Everything is lazy, so you can change the previsous cell (parameters, step order, ...) and visualize it immediatly.
 #
 #
 
 # +
-# here we use a static plot using matplotlib backend
+# here we use static plot using matplotlib backend
 fig, axs = plt.subplots(ncols=3, figsize=(20, 10))
 
-si.plot_traces(rec1, backend="matplotlib", clim=(-50, 50), ax=axs[0])
-si.plot_traces(rec4, backend="matplotlib", clim=(-50, 50), ax=axs[1])
-si.plot_traces(rec, backend="matplotlib", clim=(-50, 50), ax=axs[2])
-for i, label in enumerate(("filter", "cmr", "final")):
+si.plot_traces(rec1, backend='matplotlib',  clim=(-50, 50), ax=axs[0])
+si.plot_traces(rec4, backend='matplotlib',  clim=(-50, 50), ax=axs[1])
+si.plot_traces(rec, backend='matplotlib',  clim=(-50, 50), ax=axs[2])
+for i, label in enumerate(('filter', 'cmr', 'final')):
     axs[i].set_title(label)
 # -
 
 # plot some channels
 fig, ax = plt.subplots(figsize=(20, 10))
-some_chans = rec.channel_ids[
-    [
-        100,
-        150,
-        200,
-    ]
-]
-si.plot_traces({"filter": rec1, "cmr": rec4}, backend="matplotlib", mode="line", ax=ax, channel_ids=some_chans)
+some_chans = rec.channel_ids[[100, 150, 200, ]]
+si.plot_traces({'filter':rec1, 'cmr': rec4}, backend='matplotlib', mode='line', ax=ax, channel_ids=some_chans)
 
 
 # ### Should we save the preprocessed data to a binary file?
@@ -119,14 +113,14 @@ si.plot_traces({"filter": rec1, "cmr": rec4}, backend="matplotlib", mode="line",
 #
 # Saving is not necessarily a good choice, as it consumes a lot of disk space and sometimes the writing to disk can be slower than recomputing the preprocessing chain on-the-fly.
 #
-# Here, we decide to save it because Kilosort requires a binary file as input, so the preprocessed recording will need to be saved at some point.
+# Here, we decide to do save it because Kilosort requires a binary file as input, so the preprocessed recording will need to be saved at some point.
 #
 # Depending on the complexity of the preprocessing chain, this operation can take a while. However, we can make use of the powerful parallelization mechanism of SpikeInterface.
 
 # +
-job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
+job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
 
-rec = rec.save(folder=base_folder / "preprocess", format="binary", **job_kwargs)
+rec = rec.save(folder=base_folder / 'preprocess', format='binary', **job_kwargs)
 # -
 
 # our recording now points to the new binary folder
@@ -134,7 +128,7 @@ rec
 
 # ## Check spiking activity and drift before spike sorting
 #
-# A good practice before running a spike sorter is to check the "peaks activity" and the presence of drift.
+# A good practice before running a spike sorter is to check the "peaks activity" and the presence of drifts.
 #
 # SpikeInterface has several tools to:
 #
@@ -148,24 +142,24 @@ rec
 # Noise levels can be estimated on the scaled traces or on the raw (`int16`) traces.
 #
 
-# we can estimate the noise on the scaled traces (microV) or on the raw ones (which in our case are int16).
+# we can estimate the noise on the scaled traces (microV) or on the raw one (which is in our case int16).
 noise_levels_microV = si.get_noise_levels(rec, return_scaled=True)
 noise_levels_int16 = si.get_noise_levels(rec, return_scaled=False)
 
 
 fig, ax = plt.subplots()
 _ = ax.hist(noise_levels_microV, bins=np.arange(5, 30, 2.5))
-ax.set_xlabel("noise  [microV]")
+ax.set_xlabel('noise  [microV]')
 
 # ### Detect and localize peaks
 #
-# SpikeInterface includes built-in algorithms to detect peaks and also to localize their positions.
+# SpikeInterface includes built-in algorithms to detect peaks and also to localize their position.
 #
 # This is part of the **sortingcomponents** module and needs to be imported explicitly.
 #
 # The two functions (detect + localize):
 #
-#   * can be run in parallel
+#   * can be run parallel
 #   * are very fast when the preprocessed recording is already saved (and a bit slower otherwise)
 #   * implement several methods
 #
@@ -174,52 +168,51 @@ ax.set_xlabel("noise  [microV]")
 # +
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
-peaks = detect_peaks(
-    rec, method="locally_exclusive", noise_levels=noise_levels_int16, detect_threshold=5, radius_um=50.0, **job_kwargs
-)
+job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
+peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
+                     detect_threshold=5, radius_um=50., **job_kwargs)
 peaks
 
 # +
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-peak_locations = localize_peaks(rec, peaks, method="center_of_mass", radius_um=50.0, **job_kwargs)
+peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
 # -
 
-# ### Check for drift
+# ### Check for drifts
 #
-# We can *manually* check for drift with a simple scatter plots of peak times VS estimated peak depths.
+# We can *manually* check for drifts with a simple scatter plots of peak times VS estimated peak depths.
 #
 # In this example, we do not see any apparent drift.
 #
-# In case we notice apparent drift in the recording, one can use the SpikeInterface modules to estimate and correct motion. See the documentation for motion estimation and correction for more details.
+# In case we notice apparent drifts in the recording, one can use the SpikeInterface modules to estimate and correct motion. See the documentation for motion estimation and correction for more details.
 
-# check for drift
+# check for drifts
 fs = rec.sampling_frequency
 fig, ax = plt.subplots(figsize=(10, 8))
-ax.scatter(peaks["sample_index"] / fs, peak_locations["y"], color="k", marker=".", alpha=0.002)
+ax.scatter(peaks['sample_ind'] / fs, peak_locations['y'], color='k', marker='.',  alpha=0.002)
 
 
 # +
-# we can also use the peak location estimates to have insight of cluster separation before sorting
+# we can also use the peak location estimates to have an insight of cluster separation before sorting
 fig, ax = plt.subplots(figsize=(15, 10))
 si.plot_probe_map(rec, ax=ax, with_channel_ids=True)
 ax.set_ylim(-100, 150)
 
-ax.scatter(peak_locations["x"], peak_locations["y"], color="purple", alpha=0.002)
+ax.scatter(peak_locations['x'], peak_locations['y'], color='purple', alpha=0.002)
 # -
 
 # ## Run a spike sorter
 #
-# Despite beingthe most critical part of the pipeline, spike sorting in SpikeInterface is dead-simple: one function.
+# Even if running spike sorting is probably the most critical part of the pipeline, in SpikeInterface this is dead-simple: one function.
 #
 # **Important notes**:
 #
-#   * most of sorters are wrapped from external tools (kilosort, kilosort2.5, spykingcircus, mountainsort4 ...) that often also need other requirements (e.g., MATLAB, CUDA)
-#   * some sorters are internally developed (spykingcircus2)
-#   * external sorters can be run inside of a container (docker, singularity) WITHOUT pre-installation
+#   * most of sorters are wrapped from external tools (kilosort, kisolort2.5, spykingcircus, montainsort4 ...) that often also need other requirements (e.g., MATLAB, CUDA)
+#   * some sorters are internally developed (spyekingcircus2)
+#   * external sorter can be run inside a container (docker, singularity) WITHOUT pre-installation
 #
-# Please carefully read the `spikeinterface.sorters` documentation for more information.
+# Please carwfully read the `spikeinterface.sorters` documentation for more information.
 #
 # In this example:
 #
@@ -229,82 +222,94 @@ ax.scatter(peak_locations["x"], peak_locations["y"], color="purple", alpha=0.002
 #
 
 # check default params for kilosort2.5
-si.get_default_sorter_params("kilosort2_5")
+si.get_default_sorter_params('kilosort2_5')
 
 # +
 # run kilosort2.5 without drift correction
-params_kilosort2_5 = {"do_correction": False}
+params_kilosort2_5 = {'do_correction': False}
 
-sorting = si.run_sorter(
-    "kilosort2_5",
-    rec,
-    output_folder=base_folder / "kilosort2.5_output",
-    docker_image=True,
-    verbose=True,
-    **params_kilosort2_5,
-)
+sorting = si.run_sorter('kilosort2_5', rec, output_folder=base_folder / 'kilosort2.5_output',
+                        docker_image=True, verbose=True, **params_kilosort2_5)
 # -
 
-# the results can be read back for future sessions
-sorting = si.read_sorter_folder(base_folder / "kilosort2.5_output")
+# the results can be read back for futur session
+sorting = si.read_sorter_folder(base_folder / 'kilosort2.5_output')
 
-# here we have 31 units in our recording
+# here we have 31 untis in our recording
 sorting
 
 # ## Post processing
 #
-# All postprocessing steps are based on the **WaveformExtractor** object.
+# All the postprocessing step is based on the **SortingAnalyzer** object.
 #
-# This object combines a `recording` and a `sorting` object and extracts some waveform snippets (500 by default) for each unit.
+# This object combines a `sorting` and a `recording` object. It will also help to run some computation aka "extensions" to
+# get an insight on the qulity of units.
+#
+# The first extentions we will run are:
+#   * select some spikes per units
+#   * etxract waveforms
+#   * compute templates
+#   * compute noise levels
 #
 # Note that we use the `sparse=True` option. This option is important because the waveforms will be extracted only for a few channels around the main channel of each unit. This saves tons of disk space and speeds up the waveforms extraction and further processing.
 #
+# Note that our object is not persistent to disk because we use `format="memory"` we could use `format="binary_folder"` or `format="zarr"`.
 
-we = si.extract_waveforms(
-    rec,
-    sorting,
-    folder=base_folder / "waveforms_kilosort2.5",
-    sparse=True,
-    max_spikes_per_unit=500,
-    ms_before=1.5,
-    ms_after=2.0,
-    **job_kwargs,
-)
+# +
 
-# the `WaveformExtractor` contains all information and is persistent on disk
-print(we)
-print(we.folder)
+analyzer = si.create_sorting_analyzer(sorting, rec, sparse=True, format="memory")
+analyzer
+# -
 
-# the `WaveformExtrator` can be easily loaded back from its folder
-we = si.load_waveforms(base_folder / "waveforms_kilosort2.5")
-we
+analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500)
+analyzer.compute("waveforms",  ms_before=1.5,ms_after=2., **job_kwargs)
+analyzer.compute("templates", operators=["average", "median", "std"])
+analyzer.compute("noise_levels")
+analyzer
 
-# Many additional computations rely on the `WaveformExtractor`.
+# Many additional computations rely on the `SortingAnalyzer`.
 # Some computations are slower than others, but can be performed in parallel using the `**job_kwargs` mechanism.
 #
-# Every computation will also be persistent on disk in the same folder, since they represent waveform extensions.
+#
 
-_ = si.compute_noise_levels(we)
-_ = si.compute_correlograms(we)
-_ = si.compute_unit_locations(we)
-_ = si.compute_spike_amplitudes(we, **job_kwargs)
-_ = si.compute_template_similarity(we)
+analyzer.compute("correlograms")
+analyzer.compute("unit_locations")
+analyzer.compute("spike_amplitudes", **job_kwargs)
+analyzer.compute("template_similarity")
+analyzer
 
+
+# Our `SortingAnalyzer` can be saved to disk using `save_as()` which make a copy of the analyzer and all computed extensions.
+
+analyzer_saved = analyzer.save_as(folder=base_folder / "analyzer", format="binary_folder")
+analyzer_saved
 
 # ## Quality metrics
 #
-# We have a single function `compute_quality_metrics(WaveformExtractor)` that returns a `pandas.Dataframe` with the desired metrics.
+# We have a single function `compute_quality_metrics(SortingAnalyzer)` that returns a `pandas.Dataframe` with the desired metrics.
+#
+# Note that this function is also an extension and so can be saved. And so this is equivalent to do :
+# `metrics = analyzer.compute("quality_metrics").get_data()`
+#
 #
 # Please visit the [metrics documentation](https://spikeinterface.readthedocs.io/en/latest/modules/qualitymetrics.html) for more information and a list of all supported metrics.
 #
-# Some metrics are based on PCA (like `'isolation_distance', 'l_ratio', 'd_prime'`) and require PCA values for their computation. This can be achieved with:
+# Some metrics are based on PCA (like `'isolation_distance', 'l_ratio', 'd_prime'`) and require to estimate PCA for their computation. This can be achieved with:
 #
-# `si.compute_principal_components(waveform_extractor)`
+# `analyzer.compute("principal_components")`
+#
+#
 
-metrics = si.compute_quality_metrics(
-    we, metric_names=["firing_rate", "presence_ratio", "snr", "isi_violation", "amplitude_cutoff"]
-)
+# +
+metric_names=['firing_rate', 'presence_ratio', 'snr', 'isi_violation', 'amplitude_cutoff']
+
+
+# metrics = analyzer.compute("quality_metrics").get_data()
+# equivalent to
+metrics = si.compute_quality_metrics(analyzer, metric_names=metric_names)
+
 metrics
+# -
 
 # ## Curation using metrics
 #
@@ -325,22 +330,22 @@ keep_unit_ids
 
 # ## Export final results to disk folder and visulize with sortingview
 #
-# In order to export the final results we need to make a copy of the the waveforms, but only for the selected units (so we can avoid computing them again).
+# In order to export the final results we need to make a copy of the the waveforms, but only for the selected units (so we can avoid to compute them again).
 
-we_clean = we.select_units(keep_unit_ids, new_folder=base_folder / "waveforms_clean")
+analyzer_clean = analyzer.select_units(keep_unit_ids, folder=base_folder / 'analyzer_clean', format='binary_folder')
 
-we_clean
+analyzer_clean
 
 # Then we export figures to a report folder
 
 # export spike sorting report to a folder
-si.export_report(we_clean, base_folder / "report", format="png")
+si.export_report(analyzer_clean, base_folder / 'report', format='png')
 
-we_clean = si.load_waveforms(base_folder / "waveforms_clean")
-we_clean
+analyzer_clean = si.load_sorting_analyzer(base_folder / 'analyzer_clean')
+analyzer_clean
 
 # And push the results to sortingview webased viewer
 #
 # ```python
-# si.plot_sorting_summary(we_clean, backend='sortingview')
+# si.plot_sorting_summary(analyzer_clean, backend='sortingview')
 # ```

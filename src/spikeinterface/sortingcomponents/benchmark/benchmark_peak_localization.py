@@ -89,7 +89,7 @@ class PeakLocalizationStudy(BenchmarkStudy):
         benchmark = PeakLocalizationBenchmark(recording, gt_sorting, params, **init_kwargs)
         return benchmark
 
-    def plot_comparison_positions(self, case_keys=None, smoothing_factor=5):
+    def plot_comparison_positions(self, case_keys=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -110,15 +110,13 @@ class PeakLocalizationStudy(BenchmarkStudy):
             zdx = np.argsort(distances_to_center)
             idx = np.argsort(norms)
 
-            from scipy.signal import savgol_filter
-
             wdx = np.argsort(snrs)
 
             data = result["medians_over_templates"]
 
-            axs[0].plot(snrs[wdx], savgol_filter(data[wdx], smoothing_factor, 3), lw=2, label=self.cases[key]["label"])
-            ymin = savgol_filter((data - result["mads_over_templates"])[wdx], smoothing_factor, 3)
-            ymax = savgol_filter((data + result["mads_over_templates"])[wdx], smoothing_factor, 3)
+            axs[0].plot(snrs[wdx], data[wdx], lw=2, label=self.cases[key]["label"])
+            ymin = (data - result["mads_over_templates"])[wdx]
+            ymax = (data + result["mads_over_templates"])[wdx]
 
             axs[0].fill_between(snrs[wdx], ymin, ymax, alpha=0.5)
             axs[0].set_xlabel("snr")
@@ -126,12 +124,12 @@ class PeakLocalizationStudy(BenchmarkStudy):
 
             axs[1].plot(
                 distances_to_center[zdx],
-                savgol_filter(data[zdx], smoothing_factor, 3),
+                data[zdx],
                 lw=2,
                 label=self.cases[key]["label"],
             )
-            ymin = savgol_filter((data - result["mads_over_templates"])[zdx], smoothing_factor, 3)
-            ymax = savgol_filter((data + result["mads_over_templates"])[zdx], smoothing_factor, 3)
+            ymin = (data - result["mads_over_templates"])[zdx]
+            ymax = (data + result["mads_over_templates"])[zdx]
 
             axs[1].fill_between(distances_to_center[zdx], ymin, ymax, alpha=0.5)
             axs[1].set_xlabel("distance to center (um)")
@@ -241,7 +239,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
             )
         axs.legend()
 
-    def plot_comparison_positions(self, case_keys=None, smoothing_factor=5):
+    def plot_comparison_positions(self, case_keys=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -268,14 +266,14 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
             data = result["errors"]
 
-            axs[0].plot(snrs[wdx], savgol_filter(data[wdx], smoothing_factor, 3), lw=2, label=self.cases[key]["label"])
+            axs[0].plot(snrs[wdx], data[wdx], lw=2, label=self.cases[key]["label"])
 
             axs[0].set_xlabel("snr")
             axs[0].set_ylabel("error (um)")
 
             axs[1].plot(
                 distances_to_center[zdx],
-                savgol_filter(data[zdx], smoothing_factor, 3),
+                data[zdx],
                 lw=2,
                 label=self.cases[key]["label"],
             )

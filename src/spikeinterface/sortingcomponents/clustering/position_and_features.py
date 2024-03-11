@@ -47,6 +47,8 @@ class PositionAndFeaturesClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
+        from sklearn.preprocessing import QuantileTransformer
+
         assert HAVE_HDBSCAN, "twisted clustering needs hdbscan to be installed"
 
         if "n_jobs" in params["job_kwargs"]:
@@ -68,22 +70,23 @@ class PositionAndFeaturesClustering:
 
         position_method = d["peak_localization_kwargs"]["method"]
 
-        features_list = [position_method, "ptp", "energy"]
+        features_list = [
+            position_method,
+            "ptp",
+        ]
         features_params = {
             position_method: {"radius_um": params["radius_um"]},
             "ptp": {"all_channels": False, "radius_um": params["radius_um"]},
-            "energy": {"radius_um": params["radius_um"]},
         }
 
         features_data = compute_features_from_peaks(
             recording, peaks, features_list, features_params, ms_before=1, ms_after=1, **params["job_kwargs"]
         )
 
-        hdbscan_data = np.zeros((len(peaks), 4), dtype=np.float32)
+        hdbscan_data = np.zeros((len(peaks), 3), dtype=np.float32)
         hdbscan_data[:, 0] = features_data[0]["x"]
         hdbscan_data[:, 1] = features_data[0]["y"]
         hdbscan_data[:, 2] = features_data[1]
-        hdbscan_data[:, 3] = features_data[2]
 
         preprocessing = QuantileTransformer(output_distribution="uniform")
         hdbscan_data = preprocessing.fit_transform(hdbscan_data)
