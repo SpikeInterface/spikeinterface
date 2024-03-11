@@ -194,9 +194,6 @@ Most of the extensions live in the :code:`postprocessing` module, but there are 
     Some extensions depend on others, which must be pre-computed. For example:code:`waveforms`, the :code:`waveforms` extension depends on
     the :code:`random_spikes` one. If the latter is not computed, computing :code:`waveforms` will throw an error.
 
-# TODO: make `get_available_extensions`
-
-# TODO: docs -> access recording and sorting attributes
 
 .. code-block:: python
     from spikeinterface import create_sorting_analyzer
@@ -236,7 +233,6 @@ The :code:`sorting_analyzer` object implements convenient functions to access th
 
 Once the :code:`sorting_analyzer` is instantiated, additional extensions can be computed:
 
-# TODO: implement get_extension_params
 
 .. code-block:: python
     # compute some additional extensions
@@ -302,29 +298,23 @@ The :code:`SortingAnalyzer.save_as` function will save the object **and all its 
     )
 
 
-# TODO: loading / with recording
-
-**IMPORTANT:** to load a waveform extractor object from disk, it needs to be able to reload the associated
-:code:`sorting` object (the :code:`recording` is optional, using :code:`with_recording=False`).
-In order to make a waveform folder portable (e.g. copied to another location or machine), one can do:
+Once a :code:`SortingAnalyzer` object is saved to disk, it can be easily reloaded with:
 
 .. code-block:: python
 
-    # create a "processed" folder
-    processed_folder = Path("processed")
+    sorting_analyzer = si.load_sorting_analyzer(folder="my-sorting-analyzer.zarr")
 
-    # save the sorting object in the "processed" folder
-    sorting = sorting.save(folder=processed_folder / "sorting")
-    # extract waveforms using relative paths
-    we = extract_waveforms(recording=recording,
-                           sorting=sorting,
-                           folder=processed_folder / "waveforms",
-                           use_relative_path=True)
-    # the "processed" folder is now portable, and the waveform extractor can be reloaded
-    # from a different location/machine (without loading the recording)
-    we_loaded = si.load_waveforms(folder=processed_folder / "waveforms",
-                                  with_recording=False)
 
+.. note::
+
+    When svaed to disk, the :code:`SortingAnalyzer` will store a copy of the :code:`Sorting`` object,
+    because that is relatively small and needed for most (if not all!) operations. The same is not
+    true for the :code:`Recording` object, for which only the main properties will be stored (e.g,
+    :code:`sampling_frequency`, :code:`channel_ids`, :code:`channel_locations`, etc.) and
+    a provenance to reload the :code:`Recording`. When loading a :code:`SortingAnalyzer` from disk,
+    it will attempt to re-instantiate the :code:`Recording` object from the provenance, but in case
+    of failure, for example if the original file is not available, it will be instantiated in
+    "recordingless" mode.
 
 Event
 -----
