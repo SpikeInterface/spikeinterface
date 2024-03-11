@@ -1,9 +1,12 @@
 """Sorting components: template matching."""
 
+from __future__ import annotations
+
+
 import numpy as np
-from spikeinterface.core import WaveformExtractor, get_template_channel_sparsity, get_template_extremum_channel
 from spikeinterface.core import get_noise_levels, get_channel_distances, get_chunk_with_margin, get_random_data_chunks
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
+from spikeinterface.core.template import Templates
 
 spike_dtype = [
     ("sample_index", "int64"),
@@ -28,7 +31,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
     """
 
     default_params = {
-        "waveform_extractor": None,
+        "templates": None,
         "peak_sign": "neg",
         "exclude_sweep_ms": 0.1,
         "detect_threshold": 5,
@@ -41,19 +44,20 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d = cls.default_params.copy()
         d.update(kwargs)
 
-        assert d["waveform_extractor"] is not None, "'waveform_extractor' must be supplied"
+        assert isinstance(d["templates"], Templates), (
+            f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
+        )
 
-        we = d["waveform_extractor"]
+        templates = d["templates"]
 
         d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"])
-
         d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
         channel_distance = get_channel_distances(recording)
         d["neighbours_mask"] = channel_distance < d["radius_um"]
 
-        d["nbefore"] = we.nbefore
-        d["nafter"] = we.nafter
+        d["nbefore"] = templates.nbefore
+        d["nafter"] = templates.nafter
 
         d["exclude_sweep_size"] = int(d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0)
 
@@ -67,10 +71,6 @@ class NaiveMatching(BaseTemplateMatchingEngine):
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
         kwargs = dict(kwargs)
-
-        we = kwargs.pop("waveform_extractor")
-        kwargs["templates"] = we.get_all_templates(mode="average")
-
         return kwargs
 
     @classmethod
@@ -83,7 +83,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         abs_threholds = method_kwargs["abs_threholds"]
         exclude_sweep_size = method_kwargs["exclude_sweep_size"]
         neighbours_mask = method_kwargs["neighbours_mask"]
-        templates = method_kwargs["templates"]
+        templates_array = method_kwargs["templates"].get_dense_templates()
 
         nbefore = method_kwargs["nbefore"]
         nafter = method_kwargs["nafter"]
@@ -109,7 +109,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
             i1 = peak_sample_ind[i] + nafter
 
             waveforms = traces[i0:i1, :]
-            dist = np.sum(np.sum((templates - waveforms[None, :, :]) ** 2, axis=1), axis=1)
+            dist = np.sum(np.sum((templates_array - waveforms[None, :, :]) ** 2, axis=1), axis=1)
             cluster_index = np.argmin(dist)
 
             spikes["cluster_index"][i] = cluster_index

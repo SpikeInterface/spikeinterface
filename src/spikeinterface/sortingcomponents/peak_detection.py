@@ -1,5 +1,8 @@
 """Sorting components: peak detection."""
 
+from __future__ import annotations
+
+
 import copy
 from typing import Tuple, Union, List, Dict, Any, Optional, Callable
 
@@ -392,7 +395,7 @@ class DetectPeakByChannel(PeakDetectorWrapper):
         abs_threholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
-        return (peak_sign, abs_threholds, exclude_sweep_size)
+        return (peak_sign, abs_thresholds, exclude_sweep_size)
 
     @classmethod
     def get_method_margin(cls, *args):
@@ -400,12 +403,12 @@ class DetectPeakByChannel(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size):
+    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size):
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
         length = traces_center.shape[0]
 
         if peak_sign in ("pos", "both"):
-            peak_mask = traces_center > abs_threholds[None, :]
+            peak_mask = traces_center > abs_thresholds[None, :]
             for i in range(exclude_sweep_size):
                 peak_mask &= traces_center > traces[i : i + length, :]
                 peak_mask &= (
@@ -416,7 +419,7 @@ class DetectPeakByChannel(PeakDetectorWrapper):
             if peak_sign == "both":
                 peak_mask_pos = peak_mask.copy()
 
-            peak_mask = traces_center < -abs_threholds[None, :]
+            peak_mask = traces_center < -abs_thresholds[None, :]
             for i in range(exclude_sweep_size):
                 peak_mask &= traces_center < traces[i : i + length, :]
                 peak_mask &= (
@@ -479,7 +482,7 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
         abs_threholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
-        return (peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor)
+        return (peak_sign, abs_thresholds, exclude_sweep_size, device, return_tensor)
 
     @classmethod
     def get_method_margin(cls, *args):
@@ -487,8 +490,10 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor):
-        sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, None, device)
+    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, device, return_tensor):
+        sample_inds, chan_inds = _torch_detect_peaks(
+            traces, peak_sign, abs_thresholds, exclude_sweep_size, None, device
+        )
         if not return_tensor:
             sample_inds = np.array(sample_inds.cpu())
             chan_inds = np.array(chan_inds.cpu())
@@ -540,23 +545,23 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask):
+    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask):
         assert HAVE_NUMBA, "You need to install numba"
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
 
         if peak_sign in ("pos", "both"):
-            peak_mask = traces_center > abs_threholds[None, :]
+            peak_mask = traces_center > abs_thresholds[None, :]
             peak_mask = _numba_detect_peak_pos(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
             )
 
         if peak_sign in ("neg", "both"):
             if peak_sign == "both":
                 peak_mask_pos = peak_mask.copy()
 
-            peak_mask = traces_center < -abs_threholds[None, :]
+            peak_mask = traces_center < -abs_thresholds[None, :]
             peak_mask = _numba_detect_peak_neg(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
             )
 
             if peak_sign == "both":
@@ -624,9 +629,9 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor, neighbor_idxs):
+    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, device, return_tensor, neighbor_idxs):
         sample_inds, chan_inds = _torch_detect_peaks(
-            traces, peak_sign, abs_threholds, exclude_sweep_size, neighbor_idxs, device
+            traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbor_idxs, device
         )
         if not return_tensor and isinstance(sample_inds, torch.Tensor) and isinstance(chan_inds, torch.Tensor):
             sample_inds = np.array(sample_inds.cpu())
@@ -638,7 +643,7 @@ if HAVE_NUMBA:
 
     @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_pos(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
     ):
         num_chans = traces_center.shape[1]
         for chan_ind in range(num_chans):
@@ -663,7 +668,7 @@ if HAVE_NUMBA:
 
     @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_neg(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
     ):
         num_chans = traces_center.shape[1]
         for chan_ind in range(num_chans):
@@ -843,7 +848,7 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance <= radius_um
 
-        executor = OpenCLDetectPeakExecutor(abs_threholds, exclude_sweep_size, neighbours_mask, peak_sign)
+        executor = OpenCLDetectPeakExecutor(abs_thresholds, exclude_sweep_size, neighbours_mask, peak_sign)
 
         return (executor,)
 
@@ -860,12 +865,12 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
 
 
 class OpenCLDetectPeakExecutor:
-    def __init__(self, abs_threholds, exclude_sweep_size, neighbours_mask, peak_sign):
+    def __init__(self, abs_thresholds, exclude_sweep_size, neighbours_mask, peak_sign):
         import pyopencl
 
         self.chunk_size = None
 
-        self.abs_threholds = abs_threholds.astype("float32")
+        self.abs_thresholds = abs_thresholds.astype("float32")
         self.exclude_sweep_size = exclude_sweep_size
         self.neighbours_mask = neighbours_mask.astype("uint8")
         self.peak_sign = peak_sign
@@ -890,7 +895,7 @@ class OpenCLDetectPeakExecutor:
         self.neighbours_mask_cl = pyopencl.Buffer(
             self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.neighbours_mask
         )
-        self.abs_threholds_cl = pyopencl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.abs_threholds)
+        self.abs_thresholds_cl = pyopencl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.abs_thresholds)
 
         num_channels = self.neighbours_mask.shape[0]
         self.traces_cl = pyopencl.Buffer(self.ctx, mf.READ_WRITE, size=int(chunk_size * num_channels * 4))
@@ -916,7 +921,7 @@ class OpenCLDetectPeakExecutor:
         self.kern_detect_peaks = getattr(self.opencl_prg, "detect_peaks")
 
         self.kern_detect_peaks.set_args(
-            self.traces_cl, self.neighbours_mask_cl, self.abs_threholds_cl, self.peaks_cl, self.num_peaks_cl
+            self.traces_cl, self.neighbours_mask_cl, self.abs_thresholds_cl, self.peaks_cl, self.num_peaks_cl
         )
 
         s = self.chunk_size - 2 * self.exclude_sweep_size
@@ -970,7 +975,7 @@ __kernel void detect_peaks(
                         //in
                         __global  float *traces,
                         __global  uchar *neighbours_mask,
-                        __global  float *abs_threholds,
+                        __global  float *abs_thresholds,
                         //out
                         __global  st_peak *peaks,
                         volatile __global int *num_peaks
@@ -1004,11 +1009,11 @@ __kernel void detect_peaks(
         v = traces[index];
 
         if(peak_sign==1){
-            if (v>abs_threholds[chan]){peak=1;}
+            if (v>abs_thresholds[chan]){peak=1;}
             else {peak=0;}
         }
         else if(peak_sign==-1){
-            if (v<-abs_threholds[chan]){peak=1;}
+            if (v<-abs_thresholds[chan]){peak=1;}
             else {peak=0;}
         }
 

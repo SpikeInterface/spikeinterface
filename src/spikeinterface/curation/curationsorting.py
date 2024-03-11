@@ -1,7 +1,10 @@
-from .mergeunitssorting import MergeUnitsSorting
-from .splitunitsorting import SplitUnitSorting
+from __future__ import annotations
+
 from collections import namedtuple
 import numpy as np
+
+from .mergeunitssorting import MergeUnitsSorting
+from .splitunitsorting import SplitUnitSorting
 
 node_t = namedtuple("node_t", "unit_id stage_id")
 

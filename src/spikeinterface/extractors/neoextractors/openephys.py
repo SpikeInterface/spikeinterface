@@ -8,6 +8,9 @@ See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 for more info.
 """
 
+from __future__ import annotations
+
+
 from pathlib import Path
 
 import numpy as np

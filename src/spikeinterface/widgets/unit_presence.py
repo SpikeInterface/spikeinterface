@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -31,6 +33,8 @@ class UnitPresenceWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        sorting = self.ensure_sorting(sorting)
+
         if segment_index is None:
             nseg = sorting.get_num_segments()
             if nseg != 1:
