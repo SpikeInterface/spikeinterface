@@ -9,6 +9,7 @@ import numpy as np
 from spikeinterface.core import NumpySorting, load_extractor, BaseRecording
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.template import Templates
+from spikeinterface.core import get_channel_distances
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
@@ -165,6 +166,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 legacy = clustering_params.pop("legacy")
             else:
                 legacy = False
+
+            contact_locations = recording_f.get_channel_locations()
+            channel_distance = get_channel_distances(recording_f)
+            neighbours_mask = channel_distance <= 0
+            if np.all(np.sum(neighbours_mask, axis=0) == 1):
+                if verbose:
+                    print('Independant channels detected, switching to legacy mode')
+                legacy = True
 
             if legacy:
                 if verbose:
