@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..core import create_sorting_analyzer
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
@@ -10,7 +11,7 @@ from .mergeunitssorting import MergeUnitsSorting
 
 
 def get_potential_auto_merge(
-    waveform_extractor,
+    sorting_analyzer,
     minimum_spikes=1000,
     maximum_distance_um=150.0,
     peak_sign="neg",
@@ -56,8 +57,8 @@ def get_potential_auto_merge(
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
+    sorting_analyzer: SortingAnalyzer
+        The SortingAnalyzer
     minimum_spikes: int, default: 1000
         Minimum number of spikes for each unit to consider a potential merge.
         Enough spikes are needed to estimate the correlogram
@@ -112,8 +113,7 @@ def get_potential_auto_merge(
     """
     import scipy
 
-    we = waveform_extractor
-    sorting = we.sorting
+    sorting = sorting_analyzer.sorting
     unit_ids = sorting.unit_ids
 
     # to get fast computation we will not analyse pairs when:
@@ -144,7 +144,7 @@ def get_potential_auto_merge(
     # STEP 2 : remove contaminated auto corr
     if "remove_contaminated" in steps:
         contaminations, nb_violations = compute_refrac_period_violations(
-            we, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
+            sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
         )
         nb_violations = np.array(list(nb_violations.values()))
         contaminations = np.array(list(contaminations.values()))
@@ -154,8 +154,10 @@ def get_potential_auto_merge(
 
     # STEP 3 : unit positions are estimated roughly with channel
     if "unit_positions" in steps:
-        chan_loc = we.get_channel_locations()
-        unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
+        chan_loc = sorting_analyzer.get_channel_locations()
+        unit_max_chan = get_template_extremum_channel(
+            sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
+        )
         unit_max_chan = list(unit_max_chan.values())
         unit_locations = chan_loc[unit_max_chan, :]
         unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
@@ -187,7 +189,7 @@ def get_potential_auto_merge(
 
     # STEP 5 : check if potential merge with CC also have template similarity
     if "template_similarity" in steps:
-        templates = we.get_all_templates(mode="average")
+        templates = sorting_analyzer.get_extension("templates").get_templates(operator="average")
         templates_diff = compute_templates_diff(
             sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask
         )
@@ -196,7 +198,12 @@ def get_potential_auto_merge(
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     if "check_increase_score" in steps:
         pair_mask, pairs_decreased_score = check_improve_contaminations_score(
-            we, pair_mask, contaminations, firing_contamination_balance, refractory_period_ms, censored_period_ms
+            sorting_analyzer,
+            pair_mask,
+            contaminations,
+            firing_contamination_balance,
+            refractory_period_ms,
+            censored_period_ms,
         )
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
@@ -421,25 +428,8 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     return templates_diff
 
 
-class MockWaveformExtractor:
-    """
-    Mock WaveformExtractor to be able to run compute_refrac_period_violations()
-    needed for the auto_merge() function.
-    """
-
-    def __init__(self, recording, sorting):
-        self.recording = recording
-        self.sorting = sorting
-
-    def get_total_samples(self):
-        return self.recording.get_total_samples()
-
-    def get_total_duration(self):
-        return self.recording.get_total_duration()
-
-
 def check_improve_contaminations_score(
-    we, pair_mask, contaminations, firing_contamination_balance, refractory_period_ms, censored_period_ms
+    sorting_analyzer, pair_mask, contaminations, firing_contamination_balance, refractory_period_ms, censored_period_ms
 ):
     """
     Check that the score is improve afeter a potential merge
@@ -451,12 +441,12 @@ def check_improve_contaminations_score(
     Check that the contamination score is improved (decrease)  after
     a potential merge
     """
-    recording = we.recording
-    sorting = we.sorting
+    recording = sorting_analyzer.recording
+    sorting = sorting_analyzer.sorting
     pair_mask = pair_mask.copy()
     pairs_removed = []
 
-    firing_rates = list(compute_firing_rates(we).values())
+    firing_rates = list(compute_firing_rates(sorting_analyzer).values())
 
     inds1, inds2 = np.nonzero(pair_mask)
     for i in range(inds1.size):
@@ -473,14 +463,14 @@ def check_improve_contaminations_score(
         sorting_merged = MergeUnitsSorting(
             sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1], delta_time_ms=censored_period_ms
         ).select_units([unit_id1])
-        # make a lazy fake WaveformExtractor to compute contamination and firing rate
-        we_new = MockWaveformExtractor(recording, sorting_merged)
+
+        sorting_analyzer_new = create_sorting_analyzer(sorting_merged, recording, format="memory", sparse=False)
 
         new_contaminations, _ = compute_refrac_period_violations(
-            we_new, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
+            sorting_analyzer_new, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
         )
         c_new = new_contaminations[unit_id1]
-        f_new = compute_firing_rates(we_new)[unit_id1]
+        f_new = compute_firing_rates(sorting_analyzer_new)[unit_id1]
 
         # old and new scores
         k = 1 + firing_contamination_balance

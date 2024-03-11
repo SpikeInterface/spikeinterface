@@ -4,7 +4,7 @@ import numpy as np
 from typing import Union
 
 from .base import BaseWidget, to_attr
-from ..core.waveform_extractor import WaveformExtractor
+from ..core.sortinganalyzer import SortingAnalyzer
 from ..core.basesorting import BaseSorting
 from ..postprocessing import compute_correlograms
 
@@ -15,7 +15,7 @@ class CrossCorrelogramsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
+    sorting_analyzer_or_sorting : SortingAnalyzer or BaseSorting
         The object to compute/get crosscorrelograms from
     unit_ids  list or None, default: None
         List of unit ids
@@ -23,10 +23,10 @@ class CrossCorrelogramsWidget(BaseWidget):
         For sortingview backend. Threshold for computing pair-wise cross-correlograms.
         If template similarity between two units is below this threshold, the cross-correlogram is not displayed
     window_ms : float, default: 100.0
-        Window for CCGs in ms. If correlograms are already computed (e.g. with WaveformExtractor),
+        Window for CCGs in ms. If correlograms are already computed (e.g. with SortingAnalyzer),
         this argument is ignored
     bin_ms : float, default: 1.0
-        Bin size in ms. If correlograms are already computed (e.g. with WaveformExtractor),
+        Bin size in ms. If correlograms are already computed (e.g. with SortingAnalyzer),
         this argument is ignored
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
@@ -36,7 +36,7 @@ class CrossCorrelogramsWidget(BaseWidget):
 
     def __init__(
         self,
-        waveform_or_sorting_extractor: Union[WaveformExtractor, BaseSorting],
+        sorting_analyzer_or_sorting: Union[SortingAnalyzer, BaseSorting],
         unit_ids=None,
         min_similarity_for_correlograms=0.2,
         window_ms=100.0,
@@ -46,19 +46,21 @@ class CrossCorrelogramsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        sorting_analyzer_or_sorting = self.ensure_sorting_analyzer(sorting_analyzer_or_sorting)
+
         if min_similarity_for_correlograms is None:
             min_similarity_for_correlograms = 0
         similarity = None
-        if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
-            sorting = waveform_or_sorting_extractor.sorting
-            self.check_extensions(waveform_or_sorting_extractor, "correlograms")
-            ccc = waveform_or_sorting_extractor.load_extension("correlograms")
+        if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+            sorting = sorting_analyzer_or_sorting.sorting
+            self.check_extensions(sorting_analyzer_or_sorting, "correlograms")
+            ccc = sorting_analyzer_or_sorting.get_extension("correlograms")
             ccgs, bins = ccc.get_data()
             if min_similarity_for_correlograms > 0:
-                self.check_extensions(waveform_or_sorting_extractor, "similarity")
-                similarity = waveform_or_sorting_extractor.load_extension("similarity").get_data()
+                self.check_extensions(sorting_analyzer_or_sorting, "template_similarity")
+                similarity = sorting_analyzer_or_sorting.get_extension("template_similarity").get_data()
         else:
-            sorting = waveform_or_sorting_extractor
+            sorting = sorting_analyzer_or_sorting
             ccgs, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms)
 
         if unit_ids is None:

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core import NumpySorting, extract_waveforms
+from spikeinterface.core import NumpySorting, estimate_templates
 
 
 class RemoveArtifactsRecording(BasePreprocessor):
@@ -80,11 +82,8 @@ class RemoveArtifactsRecording(BasePreprocessor):
     time_jitter: float, default: 0
         If non 0, then for mode "median" or "average", a time jitter in ms
         can be allowed to minimize the residuals
-    waveforms_kwargs: dict or None, default: None
-        The arguments passed to the WaveformExtractor object when extracting the
-        artifacts, for mode "median" or "average".
-        By default, the global job kwargs are used, in addition to {"allow_unfiltered" : True, "mode":"memory"}.
-        To estimate sparse artifact
+    waveforms_kwargs: None
+        Depracted and ignored
 
     Returns
     -------
@@ -107,8 +106,11 @@ class RemoveArtifactsRecording(BasePreprocessor):
         sparsity=None,
         scale_amplitude=False,
         time_jitter=0,
-        waveforms_kwargs={"allow_unfiltered": True, "mode": "memory"},
+        waveforms_kwargs=None,
     ):
+        if waveforms_kwargs is not None:
+            warnings("remove_artifacts() waveforms_kwargs is deprecated and ignored")
+
         available_modes = ("zeros", "linear", "cubic", "average", "median")
         num_seg = recording.get_num_segments()
 
@@ -169,19 +171,22 @@ class RemoveArtifactsRecording(BasePreprocessor):
                     ms_before is not None and ms_after is not None
                 ), f"ms_before/after should not be None for mode {mode}"
                 sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
-                sorting = sorting.save()
-                waveforms_kwargs.update({"ms_before": ms_before, "ms_after": ms_after})
-                w = extract_waveforms(recording, sorting, None, **waveforms_kwargs)
 
+                nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+                nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+
+                templates = estimate_templates(
+                    recording=recording,
+                    spikes=sorting.to_spike_vector(),
+                    unit_ids=sorting.unit_ids,
+                    nbefore=nbefore,
+                    nafter=nafter,
+                    operator=mode,
+                    return_scaled=False,
+                )
                 artifacts = {}
-                sparsity = {}
-                for label in w.sorting.unit_ids:
-                    artifacts[label] = w.get_template(label, mode=mode).astype(recording.dtype)
-                    if w.is_sparse():
-                        unit_ind = w.sorting.id_to_index(label)
-                        sparsity[label] = w.sparsity.mask[unit_ind]
-                    else:
-                        sparsity = None
+                for i, label in enumerate(sorting.unit_ids):
+                    artifacts[label] = templates[i, :, :]
 
             if sparsity is not None:
                 labels = []

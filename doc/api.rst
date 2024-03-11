@@ -14,11 +14,12 @@ spikeinterface.core
         :members:
     .. autoclass:: BaseEvent
         :members:
-    .. autoclass:: WaveformExtractor
+    .. autoclass:: SortingAnalyzer
         :members:
-    .. autofunction:: extract_waveforms
-    .. autofunction:: load_waveforms
+    .. autofunction:: create_sorting_analyzer
+    .. autofunction:: load_sorting_analyzer
     .. autofunction:: compute_sparsity
+    .. autofunction:: estimate_sparsity
     .. autoclass:: ChannelSparsity
         :members:
     .. autoclass:: BinaryRecordingExtractor
