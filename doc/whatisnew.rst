@@ -35,7 +35,7 @@ Release notes
   releases/0.9.1.rst
 
 
-Version 0.99.1
+Version 0.100.1
 ==============
 
 * Minor release with some bug fixes and Kilosort4 support
