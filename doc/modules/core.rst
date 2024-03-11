@@ -305,14 +305,14 @@ Once a :code:`SortingAnalyzer` object is saved to disk, it can be easily reloade
 
 .. note::
 
-    When svaed to disk, the :code:`SortingAnalyzer` will store a copy of the :code:`Sorting`` object,
+    When saved to disk, the :code:`SortingAnalyzer` will store a copy of the :code:`Sorting`` object,
     because that is relatively small and needed for most (if not all!) operations. The same is not
     true for the :code:`Recording` object, for which only the main properties will be stored (e.g,
     :code:`sampling_frequency`, :code:`channel_ids`, :code:`channel_locations`, etc.) and
     a provenance to reload the :code:`Recording`. When loading a :code:`SortingAnalyzer` from disk,
-    it will attempt to re-instantiate the :code:`Recording` object from the provenance, but in case
-    of failure, for example if the original file is not available, it will be instantiated in
-    "recordingless" mode.
+    an attempt is made to re-instantiate the :code:`Recording` object from the provenance. In case
+    of failure, for example if the original file is not available, the :code:`SortingAnalyzer`
+    will be automatically instantiated in "recordingless" mode.
 
 Event
 -----
