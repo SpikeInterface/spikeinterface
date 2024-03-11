@@ -36,7 +36,6 @@ def run_peaks(recording, job_kwargs):
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
-        noise_levels=noise_levels,
         **job_kwargs,
     )
 

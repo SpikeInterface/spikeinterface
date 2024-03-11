@@ -84,7 +84,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
             rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_levels)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode, noise_levels=noise_levels)
+        self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode)
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):

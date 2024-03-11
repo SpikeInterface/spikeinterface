@@ -35,7 +35,6 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         "peak_sign": "neg",
         "exclude_sweep_ms": 0.1,
         "detect_threshold": 5,
-        "noise_levels": None,
         "radius_um": 100,
         "random_chunk_kwargs": {},
     }
@@ -51,9 +50,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
 
         templates = d["templates"]
 
-        if d["noise_levels"] is None:
-            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
-
+        d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"])
         d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
         channel_distance = get_channel_distances(recording)

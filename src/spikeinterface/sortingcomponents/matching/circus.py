@@ -469,8 +469,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         matches
     detect_threshold: int
         The detection threshold
-    noise_levels: array
-        The noise levels, for every channels
     random_chunk_kwargs: dict
         Parameters for computing noise levels, if not provided (sub optimal)
     max_amplitude: float
@@ -493,7 +491,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         "exclude_sweep_ms": 0.1,
         "jitter_ms": 0.1,
         "detect_threshold": 5,
-        "noise_levels": None,
         "random_chunk_kwargs": {},
         "max_amplitude": 1.5,
         "min_amplitude": 0.5,

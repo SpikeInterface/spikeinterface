@@ -2,7 +2,12 @@ import pytest
 import numpy as np
 from pathlib import Path
 
+<<<<<<< HEAD
+from spikeinterface import NumpySorting
+from spikeinterface import extract_waveforms
+=======
 from spikeinterface import NumpySorting, create_sorting_analyzer, get_noise_levels, compute_sparsity
+>>>>>>> 6d382a2906dfc44bf060af5ef7caf83e475be9f3
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods
 

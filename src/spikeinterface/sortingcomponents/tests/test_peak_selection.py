@@ -25,7 +25,6 @@ def test_select_peaks():
         chunk_size=10000,
         verbose=1,
         progress_bar=False,
-        noise_levels=noise_levels,
     )
 
     peak_locations = localize_peaks(
