@@ -2,7 +2,6 @@ import unittest
 import pytest
 import os
 from pathlib import Path
-import shutil
 
 if __name__ != "__main__":
     import matplotlib
@@ -13,27 +12,15 @@ import matplotlib.pyplot as plt
 
 
 from spikeinterface import (
-    load_extractor,
-    extract_waveforms,
-    load_waveforms,
-    download_dataset,
     compute_sparsity,
     generate_ground_truth_recording,
+    create_sorting_analyzer,
 )
 
-import spikeinterface.extractors as se
+
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
 from spikeinterface.preprocessing import scale
-from spikeinterface.postprocessing import (
-    compute_correlograms,
-    compute_spike_amplitudes,
-    compute_spike_locations,
-    compute_unit_locations,
-    compute_template_metrics,
-    compute_template_similarity,
-)
-from spikeinterface.qualitymetrics import compute_quality_metrics
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -47,94 +34,87 @@ KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.geten
 
 
 class TestWidgets(unittest.TestCase):
-    @classmethod
-    def _delete_widget_folders(cls):
-        for name in (
-            "recording",
-            "sorting",
-            "we_dense",
-            "we_sparse",
-        ):
-            if (cache_folder / name).is_dir():
-                shutil.rmtree(cache_folder / name)
 
     @classmethod
     def setUpClass(cls):
-        cls._delete_widget_folders()
 
-        if (cache_folder / "recording").is_dir() and (cache_folder / "sorting").is_dir():
-            cls.recording = load_extractor(cache_folder / "recording")
-            cls.sorting = load_extractor(cache_folder / "sorting")
-        else:
-            recording, sorting = generate_ground_truth_recording(
-                durations=[30.0],
-                sampling_frequency=28000.0,
-                num_channels=32,
-                num_units=10,
-                generate_probe_kwargs=dict(
-                    num_columns=2,
-                    xpitch=20,
-                    ypitch=20,
-                    contact_shapes="circle",
-                    contact_shape_params={"radius": 6},
-                ),
-                generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-                noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
-                seed=2205,
-            )
-            # cls.recording = recording.save(folder=cache_folder / "recording")
-            # cls.sorting = sorting.save(folder=cache_folder / "sorting")
-            cls.recording = recording
-            cls.sorting = sorting
+        recording, sorting = generate_ground_truth_recording(
+            durations=[30.0],
+            sampling_frequency=28000.0,
+            num_channels=32,
+            num_units=10,
+            generate_probe_kwargs=dict(
+                num_columns=2,
+                xpitch=20,
+                ypitch=20,
+                contact_shapes="circle",
+                contact_shape_params={"radius": 6},
+            ),
+            generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
+            noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
+            seed=2205,
+        )
+        # cls.recording = recording.save(folder=cache_folder / "recording")
+        # cls.sorting = sorting.save(folder=cache_folder / "sorting")
+        cls.recording = recording
+        cls.sorting = sorting
 
         cls.num_units = len(cls.sorting.get_unit_ids())
 
-        if (cache_folder / "we_dense").is_dir():
-            cls.we_dense = load_waveforms(cache_folder / "we_dense")
-        else:
-            cls.we_dense = extract_waveforms(
-                recording=cls.recording, sorting=cls.sorting, folder=None, mode="memory", sparse=False
-            )
-            metric_names = ["snr", "isi_violation", "num_spikes"]
-            _ = compute_spike_amplitudes(cls.we_dense)
-            _ = compute_unit_locations(cls.we_dense)
-            _ = compute_spike_locations(cls.we_dense)
-            _ = compute_quality_metrics(cls.we_dense, metric_names=metric_names)
-            _ = compute_template_metrics(cls.we_dense)
-            _ = compute_correlograms(cls.we_dense)
-            _ = compute_template_similarity(cls.we_dense)
+        extensions_to_compute = dict(
+            waveforms=dict(),
+            templates=dict(),
+            noise_levels=dict(),
+            spike_amplitudes=dict(),
+            unit_locations=dict(),
+            spike_locations=dict(),
+            quality_metrics=dict(metric_names=["snr", "isi_violation", "num_spikes"]),
+            template_metrics=dict(),
+            correlograms=dict(),
+            template_similarity=dict(),
+        )
+        job_kwargs = dict(n_jobs=-1)
+
+        # create dense
+        cls.sorting_analyzer_dense = create_sorting_analyzer(cls.sorting, cls.recording, format="memory", sparse=False)
+        cls.sorting_analyzer_dense.compute("random_spikes")
+        cls.sorting_analyzer_dense.compute(extensions_to_compute, **job_kwargs)
 
         sw.set_default_plotter_backend("matplotlib")
 
         # make sparse waveforms
-        cls.sparsity_radius = compute_sparsity(cls.we_dense, method="radius", radius_um=50)
-        cls.sparsity_strict = compute_sparsity(cls.we_dense, method="radius", radius_um=20)
-        cls.sparsity_large = compute_sparsity(cls.we_dense, method="radius", radius_um=80)
-        cls.sparsity_best = compute_sparsity(cls.we_dense, method="best_channels", num_channels=5)
-        if (cache_folder / "we_sparse").is_dir():
-            cls.we_sparse = load_waveforms(cache_folder / "we_sparse")
-        else:
-            cls.we_sparse = cls.we_dense.save(folder=cache_folder / "we_sparse", sparsity=cls.sparsity_radius)
+        cls.sparsity_radius = compute_sparsity(cls.sorting_analyzer_dense, method="radius", radius_um=50)
+        cls.sparsity_strict = compute_sparsity(cls.sorting_analyzer_dense, method="radius", radius_um=20)
+        cls.sparsity_large = compute_sparsity(cls.sorting_analyzer_dense, method="radius", radius_um=80)
+        cls.sparsity_best = compute_sparsity(cls.sorting_analyzer_dense, method="best_channels", num_channels=5)
 
-        cls.skip_backends = ["ipywidgets", "ephyviewer"]
+        # create sparse
+        cls.sorting_analyzer_sparse = create_sorting_analyzer(
+            cls.sorting, cls.recording, format="memory", sparsity=cls.sparsity_radius
+        )
+        cls.sorting_analyzer_sparse.compute("random_spikes")
+        cls.sorting_analyzer_sparse.compute(extensions_to_compute, **job_kwargs)
+
+        cls.skip_backends = ["ipywidgets", "ephyviewer", "spikeinterface_gui"]
+        # cls.skip_backends = ["ipywidgets", "ephyviewer", "sortingview"]
 
         if ON_GITHUB and not KACHERY_CLOUD_SET:
             cls.skip_backends.append("sortingview")
 
         print(f"Widgets tests: skipping backends - {cls.skip_backends}")
 
-        cls.backend_kwargs = {"matplotlib": {}, "sortingview": {}, "ipywidgets": {"display": False}}
+        cls.backend_kwargs = {
+            "matplotlib": {},
+            "sortingview": {},
+            "ipywidgets": {"display": False},
+            "spikeinterface_gui": {},
+        }
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive")
-
-    @classmethod
-    def tearDownClass(cls):
-        del cls.recording, cls.sorting, cls.peaks, cls.gt_comp, cls.we_sparse, cls.we_dense
-        # cls._delete_widget_folders()
+        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", **job_kwargs)
 
     def test_plot_traces(self):
         possible_backends = list(sw.TracesWidget.get_possible_backends())
@@ -173,32 +153,38 @@ class TestWidgets(unittest.TestCase):
                         **self.backend_kwargs[backend],
                     )
 
+    def test_plot_spikes_on_traces(self):
+        possible_backends = list(sw.SpikesOnTracesWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_spikes_on_traces(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
+
     def test_plot_unit_waveforms(self):
         possible_backends = list(sw.UnitWaveformsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_unit_waveforms(self.we_dense, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_unit_waveforms(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
                 unit_ids = self.sorting.unit_ids[:6]
                 sw.plot_unit_waveforms(
-                    self.we_dense,
+                    self.sorting_analyzer_dense,
                     sparsity=self.sparsity_radius,
                     unit_ids=unit_ids,
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
                 sw.plot_unit_waveforms(
-                    self.we_dense,
+                    self.sorting_analyzer_dense,
                     sparsity=self.sparsity_best,
                     unit_ids=unit_ids,
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
                 sw.plot_unit_waveforms(
-                    self.we_sparse, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_sparse, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
                 # extra sparsity
                 sw.plot_unit_waveforms(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     sparsity=self.sparsity_strict,
                     unit_ids=unit_ids,
                     backend=backend,
@@ -207,7 +193,7 @@ class TestWidgets(unittest.TestCase):
                 # test "larger" sparsity
                 with self.assertRaises(AssertionError):
                     sw.plot_unit_waveforms(
-                        self.we_sparse,
+                        self.sorting_analyzer_sparse,
                         sparsity=self.sparsity_large,
                         unit_ids=unit_ids,
                         backend=backend,
@@ -220,11 +206,11 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 print(f"Testing backend {backend}")
                 print("Dense")
-                sw.plot_unit_templates(self.we_dense, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_unit_templates(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
                 unit_ids = self.sorting.unit_ids[:6]
                 print("Dense + radius")
                 sw.plot_unit_templates(
-                    self.we_dense,
+                    self.sorting_analyzer_dense,
                     sparsity=self.sparsity_radius,
                     unit_ids=unit_ids,
                     backend=backend,
@@ -232,7 +218,7 @@ class TestWidgets(unittest.TestCase):
                 )
                 print("Dense + best")
                 sw.plot_unit_templates(
-                    self.we_dense,
+                    self.sorting_analyzer_dense,
                     sparsity=self.sparsity_best,
                     unit_ids=unit_ids,
                     backend=backend,
@@ -241,7 +227,7 @@ class TestWidgets(unittest.TestCase):
                 # test different shadings
                 print("Sparse")
                 sw.plot_unit_templates(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
                     templates_percentile_shading=None,
                     backend=backend,
@@ -249,7 +235,7 @@ class TestWidgets(unittest.TestCase):
                 )
                 print("Sparse2")
                 sw.plot_unit_templates(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
                     # templates_percentile_shading=None,
                     scale=10,
@@ -259,7 +245,7 @@ class TestWidgets(unittest.TestCase):
                 # test different shadings
                 print("Sparse3")
                 sw.plot_unit_templates(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
                     backend=backend,
                     templates_percentile_shading=None,
@@ -268,7 +254,7 @@ class TestWidgets(unittest.TestCase):
                 )
                 print("Sparse4")
                 sw.plot_unit_templates(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
                     templates_percentile_shading=0.1,
                     backend=backend,
@@ -276,7 +262,7 @@ class TestWidgets(unittest.TestCase):
                 )
                 print("Extra sparsity")
                 sw.plot_unit_templates(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     sparsity=self.sparsity_strict,
                     unit_ids=unit_ids,
                     templates_percentile_shading=[1, 10, 90, 99],
@@ -286,7 +272,7 @@ class TestWidgets(unittest.TestCase):
                 # test "larger" sparsity
                 with self.assertRaises(AssertionError):
                     sw.plot_unit_templates(
-                        self.we_sparse,
+                        self.sorting_analyzer_sparse,
                         sparsity=self.sparsity_large,
                         unit_ids=unit_ids,
                         backend=backend,
@@ -294,7 +280,7 @@ class TestWidgets(unittest.TestCase):
                     )
                 if backend != "sortingview":
                     sw.plot_unit_templates(
-                        self.we_sparse,
+                        self.sorting_analyzer_sparse,
                         unit_ids=unit_ids,
                         templates_percentile_shading=[1, 5, 25, 75, 95, 99],
                         backend=backend,
@@ -304,7 +290,7 @@ class TestWidgets(unittest.TestCase):
                     # sortingview doesn't support more than 2 shadings
                     with self.assertRaises(AssertionError):
                         sw.plot_unit_templates(
-                            self.we_sparse,
+                            self.sorting_analyzer_sparse,
                             unit_ids=unit_ids,
                             templates_percentile_shading=[1, 5, 25, 75, 95, 99],
                             backend=backend,
@@ -316,17 +302,19 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 unit_ids = self.sorting.unit_ids[:2]
+
+                # on dense
                 sw.plot_unit_waveforms_density_map(
-                    self.we_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                )
+                # on sparse
+                sw.plot_unit_waveforms_density_map(
+                    self.sorting_analyzer_sparse, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
 
-    def test_plot_unit_waveforms_density_map_sparsity_radius(self):
-        possible_backends = list(sw.UnitWaveformDensityMapWidget.get_possible_backends())
-        for backend in possible_backends:
-            if backend not in self.skip_backends:
-                unit_ids = self.sorting.unit_ids[:2]
+                # externals parsity
                 sw.plot_unit_waveforms_density_map(
-                    self.we_dense,
+                    self.sorting_analyzer_dense,
                     sparsity=self.sparsity_radius,
                     same_axis=False,
                     unit_ids=unit_ids,
@@ -334,13 +322,9 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-    def test_plot_unit_waveforms_density_map_sparsity_None_same_axis(self):
-        possible_backends = list(sw.UnitWaveformDensityMapWidget.get_possible_backends())
-        for backend in possible_backends:
-            if backend not in self.skip_backends:
-                unit_ids = self.sorting.unit_ids[:2]
+                # on sparse with same_axis
                 sw.plot_unit_waveforms_density_map(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     sparsity=None,
                     same_axis=True,
                     unit_ids=unit_ids,
@@ -362,7 +346,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-    def test_plot_crosscorrelogram(self):
+    def test_plot_crosscorrelograms(self):
         possible_backends = list(sw.CrossCorrelogramsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -383,12 +367,12 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
                 sw.plot_crosscorrelograms(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
                 sw.plot_crosscorrelograms(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     min_similarity_for_correlograms=0.6,
                     backend=backend,
                     **self.backend_kwargs[backend],
@@ -412,18 +396,20 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.AmplitudesWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_amplitudes(self.we_dense, backend=backend, **self.backend_kwargs[backend])
-                unit_ids = self.we_dense.unit_ids[:4]
-                sw.plot_amplitudes(self.we_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_amplitudes(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
+                unit_ids = self.sorting_analyzer_dense.unit_ids[:4]
                 sw.plot_amplitudes(
-                    self.we_dense,
+                    self.sorting_analyzer_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                )
+                sw.plot_amplitudes(
+                    self.sorting_analyzer_dense,
                     unit_ids=unit_ids,
                     plot_histograms=True,
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
                 sw.plot_amplitudes(
-                    self.we_sparse,
+                    self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
                     plot_histograms=True,
                     backend=backend,
@@ -434,12 +420,12 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.AllAmplitudesDistributionsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                unit_ids = self.we_dense.unit_ids[:4]
+                unit_ids = self.sorting_analyzer_dense.unit_ids[:4]
                 sw.plot_all_amplitudes_distributions(
-                    self.we_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
                 sw.plot_all_amplitudes_distributions(
-                    self.we_sparse, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_sparse, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
 
     def test_plot_unit_locations(self):
@@ -447,10 +433,10 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_unit_locations(
-                    self.we_dense, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_dense, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
                 sw.plot_unit_locations(
-                    self.we_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
 
     def test_plot_spike_locations(self):
@@ -458,59 +444,72 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_spike_locations(
-                    self.we_dense, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_dense, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
                 sw.plot_spike_locations(
-                    self.we_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
 
     def test_plot_similarity(self):
         possible_backends = list(sw.TemplateSimilarityWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_template_similarity(self.we_dense, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_template_similarity(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_template_similarity(
+                    self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend]
+                )
+                sw.plot_template_similarity(
+                    self.sorting_analyzer_sparse, backend=backend, **self.backend_kwargs[backend]
+                )
 
     def test_plot_quality_metrics(self):
         possible_backends = list(sw.QualityMetricsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_quality_metrics(self.we_dense, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_quality_metrics(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_quality_metrics(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_quality_metrics(self.sorting_analyzer_sparse, backend=backend, **self.backend_kwargs[backend])
 
     def test_plot_template_metrics(self):
         possible_backends = list(sw.TemplateMetricsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_template_metrics(self.we_dense, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_template_metrics(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_template_metrics(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_template_metrics(self.sorting_analyzer_sparse, backend=backend, **self.backend_kwargs[backend])
 
     def test_plot_unit_depths(self):
         possible_backends = list(sw.UnitDepthsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_unit_depths(self.we_dense, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_unit_depths(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_unit_depths(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_unit_depths(self.sorting_analyzer_sparse, backend=backend, **self.backend_kwargs[backend])
 
     def test_plot_unit_summary(self):
         possible_backends = list(sw.UnitSummaryWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_unit_summary(
-                    self.we_dense, self.we_dense.sorting.unit_ids[0], backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_dense,
+                    self.sorting_analyzer_dense.sorting.unit_ids[0],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
                 )
                 sw.plot_unit_summary(
-                    self.we_sparse, self.we_sparse.sorting.unit_ids[0], backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_sparse,
+                    self.sorting_analyzer_sparse.sorting.unit_ids[0],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
                 )
 
     def test_plot_sorting_summary(self):
         possible_backends = list(sw.SortingSummaryWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_sorting_summary(self.we_dense, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_sorting_summary(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_sorting_summary(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_sorting_summary(self.sorting_analyzer_sparse, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_sorting_summary(
-                    self.we_sparse, sparsity=self.sparsity_strict, backend=backend, **self.backend_kwargs[backend]
+                    self.sorting_analyzer_sparse,
+                    sparsity=self.sparsity_strict,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
                 )
 
     def test_plot_agreement_matrix(self):
@@ -541,7 +540,7 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.UnitProbeMapWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_unit_probe_map(self.we_dense)
+                sw.plot_unit_probe_map(self.sorting_analyzer_dense)
 
     def test_plot_unit_presence(self):
         possible_backends = list(sw.UnitPresenceWidget.get_possible_backends())
@@ -583,26 +582,28 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_summary()
     # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_traces()
+    # mytest.test_plot_spikes_on_traces()
     # mytest.test_plot_unit_waveforms()
-    # mytest.test_plot_unit_templates()
-    mytest.test_plot_unit_waveforms()
+    mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
-    # mytest.test_plot_unit_templates()
-    # mytest.test_plot_unit_summary()
-    # mytest.test_crosscorrelogram()
-    # mytest.test_isi_distribution()
-    # mytest.test_unit_locations()
-    # mytest.test_quality_metrics()
-    # mytest.test_template_metrics()
-    # mytest.test_amplitudes()
+    # mytest.test_plot_autocorrelograms()
+    # mytest.test_plot_crosscorrelograms()
+    # mytest.test_plot_isi_distribution()
+    # mytest.test_plot_unit_locations()
+    # mytest.test_plot_spike_locations()
+    # mytest.test_plot_similarity()
+    # mytest.test_plot_quality_metrics()
+    # mytest.test_plot_template_metrics()
+    # mytest.test_plot_amplitudes()
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
     # mytest.test_plot_rasters()
     # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_unit_presence()
+    # mytest.test_plot_peak_activity()
     # mytest.test_plot_multicomparison()
-
-    TestWidgets.tearDownClass()
-
+    # mytest.test_plot_sorting_summary()
     plt.show()
+
+    # TestWidgets.tearDownClass()

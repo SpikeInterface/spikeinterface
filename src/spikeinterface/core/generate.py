@@ -1259,7 +1259,7 @@ def generate_single_fake_waveform(
     bins = np.arange(-n, n + 1)
     smooth_kernel = np.exp(-(bins**2) / (2 * smooth_size**2))
     smooth_kernel /= np.sum(smooth_kernel)
-    smooth_kernel = smooth_kernel[4:]
+    # smooth_kernel = smooth_kernel[4:]
     wf = np.convolve(wf, smooth_kernel, mode="same")
 
     # ensure the the peak to be extatly at nbefore (smooth can modify this)
@@ -1701,7 +1701,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
 
             wf = template[start_template:end_template]
             if self.amplitude_vector is not None:
-                wf *= self.amplitude_vector[i]
+                wf = wf * self.amplitude_vector[i]
             traces[start_traces:end_traces] += wf
 
         return traces.astype(self.dtype, copy=False)

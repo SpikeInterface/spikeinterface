@@ -14,8 +14,8 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
     ----------
     recording: RecordingExtractor
         The recording extractor object
-    peaks: WaveformExtractor
-        The waveform extractor
+    peaks: numpy.array
+        The peak vector
     method: str
         Which method to use ("stupid" | "XXXX")
     method_kwargs: dict, default: dict()
