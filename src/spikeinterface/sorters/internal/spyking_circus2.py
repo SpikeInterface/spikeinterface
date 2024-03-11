@@ -6,18 +6,7 @@ import os
 import shutil
 import numpy as np
 
-<<<<<<< HEAD
-from spikeinterface.core import (
-    NumpySorting,
-    load_extractor,
-    BaseRecording,
-    get_noise_levels,
-    extract_waveforms,
-    get_channel_distances,
-)
-=======
 from spikeinterface.core import NumpySorting, load_extractor, BaseRecording
->>>>>>> 6d382a2906dfc44bf060af5ef7caf83e475be9f3
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import estimate_templates
