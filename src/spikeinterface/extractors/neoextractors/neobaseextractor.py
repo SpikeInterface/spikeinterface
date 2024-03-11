@@ -21,7 +21,9 @@ class _NeoBaseExtractor:
     NeoRawIOClass = None
 
     def __init__(self, block_index, **neo_kwargs):
-        if not hasattr(self, "neo_reader"):  # Avoid double initialization
+
+        # Avoids double initiation of the neo reader if it was already done in the __init__ of the child class
+        if not hasattr(self, "neo_reader"):
             self.neo_reader = self.get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
 
         if self.neo_reader.block_count() > 1 and block_index is None:
@@ -238,13 +240,21 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             chan_ids = signal_channels["id"]
 
         sampling_frequency = self.neo_reader.get_signal_sampling_rate(stream_index=self.stream_index)
-        dtype = signal_channels["dtype"][0]
+        dtype = np.dtype(signal_channels["dtype"][0])
         BaseRecording.__init__(self, sampling_frequency, chan_ids, dtype)
         self.extra_requirements.append("neo")
 
         # find the gain to uV
         gains = signal_channels["gain"]
         offsets = signal_channels["offset"]
+
+        if dtype.kind == "i" and np.all(gains < 0) and np.all(offsets == 0):
+            # special hack when all channel have negative gain: we put back the gain positive
+            # this help the end user experience
+            self.inverted_gain = True
+            gains = -gains
+        else:
+            self.inverted_gain = False
 
         units = signal_channels["units"]
 
@@ -286,7 +296,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         nseg = self.neo_reader.segment_count(block_index=self.block_index)
         for segment_index in range(nseg):
-            rec_segment = NeoRecordingSegment(self.neo_reader, self.block_index, segment_index, self.stream_index)
+            rec_segment = NeoRecordingSegment(
+                self.neo_reader, self.block_index, segment_index, self.stream_index, self.inverted_gain
+            )
             self.add_recording_segment(rec_segment)
 
         self._kwargs.update(kwargs)
@@ -299,7 +311,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
 
 class NeoRecordingSegment(BaseRecordingSegment):
-    def __init__(self, neo_reader, block_index, segment_index, stream_index):
+    def __init__(self, neo_reader, block_index, segment_index, stream_index, inverted_gain):
         sampling_frequency = neo_reader.get_signal_sampling_rate(stream_index=stream_index)
         t_start = neo_reader.get_signal_t_start(block_index, segment_index, stream_index=stream_index)
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
@@ -307,6 +319,7 @@ class NeoRecordingSegment(BaseRecordingSegment):
         self.segment_index = segment_index
         self.stream_index = stream_index
         self.block_index = block_index
+        self.inverted_gain = inverted_gain
 
     def get_num_samples(self):
         num_samples = self.neo_reader.get_signal_size(
@@ -329,6 +342,8 @@ class NeoRecordingSegment(BaseRecordingSegment):
             stream_index=self.stream_index,
             channel_indexes=channel_indices,
         )
+        if self.inverted_gain:
+            raw_traces = -raw_traces
         return raw_traces
 
 

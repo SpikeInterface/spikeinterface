@@ -1,21 +1,26 @@
+from __future__ import annotations
+
 import shutil
+
 from .si_based import ComponentsBasedSorter
 
 from spikeinterface.core import (
-    load_extractor,
-    BaseRecording,
     get_noise_levels,
-    extract_waveforms,
     NumpySorting,
     get_channel_distances,
+    estimate_templates_average,
+    Templates,
+    compute_sparsity,
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 
-from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
+from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
-from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
+from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel, cache_preprocessing
+
+# from spikeinterface.qualitymetrics import compute_snrs
 
 import numpy as np
 
@@ -28,6 +33,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "apply_preprocessing": True,
+        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "waveforms": {
             "ms_before": 0.5,
             "ms_after": 1.5,
@@ -36,20 +42,37 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "filtering": {"freq_min": 300.0, "freq_max": 12000.0},
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "features": {},
         "svd": {"n_components": 6},
         "clustering": {
             "split_radius_um": 40.0,
             "merge_radius_um": 40.0,
+            "threshold_diff": 1.5,
         },
         "templates": {
-            "ms_before": 1.5,
-            "ms_after": 2.5,
+            "ms_before": 2.0,
+            "ms_after": 3.0,
+            "max_spikes_per_unit": 400,
             # "peak_shift_ms": 0.2,
         },
-        "matching": {"peak_shift_ms": 0.2, "radius_um": 100.0},
+        # "matching": {"method": "tridesclous", "method_kwargs": {"peak_shift_ms": 0.2, "radius_um": 100.0}},
+        "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
         "job_kwargs": {"n_jobs": -1},
         "save_array": True,
+    }
+
+    _params_description = {
+        "apply_preprocessing": "Apply internal preprocessing or not",
+        "cache_preprocessing": "A dict contaning how to cache the preprocessed recording. mode='memory' | 'folder | 'zarr' ",
+        "waveforms": "A dictonary containing waveforms params: ms_before, ms_after, radius_um",
+        "filtering": "A dictonary containing filtering params: freq_min, freq_max",
+        "detection": "A dictonary containing detection params: peak_sign, detect_threshold, exclude_sweep_ms, radius_um",
+        "selection": "A dictonary containing selection params: n_peaks_per_channel, min_n_peaks",
+        "svd": "A dictonary containing svd params: n_components",
+        "clustering": "A dictonary containing clustering params: split_radius_um, merge_radius_um",
+        "templates": "A dictonary containing waveforms params for peeler: ms_before, ms_after",
+        "matching": "A dictonary containing matching params for matching: peak_shift_ms, radius_um",
+        "job_kwargs": "A dictionary containing job kwargs",
+        "save_array": "Save or not intermediate arrays",
     }
 
     handle_multi_segment = True
@@ -95,6 +118,14 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             # TODO what is the best about zscore>common_reference or the reverse
             recording = common_reference(recording)
             recording = zscore(recording, dtype="float32")
+            # recording = whiten(recording, dtype="float32")
+
+            # used only if "folder" or "zarr"
+            cache_folder = sorter_output_folder / "cache_preprocessing"
+            recording = cache_preprocessing(
+                recording, folder=cache_folder, **job_kwargs, **params["cache_preprocessing"]
+            )
+
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
             recording = recording_raw
@@ -149,22 +180,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         features_folder = sorter_output_folder / "features"
         node0 = PeakRetriever(recording, peaks)
 
-        # node1 = ExtractDenseWaveforms(rec, parents=[node0], return_output=False,
-        #     ms_before=0.5,
-        #     ms_after=1.5,
-        # )
-
-        # node2 = LocalizeCenterOfMass(rec, parents=[node0, node1], return_output=True,
-        #                              local_radius_um=75.0,
-        #                              feature="ptp", )
-
-        # node2 = LocalizeGridConvolution(rec, parents=[node0, node1], return_output=True,
-        #                             local_radius_um=40.,
-        #                             upsampling_um=5.0,
-        #                             )
-
         radius_um = params["waveforms"]["radius_um"]
-        node3 = ExtractSparseWaveforms(
+        node1 = ExtractSparseWaveforms(
             recording,
             parents=[node0],
             return_output=True,
@@ -175,12 +192,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         model_folder_path = sorter_output_folder / "tsvd_model"
 
-        node4 = TemporalPCAProjection(
-            recording, parents=[node0, node3], return_output=True, model_folder_path=model_folder_path
+        node2 = TemporalPCAProjection(
+            recording, parents=[node0, node1], return_output=True, model_folder_path=model_folder_path
         )
 
-        # pipeline_nodes = [node0, node1, node2, node3, node4]
-        pipeline_nodes = [node0, node3, node4]
+        pipeline_nodes = [node0, node1, node2]
 
         output = run_node_pipeline(
             recording,
@@ -193,7 +209,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
 
         # TODO make this generic in GatherNPY ???
-        sparse_mask = node3.neighbours_mask
+        sparse_mask = node1.neighbours_mask
         np.save(features_folder / "sparse_mask.npy", sparse_mask)
         np.save(features_folder / "peaks.npy", peaks)
 
@@ -229,6 +245,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
 
         merge_radius_um = params["clustering"]["merge_radius_um"]
+        threshold_diff = params["clustering"]["threshold_diff"]
 
         post_merge_label, peak_shifts = merge_clusters(
             peaks,
@@ -249,7 +266,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             method="normalized_template_diff",
             method_kwargs=dict(
                 waveforms_sparse_mask=sparse_mask,
-                threshold_diff=0.2,
+                threshold_diff=threshold_diff,
                 min_cluster_size=min_cluster_size + 1,
                 num_shift=5,
             ),
@@ -262,52 +279,90 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         new_peaks["sample_index"] -= peak_shifts
 
         # clean very small cluster before peeler
-        minimum_cluster_size = 25
-        labels_set, count = np.unique(post_merge_label, return_counts=True)
-        to_remove = labels_set[count < minimum_cluster_size]
+        post_clean_label = post_merge_label.copy()
 
-        mask = np.isin(post_merge_label, to_remove)
-        post_merge_label[mask] = -1
+        minimum_cluster_size = 25
+        labels_set, count = np.unique(post_clean_label, return_counts=True)
+        to_remove = labels_set[count < minimum_cluster_size]
+        mask = np.isin(post_clean_label, to_remove)
+        post_clean_label[mask] = -1
 
         # final label sets
-        labels_set = np.unique(post_merge_label)
+        labels_set = np.unique(post_clean_label)
         labels_set = labels_set[labels_set >= 0]
 
-        mask = post_merge_label >= 0
-        sorting_temp = NumpySorting.from_times_labels(
+        mask = post_clean_label >= 0
+        sorting_pre_peeler = NumpySorting.from_times_labels(
             new_peaks["sample_index"][mask],
             post_merge_label[mask],
             sampling_frequency,
             unit_ids=labels_set,
         )
-        sorting_temp = sorting_temp.save(folder=sorter_output_folder / "sorting_temp")
+        # sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")
 
-        ms_before = params["templates"]["ms_before"]
-        ms_after = params["templates"]["ms_after"]
-        max_spikes_per_unit = 300
-
-        we = extract_waveforms(
+        nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
+        nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
+        templates_array = estimate_templates_average(
             recording,
-            sorting_temp,
-            sorter_output_folder / "waveforms_temp",
-            ms_before=ms_before,
-            ms_after=ms_after,
-            max_spikes_per_unit=max_spikes_per_unit,
+            sorting_pre_peeler.to_spike_vector(),
+            sorting_pre_peeler.unit_ids,
+            nbefore,
+            nafter,
+            return_scaled=False,
             **job_kwargs,
         )
+        templates_dense = Templates(
+            templates_array=templates_array,
+            sampling_frequency=sampling_frequency,
+            nbefore=nbefore,
+            probe=recording.get_probe(),
+        )
+        # TODO : try other methods for sparsity
+        # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=120.)
+        sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=1.0)
+        templates = templates_dense.to_sparse(sparsity)
 
-        matching_params = params["matching"].copy()
-        matching_params["waveform_extractor"] = we
+        # snrs = compute_snrs(we, peak_sign=params["detection"]["peak_sign"], peak_mode="extremum")
+        # print(snrs)
+
+        # matching_params = params["matching"].copy()
+        # matching_params["noise_levels"] = noise_levels
+        # matching_params["peak_sign"] = params["detection"]["peak_sign"]
+        # matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
+        # matching_params["radius_um"] = params["detection"]["radius_um"]
+
+        # spikes = find_spikes_from_templates(
+        #     recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
+        # )
+
+        matching_method = params["matching"]["method"]
+        matching_params = params["matching"]["method_kwargs"].copy()
+
+        matching_params["templates"] = templates
         matching_params["noise_levels"] = noise_levels
-        matching_params["peak_sign"] = params["detection"]["peak_sign"]
-        matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
-        matching_params["radius_um"] = params["detection"]["radius_um"]
+        # matching_params["peak_sign"] = params["detection"]["peak_sign"]
+        # matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
+        # matching_params["radius_um"] = params["detection"]["radius_um"]
+
+        # spikes = find_spikes_from_templates(
+        #     recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
+        # )
+        # )
+
+        if matching_method == "circus-omp-svd":
+            job_kwargs = job_kwargs.copy()
+            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+                if value in job_kwargs:
+                    job_kwargs.pop(value)
+            job_kwargs["chunk_duration"] = "100ms"
 
         spikes = find_spikes_from_templates(
-            recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
+            recording, method=matching_method, method_kwargs=matching_params, **job_kwargs
         )
 
         if params["save_array"]:
+            sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")
+
             np.save(sorter_output_folder / "noise_levels.npy", noise_levels)
             np.save(sorter_output_folder / "all_peaks.npy", all_peaks)
             np.save(sorter_output_folder / "post_split_label.npy", post_split_label)
