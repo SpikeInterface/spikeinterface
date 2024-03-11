@@ -61,7 +61,7 @@ def get_sorting_analyzer(recording, sorting, format="memory", sparsity=None, nam
     return sorting_analyzer
 
 
-class ResultExtensionCommonTestSuite:
+class AnalyzerExtensionCommonTestSuite:
     """
     Common tests with class approach to compute extension on several cases (3 format x 2 sparsity)
 
@@ -91,7 +91,7 @@ class ResultExtensionCommonTestSuite:
         sorting_analyzer = get_sorting_analyzer(
             self.recording, self.sorting, format=format, sparsity=sparsity_, name=self.extension_class.extension_name
         )
-        sorting_analyzer.select_random_spikes(max_spikes_per_unit=50, seed=2205)
+        sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
         for dependency_name in self.extension_class.depend_on:
             if "|" in dependency_name:
                 dependency_name = dependency_name.split("|")[0]

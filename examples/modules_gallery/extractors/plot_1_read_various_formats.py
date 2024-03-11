@@ -1,4 +1,4 @@
-'''
+"""
 Read various format into SpikeInterface
 =======================================
 
@@ -14,7 +14,7 @@ Note that:
   * file formats can be file-based (NWB, ...)  or folder based (SpikeGLX, OpenEphys, ...)
 
 In this example we demonstrate how to read different file formats into SI
-'''
+"""
 
 import matplotlib.pyplot as plt
 
@@ -29,10 +29,10 @@ import spikeinterface.extractors as se
 #   * Spike2: file from spike2 devices. It contains "recording" information only.
 
 
-spike2_file_path = si.download_dataset(remote_path='spike2/130322-1LY.smr')
+spike2_file_path = si.download_dataset(remote_path="spike2/130322-1LY.smr")
 print(spike2_file_path)
 
-mearec_folder_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+mearec_folder_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
 print(mearec_folder_path)
 
 ##############################################################################
@@ -45,13 +45,13 @@ print(mearec_folder_path)
 # want to retrieve ('0' in our case).
 # the stream information can be retrieved by using the :py:func:`~spikeinterface.extractors.get_neo_streams` function.
 
-stream_names, stream_ids = se.get_neo_streams('spike2', spike2_file_path)
+stream_names, stream_ids = se.get_neo_streams("spike2", spike2_file_path)
 print(stream_names)
 print(stream_ids)
 stream_id = stream_ids[0]
-print('stream_id', stream_id)
+print("stream_id", stream_id)
 
-recording = se.read_spike2(spike2_file_path, stream_id='0')
+recording = se.read_spike2(spike2_file_path, stream_id="0")
 print(recording)
 print(type(recording))
 print(isinstance(recording, si.BaseRecording))
@@ -61,7 +61,7 @@ print(isinstance(recording, si.BaseRecording))
 # :py:class:`~spikeinterface.extractors.Spike2RecordingExtractor` object:
 #
 
-recording = se.Spike2RecordingExtractor(spike2_file_path, stream_id='0')
+recording = se.Spike2RecordingExtractor(spike2_file_path, stream_id="0")
 print(recording)
 
 ##############################################################################

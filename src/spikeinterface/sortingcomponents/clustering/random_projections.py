@@ -45,12 +45,12 @@ class RandomProjectionClustering:
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
             "allow_single_cluster": True,
-            "core_dist_n_jobs": os.cpu_count(),
+            "core_dist_n_jobs": -1,
             "cluster_selection_method": "leaf",
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
-        "sparsity": {"method": "ptp", "threshold": 1},
+        "sparsity": {"method": "ptp", "threshold": 0.25},
         "radius_um": 100,
         "nb_projections": 10,
         "ms_before": 0.5,
@@ -58,27 +58,21 @@ class RandomProjectionClustering:
         "random_seed": 42,
         "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
-        "debug": False,
         "tmp_folder": None,
-        "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {},
     }
 
     @classmethod
     def main_function(cls, recording, peaks, params):
         assert HAVE_HDBSCAN, "random projections clustering need hdbscan to be installed"
 
-        if "n_jobs" in params["job_kwargs"]:
-            if params["job_kwargs"]["n_jobs"] == -1:
-                params["job_kwargs"]["n_jobs"] = os.cpu_count()
-
-        if "core_dist_n_jobs" in params["hdbscan_kwargs"]:
-            if params["hdbscan_kwargs"]["core_dist_n_jobs"] == -1:
-                params["hdbscan_kwargs"]["core_dist_n_jobs"] = os.cpu_count()
-
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        verbose = d["job_kwargs"]["verbose"]
+        if "verbose" in job_kwargs:
+            verbose = job_kwargs["verbose"]
+        else:
+            verbose = False
 
         fs = recording.get_sampling_frequency()
         nbefore = int(params["ms_before"] * fs / 1000.0)
@@ -117,19 +111,23 @@ class RandomProjectionClustering:
         nafter = int(params["ms_after"] * fs / 1000)
         nsamples = nbefore + nafter
 
+        # noise_ptps = np.linalg.norm(np.random.randn(1000, nsamples), axis=1)
+        # noise_threshold = np.mean(noise_ptps) + 3 * np.std(noise_ptps)
+
         node3 = RandomProjectionsFeature(
             recording,
             parents=[node0, node2],
             return_output=True,
             projections=projections,
             radius_um=params["radius_um"],
+            noise_threshold=None,
             sparse=True,
         )
 
         pipeline_nodes = [node0, node1, node2, node3]
 
         hdbscan_data = run_node_pipeline(
-            recording, pipeline_nodes, params["job_kwargs"], job_name="extracting features"
+            recording, pipeline_nodes, job_kwargs=job_kwargs, job_name="extracting features"
         )
 
         import sklearn
@@ -159,7 +157,7 @@ class RandomProjectionClustering:
             templates_array, fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe()
         )
         if params["noise_levels"] is None:
-            params["noise_levels"] = get_noise_levels(recording)
+            params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
         sparsity = compute_sparsity(templates, params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         templates = remove_empty_templates(templates)
@@ -167,7 +165,7 @@ class RandomProjectionClustering:
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
 
-        cleaning_matching_params = params["job_kwargs"].copy()
+        cleaning_matching_params = job_kwargs.copy()
         for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
             if value in cleaning_matching_params:
                 cleaning_matching_params[value] = None

@@ -37,7 +37,7 @@
 	<td>Codecov</td>
 	<td>
 		<a href="https://codecov.io/github/spikeinterface/spikeinterface">
-		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/master/graphs/badge.svg" alt="codecov" />
+		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/main/graphs/badge.svg" alt="codecov" />
 		</a>
 	</td>
 </tr>

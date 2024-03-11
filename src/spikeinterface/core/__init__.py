@@ -101,7 +101,7 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
-from .sorting_tools import spike_vector_to_spike_trains
+from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection
 
 from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_average
 from .snippets_tools import snippets_from_sorting
@@ -143,9 +143,11 @@ from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
 
 from .template import Templates
 
-# SortingAnalyzer and ResultExtension
-from .sortinganalyzer import SortingAnalyzer, ResultExtension, create_sorting_analyzer, load_sorting_analyzer
+# SortingAnalyzer and AnalyzerExtension
+from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, create_sorting_analyzer, load_sorting_analyzer
 from .analyzer_extension_core import (
+    SelectRandomSpikes,
+    compute_select_random_spikes,
     ComputeWaveforms,
     compute_waveforms,
     ComputeTemplates,
