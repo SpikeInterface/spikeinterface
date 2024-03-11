@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.100.1.rst
   releases/0.100.0.rst
   releases/0.99.1.rst
   releases/0.99.0.rst
@@ -32,6 +33,12 @@ Release notes
   releases/0.10.0.rst
   releases/0.9.9.rst
   releases/0.9.1.rst
+
+
+Version 0.100.1
+==============
+
+* Minor release with some bug fixes and Kilosort4 support
 
 
 Version 0.100.0
