@@ -42,6 +42,11 @@ base_peak_dtype = [
 ]
 
 
+spike_peak_dtype = base_peak_dtype + [
+    ("unit_index", "int64"),
+]
+
+
 class PipelineNode:
     def __init__(
         self,
@@ -162,10 +167,19 @@ class SpikeRetriever(PeakSource):
     peak_sign: "neg" | "pos", default: "neg"
         Peak sign to find the max channel.
         Used only when channel_from_template=False
+    include_spikes_in_margin: bool, default False
+        If not None then spikes in margin are added and an extra filed in dtype is added
     """
 
     def __init__(
-        self, recording, sorting, channel_from_template=True, extremum_channel_inds=None, radius_um=50, peak_sign="neg"
+        self,
+        recording,
+        sorting,
+        channel_from_template=True,
+        extremum_channel_inds=None,
+        radius_um=50,
+        peak_sign="neg",
+        include_spikes_in_margin=False,
     ):
         PipelineNode.__init__(self, recording, return_output=False)
 
@@ -173,7 +187,13 @@ class SpikeRetriever(PeakSource):
 
         assert extremum_channel_inds is not None, "SpikeRetriever needs the extremum_channel_inds dictionary"
 
-        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds)
+        self._dtype = spike_peak_dtype
+
+        self.include_spikes_in_margin = include_spikes_in_margin
+        if include_spikes_in_margin is not None:
+            self._dtype = spike_peak_dtype + [("in_margin", "bool")]
+
+        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds, self._dtype)
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
@@ -190,18 +210,31 @@ class SpikeRetriever(PeakSource):
         return 0
 
     def get_dtype(self):
-        return base_peak_dtype
+        return self._dtype
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        if self.include_spikes_in_margin:
+            i0, i1 = np.searchsorted(
+                peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
+            )
+        else:
+            i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
         local_peaks = local_peaks.copy()
         local_peaks["sample_index"] -= start_frame - max_margin
+
+        # handle flag for margin
+        if self.include_spikes_in_margin:
+            local_peaks["in_margin"][:] = False
+            mask = local_peaks["sample_index"] < max_margin
+            local_peaks["in_margin"][mask] = True
+            mask = local_peaks["sample_index"] >= traces.shape[0] - max_margin
+            local_peaks["in_margin"][mask] = True
 
         if not self.channel_from_template:
             # handle channel spike per spike
@@ -222,14 +255,15 @@ class SpikeRetriever(PeakSource):
         return (local_peaks,)
 
 
-def sorting_to_peaks(sorting, extremum_channel_inds):
+def sorting_to_peaks(sorting, extremum_channel_inds, dtype):
     spikes = sorting.to_spike_vector()
-    peaks = np.zeros(spikes.size, dtype=base_peak_dtype)
+    peaks = np.zeros(spikes.size, dtype=dtype)
     peaks["sample_index"] = spikes["sample_index"]
     extremum_channel_inds_ = np.array([extremum_channel_inds[unit_id] for unit_id in sorting.unit_ids])
     peaks["channel_index"] = extremum_channel_inds_[spikes["unit_index"]]
     peaks["amplitude"] = 0.0
     peaks["segment_index"] = spikes["segment_index"]
+    peaks["unit_index"] = spikes["unit_index"]
     return peaks
 
 

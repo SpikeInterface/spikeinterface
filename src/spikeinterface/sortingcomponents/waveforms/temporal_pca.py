@@ -14,7 +14,7 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.sparsity import ChannelSparsity
-from spikeinterface import extract_waveforms, NumpySorting
+from spikeinterface import NumpySorting, create_sorting_analyzer
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
@@ -138,25 +138,16 @@ class TemporalPCBaseNode(WaveformsNode):
 
         # Creates a numpy sorting object where the spike times are the peak times and the unit ids are the peak channel
         sorting = NumpySorting.from_peaks(peaks, recording.sampling_frequency, recording.channel_ids)
-        # Create a waveform extractor
-        we = extract_waveforms(
-            recording,
-            sorting,
-            ms_before=ms_before,
-            ms_after=ms_after,
-            folder=None,
-            mode="memory",
-            max_spikes_per_unit=None,
-            **job_kwargs,
-        )
 
-        # compute PCA by_channel_global (with sparsity)
-        sparsity = ChannelSparsity.from_radius(we, radius_um=radius_um) if radius_um else None
-        pc = compute_principal_components(
-            we, n_components=n_components, mode="by_channel_global", sparsity=sparsity, whiten=whiten
+        # TODO alessio, herberto : the fitting is done with a SortingAnalyzer which is a postprocessing object, I think we should not do this for a component
+        sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=True)
+        sorting_analyzer.compute("random_spikes")
+        sorting_analyzer.compute("waveforms", ms_before=ms_before, ms_after=ms_after)
+        sorting_analyzer.compute(
+            "principal_components", n_components=n_components, mode="by_channel_global", whiten=whiten
         )
+        pca_model = sorting_analyzer.get_extension("principal_components").get_pca_model()
 
-        pca_model = pc.get_pca_model()
         params = {
             "ms_before": ms_before,
             "ms_after": ms_after,
@@ -200,11 +191,18 @@ class TemporalPCAProjection(TemporalPCBaseNode):
     """
 
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
+        self,
+        recording: BaseRecording,
+        parents: List[PipelineNode],
+        model_folder_path: str,
+        dtype="float32",
+        return_output=True,
     ):
         TemporalPCBaseNode.__init__(
             self, recording=recording, parents=parents, return_output=return_output, model_folder_path=model_folder_path
         )
+        self.n_components = self.pca_model.n_components
+        self.dtype = np.dtype(dtype)
 
     def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
         """
@@ -227,12 +225,13 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         """
 
         num_channels = waveforms.shape[2]
-
-        temporal_waveforms = to_temporal_representation(waveforms)
-        projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
-        projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
-
-        return projected_waveforms
+        if waveforms.shape[0] > 0:
+            temporal_waveforms = to_temporal_representation(waveforms)
+            projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
+            projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
+        else:
+            projected_waveforms = np.zeros((0, self.n_components, num_channels), dtype=self.dtype)
+        return projected_waveforms.astype(self.dtype, copy=False)
 
 
 class TemporalPCADenoising(TemporalPCBaseNode):
@@ -283,9 +282,12 @@ class TemporalPCADenoising(TemporalPCBaseNode):
         """
         num_channels = waveforms.shape[2]
 
-        temporal_waveform = to_temporal_representation(waveforms)
-        projected_temporal_waveforms = self.pca_model.transform(temporal_waveform)
-        temporal_denoised_waveforms = self.pca_model.inverse_transform(projected_temporal_waveforms)
-        denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
+        if waveforms.shape[0] > 0:
+            temporal_waveform = to_temporal_representation(waveforms)
+            projected_temporal_waveforms = self.pca_model.transform(temporal_waveform)
+            temporal_denoised_waveforms = self.pca_model.inverse_transform(projected_temporal_waveforms)
+            denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
+        else:
+            denoised_waveforms = np.zeros_like(waveforms)
 
         return denoised_waveforms
