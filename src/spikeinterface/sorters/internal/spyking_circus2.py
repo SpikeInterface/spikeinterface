@@ -232,7 +232,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             if matching_method == "circus-omp-svd":
                 for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
                     if value in matching_job_params:
-                        matching_job_params.pop(value)
+                        matching_job_params[value] = None
                 matching_job_params["chunk_duration"] = "100ms"
 
             spikes = find_spikes_from_templates(
