@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Union
 
-from probeinterface import ProbeGroup
 
 from .base import BaseWidget, to_attr
-from .utils import get_unit_colors
-from ..core.waveform_extractor import WaveformExtractor
 
 
 class PeakActivityMapWidget(BaseWidget):

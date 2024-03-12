@@ -1,4 +1,4 @@
-'''
+"""
 Handling probe information
 ===========================
 
@@ -10,7 +10,8 @@ Depending on the dataset, the :py:class:`~probeinterface.Probe` object may alrea
 manually.
 
 Here's how!
-'''
+"""
+
 import numpy as np
 import spikeinterface.extractors as se
 
@@ -21,7 +22,7 @@ recording, sorting_true = se.toy_example(duration=10, num_channels=32, seed=0, n
 print(recording)
 
 ###############################################################################
-# This generator already contain a probe object that you can retrieve
+# This generator already contains a probe object that you can retrieve
 # directly and plot:
 
 probe = recording.get_probe()
@@ -32,17 +33,17 @@ from probeinterface.plotting import plot_probe
 plot_probe(probe)
 
 ###############################################################################
-# You can also overwrite the probe. In this case you need to manually make
+# You can also overwrite the probe. In this case you need to manually set
 # the wiring (e.g. virtually connect each electrode to the recording device).
 # Let's use a probe from Cambridge Neurotech with 32 channels:
 
 from probeinterface import get_probe
 
-other_probe = get_probe(manufacturer='cambridgeneurotech', probe_name='ASSY-37-E-1')
+other_probe = get_probe(manufacturer="cambridgeneurotech", probe_name="ASSY-37-E-1")
 print(other_probe)
 
 other_probe.set_device_channel_indices(np.arange(32))
-recording_2_shanks = recording.set_probe(other_probe, group_mode='by_shank')
+recording_2_shanks = recording.set_probe(other_probe, group_mode="by_shank")
 plot_probe(recording_2_shanks.get_probe())
 
 ###############################################################################
@@ -51,9 +52,9 @@ plot_probe(recording_2_shanks.get_probe())
 # We can use this information to split the recording into two sub-recordings:
 
 print(recording_2_shanks)
-print(recording_2_shanks.get_property('group'))
+print(recording_2_shanks.get_property("group"))
 
-rec0, rec1 = recording_2_shanks.split_by(property='group')
+rec0, rec1 = recording_2_shanks.split_by(property="group")
 print(rec0)
 print(rec1)
 

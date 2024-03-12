@@ -1,9 +1,10 @@
-'''
+"""
 RecordingExtractor Widgets Gallery
 ===================================
 
 Here is a gallery of all the available widgets using RecordingExtractor objects.
-'''
+"""
+
 import matplotlib.pyplot as plt
 
 import spikeinterface.extractors as se
@@ -39,10 +40,9 @@ w_ts.figure.suptitle("Recording by group")
 w_ts.ax.set_ylabel("Channel_ids")
 
 ##############################################################################
-# We can also use the 'map' mode useful for high channel count
+# We can also use the 'map' mode useful for high channel count
 
-w_ts = sw.plot_traces(recording, mode='map', time_range=(5, 8),
-        show_channel_ids=True, order_channel_by_depth=True)
+w_ts = sw.plot_traces(recording, mode="map", time_range=(5, 8), show_channel_ids=True, order_channel_by_depth=True)
 
 ##############################################################################
 # plot_electrode_geometry()

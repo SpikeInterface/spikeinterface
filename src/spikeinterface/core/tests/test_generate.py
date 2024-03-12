@@ -3,7 +3,7 @@ import psutil
 
 import numpy as np
 
-from spikeinterface.core import load_extractor, extract_waveforms
+from spikeinterface.core import load_extractor
 
 from probeinterface import generate_multi_columns_probe
 from spikeinterface.core.generate import (

@@ -8,3 +8,4 @@ How to guides
     analyse_neuropixels
     handle_drift
     load_matlab_data
+    process_by_channel_group
