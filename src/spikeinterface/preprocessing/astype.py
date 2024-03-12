@@ -13,6 +13,9 @@ class AstypeRecording(BasePreprocessor):
     Converts a recording to another dtype on the fly.
 
     For recording with an unsigned dtype, please use the `unsigned_to_signed` preprocessing function.
+
+    If `round` is True, will round the values to the nearest integer.
+    If `round` is None, will round in the case of float to integer conversion.
     """
 
     name = "astype"
