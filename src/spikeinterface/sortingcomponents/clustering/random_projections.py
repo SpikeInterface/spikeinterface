@@ -69,10 +69,7 @@ class RandomProjectionClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        if "verbose" in job_kwargs:
-            verbose = job_kwargs.pop("verbose", False)
-        else:
-            verbose = False
+        verbose = job_kwargs.get("verbose", False)
 
         fs = recording.get_sampling_frequency()
         nbefore = int(params["ms_before"] * fs / 1000.0)

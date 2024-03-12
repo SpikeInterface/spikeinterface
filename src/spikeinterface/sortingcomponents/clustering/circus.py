@@ -72,10 +72,7 @@ class CircusClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        if "verbose" in job_kwargs:
-            verbose = job_kwargs["verbose"]
-        else:
-            verbose = False
+        verbose = job_kwargs.get("verbose", False)
 
         peak_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
 
