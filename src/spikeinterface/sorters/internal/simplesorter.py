@@ -40,7 +40,7 @@ class SimpleSorter(ComponentsBasedSorter):
             "min_cluster_size": 25,
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
-            "cluster_selection_method": "leaf",
+            "cluster_selection_method": "eom",
             "num_spikes_to_fit" : None,
             "seed" : 42
         },
@@ -169,8 +169,6 @@ class SimpleSorter(ComponentsBasedSorter):
             idx = rng.choice(np.arange(len(features_flat)), size=num_spikes_to_fit)
         else:
             idx = np.arange(len(features_flat))
-
-        print(features_flat.shape)
 
         if clust_method == "hdbscan":
             import hdbscan
