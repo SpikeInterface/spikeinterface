@@ -146,6 +146,8 @@ from .template import Templates
 # SortingAnalyzer and AnalyzerExtension
 from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, create_sorting_analyzer, load_sorting_analyzer
 from .analyzer_extension_core import (
+    SelectRandomSpikes,
+    compute_select_random_spikes,
     ComputeWaveforms,
     compute_waveforms,
     ComputeTemplates,

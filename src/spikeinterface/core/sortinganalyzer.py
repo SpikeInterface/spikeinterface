@@ -431,7 +431,7 @@ class SortingAnalyzer:
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
         if sorting.check_serializability("json"):
-            zarr_sort = np.array([sort_dict], dtype=object)
+            zarr_sort = np.array([check_json(sort_dict)], dtype=object)
             zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
         elif sorting.check_serializability("pickle"):
             zarr_sort = np.array([sort_dict], dtype=object)
@@ -507,7 +507,7 @@ class SortingAnalyzer:
         # sparsity
         if "sparsity_mask" in zarr_root.attrs:
             # sparsity = zarr_root.attrs["sparsity"]
-            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], self.unit_ids, rec_attributes["channel_ids"])
+            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], cls.unit_ids, rec_attributes["channel_ids"])
         else:
             sparsity = None
 
