@@ -170,7 +170,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             neighbours_mask = channel_distance <= radius_um
             if np.all(np.sum(neighbours_mask, axis=0) == 1):
                 if verbose:
-                    print('Independant channels detected, switching to legacy mode')
+                    print("Independant channels detected, switching to legacy mode")
                 legacy = True
 
             if legacy:
