@@ -41,8 +41,8 @@ class SimpleSorter(ComponentsBasedSorter):
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "eom",
-            "num_spikes_to_fit" : None,
-            "seed" : 42
+            "num_spikes_to_fit": None,
+            "seed": 42,
         },
         # "cache_preprocessing": {"mode": None, "memory_limit": 0.5, "delete_cache": True},
         "job_kwargs": {"n_jobs": -1, "chunk_duration": "1s"},
