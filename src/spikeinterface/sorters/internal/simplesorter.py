@@ -41,6 +41,8 @@ class SimpleSorter(ComponentsBasedSorter):
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "leaf",
+            "num_spikes_to_fit" : None,
+            "seed" : 42
         },
         # "cache_preprocessing": {"mode": None, "memory_limit": 0.5, "delete_cache": True},
         "job_kwargs": {"n_jobs": -1, "chunk_duration": "1s"},
@@ -159,30 +161,43 @@ class SimpleSorter(ComponentsBasedSorter):
 
         clust_params = params["clustering"].copy()
         clust_method = clust_params.pop("method", "hdbscan")
+        seed = clust_params.pop('seed', 42)
+        rng = np.random.RandomState(seed)
+        num_spikes_to_fit = clust_params.pop('num_spikes_to_fit', None)
+        
+        if num_spikes_to_fit is not None:
+            idx = rng.choice(np.arange(len(features_flat)), size=num_spikes_to_fit)
+        else:
+            idx = np.arange(len(features_flat))
+
+        print(features_flat.shape)
 
         if clust_method == "hdbscan":
             import hdbscan
-
-            out = hdbscan.hdbscan(features_flat, **clust_params)
-            peak_labels = out[0]
+            if "num_spikes_to_fit" != None:
+                clust_params["prediction_data"] = True
+            clusterer = hdbscan.HDBSCAN(**clust_params)
         elif clust_method in ("kmeans"):
             from sklearn.cluster import MiniBatchKMeans
-
-            peak_labels = MiniBatchKMeans(**clust_params).fit_predict(features_flat)
+            clusterer = MiniBatchKMeans(**clust_params)
         elif clust_method in ("mean_shift"):
             from sklearn.cluster import MeanShift
-
-            peak_labels = MeanShift().fit_predict(features_flat)
+            clusterer = MeanShift(**clust_params)
         elif clust_method in ("affinity_propagation"):
             from sklearn.cluster import AffinityPropagation
-
-            peak_labels = AffinityPropagation().fit_predict(features_flat)
+            clusterer = AffinityPropagation(**clust_params)
         elif clust_method in ("gaussian_mixture"):
             from sklearn.mixture import GaussianMixture
-
-            peak_labels = GaussianMixture(**clust_params).fit_predict(features_flat)
+            clusterer = GaussianMixture(**clust_params)
         else:
             raise ValueError(f"simple_sorter : unkown clustering method {clust_method}")
+
+        clusterer.fit(features_flat[idx])
+
+        if clust_method == 'hdbscan':
+            peak_labels, _ = hdbscan.approximate_predict(clusterer, features_flat)
+        else:
+            peak_labels = clusterer.predict(features_flat)
 
         np.save(features_folder / "peak_labels.npy", peak_labels)
 
