@@ -189,7 +189,7 @@ class SortingAnalyzer:
             txt += " - sparse"
         if self.has_recording():
             txt += " - has recording"
-        ext_txt = f"Loaded {len(self.extensions)} extenstions: " + ", ".join(self.extensions.keys())
+        ext_txt = f"Loaded {len(self.extensions)} extensions: " + ", ".join(self.extensions.keys())
         txt += "\n" + ext_txt
         return txt
 
