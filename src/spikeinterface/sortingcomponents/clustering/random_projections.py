@@ -70,7 +70,7 @@ class RandomProjectionClustering:
 
         d = params
         if "verbose" in job_kwargs:
-            verbose = job_kwargs["verbose"]
+            verbose = job_kwargs.pop("verbose", False)
         else:
             verbose = False
 
