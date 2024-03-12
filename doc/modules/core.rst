@@ -171,7 +171,7 @@ The :py:class:`~spikeinterface.core.SortingAnalyzer` class is the core object to
 This is the first step for additional analyses, and the basis of several postprocessing and quality metrics
 computations.
 
-The :py:class:`~spikeinterface.core.SortingAnalyzer` is provides a convenient API to access the underlying
+The :py:class:`~spikeinterface.core.SortingAnalyzer` provides a convenient API to access the underlying
 :py:class:`~spikeinterface.core.BaseSorting` and :py:class:`~spikeinterface.core.BaseRecording` information,
 and it supports several extensions (derived from the :py:class:`~spikeinterface.core.AnalyzerExtension` class)
 to perform further analysis.
@@ -180,16 +180,16 @@ Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *s
 the channels on which waveforms and templates are defined on, for example, based on a physical distance from the
 channel with the largest peak amplitude.
 
-Most of the extensions live in the :code:`postprocessing` module, but there are some *core* extensions to:
+Most of the extensions live in the :code:`postprocessing` module, but there are some *core* extensions too:
 
-* select random spikes for downstream analysis (e.g., extracting waveforms or fit a PCA model)
+* select random spikes for downstream analysis (e.g., extracting waveforms or fitting a PCA model)
 * estimate templates
 * extract waveforms for single spikes
 * compute channel-wise noise levels
 
 .. note::
 
-    Some extensions depend on others, which must be pre-computed. For example:code:`waveforms`, the :code:`waveforms` extension depends on
+    Some extensions depend on others, which must be pre-computed. For example :code:`waveforms`, the :code:`waveforms` extension depends on
     the :code:`random_spikes` one. If the latter is not computed, computing :code:`waveforms` will throw an error.
 
 
@@ -212,7 +212,7 @@ Most of the extensions live in the :code:`postprocessing` module, but there are 
     >>> Loaded 0 extenstions:
 
 The :code:`sorting_analyzer` object implements convenient functions to access the underlying :code:`recording` and
-:code:`sorting` objects information:
+:code:`sorting` objects' information:
 
 .. code-block:: python
 
@@ -254,7 +254,7 @@ Once the :code:`sorting_analyzer` is instantiated, additional extensions can be 
     # note that re-computing an extension will overwrite the existing one
     waveform_extension_2 = sorting_analyzer.compute("waveforms", ms_before=2, ms_after=5)
 
-    # multiple extensions can be computedwithin the same `compute` call
+    # multiple extensions can be computed within the same `compute` call
     sorting_analyzer.compute(
         ["random_spikes", "waveforms", "templates", "noise_levels"]
     )
@@ -263,9 +263,9 @@ The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in m
 (or upon instantiation) to one of the following backends:
 
 * | :code:`zarr`: the sorting analyzer is saved to a [Zarr]() folder, and each extension is a Zarr group. This is the
-  | recommended backend, since Zarr files can be writter to/read from the cloud and compression is applied.
+  | recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
 * | :code:`binary_folder`: the sorting analyzer is saved to a folder, and each extension creates a sub-folder. The extension
-  | data are saved to either :code:`npy` (for arrays), `csv` (for dataframes), or `pickle` (for everything else).
+  | data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
 
 
 The :code:`SortingAnalyzer.save_as` function will save the object **and all its extension** to disk.
