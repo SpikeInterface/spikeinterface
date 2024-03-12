@@ -211,7 +211,7 @@ Most of the extensions live in the :code:`postprocessing` module, but there are 
 .. code-block:: bash
 
     >>> SortingAnalyzer: 4 channels - 10 units - 1 segments - memory - sparse - has recording
-    >>> Loaded 0 extenstions:
+    >>> Loaded 0 extensions:
 
 The :code:`sorting_analyzer` object implements convenient functions to access the underlying :code:`recording` and
 :code:`sorting` objects' information:
