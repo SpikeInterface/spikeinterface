@@ -86,7 +86,7 @@ print(sorting_true)
 
 # `recording` is a `BaseRecording` object, which extracts information about
 # channel ids,  channel locations (if present), the sampling frequency of the recording, and the extracellular
-# traces. `sorting_true` is a :`BaseSorting` object, which contains information
+# traces. `sorting_true` is a `BaseSorting` object, which contains information
 # about spike-sorting related information,  including unit ids, spike trains, etc. Since the data are simulated,
 # `sorting_true` has ground-truth information of the spiking activity of each unit.
 #
@@ -121,7 +121,7 @@ print("Unit ids:", unit_ids)
 print("Spike train of first unit:", spike_train)
 # -
 
-# SpikeInterface internally uses the [`ProbeInterface`](https://probeinterface.readthedocs.io/en/main/) to handle `probeinterface.Probe` and
+# SpikeInterface internally uses the `ProbeInterface <https://probeinterface.readthedocs.io/en/main/>`_ package to handle `probeinterface.Probe` and
 # `probeinterface.ProbeGroup`. So any probe in the probeinterface collections can be downloaded and set to a
 # `Recording` object. In this case, the MEArec dataset already handles a `Probe` and we don't need to set it *manually*.
 
@@ -134,7 +134,9 @@ from probeinterface.plotting import plot_probe
 _ = plot_probe(probe)
 # -
 
-# Using the :`spikeinterface.preprocessing`, you can perform preprocessing on the recordings.
+# If your recording does not have a `Probe`, you can set it using `set_probe`. There is more information `here <https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html>`_.
+
+# Using the `spikeinterface.preprocessing` module, you can perform preprocessing on the recordings.
 # Each pre-processing function also returns a `BaseRecording`,
 # which makes it easy to build pipelines. Here, we filter the recording and apply common median reference (CMR).
 # All these preprocessing steps are "lazy". The computation is done on demand when we call
