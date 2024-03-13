@@ -70,17 +70,20 @@ class RandomProjectionClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        if "verbose" in job_kwargs:
-            verbose = job_kwargs["verbose"]
-        else:
-            verbose = False
+        verbose = job_kwargs.get("verbose", False)
 
         fs = recording.get_sampling_frequency()
+        radius_um = params["radius_um"]
         nbefore = int(params["ms_before"] * fs / 1000.0)
         nafter = int(params["ms_after"] * fs / 1000.0)
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
         np.random.seed(d["random_seed"])
+
+        contact_locations = recording.get_channel_locations()
+        channel_distance = get_channel_distances(recording)
+        neighbours_mask = channel_distance <= radius_um
+        num_neighbors = int(np.sum(neighbours_mask, axis=0).mean())
 
         node0 = PeakRetriever(recording, peaks)
         node1 = ExtractSparseWaveforms(
@@ -89,13 +92,12 @@ class RandomProjectionClustering:
             return_output=False,
             ms_before=params["ms_before"],
             ms_after=params["ms_after"],
-            radius_um=params["radius_um"],
+            radius_um=radius_um,
         )
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
 
-
-        num_projections = min(num_chans, d["nb_projections"])
+        num_projections = min(num_chans, min(d["nb_projections"], num_neighbors))
         projections = np.random.randn(num_chans, num_projections)
         if num_chans > 1:
             projections -= projections.mean(0)
@@ -115,9 +117,9 @@ class RandomProjectionClustering:
             recording,
             parents=[node0, node2],
             return_output=True,
-            feature='energy',
+            feature=params['feature'],
             projections=projections,
-            radius_um=params["radius_um"],
+            radius_um=radius_um,
             noise_threshold=noise_threshold,
             sparse=True,
         )

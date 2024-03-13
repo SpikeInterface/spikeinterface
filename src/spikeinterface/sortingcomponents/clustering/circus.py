@@ -72,10 +72,7 @@ class CircusClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        if "verbose" in job_kwargs:
-            verbose = job_kwargs["verbose"]
-        else:
-            verbose = False
+        verbose = job_kwargs.get("verbose", False)
 
         peak_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
 
@@ -152,7 +149,10 @@ class CircusClustering:
         nb_clusters = 0
         for c in np.unique(peaks["channel_index"]):
             mask = peaks["channel_index"] == c
-            tsvd = TruncatedSVD(params["n_svd"][1])
+            if all_pc_data.shape[1] > params["n_svd"][1]:
+                tsvd = TruncatedSVD(params["n_svd"][1])
+            else:
+                tsvd = TruncatedSVD(all_pc_data.shape[1])
             sub_data = all_pc_data[mask]
             hdbscan_data = tsvd.fit_transform(sub_data.reshape(len(sub_data), -1))
             try:

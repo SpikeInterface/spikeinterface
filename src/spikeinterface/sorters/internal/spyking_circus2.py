@@ -122,8 +122,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
         detection_params.update(job_kwargs)
+        radius_um = params["general"].get("radius_um", 100)
         if "radius_um" not in detection_params:
-            detection_params["radius_um"] = params["general"]["radius_um"]
+            detection_params["radius_um"] = radius_um
         if "exclude_sweep_ms" not in detection_params:
             detection_params["exclude_sweep_ms"] = max(params["general"]["ms_before"], params["general"]["ms_after"])
         detection_params["noise_levels"] = noise_levels
@@ -153,6 +154,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params = params["clustering"].copy()
             clustering_params["waveforms"] = {}
             clustering_params["sparsity"] = params["sparsity"]
+            clustering_params["radius_um"] = radius_um
 
             for k in ["ms_before", "ms_after"]:
                 clustering_params["waveforms"][k] = params["general"][k]
