@@ -182,7 +182,7 @@ Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *s
 the channels on which waveforms and templates are defined on, for example, based on a physical distance from the
 channel with the largest peak amplitude.
 
-Most of the extensions live in the :code:`postprocessing` module, but there are some *core* extensions too:
+Most of the extensions live in the :code:`postprocessing` module (with the :code:`quality_metrics` extension in the :code:`qualitymetrics` module) , but there are some *core* extensions too:
 
 * select random spikes for downstream analysis (e.g., extracting waveforms or fitting a PCA model)
 * estimate templates
@@ -196,6 +196,7 @@ Most of the extensions live in the :code:`postprocessing` module, but there are 
 
 
 .. code-block:: python
+
     from spikeinterface import create_sorting_analyzer
 
     # create in-memory sorting analyzer object
@@ -308,11 +309,11 @@ Once a :code:`SortingAnalyzer` object is saved to disk, it can be easily reloade
 .. note::
 
     When saved to disk, the :code:`SortingAnalyzer` will store a copy of the :code:`Sorting`` object,
-    because that is relatively small and needed for most (if not all!) operations. The same is not
+    because it is relatively small and needed for most (if not all!) operations. The same is not
     true for the :code:`Recording` object, for which only the main properties will be stored (e.g,
     :code:`sampling_frequency`, :code:`channel_ids`, :code:`channel_locations`, etc.) and
     a provenance to reload the :code:`Recording`. When loading a :code:`SortingAnalyzer` from disk,
-    an attempt is made to re-instantiate the :code:`Recording` object from the provenance. In case
+    an attempt is made to re-instantiate the :code:`Recording` object from the provenance. In cases
     of failure, for example if the original file is not available, the :code:`SortingAnalyzer`
     will be automatically instantiated in "recordingless" mode.
 
