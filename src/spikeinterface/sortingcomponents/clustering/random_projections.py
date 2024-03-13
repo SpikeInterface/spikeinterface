@@ -80,10 +80,10 @@ class RandomProjectionClustering:
         num_chans = recording.get_num_channels()
         np.random.seed(d["random_seed"])
 
-        contact_locations = recording.get_channel_locations()
-        channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance <= radius_um
-        num_neighbors = int(np.sum(neighbours_mask, axis=0).mean())
+        # contact_locations = recording.get_channel_locations()
+        # channel_distance = get_channel_distances(recording)
+        # neighbours_mask = channel_distance <= radius_um
+        # num_neighbors = int(np.sum(neighbours_mask, axis=0).mean())
 
         node0 = PeakRetriever(recording, peaks)
         node1 = ExtractSparseWaveforms(
@@ -97,7 +97,7 @@ class RandomProjectionClustering:
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
 
-        num_projections = min(num_chans, min(d["nb_projections"], num_neighbors))
+        num_projections = min(num_chans, d["nb_projections"])
         projections = np.random.randn(num_chans, num_projections)
         if num_chans > 1:
             projections -= projections.mean(0)
