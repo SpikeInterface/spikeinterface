@@ -33,7 +33,7 @@ from ..postprocessing.unit_localization import (
 from .tools import get_prototype_spike
 
 
-def _run_localization_from_peak_source(
+def get_localization_pipeline_nodes(
     recording, peak_source, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs
 ):
     # use by localize_peaks() and compute_spike_locations()
@@ -78,10 +78,7 @@ def _run_localization_from_peak_source(
             LocalizeGridConvolution(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs),
         ]
 
-    job_name = f"localize peaks using {method}"
-    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
-
-    return peak_locations
+    return pipeline_nodes
 
 
 def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs):
@@ -109,10 +106,14 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
         Array with estimated location for each spike.
         The dtype depends on the method. ("x", "y") or ("x", "y", "z", "alpha").
     """
+    _, job_kwargs = split_job_kwargs(kwargs)
     peak_retriever = PeakRetriever(recording, peaks)
-    peak_locations = _run_localization_from_peak_source(
+    pipeline_nodes = get_localization_pipeline_nodes(
         recording, peak_retriever, method=method, ms_before=ms_before, ms_after=ms_after, **kwargs
     )
+    job_name = f"localize peaks using {method}"
+    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
+
     return peak_locations
 
 
