@@ -208,6 +208,7 @@ def test_ComputeNoiseLevels(format, sparse):
     noise_levels = sorting_analyzer.get_extension("noise_levels").data["noise_levels"]
     assert noise_levels.shape[0] == sorting_analyzer.channel_ids.size
 
+
 def test_get_extension1_or_extension2():
     sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
 
@@ -228,8 +229,6 @@ def test_get_extension1_or_extension2():
 
     ext = sorting_analyzer.get_extension("fast_templates|templates")
     assert ext is ext_fast_templates
-
-
 
 
 if __name__ == "__main__":
