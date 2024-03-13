@@ -53,6 +53,7 @@ class RandomProjectionClustering:
         "sparsity": {"method": "ptp", "threshold": 0.25},
         "radius_um": 100,
         "nb_projections": 10,
+        "feature" : "energy",
         "ms_before": 0.5,
         "ms_after": 0.5,
         "random_seed": 42,
@@ -81,14 +82,6 @@ class RandomProjectionClustering:
         num_chans = recording.get_num_channels()
         np.random.seed(d["random_seed"])
 
-        if params["tmp_folder"] is None:
-            name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-            tmp_folder = get_global_tmp_folder() / name
-        else:
-            tmp_folder = Path(params["tmp_folder"]).absolute()
-
-        tmp_folder.mkdir(parents=True, exist_ok=True)
-
         node0 = PeakRetriever(recording, peaks)
         node1 = ExtractSparseWaveforms(
             recording,
@@ -101,6 +94,7 @@ class RandomProjectionClustering:
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
 
+
         num_projections = min(num_chans, d["nb_projections"])
         projections = np.random.randn(num_chans, num_projections)
         if num_chans > 1:
@@ -111,16 +105,20 @@ class RandomProjectionClustering:
         nafter = int(params["ms_after"] * fs / 1000)
         nsamples = nbefore + nafter
 
-        # noise_ptps = np.linalg.norm(np.random.randn(1000, nsamples), axis=1)
-        # noise_threshold = np.mean(noise_ptps) + 3 * np.std(noise_ptps)
+        if params['feature'] == 'ptp':
+            noise_values= np.ptp(np.random.randn(1000, nsamples), axis=1)
+        elif params['feature'] == 'energy':
+            noise_values = np.linalg.norm(np.random.randn(1000, nsamples), axis=1)
+        noise_threshold = np.mean(noise_values) + 3*np.std(noise_values)
 
         node3 = RandomProjectionsFeature(
             recording,
             parents=[node0, node2],
             return_output=True,
+            feature='energy',
             projections=projections,
             radius_um=params["radius_um"],
-            noise_threshold=None,
+            noise_threshold=noise_threshold,
             sparse=True,
         )
 
@@ -175,8 +173,7 @@ class RandomProjectionClustering:
         cleaning_matching_params["progress_bar"] = False
 
         cleaning_params = params["cleaning_kwargs"].copy()
-        cleaning_params["tmp_folder"] = tmp_folder
-
+        
         labels, peak_labels = remove_duplicates_via_matching(
             templates, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
         )

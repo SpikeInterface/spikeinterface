@@ -41,7 +41,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "clustering": {"legacy": False},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
-        "cache_preprocessing": {"mode": None, "memory_limit": 0.5, "delete_cache": True},
+        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
@@ -260,16 +260,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(sorting_folder)
 
         folder_to_delete = None
-
-        if "mode" in params["cache_preprocessing"]:
-            cache_mode = params["cache_preprocessing"]["mode"]
-        else:
-            cache_mode = "memory"
-
-        if "delete_cache" in params["cache_preprocessing"]:
-            delete_cache = params["cache_preprocessing"]
-        else:
-            delete_cache = True
+        cache_mode = params["cache_preprocessing"].get("mode", "memory")
+        delete_cache = params["cache_preprocessing"].get("delete_cache", True)
 
         if cache_mode in ["folder", "zarr"] and delete_cache:
             folder_to_delete = recording_f._kwargs["folder_path"]

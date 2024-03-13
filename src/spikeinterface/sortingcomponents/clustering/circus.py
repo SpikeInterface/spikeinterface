@@ -206,7 +206,6 @@ class CircusClustering:
         cleaning_matching_params["progress_bar"] = False
 
         cleaning_params = params["cleaning_kwargs"].copy()
-        cleaning_params["tmp_folder"] = tmp_folder
 
         labels, peak_labels = remove_duplicates_via_matching(
             templates, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
