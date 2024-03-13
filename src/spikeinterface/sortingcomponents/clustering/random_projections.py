@@ -47,6 +47,7 @@ class RandomProjectionClustering:
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "leaf",
+            "cluster_selection_epsilon" : 2
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
