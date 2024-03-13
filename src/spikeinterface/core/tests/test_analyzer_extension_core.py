@@ -208,23 +208,48 @@ def test_ComputeNoiseLevels(format, sparse):
     noise_levels = sorting_analyzer.get_extension("noise_levels").data["noise_levels"]
     assert noise_levels.shape[0] == sorting_analyzer.channel_ids.size
 
+def test_get_extension1_or_extension2():
+    sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
+
+    ms_before = 0.8
+    ms_after = 1.3
+
+    sorting_analyzer.compute("noise_levels", return_scaled=True)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
+    sorting_analyzer.compute("fast_templates", ms_before=ms_before, ms_after=ms_after, return_scaled=True)
+    sorting_analyzer.compute("waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True)
+    sorting_analyzer.compute("templates", operators=["average"])
+
+    ext_templates = sorting_analyzer.get_extension("templates")
+    ext_fast_templates = sorting_analyzer.get_extension("fast_templates")
+
+    ext = sorting_analyzer.get_extension("templates|fast_templates")
+    assert ext is ext_templates
+
+    ext = sorting_analyzer.get_extension("fast_templates|templates")
+    assert ext is ext_fast_templates
+
+
+
 
 if __name__ == "__main__":
 
-    test_SelectRandomSpikes(format="memory", sparse=True)
+    # test_SelectRandomSpikes(format="memory", sparse=True)
 
-    test_ComputeWaveforms(format="memory", sparse=True)
-    test_ComputeWaveforms(format="memory", sparse=False)
-    test_ComputeWaveforms(format="binary_folder", sparse=True)
-    test_ComputeWaveforms(format="binary_folder", sparse=False)
-    test_ComputeWaveforms(format="zarr", sparse=True)
-    test_ComputeWaveforms(format="zarr", sparse=False)
+    # test_ComputeWaveforms(format="memory", sparse=True)
+    # test_ComputeWaveforms(format="memory", sparse=False)
+    # test_ComputeWaveforms(format="binary_folder", sparse=True)
+    # test_ComputeWaveforms(format="binary_folder", sparse=False)
+    # test_ComputeWaveforms(format="zarr", sparse=True)
+    # test_ComputeWaveforms(format="zarr", sparse=False)
 
-    test_ComputeTemplates(format="memory", sparse=True)
-    test_ComputeTemplates(format="memory", sparse=False)
-    test_ComputeTemplates(format="binary_folder", sparse=True)
-    test_ComputeTemplates(format="zarr", sparse=True)
+    # test_ComputeTemplates(format="memory", sparse=True)
+    # test_ComputeTemplates(format="memory", sparse=False)
+    # test_ComputeTemplates(format="binary_folder", sparse=True)
+    # test_ComputeTemplates(format="zarr", sparse=True)
 
-    test_ComputeFastTemplates(format="memory", sparse=True)
+    # test_ComputeFastTemplates(format="memory", sparse=True)
 
-    test_ComputeNoiseLevels(format="memory", sparse=False)
+    # test_ComputeNoiseLevels(format="memory", sparse=False)
+
+    test_get_extension1_or_extension2()

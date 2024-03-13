@@ -943,20 +943,41 @@ class SortingAnalyzer:
     def get_extension(self, extension_name: str):
         """
         Get a AnalyzerExtension.
+
         If not loaded then load is automatic.
 
         Return None if the extension is not computed yet (this avoids the use of has_extension() and then get it)
 
+        Parameters
+        ----------
+        extension_name: str
+            The extension name.
+            This also accept the or logic with the "|".
+            For instance get_extension("templates|fast_templates") will try to get "templates" extension, if not
+            exists then try to get "fast_templates" extension and if not exists return None.
+
+        Returns
+        -------
+        ext_instance: AnalyzerExtension | None
+            Return the extension instance if possible ortherwise None.
         """
-        if extension_name in self.extensions:
-            return self.extensions[extension_name]
-
-        elif self.format != "memory" and self.has_extension(extension_name):
-            self.load_extension(extension_name)
-            return self.extensions[extension_name]
-
-        else:
+        if "|" in extension_name:
+            extension_names = extension_name.split("|")
+            for ext_name in extension_names:
+                ext = self.get_extension(ext_name)
+                if ext is not None:
+                    return ext
             return None
+        else:
+            if extension_name in self.extensions:
+                return self.extensions[extension_name]
+
+            elif self.format != "memory" and self.has_extension(extension_name):
+                self.load_extension(extension_name)
+                return self.extensions[extension_name]
+
+            else:
+                return None
 
     def load_extension(self, extension_name: str):
         """
@@ -969,7 +990,7 @@ class SortingAnalyzer:
 
         Returns
         -------
-        ext_instanace:
+        ext_instance:
             The loaded instance of the extension
 
         """
