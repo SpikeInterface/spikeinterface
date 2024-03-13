@@ -78,12 +78,12 @@ class RandomProjectionClustering:
         nafter = int(params["ms_after"] * fs / 1000.0)
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
-        np.random.seed(d["random_seed"])
+        rng = np.random.RandomState(d["random_seed"])
 
-        # contact_locations = recording.get_channel_locations()
-        # channel_distance = get_channel_distances(recording)
-        # neighbours_mask = channel_distance <= radius_um
-        # num_neighbors = int(np.sum(neighbours_mask, axis=0).mean())
+        contact_locations = recording.get_channel_locations()
+        channel_distance = get_channel_distances(recording)
+        neighbours_mask = channel_distance <= radius_um
+        num_neighbors = int(np.sum(neighbours_mask, axis=0).mean())
 
         node0 = PeakRetriever(recording, peaks)
         node1 = ExtractSparseWaveforms(
@@ -98,19 +98,19 @@ class RandomProjectionClustering:
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
 
         num_projections = min(num_chans, d["nb_projections"])
-        projections = np.random.randn(num_chans, num_projections)
+        projections = rng.randn(num_chans, num_projections)
         if num_chans > 1:
-            projections -= projections.mean(0)
-            projections /= projections.std(0)
+            projections -= projections.mean()
+            projections /= projections.std()
 
         nbefore = int(params["ms_before"] * fs / 1000)
         nafter = int(params["ms_after"] * fs / 1000)
         nsamples = nbefore + nafter
 
         if params['feature'] == 'ptp':
-            noise_values= np.ptp(np.random.randn(1000, nsamples), axis=1)
+            noise_values = np.ptp(rng.randn(1000, nsamples), axis=1)
         elif params['feature'] == 'energy':
-            noise_values = np.linalg.norm(np.random.randn(1000, nsamples), axis=1)
+            noise_values = np.linalg.norm(rng.randn(1000, nsamples), axis=1)
         noise_threshold = np.mean(noise_values) + 3*np.std(noise_values)
 
         node3 = RandomProjectionsFeature(
@@ -120,7 +120,7 @@ class RandomProjectionClustering:
             feature=params['feature'],
             projections=projections,
             radius_um=radius_um,
-            noise_threshold=noise_threshold,
+            noise_threshold=None,
             sparse=True,
         )
 

@@ -37,6 +37,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "n_peaks_per_channel": 5000,
             "min_n_peaks": 100000,
             "select_per_channel": False,
+            "seed" : 42
         },
         "clustering": {"legacy": False},
         "matching": {"method": "circus-omp-svd"},
