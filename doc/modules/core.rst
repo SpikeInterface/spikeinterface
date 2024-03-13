@@ -287,8 +287,8 @@ The :code:`SortingAnalyzer.save_as` function will save the object **and all its 
     # sorting_analyzer_zarr and sorting_analyzer_binary are valid SortingAnalyzers,
     # now associated to a Zarr storage / binary folder backend
 
-    # create sorting analyzer associated to a backend upon instantiation
-    # create in-memory sorting analyzer object
+    # We can also create directly a  SortingAnalyzer associated to a backend upon instantiation
+    # for instance, this create "zarr" SortingAnalyzer object
     sorting_analyzer_with_backend = create_sorting_analyzer(
         sorting=sorting,
         recording=recording,
