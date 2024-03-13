@@ -75,7 +75,8 @@ si.set_global_job_kwargs(**global_job_kwargs)
 
 # First, let's download a simulated dataset from the
 # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data repo
-#
+# We download the dataset using DataLad but it can also be downloaded directly.
+
 # Then we can open it. Note that [MEArec](https://mearec.readthedocs.io>) simulated file
 # contains both a "recording" and a "sorting" object.
 
@@ -121,7 +122,7 @@ print("Unit ids:", unit_ids)
 print("Spike train of first unit:", spike_train)
 # -
 
-# SpikeInterface internally uses the `ProbeInterface <https://probeinterface.readthedocs.io/en/main/>`_ package to handle `probeinterface.Probe` and
+# SpikeInterface internally uses the [ProbeInterface](https://probeinterface.readthedocs.io/en/main/) package to handle `probeinterface.Probe` and
 # `probeinterface.ProbeGroup`. So any probe in the probeinterface collections can be downloaded and set to a
 # `Recording` object. In this case, the MEArec dataset already handles a `Probe` and we don't need to set it *manually*.
 
@@ -134,7 +135,7 @@ from probeinterface.plotting import plot_probe
 _ = plot_probe(probe)
 # -
 
-# If your recording does not have a `Probe`, you can set it using `set_probe`. There is more information `here <https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html>`_.
+# If your recording does not have a `Probe`, you can set it using `set_probe`. There is more information [here](https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html).
 
 # Using the `spikeinterface.preprocessing` module, you can perform preprocessing on the recordings.
 # Each pre-processing function also returns a `BaseRecording`,
@@ -198,48 +199,85 @@ print(sorting_SC2)
 print("Units found by tridesclous:", sorting_TDC.get_unit_ids())
 print("Units found by spyking-circus2:", sorting_SC2.get_unit_ids())
 
-# If a sorter is not installed locally, we can also avoid installing it and run it anyways, using a container (Docker or Singularity). For example, let's run `Kilosort2` using Docker:
+# If a sorter is not installed locally, we can also avoid installing it and run it anyways, using a container (Docker or Singularity). To do this, you will need to install Docker. More information [here](https://spikeinterface.readthedocs.io/en/latest/modules/sorters.html?highlight=docker#running-sorters-in-docker-singularity-containers). For example, let's run `Kilosort2` using Docker:
 
 sorting_KS2 = ss.run_sorter(sorter_name="kilosort2", recording=recording_preprocessed, docker_image=True, verbose=True)
 print(sorting_KS2)
 
-# SpikeInterface provides a efficient way to extract waveforms from paired recording/sorting objects.
-# The `extract_waveforms` function samples some spikes (by default `max_spikes_per_unit=500`)
-# for each unit, extracts their waveforms, and stores them to disk. These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
+# For postprocessing SpikeInterface pairs recording and sorting objects into a `SortingAnalyzer` object.
+# The `SortingAnalyzer` can be loaded in memory or saved in a folder. Here, we save it in binary format.
+
+sa_TDC = si.create_sorting_analyzer(sorting_TDC, recording_preprocessed, format='binary_folder', folder='sa_TDC_binary')
+
+# This folder is where all the postprocessing data will be saved such as waveforms and templates. Let's calculate
+# some waveforms. To do this the function samples some spikes (by default `max_spikes_per_unit=500`)
+# for each unit, extracts their waveforms, and stores them to disk in `extensions/waveforms`. 
+# These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
+# All computations for the `SortingAnalyzer` object are done using the `compute` method:
 
 # +
-we_TDC = si.extract_waveforms(recording_preprocessed, sorting_TDC, "waveforms_folder", overwrite=True)
-print(we_TDC)
-
-unit_id0 = sorting_TDC.unit_ids[0]
-wavefroms = we_TDC.get_waveforms(unit_id0)
-print(wavefroms.shape)
-
-template = we_TDC.get_template(unit_id0)
-print(template.shape)
+sa_TDC.compute("random_spikes")
+sa_TDC.compute("waveforms")
 # -
 
-# `we_TDC` is a `WaveformExtractor` object
-# we can post-process, validate, and curate the results. With
-# the `spikeinterface.postprocessing` submodule, one can, for example,
-# compute spike amplitudes, PCA projections, unit locations, and more.
+# The results of these calculations are saved as `extensions`. We access the results by first getting the extension
+
+# +
+unit_id0 = sa_TDC.unit_ids[0]
+waveforms = sa_TDC.get_extension("waveforms").get_data()[0]
+print(waveforms.shape)
+# -
+
+# There are many more properties we can calculate
+
+# +
+sa_TDC.compute("noise_levels")
+sa_TDC.compute("templates")
+sa_TDC.compute("spike_amplitudes")
+sa_TDC.compute("unit_locations")
+sa_TDC.compute("spike_locations")
+sa_TDC.compute("correlograms")
+sa_TDC.compute("template_similarity")
+# -
+
+# These calculations are saved in the `extensions` subfolder of the `SortingAnalyzer` folder.
+# Similar to the waveforms we can access them using `get_extension` and `get_data`. For example,
+# here we can make a historgram of spike amplitudes
+
+# +
+amplitudes = sa_TDC.get_extension("spike_amplitudes").get_data()
+plt.hist(amplitudes, bins=50)
+plt.show()
+# -
+
+# You can check which extensions have been saved (in the folder) and which have been loaded (in your enviroment)...
+
+# +
+print(sa_TDC.get_saved_extension_names())
+print(sa_TDC.get_loaded_extension_names())
+# - 
+
+# ...or delete an extension...
+
+# +
+sa_TDC.delete_extension("spike_amplitudes")
+# - 
+
+# This deletes the extension's data in the `SortingAnalyzer` folder.
 #
-# Let's compute some postprocessing information that will be needed later for computing quality metrics, exporting, and visualization:
+# Importantly, `SortingAnalyzers` (and all extensions) can be reloaded at later times:
+# (Note: spike_locations is not loaded, since we just deleted it)
 
-amplitudes = spost.compute_spike_amplitudes(we_TDC)
-unit_locations = spost.compute_unit_locations(we_TDC)
-spike_locations = spost.compute_spike_locations(we_TDC)
-correlograms, bins = spost.compute_correlograms(we_TDC)
-similarity = spost.compute_template_similarity(we_TDC)
+# +
+sa_loaded = si.load_sorting_analyzer('sa_TDC_binary')
+print(sa_loaded.get_loaded_extension_names())
+# -
 
-# All of these postprocessing functions are saved in the waveforms folder as extensions:
+# And any deleted extensions are easily recomputed
 
-print(we_TDC.get_available_extension_names())
-
-# Importantly, waveform extractors (and all extensions) can be reloaded at later times:
-
-we_loaded = si.load_waveforms("waveforms_folder")
-print(we_loaded.get_available_extension_names())
+# +
+sa_TDC.compute("spike_amplitudes")
+# -
 
 # Once we have computed all of the postprocessing information, we can compute quality metrics (different quality metrics require different extensions - e.g., drift metrics require `spike_locations`):
 
@@ -253,18 +291,19 @@ qm_params["amplitude_cutoff"]["num_histogram_bins"] = 5
 qm_params["drift"]["interval_s"] = 2
 qm_params["drift"]["min_spikes_per_interval"] = 2
 
-qm = sqm.compute_quality_metrics(we_TDC, qm_params=qm_params)
+qm = sqm.compute_quality_metrics(sa_TDC, qm_params=qm_params)
 display(qm)
 
-# Quality metrics are also extensions (and become part of the waveform folder):
+# Quality metrics are also extensions (and become part of the SortingAnalyzer folder):
 
 # Next, we can use some of the powerful tools for spike sorting visualization.
-#
+
 # We can export a sorting summary and quality metrics plot using the `sortingview` backend. This will generate shareable links for web-based visualization.
+# For this to work you need to install `sortingview` and construct a `kachery-cloud`: [https://github.com/magland/sortingview](more details).
 
-w1 = sw.plot_quality_metrics(we_TDC, display=False, backend="sortingview")
+w1 = sw.plot_quality_metrics(sa_TDC, display=False, backend="sortingview")
 
-w2 = sw.plot_sorting_summary(we_TDC, display=False, curation=True, backend="sortingview")
+w2 = sw.plot_sorting_summary(sa_TDC, display=False, curation=True, backend="sortingview")
 
 # The sorting summary plot can also be used for manual labeling and curation. In the example above, we manually merged two units (0, 4) and added accept labels (2, 6, 7). After applying our curation, we can click on the "Save as snapshot (sha://)" and copy the URI:
 
@@ -279,7 +318,7 @@ print(sorting_curated_sv.get_property("accept"))
 # Alternatively, we can export the data locally to Phy. [Phy](<https://github.com/cortex-lab/phy>) is a GUI for manual
 # curation of the spike sorting output. To export to phy you can run:
 
-sexp.export_to_phy(we_TDC, "phy_folder_for_TDC", verbose=True)
+sexp.export_to_phy(sa_TDC, "phy_folder_for_TDC", verbose=True)
 
 # Then you can run the template-gui with: `phy template-gui phy_folder_for_TDC/params.py`
 # and manually curate the results.
