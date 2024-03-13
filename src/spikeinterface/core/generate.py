@@ -1591,6 +1591,9 @@ class InjectTemplatesRecording(BaseRecording):
             )
             self.add_recording_segment(recording_segment)
 
+        if not sorting.check_serializability("json"):
+            self._serializability["json"] = False
+
         self._kwargs = {
             "sorting": sorting,
             "templates": templates.tolist(),
