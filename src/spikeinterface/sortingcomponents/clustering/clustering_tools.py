@@ -578,7 +578,7 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
 
     local_params = method_kwargs.copy()
 
-    local_params.update({"templates": templates, "amplitudes": [0.975, 1.025]})
+    local_params.update({"templates": templates, "amplitudes": [0.95, 1.05]})
 
     ignore_ids = []
     similar_templates = [[], []]

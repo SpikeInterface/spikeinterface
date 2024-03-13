@@ -161,10 +161,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["noise_levels"] = noise_levels
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
 
-            if "legacy" in clustering_params:
-                legacy = clustering_params.pop("legacy")
-            else:
-                legacy = False
+            legacy = clustering_params.get("legacy", False)
 
             if legacy:
                 if verbose:
