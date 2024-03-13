@@ -1077,13 +1077,13 @@ def get_extension_class(extension_name: str, autoload=True):
 
     if extension_name not in extensions_dict:
         if extension_name in _builtin_extensions:
+            module = _builtin_extensions[extension_name]
             if autoload:
-                module = _builtin_extensions[extension_name]
                 print(f"module '{module}' is imported automatically for extension '{extension_name}'")
                 imported_module = importlib.import_module(module)
                 extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
             else:
-                raise ValueError(f"Extension '{extension_name}' is not registered, please import related module before use")
+                raise ValueError(f"Extension '{extension_name}' is not registered, please import related module before use: 'import {module}'")
         else:
             raise ValueError(f"Extension '{extension_name}' is unkown maybe this is an external extension or a typo.")
         
