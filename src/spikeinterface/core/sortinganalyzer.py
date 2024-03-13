@@ -1082,10 +1082,10 @@ def get_extension_class(extension_name: str, auto_import=True):
                 extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
             else:
                 raise ValueError(
-                    f"Extension '{extension_name}' is not registered, please import related module before use: 'import {module}'"
+                    f"Extension '{extension_name}' is not registered, please import related module before use"
                 )
         else:
-            raise ValueError(f"Extension '{extension_name}' is unknown maybe this is an external extension or a typo.")
+            raise ValueError(f"Extension '{extension_name}' is unkown maybe this is an external extension or a typo.")
 
     ext_class = extensions_dict[extension_name]
     return ext_class
