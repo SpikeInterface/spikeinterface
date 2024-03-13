@@ -8,6 +8,7 @@ import pickle
 import weakref
 import shutil
 import warnings
+import importlib
 
 import numpy as np
 
@@ -1060,7 +1061,7 @@ def register_result_extension(extension_class):
         _possible_extensions.append(extension_class)
 
 
-def get_extension_class(extension_name: str):
+def get_extension_class(extension_name: str, autoload=True):
     """
     Get extension class from name and check if registered.
 
@@ -1076,9 +1077,19 @@ def get_extension_class(extension_name: str):
     """
     global _possible_extensions
     extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
-    assert (
-        extension_name in extensions_dict
-    ), f"Extension '{extension_name}' is not registered, please import related module before use"
+
+    if extension_name not in extensions_dict:
+        if extension_name in _builtin_extensions:
+            if autoload:
+                module = _builtin_extensions[extension_name]
+                print(f"module '{module}' is imported automatically for extension '{extension_name}'")
+                imported_module = importlib.import_module(module)
+                extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
+            else:
+                raise ValueError(f"Extension '{extension_name}' is not registered, please import related module before use")
+        else:
+            raise ValueError(f"Extension '{extension_name}' is unkown maybe this is an external extension or a typo.")
+        
     ext_class = extensions_dict[extension_name]
     return ext_class
 
@@ -1474,3 +1485,27 @@ class AnalyzerExtension:
     def get_data(self, *args, **kwargs):
         assert len(self.data) > 0, f"You must run the extension {self.extension_name} before retrieving data"
         return self._get_data(*args, **kwargs)
+
+
+# this is a hardcoded list to to improve error message and autoload mechanism
+# this is important because extension are register when the submodule is imported
+_builtin_extensions = {
+    # from core
+    "random_spikes": "spikeinterface.core",
+    "waveforms": "spikeinterface.core",
+    "templates": "spikeinterface.core",
+    "fast_templates": "spikeinterface.core",
+    "noise_levels": "spikeinterface.core",
+    # from postprocessing
+    "amplitude_scalings": "spikeinterface.postprocessing",
+    "correlograms": "spikeinterface.postprocessing",
+    "isi_histograms": "spikeinterface.postprocessing",
+    "principal_components": "spikeinterface.postprocessing",
+    "spike_amplitudes": "spikeinterface.postprocessing",
+    "spike_locations": "spikeinterface.postprocessing",
+    "template_metrics": "spikeinterface.postprocessing",
+    "template_similarity": "spikeinterface.postprocessing",
+    "unit_locations": "spikeinterface.postprocessing",
+    # from quality metrics
+    "quality_metrics": "spikeinterface.qualitymetrics",
+}
