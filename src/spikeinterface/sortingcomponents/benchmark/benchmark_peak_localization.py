@@ -171,7 +171,7 @@ class UnitLocalizationBenchmark(Benchmark):
         self.gt_positions = gt_positions
         self.params = params
         assert 'method' in self.params, "Method should be specified in the params!"
-        self.method = self.params.pop('method')
+        self.method = self.params.get('method')
         self.params = self.params['method_kwargs']
         self.result = {}
         self.waveforms_params = {}
@@ -237,6 +237,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
                 plot_probe_map(self.benchmarks[key].recording, ax=axs[count])
             axs[count].scatter(gt_positions[:, 0], gt_positions[:, 1], 
                 c=colors)
+            axs[count].set_title(self.cases[key]["label"])
 
             result = self.get_result(key)
             axs[count].scatter(
@@ -244,7 +245,6 @@ class UnitLocalizationStudy(BenchmarkStudy):
                 result["unit_locations"][:, 1],
                 c=colors,
                 marker="v",
-                label=self.cases[key]["label"],
             )
 
     def plot_comparison_positions(self, case_keys=None):

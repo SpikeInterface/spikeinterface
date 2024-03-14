@@ -29,7 +29,7 @@ from spikeinterface.core.template_tools import get_template_extremum_channel
 
 class PeakDetectionBenchmark(Benchmark):
 
-    def __init__(self, recording, gt_sorting, params, exhaustive_gt=True):
+    def __init__(self, recording, gt_sorting, params, exhaustive_gt=True, delta_t_ms=0.2):
         self.recording = recording
         self.gt_sorting = gt_sorting
 
@@ -39,13 +39,15 @@ class PeakDetectionBenchmark(Benchmark):
         self.gt_peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         self.params = params
         self.exhaustive_gt = exhaustive_gt
-        self.method = params["method"]
-        self.method_kwargs = params["method_kwargs"]
+        assert 'method' in self.params, "Method should be specified in the params!"
+        self.method = self.params.get('method')
+        self.delta_frames = int(delta_t_ms * self.recording.sampling_frequency / 1000)
+        self.params = self.params['method_kwargs']
         self.result = {"gt_peaks": self.gt_peaks}
         self.result["gt_amplitudes"] = sorting_analyzer.get_extension("spike_amplitudes").get_data()
 
     def run(self, **job_kwargs):
-        peaks = detect_peaks(self.recording, method=self.method, **self.method_kwargs, **job_kwargs)
+        peaks = detect_peaks(self.recording, self.method, **self.params, **job_kwargs)
         self.result["peaks"] = peaks
 
     def compute_result(self, **result_params):
@@ -68,7 +70,7 @@ class PeakDetectionBenchmark(Benchmark):
 
         print("The gt recording has {} peaks and {} have been detected".format(len(times1), len(times2)))
 
-        matches = make_matching_events(times1, times2, int(0.4 * self.recording.sampling_frequency / 1000))
+        matches = make_matching_events(times1, times2, self.delta_frames)
         self.matches = matches
         self.gt_matches = matches["index1"]
 
