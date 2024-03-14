@@ -912,36 +912,30 @@ class SortingAnalyzer:
 
     def get_saved_extension_names(self):
         """
-        Get extension saved in folder or zarr that can be loaded.
+        Get extension names saved in folder or zarr that can be loaded.
+        This do not load data, this only explores the directory.
         """
-        assert self.format != "memory"
-        global _possible_extensions
+        saved_extension_names = []
+        if self.format == "binary_folder":
+            ext_folder = self.folder / "extensions"
+            if ext_folder.is_dir():
+                for extension_folder in ext_folder.iterdir():
+                    is_saved = extension_folder.is_dir() and (extension_folder / "params.json").is_file()
+                    if not is_saved:
+                        continue
+                    saved_extension_names.append(extension_folder.stem)
 
-        if self.format == "zarr":
+        elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
             if "extensions" in zarr_root.keys():
                 extension_group = zarr_root["extensions"]
-            else:
-                extension_group = None
+                for extension_name in extension_group.keys():
+                    if "params" in extension_group[extension_name].attrs.keys():
+                        saved_extension_names.append(extension_folder.stem)
 
-        saved_extension_names = []
-        for extension_class in _possible_extensions:
-            extension_name = extension_class.extension_name
-
-            if self.format == "binary_folder":
-                extension_folder = self.folder / "extensions" / extension_name
-                is_saved = extension_folder.is_dir() and (extension_folder / "params.json").is_file()
-            elif self.format == "zarr":
-                if extension_group is not None:
-                    is_saved = (
-                        extension_name in extension_group.keys()
-                        and "params" in extension_group[extension_name].attrs.keys()
-                    )
-                else:
-                    is_saved = False
-            if is_saved:
-                saved_extension_names.append(extension_class.extension_name)
-
+        else:
+            raise ValueError("SortingAnalyzer.get_saved_extension_names() works only with binary_folder and zarr")
+        
         return saved_extension_names
 
     def get_extension(self, extension_name: str):
@@ -1061,7 +1055,7 @@ def register_result_extension(extension_class):
         _possible_extensions.append(extension_class)
 
 
-def get_extension_class(extension_name: str, autoload=True):
+def get_extension_class(extension_name: str, auto_import=True):
     """
     Get extension class from name and check if registered.
 
@@ -1069,6 +1063,8 @@ def get_extension_class(extension_name: str, autoload=True):
     ----------
     extension_name: str
         The extension name.
+    auto_import: bool, default True
+        Auto import the module if the extension class is not registered yet.
 
     Returns
     -------
@@ -1081,8 +1077,7 @@ def get_extension_class(extension_name: str, autoload=True):
     if extension_name not in extensions_dict:
         if extension_name in _builtin_extensions:
             module = _builtin_extensions[extension_name]
-            if autoload:
-                print(f"module '{module}' is imported automatically for extension '{extension_name}'")
+            if auto_import:
                 imported_module = importlib.import_module(module)
                 extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
             else:
@@ -1489,7 +1484,7 @@ class AnalyzerExtension:
         return self._get_data(*args, **kwargs)
 
 
-# this is a hardcoded list to to improve error message and autoload mechanism
+# this is a hardcoded list to to improve error message and auto_import mechanism
 # this is important because extension are register when the submodule is imported
 _builtin_extensions = {
     # from core
