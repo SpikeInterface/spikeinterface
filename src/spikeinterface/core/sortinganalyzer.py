@@ -928,7 +928,7 @@ class SortingAnalyzer:
                 extension_group = zarr_root["extensions"]
                 for extension_name in extension_group.keys():
                     if "params" in extension_group[extension_name].attrs.keys():
-                        saved_extension_names.append(extension_folder.stem)
+                        saved_extension_names.append(extension_name)
 
         else:
             raise ValueError("SortingAnalyzer.get_saved_extension_names() works only with binary_folder and zarr")
