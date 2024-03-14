@@ -803,6 +803,8 @@ class SortingAnalyzer:
         >>> wfs = compute_waveforms(sorting_analyzer, **some_params)
 
         """
+        for child in get_children(extension_name):
+            self.delete_extension(child)
 
         extension_class = get_extension_class(extension_name)
 
@@ -855,6 +857,10 @@ class SortingAnalyzer:
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
+        for extension_name in extensions.keys():
+            for child in get_children(extension_name):
+                self.delete_extension(child)
+
         pipeline_mode = True
         for extension_name, extension_params in extensions.items():
             extension_class = get_extension_class(extension_name)
@@ -1034,6 +1040,22 @@ class SortingAnalyzer:
 global _possible_extensions
 _possible_extensions = []
 
+global _extension_children
+_extension_children = {}
+
+def get_children(extension_name):
+    # recursive children and so grand children and grand grand children
+    # this is usefull to delete child extension on re compute
+    # for instance recompute the "waveforms" need to delete "template" in ms_before is changed
+    names = []
+    children = _extension_children[extension_name]
+    for child in children:
+        if child not in names:
+            names.append(child)
+        grand_children = get_children(child)
+        names.extend(grand_children)
+    return list(set(names))
+
 
 def register_result_extension(extension_class):
     """
@@ -1058,6 +1080,17 @@ def register_result_extension(extension_class):
         ), "Extension name already exists"
 
         _possible_extensions.append(extension_class)
+
+        # create the children dpendencies to be able to delete on re-compute
+        _extension_children[extension_class.extension_name] = []
+        for parent_name in extension_class.depend_on:
+            if "|" in parent_name:
+                for name in parent_name.split("|"):
+                    _extension_children[name].append(extension_class.extension_name)
+            else:
+                _extension_children[parent_name].append(extension_class.extension_name)
+
+            
 
 
 def get_extension_class(extension_name: str):

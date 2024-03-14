@@ -6,6 +6,8 @@ import shutil
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
 
+from spikeinterface.core.sortinganalyzer import _extension_children, get_children
+
 import numpy as np
 
 if hasattr(pytest, "global_test_folder"):
@@ -209,22 +211,47 @@ def test_ComputeNoiseLevels(format, sparse):
     assert noise_levels.shape[0] == sorting_analyzer.channel_ids.size
 
 
+def test_get_children():
+    assert "fast_templates" in _extension_children["random_spikes"]
+    assert "waveforms" in _extension_children["random_spikes"]
+
+    children = get_children("random_spikes")
+    assert "waveforms" in children
+    assert "templates" in children
+    assert "fast_templates" in children
+
+
+def test_delete_on_recompute():
+    sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
+    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute("waveforms")
+    sorting_analyzer.compute("templates")
+
+    # re compute random_spikes should delete waveforms and templates
+    sorting_analyzer.compute("random_spikes")
+    assert sorting_analyzer.get_extension("templates") is None
+    assert sorting_analyzer.get_extension("waveforms") is None
+
+
 if __name__ == "__main__":
 
-    test_SelectRandomSpikes(format="memory", sparse=True)
+    # test_SelectRandomSpikes(format="memory", sparse=True)
 
-    test_ComputeWaveforms(format="memory", sparse=True)
-    test_ComputeWaveforms(format="memory", sparse=False)
-    test_ComputeWaveforms(format="binary_folder", sparse=True)
-    test_ComputeWaveforms(format="binary_folder", sparse=False)
-    test_ComputeWaveforms(format="zarr", sparse=True)
-    test_ComputeWaveforms(format="zarr", sparse=False)
+    # test_ComputeWaveforms(format="memory", sparse=True)
+    # test_ComputeWaveforms(format="memory", sparse=False)
+    # test_ComputeWaveforms(format="binary_folder", sparse=True)
+    # test_ComputeWaveforms(format="binary_folder", sparse=False)
+    # test_ComputeWaveforms(format="zarr", sparse=True)
+    # test_ComputeWaveforms(format="zarr", sparse=False)
 
-    test_ComputeTemplates(format="memory", sparse=True)
-    test_ComputeTemplates(format="memory", sparse=False)
-    test_ComputeTemplates(format="binary_folder", sparse=True)
-    test_ComputeTemplates(format="zarr", sparse=True)
+    # test_ComputeTemplates(format="memory", sparse=True)
+    # test_ComputeTemplates(format="memory", sparse=False)
+    # test_ComputeTemplates(format="binary_folder", sparse=True)
+    # test_ComputeTemplates(format="zarr", sparse=True)
 
-    test_ComputeFastTemplates(format="memory", sparse=True)
+    # test_ComputeFastTemplates(format="memory", sparse=True)
 
-    test_ComputeNoiseLevels(format="memory", sparse=False)
+    # test_ComputeNoiseLevels(format="memory", sparse=False)
+
+    test_get_children()
+    test_delete_on_recompute()
