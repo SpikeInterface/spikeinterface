@@ -658,7 +658,7 @@ class DetectPeakMatchedFiltering(MatchedPeakDetectorWrapper):
         weight_method={},
     ):
         if not HAVE_NUMBA:
-            raise ModuleNotFoundError('"locally_exclusive" needs numba which is not installed')
+            raise ModuleNotFoundError('matched_filtering" needs numba which is not installed')
 
         assert peak_sign in ("both", "neg", "pos")
 
