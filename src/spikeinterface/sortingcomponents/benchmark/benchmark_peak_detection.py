@@ -34,7 +34,9 @@ class PeakDetectionBenchmark(Benchmark):
         self.gt_sorting = gt_sorting
 
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute(["random_spikes", "fast_templates", "spike_amplitudes"])
+        sorting_analyzer.compute({"random_spikes" : {}, 
+                                  "fast_templates" : {}, 
+                                  "spike_amplitudes" : {"return_scaled" : False}})
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
         self.gt_peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         self.params = params
@@ -153,7 +155,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             if count == 2:
                 ax.legend()
 
-    def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5)):
+    def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5), detect_threshold=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -169,6 +171,11 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.hist(data2, bins=bins, alpha=0.5, label="gt")
             ax.set_title(self.cases[key]["label"])
             ax.legend()
+            if detect_threshold is not None:
+                noise_levels = get_noise_levels(self.benchmarks[key].recording, return_scaled=False).mean()
+                ymin, ymax = ax.get_ylim()
+                abs_threshold = -detect_threshold * noise_levels
+                ax.plot([abs_threshold, abs_threshold], [ymin, ymax], 'k--')
 
 
 #     def run(self, peaks=None, positions=None, delta=0.2):
