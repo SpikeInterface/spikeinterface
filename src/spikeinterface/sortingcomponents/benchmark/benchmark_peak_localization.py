@@ -25,19 +25,23 @@ from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
 class PeakLocalizationBenchmark(Benchmark):
 
-    def __init__(self, recording, gt_sorting, params, gt_positions):
+    def __init__(self, recording, gt_sorting, params, gt_positions, channel_from_template=False):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.gt_positions = gt_positions
+        self.channel_from_template = channel_from_template
         self.params = params
         self.result = {}
         self.templates_params = {}
         for key in ["ms_before", "ms_after"]:
-            if key in self.params:
-                self.templates_params[key] = self.params[key]
-            else:
-                self.templates_params[key] = 2
-                self.params[key] = 2
+            self.params[key] = self.params.get(key, 2)
+            self.templates_params[key] = self.params[key]
+
+        if not self.channel_from_template:
+            self.params["spike_retriver_kwargs"] = {"channel_from_template" : False}
+        else:
+            ## TODO
+            pass
 
     def run(self, **job_kwargs):
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
@@ -165,15 +169,14 @@ class UnitLocalizationBenchmark(Benchmark):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.gt_positions = gt_positions
-        self.method = params["method"]
-        self.method_kwargs = params["method_kwargs"]
+        self.params = params
+        assert 'method' in self.params, "Method should be specified in the params!"
+        self.method = self.params.pop('method')
+        self.params = self.params['method_kwargs']
         self.result = {}
         self.waveforms_params = {}
         for key in ["ms_before", "ms_after"]:
-            if key in self.method_kwargs:
-                self.waveforms_params[key] = self.method_kwargs.pop(key)
-            else:
-                self.waveforms_params[key] = 2
+            self.waveforms_params[key] = self.params.pop(key, 2)
 
     def run(self, **job_kwargs):
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory")
@@ -183,11 +186,11 @@ class UnitLocalizationBenchmark(Benchmark):
         templates = ext.get_data(outputs="Templates")
 
         if self.method == "center_of_mass":
-            unit_locations = compute_center_of_mass(sorting_analyzer, **self.method_kwargs)
+            unit_locations = compute_center_of_mass(sorting_analyzer, **self.params)
         elif self.method == "monopolar_triangulation":
-            unit_locations = compute_monopolar_triangulation(sorting_analyzer, **self.method_kwargs)
+            unit_locations = compute_monopolar_triangulation(sorting_analyzer, **self.params)
         elif self.method == "grid_convolution":
-            unit_locations = compute_grid_convolution(sorting_analyzer, **self.method_kwargs)
+            unit_locations = compute_grid_convolution(sorting_analyzer, **self.params)
 
         if unit_locations.shape[1] == 2:
             unit_locations = np.hstack((unit_locations, np.zeros((len(unit_locations), 1))))
@@ -218,26 +221,31 @@ class UnitLocalizationStudy(BenchmarkStudy):
         benchmark = UnitLocalizationBenchmark(recording, gt_sorting, params, **init_kwargs)
         return benchmark
 
-    def plot_template_errors(self, case_keys=None):
+    def plot_template_errors(self, case_keys=None, show_probe=True):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        fig, axs = plt.subplots(ncols=1, nrows=1, figsize=(15, 5))
+        
+        fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
+
         from spikeinterface.widgets import plot_probe_map
 
-        # plot_probe_map(self.benchmarks[case_keys[0]].recording, ax=axs)
-        axs.scatter(self.gt_positions[:, 0], self.gt_positions[:, 1], c=np.arange(len(self.gt_positions)), cmap="jet")
-
         for count, key in enumerate(case_keys):
+            gt_positions = self.benchmarks[key].gt_positions
+            colors = np.arange(len(gt_positions))
+            if show_probe:
+                plot_probe_map(self.benchmarks[key].recording, ax=axs[count])
+            axs[count].scatter(gt_positions[:, 0], gt_positions[:, 1], 
+                c=colors)
+
             result = self.get_result(key)
-            axs.scatter(
+            axs[count].scatter(
                 result["unit_locations"][:, 0],
                 result["unit_locations"][:, 1],
-                c=f"C{count}",
+                c=colors,
                 marker="v",
                 label=self.cases[key]["label"],
             )
-        axs.legend()
 
     def plot_comparison_positions(self, case_keys=None):
 
