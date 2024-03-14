@@ -932,7 +932,7 @@ class SortingAnalyzer:
 
         else:
             raise ValueError("SortingAnalyzer.get_saved_extension_names() works only with binary_folder and zarr")
-        
+
         return saved_extension_names
 
     def get_extension(self, extension_name: str):
