@@ -652,7 +652,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        rank=5,
+        rank=3,
         noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
@@ -686,25 +686,10 @@ class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
 
         num_channels = recording.get_num_channels()
         num_templates = num_channels * len(z_factors)
-        num_samples = len(prototype)
         weights = weights.reshape(num_templates, -1)
 
-        # Mode with less memory consumption?
-        # prototype = prototype[:, None]
-        # temporal = np.zeros((0, num_samples, rank), dtype=np.float32)
-        # singular = np.zeros((0, rank), dtype=np.float32)
-        # spatial = np.zeros((0, rank, num_channels), dtype=np.float32)
-        # norms = np.zeros(num_templates, dtype=np.float32)
-        # for count, w in enumerate(weights):
-        #     template = w[None, :] * prototype
-        #     a, b, c = np.linalg.svd(template, full_matrices=False)
-        #     temporal = np.concatenate((temporal, a[None, :,:rank]), axis=0)
-        #     singular = np.concatenate((singular, b[None, :rank]), axis=0)
-        #     spatial = np.concatenate((spatial, c[None, :rank, :]), axis=0)
-        #     template = np.matmul(temporal[-1] * singular[-1, np.newaxis, :], spatial[-1])
-        #     norms[count] = np.linalg.norm(template)
-
         templates = weights[:, None, :] * prototype[None, :, None]
+        templates -= templates.mean(axis=(1, 2))[:, None, None]
         temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
         temporal = temporal[:, :, :rank]
         singular = singular[:, :rank]
