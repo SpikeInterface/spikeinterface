@@ -855,9 +855,6 @@ class SortingAnalyzer:
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
-        # TODO this is a simple implementation
-        # this will be improved with nodepipeline!!!
-
         pipeline_mode = True
         for extension_name, extension_params in extensions.items():
             extension_class = get_extension_class(extension_name)
@@ -905,6 +902,12 @@ class SortingAnalyzer:
                 self.extensions[extension_name] = extension_instance
                 if save:
                     extension_instance.save()
+    
+    # def _delete_extensions_depencies(self, extension_names):
+    #     # delete already computed dependencies that depend on a new computation
+    #     to_delete = []
+    #     for 
+
 
     def get_saved_extension_names(self):
         """
