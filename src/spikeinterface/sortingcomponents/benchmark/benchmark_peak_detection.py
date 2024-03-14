@@ -84,6 +84,10 @@ class PeakDetectionBenchmark(Benchmark):
             gt_peaks[self.gt_matches], self.recording.sampling_frequency, self.gt_sorting.unit_ids
         )
 
+        self.result["sliced_gt_comparison"] = GroundTruthComparison(
+            self.gt_sorting, self.result["sliced_gt_sorting"], exhaustive_gt=self.exhaustive_gt
+        )
+
         ratio = 100 * len(self.gt_matches) / len(times1)
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
 
@@ -105,6 +109,8 @@ class PeakDetectionBenchmark(Benchmark):
     _result_key_saved = [
         ("gt_comparison", "pickle"),
         ("sliced_gt_sorting", "sorting"),
+        ("sliced_gt_comparison", "pickle"),
+        ("sliced_gt_sorting", "sorting"),
         ("peak_on_channels", "sorting"),
         ("gt_on_channels", "sorting"),
     ]
@@ -122,7 +128,7 @@ class PeakDetectionStudy(BenchmarkStudy):
         benchmark = PeakDetectionBenchmark(recording, gt_sorting, params, **init_kwargs)
         return benchmark
 
-    def plot_agreements(self, case_keys=None, figsize=(15, 15)):
+    def plot_agreements_by_channels(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
@@ -132,6 +138,17 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax = axs[0, count]
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
+    
+    def plot_agreements_by_units(self, case_keys=None, figsize=(15, 15)):
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+
+        for count, key in enumerate(case_keys):
+            ax = axs[0, count]
+            ax.set_title(self.cases[key]["label"])
+            plot_agreement_matrix(self.get_result(key)["sliced_gt_comparison"], ax=ax)
 
     def plot_performances_vs_snr(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
@@ -148,7 +165,7 @@ class PeakDetectionStudy(BenchmarkStudy):
                 analyzer = self.get_sorting_analyzer(key)
                 metrics = analyzer.get_extension("quality_metrics").get_data()
                 x = metrics["snr"].values
-                y = self.get_result(key)["gt_comparison"].get_performance()[k].values
+                y = self.get_result(key)["sliced_gt_comparison"].get_performance()[k].values
                 ax.scatter(x, y, marker=".", label=label)
                 ax.set_title(k)
 
