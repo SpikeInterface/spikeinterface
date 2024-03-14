@@ -47,14 +47,14 @@ class RandomProjectionClustering:
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "leaf",
-            "cluster_selection_epsilon" : 2
+            "cluster_selection_epsilon": 2,
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "ptp", "threshold": 0.25},
         "radius_um": 100,
         "nb_projections": 10,
-        "feature" : "energy",
+        "feature": "energy",
         "ms_before": 0.5,
         "ms_after": 0.5,
         "random_seed": 42,
@@ -108,17 +108,17 @@ class RandomProjectionClustering:
         nafter = int(params["ms_after"] * fs / 1000)
         nsamples = nbefore + nafter
 
-        if params['feature'] == 'ptp':
+        if params["feature"] == "ptp":
             noise_values = np.ptp(rng.randn(1000, nsamples), axis=1)
-        elif params['feature'] == 'energy':
+        elif params["feature"] == "energy":
             noise_values = np.linalg.norm(rng.randn(1000, nsamples), axis=1)
-        noise_threshold = np.mean(noise_values) + 3*np.std(noise_values)
+        noise_threshold = np.mean(noise_values) + 3 * np.std(noise_values)
 
         node3 = RandomProjectionsFeature(
             recording,
             parents=[node0, node2],
             return_output=True,
-            feature=params['feature'],
+            feature=params["feature"],
             projections=projections,
             radius_um=radius_um,
             noise_threshold=None,
@@ -176,7 +176,7 @@ class RandomProjectionClustering:
         cleaning_matching_params["progress_bar"] = False
 
         cleaning_params = params["cleaning_kwargs"].copy()
-        
+
         labels, peak_labels = remove_duplicates_via_matching(
             templates, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
         )

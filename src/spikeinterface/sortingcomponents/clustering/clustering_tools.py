@@ -552,11 +552,11 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
 
     fs = templates.sampling_frequency
     num_chans = len(templates.channel_ids)
-    
+
     padding = 2 * duration
     tmp_filename = None
-    zdata = templates_array.reshape(nb_templates*duration, num_chans)
-    blank = np.zeros((2*duration, num_chans), dtype=zdata.dtype)
+    zdata = templates_array.reshape(nb_templates * duration, num_chans)
+    blank = np.zeros((2 * duration, num_chans), dtype=zdata.dtype)
     zdata = np.vstack((blank, zdata, blank))
 
     if tmp_folder is not None:
@@ -565,8 +565,10 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
         f = open(tmp_filename, "wb")
         f.write(zdata.flatten())
         f.close()
-        recording = BinaryRecordingExtractor(tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype=zdata.dtype)
-    else:        
+        recording = BinaryRecordingExtractor(
+            tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype=zdata.dtype
+        )
+    else:
         recording = NumpyRecording(zdata, sampling_frequency=fs)
         recording = SharedMemoryRecording.from_recording(recording)
 
