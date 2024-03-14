@@ -153,7 +153,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             matching_job_params["chunk_duration"] = "100ms"
 
-            peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params, **matching_job_params)
+            peaks = detect_peaks(recording_f, "matched_filtering", **detection_params, **matching_job_params)
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))

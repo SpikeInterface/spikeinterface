@@ -14,13 +14,11 @@ from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeatu
 
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCADenoising
 from spikeinterface.sortingcomponents.peak_detection import IterativePeakDetector
-from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_detection import (
     DetectPeakByChannel,
     DetectPeakByChannelTorch,
     DetectPeakLocallyExclusive,
     DetectPeakLocallyExclusiveTorch,
-    DetectPeakLocallyExclusiveMatchedFiltering,
 )
 
 from spikeinterface.core.node_pipeline import run_node_pipeline
@@ -325,7 +323,7 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
 
     peaks_local_mf_filtering = detect_peaks(
         recording,
-        method="locally_exclusive_mf",
+        method="matched_filtering",
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,

@@ -621,10 +621,10 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         return peak_sample_ind, peak_chan_ind
 
 
-class DetectPeakLocallyExclusiveMatchedFiltering(MatchedPeakDetectorWrapper):
+class DetectPeakMatchedFiltering(MatchedPeakDetectorWrapper):
     """Detect peaks using the 'locally exclusive' method."""
 
-    name = "locally_exclusive_mf"
+    name = "matched_filtering"
     engine = "numba"
     preferred_mp_context = None
     params_doc = (
@@ -1312,7 +1312,7 @@ _methods_list = [
     DetectPeakLocallyExclusiveOpenCL,
     DetectPeakByChannelTorch,
     DetectPeakLocallyExclusiveTorch,
-    DetectPeakLocallyExclusiveMatchedFiltering,
+    DetectPeakMatchedFiltering,
 ]
 detect_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
