@@ -908,12 +908,11 @@ class SortingAnalyzer:
                 self.extensions[extension_name] = extension_instance
                 if save:
                     extension_instance.save()
-    
+
     # def _delete_extensions_depencies(self, extension_names):
     #     # delete already computed dependencies that depend on a new computation
     #     to_delete = []
-    #     for 
-
+    #     for
 
     def get_saved_extension_names(self):
         """
@@ -1043,6 +1042,7 @@ _possible_extensions = []
 global _extension_children
 _extension_children = {}
 
+
 def get_children(extension_name):
     # recursive children and so grand children and grand grand children
     # this is usefull to delete child extension on re compute
@@ -1089,8 +1089,6 @@ def register_result_extension(extension_class):
                     _extension_children[name].append(extension_class.extension_name)
             else:
                 _extension_children[parent_name].append(extension_class.extension_name)
-
-            
 
 
 def get_extension_class(extension_name: str):
