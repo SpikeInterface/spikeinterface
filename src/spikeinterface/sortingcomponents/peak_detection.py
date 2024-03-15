@@ -634,7 +634,7 @@ class DetectPeakMatchedFiltering(MatchedPeakDetectorWrapper):
         The radius to use to select neighbour channels for locally exclusive detection.
     prototype: array
         The canonical waveform of action potentials
-    rank : int (default 5)
+    rank : int (default 1)
         The rank for SVD convolution of spatiotemporal templates with the traces
     weight_method: dict
         Parameter that should be provided to the get_convolution_weights() function
@@ -652,7 +652,7 @@ class DetectPeakMatchedFiltering(MatchedPeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        rank=3,
+        rank=1,
         noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
