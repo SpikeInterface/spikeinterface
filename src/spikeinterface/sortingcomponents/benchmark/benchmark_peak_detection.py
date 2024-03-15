@@ -34,20 +34,20 @@ class PeakDetectionBenchmark(Benchmark):
         self.gt_sorting = gt_sorting
 
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute({"random_spikes" : {}, 
-                                  "fast_templates" : {}, 
-                                  "spike_amplitudes" : {"return_scaled" : False}})
+        sorting_analyzer.compute(
+            {"random_spikes": {}, "fast_templates": {}, "spike_amplitudes": {"return_scaled": False}}
+        )
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
         self.gt_peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         self.params = params
         self.exhaustive_gt = exhaustive_gt
-        assert 'method' in self.params, "Method should be specified in the params!"
-        self.method = self.params.get('method')
+        assert "method" in self.params, "Method should be specified in the params!"
+        self.method = self.params.get("method")
         self.delta_frames = int(delta_t_ms * self.recording.sampling_frequency / 1000)
-        self.params = self.params['method_kwargs']
+        self.params = self.params["method_kwargs"]
         self.result = {"gt_peaks": self.gt_peaks}
         self.result["gt_amplitudes"] = sorting_analyzer.get_extension("spike_amplitudes").get_data()
-        self.result["gt_templates"] = sorting_analyzer.get_extension('fast_templates').get_data()
+        self.result["gt_templates"] = sorting_analyzer.get_extension("fast_templates").get_data()
 
     def run(self, **job_kwargs):
         peaks = detect_peaks(self.recording, self.method, **self.params, **job_kwargs)
@@ -71,7 +71,7 @@ class PeakDetectionBenchmark(Benchmark):
         peaks = self.result["peaks"]
         times1 = peaks["sample_index"]
         times2 = self.result["gt_peaks"]["sample_index"]
-        
+
         print("The gt recording has {} peaks and {} have been detected".format(len(times1), len(times2)))
 
         matches = make_matching_events(times1, times2, self.delta_frames)
@@ -88,7 +88,9 @@ class PeakDetectionBenchmark(Benchmark):
         sorting["segment_index"] = peaks[detected_matches]["segment_index"]
         idx = np.argsort(sorting["sample_index"])
         sorting = sorting[idx]
-        self.result["sliced_gt_sorting"] = NumpySorting(sorting, self.recording.sampling_frequency, self.gt_sorting.unit_ids)
+        self.result["sliced_gt_sorting"] = NumpySorting(
+            sorting, self.recording.sampling_frequency, self.gt_sorting.unit_ids
+        )
 
         self.result["sliced_gt_comparison"] = GroundTruthComparison(
             self.gt_sorting, self.result["sliced_gt_sorting"], exhaustive_gt=self.exhaustive_gt
@@ -97,12 +99,12 @@ class PeakDetectionBenchmark(Benchmark):
         ratio = 100 * len(gt_matches) / len(times2)
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
 
+        sorting_analyzer = create_sorting_analyzer(
+            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False
+        )
+        sorting_analyzer.compute({"random_spikes": {}, "fast_templates": {}})
 
-        sorting_analyzer = create_sorting_analyzer(self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute({"random_spikes" : {}, 
-                                  "fast_templates" : {}})
-        
-        self.result["templates"] = sorting_analyzer.get_extension('fast_templates').get_data()
+        self.result["templates"] = sorting_analyzer.get_extension("fast_templates").get_data()
 
     _run_key_saved = [("peaks", "npy"), ("gt_peaks", "npy"), ("gt_amplitudes", "npy"), ("gt_templates", "npy")]
 
@@ -113,8 +115,8 @@ class PeakDetectionBenchmark(Benchmark):
         ("sliced_gt_sorting", "sorting"),
         ("peak_on_channels", "sorting"),
         ("gt_on_channels", "sorting"),
-        ('matches', 'pickle'),
-        ("templates", "npy")
+        ("matches", "pickle"),
+        ("templates", "npy"),
     ]
 
 
@@ -140,7 +142,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax = axs[0, count]
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
-    
+
     def plot_agreements_by_units(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -172,7 +174,7 @@ class PeakDetectionStudy(BenchmarkStudy):
                 ax.set_title(k)
                 if detect_threshold is not None:
                     ymin, ymax = ax.get_ylim()
-                    ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
+                    ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
 
             if count == 2:
                 ax.legend()
@@ -197,7 +199,7 @@ class PeakDetectionStudy(BenchmarkStudy):
                 noise_levels = get_noise_levels(self.benchmarks[key].recording, return_scaled=False).mean()
                 ymin, ymax = ax.get_ylim()
                 abs_threshold = -detect_threshold * noise_levels
-                ax.plot([abs_threshold, abs_threshold], [ymin, ymax], 'k--')
+                ax.plot([abs_threshold, abs_threshold], [ymin, ymax], "k--")
 
     def plot_deltas_per_cells(self, case_keys=None, figsize=(15, 5)):
 
@@ -217,28 +219,29 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.set_title(self.cases[key]["label"])
             ax.set_xticks(np.arange(len(gt_sorting.unit_ids)), gt_sorting.unit_ids)
             ax.set_ylabel("# frames")
-            ax.set_xlabel('unit id')
-    
-    def plot_template_similarities(self, case_keys=None, metric='l2', figsize=(15, 5), detect_threshold=None):
+            ax.set_xlabel("unit id")
+
+    def plot_template_similarities(self, case_keys=None, metric="l2", figsize=(15, 5), detect_threshold=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=figsize, squeeze=True)
         for key in case_keys:
-            
+
             import sklearn
-            gt_templates = self.get_result(key)['gt_templates']
-            found_templates = self.get_result(key)['templates']
+
+            gt_templates = self.get_result(key)["gt_templates"]
+            found_templates = self.get_result(key)["templates"]
             num_templates = len(gt_templates)
             distances = np.zeros(num_templates)
 
             for i in range(num_templates):
-        
+
                 a = gt_templates[i].flatten()
                 b = found_templates[i].flatten()
 
-                if metric == 'cosine':
+                if metric == "cosine":
                     distances[i] = sklearn.metrics.pairwise.cosine_similarity(a[None, :], b[None, :])[0, 0]
                 else:
                     distances[i] = sklearn.metrics.pairwise_distances(a[None, :], b[None, :], metric)[0, 0]
@@ -250,8 +253,8 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.scatter(x, distances, marker=".", label=label)
             if detect_threshold is not None:
                 ymin, ymax = ax.get_ylim()
-                ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
-            
+                ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
+
         ax.legend()
-        ax.set_xlabel('snr')
+        ax.set_xlabel("snr")
         ax.set_ylabel(metric)

@@ -11,6 +11,7 @@ import numpy as np
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
+
 class PeakLocalizationBenchmark(Benchmark):
 
     def __init__(self, recording, gt_sorting, params, gt_positions, channel_from_template=False):
@@ -26,7 +27,7 @@ class PeakLocalizationBenchmark(Benchmark):
             self.templates_params[key] = self.params[key]
 
         if not self.channel_from_template:
-            self.params["spike_retriver_kwargs"] = {"channel_from_template" : False}
+            self.params["spike_retriver_kwargs"] = {"channel_from_template": False}
         else:
             ## TODO
             pass
@@ -157,9 +158,9 @@ class UnitLocalizationBenchmark(Benchmark):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.gt_positions = gt_positions
-        assert 'method' in params, "Method should be specified in the params!"
-        self.method = params['method']
-        self.params = params['method_kwargs']
+        assert "method" in params, "Method should be specified in the params!"
+        self.method = params["method"]
+        self.params = params["method_kwargs"]
         self.result = {}
         self.waveforms_params = {}
         for key in ["ms_before", "ms_after"]:
@@ -212,7 +213,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        
+
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
         from spikeinterface.widgets import plot_probe_map
@@ -222,8 +223,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
             colors = np.arange(len(gt_positions))
             if show_probe:
                 plot_probe_map(self.benchmarks[key].recording, ax=axs[count])
-            axs[count].scatter(gt_positions[:, 0], gt_positions[:, 1], 
-                c=colors)
+            axs[count].scatter(gt_positions[:, 0], gt_positions[:, 1], c=colors)
             axs[count].set_title(self.cases[key]["label"])
 
             result = self.get_result(key)

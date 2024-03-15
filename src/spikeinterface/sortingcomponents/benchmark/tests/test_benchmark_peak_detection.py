@@ -23,16 +23,12 @@ def test_benchmark_peak_detection():
     study_folder = cache_folder / "study_peak_detection"
     datasets = {"toy": (recording, gt_sorting)}
     cases = {}
-    for method in ["locally_exclusive", 'by_channel']:
+    for method in ["locally_exclusive", "by_channel"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
             "init_kwargs": {},
-            "params": {
-                "ms_before": 2,
-                "method": method,
-                "method_kwargs": {}
-            },
+            "params": {"ms_before": 2, "method": method, "method_kwargs": {}},
         }
 
     if study_folder.exists():

@@ -68,10 +68,7 @@ def test_benchmark_unit_localization():
             "label": f"{method} on toy",
             "dataset": "toy",
             "init_kwargs": {"gt_positions": gt_sorting.get_property("gt_unit_locations")},
-            "params": {
-                "method": method,
-                "method_kwargs": {"ms_before": 2}
-            },
+            "params": {"method": method, "method_kwargs": {"ms_before": 2}},
         }
 
     if study_folder.exists():
