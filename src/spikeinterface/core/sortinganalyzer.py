@@ -909,12 +909,6 @@ class SortingAnalyzer:
                 if save:
                     extension_instance.save()
     
-    # def _delete_extensions_depencies(self, extension_names):
-    #     # delete already computed dependencies that depend on a new computation
-    #     to_delete = []
-    #     for 
-
-
     def get_saved_extension_names(self):
         """
         Get extension saved in folder or zarr that can be loaded.
