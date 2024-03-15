@@ -2,17 +2,12 @@ import pytest
 
 import shutil
 
-import spikeinterface.full as si
-import pandas as pd
-from pathlib import Path
 import matplotlib.pyplot as plt
-import numpy as np
 
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset, cache_folder
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_peak_localization import PeakLocalizationStudy
-
 from spikeinterface.sortingcomponents.benchmark.benchmark_peak_localization import UnitLocalizationStudy
 
 
@@ -32,10 +27,8 @@ def test_benchmark_peak_localization():
             "dataset": "toy",
             "init_kwargs": {"gt_positions": gt_sorting.get_property("gt_unit_locations")},
             "params": {
-                "ms_before": 2,
                 "method": method,
-                "method_kwargs": {},
-                "spike_retriver_kwargs": {"channel_from_template": False},
+                "method_kwargs": {"ms_before": 2},
             },
         }
 
@@ -76,10 +69,8 @@ def test_benchmark_unit_localization():
             "dataset": "toy",
             "init_kwargs": {"gt_positions": gt_sorting.get_property("gt_unit_locations")},
             "params": {
-                "ms_before": 2,
                 "method": method,
-                "method_kwargs": {},
-                "spike_retriver_kwargs": {"channel_from_template": False},
+                "method_kwargs": {"ms_before": 2}
             },
         }
 
@@ -99,6 +90,7 @@ def test_benchmark_unit_localization():
     # load study to check persistency
     study = UnitLocalizationStudy(study_folder)
     study.plot_comparison_positions()
+    study.plot_template_errors()
     study.plot_run_times()
 
     plt.show()

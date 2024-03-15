@@ -1,27 +1,15 @@
 from __future__ import annotations
 
-from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.core import NumpySorting
-from spikeinterface.qualitymetrics import compute_snrs
-from spikeinterface.widgets import (
-    plot_probe_map,
-    plot_agreement_matrix,
-    plot_comparison_collision_by_similarity,
-    plot_unit_templates,
-    plot_unit_waveforms,
-)
 from spikeinterface.postprocessing.unit_localization import (
     compute_center_of_mass,
     compute_monopolar_triangulation,
     compute_grid_convolution,
 )
-from spikeinterface.core import get_noise_levels
-
+from spikeinterface.qualitymetrics import compute_quality_metrics
 import pylab as plt
 import numpy as np
-from .benchmark_tools import BenchmarkStudy, Benchmark
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-
 
 class PeakLocalizationBenchmark(Benchmark):
 
@@ -169,7 +157,7 @@ class UnitLocalizationBenchmark(Benchmark):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.gt_positions = gt_positions
-        assert 'method' in self.params, "Method should be specified in the params!"
+        assert 'method' in params, "Method should be specified in the params!"
         self.method = params['method']
         self.params = params['method_kwargs']
         self.result = {}

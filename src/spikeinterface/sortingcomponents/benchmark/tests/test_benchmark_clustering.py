@@ -55,6 +55,11 @@ def test_benchmark_clustering():
 
     # plots
     study.plot_performances_vs_snr()
+    study.plot_agreements()
+    study.plot_comparison_clustering()
+    study.plot_error_metrics()
+    study.plot_metrics_vs_snr()
+    study.plot_run_times()
     # @pierre : This one has a bug
     # study.plot_metrics_vs_snr('cosine')
     study.homogeneity_score(ignore_noise=False)

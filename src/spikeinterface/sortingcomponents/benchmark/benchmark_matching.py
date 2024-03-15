@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from spikeinterface.postprocessing import compute_template_similarity
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-from spikeinterface.core.template import Templates
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
@@ -10,12 +8,10 @@ from spikeinterface.widgets import (
     plot_comparison_collision_by_similarity,
 )
 
-from pathlib import Path
 import pylab as plt
 import matplotlib.patches as mpatches
 import numpy as np
-import pandas as pd
-from .benchmark_tools import BenchmarkStudy, Benchmark
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
 

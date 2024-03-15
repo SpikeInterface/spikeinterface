@@ -184,8 +184,8 @@ class ClusteringStudy(BenchmarkStudy):
             unit_ids2 = scores.columns.values
             inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1)
             inds_2 = result["gt_comparison"].sorting2.ids_to_indices(unit_ids2)
-            t1 = result["sliced_gt_templates"].templates_array
-            t2 = result["clustering_templates"].templates_array
+            t1 = result["sliced_gt_templates"].templates_array[:]
+            t2 = result["clustering_templates"].templates_array[:]
             a = t1.reshape(len(t1), -1)[inds_1]
             b = t2.reshape(len(t2), -1)[inds_2]
 
@@ -196,9 +196,9 @@ class ClusteringStudy(BenchmarkStudy):
             else:
                 distances = sklearn.metrics.pairwise_distances(a, b, metric)
 
-            im = axs[count].imshow(distances, aspect="auto")
-            axs[count].set_title(metric)
-            fig.colorbar(im, ax=axs[count])
+            im = axs[0, count].imshow(distances, aspect="auto")
+            axs[0, count].set_title(metric)
+            fig.colorbar(im, ax=axs[0, count])
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
 
@@ -221,8 +221,8 @@ class ClusteringStudy(BenchmarkStudy):
             unit_ids2 = scores.columns.values
             inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1)
             inds_2 = result["gt_comparison"].sorting2.ids_to_indices(unit_ids2)
-            t1 = result["sliced_gt_templates"].templates_array
-            t2 = result["clustering_templates"].templates_array
+            t1 = result["sliced_gt_templates"].templates_array[:]
+            t2 = result["clustering_templates"].templates_array[:]
             a = t1.reshape(len(t1), -1)
             b = t2.reshape(len(t2), -1)
 
