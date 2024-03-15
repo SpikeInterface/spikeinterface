@@ -1483,8 +1483,6 @@ class AnalyzerExtension:
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["info"] = info
 
-
-
     def get_pipeline_nodes(self):
         assert (
             self.use_nodepipeline
