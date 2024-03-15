@@ -130,6 +130,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             (d["unit_overlaps_indices"][i],) = np.nonzero(d["units_overlaps"][i])
 
         templates_array = templates.get_dense_templates().copy()
+        templates_array -= templates_array.mean(axis=(1, 2))[:, None, None]
 
         # Then we keep only the strongest components
         rank = d["rank"]
