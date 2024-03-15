@@ -17,7 +17,7 @@ curation (manual and automatic), and compare spike sorting results.
     from pprint import pprint
 
 The spikeinterface module by itself imports only the spikeinterface.core
-submodule which is not useful for end user
+submodule which is not useful for the end user
 
 .. code:: ipython3
 
@@ -48,9 +48,11 @@ We need to import one by one different submodules separately
     import spikeinterface.curation as scur
     import spikeinterface.widgets as sw
 
-Alternatively, we can import all submodules at once which internally
-imports core+extractors+preprocessing+sorters+postprocessing+
-qualitymetrics+comparison+widgets+exporters
+Alternatively, we can import all submodules at once with
+``import spikeinterface.full as si`` which internally imports
+core+extractors+preprocessing+sorters+postprocessing+
+qualitymetrics+comparison+widgets+exporters. In this case all aliases in
+the following tutorial would be ``si``.
 
 This is useful for notebooks, but it is a heavier import because
 internally many more dependencies are imported
@@ -111,11 +113,11 @@ and the raster plots.
 
 
 
-.. image:: get_started_files/get_started_15_0.png
+.. image:: get_started_files/get_started_16_0.png
 
 
 
-.. image:: get_started_files/get_started_15_1.png
+.. image:: get_started_files/get_started_16_1.png
 
 
 This is how you retrieve info from a ``BaseRecording``\ …
@@ -192,7 +194,7 @@ to set it *manually*.
 
 
 
-.. image:: get_started_files/get_started_21_1.png
+.. image:: get_started_files/get_started_22_1.png
 
 
 If your recording does not have a ``Probe``, you can set it using
@@ -226,7 +228,7 @@ object to disk.
                              float32 dtype - 39.06 MiB
     CommonReferenceRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s 
                               float32 dtype - 39.06 MiB
-    Use cache_folder=/tmp/spikeinterface_cache/tmp8sr7ylv1/PVPX8CJL
+    Use cache_folder=/tmp/spikeinterface_cache/tmp8zkscdxr/3IT027JP
     write_binary_recording with n_jobs = 4 and chunk_size = 32000
 
 
@@ -396,7 +398,7 @@ in memory or saved in a folder. Here, we save it in binary format.
 
 .. code:: ipython3
 
-    sa_TDC = si.create_sorting_analyzer(sorting_TDC, recording_preprocessed, format='binary_folder', folder='sa_TDC_binary')
+    analyzer_TDC = si.create_sorting_analyzer(sorting=sorting_TDC, recording=recording_preprocessed, format='binary_folder', folder='analyzer_TDC_binary')
 
 
 
@@ -416,8 +418,8 @@ and then to compute, for example, quality metrics. Computations with the
 
 .. code:: ipython3
 
-    sa_TDC.compute("random_spikes")
-    sa_TDC.compute("waveforms")
+    analyzer_TDC.compute("random_spikes")
+    analyzer_TDC.compute("waveforms")
 
 
 
@@ -430,7 +432,7 @@ and then to compute, for example, quality metrics. Computations with the
 
 .. parsed-literal::
 
-    <spikeinterface.core.analyzer_extension_core.ComputeWaveforms at 0x7f63c42d2b50>
+    <spikeinterface.core.analyzer_extension_core.ComputeWaveforms at 0x7fb5013daf70>
 
 
 
@@ -441,8 +443,8 @@ the extension then getting the data
 
 .. code:: ipython3
 
-    unit_id0 = sa_TDC.unit_ids[0]
-    waveforms = sa_TDC.get_extension("waveforms").get_data()[unit_id0]
+    unit_id0 = analyzer_TDC.unit_ids[0]
+    waveforms = analyzer_TDC.get_extension("waveforms").get_data()[unit_id0]
     print(waveforms.shape)
 
 
@@ -455,19 +457,33 @@ There are many more properties we can calculate
 
 .. code:: ipython3
 
-    sa_TDC.compute("noise_levels")
-    sa_TDC.compute("templates")
-    sa_TDC.compute("spike_amplitudes")
-    sa_TDC.compute("unit_locations")
-    sa_TDC.compute("spike_locations")
-    sa_TDC.compute("correlograms")
-    sa_TDC.compute("template_similarity")
+    analyzer_TDC.compute("noise_levels")
+    analyzer_TDC.compute("templates")
+    analyzer_TDC.compute("spike_amplitudes")
 
 
 
 .. parsed-literal::
 
     spike_amplitudes:   0%|          | 0/10 [00:00<?, ?it/s]
+
+
+
+
+.. parsed-literal::
+
+    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7fb5013f6340>
+
+
+
+Many of the extensions have parameters you can tune
+
+.. code:: ipython3
+
+    analyzer_TDC.compute("unit_locations", method="center_of_mass")
+    analyzer_TDC.compute("spike_locations", ms_before=0.5)
+    analyzer_TDC.compute("correlograms", bin_ms=0.1)
+    analyzer_TDC.compute("template_similarity", method="cosine_similarity")
 
 
 
@@ -480,24 +496,27 @@ There are many more properties we can calculate
 
 .. parsed-literal::
 
-    <spikeinterface.postprocessing.template_similarity.ComputeTemplateSimilarity at 0x7f6435890250>
+    <spikeinterface.postprocessing.template_similarity.ComputeTemplateSimilarity at 0x7fb5013f6f40>
 
 
 
-These calculations are saved in the ``extensions`` subfolder of the
+Find out more about the available parameters and extensions
+`here <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html#available-postprocessing-extensions>`__.
+
+The calculations are saved in the ``extensions`` subfolder of the
 ``SortingAnalyzer`` folder. Similar to the waveforms we can access them
 using ``get_extension`` and ``get_data``. For example, here we can make
 a historgram of spike amplitudes
 
 .. code:: ipython3
 
-    amplitudes = sa_TDC.get_extension("spike_amplitudes").get_data()
+    amplitudes = analyzer_TDC.get_extension("spike_amplitudes").get_data()
     plt.hist(amplitudes, bins=50)
     plt.show()
 
 
 
-.. image:: get_started_files/get_started_48_0.png
+.. image:: get_started_files/get_started_52_0.png
 
 
 You can check which extensions have been saved (in your local folder)
@@ -505,8 +524,8 @@ and which have been loaded (in your enviroment)…
 
 .. code:: ipython3
 
-    print(sa_TDC.get_saved_extension_names())
-    print(sa_TDC.get_loaded_extension_names())
+    print(analyzer_TDC.get_saved_extension_names())
+    print(analyzer_TDC.get_loaded_extension_names())
 
 
 .. parsed-literal::
@@ -519,18 +538,18 @@ and which have been loaded (in your enviroment)…
 
 .. code:: ipython3
 
-    sa_TDC.delete_extension("spike_amplitudes")
+    analyzer_TDC.delete_extension("spike_amplitudes")
 
 This deletes the extension’s data in the ``SortingAnalyzer`` folder.
 
 Importantly, ``SortingAnalyzers`` (and all extensions) can be reloaded
-at later times: (Here, ``spike_amplitudes`` is not loaded since we just
+at later times: (Here, spike_amplitudes is not loaded since we just
 deleted it)
 
 .. code:: ipython3
 
-    sa_loaded = si.load_sorting_analyzer('sa_TDC_binary')
-    print(sa_loaded.get_loaded_extension_names())
+    analyzer_loaded = si.load_sorting_analyzer('analyzer_TDC_binary')
+    print(analyzer_loaded.get_loaded_extension_names())
 
 
 .. parsed-literal::
@@ -542,7 +561,7 @@ And any deleted extensions are easily recomputed
 
 .. code:: ipython3
 
-    sa_TDC.compute("spike_amplitudes")
+    analyzer_TDC.compute("spike_amplitudes")
 
 
 
@@ -555,7 +574,7 @@ And any deleted extensions are easily recomputed
 
 .. parsed-literal::
 
-    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7f6435a1f070>
+    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7fb5012a74c0>
 
 
 
@@ -624,10 +643,24 @@ accommodate the duration:
     qm_params["drift"]["interval_s"] = 2
     qm_params["drift"]["min_spikes_per_interval"] = 2
 
+Quality metrics are extensions, so computations and data extraction work
+in the same way as earlier
+
 .. code:: ipython3
 
-    qm = sqm.compute_quality_metrics(sa_TDC, qm_params=qm_params)
-    display(qm)
+    analyzer_TDC.compute("quality_metrics", qm_params)
+    analyzer_TDC.get_extension("quality_metrics").get_data()
+
+
+.. parsed-literal::
+
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:846: UserWarning: Some units have too few spikes : amplitude_cutoff is set to NaN
+      warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:999: UserWarning: The recording is too short given the specified 'interval_s' and 'min_num_bins'. Drift metrics will be set to NaN
+      warnings.warn(
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:147: UserWarning: Bin duration of 60s is larger than recording duration. Presence ratios are set to NaN.
+      warnings.warn(
+
 
 
 
@@ -677,240 +710,240 @@ accommodate the duration:
       <tbody>
         <tr>
           <th>0</th>
-          <td>0.200717</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-306.199036</td>
-          <td>1.052532</td>
-          <td>0.424653</td>
-          <td>0.421992</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>0.72</td>
           <td>3.0</td>
           <td>0.0</td>
           <td>...</td>
           <td>30.0</td>
-          <td>0.9</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>1.536918</td>
           <td>NaN</td>
-          <td>27.411295</td>
+          <td>27.153605</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
         </tr>
         <tr>
           <th>1</th>
-          <td>0.500000</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-273.444977</td>
-          <td>0.995004</td>
-          <td>0.344932</td>
-          <td>0.261774</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>0.18</td>
           <td>5.1</td>
           <td>0.0</td>
           <td>...</td>
           <td>51.0</td>
-          <td>1.0</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>1.311148</td>
           <td>NaN</td>
-          <td>24.264845</td>
+          <td>24.072818</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
         </tr>
         <tr>
           <th>2</th>
-          <td>0.500000</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-269.204590</td>
-          <td>1.355411</td>
-          <td>0.541736</td>
-          <td>0.567367</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>0.90</td>
           <td>5.3</td>
           <td>0.0</td>
           <td>...</td>
           <td>53.0</td>
-          <td>0.9</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>2.016703</td>
           <td>NaN</td>
-          <td>24.177365</td>
+          <td>24.172255</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
         </tr>
         <tr>
           <th>3</th>
-          <td>0.500000</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-311.545715</td>
-          <td>0.421523</td>
-          <td>0.146277</td>
-          <td>0.112580</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>0.72</td>
           <td>5.0</td>
           <td>0.0</td>
           <td>...</td>
           <td>50.0</td>
-          <td>1.0</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>2.011083</td>
           <td>NaN</td>
-          <td>26.977121</td>
+          <td>26.741690</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
         </tr>
         <tr>
           <th>4</th>
-          <td>0.207231</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-106.953278</td>
-          <td>1.941205</td>
-          <td>0.688280</td>
-          <td>0.556732</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>0.72</td>
           <td>3.6</td>
           <td>0.0</td>
           <td>...</td>
           <td>36.0</td>
-          <td>1.0</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.680199</td>
           <td>NaN</td>
-          <td>9.636824</td>
+          <td>9.519926</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
         </tr>
         <tr>
           <th>5</th>
-          <td>0.204838</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-150.833191</td>
-          <td>0.927884</td>
-          <td>0.314812</td>
-          <td>0.186148</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>0.36</td>
           <td>4.2</td>
           <td>0.0</td>
           <td>...</td>
           <td>42.0</td>
-          <td>1.0</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.965515</td>
           <td>NaN</td>
-          <td>13.243997</td>
+          <td>13.052760</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
         </tr>
         <tr>
           <th>6</th>
-          <td>0.500000</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-90.358444</td>
-          <td>2.084521</td>
-          <td>0.753820</td>
-          <td>0.385204</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>0.00</td>
           <td>4.8</td>
           <td>0.0</td>
           <td>...</td>
           <td>48.0</td>
-          <td>1.0</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>1.177009</td>
           <td>NaN</td>
-          <td>8.280531</td>
+          <td>8.264430</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
         </tr>
         <tr>
           <th>7</th>
-          <td>0.500000</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-102.491577</td>
-          <td>1.191062</td>
-          <td>0.452649</td>
-          <td>0.485258</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>2.34</td>
           <td>19.3</td>
           <td>0.0</td>
           <td>...</td>
           <td>193.0</td>
-          <td>1.0</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
-          <td>0.974259</td>
+          <td>0.973417</td>
           <td>0.155</td>
-          <td>8.820936</td>
+          <td>8.796671</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
         </tr>
         <tr>
           <th>8</th>
-          <td>0.500000</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-127.252319</td>
-          <td>1.116480</td>
-          <td>0.440774</td>
-          <td>0.477920</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>0.90</td>
           <td>12.9</td>
           <td>0.0</td>
           <td>...</td>
           <td>129.0</td>
-          <td>1.0</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.949695</td>
           <td>0.310</td>
-          <td>11.158875</td>
+          <td>11.126467</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
         </tr>
         <tr>
           <th>9</th>
-          <td>0.203415</td>
+          <td>NaN</td>
           <td>NaN</td>
           <td>NaN</td>
           <td>-97.207291</td>
-          <td>1.395852</td>
-          <td>0.561095</td>
-          <td>0.632810</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
           <td>2.16</td>
           <td>11.0</td>
           <td>0.0</td>
           <td>...</td>
           <td>110.0</td>
-          <td>1.0</td>
+          <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
-          <td>1.027925</td>
+          <td>1.021080</td>
           <td>0.270</td>
-          <td>8.306556</td>
+          <td>8.230328</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -921,10 +954,11 @@ accommodate the duration:
     </div>
 
 
-Quality metrics are also extensions (and become part of the
-``SortingAnalyzer`` folder):
 
-Next, we can use some of the powerful tools for spike sorting
+And since the quality metrics are extensions, they are saved
+``SortingAnalyzer`` folder.
+
+Now, we can use some of the powerful tools for spike sorting
 visualization.
 
 We can export a sorting summary and quality metrics plot using the
@@ -935,22 +969,28 @@ web-based visualization. For this to work you need to install
 
 .. code:: ipython3
 
-    w1 = sw.plot_quality_metrics(sa_TDC, display=False, backend="sortingview")
+    w1 = sw.plot_quality_metrics(analyzer_TDC, display=False, backend="sortingview")
 
 
 .. parsed-literal::
 
-    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/widgets/metrics.py:65: UserWarning: Skipping ['amplitude_cv_median', 'amplitude_cv_range'] because they contain all NaNs
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/widgets/metrics.py:65: UserWarning: Skipping ['amplitude_cutoff', 'amplitude_cv_median', 'amplitude_cv_range', 'drift_ptp', 'drift_std', 'drift_mad', 'presence_ratio'] because they contain all NaNs
       warnings.warn(f"Skipping {nan_metrics} because they contain all NaNs")
 
-https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://7927a56e56bde2e923f85858608dfc38c51da534
+
+.. parsed-literal::
+
+    https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://167688f4ddfc0b27f5d67d5c9d84f89685e705fa
 
 
 .. code:: ipython3
 
-    w2 = sw.plot_sorting_summary(sa_TDC, display=False, curation=True, backend="sortingview")
+    w2 = sw.plot_sorting_summary(analyzer_TDC, display=False, curation=True, backend="sortingview")
 
-https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://aa8e4c3e7f0f3f041eff55656b6e9151bcdec399
+
+.. parsed-literal::
+
+    https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://688cd7a233857847b5663e565dbf3f2807887013
 
 
 The sorting summary plot can also be used for manual labeling and
@@ -979,7 +1019,7 @@ of the spike sorting output. To export to phy you can run:
 
 .. code:: ipython3
 
-    sexp.export_to_phy(sa_TDC, "phy_folder_for_TDC", verbose=True)
+    sexp.export_to_phy(analyzer_TDC, "phy_folder_for_TDC", verbose=True)
 
 
 
@@ -1030,7 +1070,8 @@ above a certain threshold:
 
 .. code:: ipython3
 
-    keep_mask = (qm["snr"] > 10) & (qm["isi_violations_ratio"] < 0.01)
+    qm_data = analyzer_TDC.get_extension("quality_metrics").get_data()
+    keep_mask = (qm_data["snr"] > 10) & (qm_data["isi_violations_ratio"] < 0.01)
     print("Mask:", keep_mask.values)
     
     sorting_curated_auto = sorting_TDC.select_units(sorting_TDC.unit_ids[keep_mask])
@@ -1090,11 +1131,11 @@ performance and plot a confusion matrix
 
 
 
-.. image:: get_started_files/get_started_79_1.png
+.. image:: get_started_files/get_started_84_1.png
 
 
 
-.. image:: get_started_files/get_started_79_2.png
+.. image:: get_started_files/get_started_84_2.png
 
 
 When comparing two sorters (2.), we can see the matching of units
@@ -1168,11 +1209,11 @@ graph showing how the units are matched between the sorters.
 
 
 
-.. image:: get_started_files/get_started_85_1.png
+.. image:: get_started_files/get_started_90_1.png
 
 
 
-.. image:: get_started_files/get_started_85_2.png
+.. image:: get_started_files/get_started_90_2.png
 
 
 We see that 10 unit were found by all sorters (note that this simulated
