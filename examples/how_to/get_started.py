@@ -210,7 +210,7 @@ print(sorting_KS2)
 # For postprocessing SpikeInterface pairs recording and sorting objects into a `SortingAnalyzer` object.
 # The `SortingAnalyzer` can be loaded in memory or saved in a folder. Here, we save it in binary format.
 
-sa_TDC = si.create_sorting_analyzer(sorting_TDC, recording_preprocessed, format='binary_folder', folder='sa_TDC_binary')
+sa_TDC = si.create_sorting_analyzer(sorting=sorting_TDC, recording=recording_preprocessed, format='binary_folder', folder='sa_TDC_binary')
 
 # This folder is where all the postprocessing data will be saved such as waveforms and templates. Let's calculate
 # some waveforms. When doing this, the function samples some spikes (by default `max_spikes_per_unit=500`)
