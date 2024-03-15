@@ -59,9 +59,10 @@ import spikeinterface.exporters as sexp
 import spikeinterface.curation as scur
 import spikeinterface.widgets as sw
 
-# Alternatively, we can import all submodules at once which
+# Alternatively, we can import all submodules at once with `import spikeinterface.full as si` which
 # internally imports core+extractors+preprocessing+sorters+postprocessing+
-# qualitymetrics+comparison+widgets+exporters
+# qualitymetrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
+# would be `si`
 #
 # This is useful for notebooks, but it is a heavier import because internally many more dependencies
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
