@@ -219,7 +219,8 @@ The :code:`sorting_analyzer` object implements convenient functions to access th
 
     num_channels = sorting_analyzer.get_num_channels()
     num_units = sorting_analyzer.get_num_units()
-    sampling_frequency = sorting_analyzer.sampling_frequency
+    sampling_frequency = sorting_analyzer.get_sampling_frequency()
+    # or: sampling_frequency = sorting_analyzer.sampling_frequency
     total_num_samples = sorting_analyzer.get_total_samples()
     total_duration = sorting_analyzer.get_total_duration()
     ### NOTE ###
@@ -269,7 +270,7 @@ The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in m
   | data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
 
 
-The :code:`SortingAnalyzer.save_as` function will save the object **and all its extension** to disk.
+The :code:`SortingAnalyzer.save_as` function will save the object **and all its extensions** to disk.
 
 .. code-block:: python
     # create a "processed" folder
