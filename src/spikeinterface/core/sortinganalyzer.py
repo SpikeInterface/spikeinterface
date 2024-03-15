@@ -908,7 +908,7 @@ class SortingAnalyzer:
                 self.extensions[extension_name] = extension_instance
                 if save:
                     extension_instance.save()
-    
+
     def get_saved_extension_names(self):
         """
         Get extension saved in folder or zarr that can be loaded.
