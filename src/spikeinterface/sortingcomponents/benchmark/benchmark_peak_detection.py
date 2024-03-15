@@ -152,7 +152,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["sliced_gt_comparison"], ax=ax)
 
-    def plot_performances_vs_snr(self, case_keys=None, figsize=(15, 15)):
+    def plot_performances_vs_snr(self, case_keys=None, figsize=(15, 15), detect_threshold=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
@@ -170,6 +170,9 @@ class PeakDetectionStudy(BenchmarkStudy):
                 y = self.get_result(key)["sliced_gt_comparison"].get_performance()[k].values
                 ax.scatter(x, y, marker=".", label=label)
                 ax.set_title(k)
+                if detect_threshold is not None:
+                    ymin, ymax = ax.get_ylim()
+                    ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
 
             if count == 2:
                 ax.legend()
@@ -213,14 +216,16 @@ class PeakDetectionStudy(BenchmarkStudy):
                 )
             ax.set_title(self.cases[key]["label"])
             ax.set_xticks(np.arange(len(gt_sorting.unit_ids)), gt_sorting.unit_ids)
+            ax.set_ylabel("# frames")
+            ax.set_xlabel('unit id')
     
-    def plot_template_similarities(self, case_keys=None, metric='l2', figsize=(15, 5)):
+    def plot_template_similarities(self, case_keys=None, metric='l2', figsize=(15, 5), detect_threshold=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=figsize, squeeze=True)
-        for count, key in enumerate(case_keys):
+        for key in case_keys:
             
             import sklearn
             gt_templates = self.get_result(key)['gt_templates']
@@ -243,6 +248,10 @@ class PeakDetectionStudy(BenchmarkStudy):
             metrics = analyzer.get_extension("quality_metrics").get_data()
             x = metrics["snr"].values
             ax.scatter(x, distances, marker=".", label=label)
+            if detect_threshold is not None:
+                ymin, ymax = ax.get_ylim()
+                ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
+            
         ax.legend()
         ax.set_xlabel('snr')
         ax.set_ylabel(metric)
