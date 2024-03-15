@@ -1037,6 +1037,7 @@ _possible_extensions = []
 global _extension_children
 _extension_children = {}
 
+
 def get_children(extension_name):
     # recursive children and so grand children and grand grand children
     # this is usefull to delete child extension on re compute
@@ -1083,8 +1084,6 @@ def register_result_extension(extension_class):
                     _extension_children[name].append(extension_class.extension_name)
             else:
                 _extension_children[parent_name].append(extension_class.extension_name)
-
-            
 
 
 def get_extension_class(extension_name: str):
