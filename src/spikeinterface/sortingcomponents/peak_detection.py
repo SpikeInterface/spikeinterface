@@ -25,8 +25,6 @@ from spikeinterface.core.node_pipeline import (
     base_peak_dtype,
 )
 
-from ..core import get_chunk_with_margin
-
 from .tools import make_multi_method_doc
 
 try:

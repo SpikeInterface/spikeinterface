@@ -795,6 +795,49 @@ def get_chunk_with_margin(
     return traces_chunk, left_margin, right_margin
 
 
+def get_traces_with_margin(
+    recording,
+    segment_index,
+    start_frame,
+    end_frame,
+    channel_indices,
+    margin,
+    add_zeros=False,
+    return_scaled=False,
+    add_reflect_padding=False,
+    window_on_margin=False,
+    dtype=None,
+):
+    """
+    Helper to get traces (i.e. with proper scaling) with margin
+
+    The margin is extracted from the recording when possible. If
+    at the edge of the recording, no margin is used unless one
+    of `add_zeros` or `add_reflect_padding` is True. In the first
+    case zero padding is used, in the second case np.pad is called
+    with mod="reflect". This function is very similar to get_chunk_with_margin
+    (and rely on it), but it adds the possibility to scale the final results.
+    By doing so, the node pipeline can work on scaled traces
+    """
+    rec_segment = recording._recording_segments[segment_index]
+    traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+        rec_segment,
+        start_frame,
+        end_frame,
+        channel_indices,
+        margin,
+        add_zeros,
+        add_reflect_padding,
+        window_on_margin,
+        dtype,
+    )
+
+    if return_scaled:
+        traces_chunk = recording._scale_traces(traces_chunk, channel_indices)
+
+    return traces_chunk, left_margin, right_margin
+
+
 def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), flip=False):
     """
     Order channels by depth, by first ordering the x-axis, and then the y-axis.

@@ -224,7 +224,7 @@ def test_get_chunk_with_margin():
     rec_seg = rec._recording_segments[0]
     length = rec_seg.get_num_samples()
 
-    #  rec_segment, start_frame, end_frame, channel_indices, sample_margin
+    # rec_segment, start_frame, end_frame, channel_indices, sample_margin
 
     traces, l, r = get_chunk_with_margin(rec_seg, None, None, None, 10)
     assert l == 0 and r == 0
