@@ -6,6 +6,7 @@ import sys
 import datetime
 import json
 from copy import deepcopy
+import importlib
 
 
 import numpy as np
@@ -476,3 +477,23 @@ def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
     """
 
     return 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-((x - mu) ** 2) / (2 * sigma**2))
+
+def get_class_info(a_class):
+    """
+    Get class info as a dict.
+    """
+    module_import_path = a_class.__module__
+    class_name_no_path = a_class.__name__
+    class_name = f"{module_import_path}.{class_name_no_path}"  # e.g. 'spikeinterface.core.generate.AClass'
+    module = class_name.split(".")[0]
+
+    imported_module = importlib.import_module(module)
+    module_version = getattr(imported_module, "__version__", "unknown")
+
+    info = {
+        "class": class_name,
+        "module": module,
+        "version": module_version,
+    }
+
+    return info

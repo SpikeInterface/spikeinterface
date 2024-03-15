@@ -20,7 +20,7 @@ from .basesorting import BaseSorting
 
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
-from .core_tools import check_json
+from .core_tools import check_json, get_class_info
 from .job_tools import split_job_kwargs
 from .numpyextractors import SharedMemorySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
@@ -1317,6 +1317,7 @@ class AnalyzerExtension:
         if save and not self.sorting_analyzer.is_read_only():
             # this also reset the folder or zarr group
             self._save_params()
+            self._save_info()
 
         self._run(**kwargs)
 
@@ -1325,6 +1326,7 @@ class AnalyzerExtension:
 
     def save(self, **kwargs):
         self._save_params()
+        self._save_info()
         self._save_data(**kwargs)
 
     def _save_data(self, **kwargs):
@@ -1443,6 +1445,7 @@ class AnalyzerExtension:
 
         if save:
             self._save_params()
+            self._save_info()
 
     def _save_params(self):
         params_to_save = self.params.copy()
@@ -1464,6 +1467,23 @@ class AnalyzerExtension:
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["params"] = check_json(params_to_save)
+
+    def _save_info(self):
+        # this save class info, this is not uselfull at the moment but this could be usefull in futur
+        # if some class change the data model and if we need to make backwards compatibility
+        # we have the same machanism in base.py for recording and sorting
+
+        info = get_class_info(self.__class__)
+        if self.format == "binary_folder":
+            extension_folder = self._get_binary_extension_folder()
+            extension_folder.mkdir(exist_ok=True, parents=True)
+            info_file = extension_folder / "info.json"
+            info_file.write_text(json.dumps(info, indent=4), encoding="utf8")
+        elif self.format == "zarr":
+            extension_group = self._get_zarr_extension_group(mode="r+")
+            extension_group.attrs["info"] = info
+
+
 
     def get_pipeline_nodes(self):
         assert (
