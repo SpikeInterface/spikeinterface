@@ -59,9 +59,10 @@ import spikeinterface.exporters as sexp
 import spikeinterface.curation as scur
 import spikeinterface.widgets as sw
 
-# Alternatively, we can import all submodules at once with `import spikeinterface.full as si` which
+# Alternatively, we can import all submodules at once with `import spikeinterface.full as si` with `import spikeinterface.full as si` which
 # internally imports core+extractors+preprocessing+sorters+postprocessing+
 # qualitymetrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
+# would be `si`. In this case all aliases in the following tutorial
 # would be `si`.
 
 # This is useful for notebooks, but it is a heavier import because internally many more dependencies
@@ -200,8 +201,8 @@ print(sorting_SC2)
 print("Units found by tridesclous:", sorting_TDC.get_unit_ids())
 print("Units found by spyking-circus2:", sorting_SC2.get_unit_ids())
 
-# If a sorter is not installed locally, we can also avoid installing it and run it anyways, using a container (Docker or Singularity). 
-# To do this, you will need to install Docker. More information [here](https://spikeinterface.readthedocs.io/en/latest/modules/sorters.html?highlight=docker#running-sorters-in-docker-singularity-containers). 
+# If a sorter is not installed locally, we can also avoid installing it and run it anyways, using a container (Docker or Singularity).
+# To do this, you will need to install Docker. More information [here](https://spikeinterface.readthedocs.io/en/latest/modules/sorters.html?highlight=docker#running-sorters-in-docker-singularity-containers).
 # Let's run `Kilosort2` using Docker:
 
 sorting_KS2 = ss.run_sorter(sorter_name="kilosort2", recording=recording_preprocessed, docker_image=True, verbose=True)
@@ -210,11 +211,11 @@ print(sorting_KS2)
 # For postprocessing SpikeInterface pairs recording and sorting objects into a `SortingAnalyzer` object.
 # The `SortingAnalyzer` can be loaded in memory or saved in a folder. Here, we save it in binary format.
 
-analyzer_TDC = si.create_sorting_analyzer(sorting=sorting_TDC, recording=recording_preprocessed, format='binary_folder', folder='analyzer_TDC_binary')
+analyzer_TDC = si.create_sorting_analyzer(sorting=sorting=sorting_TDC, recording=recording=recording_preprocessed, format='binary_folder', folder='analyzer_TDC_binary')
 
 # This folder is where all the postprocessing data will be saved such as waveforms and templates. Let's calculate
 # some waveforms. When doing this, the function samples some spikes (by default `max_spikes_per_unit=500`)
-# for each unit, extracts their waveforms, and stores them to disk in `extensions/waveforms`. 
+# for each unit, extracts their waveforms, and stores them to disk in `extensions/waveforms`.
 # These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
 # Computations with the `SortingAnalyzer` object are done using the `compute` method:
 
@@ -266,13 +267,13 @@ plt.show()
 # +
 print(analyzer_TDC.get_saved_extension_names())
 print(analyzer_TDC.get_loaded_extension_names())
-# - 
+# -
 
 # ...or delete an extension...
 
 # +
 analyzer_TDC.delete_extension("spike_amplitudes")
-# - 
+# -
 
 # This deletes the extension's data in the `SortingAnalyzer` folder.
 #
@@ -290,7 +291,7 @@ print(analyzer_loaded.get_loaded_extension_names())
 analyzer_TDC.compute("spike_amplitudes")
 # -
 
-# Once we have computed all of the postprocessing information, we can compute quality 
+# Once we have computed all of the postprocessing information, we can compute quality
 # metrics (some quality metrics require certain extensions - e.g., drift metrics require `spike_locations`):
 
 qm_params = sqm.get_default_qm_params()
