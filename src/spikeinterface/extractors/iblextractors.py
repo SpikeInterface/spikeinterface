@@ -19,7 +19,7 @@ class IblRecordingExtractor(BaseRecording):
 
     Parameters
     ----------
-    session : str
+    eid : str or None, default: None
         The session ID to extract recordings for.
         In ONE, this is sometimes referred to as the "eid".
         When doing a session lookup such as
@@ -29,6 +29,15 @@ class IblRecordingExtractor(BaseRecording):
         >>> sessions = one.alyx.rest("sessions", "list", tag="2022_Q2_IBL_et_al_RepeatedSite")
 
         each returned value in `sessions` refers to it as the "id".
+    pid : str or None, default: None
+        Probe insertion UUID in Alyx. To retrieve the PID from a session (or eid), use the following code:
+
+        >>> from one.api import ONE
+        >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
+        >>> pids, _ = one.eid2pid("session_eid")
+        >>> pid = pids[0]
+
+        Either `eid` or `pid` must be provided.
     stream_name : str
         The name of the stream to load for the session.
         These can be retrieved from calling `StreamingIblExtractor.get_stream_names(session="<your session ID>")`.
@@ -43,6 +52,12 @@ class IblRecordingExtractor(BaseRecording):
     remove_cached : bool, default: True
         Whether or not to remove streamed data from the cache immediately after it is read.
         If you expect to reuse fetched data many times, and have the disk space available, it is recommended to set this to False.
+    stream : bool, default: True
+        Whether or not to stream the data.
+    one : one.api.OneAlyx, default: None
+        An instance of the ONE API to use for data loading.
+        If not provided, a default instance is created using the default parameters.
+        If you need to use a specific instance, you can create it using the ONE API and pass it here.
 
     Returns
     -------
@@ -114,8 +129,9 @@ class IblRecordingExtractor(BaseRecording):
 
     def __init__(
         self,
-        session: str,
-        stream_name: str,
+        eid: str | None = None,
+        pid: str | None = None,
+        stream_name: str | None = None,
         load_sync_channel: bool = False,
         cache_folder: Optional[Union[Path, str]] = None,
         remove_cached: bool = True,
@@ -123,25 +139,30 @@ class IblRecordingExtractor(BaseRecording):
         one: "one.api.OneAlyx" = None,
     ):
         try:
-            from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
         except ImportError:
             raise ImportError(self.installation_mesg)
 
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
+        assert eid or pid, "Either `eid` or `pid` must be provided."
+
         if one is None:
             one = IblRecordingExtractor._get_default_one(cache_folder=cache_folder)
 
-        session_names = IblRecordingExtractor.get_stream_names(session=session, cache_folder=cache_folder, one=one)
-        assert stream_name in session_names, (
-            f"The `stream_name` '{stream_name}' was not found in the available listing for session '{session}'! "
-            f"Please choose one of {session_names}."
-        )
-        pname, stream_type = stream_name.split(".")
-
-        self.ssl = SpikeSortingLoader(one=one, eid=session, pname=pname)
-        self.ssl.pid = one.alyx.rest("insertions", "list", session=session, name=pname)[0]["id"]
+        if pid is None:
+            stream_names = IblRecordingExtractor.get_stream_names(session=session, cache_folder=cache_folder, one=one)
+            assert stream_name in stream_names, (
+                f"The `stream_name` '{stream_name}' was not found in the available listing for session '{session}'! "
+                f"Please choose one of {stream_names}."
+            )
+            pname, stream_type = stream_name.split(".")
+            pid = None
+        else:
+            pname = None
+        self.ssl = SpikeSortingLoader(one=one, eid=eid, pid=pid, pname=pname)
+        if pid is None:
+            self.ssl.pid = one.alyx.rest("insertions", "list", session=eid, name=pname)[0]["id"]
 
         self._file_streamer = self.ssl.raw_electrophysiology(band=stream_type, stream=stream)
 
@@ -249,18 +270,19 @@ class IblSortingExtractor(BaseSorting):
 
     Parameters
     ----------
-    one: One = None
-        instance of ONE.api to use for data loading
-        for multi-processing applications, this can also be a dictionary of ONE.api arguments
-        for example: one={} or one=dict(base_url='https://alyx.internationalbrainlab.org', mode='remote')
-    pid: str = None
-        probe insertion UUID in Alyx
-    eid: str = ''
-        session UUID in Alyx (optional if pid is provided)
-    pname: str = ''
-        probe name in Alyx (optional if pid is provided)
-    kwargs:
-        additional keyword arguments for brainbox.io.one.SpikeSortingLoader
+    pid: str
+        Probe insertion UUID in Alyx. To retrieve the PID from a session (or eid), use the following code:
+
+        >>> from one.api import ONE
+        >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
+        >>> pids, _ = one.eid2pid("session_eid")
+        >>> pid = pids[0]
+
+    one: One | dict, default: None
+        Instance of ONE.api or dict to use for data loading.
+        For multi-processing applications, this can also be a dictionary of ONE.api arguments
+        For example: one={} or one=dict(base_url='https://alyx.internationalbrainlab.org', mode='remote')
+
     Returns
     -------
     extractor : IBLSortingExtractor
@@ -271,19 +293,20 @@ class IblSortingExtractor(BaseSorting):
     name = "ibl"
     installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
 
-    def __init__(self, one=None, pid=None, eid="", pname="", **kwargs):
-        self._kwargs = dict(one=one, pid=pid, eid=eid, pname=pname, **kwargs)
+    def __init__(self, pid, one=None):
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
 
+            if one is None:
+                one = {}
             if isinstance(one, dict):
                 one = ONE(**one)
             elif one is None:
                 raise ValueError("one must be either an instance of ONE or a dictionary of ONE arguments")
         except ImportError:
             raise ImportError(self.installation_mesg)
-        self.ssl = SpikeSortingLoader(one=one, pid=pid, eid=eid, pname=pname, **kwargs)
+        self.ssl = SpikeSortingLoader(one=one, pid=pid)
         sr = self.ssl.raw_electrophysiology(band="ap", stream=True)
         self._folder_path = self.ssl.session_path
         spikes, clusters, channels = self.ssl.load_spike_sorting(dataset_types=["spikes.samples"])
@@ -292,8 +315,9 @@ class IblSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sr.fs)
         sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"], sampling_frequency=sr.fs)
         self.add_sorting_segment(sorting_segment)
-        self.extra_requirements.append("pandas")
         self.extra_requirements.append("ibllib")
+
+        self._kwargs = dict(one=one, pid=pid)
 
 
 read_ibl_recording = define_function_from_class(source_class=IblRecordingExtractor, name="read_ibl_streaming_recording")

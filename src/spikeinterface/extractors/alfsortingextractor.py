@@ -7,17 +7,6 @@ import numpy as np
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    import pandas as pd
-
-    HAVE_PANDAS = True
-except:
-    HAVE_PANDAS = False
-try:
-    import one.alf.io as alfio
-except:
-    pass
-
 
 class ALFSortingExtractor(BaseSorting):
     """Load ALF format data as a sorting extractor.
@@ -36,13 +25,15 @@ class ALFSortingExtractor(BaseSorting):
     """
 
     extractor_name = "ALFSorting"
-    installed = HAVE_PANDAS
-    installation_mesg = "To use the ALF extractors, install pandas: \n\n pip install pandas\n\n"
+    installation_mesg = "To use the ALF extractors, install ONE-api: \n\n pip install ONE-api\n\n"
     name = "alf"
 
     def __init__(self, folder_path, sampling_frequency=30000):
-        assert self.installed, self.installation_mesg
-        # check correct parent folder:
+        try:
+            import one.alf.io as alfio
+        except ImportError as e:
+            raise ImportErrot(self.installation_mesg)
+
         self._folder_path = Path(folder_path)
         spikes = alfio.load_object(self._folder_path, "spikes", short_keys=True)
         # TODO: is there a way to add context data to the sorting extractor?
@@ -52,7 +43,6 @@ class ALFSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
         sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"], sampling_frequency)
         self.add_sorting_segment(sorting_segment)
-        self.extra_requirements.append("pandas")
         self.extra_requirements.append("ONE-api")
         self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "sampling_frequency": sampling_frequency}
 
