@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 from pprint import pprint
 
 # The spikeinterface module by itself imports only the spikeinterface.core submodule
-# which is not useful for end user
+# which is not useful for the end user
 
 import spikeinterface
 
@@ -59,10 +59,11 @@ import spikeinterface.exporters as sexp
 import spikeinterface.curation as scur
 import spikeinterface.widgets as sw
 
-# Alternatively, we can import all submodules at once which
+# Alternatively, we can import all submodules at once with `import spikeinterface.full as si` which
 # internally imports core+extractors+preprocessing+sorters+postprocessing+
-# qualitymetrics+comparison+widgets+exporters
-#
+# qualitymetrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
+# would be `si`.
+
 # This is useful for notebooks, but it is a heavier import because internally many more dependencies
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
 
@@ -209,7 +210,7 @@ print(sorting_KS2)
 # For postprocessing SpikeInterface pairs recording and sorting objects into a `SortingAnalyzer` object.
 # The `SortingAnalyzer` can be loaded in memory or saved in a folder. Here, we save it in binary format.
 
-sa_TDC = si.create_sorting_analyzer(sorting_TDC, recording_preprocessed, format='binary_folder', folder='sa_TDC_binary')
+analyzer_TDC = si.create_sorting_analyzer(sorting=sorting_TDC, recording=recording_preprocessed, format='binary_folder', folder='analyzer_TDC_binary')
 
 # This folder is where all the postprocessing data will be saved such as waveforms and templates. Let's calculate
 # some waveforms. When doing this, the function samples some spikes (by default `max_spikes_per_unit=500`)
@@ -218,37 +219,44 @@ sa_TDC = si.create_sorting_analyzer(sorting_TDC, recording_preprocessed, format=
 # Computations with the `SortingAnalyzer` object are done using the `compute` method:
 
 # +
-sa_TDC.compute("random_spikes")
-sa_TDC.compute("waveforms")
+analyzer_TDC.compute("random_spikes")
+analyzer_TDC.compute("waveforms")
 # -
 
 # The results of these calculations are saved as `extensions`. Some simple data, such as the `unit_ids` can be accessed directly
 # from the `SortingAnalyzer` object. Extension data is accessed by first getting the extension then getting the data
 
 # +
-unit_id0 = sa_TDC.unit_ids[0]
-waveforms = sa_TDC.get_extension("waveforms").get_data()[unit_id0]
+unit_id0 = analyzer_TDC.unit_ids[0]
+waveforms = analyzer_TDC.get_extension("waveforms").get_data()[unit_id0]
 print(waveforms.shape)
 # -
 
 # There are many more properties we can calculate
 
 # +
-sa_TDC.compute("noise_levels")
-sa_TDC.compute("templates")
-sa_TDC.compute("spike_amplitudes")
-sa_TDC.compute("unit_locations")
-sa_TDC.compute("spike_locations")
-sa_TDC.compute("correlograms")
-sa_TDC.compute("template_similarity")
+analyzer_TDC.compute("noise_levels")
+analyzer_TDC.compute("templates")
+analyzer_TDC.compute("spike_amplitudes")
 # -
 
-# These calculations are saved in the `extensions` subfolder of the `SortingAnalyzer` folder.
+# Many of the extensions have parameters you can tune
+
+# +
+analyzer_TDC.compute("unit_locations", method="center_of_mass")
+analyzer_TDC.compute("spike_locations", ms_before=0.5)
+analyzer_TDC.compute("correlograms", bin_ms=0.1)
+analyzer_TDC.compute("template_similarity", method="cosine_similarity")
+# -
+
+# Find out more about the available parameters and extensions [here](https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html#available-postprocessing-extensions).
+
+# The calculations are saved in the `extensions` subfolder of the `SortingAnalyzer` folder.
 # Similar to the waveforms we can access them using `get_extension` and `get_data`. For example,
 # here we can make a historgram of spike amplitudes
 
 # +
-amplitudes = sa_TDC.get_extension("spike_amplitudes").get_data()
+amplitudes = analyzer_TDC.get_extension("spike_amplitudes").get_data()
 plt.hist(amplitudes, bins=50)
 plt.show()
 # -
@@ -256,14 +264,14 @@ plt.show()
 # You can check which extensions have been saved (in your local folder) and which have been loaded (in your enviroment)...
 
 # +
-print(sa_TDC.get_saved_extension_names())
-print(sa_TDC.get_loaded_extension_names())
+print(analyzer_TDC.get_saved_extension_names())
+print(analyzer_TDC.get_loaded_extension_names())
 # - 
 
 # ...or delete an extension...
 
 # +
-sa_TDC.delete_extension("spike_amplitudes")
+analyzer_TDC.delete_extension("spike_amplitudes")
 # - 
 
 # This deletes the extension's data in the `SortingAnalyzer` folder.
@@ -272,14 +280,14 @@ sa_TDC.delete_extension("spike_amplitudes")
 # (Here, spike_amplitudes is not loaded since we just deleted it)
 
 # +
-sa_loaded = si.load_sorting_analyzer('sa_TDC_binary')
-print(sa_loaded.get_loaded_extension_names())
+analyzer_loaded = si.load_sorting_analyzer('analyzer_TDC_binary')
+print(analyzer_loaded.get_loaded_extension_names())
 # -
 
 # And any deleted extensions are easily recomputed
 
 # +
-sa_TDC.compute("spike_amplitudes")
+analyzer_TDC.compute("spike_amplitudes")
 # -
 
 # Once we have computed all of the postprocessing information, we can compute quality 
@@ -295,19 +303,21 @@ qm_params["amplitude_cutoff"]["num_histogram_bins"] = 5
 qm_params["drift"]["interval_s"] = 2
 qm_params["drift"]["min_spikes_per_interval"] = 2
 
-qm = sqm.compute_quality_metrics(sa_TDC, qm_params=qm_params)
-display(qm)
+# Quality metrics are extensions, so computations and data extraction work in the same way as earlier
 
-# Quality metrics are also extensions (and become part of the `SortingAnalyzer` folder):
+analyzer_TDC.compute("quality_metrics", qm_params)
+analyzer_TDC.get_extension("quality_metrics").get_data()
 
-# Next, we can use some of the powerful tools for spike sorting visualization.
+# And since the quality metrics are extensions, they are saved `SortingAnalyzer` folder.
+
+# Now, we can use some of the powerful tools for spike sorting visualization.
 
 # We can export a sorting summary and quality metrics plot using the `sortingview` backend. This will generate shareable links for web-based visualization.
 # For this to work you need to install `sortingview` and construct a `kachery-cloud`: [https://github.com/magland/sortingview](more details).
 
-w1 = sw.plot_quality_metrics(sa_TDC, display=False, backend="sortingview")
+w1 = sw.plot_quality_metrics(analyzer_TDC, display=False, backend="sortingview")
 
-w2 = sw.plot_sorting_summary(sa_TDC, display=False, curation=True, backend="sortingview")
+w2 = sw.plot_sorting_summary(analyzer_TDC, display=False, curation=True, backend="sortingview")
 
 # The sorting summary plot can also be used for manual labeling and curation. In the example above, we manually merged two units (0, 4) and added accept labels (2, 6, 7). After applying our curation, we can click on the "Save as snapshot (sha://)" and copy the URI:
 
@@ -322,7 +332,7 @@ print(sorting_curated_sv.get_property("accept"))
 # Alternatively, we can export the data locally to Phy. [Phy](<https://github.com/cortex-lab/phy>) is a GUI for manual
 # curation of the spike sorting output. To export to phy you can run:
 
-sexp.export_to_phy(sa_TDC, "phy_folder_for_TDC", verbose=True)
+sexp.export_to_phy(analyzer_TDC, "phy_folder_for_TDC", verbose=True)
 
 # Then you can run the template-gui with: `phy template-gui phy_folder_for_TDC/params.py`
 # and manually curate the results.
@@ -336,7 +346,8 @@ sorting_curated_phy = se.read_phy("phy_folder_for_TDC", exclude_cluster_groups=[
 # certain threshold:
 
 # +
-keep_mask = (qm["snr"] > 10) & (qm["isi_violations_ratio"] < 0.01)
+qm_data = analyzer_TDC.get_extension("quality_metrics").get_data()
+keep_mask = (qm_data["snr"] > 10) & (qm_data["isi_violations_ratio"] < 0.01)
 print("Mask:", keep_mask.values)
 
 sorting_curated_auto = sorting_TDC.select_units(sorting_TDC.unit_ids[keep_mask])
