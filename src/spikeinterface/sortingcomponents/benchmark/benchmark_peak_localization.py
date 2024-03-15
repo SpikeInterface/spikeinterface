@@ -169,10 +169,9 @@ class UnitLocalizationBenchmark(Benchmark):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.gt_positions = gt_positions
-        self.params = params
         assert 'method' in self.params, "Method should be specified in the params!"
-        self.method = self.params.get('method')
-        self.params = self.params['method_kwargs']
+        self.method = params['method']
+        self.params = params['method_kwargs']
         self.result = {}
         self.waveforms_params = {}
         for key in ["ms_before", "ms_after"]:
