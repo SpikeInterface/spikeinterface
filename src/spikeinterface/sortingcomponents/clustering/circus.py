@@ -3,7 +3,6 @@ from __future__ import annotations
 # """Sorting components: clustering"""
 from pathlib import Path
 
-import shutil
 import numpy as np
 
 try:
@@ -13,16 +12,13 @@ try:
 except:
     HAVE_HDBSCAN = False
 
-import random, string, os
-from spikeinterface.core import get_global_tmp_folder, get_channel_distances
+import random, string
+from spikeinterface.core import get_global_tmp_folder
 from spikeinterface.core.basesorting import minimum_spike_dtype
-from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
-from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers, estimate_templates
-from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
-from spikeinterface.core import NumpySorting
+from spikeinterface.core.waveform_tools import estimate_templates
+from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.core import extract_waveforms
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
 from sklearn.decomposition import TruncatedSVD
@@ -32,7 +28,6 @@ from spikeinterface.sortingcomponents.tools import remove_empty_templates
 import pickle, json
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
-    ExtractDenseWaveforms,
     ExtractSparseWaveforms,
     PeakRetriever,
 )
@@ -59,7 +54,6 @@ class CircusClustering:
         "n_svd": [5, 10],
         "ms_before": 0.5,
         "ms_after": 0.5,
-        "random_seed": 42,
         "noise_levels": None,
         "tmp_folder": None,
         "job_kwargs": {},
@@ -74,16 +68,11 @@ class CircusClustering:
         d = params
         verbose = job_kwargs.get("verbose", False)
 
-        peak_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
-
         fs = recording.get_sampling_frequency()
         ms_before = params["ms_before"]
         ms_after = params["ms_after"]
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
-        num_samples = nbefore + nafter
-        num_chans = recording.get_num_channels()
-        np.random.seed(d["random_seed"])
 
         if params["tmp_folder"] is None:
             name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
@@ -119,7 +108,6 @@ class CircusClustering:
             json.dump(model_params, f)
 
         # features
-        features_folder = model_folder / "features"
         node0 = PeakRetriever(recording, peaks)
 
         radius_um = params["radius_um"]

@@ -13,14 +13,9 @@ try:
 except:
     HAVE_HDBSCAN = False
 
-import random, string, os
 from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.core import get_global_tmp_folder, get_channel_distances, get_random_data_chunks
-from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
-from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers, estimate_templates
-from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
-from spikeinterface.core import NumpySorting
-from spikeinterface.core import extract_waveforms
+from spikeinterface.core.waveform_tools import estimate_templates
+from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
@@ -99,7 +94,6 @@ class RandomProjectionClustering:
 
         nbefore = int(params["ms_before"] * fs / 1000)
         nafter = int(params["ms_after"] * fs / 1000)
-        nsamples = nbefore + nafter
 
         # if params["feature"] == "ptp":
         #     noise_values = np.ptp(rng.randn(1000, nsamples), axis=1)
@@ -123,8 +117,6 @@ class RandomProjectionClustering:
         hdbscan_data = run_node_pipeline(
             recording, pipeline_nodes, job_kwargs=job_kwargs, job_name="extracting features"
         )
-
-        import sklearn
 
         clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
         peak_labels = clustering[0]
