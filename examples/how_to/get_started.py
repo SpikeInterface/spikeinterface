@@ -59,9 +59,9 @@ import spikeinterface.exporters as sexp
 import spikeinterface.curation as scur
 import spikeinterface.widgets as sw
 
-#  We can also import all submodules at once with this
-#  this internally imports core+extractors+preprocessing+sorters+postprocessing+
-#  qualitymetrics+comparison+widgets+exporters
+# Alternatively, we can import all submodules at once which
+# internally imports core+extractors+preprocessing+sorters+postprocessing+
+# qualitymetrics+comparison+widgets+exporters
 #
 # This is useful for notebooks, but it is a heavier import because internally many more dependencies
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
@@ -77,8 +77,8 @@ si.set_global_job_kwargs(**global_job_kwargs)
 # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data repo
 # We download the dataset using DataLad but it can also be downloaded directly.
 
-# Then we can open it. Note that [MEArec](https://mearec.readthedocs.io>) simulated file
-# contains both a "recording" and a "sorting" object.
+# Then we can open it. Note that [MEArec](https://mearec.readthedocs.io>) simulated files
+# contain both a "recording" and a "sorting" object.
 
 local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
 recording, sorting_true = se.read_mearec(local_path)
@@ -123,7 +123,7 @@ print("Spike train of first unit:", spike_train)
 # -
 
 # SpikeInterface internally uses the [ProbeInterface](https://probeinterface.readthedocs.io/en/main/) package to handle `probeinterface.Probe` and
-# `probeinterface.ProbeGroup`. So any probe in the probeinterface collections can be downloaded and set to a
+# `probeinterface.ProbeGroup`. So any probe in the probeinterface collection can be downloaded and set to a
 # `Recording` object. In this case, the MEArec dataset already handles a `Probe` and we don't need to set it *manually*.
 
 # +
@@ -199,7 +199,9 @@ print(sorting_SC2)
 print("Units found by tridesclous:", sorting_TDC.get_unit_ids())
 print("Units found by spyking-circus2:", sorting_SC2.get_unit_ids())
 
-# If a sorter is not installed locally, we can also avoid installing it and run it anyways, using a container (Docker or Singularity). To do this, you will need to install Docker. More information [here](https://spikeinterface.readthedocs.io/en/latest/modules/sorters.html?highlight=docker#running-sorters-in-docker-singularity-containers). For example, let's run `Kilosort2` using Docker:
+# If a sorter is not installed locally, we can also avoid installing it and run it anyways, using a container (Docker or Singularity). 
+# To do this, you will need to install Docker. More information [here](https://spikeinterface.readthedocs.io/en/latest/modules/sorters.html?highlight=docker#running-sorters-in-docker-singularity-containers). 
+# Let's run `Kilosort2` using Docker:
 
 sorting_KS2 = ss.run_sorter(sorter_name="kilosort2", recording=recording_preprocessed, docker_image=True, verbose=True)
 print(sorting_KS2)
@@ -210,21 +212,22 @@ print(sorting_KS2)
 sa_TDC = si.create_sorting_analyzer(sorting_TDC, recording_preprocessed, format='binary_folder', folder='sa_TDC_binary')
 
 # This folder is where all the postprocessing data will be saved such as waveforms and templates. Let's calculate
-# some waveforms. To do this the function samples some spikes (by default `max_spikes_per_unit=500`)
+# some waveforms. When doing this, the function samples some spikes (by default `max_spikes_per_unit=500`)
 # for each unit, extracts their waveforms, and stores them to disk in `extensions/waveforms`. 
 # These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
-# All computations for the `SortingAnalyzer` object are done using the `compute` method:
+# Computations with the `SortingAnalyzer` object are done using the `compute` method:
 
 # +
 sa_TDC.compute("random_spikes")
 sa_TDC.compute("waveforms")
 # -
 
-# The results of these calculations are saved as `extensions`. We access the results by first getting the extension
+# The results of these calculations are saved as `extensions`. Some simple data, such as the `unit_ids` can be accessed directly
+# from the `SortingAnalyzer` object. Extension data is accessed by first getting the extension then getting the data
 
 # +
 unit_id0 = sa_TDC.unit_ids[0]
-waveforms = sa_TDC.get_extension("waveforms").get_data()[0]
+waveforms = sa_TDC.get_extension("waveforms").get_data()[unit_id0]
 print(waveforms.shape)
 # -
 
@@ -250,7 +253,7 @@ plt.hist(amplitudes, bins=50)
 plt.show()
 # -
 
-# You can check which extensions have been saved (in the folder) and which have been loaded (in your enviroment)...
+# You can check which extensions have been saved (in your local folder) and which have been loaded (in your enviroment)...
 
 # +
 print(sa_TDC.get_saved_extension_names())
@@ -266,7 +269,7 @@ sa_TDC.delete_extension("spike_amplitudes")
 # This deletes the extension's data in the `SortingAnalyzer` folder.
 #
 # Importantly, `SortingAnalyzers` (and all extensions) can be reloaded at later times:
-# (Note: spike_locations is not loaded, since we just deleted it)
+# (Here, spike_amplitudes is not loaded since we just deleted it)
 
 # +
 sa_loaded = si.load_sorting_analyzer('sa_TDC_binary')
@@ -279,7 +282,8 @@ print(sa_loaded.get_loaded_extension_names())
 sa_TDC.compute("spike_amplitudes")
 # -
 
-# Once we have computed all of the postprocessing information, we can compute quality metrics (different quality metrics require different extensions - e.g., drift metrics require `spike_locations`):
+# Once we have computed all of the postprocessing information, we can compute quality 
+# metrics (some quality metrics require certain extensions - e.g., drift metrics require `spike_locations`):
 
 qm_params = sqm.get_default_qm_params()
 pprint(qm_params)
@@ -294,7 +298,7 @@ qm_params["drift"]["min_spikes_per_interval"] = 2
 qm = sqm.compute_quality_metrics(sa_TDC, qm_params=qm_params)
 display(qm)
 
-# Quality metrics are also extensions (and become part of the SortingAnalyzer folder):
+# Quality metrics are also extensions (and become part of the `SortingAnalyzer` folder):
 
 # Next, we can use some of the powerful tools for spike sorting visualization.
 
