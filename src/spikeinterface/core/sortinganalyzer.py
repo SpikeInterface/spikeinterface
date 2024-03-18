@@ -1085,7 +1085,7 @@ def get_extension_class(extension_name: str, auto_import=True):
                     f"Extension '{extension_name}' is not registered, please import related module before use: 'import {module}'"
                 )
         else:
-            raise ValueError(f"Extension '{extension_name}' is unkown maybe this is an external extension or a typo.")
+            raise ValueError(f"Extension '{extension_name}' is unknown maybe this is an external extension or a typo.")
 
     ext_class = extensions_dict[extension_name]
     return ext_class
@@ -1485,7 +1485,7 @@ class AnalyzerExtension:
 
 
 # this is a hardcoded list to to improve error message and auto_import mechanism
-# this is important because extension are register when the submodule is imported
+# this is important because extension are registered when the submodule is imported
 _builtin_extensions = {
     # from core
     "random_spikes": "spikeinterface.core",
