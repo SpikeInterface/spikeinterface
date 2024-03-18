@@ -242,34 +242,6 @@ class MockWaveformExtractor:
     def has_extension(self, extension_name: str) -> bool:
         return self.sorting_analyzer.has_extension(extension_name)
 
-    def precompute_templates(self, modes=("average", "std", "median", "percentile"), percentile=None):
-
-        modes = list(modes)
-        for i, mode in enumerate(modes):
-            if mode == "percentile":
-                assert percentile is not None, "percentile must be specified for mode='percentile'"
-                assert 0 <= percentile <= 100, "percentile must be between 0 and 100 inclusive"
-                modes[i] = (mode, percentile)
-
-        templates_params = dict(operators=list(modes))
-        self.sorting_analyzer.compute("templates", **templates_params)
-
-    def sample_spikes(self):
-
-        assert self.sorting_analyzer.has_extension(
-            "random_spikes"
-        ), "sample_spikes() requires the 'random_spikes' extension."
-
-        sample_spikes = dict.fromkeys(self.sorting_analyzer.unit_ids, np.array([], "int"))
-        spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
-        spike_indices = self.sorting_analyzer.get_extension("random_spikes").data["random_spikes_indices"]
-        for i, spike in enumerate(spikes):
-            sample_spikes[spike["unit_index"]] = np.append(sample_spikes[spike["unit_index"]], spike_indices[i])
-
-        return sample_spikes
-
-    def run_extract_waveforms(self):
-        self.sorting_analyzer.compute("waveforms")
 
     def select_units(self, unit_ids):
         return self.sorting_analyzer.select_units(unit_ids)
@@ -407,7 +379,6 @@ def load_waveforms(
     if output == "SortingAnalyzer":
         return sorting_analyzer
     elif output in ("WaveformExtractor", "MockWaveformExtractor"):
-        sorting_analyzer.compute("random_spikes")
         return MockWaveformExtractor(sorting_analyzer)
 
 
@@ -500,6 +471,7 @@ def _read_old_waveforms_extractor_binary(folder):
         ext = SelectRandomSpikes(sorting_analyzer)
         ext.params = dict()
         ext.data = dict(random_spikes_indices=random_spikes_indices)
+        sorting_analyzer.extensions["random_spikes"] = ext
 
         ext = ComputeWaveforms(sorting_analyzer)
         ext.params = dict(
