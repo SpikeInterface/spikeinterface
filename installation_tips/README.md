@@ -48,7 +48,7 @@ If you want to test the spikeinterface install you can:
     conda activate si_env
     python check_your_install.py
     ```
-5. If a windows user to clean-up you will also need to right click + save [`cleanup_for_windows.py`](https://raw.githubusercontent.com/SpikeInterfacemaster/installation_tips/cleanup_for_windows.py)
+5. If a windows user to clean-up you will also need to right click + save [`cleanup_for_windows.py`](https://raw.githubusercontent.com/SpikeInterface/master/installation_tips/cleanup_for_windows.py)
 Then transfer `cleanup_for_windows.py` into your "Documents" folder. Finally run :
    ```
    python cleanup_for_windows.py
