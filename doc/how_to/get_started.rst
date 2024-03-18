@@ -198,7 +198,9 @@ to set it *manually*.
 
 
 If your recording does not have a ``Probe``, you can set it using
-``set_probe``. There is more information
+``set_probe``. Note: ``set_probe`` creates a copy of the recording
+with the new probe, rather than modifying the existing recording
+in place. There is more information
 `here <https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html>`__.
 
 Using the ``spikeinterface.preprocessing`` module, you can perform
