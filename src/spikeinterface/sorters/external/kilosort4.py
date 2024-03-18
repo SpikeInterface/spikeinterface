@@ -15,6 +15,7 @@ class Kilosort4Sorter(BaseSorter):
 
     sorter_name: str = "kilosort4"
     requires_locations = True
+    gpu_capability = "nvidia-optional"
 
     _default_params = {
         "nblocks": 1,
