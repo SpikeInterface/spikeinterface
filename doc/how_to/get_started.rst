@@ -651,19 +651,6 @@ in the same way as earlier
     analyzer_TDC.compute("quality_metrics", qm_params)
     analyzer_TDC.get_extension("quality_metrics").get_data()
 
-
-.. parsed-literal::
-
-    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:846: UserWarning: Some units have too few spikes : amplitude_cutoff is set to NaN
-      warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
-    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:999: UserWarning: The recording is too short given the specified 'interval_s' and 'min_num_bins'. Drift metrics will be set to NaN
-      warnings.warn(
-    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:147: UserWarning: Bin duration of 60s is larger than recording duration. Presence ratios are set to NaN.
-      warnings.warn(
-
-
-
-
 .. raw:: html
 
     <div>
