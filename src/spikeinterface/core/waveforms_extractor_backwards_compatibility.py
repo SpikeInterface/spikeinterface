@@ -242,7 +242,6 @@ class MockWaveformExtractor:
     def has_extension(self, extension_name: str) -> bool:
         return self.sorting_analyzer.has_extension(extension_name)
 
-
     def select_units(self, unit_ids):
         return self.sorting_analyzer.select_units(unit_ids)
 
