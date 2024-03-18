@@ -1168,21 +1168,16 @@ class AnalyzerExtension:
             def __init__(self, extension_name):
                 self.extension_name = extension_name
 
-            def __call__(self, waveform_extractor=None, sorting_analyzer=None, load_if_exists=None, *args, **kwargs):
+            def __call__(self, sorting_analyzer, load_if_exists=None, *args, **kwargs):
                 from .waveforms_extractor_backwards_compatibility import MockWaveformExtractor
 
-                if isinstance(waveform_extractor, MockWaveformExtractor):
+                if isinstance(sorting_analyzer, MockWaveformExtractor):
                     # backward compatibility with WaveformsExtractor
-                    sorting_analyzer = waveform_extractor.sorting_analyzer
-                elif isinstance(waveform_extractor, SortingAnalyzer):
-                    raise ValueError(f"waveform_extractor must be a MockWaveformExtractor")
-                elif isinstance(sorting_analyzer, SortingAnalyzer):
-                    sorting_analyzer = sorting_analyzer
-                elif isinstance(sorting_analyzer, MockWaveformExtractor):
-                    raise ValueError(f"sorting_analyzer must be a SortingAnalyzer")
-                else:
-                    raise ValueError(f"Must supply a waveform_extractor or sorting_analyzer.")
-
+                    sorting_analyzer = sorting_analyzer.sorting_analyzer
+                
+                if not isinstance(sorting_analyzer, SortingAnalyzer):
+                    raise ValueError(f"compute_{self.extension_name}() needs a SortingAnalyzer instance")
+                
                 if load_if_exists is not None:
                     # backward compatibility with "load_if_exists"
                     warnings.warn(
