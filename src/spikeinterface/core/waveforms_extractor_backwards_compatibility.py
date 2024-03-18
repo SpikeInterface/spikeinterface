@@ -133,7 +133,6 @@ class MockWaveformExtractor:
     def delete_extension(self, extension) -> None:
         self.sorting_analyzer.delete_extension()
 
-
     @property
     def recording(self) -> BaseRecording:
         return self.sorting_analyzer.recording

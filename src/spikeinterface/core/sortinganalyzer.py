@@ -1174,10 +1174,10 @@ class AnalyzerExtension:
                 if isinstance(sorting_analyzer, MockWaveformExtractor):
                     # backward compatibility with WaveformsExtractor
                     sorting_analyzer = sorting_analyzer.sorting_analyzer
-                
+
                 if not isinstance(sorting_analyzer, SortingAnalyzer):
                     raise ValueError(f"compute_{self.extension_name}() needs a SortingAnalyzer instance")
-                
+
                 if load_if_exists is not None:
                     # backward compatibility with "load_if_exists"
                     warnings.warn(
