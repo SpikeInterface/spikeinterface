@@ -457,7 +457,8 @@ class NumpySorting(BaseSorting):
         spikes["sample_index"] = peaks["sample_index"]
         spikes["unit_index"] = peaks["channel_index"]
         spikes["segment_index"] = peaks["segment_index"]
-
+        order = np.argsort(spikes["sample_index"])
+        spikes = spikes[order]
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
         return sorting
