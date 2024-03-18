@@ -86,7 +86,7 @@ class PeakDetectionBenchmark(Benchmark):
         sorting["sample_index"] = peaks[detected_matches]["sample_index"]
         sorting["unit_index"] = gt_peaks["unit_index"][gt_matches]
         sorting["segment_index"] = peaks[detected_matches]["segment_index"]
-        order = np.lexsort((sorting["segment_index"], sorting["sample_index"]))
+        order = np.lexsort((sorting["sample_index"], sorting["segment_index"]))
         sorting = sorting[order]
         self.result["sliced_gt_sorting"] = NumpySorting(
             sorting, self.recording.sampling_frequency, self.gt_sorting.unit_ids
