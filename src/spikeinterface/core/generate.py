@@ -1206,6 +1206,7 @@ def exp_growth(start_amp, end_amp, duration_ms, tau_ms, sampling_frequency, flip
         y = y[::-1]
     return y[:-1]
 
+
 def get_ellipse(positions, center, a_um=10, b_um=10, c_um=10, x_angle=0, y_angle=0, z_angle=0):
 
     p = np.zeros((3, len(positions)))
@@ -1237,7 +1238,7 @@ def get_ellipse(positions, center, a_um=10, b_um=10, c_um=10, x_angle=0, y_angle
     inv_matrix = np.dot(Rx, Ry, Rz)
     P = np.dot(inv_matrix, p)
 
-    return (P[0]/a_um)**2 + (P[1]/b_um)**2 + (P[2]/c_um)**2
+    return (P[0] / a_um) ** 2 + (P[1] / b_um) ** 2 + (P[2] / c_um) ** 2
 
 
 def generate_single_fake_waveform(
@@ -1454,13 +1455,16 @@ def generate_templates(
         eps = 1.0
         # naive formula for spatial decay
         pow = params["decay_power"][u]
-        distances = get_ellipse(channel_locations, units_locations[u], 
-                                params["a_um"][u], 
-                                params["b_um"][u], 
-                                params["c_um"][u],
-                                params["x_angle"][u],
-                                params["y_angle"][u],
-                                params["z_angle"][u])
+        distances = get_ellipse(
+            channel_locations,
+            units_locations[u],
+            params["a_um"][u],
+            params["b_um"][u],
+            params["c_um"][u],
+            params["x_angle"][u],
+            params["y_angle"][u],
+            params["z_angle"][u],
+        )
 
         channel_factors = alpha / (distances + eps) ** pow
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
