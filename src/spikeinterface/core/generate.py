@@ -1206,13 +1206,38 @@ def exp_growth(start_amp, end_amp, duration_ms, tau_ms, sampling_frequency, flip
         y = y[::-1]
     return y[:-1]
 
+def get_ellipse(positions, center, a_um=10, b_um=10, c_um=10, x_angle=0, y_angle=0, z_angle=0):
 
-def get_ellipse(positions, center, a_um, b_um, theta):
-    x = positions[:, 0]
-    y = positions[:, 1]
-    X = (x - center[0])*np.cos(theta) + (y - center[1])*np.sin(theta)
-    Y = (x - center[0])*np.sin(theta) + (y - center[1])*np.cos(theta)
-    return ((X/a_um)**2 + (Y/b_um)**2)
+    p = np.zeros((3, len(positions)))
+    p[0] = positions[:, 0] - center[0]
+    p[1] = positions[:, 1] - center[1]
+    p[2] = -center[2]
+
+    Rx = np.zeros((3, 3))
+    Rx[0, 0] = 1
+    Rx[1, 1] = np.cos(-x_angle)
+    Rx[1, 0] = -np.sin(-x_angle)
+    Rx[2, 1] = np.sin(-x_angle)
+    Rx[2, 2] = np.cos(-x_angle)
+
+    Ry = np.zeros((3, 3))
+    Ry[1, 1] = 1
+    Ry[0, 0] = np.cos(-y_angle)
+    Ry[0, 2] = np.sin(-y_angle)
+    Ry[2, 0] = -np.sin(-y_angle)
+    Ry[2, 2] = np.cos(-y_angle)
+
+    Rz = np.zeros((3, 3))
+    Rz[2, 2] = 1
+    Rz[0, 0] = np.cos(-z_angle)
+    Rz[0, 1] = -np.sin(-z_angle)
+    Rz[1, 0] = np.sin(-z_angle)
+    Rz[1, 1] = np.cos(-z_angle)
+
+    inv_matrix = np.dot(Rx, Ry, Rz)
+    P = np.dot(inv_matrix, p)
+
+    return (P[0]/a_um)**2 + (P[1]/b_um)**2 + (P[2]/c_um)**2
 
 
 def generate_single_fake_waveform(
@@ -1294,6 +1319,10 @@ default_unit_params_range = dict(
     theta=(-np.pi, np.pi),
     a_um=(10, 50),
     b_um=(10, 50),
+    c_um=(10, 50),
+    x_angle=(-np.pi, np.pi),
+    y_angle=(-np.pi, np.pi),
+    z_angle=(-np.pi, np.pi),
 )
 
 
@@ -1428,7 +1457,10 @@ def generate_templates(
         distances = get_ellipse(channel_locations, units_locations[u], 
                                 params["a_um"][u], 
                                 params["b_um"][u], 
-                                params["theta"][u])
+                                params["c_um"][u],
+                                params["x_angle"][u],
+                                params["y_angle"][u],
+                                params["z_angle"][u])
 
         channel_factors = alpha / (distances + eps) ** pow
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
