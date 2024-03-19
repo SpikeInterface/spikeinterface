@@ -1237,7 +1237,7 @@ def get_ellipse(positions, center, a_um=10, b_um=10, c_um=10, x_angle=0, y_angle
     inv_matrix = np.dot(Rx, Ry, Rz)
     P = np.dot(inv_matrix, p)
 
-    return (P[0]/a_um)**2 + (P[1]/b_um)**2 + (P[2]/c_um)**2
+    return np.sqrt((P[0]/a_um)**2 + (P[1]/b_um)**2 + (P[2]/c_um)**2)
 
 
 def generate_single_fake_waveform(
@@ -1308,7 +1308,7 @@ def generate_single_fake_waveform(
 
 
 default_unit_params_range = dict(
-    alpha=(2_00.0, 3_00.0),
+    alpha=(1_00.0, 3_00.0),
     depolarization_ms=(0.09, 0.14),
     repolarization_ms=(0.5, 0.8),
     recovery_ms=(1.0, 1.5),
