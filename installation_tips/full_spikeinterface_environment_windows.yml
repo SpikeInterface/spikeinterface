@@ -3,20 +3,22 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10
-  - pip>=21.0
-  # numpy 1.21 break numba which break tridesclous
+  - python=3.11
+  - pip
   - numpy
+  - scipy
   - joblib
   - tqdm
   - matplotlib
   - h5py
   - pandas
+  - xarray
+  - zarr
   - scikit-learn
+  - hdbscan
   - networkx
   - pybind11
   - loky
-  - hdbscan
   - numba
   - jupyter
   - pyqt=5
@@ -25,10 +27,8 @@ dependencies:
   - ipympl
   - pip:
     - ephyviewer
-    - neo>=0.12
-    - probeinterface>=0.2.11
-    - MEArec>=1.8
-    - spikeinterface[full, widgets]
+    - MEArec
+    - spikeinterface[full,widgets]
     - spikeinterface-gui
-    - tridesclous>=1.6.8
+    - tridesclous
     # - phy==2.0b5

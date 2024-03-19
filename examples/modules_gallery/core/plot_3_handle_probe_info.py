@@ -22,7 +22,7 @@ recording, sorting_true = se.toy_example(duration=10, num_channels=32, seed=0, n
 print(recording)
 
 ###############################################################################
-# This generator already contain a probe object that you can retrieve
+# This generator already contains a probe object that you can retrieve
 # directly and plot:
 
 probe = recording.get_probe()
@@ -33,7 +33,7 @@ from probeinterface.plotting import plot_probe
 plot_probe(probe)
 
 ###############################################################################
-# You can also overwrite the probe. In this case you need to manually make
+# You can also overwrite the probe. In this case you need to manually set
 # the wiring (e.g. virtually connect each electrode to the recording device).
 # Let's use a probe from Cambridge Neurotech with 32 channels:
 

@@ -4,11 +4,11 @@
 Append and/or concatenate segments
 ===================================
 
-Sometimes a recording can be split in several subparts, for instance a baseline and an intervention.
+Sometimes a recording can be split into several subparts, for instance a baseline and an intervention.
 
 Similarly to `NEO <https://github.com/NeuralEnsemble/python-neo>`_ we define each subpart as a "segment".
 
-SpikeInterface has tools to manipulate these segments. There are two ways:
+SpikeInterface has tools to interact with these segments. There are two ways:
 
   1. :py:func:`~spikeinterface.core.append_recordings()` and :py:func:`~spikeinterface.core.append_sortings()`
 

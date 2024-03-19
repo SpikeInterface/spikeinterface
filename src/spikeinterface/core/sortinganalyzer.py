@@ -183,13 +183,13 @@ class SortingAnalyzer:
         clsname = self.__class__.__name__
         nseg = self.get_num_segments()
         nchan = self.get_num_channels()
-        nunits = self.sorting.get_num_units()
+        nunits = self.get_num_units()
         txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
         if self.is_sparse():
             txt += " - sparse"
         if self.has_recording():
             txt += " - has recording"
-        ext_txt = f"Loaded {len(self.extensions)} extenstions: " + ", ".join(self.extensions.keys())
+        ext_txt = f"Loaded {len(self.extensions)} extensions: " + ", ".join(self.extensions.keys())
         txt += "\n" + ext_txt
         return txt
 
@@ -431,7 +431,7 @@ class SortingAnalyzer:
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
         if sorting.check_serializability("json"):
-            zarr_sort = np.array([sort_dict], dtype=object)
+            zarr_sort = np.array([check_json(sort_dict)], dtype=object)
             zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
         elif sorting.check_serializability("pickle"):
             zarr_sort = np.array([sort_dict], dtype=object)
@@ -507,7 +507,7 @@ class SortingAnalyzer:
         # sparsity
         if "sparsity_mask" in zarr_root.attrs:
             # sparsity = zarr_root.attrs["sparsity"]
-            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], self.unit_ids, rec_attributes["channel_ids"])
+            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], cls.unit_ids, rec_attributes["channel_ids"])
         else:
             sparsity = None
 
@@ -742,6 +742,9 @@ class SortingAnalyzer:
 
     def get_dtype(self):
         return self.rec_attributes["dtype"]
+
+    def get_num_units(self) -> int:
+        return self.sorting.get_num_units()
 
     ## extensions zone
 
