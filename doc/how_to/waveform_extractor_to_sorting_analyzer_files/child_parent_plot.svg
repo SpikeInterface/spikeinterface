@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="145.97897mm"
+   height="22.686487mm"
+   viewBox="0 0 145.97897 22.686487"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <marker
+       style="overflow:visible"
+       id="marker7"
+       refX="27"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         transform="rotate(180,0.125,0)"
+         id="path7" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="ArrowWide"
+       refX="76"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         transform="rotate(180,0.125,0)"
+         id="path1" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="ArrowWide-9"
+       refX="76"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         transform="rotate(180,0.125,0)"
+         id="path1-9" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="ArrowWide-9-2"
+       refX="76"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         transform="rotate(180,0.125,0)"
+         id="path1-9-7" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="marker7-6"
+       refX="27"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         transform="rotate(180,0.125,0)"
+         id="path7-1" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="marker7-4"
+       refX="27"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         transform="rotate(180,0.125,0)"
+         id="path7-3" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="ArrowWide-9-9"
+       refX="40"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         transform="rotate(180,0.125,0)"
+         id="path1-9-3" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="ArrowWide-9-9-6"
+       refX="40"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         transform="rotate(180,0.125,0)"
+         id="path1-9-3-4" />
+    </marker>
+  </defs>
+  <g
+     id="layer1"
+     transform="translate(-49.917501,-99.885259)">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="159.67297"
+       y="106.98119"
+       id="text1"><tspan
+         id="tspan1"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="159.67297"
+         y="106.98119">spike_locations</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="159.67297"
+       y="111.98119"
+       id="text1-4"><tspan
+         id="tspan1-7"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="159.67297"
+         y="111.98119">spike_amplitudes</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="159.86348"
+       y="116.98119"
+       id="text1-4-4"><tspan
+         id="tspan1-7-0"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="159.86348"
+         y="116.98119">template_similarity</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="159.86348"
+       y="121.98119"
+       id="text1-4-4-3"><tspan
+         id="tspan1-7-0-6"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="159.86348"
+         y="121.98119">template_metrics</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="159.79997"
+       y="101.98119"
+       id="text1-4-4-3-2-3"><tspan
+         id="tspan1-7-0-6-3-2"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="159.79997"
+         y="101.98119">quality_metrics</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="114.86348"
+       y="111.91769"
+       id="text1-4-4-3-2-3-0"><tspan
+         id="tspan1-7-0-6-3-2-7"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="114.86348"
+         y="111.91769">templates</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="84.86348"
+       y="111.91769"
+       id="text1-4-4-3-2-3-0-7"><tspan
+         id="tspan1-7-0-6-3-2-7-2"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="84.86348"
+         y="111.91769">waveforms</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="115"
+       y="121.98119"
+       id="text1-4-4-3-2-3-0-2"><tspan
+         id="tspan1-7-0-6-3-2-7-0"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="115"
+         y="121.98119">principal_components</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="84.831726"
+       y="121.98119"
+       id="text1-4-4-3-2-3-0-2-0"><tspan
+         id="tspan1-7-0-6-3-2-7-0-8"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="84.831726"
+         y="121.98119">noise_levels</tspan></text>
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#ArrowWide)"
+       d="M 133.39852,111.25411 H 159"
+       id="path4" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#ArrowWide-9)"
+       d="M 133.41186,111.80745 159,116"
+       id="path4-7" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#ArrowWide-9-9)"
+       d="m 103.62596,112.4294 9.67762,8.05735"
+       id="path4-7-7" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#ArrowWide-9-9-6)"
+       d="m 75.000002,112.97132 8.83881,8.05735"
+       id="path4-7-7-2" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#ArrowWide-9-2)"
+       d="M 133.39852,112.50824 159,120.40792"
+       id="path4-7-0" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#ArrowWide)"
+       d="M 133.42466,110.56914 159,106.55333"
+       id="path5" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#ArrowWide)"
+       d="M 133.41186,109.99999 159,102"
+       id="path6" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker7)"
+       d="m 74.96805,111.22236 9.428649,0.0636"
+       id="path6-0" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker7-6)"
+       d="m 103.62652,111.22139 9.42865,0.0636"
+       id="path6-0-5" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="49.733299"
+       y="111.91769"
+       id="text6"><tspan
+         id="tspan6"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="49.733299"
+         y="111.91769">random_spikes</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="71.811287"
+       y="103.01687"
+       id="text1-4-4-3-2-3-0-7-6"><tspan
+         id="tspan1-7-0-6-3-2-7-2-2"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="71.811287"
+         y="103.01687">parent</tspan></text>
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker7-4)"
+       d="m 61.811291,102.22935 9.428649,0.0636"
+       id="path6-0-8" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';fill:#000000;stroke-width:0.264583"
+       x="51.544586"
+       y="103.21054"
+       id="text6-7"><tspan
+         id="tspan6-4"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Tlwg Typo';-inkscape-font-specification:'Tlwg Typo';stroke-width:0.264583"
+         x="51.544586"
+         y="103.21054">child</tspan></text>
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.165;stroke-dasharray:none;stroke-opacity:1"
+       id="rect8"
+       width="34.958729"
+       height="4.901247"
+       x="50"
+       y="99.967758" />
+  </g>
+</svg>

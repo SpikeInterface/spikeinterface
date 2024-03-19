@@ -65,11 +65,15 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinx_design',
+    'myst_parser',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting"
 ]
+
+myst_enable_extensions = ['colon_fence']
 
 numpydoc_show_class_members = False
 
