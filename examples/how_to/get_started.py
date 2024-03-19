@@ -221,7 +221,7 @@ analyzer_TDC = si.create_sorting_analyzer(sorting=sorting_TDC, recording=recordi
 
 # This folder is where all the postprocessing data will be saved such as waveforms and templates. Let's calculate
 # some waveforms. When doing this, the function samples some spikes (by default `max_spikes_per_unit=500`)
-# for each unit, extracts their waveforms, and stores them to disk in `extensions/waveforms`.
+# for each unit, extracts their waveforms, and stores them to disk in `./analyzer_TDC_binary/extensions/waveforms`.
 # These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
 # Computations with the `SortingAnalyzer` object are done using the `compute` method:
 
