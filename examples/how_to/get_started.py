@@ -60,11 +60,10 @@ import spikeinterface.curation as scur
 import spikeinterface.widgets as sw
 
 # Alternatively, we can import all submodules at once with `import spikeinterface.full as si` which
-# Alternatively, we can import all submodules at once with `import spikeinterface.full as si` which
 # internally imports core+extractors+preprocessing+sorters+postprocessing+
 # qualitymetrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
-# would be `si`
-#
+# would be `si`.
+
 # This is useful for notebooks, but it is a heavier import because internally many more dependencies
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
 
@@ -214,11 +213,11 @@ print(sorting_KS2)
 # For postprocessing SpikeInterface pairs recording and sorting objects into a `SortingAnalyzer` object.
 # The `SortingAnalyzer` can be loaded in memory or saved in a folder. Here, we save it in binary format.
 
-sa_TDC = si.create_sorting_analyzer(sorting=sorting_TDC, recording=recording_preprocessed, format='binary_folder', folder='sa_TDC_binary')
+analyzer_TDC = si.create_sorting_analyzer(sorting=sorting_TDC, recording=recording_preprocessed, format='binary_folder', folder='analyzer_TDC_binary')
 
 # This folder is where all the postprocessing data will be saved such as waveforms and templates. Let's calculate
 # some waveforms. When doing this, the function samples some spikes (by default `max_spikes_per_unit=500`)
-# for each unit, extracts their waveforms, and stores them to disk in `extensions/waveforms`.
+# for each unit, extracts their waveforms, and stores them to disk in `./analyzer_TDC_binary/extensions/waveforms`.
 # These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
 # Computations with the `SortingAnalyzer` object are done using the `compute` method:
 
@@ -280,11 +279,12 @@ sa_TDC.delete_extension("spike_amplitudes")
 
 # This deletes the extension's data in the `SortingAnalyzer` folder.
 #
-# Importantly, `SortingAnalyzers` (and all extensions) can be reloaded at later times:
+# Importantly, `SortingAnalyzers` (and all extensions) can be reloaded at later times from their folders:
 # (Here, spike_amplitudes is not loaded since we just deleted it)
 
 # +
-analyzer_loaded = si.load_sorting_analyzer('analyzer_TDC_binary')
+sorting_analyzer_path = './analyzer_TDC_binary'
+analyzer_loaded = si.load_sorting_analyzer(sorting_analyzer_path)
 print(analyzer_loaded.get_loaded_extension_names())
 # -
 
