@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.100.2.rst
   releases/0.100.1.rst
   releases/0.100.0.rst
   releases/0.99.1.rst
@@ -33,6 +34,12 @@ Release notes
   releases/0.10.0.rst
   releases/0.9.9.rst
   releases/0.9.1.rst
+
+
+Version 0.100.2
+==============
+
+* Minor release with fix for running Kilosort4 with GPU support in container
 
 
 Version 0.100.1
