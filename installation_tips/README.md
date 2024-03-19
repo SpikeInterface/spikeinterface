@@ -19,8 +19,8 @@ Steps:
 1. Download anaconda individual edition [here](https://www.anaconda.com/download)
 2. Run the installer. Check the box “Add anaconda3 to my Path environment variable”. It makes life easier for beginners.
 3. Download with right click + save the file corresponding to your OS, and put it in "Documents" folder
-    * [`full_spikeinterface_environment_windows.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/master/installation_tips/full_spikeinterface_environment_windows.yml)
-    * [`full_spikeinterface_environment_mac.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/master/installation_tips/full_spikeinterface_environment_mac.yml)
+    * [`full_spikeinterface_environment_windows.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/full_spikeinterface_environment_windows.yml)
+    * [`full_spikeinterface_environment_mac.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/full_spikeinterface_environment_mac.yml)
 4. Then open the "Anaconda Command Prompt" (if Windows, search in your applications) or the Terminal (for Mac users)
 5. If not in the "Documents" folder type `cd Documents`
 6. Then run this depending on your OS:
@@ -38,7 +38,7 @@ Note for **linux** users : this conda recipe should work but we recommend strong
 
 If you want to test the spikeinterface install you can:
 
-1. Download with right click + save the file [`check_your_install.py`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/master/installation_tips/check_your_install.py)
+1. Download with right click + save the file [`check_your_install.py`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/check_your_install.py)
     and put it into the "Documents" folder
 
 2. Open the Anaconda Command Prompt (Windows) or Terminal (Mac)
@@ -48,7 +48,7 @@ If you want to test the spikeinterface install you can:
     conda activate si_env
     python check_your_install.py
     ```
-5. If a windows user to clean-up you will also need to right click + save [`cleanup_for_windows.py`](https://raw.githubusercontent.com/SpikeInterfacemaster/installation_tips/cleanup_for_windows.py)
+5. If a windows user to clean-up you will also need to right click + save [`cleanup_for_windows.py`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/cleanup_for_windows.py)
 Then transfer `cleanup_for_windows.py` into your "Documents" folder. Finally run :
    ```
    python cleanup_for_windows.py

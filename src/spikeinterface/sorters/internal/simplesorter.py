@@ -33,7 +33,7 @@ class SimpleSorter(ComponentsBasedSorter):
         "apply_preprocessing": False,
         "waveforms": {"ms_before": 1.0, "ms_after": 1.5},
         "filtering": {"freq_min": 300, "freq_max": 8000.0},
-        "detection": {"peak_sign": "neg", "detect_threshold": 5.0, "exclude_sweep_ms": 0.4},
+        "detection": {"peak_sign": "neg", "detect_threshold": 5.0, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "features": {"n_components": 3},
         "clustering": {
             "method": "hdbscan",
