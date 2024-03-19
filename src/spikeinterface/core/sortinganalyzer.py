@@ -183,13 +183,13 @@ class SortingAnalyzer:
         clsname = self.__class__.__name__
         nseg = self.get_num_segments()
         nchan = self.get_num_channels()
-        nunits = self.sorting.get_num_units()
+        nunits = self.get_num_units()
         txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
         if self.is_sparse():
             txt += " - sparse"
         if self.has_recording():
             txt += " - has recording"
-        ext_txt = f"Loaded {len(self.extensions)} extenstions: " + ", ".join(self.extensions.keys())
+        ext_txt = f"Loaded {len(self.extensions)} extensions: " + ", ".join(self.extensions.keys())
         txt += "\n" + ext_txt
         return txt
 
@@ -742,6 +742,9 @@ class SortingAnalyzer:
 
     def get_dtype(self):
         return self.rec_attributes["dtype"]
+
+    def get_num_units(self) -> int:
+        return self.sorting.get_num_units()
 
     ## extensions zone
 
