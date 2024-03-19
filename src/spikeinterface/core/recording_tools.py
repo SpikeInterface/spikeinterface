@@ -270,7 +270,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     arr[start_frame:end_frame, :] = traces
 
 
-def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=True, buffer_type="auto", **job_kwargs):
+def write_memory_recording(recording, dtype=None, auto_cast_uint=True, buffer_type="auto", **job_kwargs):
     """
     Save the traces into numpy arrays (memory).
     try to use the SharedMemory introduce in py3.8 if n_jobs > 1
@@ -281,8 +281,6 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
         The recording extractor object to be saved in .dat format
     dtype: dtype, default: None
         Type of the saved data
-    verbose: bool, default: False
-        If True, output is verbose (when chunks are used)
     auto_cast_uint: bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
     buffer_type: "auto" | "numpy" | "sharedmem"
@@ -337,7 +335,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
         init_args = (recording, arrays, None, None, dtype, cast_unsigned)
 
     executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
+        recording, func, init_func, init_args, job_name="write_memory_recording", **job_kwargs
     )
     executor.run()
 
