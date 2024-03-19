@@ -88,7 +88,7 @@ both a “recording” and a “sorting” object.
 
 .. parsed-literal::
 
-    MEArecRecordingExtractor: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s 
+    MEArecRecordingExtractor: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
                               float32 dtype - 39.06 MiB
       file_path: /home/nolanlab/spikeinterface_datasets/ephy_testing_data/mearec/mearec_test_10s.h5
     MEArecSortingExtractor: 10 units - 1 segments - 32.0kHz
@@ -128,7 +128,7 @@ This is how you retrieve info from a ``BaseRecording``\ …
     fs = recording.get_sampling_frequency()
     num_chan = recording.get_num_channels()
     num_seg = recording.get_num_segments()
-    
+
     print("Channel ids:", channel_ids)
     print("Sampling frequency:", fs)
     print("Number of channels:", num_chan)
@@ -152,7 +152,7 @@ This is how you retrieve info from a ``BaseRecording``\ …
     num_seg = recording.get_num_segments()
     unit_ids = sorting_true.get_unit_ids()
     spike_train = sorting_true.get_unit_spike_train(unit_id=unit_ids[0])
-    
+
     print("Number of segments:", num_seg)
     print("Unit ids:", unit_ids)
     print("Spike train of first unit:", spike_train)
@@ -182,9 +182,9 @@ to set it *manually*.
 
     probe = recording.get_probe()
     print(probe)
-    
+
     from probeinterface.plotting import plot_probe
-    
+
     _ = plot_probe(probe)
 
 
@@ -218,7 +218,7 @@ object to disk.
     print(recording_f)
     recording_cmr = si.common_reference(recording_f, reference="global", operator="median")
     print(recording_cmr)
-    
+
     # this computes and saves the recording after applying the preprocessing chain
     recording_preprocessed = recording_cmr.save(format="binary")
     print(recording_preprocessed)
@@ -226,9 +226,9 @@ object to disk.
 
 .. parsed-literal::
 
-    BandpassFilterRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s 
+    BandpassFilterRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
                              float32 dtype - 39.06 MiB
-    CommonReferenceRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s 
+    CommonReferenceRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
                               float32 dtype - 39.06 MiB
     Use cache_folder=/tmp/spikeinterface_cache/tmpsgoh2z3y/DLGW1J8V
     write_binary_recording with n_jobs = 4 and chunk_size = 32000
@@ -242,7 +242,7 @@ object to disk.
 
 .. parsed-literal::
 
-    BinaryFolderRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s 
+    BinaryFolderRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
                            float32 dtype - 39.06 MiB
 
 
@@ -329,7 +329,7 @@ Alternatively we can pass a full dictionary containing the parameters:
 
     other_params = ss.get_default_sorter_params("tridesclous")
     other_params["detect_threshold"] = 6
-    
+
     # parameters set by params dictionary
     sorting_TDC_2 = ss.run_sorter(
         sorter_name="tridesclous", recording=recording_preprocessed, output_folder="tdc_output2", **other_params
@@ -662,11 +662,11 @@ in the same way as earlier
         .dataframe tbody tr th:only-of-type {
             vertical-align: middle;
         }
-    
+
         .dataframe tbody tr th {
             vertical-align: top;
         }
-    
+
         .dataframe thead th {
             text-align: right;
         }
@@ -981,7 +981,7 @@ on the “Save as snapshot (sha://)” and copy the URI:
 .. code:: ipython3
 
     uri = "sha1://68cb54a9aaed2303fb82dedbc302c853e818f1b6"
-    
+
     sorting_curated_sv = scur.apply_sortingview_curation(sorting_TDC, uri_or_json=uri)
     print(sorting_curated_sv)
     print(sorting_curated_sv.get_property("accept"))
@@ -1053,7 +1053,7 @@ above a certain threshold:
     qm_data = analyzer_TDC.get_extension("quality_metrics").get_data()
     keep_mask = (qm_data["snr"] > 10) & (qm_data["isi_violations_ratio"] < 0.01)
     print("Mask:", keep_mask.values)
-    
+
     sorting_curated_auto = sorting_TDC.select_units(sorting_TDC.unit_ids[keep_mask])
     print(sorting_curated_auto)
 
@@ -1097,7 +1097,7 @@ performance and plot a confusion matrix
 .. parsed-literal::
 
                 accuracy    recall precision false_discovery_rate miss_rate
-    gt_unit_id                                                             
+    gt_unit_id
     #0               1.0       1.0       1.0                  0.0       0.0
     #1               1.0       1.0       1.0                  0.0       0.0
     #2          0.976744  0.976744       1.0                  0.0  0.023256
@@ -1176,9 +1176,9 @@ graph showing how the units are matched between the sorters.
 .. code:: ipython3
 
     sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
-    
+
     print("Units in agreement between TDC, SC2, and KS2:", sorting_agreement.get_unit_ids())
-    
+
     w_multi = sw.plot_multicomparison_agreement(comp_multi)
     w_multi = sw.plot_multicomparison_agreement_by_sorter(comp_multi)
 
