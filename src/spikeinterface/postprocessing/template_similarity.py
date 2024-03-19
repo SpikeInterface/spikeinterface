@@ -112,7 +112,9 @@ def compute_template_similarity(
         similarity = tmc.get_data()
         return similarity
     else:
-        return _compute_template_similarity(waveform_extractor, waveform_extractor_other, method)
+        return _compute_template_similarity(
+            waveform_extractor=waveform_extractor, waveform_extractor_other=waveform_extractor_other, method=method
+        )
 
 
 def check_equal_template_with_distribution_overlap(
