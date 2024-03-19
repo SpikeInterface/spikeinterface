@@ -1207,6 +1207,14 @@ def exp_growth(start_amp, end_amp, duration_ms, tau_ms, sampling_frequency, flip
     return y[:-1]
 
 
+def get_ellipse(positions, center, a_um, b_um, theta):
+    x = positions[:, 0]
+    y = positions[:, 1]
+    X = (x - center[0])*np.cos(theta) + (y - center[1])*np.sin(theta)
+    Y = (x - center[0])*np.sin(theta) + (y - center[1])*np.cos(theta)
+    return ((X/a_um)**2 + (Y/b_um)**2)
+
+
 def generate_single_fake_waveform(
     sampling_frequency=None,
     ms_before=1.0,
@@ -1283,6 +1291,9 @@ default_unit_params_range = dict(
     smooth_ms=(0.03, 0.07),
     decay_power=(1.4, 1.8),
     propagation_speed=(250.0, 350.0),  # um  / ms
+    theta=(-np.pi, np.pi),
+    a_um=(10, 50),
+    b_um=(10, 50),
 )
 
 
@@ -1361,8 +1372,6 @@ def generate_templates(
     if channel_locations.shape[1] == 2:
         channel_locations = np.hstack([channel_locations, np.zeros((channel_locations.shape[0], 1))])
 
-    distances = np.linalg.norm(units_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
-
     num_units = units_locations.shape[0]
     num_channels = channel_locations.shape[0]
     nbefore = int(sampling_frequency * ms_before / 1000.0)
@@ -1416,14 +1425,19 @@ def generate_templates(
         eps = 1.0
         # naive formula for spatial decay
         pow = params["decay_power"][u]
-        channel_factors = alpha / (distances[u, :] + eps) ** pow
+        distances = get_ellipse(channel_locations, units_locations[u], 
+                                params["a_um"][u], 
+                                params["b_um"][u], 
+                                params["theta"][u])
+
+        channel_factors = alpha / (distances + eps) ** pow
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
 
         # This mimic a propagation delay for distant channel
         propagation_speed = params["propagation_speed"][u]
         if propagation_speed is not None:
             # the speed is um/ms
-            dist = distances[u, :].copy()
+            dist = distances.copy()
             dist -= np.min(dist)
             delay_s = dist / propagation_speed / 1000.0
             sample_shifts = delay_s * fs
