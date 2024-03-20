@@ -231,17 +231,6 @@ class LocalFeatureClustering:
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         elif clusterer == "isocut5":
-            print(final_features[:, 0].shape)
-            unique_feat, counts_feat = np.unique(final_features[:, 0], return_counts=True)
-            import matplotlib.pyplot as plt
-
-            fig, ax = plt.subplots()
-            ax.hist(final_features[:, 0])
-            fig, ax = plt.subplots()
-            ax.plot(unique_feat, counts_feat)
-            plt.show()
-
-            print(np.sum(counts_feat > 1))
             dipscore, cutpoint = isocut5(final_features[:, 0])
             possible_labels = np.zeros(final_features.shape[0])
             if dipscore > 1.5:
