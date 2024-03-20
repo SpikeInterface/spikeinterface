@@ -4,6 +4,7 @@ from typing import Literal, Optional
 from pathlib import Path
 import os
 import json
+import math
 import pickle
 import weakref
 import shutil
@@ -210,7 +211,7 @@ class SortingAnalyzer:
         sparsity=None,
     ):
         # some checks
-        assert math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
+        assert math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5)
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
         check_probe_do_not_overlap(all_probes)
