@@ -843,7 +843,7 @@ class SortingAnalyzer:
         Important note: when computing again an extension, all extensions that depend on it
         will be automatically and silently deleted to keep a coherent data.
 
-        
+
         Parameters
         ----------
         extensions: dict
