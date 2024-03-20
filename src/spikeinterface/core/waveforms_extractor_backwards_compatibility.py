@@ -252,7 +252,7 @@ class MockWaveformExtractor:
         # lazy and cache are ingnored
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").random_spikes()
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
