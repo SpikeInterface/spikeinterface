@@ -1469,8 +1469,8 @@ class AnalyzerExtension:
             extension_group.attrs["params"] = check_json(params_to_save)
 
     def _save_info(self):
-        # this save class info, this is not uselfull at the moment but this could be usefull in futur
-        # if some class change the data model and if we need to make backwards compatibility
+        # this saves the class info, this is not uselful at the moment but could be useful in future
+        # if some class changes the data model and if we need to make backwards compatibility
         # we have the same machanism in base.py for recording and sorting
 
         info = retrieve_importing_provenance(self.__class__)
