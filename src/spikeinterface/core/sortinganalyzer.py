@@ -962,7 +962,7 @@ class SortingAnalyzer:
             Return the extension instance if possible ortherwise None.
         """
         if "|" in extension_name:
-            extension_names = extension_name.split("|")
+            extension_names = extension_name.replace(" ", "").split("|")
             for ext_name in extension_names:
                 ext = self.get_extension(ext_name)
                 if ext is not None:
