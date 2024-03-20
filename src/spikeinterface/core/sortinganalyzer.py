@@ -20,7 +20,7 @@ from .basesorting import BaseSorting
 
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
-from .core_tools import check_json, get_class_info
+from .core_tools import check_json, retrieve_importing_provenance
 from .job_tools import split_job_kwargs
 from .numpyextractors import SharedMemorySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
@@ -1473,7 +1473,7 @@ class AnalyzerExtension:
         # if some class change the data model and if we need to make backwards compatibility
         # we have the same machanism in base.py for recording and sorting
 
-        info = get_class_info(self.__class__)
+        info = retrieve_importing_provenance(self.__class__)
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             extension_folder.mkdir(exist_ok=True, parents=True)

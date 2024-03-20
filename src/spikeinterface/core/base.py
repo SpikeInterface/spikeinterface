@@ -23,7 +23,7 @@ from .core_tools import (
     make_paths_relative,
     make_paths_absolute,
     check_paths_relative,
-    get_class_info,
+    retrieve_importing_provenance,
 )
 from .job_tools import _shared_job_kwargs_doc
 
@@ -428,7 +428,7 @@ class BaseExtractor:
 
             kwargs = new_kwargs
 
-        dump_dict = get_class_info(self.__class__)
+        dump_dict = retrieve_importing_provenance(self.__class__)
         dump_dict["kwargs"] = kwargs
 
         if include_annotations:

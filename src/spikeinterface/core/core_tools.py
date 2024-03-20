@@ -479,7 +479,7 @@ def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
     return 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-((x - mu) ** 2) / (2 * sigma**2))
 
 
-def get_class_info(a_class):
+def retrieve_importing_provenance(a_class):
     """
     Get class info as a dict.
     """
