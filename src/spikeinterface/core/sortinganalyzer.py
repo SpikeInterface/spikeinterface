@@ -1317,7 +1317,7 @@ class AnalyzerExtension:
         if save and not self.sorting_analyzer.is_read_only():
             # this also reset the folder or zarr group
             self._save_params()
-            self._save_info()
+            self._save_importing_provenance()
 
         self._run(**kwargs)
 
@@ -1326,7 +1326,7 @@ class AnalyzerExtension:
 
     def save(self, **kwargs):
         self._save_params()
-        self._save_info()
+        self._save_importing_provenance()
         self._save_data(**kwargs)
 
     def _save_data(self, **kwargs):
@@ -1445,7 +1445,7 @@ class AnalyzerExtension:
 
         if save:
             self._save_params()
-            self._save_info()
+            self._save_importing_provenance()
 
     def _save_params(self):
         params_to_save = self.params.copy()
@@ -1468,7 +1468,7 @@ class AnalyzerExtension:
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["params"] = check_json(params_to_save)
 
-    def _save_info(self):
+    def _save_importing_provenance(self):
         # this saves the class info, this is not uselful at the moment but could be useful in future
         # if some class changes the data model and if we need to make backwards compatibility
         # we have the same machanism in base.py for recording and sorting
