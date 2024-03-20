@@ -119,7 +119,6 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     sorting_analyzer_norec._recording = None
     assert not sorting_analyzer_norec.has_recording()
 
-
     metrics_norec = compute_quality_metrics(
         sorting_analyzer_norec,
         metric_names=None,
