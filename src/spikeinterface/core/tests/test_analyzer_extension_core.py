@@ -6,7 +6,7 @@ import shutil
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
 
-from spikeinterface.core.sortinganalyzer import _extension_children, get_children
+from spikeinterface.core.sortinganalyzer import _extension_children, _get_children_dependencies
 
 import numpy as np
 
@@ -211,11 +211,11 @@ def test_ComputeNoiseLevels(format, sparse):
     assert noise_levels.shape[0] == sorting_analyzer.channel_ids.size
 
 
-def test_get_children():
+def test_get_children_dependencies():
     assert "fast_templates" in _extension_children["random_spikes"]
     assert "waveforms" in _extension_children["random_spikes"]
 
-    children = get_children("random_spikes")
+    children = _get_children_dependencies("random_spikes")
     assert "waveforms" in children
     assert "templates" in children
     assert "fast_templates" in children
@@ -253,5 +253,5 @@ if __name__ == "__main__":
 
     # test_ComputeNoiseLevels(format="memory", sparse=False)
 
-    test_get_children()
+    test_get_children_dependencies()
     test_delete_on_recompute()
