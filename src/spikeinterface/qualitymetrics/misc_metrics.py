@@ -579,7 +579,8 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
 
     synchrony_metrics_dict = {
         f"sync_spike_{synchrony_size}": {
-            unit_id: synchrony_counts[sync_idx][unit_id] / spike_counts[unit_id] for i, unit_id in enumerate(all_unit_ids)
+            unit_id: synchrony_counts[sync_idx][unit_id] / spike_counts[unit_id]
+            for i, unit_id in enumerate(all_unit_ids)
         }
         for sync_idx, synchrony_size in enumerate(synchrony_sizes_np)
     }
