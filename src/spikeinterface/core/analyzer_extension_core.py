@@ -23,7 +23,7 @@ class SelectRandomSpikes(AnalyzerExtension):
     """
     AnalyzerExtension that select some random spikes.
 
-    This will be used by the `waveforms`/`templates`/`fast_templates` extension.
+    This will be used by the `waveforms`/`templates`/`fast_templates` extensions.
 
     This internally use `random_spikes_selection()` parameters are the same.
 
@@ -465,7 +465,7 @@ class ComputeFastTemplates(AnalyzerExtension):
     """
     AnalyzerExtension which is similar to the extension "templates" (ComputeTemplates)
     **but only for average**.
-    This is way faster because it do not need "waveforms" to be computed first.
+    This is way faster because it does not need "waveforms" to be computed first.
 
     Parameters
     ----------
