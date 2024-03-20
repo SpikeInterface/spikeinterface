@@ -403,7 +403,7 @@ def test_synchrony_metrics_unit_id_subset(sorting_analyzer_simple):
     unit_ids_subset = [3, 7]
 
     synchrony_sizes = (2,)
-    synchrony_metrics, = compute_synchrony_metrics(
+    (synchrony_metrics,) = compute_synchrony_metrics(
         sorting_analyzer_simple, synchrony_sizes=synchrony_sizes, unit_ids=unit_ids_subset
     )
 
@@ -412,10 +412,10 @@ def test_synchrony_metrics_unit_id_subset(sorting_analyzer_simple):
 
 def test_synchrony_metrics_no_unit_ids(sorting_analyzer_simple):
 
-    #all_unit_ids = sorting_analyzer_simple.sorting.unit_ids
+    # all_unit_ids = sorting_analyzer_simple.sorting.unit_ids
 
     synchrony_sizes = (2,)
-    synchrony_metrics, = compute_synchrony_metrics(sorting_analyzer_simple, synchrony_sizes=synchrony_sizes)
+    (synchrony_metrics,) = compute_synchrony_metrics(sorting_analyzer_simple, synchrony_sizes=synchrony_sizes)
 
     assert np.all(list(synchrony_metrics.keys()) == sorting_analyzer_simple.unit_ids)
 
