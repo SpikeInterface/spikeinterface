@@ -481,6 +481,20 @@ def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
 
 def retrieve_importing_provenance(a_class):
     """
+    Retrieve the import provenance of a class, including its an import name that consists of the class name and the module, the top-level module, and the module version.
+
+    Parameters
+    ----------
+    a_class : type
+        The class object for which to retrieve the import provenance.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+        - 'class':  The module path and the name of the class concatenated (e.g., 'package.subpackage.ClassName').
+        - 'module': The top-level module name where the class is defined.
+        - 'version': The version of the module if available, otherwise 'unknown'.
     Get class info as a dict.
     """
     module_import_path = a_class.__module__
