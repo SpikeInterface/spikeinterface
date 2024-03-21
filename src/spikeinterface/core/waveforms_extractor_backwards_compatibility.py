@@ -23,7 +23,7 @@ from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
 from .sortinganalyzer import SortingAnalyzer, load_sorting_analyzer
 from .base import load_extractor
-from .analyzer_extension_core import SelectRandomSpikes, ComputeWaveforms, ComputeTemplates
+from .analyzer_extension_core import ComputeRandomSpikes, ComputeWaveforms, ComputeTemplates
 
 _backwards_compatibility_msg = """####
 # extract_waveforms() and WaveformExtractor() have been replace by SortingAnalyzer since version 0.101
@@ -252,7 +252,7 @@ class MockWaveformExtractor:
         # lazy and cache are ingnored
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").random_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
@@ -439,7 +439,7 @@ def _read_old_waveforms_extractor_binary(folder):
             mask = some_spikes["unit_index"] == unit_index
             waveforms[:, :, : wfs.shape[2]][mask, :, :] = wfs
 
-        ext = SelectRandomSpikes(sorting_analyzer)
+        ext = ComputeRandomSpikes(sorting_analyzer)
         ext.params = dict()
         ext.data = dict(random_spikes_indices=random_spikes_indices)
 
