@@ -75,14 +75,15 @@ class SilencedPeriodsRecording(BasePreprocessor):
                     recording, return_scaled=False, concatenated=True, seed=seed, **random_chunk_kwargs
                 )
             noise_generator = NoiseGeneratorRecording(
-                        num_channels=recording.get_num_channels(),
-                        sampling_frequency=recording.sampling_frequency,
-                        durations=[recording.select_segments(i).get_duration() for i in range(recording.get_num_segments())],
-                        dtype=recording.dtype,
-                        seed=seed,
-                        noise_levels=noise_levels,
-                        strategy='on_the_fly',
-                        noise_block_size=int(recording.sampling_frequency))
+                num_channels=recording.get_num_channels(),
+                sampling_frequency=recording.sampling_frequency,
+                durations=[recording.select_segments(i).get_duration() for i in range(recording.get_num_segments())],
+                dtype=recording.dtype,
+                seed=seed,
+                noise_levels=noise_levels,
+                strategy="on_the_fly",
+                noise_block_size=int(recording.sampling_frequency),
+            )
         else:
             noise_generator = None
 
@@ -92,7 +93,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
             periods = np.asarray(periods, dtype="int64")
             periods = np.sort(periods, axis=0)
             if noise_generator is not None:
-                rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_generator.select_segments(seg_index))
+                rec_segment = SilencedPeriodsRecordingSegment(
+                    parent_segment, periods, mode, noise_generator.select_segments(seg_index)
+                )
             else:
                 rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_generator)
             self.add_recording_segment(rec_segment)
