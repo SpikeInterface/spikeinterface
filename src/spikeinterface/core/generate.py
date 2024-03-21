@@ -984,8 +984,8 @@ class NoiseGeneratorRecording(BaseRecording):
         The sampling frequency of the recorder.
     durations : List[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
-    noise_level: float, default: 1
-        Std of the white noise
+    noise_levels: float or array, default: 1
+        Std of the white noise (if an array, defined by per channels)
     dtype : Optional[Union[np.dtype, str]], default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : Optional[int], default: None
@@ -1010,17 +1010,24 @@ class NoiseGeneratorRecording(BaseRecording):
         num_channels: int,
         sampling_frequency: float,
         durations: List[float],
-        noise_level: float = 1.0,
+        noise_levels: float = 1.0,
         dtype: Optional[Union[np.dtype, str]] = "float32",
         seed: Optional[int] = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
+
+
         channel_ids = np.arange(num_channels)
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
         assert strategy in ("tile_pregenerated", "on_the_fly"), "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
+
+        if np.isscalar(noise_levels):
+            noise_levels = np.ones((1, num_channels)) * noise_levels
+        else:
+            noise_levels = np.asarray(noise_levels)
 
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
@@ -1040,7 +1047,7 @@ class NoiseGeneratorRecording(BaseRecording):
                 num_channels,
                 sampling_frequency,
                 noise_block_size,
-                noise_level,
+                noise_levels,
                 dtype,
                 segments_seeds[i],
                 strategy,
@@ -1051,7 +1058,7 @@ class NoiseGeneratorRecording(BaseRecording):
             "num_channels": num_channels,
             "durations": durations,
             "sampling_frequency": sampling_frequency,
-            "noise_level": noise_level,
+            "noise_levels": noise_levels,
             "dtype": dtype,
             "seed": seed,
             "strategy": strategy,
@@ -1061,7 +1068,7 @@ class NoiseGeneratorRecording(BaseRecording):
 
 class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
     def __init__(
-        self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_level, dtype, seed, strategy
+        self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_levels, dtype, seed, strategy
     ):
         assert seed is not None
 
@@ -1070,7 +1077,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self.num_samples = num_samples
         self.num_channels = num_channels
         self.noise_block_size = noise_block_size
-        self.noise_level = noise_level
+        self.noise_levels = noise_levels
         self.dtype = dtype
         self.seed = seed
         self.strategy = strategy
@@ -1078,7 +1085,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         if self.strategy == "tile_pregenerated":
             rng = np.random.default_rng(seed=self.seed)
             self.noise_block = (
-                rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype) * noise_level
+                rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype) * noise_levels
             )
         elif self.strategy == "on_the_fly":
             pass
@@ -1111,7 +1118,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
             elif self.strategy == "on_the_fly":
                 rng = np.random.default_rng(seed=(self.seed, block_index))
                 noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                noise_block *= self.noise_level
+                noise_block *= self.noise_levels
 
             if block_index == first_block_index:
                 if first_block_index != last_block_index:
