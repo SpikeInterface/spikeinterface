@@ -1342,8 +1342,8 @@ default_unit_params_range = dict(
     smooth_ms=(0.03, 0.07),
     decay_power=(1.4, 1.8),
     propagation_speed=(250.0, 350.0),  # um  / ms
-    b=(0.25, 4),
-    c=(0.25, 4),
+    b=(0.5, 2),
+    c=(0.5, 2),
     x_angle=(-np.pi, np.pi),
     y_angle=(-np.pi, np.pi),
     z_angle=(-np.pi, np.pi),
@@ -1360,7 +1360,8 @@ def generate_templates(
     dtype="float32",
     upsample_factor=None,
     unit_params=dict(),
-    unit_params_range=dict()
+    unit_params_range=dict(),
+    mode='ellipsoid'
 ):
     """
     Generate some templates from the given channel positions and neuron position.s
@@ -1478,15 +1479,27 @@ def generate_templates(
         eps = 1.0
         # naive formula for spatial decay
         pow = params["decay_power"][u]
-        distances = get_ellipse(
+        if mode == 'sphere':
+            distances = get_ellipse(
             channel_locations,
             units_locations[u],
-            params["b"][u],
-            params["c"][u],
-            params["x_angle"][u],
-            params["y_angle"][u],
-            params["z_angle"][u],
+            1,
+            1,
+            0,
+            0,
+            0,
         )
+        elif mode == 'ellipsoid':
+            alpha /= 4
+            distances = get_ellipse(
+                channel_locations,
+                units_locations[u],
+                params["b"][u],
+                params["c"][u],
+                params["x_angle"][u],
+                params["y_angle"][u],
+                params["z_angle"][u],
+            )
 
         channel_factors = alpha / (distances + eps) ** pow
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
