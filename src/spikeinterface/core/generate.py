@@ -1207,8 +1207,34 @@ def exp_growth(start_amp, end_amp, duration_ms, tau_ms, sampling_frequency, flip
     return y[:-1]
 
 
-def get_ellipse(positions, center, a_um=10, b_um=10, c_um=10, x_angle=0, y_angle=0, z_angle=0):
+def get_ellipse(positions, center, b=1, c=1, x_angle=0, y_angle=0, z_angle=0):
+    """
+    Compute the distances to a particular ellipsoid in order to take into account
+    spatial inhomogeneities while generating the template. In a carthesian, centered
+    space, the equation of the ellipsoid in 3D is given by
+        R = x**2 + (y/b)**2 + (z/c)**2, with R being the radius of the ellipsoid
 
+    Given the coordinates of the recording channels, we want to know what is the radius
+    (i.e. the distance) between these points and a given ellipsoidal volume. To to do, 
+    we change the referential. To go from the centered space of our ellipsoidal volume, we
+    need to perform a translation of the center (given the center of the ellipsoids), and perform
+    three rotations along the three main axis (Rx, Ry, Rz). To go from one referential to the other, 
+    we need to have
+                            x - x0 
+        [X,Y,Z] = Rx.Ry.Rz (y - y0) 
+                            z - z0
+
+    In this new space, we can compute the radius of the ellipsoidal shape given the same formula
+        R = X**2 + (Y/b)**2 + (Z/c)**2
+
+    and thus obtain putative amplitudes given the ellipsoidal projections. Note that in case of a=b=1 and
+    no rotation, the distance is the same as the euclidean distance
+
+    Returns
+    -------
+    The distances of the recording channels, as radius to a defined elliposoidal volume
+
+    """
     p = np.zeros((3, len(positions)))
     p[0] = positions[:, 0] - center[0]
     p[1] = positions[:, 1] - center[1]
@@ -1238,12 +1264,7 @@ def get_ellipse(positions, center, a_um=10, b_um=10, c_um=10, x_angle=0, y_angle
     inv_matrix = np.dot(Rx, Ry, Rz)
     P = np.dot(inv_matrix, p)
 
-<<<<<<< HEAD
-    return np.sqrt((P[0]/a_um)**2 + (P[1]/b_um)**2 + (P[2]/c_um)**2)
-=======
-    return (P[0] / a_um) ** 2 + (P[1] / b_um) ** 2 + (P[2] / c_um) ** 2
->>>>>>> 45f8505cd5132320e54500dea255cc8fa646f431
-
+    return np.sqrt(P[0]**2 + (P[1]/b)**2 + (P[2]/c)**2)
 
 def generate_single_fake_waveform(
     sampling_frequency=None,
@@ -1313,7 +1334,7 @@ def generate_single_fake_waveform(
 
 
 default_unit_params_range = dict(
-    alpha=(1_00.0, 3_00.0),
+    alpha=(6_000.0, 9_000.0),
     depolarization_ms=(0.09, 0.14),
     repolarization_ms=(0.5, 0.8),
     recovery_ms=(1.0, 1.5),
@@ -1321,9 +1342,8 @@ default_unit_params_range = dict(
     smooth_ms=(0.03, 0.07),
     decay_power=(1.4, 1.8),
     propagation_speed=(250.0, 350.0),  # um  / ms
-    a_um=(10, 50),
-    b_um=(10, 50),
-    c_um=(10, 50),
+    b=(0.25, 4),
+    c=(0.25, 4),
     x_angle=(-np.pi, np.pi),
     y_angle=(-np.pi, np.pi),
     z_angle=(-np.pi, np.pi),
@@ -1340,7 +1360,7 @@ def generate_templates(
     dtype="float32",
     upsample_factor=None,
     unit_params=dict(),
-    unit_params_range=dict(),
+    unit_params_range=dict()
 ):
     """
     Generate some templates from the given channel positions and neuron position.s
@@ -1461,9 +1481,8 @@ def generate_templates(
         distances = get_ellipse(
             channel_locations,
             units_locations[u],
-            params["a_um"][u],
-            params["b_um"][u],
-            params["c_um"][u],
+            params["b"][u],
+            params["c"][u],
             params["x_angle"][u],
             params["y_angle"][u],
             params["z_angle"][u],
