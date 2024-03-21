@@ -280,7 +280,7 @@ class ComputeTemplates(AnalyzerExtension):
 
     Parameters
     ----------
-    operators: list of str | list of (str, float)
+    operators: list[str] | list[(str, float)] (for percentile)
         The operators to compute. Can be "average", "std", "median", "percentile"
         If percentile is used, then the second element of the tuple is the percentile to compute.
 
