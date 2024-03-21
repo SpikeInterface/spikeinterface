@@ -86,6 +86,7 @@ def test_extract_waveforms():
     print(mock_loaded_we_old)
 
 
+@pytest.mark.skip("This test is run locally")
 def test_read_old_waveforms_extractor_binary():
     import pandas as pd
 
@@ -109,6 +110,7 @@ def test_read_old_waveforms_extractor_binary():
             print(type(data))
 
 
+@pytest.mark.skip("This test is run locally")
 def test_read_old_waveforms_extractor_zarr():
     import pandas as pd
 
