@@ -173,7 +173,7 @@ def test_InjectDriftingTemplatesRecording():
         num_channels=probe.contact_ids.size,
         sampling_frequency=sampling_frequency,
         durations=[duration],
-        noise_level=1.0,
+        noise_levels=1.0,
         dtype="float32",
     )
 
