@@ -57,7 +57,7 @@ class FrameSliceSorting(BaseSorting):
             if check_spike_frames and has_exceeding_spikes(parent_sorting._recording, parent_sorting):
                 raise ValueError(
                     "The sorting object has spikes whose times go beyond the recording duration."
-                    "This could indicate a bug in the sorter. Double check the time of both objects"
+                    "This could indicate a bug in the sorter. "
                     "To remove those spikes, you can use `spikeinterface.curation.remove_excess_spikes()`."
                 )
         else:
