@@ -326,7 +326,21 @@ def load_waveforms(
     >>> we = load_waveforms("/my_we")
     >>> templates = we.get_all_templates()
 
+    Parameters
+    ----------
+    folder: str | Path
+        The folder to the waveform extractor (binary or zarr)
+    with_recording: bool
+        For back-compatibility, ignored
+    sorting: BaseSorting | None, default: None
+        The sorting object to instantiate with the Waveforms
+    output: "MockWaveformExtractor" | "SortingAnalyzer", default: "MockWaveformExtractor"
+        The output format
 
+    Returns
+    -------
+    waveforms_or_analyzer: MockWaveformExtractor | SortingAnalyzer
+        The returned MockWaveformExtractor or SortingAnalyzer
     """
 
     folder = Path(folder)
@@ -343,9 +357,9 @@ def load_waveforms(
             return we
 
     if folder.suffix == ".zarr":
-        sorting_analyzer = _read_old_waveforms_extractor_zarr(folder)
+        sorting_analyzer = _read_old_waveforms_extractor_zarr(folder, sorting)
     else:
-        sorting_analyzer = _read_old_waveforms_extractor_binary(folder)
+        sorting_analyzer = _read_old_waveforms_extractor_binary(folder, sorting)
 
     if output == "SortingAnalyzer":
         return sorting_analyzer
@@ -369,7 +383,7 @@ old_extension_to_new_class_map = {
 }
 
 
-def _read_old_waveforms_extractor_binary(folder):
+def _read_old_waveforms_extractor_binary(folder, sorting):
     folder = Path(folder)
     params_file = folder / "params.json"
     if not params_file.exists():
@@ -409,10 +423,11 @@ def _read_old_waveforms_extractor_binary(folder):
             pass
 
     # sorting
-    if (folder / "sorting.json").exists():
-        sorting = load_extractor(folder / "sorting.json", base_folder=folder)
-    elif (folder / "sorting.pickle").exists():
-        sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
+    if sorting is None:
+        if (folder / "sorting.json").exists():
+            sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+        elif (folder / "sorting.pickle").exists():
+            sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
 
     sorting_analyzer = SortingAnalyzer.create_memory(sorting, recording, sparsity, rec_attributes=rec_attributes)
 
@@ -546,13 +561,14 @@ def _read_old_waveforms_extractor_binary(folder):
                     pc_one = np.load(ext_folder / f"pca_{unit_id}.npy")
                     mask = some_spikes["unit_index"] == unit_index
                     pc_all[mask, ...] = pc_one
+                ext.data["pca_projection"] = pc_all
 
         sorting_analyzer.extensions[new_name] = ext
 
     return sorting_analyzer
 
 
-def _read_old_waveforms_extractor_zarr(folder):
+def _read_old_waveforms_extractor_zarr(folder, sorting):
     import zarr
 
     folder = Path(folder)
@@ -560,11 +576,11 @@ def _read_old_waveforms_extractor_zarr(folder):
 
     params = waveforms_root.attrs["params"]
 
-    rec_attributes = waveforms_root.require_group("recording_info").attrs["recording_attributes"]
+    rec_attributes = waveforms_root.get("recording_info").attrs["recording_attributes"]
     # the probe is handle ouside the main json
-    if "probegroup" in waveforms_root.require_group("recording_info").attrs:
-        probegroup_dict = waveforms_root.require_group("recording_info").attrs["probegroup"]
-        rec_attributes["probegroup"] = probeinterface.Probe.from_dict(probegroup_dict)
+    if "probegroup" in waveforms_root.get("recording_info").attrs:
+        probegroup_dict = waveforms_root.get("recording_info").attrs["probegroup"]
+        rec_attributes["probegroup"] = probeinterface.ProbeGroup.from_dict(probegroup_dict)
     else:
         rec_attributes["probegroup"] = None
 
@@ -577,8 +593,10 @@ def _read_old_waveforms_extractor_zarr(folder):
         pass
 
     # sorting
-    sorting_dict = waveforms_root.attrs["sorting"]
-    sorting = load_extractor(sorting_dict, base_folder=folder)
+    if sorting is None:
+        assert "sorting" in waveforms_root.attrs, "Could not load sorting object"
+        sorting_dict = waveforms_root.attrs["sorting"]
+        sorting = load_extractor(sorting_dict, base_folder=folder)
 
     if "sparsity" in waveforms_root.attrs:
         sparsity_dict = waveforms_root.attrs["sparsity"]
@@ -591,7 +609,7 @@ def _read_old_waveforms_extractor_zarr(folder):
     # waveforms
     # need to concatenate all waveforms in one unique buffer
     # need to concatenate sampled_index and order it
-    waveform_group = waveform_group.get("waveforms", None)
+    waveform_group = waveforms_root.get("waveforms", None)
     if waveform_group:
         spikes = sorting.to_spike_vector()
         random_spike_mask = np.zeros(spikes.size, dtype="bool")
@@ -599,7 +617,7 @@ def _read_old_waveforms_extractor_zarr(folder):
         # first read all sampled_index to get the correct ordering
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             # unit_indices has dtype=[("spike_index", "int64"), ("segment_index", "int64")]
-            unit_indices = waveform_group[f"sampled_index_{unit_id}"]
+            unit_indices = waveform_group[f"sampled_index_{unit_id}"][:]
             for segment_index in range(sorting.get_num_segments()):
                 in_seg_selected = unit_indices[unit_indices["segment_index"] == segment_index]["spike_index"]
                 spikes_indices = np.flatnonzero(
@@ -656,7 +674,7 @@ def _read_old_waveforms_extractor_zarr(folder):
         sorting_analyzer.extensions["templates"] = ext
 
     for old_name, new_name in old_extension_to_new_class_map.items():
-        ext_group = waveform_group.get(old_name, None)
+        ext_group = waveforms_root.get(old_name, None)
         if ext_group is None:
             continue
         new_class = get_extension_class(new_name)
@@ -720,6 +738,7 @@ def _read_old_waveforms_extractor_zarr(folder):
                     pc_one = ext_group[f"pca_{unit_id}"]
                     mask = some_spikes["unit_index"] == unit_index
                     pc_all[mask, ...] = pc_one
+                ext.data["pca_projection"] = pc_all
 
         sorting_analyzer.extensions[new_name] = ext
 
