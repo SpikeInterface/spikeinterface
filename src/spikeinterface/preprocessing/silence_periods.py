@@ -91,20 +91,18 @@ class SilencedPeriodsRecording(BasePreprocessor):
             periods = list_periods[seg_index]
             periods = np.asarray(periods, dtype="int64")
             periods = np.sort(periods, axis=0)
-            if noise_generator is not None:
-                rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_generator.select_segments(seg_index))
-            else:
-                rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_generator)
+            rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_generator, seg_index)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode, noise_generator=noise_generator)
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, periods, mode, noise_generator):
+    def __init__(self, parent_recording_segment, periods, mode, noise_generator, seg_index):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.periods = periods
         self.mode = mode
+        self.seg_index = seg_index
         self.noise_generator = noise_generator
 
     def get_traces(self, start_frame, end_frame, channel_indices):
@@ -132,7 +130,7 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                     if self.mode == "zeros":
                         traces[onset:offset, :] = 0
                     elif self.mode == "noise":
-                        noise = self.noise_generator.get_traces(start_frame, end_frame)[:, channel_indices]
+                        noise = self.noise_generator.get_traces(self.seg_index, start_frame, end_frame)[:, channel_indices]
                         traces[onset:offset, :] = noise[onset:offset]
 
         return traces
