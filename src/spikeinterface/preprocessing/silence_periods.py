@@ -131,7 +131,9 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                     if self.mode == "zeros":
                         traces[onset:offset, :] = 0
                     elif self.mode == "noise":
-                        noise = self.noise_generator.get_traces(self.seg_index, start_frame, end_frame)[:, channel_indices]
+                        noise = self.noise_generator.get_traces(self.seg_index, start_frame, end_frame)[
+                            :, channel_indices
+                        ]
                         traces[onset:offset, :] = noise[onset:offset]
 
         return traces
