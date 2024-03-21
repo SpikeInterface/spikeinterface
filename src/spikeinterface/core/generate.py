@@ -1215,13 +1215,13 @@ def get_ellipse(positions, center, b=1, c=1, x_angle=0, y_angle=0, z_angle=0):
         R = x**2 + (y/b)**2 + (z/c)**2, with R being the radius of the ellipsoid
 
     Given the coordinates of the recording channels, we want to know what is the radius
-    (i.e. the distance) between these points and a given ellipsoidal volume. To to do, 
+    (i.e. the distance) between these points and a given ellipsoidal volume. To to do,
     we change the referential. To go from the centered space of our ellipsoidal volume, we
     need to perform a translation of the center (given the center of the ellipsoids), and perform
-    three rotations along the three main axis (Rx, Ry, Rz). To go from one referential to the other, 
+    three rotations along the three main axis (Rx, Ry, Rz). To go from one referential to the other,
     we need to have
-                            x - x0 
-        [X,Y,Z] = Rx.Ry.Rz (y - y0) 
+                            x - x0
+        [X,Y,Z] = Rx.Ry.Rz (y - y0)
                             z - z0
 
     In this new space, we can compute the radius of the ellipsoidal shape given the same formula
@@ -1264,7 +1264,8 @@ def get_ellipse(positions, center, b=1, c=1, x_angle=0, y_angle=0, z_angle=0):
     inv_matrix = np.dot(Rx, Ry, Rz)
     P = np.dot(inv_matrix, p)
 
-    return np.sqrt(P[0]**2 + (P[1]/b)**2 + (P[2]/c)**2)
+    return np.sqrt(P[0] ** 2 + (P[1] / b) ** 2 + (P[2] / c) ** 2)
+
 
 def generate_single_fake_waveform(
     sampling_frequency=None,
@@ -1361,7 +1362,7 @@ def generate_templates(
     upsample_factor=None,
     unit_params=dict(),
     unit_params_range=dict(),
-    mode='ellipsoid'
+    mode="ellipsoid",
 ):
     """
     Generate some templates from the given channel positions and neuron position.s
@@ -1479,17 +1480,17 @@ def generate_templates(
         eps = 1.0
         # naive formula for spatial decay
         pow = params["decay_power"][u]
-        if mode == 'sphere':
+        if mode == "sphere":
             distances = get_ellipse(
-            channel_locations,
-            units_locations[u],
-            1,
-            1,
-            0,
-            0,
-            0,
-        )
-        elif mode == 'ellipsoid':
+                channel_locations,
+                units_locations[u],
+                1,
+                1,
+                0,
+                0,
+                0,
+            )
+        elif mode == "ellipsoid":
             alpha /= 4
             distances = get_ellipse(
                 channel_locations,
