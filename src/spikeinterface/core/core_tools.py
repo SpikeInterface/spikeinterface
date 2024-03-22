@@ -163,6 +163,7 @@ def make_shared_array(shape, dtype):
     from multiprocessing.shared_memory import SharedMemory
 
     dtype = np.dtype(dtype)
+    shape = (int(x) for x in shape)  # We need to be sure that shape comes in int and not number scalars
     nbytes = prod(shape) * dtype.itemsize
     shm = SharedMemory(name=None, create=True, size=nbytes)
     arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
