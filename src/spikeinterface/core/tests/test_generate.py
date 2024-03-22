@@ -24,7 +24,7 @@ from spikeinterface.core.generate import (
 from spikeinterface.core.numpyextractors import NumpySorting
 
 from spikeinterface.core.core_tools import convert_bytes_to_str
-
+from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.testing import check_recordings_equal
 
 strategy_list = ["tile_pregenerated", "on_the_fly"]
@@ -140,6 +140,32 @@ def test_noise_generator_memory():
     after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
     assert memory_usage_MiB < 2, f"NoiseGeneratorRecording with 'on_the_fly wrong memory  {memory_usage_MiB}MiB"
+
+
+def test_noise_generator_several_noise_levels():
+    rec1 = NoiseGeneratorRecording(
+        num_channels=4,
+        sampling_frequency=20000,
+        durations=[10],
+        dtype='float32',
+        seed=32,
+        noise_levels=1,
+        strategy="on_the_fly",
+        noise_block_size=20000,
+    )
+    assert np.all(np.abs(get_noise_levels(rec1) - 1) < 0.1)
+
+    rec2 = NoiseGeneratorRecording(
+        num_channels=4,
+        sampling_frequency=20000,
+        durations=[10],
+        dtype='float32',
+        seed=32,
+        noise_levels=[0, 1, 2, 3],
+        strategy="on_the_fly",
+        noise_block_size=20000,
+    )
+    assert np.all(np.abs(get_noise_levels(rec2) - np.arange(4)) < 0.1)
 
 
 def test_noise_generator_under_giga():
