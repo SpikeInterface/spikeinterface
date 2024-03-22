@@ -322,8 +322,8 @@ class IblSortingExtractor(BaseSorting):
                 one = {}
             if isinstance(one, dict):
                 one = ONE(**one)
-            elif one is None:
-                raise ValueError("one must be either an instance of ONE or a dictionary of ONE arguments")
+            else:
+                one = IblRecordingExtractor._get_default_one()
         except ImportError:
             raise ImportError(self.installation_mesg)
         self.ssl = SpikeSortingLoader(one=one, pid=pid)
