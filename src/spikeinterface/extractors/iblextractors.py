@@ -86,22 +86,28 @@ class IblRecordingExtractor(BaseRecording):
         return one
 
     @staticmethod
-    def get_stream_names(session: str, cache_folder: Optional[Union[Path, str]] = None, one=None) -> List[str]:
+    def get_stream_names(eid: str, cache_folder: Optional[Union[Path, str]] = None, one=None) -> List[str]:
         """
         Convenient retrieval of available stream names.
 
         Parameters
         ----------
-        session : str
-            The session ID to extract recordings for.
+        eid : str
+            The experiment ID to extract recordings for.
             In ONE, this is sometimes referred to as the "eid".
             When doing a session lookup such as
 
             >>> from one.api import ONE
             >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
-            >>> sessions = one.alyx.rest("sessions", "list", tag="2022_Q2_IBL_et_al_RepeatedSite")
+            >>> eids = one.alyx.rest("sessions", "list", tag="2022_Q2_IBL_et_al_RepeatedSite")
 
-            each returned value in `sessions` refers to it as the "id".
+            each returned value in `eids` refers to it as the experiment "id".
+        cache_folder : str or None, default: None
+            The location to temporarily store chunks of data during streaming.
+        one : one.api.OneAlyx, default: None
+            An instance of the ONE API to use for data loading.
+            If not provided, a default instance is created using the default parameters.
+            If you need to use a specific instance, you can create it using the ONE API and pass it here.
 
         Returns
         -------
@@ -118,14 +124,14 @@ class IblRecordingExtractor(BaseRecording):
 
         if one is None:
             one = IblRecordingExtractor._get_default_one(cache_folder=cache_folder)
-        esl = EphysSessionLoader(one=one, eid=session)
+        esl = EphysSessionLoader(one=one, eid=eid)
         stream_names = []
         for probe in esl.probes:
             if any(filter(lambda x: ".ap." in x, esl.ephys[probe]["ssl"].datasets)):
                 stream_names.append(f"{probe}.ap")
             if any(filter(lambda x: ".lf." in x, esl.ephys[probe]["ssl"].datasets)):
                 stream_names.append(f"{probe}.lf")
-        return stream_names  # ['probe00.ap', 'probe00.lf', 'probe01.ap', 'probe01.lf']
+        return stream_names
 
     def __init__(
         self,
@@ -150,16 +156,22 @@ class IblRecordingExtractor(BaseRecording):
         if one is None:
             one = IblRecordingExtractor._get_default_one(cache_folder=cache_folder)
 
-        if pid is None:
-            stream_names = IblRecordingExtractor.get_stream_names(session=session, cache_folder=cache_folder, one=one)
+        if pid is not None:
+            eid = one.pid2eid(pid)
+
+        stream_names = IblRecordingExtractor.get_stream_names(eid=eid, cache_folder=cache_folder, one=one)
+        if len(stream_names) > 1:
+            assert (
+                stream_name is not None
+            ), f"Multiple streams found for session. Please specify a stream name from {stream_names}."
             assert stream_name in stream_names, (
                 f"The `stream_name` '{stream_name}' was not found in the available listing for session '{session}'! "
                 f"Please choose one of {stream_names}."
             )
-            pname, stream_type = stream_name.split(".")
-            pid = None
         else:
-            pname = None
+            stream_name = stream_names[0]
+        pname, stream_type = stream_name.split(".")
+
         self.ssl = SpikeSortingLoader(one=one, eid=eid, pid=pid, pname=pname)
         if pid is None:
             self.ssl.pid = one.alyx.rest("insertions", "list", session=eid, name=pname)[0]["id"]
@@ -167,7 +179,7 @@ class IblRecordingExtractor(BaseRecording):
         self._file_streamer = self.ssl.raw_electrophysiology(band=stream_type, stream=stream)
 
         # get basic metadata
-        meta_file = self._file_streamer.file_meta_data  # streamer downloads uncompressed metadata files on init
+        meta_file = str(self._file_streamer.file_meta_data)  # streamer downloads uncompressed metadata files on init
         meta = read_meta_file(meta_file)
         info = extract_stream_info(meta_file, meta)
         channel_ids = info["channel_names"]
@@ -189,6 +201,10 @@ class IblRecordingExtractor(BaseRecording):
 
         # set probe
         if not load_sync_channel:
+            if "lf" in stream_name:
+                # same trick as in:
+                # https://github.com/SpikeInterface/spikeinterface/blob/e990d53ea1024f6352596bcc237f3d60ae12e73a/src/spikeinterface/extractors/neoextractors/spikeglx.py#L63-L64
+                meta_file = meta_file.replace(".lf.", ".ap.")
             probe = probeinterface.read_spikeglx(meta_file)
 
             if probe.shank_ids is not None:
@@ -233,7 +249,8 @@ class IblRecordingExtractor(BaseRecording):
         self.add_recording_segment(recording_segment)
 
         self._kwargs = {
-            "session": session,
+            "eid": eid,
+            "pid": pid,
             "stream_name": stream_name,
             "load_sync_channel": load_sync_channel,
             "cache_folder": cache_folder,
@@ -277,7 +294,10 @@ class IblSortingExtractor(BaseSorting):
         >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
         >>> pids, _ = one.eid2pid("session_eid")
         >>> pid = pids[0]
-
+    good_clusters_only: bool, default: False
+        If True, only load the good clusters
+    load_unit_properties: bool, default: True
+        If True, load the unit properties from the IBL database
     one: One | dict, default: None
         Instance of ONE.api or dict to use for data loading.
         For multi-processing applications, this can also be a dictionary of ONE.api arguments
@@ -293,7 +313,7 @@ class IblSortingExtractor(BaseSorting):
     name = "ibl"
     installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
 
-    def __init__(self, pid, one=None):
+    def __init__(self, pid, good_clusters_only=False, load_unit_properties=True, one=None):
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
@@ -310,14 +330,25 @@ class IblSortingExtractor(BaseSorting):
         sr = self.ssl.raw_electrophysiology(band="ap", stream=True)
         self._folder_path = self.ssl.session_path
         spikes, clusters, channels = self.ssl.load_spike_sorting(dataset_types=["spikes.samples"])
-        total_units = clusters[next(iter(clusters))].size
-        unit_ids = np.arange(total_units)  # in alf format, spikes.clusters index directly into clusters
+        clusters = self.ssl.merge_clusters(spikes, clusters, channels)
+
+        if good_clusters_only:
+            good_cluster_slice = clusters["cluster_id"][clusters["label"] == 1]
+            unit_ids = clusters["cluster_id"][good_cluster_slice]
+        else:
+            good_cluster_slice = slice(None)
+        unit_ids = clusters["cluster_id"][good_cluster_slice]
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sr.fs)
-        sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"], sampling_frequency=sr.fs)
+        sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"])
         self.add_sorting_segment(sorting_segment)
+
+        if load_unit_properties:
+            for key, val in clusters.items():
+                self.set_property(key, val[good_cluster_slice])
+
         self.extra_requirements.append("ibllib")
 
-        self._kwargs = dict(one=one, pid=pid)
+        self._kwargs = dict(pid=pid, good_clusters_only=good_clusters_only, load_unit_properties=load_unit_properties)
 
 
 read_ibl_recording = define_function_from_class(source_class=IblRecordingExtractor, name="read_ibl_streaming_recording")

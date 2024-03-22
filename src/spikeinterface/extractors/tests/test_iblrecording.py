@@ -1,12 +1,12 @@
 from re import escape
-from unittest import TestCase, mock
+from unittest import TestCase
 
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 import requests
 
-from spikeinterface.extractors import IblRecordingExtractor, read_ibl_sorting
+from spikeinterface.extractors import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
 from spikeinterface.extractors import read_ibl_sorting
 from spikeinterface.core import generate_sorting
 
@@ -18,9 +18,9 @@ PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 class TestDefaultIblRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.session = EID
+        cls.eid = EID
         try:
-            cls.recording = IblRecordingExtractor(session=cls.session, stream_name="probe00.ap")
+            cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap")
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 503:
                 pytest.skip("Skipping test due to server being down (HTTP 503).")
@@ -40,7 +40,7 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
         )  # return_scaled=False is SI default
 
     def test_get_stream_names(self):
-        stream_names = IblRecordingExtractor.get_stream_names(session=self.session)
+        stream_names = IblRecordingExtractor.get_stream_names(eid=self.eid)
 
         expected_stream_names = ["probe01.ap", "probe01.lf", "probe00.ap", "probe00.lf"]
         self.assertCountEqual(first=stream_names, second=expected_stream_names)
@@ -100,8 +100,8 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
 class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.session = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
-        cls.recording = IblRecordingExtractor(session=cls.session, stream_name="probe00.ap", load_sync_channel=True)
+        cls.eid = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
+        cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", load_sync_channel=True)
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
@@ -165,14 +165,18 @@ class TestIblSortingExtractor(TestCase):
         Here we generate spike train with 3 clusters in a very basic ALF format\
         and read it with the spikeinterface extractor
         """
-        sorting = generate_sorting(3, durations=[1000])
-        spikes = sorting.to_spike_vector()
-        spikes = {"samples": spikes["sample_index"], "clusters": spikes["unit_index"]}
-        clusters = {"amps": np.ones(3) * 50 / 1e6}
-        one = IblRecordingExtractor._get_default_one()
-        with mock.patch("brainbox.io.one.SpikeSortingLoader.load_spike_sorting", side_effect=((spikes, clusters, {}),)):
-            sorting = read_ibl_sorting(pid=PID, one=one)
-        self.assertEqual(sorting.to_spike_vector()["sample_index"].size, spikes["samples"].size)
+        sorting = read_ibl_sorting(pid=PID)
+        assert len(sorting.unit_ids) == 733
+        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True)
+        assert len(sorting_good.unit_ids) == 108
+
+        # check properties
+        assert "firing_rate" in sorting.get_property_keys()
+
+        # load without properties
+        sorting_no_properties = read_ibl_sorting(pid=PID, load_unit_properties=False)
+        # check properties
+        assert "firing_rate" not in sorting_no_properties.get_property_keys()
 
 
 if __name__ == "__main__":
