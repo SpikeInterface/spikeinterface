@@ -143,6 +143,26 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting):
         assert np.all(~np.isin(data["result_two"], [1, 3]))
 
 
+def test_extension_params():
+    from spikeinterface.core.sortinganalyzer import _builtin_extensions
+
+    recording, sorting = get_dataset()
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    computable_extension = sorting_analyzer.get_computable_extensions()
+
+    for ext, mod in _builtin_extensions.items():
+        assert ext in computable_extension
+        if mod == "spikeinterface.core":
+            default_params = sorting_analyzer.get_default_extension_params(ext)
+            print(ext, default_params)
+        else:
+            try:
+                default_params = sorting_analyzer.get_default_extension_params(ext)
+                print(ext, default_params)
+            except:
+                print(f"Failed to import {ext}")
+
+
 class DummyAnalyzerExtension(AnalyzerExtension):
     extension_name = "dummy"
     depend_on = []
@@ -201,3 +221,4 @@ if __name__ == "__main__":
     test_SortingAnalyzer_binary_folder()
     test_SortingAnalyzer_zarr()
     test_extension()
+    test_extension_params()

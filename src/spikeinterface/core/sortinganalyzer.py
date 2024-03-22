@@ -1025,6 +1025,37 @@ class SortingAnalyzer:
         else:
             return False
 
+    def get_computable_extensions(self):
+        """
+        Get all extensions that can be computed by the analyzer.
+        """
+        return list(_builtin_extensions.keys())
+
+    def get_default_extension_params(self, extension_name: str):
+        """
+        Get the default params for an extension.
+
+        Parameters
+        ----------
+        extension_name: str
+            The extension name
+
+        Returns
+        -------
+        default_params: dict
+            The default parameters for the extension
+        """
+        import inspect
+
+        extension_class = get_extension_class(extension_name)
+
+        sig = inspect.signature(extension_class._set_params)
+        default_params = {
+            k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty
+        }
+
+        return default_params
+
 
 global _possible_extensions
 _possible_extensions = []
