@@ -40,6 +40,9 @@ def test_silence():
     traces_in1 = rec1.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
     assert np.abs((np.std(traces_in0, axis=0) - noise_levels) < 0.1).sum()
     assert np.abs((np.std(traces_in1, axis=0) - noise_levels)).sum() < 0.1
+    data1 = rec.get_traces(0, 400, 600)
+    data2 = rec.get_traces(0, 500, 700)
+    assert np.all(data1[100:] == data2[:100])
 
     traces_mix = rec0.get_traces(segment_index=0, start_frame=900, end_frame=5100)
     traces_original = rec.get_traces(segment_index=0, start_frame=900, end_frame=5100)
