@@ -159,6 +159,7 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         assert self.small_unscaled_trace.dtype == expected_dtype
 
 
+@pytest.mark.streaming_extractors
 class TestIblSortingExtractor(TestCase):
     def test_ibl_sorting_extractor(self):
         """
