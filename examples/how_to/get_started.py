@@ -159,6 +159,8 @@ recording_preprocessed = recording_cmr.save(format="binary")
 print(recording_preprocessed)
 # -
 
+# To reload a preprocessed recording that was saved to disk, you can use `load_extractor()` function from the `core` module.
+#
 # Now you are ready to spike sort using the `spikeinterface.sorters` module!
 # Let's first check which sorters are implemented and which are installed
 
