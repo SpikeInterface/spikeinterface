@@ -1029,7 +1029,7 @@ class SortingAnalyzer:
         """
         Get all extensions that can be computed by the analyzer.
         """
-        return list(_builtin_extensions.keys())
+        return get_available_analyzer_extensions()
 
     def get_default_extension_params(self, extension_name: str):
         """
@@ -1045,16 +1045,7 @@ class SortingAnalyzer:
         default_params: dict
             The default parameters for the extension
         """
-        import inspect
-
-        extension_class = get_extension_class(extension_name)
-
-        sig = inspect.signature(extension_class._set_params)
-        default_params = {
-            k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty
-        }
-
-        return default_params
+        return get_default_anlyzer_extension_params(extension_name)
 
 
 global _possible_extensions
@@ -1120,6 +1111,39 @@ def get_extension_class(extension_name: str, auto_import=True):
 
     ext_class = extensions_dict[extension_name]
     return ext_class
+
+
+def get_available_analyzer_extensions():
+    """
+    Get all extensions that can be computed by the analyzer.
+    """
+    return list(_builtin_extensions.keys())
+
+
+def get_default_anlyzer_extension_params(extension_name: str):
+    """
+    Get the default params for an extension.
+
+    Parameters
+    ----------
+    extension_name: str
+        The extension name
+
+    Returns
+    -------
+    default_params: dict
+        The default parameters for the extension
+    """
+    import inspect
+
+    extension_class = get_extension_class(extension_name)
+
+    sig = inspect.signature(extension_class._set_params)
+    default_params = {
+        k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty
+    }
+
+    return default_params
 
 
 class AnalyzerExtension:

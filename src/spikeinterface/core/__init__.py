@@ -144,7 +144,15 @@ from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
 from .template import Templates
 
 # SortingAnalyzer and AnalyzerExtension
-from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, create_sorting_analyzer, load_sorting_analyzer
+from .sortinganalyzer import (
+    SortingAnalyzer,
+    AnalyzerExtension,
+    create_sorting_analyzer,
+    load_sorting_analyzer,
+    get_available_analyzer_extensions,
+    get_default_anlyzer_extension_params,
+)
+
 from .analyzer_extension_core import (
     SelectRandomSpikes,
     compute_select_random_spikes,
