@@ -275,7 +275,7 @@ class ComputeTemplates(AnalyzerExtension):
 
     When the "waveforms" extension is already computed, then the recording is not needed anymore for this extension.
 
-    Note: by default only the average and std are computed. Other operator (std, median, percentile) can be computed on demand
+    Note: by default only the average and std are computed. Other operators (std, median, percentile) can be computed on demand
     after the SortingAnalyzer.compute("templates") and then the data dict is updated on demand.
 
     Parameters
