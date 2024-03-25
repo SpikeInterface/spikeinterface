@@ -953,13 +953,13 @@ class SortingAnalyzer:
         extension_name: str
             The extension name.
             This also accept the or logic with the "|".
-            For instance get_extension("templates|fast_templates") will try to get "templates" extension, if not
-            exists then try to get "fast_templates" extension and if not exists return None.
+            For instance get_extension("templates|fast_templates") will try to get the "templates" extension, if it does not
+            exist then it will try to get the "fast_templates" extension and if it does not exist  it will return None.
 
         Returns
         -------
         ext_instance: AnalyzerExtension | None
-            Return the extension instance if possible ortherwise None.
+            Return the extension instance if possible otherwise None.
         """
         if "|" in extension_name:
             extension_names = extension_name.replace(" ", "").split("|")
