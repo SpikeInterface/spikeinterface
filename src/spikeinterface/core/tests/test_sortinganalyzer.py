@@ -8,7 +8,7 @@ from spikeinterface.core import (
     create_sorting_analyzer,
     load_sorting_analyzer,
     get_available_analyzer_extensions,
-    get_default_anlyzer_extension_params,
+    get_default_analyzer_extension_params,
 )
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
