@@ -13,7 +13,7 @@ It also implement:
 import numpy as np
 
 from .sortinganalyzer import AnalyzerExtension, register_result_extension
-from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_average
+from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_online
 from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection
@@ -391,9 +391,9 @@ class ComputeTemplates(AnalyzerExtension):
 
     def get_templates(self, unit_ids=None, operator="average", percentile=None, save=True):
         """
-        Return templates (average, std, median or percentil) for multiple units.
+        Return templates (average, std, median or percentiles) for multiple units.
 
-        I not computed yet then this is computed on demand and optionally saved.
+        If not computed yet then this is computed on demand and optionally saved.
 
         Parameters
         ----------
@@ -480,8 +480,15 @@ class ComputeFastTemplates(AnalyzerExtension):
         return_scaled = self.params["return_scaled"]
 
         # TODO jobw_kwargs
-        self.data["average"] = estimate_templates_average(
-            recording, some_spikes, unit_ids, self.nbefore, self.nafter, return_scaled=return_scaled, **job_kwargs
+        self.data["average"], self.data["std"] = estimate_templates_online(
+            recording,
+            some_spikes,
+            unit_ids,
+            self.nbefore,
+            self.nafter,
+            return_scaled=return_scaled,
+            return_std=True,
+            **job_kwargs,
         )
 
     def _set_params(
@@ -521,6 +528,39 @@ class ComputeFastTemplates(AnalyzerExtension):
         new_data["average"] = self.data["average"][keep_unit_indices, :, :]
 
         return new_data
+
+    def get_templates(self, unit_ids=None, operator="average", percentile=None, save=True):
+        """
+        Return templates (average, std) for multiple units.
+
+        Parameters
+        ----------
+        unit_ids: list or None
+            Unit ids to retrieve waveforms for
+        mode: "average" | "std", default: "average"
+            The mode to compute the templates
+        percentile: float, default: None
+            Percentile to use for mode="percentile"
+        save: bool, default True
+            In case, the operator is not computed yet it can be saved to folder or zarr.
+
+        Returns
+        -------
+        templates: np.array
+            The returned templates (num_units, num_samples, num_channels)
+        """
+        assert operator in ("average", "std"), "ComputeFastTemplates only support average and std"
+
+        templates = self.data[operator]
+
+        if save:
+            self.save()
+
+        if unit_ids is not None:
+            unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+            templates = templates[unit_indices, :, :]
+
+        return np.array(templates)
 
 
 compute_fast_templates = ComputeFastTemplates.function_factory()
