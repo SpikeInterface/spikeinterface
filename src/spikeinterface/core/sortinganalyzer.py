@@ -1045,7 +1045,7 @@ class SortingAnalyzer:
         default_params: dict
             The default parameters for the extension
         """
-        return get_default_anlyzer_extension_params(extension_name)
+        return get_default_analyzer_extension_params(extension_name)
 
 
 global _possible_extensions
@@ -1120,7 +1120,7 @@ def get_available_analyzer_extensions():
     return list(_builtin_extensions.keys())
 
 
-def get_default_anlyzer_extension_params(extension_name: str):
+def get_default_analyzer_extension_params(extension_name: str):
     """
     Get the default params for an extension.
 
