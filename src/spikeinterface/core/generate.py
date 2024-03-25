@@ -1027,6 +1027,10 @@ class NoiseGeneratorRecording(BaseRecording):
             noise_levels = np.ones((1, num_channels)) * noise_levels
         else:
             noise_levels = np.asarray(noise_levels)
+            if len(noise_levels.shape) < 2:
+                noise_levels = noise_levels[np.newaxis, :]
+        
+        assert len(noise_levels[0]) == num_channels, "Noise levels should have a size of num_channels"
 
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
