@@ -58,7 +58,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, method="monopolar_triangulation", **method_kwargs):
-        params = dict(method=method, **method_kwargs)
+        params = dict(method=method, method_kwargs=method_kwargs)
         return params
 
     def _select_extension_data(self, unit_ids):
