@@ -501,8 +501,8 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
     Parameters
     ----------
-    spikes : memmap
-        The spike train
+    spikes : np.array
+        Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
     synchrony_sizes : numpy array
         The synchrony sizes to compute. Should be pre-sorted.
     unit_ids : list or None, default: None
