@@ -539,6 +539,7 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
     return synchrony_counts
 
+
 def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None):
     """Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
     "synchrony_size" spikes at the exact same sample index.

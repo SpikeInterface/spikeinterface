@@ -133,7 +133,7 @@ def sorting_analyzer_violations():
 
 
 def test_synchrony_counts_no_sync():
-    
+
     spike_times, spike_units = synthesize_random_firings(num_units=1, duration=1, firing_rates=1.0)
 
     one_spike = np.zeros(len(spike_times), minimum_spike_dtype)
@@ -142,13 +142,14 @@ def test_synchrony_counts_no_sync():
 
     sync_count = get_synchrony_counts(one_spike, np.array((2)), [0])
 
-
     assert np.all(sync_count[0] == np.array([0]))
 
 
 def test_synchrony_counts_one_sync():
     # a spike train containing two synchronized spikes
-    spike_times, spike_units = synthesize_random_firings(num_units=2, duration=1, firing_rates=1.0, insertions=[[100, 1], [100, 0]])
+    spike_times, spike_units = synthesize_random_firings(
+        num_units=2, duration=1, firing_rates=1.0, insertions=[[100, 1], [100, 0]]
+    )
     two_spikes = np.zeros(len(spike_times), minimum_spike_dtype)
     two_spikes["sample_index"] = spike_times
     two_spikes["unit_index"] = spike_units

@@ -719,7 +719,9 @@ def synthesize_poisson_spike_vector(
 
     # Add insertions
     if insertions is not None:
-        spike_frames, unit_indices = _add_insertions([spike_frames,unit_indices], insertions=insertions, insertions_replace=insertions_replace)
+        spike_frames, unit_indices = _add_insertions(
+            [spike_frames, unit_indices], insertions=insertions, insertions_replace=insertions_replace
+        )
 
     # Sort globaly
     spike_frames = spike_frames[:num_correct_frames]
@@ -729,7 +731,6 @@ def synthesize_poisson_spike_vector(
     spike_frames = spike_frames[sort_indices]
 
     return spike_frames, unit_indices
-
 
 
 def synthesize_random_firings(
@@ -825,13 +826,14 @@ def synthesize_random_firings(
     labels = np.concatenate(labels)
 
     if insertions is not None:
-        times, labels = _add_insertions([times,labels], insertions=insertions, insertions_replace=insertions_replace)
+        times, labels = _add_insertions([times, labels], insertions=insertions, insertions_replace=insertions_replace)
 
     sort_inds = np.argsort(times)
     times = times[sort_inds]
     labels = labels[sort_inds]
 
     return (times, labels)
+
 
 def _add_insertions(spike_train, insertions=None, insertions_replace=False, rng=None, seed=None):
     """
@@ -860,24 +862,24 @@ def _add_insertions(spike_train, insertions=None, insertions_replace=False, rng=
 
     if insertions is None:
         return spike_train
-    
+
     new_spike_train = np.array(spike_train)
     insertions = np.array(insertions)
 
-
-    assert np.shape(new_spike_train)[0] == len(insertions[0]), "Number of spike train and insertions indices are not equal."
+    assert np.shape(new_spike_train)[0] == len(
+        insertions[0]
+    ), "Number of spike train and insertions indices are not equal."
 
     if rng is None:
         rng = np.random.default_rng(seed=seed)
 
     if insertions_replace:
         replacement_indices = rng.choice(len(spike_train), len(insertions), replace=False)
-        new_spike_train[:,replacement_indices] = np.transpose(insertions)
+        new_spike_train[:, replacement_indices] = np.transpose(insertions)
     else:
-        new_spike_train = np.concatenate((new_spike_train,np.transpose(insertions)), axis=1)
+        new_spike_train = np.concatenate((new_spike_train, np.transpose(insertions)), axis=1)
 
     return new_spike_train
-
 
 
 def clean_refractory_period(times, refractory_period):
