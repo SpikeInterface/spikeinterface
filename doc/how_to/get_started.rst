@@ -198,9 +198,9 @@ to set it *manually*.
 
 
 If your recording does not have a ``Probe``, you can set it using
-``set_probe``. Note: ``set_probe`` creates a copy of the recording
-with the new probe, rather than modifying the existing recording
-in place. There is more information
+``set_probe``. Note: ``set_probe`` creates a copy of the recording with
+the new probe, rather than modifying the existing recording in place.
+There is more information
 `here <https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html>`__.
 
 Using the ``spikeinterface.preprocessing`` module, you can perform
@@ -230,7 +230,7 @@ object to disk.
                              float32 dtype - 39.06 MiB
     CommonReferenceRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
                               float32 dtype - 39.06 MiB
-    Use cache_folder=/tmp/spikeinterface_cache/tmp8zkscdxr/3IT027JP
+    Use cache_folder=/tmp/spikeinterface_cache/tmpsgoh2z3y/DLGW1J8V
     write_binary_recording with n_jobs = 4 and chunk_size = 32000
 
 
@@ -245,6 +245,7 @@ object to disk.
     BinaryFolderRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
                            float32 dtype - 39.06 MiB
 
+To reload a preprocessed recording that was saved to disk, you can use ``load_extractor()`` function from the ``core`` module.
 
 Now you are ready to spike sort using the ``spikeinterface.sorters``
 module! Let’s first check which sorters are implemented and which are
@@ -413,7 +414,8 @@ This folder is where all the postprocessing data will be saved such as
 waveforms and templates. Let’s calculate some waveforms. When doing
 this, the function samples some spikes (by default
 ``max_spikes_per_unit=500``) for each unit, extracts their waveforms,
-and stores them to disk in ``extensions/waveforms``. These waveforms are
+and stores them to disk in
+``./analyzer_TDC_binary/extensions/waveforms``. These waveforms are
 helpful to compute the average waveform, or “template”, for each unit
 and then to compute, for example, quality metrics. Computations with the
 ``SortingAnalyzer`` object are done using the ``compute`` method:
@@ -434,7 +436,7 @@ and then to compute, for example, quality metrics. Computations with the
 
 .. parsed-literal::
 
-    <spikeinterface.core.analyzer_extension_core.ComputeWaveforms at 0x7fb5013daf70>
+    <spikeinterface.core.analyzer_extension_core.ComputeWaveforms at 0x7f49d5ddabb0>
 
 
 
@@ -474,7 +476,7 @@ There are many more properties we can calculate
 
 .. parsed-literal::
 
-    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7fb5013f6340>
+    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7f49d5e36340>
 
 
 
@@ -498,7 +500,7 @@ Many of the extensions have parameters you can tune
 
 .. parsed-literal::
 
-    <spikeinterface.postprocessing.template_similarity.ComputeTemplateSimilarity at 0x7fb5013f6f40>
+    <spikeinterface.postprocessing.template_similarity.ComputeTemplateSimilarity at 0x7f49d5e0ed90>
 
 
 
@@ -545,12 +547,13 @@ and which have been loaded (in your enviroment)…
 This deletes the extension’s data in the ``SortingAnalyzer`` folder.
 
 Importantly, ``SortingAnalyzers`` (and all extensions) can be reloaded
-at later times: (Here, spike_amplitudes is not loaded since we just
-deleted it)
+at later times from their folders: (Here, spike_amplitudes is not loaded
+since we just deleted it)
 
 .. code:: ipython3
 
-    analyzer_loaded = si.load_sorting_analyzer('analyzer_TDC_binary')
+    sorting_analyzer_path = './analyzer_TDC_binary'
+    analyzer_loaded = si.load_sorting_analyzer(sorting_analyzer_path)
     print(analyzer_loaded.get_loaded_extension_names())
 
 
@@ -576,7 +579,7 @@ And any deleted extensions are easily recomputed
 
 .. parsed-literal::
 
-    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7fb5012a74c0>
+    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7f49b80eadc0>
 
 
 
@@ -716,7 +719,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>1.536918</td>
           <td>NaN</td>
-          <td>27.153605</td>
+          <td>27.140698</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -740,7 +743,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>1.311148</td>
           <td>NaN</td>
-          <td>24.072818</td>
+          <td>24.059540</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -764,7 +767,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>2.016703</td>
           <td>NaN</td>
-          <td>24.172255</td>
+          <td>24.387525</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -788,7 +791,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>2.011083</td>
           <td>NaN</td>
-          <td>26.741690</td>
+          <td>26.948630</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -812,7 +815,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>0.680199</td>
           <td>NaN</td>
-          <td>9.519926</td>
+          <td>9.585650</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -836,7 +839,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>0.965515</td>
           <td>NaN</td>
-          <td>13.052760</td>
+          <td>13.196613</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -860,7 +863,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>1.177009</td>
           <td>NaN</td>
-          <td>8.264430</td>
+          <td>8.193233</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -884,7 +887,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>0.973417</td>
           <td>0.155</td>
-          <td>8.796671</td>
+          <td>8.808388</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -908,7 +911,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>0.949695</td>
           <td>0.310</td>
-          <td>11.126467</td>
+          <td>11.125336</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -932,7 +935,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>1.021080</td>
           <td>0.270</td>
-          <td>8.230328</td>
+          <td>8.281832</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -960,16 +963,7 @@ web-based visualization. For this to work you need to install
 
     w1 = sw.plot_quality_metrics(analyzer_TDC, display=False, backend="sortingview")
 
-
-.. parsed-literal::
-
-    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/widgets/metrics.py:65: UserWarning: Skipping ['amplitude_cutoff', 'amplitude_cv_median', 'amplitude_cv_range', 'drift_ptp', 'drift_std', 'drift_mad', 'presence_ratio'] because they contain all NaNs
-      warnings.warn(f"Skipping {nan_metrics} because they contain all NaNs")
-
-
-.. parsed-literal::
-
-    https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://167688f4ddfc0b27f5d67d5c9d84f89685e705fa
+https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://c0312bc14387471531af9913147098b94cc640cf
 
 
 .. code:: ipython3
@@ -977,9 +971,7 @@ web-based visualization. For this to work you need to install
     w2 = sw.plot_sorting_summary(analyzer_TDC, display=False, curation=True, backend="sortingview")
 
 
-.. parsed-literal::
-
-    https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://688cd7a233857847b5663e565dbf3f2807887013
+https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://688cd7a233857847b5663e565dbf3f2807887013
 
 
 The sorting summary plot can also be used for manual labeling and
