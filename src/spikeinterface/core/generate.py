@@ -615,7 +615,6 @@ def synthesize_poisson_spike_vector(
     duration=60.0,
     refractory_period_ms=4.0,
     firing_rates=3.0,
-    segments=1,
     seed=0,
     insertions=None,
     insertions_replace=True,
@@ -641,8 +640,6 @@ def synthesize_poisson_spike_vector(
     firing_rates : float or array_like, default: 3.0
         Firing rate(s) in Hz. Can be a single value for all units or an array of firing rates with
         each element being the firing rate for one unit
-    segments : int, default: 1
-        Number of segments. Train is evenly spread between segments.
     seed : int, default: 0
         Seed for random number generator
     insertions: array-like
@@ -653,8 +650,10 @@ def synthesize_poisson_spike_vector(
 
     Returns
     -------
-    spike_train: np.ndarray
-        Structured numpy array ("sample_index", "unit_index", "segment_index").
+    spike_frames : ndarray
+        1D array of spike frames.
+    unit_indices : ndarray
+        1D array of unit indices corresponding to each spike.
 
     Notes
     -----
@@ -739,7 +738,6 @@ def synthesize_random_firings(
     duration=60,
     refractory_period_ms=4.0,
     firing_rates=3.0,
-    segments=1,
     add_shift_shuffle=False,
     seed=None,
     insertions=None,
@@ -761,8 +759,6 @@ def synthesize_random_firings(
     firing_rates: float or list[float]
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
-    segments : int, default: 1
-        Number of segments. Train is evenly spread between segments.
     add_shift_shuffle: bool, default: False
         Optionally add a small shuffle on half of the spikes to make the autocorrelogram less flat.
     seed: int, default: None
