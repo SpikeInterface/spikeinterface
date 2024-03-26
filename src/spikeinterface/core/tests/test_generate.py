@@ -19,6 +19,8 @@ from spikeinterface.core.generate import (
     generate_unit_locations,
     generate_ground_truth_recording,
     generate_sorting_to_inject,
+    _add_insertions,
+    synthesize_random_firings
 )
 
 from spikeinterface.core.numpyextractors import NumpySorting
@@ -529,6 +531,81 @@ def test_generate_sorting_to_inject():
     for unit_id in num_spikes:
         assert num_injected_spikes[unit_id] <= num_spikes[unit_id]
 
+def test_synthesize_random_firings_length():
+
+    firing_rates = [2.0, 3.0]
+    duration = 2
+    num_units = 2
+
+    spike_times, spike_units = synthesize_random_firings(num_units=num_units, duration=duration, firing_rates=firing_rates)
+
+    assert len(spike_times) == int(np.sum(firing_rates) * duration)
+
+    units, counts = np.unique(spike_units, return_counts=True)
+
+    assert len(units) == num_units
+    assert np.sum(counts) == int(np.sum(firing_rates) * duration)
+
+
+
+def test_synthesize_random_firings_length_with_insertion():
+
+    firing_rates = [2.0, 3.0]
+    duration = 2
+    num_units = 2
+
+    insertions =[[15000, 12], [1, 2]]
+
+    spike_times, _ = synthesize_random_firings(
+        num_units=num_units, duration=duration, firing_rates=firing_rates, insertions=insertions, insertions_replace=False)
+
+    assert len(spike_times) == int(np.sum(firing_rates) * duration) + 2
+
+    spike_times, _ = synthesize_random_firings(
+        num_units=num_units, duration=duration, firing_rates=firing_rates, insertions=insertions, insertions_replace=True)
+
+    assert len(spike_times) == int(np.sum(firing_rates) * duration)
+
+def test_add_insertions_replacement():
+
+    train_length = 10
+
+    spike_train = [np.zeros(train_length), np.zeros(train_length), np.zeros(train_length)]
+
+    insertion_1 = (15, 12, 0)
+    insertion_2 = (1, 2, 3)
+
+    insertions = [insertion_1, insertion_2]
+
+    spike_train_replace = _add_insertions(spike_train, insertions=insertions, insertions_replace=True)
+
+    assert (
+        np.any(np.all( np.transpose(spike_train_replace) == np.array(insertion_1), axis=1))
+    )
+    assert np.shape(spike_train_replace)[1] == train_length
+
+
+def test_add_insertions_no_replacement():
+
+    train_length = 10
+
+    spike_train = [np.zeros(train_length), np.zeros(train_length), np.zeros(train_length)]
+
+    insertion_1 = [15, 12, 0]
+    insertion_2 = [1, 2, 3]
+
+    insertions = [insertion_1, insertion_2]
+
+    spike_train_replace = _add_insertions(spike_train, insertions=insertions, insertions_replace=False)
+
+    assert (
+        np.any(np.all( np.transpose(spike_train_replace) == np.array(insertion_1), axis=1))
+    )
+
+    assert np.shape(spike_train_replace)[1] == train_length + len(insertions)
+
+
+
 
 if __name__ == "__main__":
     strategy = "tile_pregenerated"
@@ -546,3 +623,5 @@ if __name__ == "__main__":
     # test_inject_templates()
     # test_generate_ground_truth_recording()
     # test_generate_sorting_with_spikes_on_borders()
+
+

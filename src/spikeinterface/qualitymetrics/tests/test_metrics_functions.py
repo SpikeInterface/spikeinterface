@@ -39,6 +39,7 @@ from spikeinterface.qualitymetrics import (
     get_synchrony_counts,
 )
 
+from spikeinterface.core.basesorting import minimum_spike_dtype
 
 # if hasattr(pytest, "global_test_folder"):
 #     cache_folder = pytest.global_test_folder / "qualitymetrics"
@@ -132,17 +133,26 @@ def sorting_analyzer_violations():
 
 
 def test_synchrony_counts_no_sync():
-    one_spike = synthesize_random_firings(num_units=1, duration=1, firing_rates=1.0)
+    
+    spike_times, spike_units = synthesize_random_firings(num_units=1, duration=1, firing_rates=1.0)
+
+    one_spike = np.zeros(len(spike_times), minimum_spike_dtype)
+    one_spike["sample_index"] = spike_times
+    one_spike["unit_index"] = spike_units
+
     sync_count = get_synchrony_counts(one_spike, np.array((2)), [0])
 
-    print(sync_count)
 
     assert np.all(sync_count[0] == np.array([0]))
 
 
 def test_synchrony_counts_one_sync():
     # a spike train containing two synchronized spikes
-    two_spikes = synthesize_random_firings(num_units=2, duration=1, firing_rates=1.0, insertions=[[100, 1], [100, 0]])
+    spike_times, spike_units = synthesize_random_firings(num_units=2, duration=1, firing_rates=1.0, insertions=[[100, 1], [100, 0]])
+    two_spikes = np.zeros(len(spike_times), minimum_spike_dtype)
+    two_spikes["sample_index"] = spike_times
+    two_spikes["unit_index"] = spike_units
+
     sync_count = get_synchrony_counts(two_spikes, np.array((2)), [0, 1])
 
     assert np.all(sync_count[0] == np.array([1, 1]))
@@ -150,9 +160,13 @@ def test_synchrony_counts_one_sync():
 
 def test_synchrony_counts_one_quad_sync():
     # a spike train containing four synchronized spikes
-    four_spikes = synthesize_random_firings(
+    spike_times, spike_units = synthesize_random_firings(
         num_units=4, duration=1, firing_rates=1.0, insertions=[[100, 0], [100, 1], [100, 2], [100, 3]]
     )
+    four_spikes = np.zeros(len(spike_times), minimum_spike_dtype)
+    four_spikes["sample_index"] = spike_times
+    four_spikes["unit_index"] = spike_units
+
     sync_count = get_synchrony_counts(four_spikes, np.array((2, 4)), [0, 1, 2, 3])
 
     assert np.all(sync_count[0] == np.array([1, 1, 1, 1]))
@@ -161,9 +175,13 @@ def test_synchrony_counts_one_quad_sync():
 
 def test_synchrony_counts_not_all_units():
     # a spike train containing two synchronized spikes
-    three_spikes = synthesize_random_firings(
+    spike_times, spike_units = synthesize_random_firings(
         num_units=3, duration=1, firing_rates=1.0, insertions=[[50, 0], [100, 1], [100, 2]]
     )
+    three_spikes = np.zeros(len(spike_times), minimum_spike_dtype)
+    three_spikes["sample_index"] = spike_times
+    three_spikes["unit_index"] = spike_units
+
     sync_count = get_synchrony_counts(three_spikes, np.array((2)), [0, 1, 2])
 
     assert np.all(sync_count[0] == np.array([0, 1, 1]))
