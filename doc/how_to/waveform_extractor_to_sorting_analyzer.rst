@@ -32,7 +32,8 @@ This object contains a ``SortingAnalyzer`` which can be accessed and then saved 
 
     waveform_folder_path = "path_to/my_waveform_extractor_folder"
     new_sorting_analyzer_path = "path_to/my_new_sorting_analyzer_folder"
-
+# On Windows
+# new_sorting_analyzer_path = r"path_to\my_new_sorting_analyzer_folder"
     extractor = load_waveform(folder = waveform_folder_path)
     sorting_analyzer = extractor.sorting_analyzer
     sorting_analyzer.save_as(folder = new_sorting_analyzer_path, format = "binary_folder")
@@ -483,12 +484,12 @@ on which extension you were interested in. We won't list them all here.
             wv_data = wv.get_data()
             ul = analyzer.get_extension(
                 extension_name = "unit_locations")
-            ul_data = nl.get_data()
+            ul_data = ul.get_data()
 
 
 
 
-You can also access the parameters used in the extension calculation, which is very simply for the new SortingAnalyzer:
+You can also access the parameters used in the extension calculation, which is very simple for the new SortingAnalyzer:
 
 .. grid:: 2
 
