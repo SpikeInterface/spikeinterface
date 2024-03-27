@@ -540,7 +540,7 @@ class ComputeFastTemplates(AnalyzerExtension):
             The returned templates (num_units, num_samples, num_channels)
         """
 
-        assert operator == f"average", "Analyzer extension `fast_templates` only works with 'average' templates. Given operator = {operator}"
+        assert operator == "average", f"Analyzer extension `fast_templates` only works with 'average' templates. Given operator = {operator}"
         templates = self.data["average"]
 
         if unit_ids is not None:
