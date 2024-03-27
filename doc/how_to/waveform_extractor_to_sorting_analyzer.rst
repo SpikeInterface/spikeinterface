@@ -73,12 +73,12 @@ the left while the SortingAnalyzer code will be displayed on the right:
 
 .. grid:: 2
 
-    .. grid-item:: 
-        
+    .. grid-item::
+
         **WaveformExtractor**
 
     .. grid-item::
-        
+
         **SortingAnalyzer**
 
 Create, load and save
@@ -93,7 +93,7 @@ First, create the object from a recording and a sorting.
         .. code-block:: python
 
             wvf_extractor = extract_waveforms(
-                sorting=sorting, 
+                sorting=sorting,
                 recording=recording
             )
 
@@ -116,7 +116,7 @@ Alternatively, we can save it locally at the point of creation by specifying a `
         .. code-block:: python
 
             wvf_extractor = extract_waveforms(
-                sorting=sorting, 
+                sorting=sorting,
                 recording=recording,
                 mode="folder",
                 folder="my_waveform_extractor",
@@ -145,7 +145,7 @@ of saving it to a new format
         .. code-block:: python
 
             wvf_extractor.save(
-                format="zarr", 
+                format="zarr",
                 folder="/path/to_my/result.zarr"
             )
 
@@ -311,7 +311,7 @@ Compute Extensions
 ++++++++++++++++++
 
 Waveforms, templates, quality metrics etc are all extensions of the ``SortingAnalyzer`` object.
-Some extensions depend on other extensions. To calculate a *child* we must first have calculated it's 
+Some extensions depend on other extensions. To calculate a *child* we must first have calculated it's
 **parents**. The relationship between some commonly used extensions are shown below:
 
 .. image:: waveform_extractor_to_sorting_analyzer_files/child_parent_plot.svg
