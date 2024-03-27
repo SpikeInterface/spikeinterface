@@ -831,6 +831,52 @@ def clean_refractory_period(times, refractory_period):
     return times
 
 
+def _add_insertions(spike_train, insertions=None, insertions_replace=False, seed=None):
+    """
+    Add specified insertions into a spike train
+
+    Parameters
+    ----------
+    spike_train: array-like
+        Taking the form [spike_times, spike_units, segment_indices]. Segments are optional.
+    insertions: array-like
+        List of manually inserted spikes, each spike formatted as [sample index, unit index, segment_index]. Intended for
+        use in testing. Segment index is optional.
+    insertions_replace: bool, default: False
+        If True, randomly replace generated spikes. If False, add to generated spikes.
+    rng: numpy.random.Generator
+        A random number generator
+    seed: int, default: None
+        seed for the generator
+
+    Returns
+    -------
+        spike_train: np.ndarray
+        Numpy array in same form as spike_train input, including insertions.
+
+    """
+
+    if insertions is None:
+        return spike_train
+
+    new_spike_train = np.array(spike_train)
+    insertions = np.array(insertions)
+
+    assert np.shape(new_spike_train)[0] == len(
+        insertions[0]
+    ), "Number of spike train and insertions indices are not equal."
+
+    rng = np.random.default_rng(seed=seed)
+
+    if insertions_replace:
+        replacement_indices = rng.choice(len(spike_train), len(insertions), replace=False)
+        new_spike_train[:, replacement_indices] = np.transpose(insertions)
+    else:
+        new_spike_train = np.concatenate((new_spike_train, np.transpose(insertions)), axis=1)
+
+    return new_spike_train
+
+
 def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=None):
     """
     Inject some duplicate units in a sorting.
