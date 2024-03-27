@@ -32,7 +32,7 @@ from .node_pipeline import run_node_pipeline
 
 # high level function
 def create_sorting_analyzer(
-    sorting, recording, format="memory", folder=None, sparse=True, sparsity=None, **sparsity_kwargs
+    sorting, recording, format="memory", folder=None, sparse=True, sparsity=None, overwrite=False, **sparsity_kwargs
 ):
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
@@ -96,6 +96,12 @@ def create_sorting_analyzer(
     In some situation, sparsity is not needed, so to make it fast creation, you need to turn
     sparsity off (or give external sparsity) like this.
     """
+    if format != "memory":
+        if Path(folder).is_dir():
+            if not overwrite:
+                raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
+            else:
+                shutil.rmtree(folder)
 
     # handle sparsity
     if sparsity is not None:
@@ -1025,6 +1031,28 @@ class SortingAnalyzer:
         else:
             return False
 
+    def get_computable_extensions(self):
+        """
+        Get all extensions that can be computed by the analyzer.
+        """
+        return get_available_analyzer_extensions()
+
+    def get_default_extension_params(self, extension_name: str):
+        """
+        Get the default params for an extension.
+
+        Parameters
+        ----------
+        extension_name: str
+            The extension name
+
+        Returns
+        -------
+        default_params: dict
+            The default parameters for the extension
+        """
+        return get_default_analyzer_extension_params(extension_name)
+
 
 global _possible_extensions
 _possible_extensions = []
@@ -1089,6 +1117,39 @@ def get_extension_class(extension_name: str, auto_import=True):
 
     ext_class = extensions_dict[extension_name]
     return ext_class
+
+
+def get_available_analyzer_extensions():
+    """
+    Get all extensions that can be computed by the analyzer.
+    """
+    return list(_builtin_extensions.keys())
+
+
+def get_default_analyzer_extension_params(extension_name: str):
+    """
+    Get the default params for an extension.
+
+    Parameters
+    ----------
+    extension_name: str
+        The extension name
+
+    Returns
+    -------
+    default_params: dict
+        The default parameters for the extension
+    """
+    import inspect
+
+    extension_class = get_extension_class(extension_name)
+
+    sig = inspect.signature(extension_class._set_params)
+    default_params = {
+        k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty
+    }
+
+    return default_params
 
 
 class AnalyzerExtension:
