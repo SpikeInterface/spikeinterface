@@ -628,7 +628,7 @@ Note that our object is not persistent to disk because we use
 .. parsed-literal::
 
     SortingAnalyzer: 383 channels - 31 units - 1 segments - memory - sparse - has recording
-    Loaded 0 extenstions:
+    Loaded 0 extensions:
 
 
 
@@ -646,7 +646,7 @@ Note that our object is not persistent to disk because we use
 .. parsed-literal::
 
     SortingAnalyzer: 383 channels - 31 units - 1 segments - memory - sparse - has recording
-    Loaded 4 extenstions: random_spikes, waveforms, templates, noise_levels
+    Loaded 4 extensions: random_spikes, waveforms, templates, noise_levels
 
 
 
@@ -674,7 +674,7 @@ using the ``**job_kwargs`` mechanism.
 .. parsed-literal::
 
     SortingAnalyzer: 383 channels - 31 units - 1 segments - memory - sparse - has recording
-    Loaded 8 extenstions: random_spikes, waveforms, templates, noise_levels, correlograms, unit_locations, spike_amplitudes, template_similarity
+    Loaded 8 extensions: random_spikes, waveforms, templates, noise_levels, correlograms, unit_locations, spike_amplitudes, template_similarity
 
 
 
@@ -692,7 +692,7 @@ make a copy of the analyzer and all computed extensions.
 .. parsed-literal::
 
     SortingAnalyzer: 383 channels - 31 units - 1 segments - binary_folder - sparse - has recording
-    Loaded 8 extenstions: random_spikes, waveforms, templates, noise_levels, correlograms, unit_locations, spike_amplitudes, template_similarity
+    Loaded 8 extensions: random_spikes, waveforms, templates, noise_levels, correlograms, unit_locations, spike_amplitudes, template_similarity
 
 
 
@@ -1107,7 +1107,7 @@ them again).
 .. parsed-literal::
 
     SortingAnalyzer: 383 channels - 6 units - 1 segments - binary_folder - sparse - has recording
-    Loaded 9 extenstions: random_spikes, waveforms, templates, noise_levels, correlograms, unit_locations, spike_amplitudes, template_similarity, quality_metrics
+    Loaded 9 extensions: random_spikes, waveforms, templates, noise_levels, correlograms, unit_locations, spike_amplitudes, template_similarity, quality_metrics
 
 
 
@@ -1129,7 +1129,7 @@ Then we export figures to a report folder
 .. parsed-literal::
 
     SortingAnalyzer: 383 channels - 6 units - 1 segments - binary_folder - sparse - has recording
-    Loaded 9 extenstions: random_spikes, waveforms, templates, noise_levels, template_similarity, spike_amplitudes, correlograms, unit_locations, quality_metrics
+    Loaded 9 extensions: random_spikes, waveforms, templates, noise_levels, template_similarity, spike_amplitudes, correlograms, unit_locations, quality_metrics
 
 
 
