@@ -34,8 +34,8 @@ This object contains a ``SortingAnalyzer`` which can be accessed and then saved 
     new_sorting_analyzer_path = "path_to/my_new_sorting_analyzer_folder"
     # On Windows
     # new_sorting_analyzer_path = r"path_to\my_new_sorting_analyzer_folder"
-    extractor = load_waveform(folder=waveform_folder_path)
-    sorting_analyzer = extractor.sorting_analyzer
+    wvf_extractor = load_waveform(folder=waveform_folder_path)
+    sorting_analyzer = wvf_extractor.sorting_analyzer
     sorting_analyzer.save_as(folder=new_sorting_analyzer_path, format="binary_folder")
 
 
@@ -67,21 +67,19 @@ we will need to prepend functions by the appropriate submodule name.
 
 In the following we start with a recording called `recording` and a sorting
 object called ``sorting``. We’ll then create, export, explore and compute things using a
-``SortingAnalyzer`` called ``analyzer`` and a ``WaveformExtractor`` called ``extractor``.
+``SortingAnalyzer`` called ``analyzer`` and a ``WaveformExtractor`` called ``wvf_extractor``.
 We’ll do the same calculations for both objects. The WaveformExtractor code will be on
 the left while the SortingAnalyzer code will be displayed on the right:
 
 .. grid:: 2
 
+    .. grid-item:: 
+        
+        **WaveformExtractor**
+
     .. grid-item::
-
-        WaveformExtractor
-        ^^^^^^^^^^^^^^^^^
-
-    .. grid-item::
-
-        SortingAnalyzer
-        ^^^^^^^^^^^^^^^
+        
+        **SortingAnalyzer**
 
 Create, load and save
 +++++++++++++++++++++
@@ -94,7 +92,7 @@ First, create the object from a recording and a sorting.
 
         .. code-block:: python
 
-            extractor = extract_waveforms(
+            wvf_extractor = extract_waveforms(
                 sorting=sorting, 
                 recording=recording
             )
@@ -117,7 +115,7 @@ Alternatively, we can save it locally at the point of creation by specifying a `
 
         .. code-block:: python
 
-            extractor = extract_waveforms(
+            wvf_extractor = extract_waveforms(
                 sorting=sorting, 
                 recording=recording,
                 mode="folder",
@@ -146,7 +144,7 @@ of saving it to a new format
 
         .. code-block:: python
 
-            extractor.save(
+            wvf_extractor.save(
                 format="zarr", 
                 folder="/path/to_my/result.zarr"
             )
@@ -171,7 +169,7 @@ If you already have the object saved, you can load it
 
         .. code-block:: python
 
-            extractor = load_waveforms(
+            wvf_extractor = load_waveforms(
                 folder="my_waveform_extractor"
             )
 
@@ -196,8 +194,8 @@ can be isolated
 
         .. code-block:: python
 
-            the_recording = extractor.recording
-            the_sorting = extractor.sorting
+            the_recording = wvf_extractor.recording
+            the_sorting = wvf_extractor.sorting
 
     .. grid-item::
 
@@ -221,7 +219,7 @@ the channel locations as follows
         .. code-block:: python
 
             channel_locations =
-                extractor.get_channel_locations()
+                wvf_extractor.get_channel_locations()
 
     .. grid-item::
 
@@ -241,13 +239,13 @@ Many properties can be accessed in a similar way
 
         .. code-block:: python
 
-            extractor.get_num_channels()
-            extractor.get_num_samples()
-            extractor.get_num_segments()
-            extractor.get_probe()
-            extractor.get_probegroup()
-            extractor.get_total_duration()
-            extractor.get_total_samples()
+            wvf_extractor.get_num_channels()
+            wvf_extractor.get_num_samples()
+            wvf_extractor.get_num_segments()
+            wvf_extractor.get_probe()
+            wvf_extractor.get_probegroup()
+            wvf_extractor.get_total_duration()
+            wvf_extractor.get_total_samples()
 
     .. grid-item::
 
@@ -269,9 +267,9 @@ Many properties can be accessed in a similar way
 
         .. code-block:: python
 
-            extractor.channel_ids
-            extractor.unit_ids
-            extractor.sampling_frequency
+            wvf_extractor.channel_ids
+            wvf_extractor.unit_ids
+            wvf_extractor.sampling_frequency
 
     .. grid-item::
 
@@ -293,11 +291,11 @@ though these are mostly used internally:
 
         .. code-block:: python
 
-            extractor.folder
-            extractor.format
-            extractor.is_read_only()
-            extractor.dtype
-            extractor.is_sparse()
+            wvf_extractor.folder
+            wvf_extractor.format
+            wvf_extractor.is_read_only()
+            wvf_extractor.dtype
+            wvf_extractor.is_sparse()
 
     .. grid-item::
 
@@ -314,7 +312,7 @@ Compute Extensions
 
 Waveforms, templates, quality metrics etc are all extensions of the ``SortingAnalyzer`` object.
 Some extensions depend on other extensions. To calculate a *child* we must first have calculated it's 
-_parents_. The relationship between some commonly used extensions are shown below:
+**parents**. The relationship between some commonly used extensions are shown below:
 
 .. image:: waveform_extractor_to_sorting_analyzer_files/child_parent_plot.svg
     :alt: Child parent relationships
@@ -330,11 +328,11 @@ looks slightly different. Let's calculate these extensions, and also add a param
 
         .. code-block:: python
 
-            extractor.precompute_templates(
+            wvf_extractor.precompute_templates(
                 modes=("average",)
             )
             compute_spike_amplitudes(
-                waveform_extractor=extractor,
+                waveform_extractor=wvf_extractor,
                 peak_sign="pos"
             )
 
@@ -365,7 +363,7 @@ locally too. You can check which extensions have been saved
 
         .. code-block:: python
 
-            extractor.get_available_extension_names()
+            wvf_extractor.get_available_extension_names()
 
     .. grid-item::
 
@@ -382,7 +380,7 @@ checks the local folder *and* the memory:
 
         .. code-block:: python
 
-            extractor.get_available_extension_names()
+            wvf_extractor.get_available_extension_names()
 
     .. grid-item::
 
@@ -398,7 +396,7 @@ If there is an extensions which is saved but not yet loaded you can load it:
 
         .. code-block:: python
 
-            extractor.load_extension(
+            wvf_extractor.load_extension(
                 extension_name="spike_amplitudes"
             )
 
@@ -418,7 +416,7 @@ You can also check if a certain extension is loaded
 
         .. code-block:: python
 
-            extractor.has_extension(
+            wvf_extractor.has_extension(
                 extension_name="spike_amplitudes"
             )
 
@@ -440,7 +438,7 @@ will be deleted too. We'll now delete ``templates`` from the SortingAnalyzer and
 
           .. code-block:: python
 
-            extractor.delete_extension(
+            wvf_extractor.delete_extension(
                 extension_name="spike_amplitudes"
             )
 
@@ -465,12 +463,12 @@ on which extension you were interested in. We won't list them all here.
 
           .. code-block:: python
 
-            wv_data = extractor.get_waveforms(
+            wv_data = wvf_extractor.get_waveforms(
                 unit_id=0
             )
             
             ul_data = compute_unit_locations(
-                waveform_extractor=extractor
+                waveform_extractor=wvf_extractor
             )
 
     .. grid-item::
@@ -494,7 +492,7 @@ You can also access the parameters used in the extension calculation, which is v
 
         .. code-block:: python
 
-            ul_ex = extractor.load_extension(
+            ul_ex = wvf_extractor.load_extension(
                 extension_name="unit_locations"
             )
             ul_parms = ul_ex.load_params_from_folder(
@@ -521,9 +519,11 @@ need to find the correct function. The old functions still work for SortingAnaly
         .. code-block:: python
 
             amp_cut_data = compute_amplitude_cutoffs(
-                waveform_extractor=extractor
+                waveform_extractor=wvf_extractor
             )
-            #or: compute_amplitude_cutoffs(extractor)
+            #or: compute_amplitude_cutoffs(
+            #        wvf_extractor
+            #    )
 
     .. grid-item::
 
@@ -547,7 +547,7 @@ list of quality metric parameters.
 
             dqm_params = get_default_qm_params()
             amp_cut_data = compute_quality_metrics(
-                waveform_extractor=extractor,
+                waveform_extractor=wvf_extractor,
                 qm_params=dqm_params
             )
 
