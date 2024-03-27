@@ -437,6 +437,28 @@ class ComputeTemplates(AnalyzerExtension):
 
         return np.array(templates)
 
+    def get_unit_template(self, unit_id, operator="average"):
+        """
+        Return template for a single unit.
+
+        Parameters
+        ----------
+        unit_id: str | int
+            Unit id to retrieve waveforms for
+        operator: str
+             The operator to compute the templates
+
+        Returns
+        -------
+        template: np.array
+            The returned template (num_samples, num_channels)
+        """
+
+        templates = self.data[operator]
+        unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+
+        return np.array(templates[unit_index, :, :])
+
 
 compute_templates = ComputeTemplates.function_factory()
 register_result_extension(ComputeTemplates)
