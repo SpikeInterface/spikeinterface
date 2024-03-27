@@ -522,7 +522,7 @@ class ComputeFastTemplates(AnalyzerExtension):
 
         return new_data
 
-    def get_templates(self, unit_ids=None):
+    def get_templates(self, unit_ids=None, operator="average"):
         """
         Return average templates for multiple units.
 
@@ -530,6 +530,9 @@ class ComputeFastTemplates(AnalyzerExtension):
         ----------
         unit_ids: list or None, default: None
             Unit ids to retrieve waveforms for
+        operator: str
+            MUST be "average" (only one supported by fast_templates)
+            The argument exist to have the same signature as ComputeTemplates.get_templates
 
         Returns
         -------
@@ -537,6 +540,7 @@ class ComputeFastTemplates(AnalyzerExtension):
             The returned templates (num_units, num_samples, num_channels)
         """
 
+        assert operator == f"average", "Analyzer extension `fast_templates` only works with 'average' templates. Given operator = {operator}"
         templates = self.data["average"]
 
         if unit_ids is not None:

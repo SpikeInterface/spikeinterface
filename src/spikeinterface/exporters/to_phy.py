@@ -180,19 +180,8 @@ def export_to_phy(
 
     # export templates/templates_ind/similar_templates
     # shape (num_units, num_samples, max_num_channels)
-    templates_ext = sorting_analyzer.get_extension("templates")
-    if templates_ext is None:
-        templates_ext = sorting_analyzer.get_extension("fast_templates")
-        if templates_ext is not None and template_mode != "average":
-            raise ValueError(
-                "export_to_phy with SortingAnalyzer with extension 'fast_templates' can only work with template_mode='average'"
-            )
-        dense_templates = templates_ext.get_templates(unit_ids=unit_ids)
-    else:
-        dense_templates = templates_ext.get_templates(unit_ids=unit_ids, operator=template_mode)
-    assert (
-        templates_ext is not None
-    ), "export_to_phy requires SortingAnalyzer with either extension 'templates' or 'fast_templates'"
+    templates_ext = sorting_analyzer.get_extension("templates") or sorting_analyzer.get_extension("fast_templates")
+    dense_templates = templates_ext.get_templates(unit_ids=unit_ids, operator=template_mode)
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
     num_samples = dense_templates.shape[1]
     templates = np.zeros((len(unit_ids), num_samples, max_num_channels), dtype="float64")
