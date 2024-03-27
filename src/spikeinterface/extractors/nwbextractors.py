@@ -540,6 +540,7 @@ class NwbRecordingExtractor(BaseRecording):
                 segment_data,
                 times_kwargs,
             ) = self._fetch_recording_segment_info_pynwb(file, cache, load_time_vector, samples_for_rate_estimation)
+            self.extra_requirements.append("pynwb")
         else:
             (
                 channel_ids,
@@ -548,7 +549,7 @@ class NwbRecordingExtractor(BaseRecording):
                 segment_data,
                 times_kwargs,
             ) = self._fetch_recording_segment_info_backend(file, cache, load_time_vector, samples_for_rate_estimation)
-
+            self.extra_requirements.append("h5py")
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         recording_segment = NwbRecordingSegment(
             electrical_series_data=segment_data,
@@ -772,8 +773,6 @@ class NwbRecordingExtractor(BaseRecording):
         #########
         # Extract and re-name properties from nwbfile TODO: Should be a function
         ########
-        from pynwb.ecephys import ElectrodeGroup
-
         properties = dict()
         properties_to_skip = [
             "id",
@@ -788,10 +787,7 @@ class NwbRecordingExtractor(BaseRecording):
         rename_properties = dict(location="brain_area")
 
         for column in columns:
-            first_value = electrodes_table[column][0]
-            if isinstance(first_value, ElectrodeGroup):
-                continue
-            elif column in properties_to_skip:
+            if column in properties_to_skip:
                 continue
             else:
                 column_name = rename_properties.get(column, column)
@@ -994,10 +990,12 @@ class NwbSortingExtractor(BaseSorting):
             unit_ids, spike_times_data, spike_times_index_data = self._fetch_sorting_segment_info_pynwb(
                 unit_table_path=unit_table_path, samples_for_rate_estimation=samples_for_rate_estimation, cache=cache
             )
+            self.extra_requirements.append("pynwb")
         else:
             unit_ids, spike_times_data, spike_times_index_data = self._fetch_sorting_segment_info_backend(
                 unit_table_path=unit_table_path, samples_for_rate_estimation=samples_for_rate_estimation, cache=cache
             )
+            self.extra_requirements.append("h5py")
 
         BaseSorting.__init__(
             self, sampling_frequency=self.provided_or_electrical_series_sampling_frequency, unit_ids=unit_ids
