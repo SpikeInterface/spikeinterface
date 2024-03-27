@@ -165,7 +165,7 @@ def random_spikes_selection(
     max_spikes_per_unit: int, default: 500
         The number of spikes per units
     margin_size: None | int, default: None
-        A margin on each border of segments to avoid spikes
+        A margin on each border of segments to avoid border spikes
     seed: None | int, default: None
         A seed for random generator
 

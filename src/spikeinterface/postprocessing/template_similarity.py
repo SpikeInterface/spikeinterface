@@ -78,8 +78,8 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
 def compute_template_similarity_by_pair(sorting_analyzer_1, sorting_analyzer_2, method="cosine_similarity"):
     templates_array_1 = _get_dense_templates_array(sorting_analyzer_1, return_scaled=True)
     templates_array_2 = _get_dense_templates_array(sorting_analyzer_2, return_scaled=True)
-    similmarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method)
-    return similmarity
+    similarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method)
+    return similarity
 
 
 def check_equal_template_with_distribution_overlap(
