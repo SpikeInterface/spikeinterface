@@ -20,7 +20,7 @@ from spikeinterface.core.generate import (
     generate_ground_truth_recording,
     generate_sorting_to_inject,
     synthesize_random_firings,
-    _add_insertions
+    _add_insertions,
 )
 
 from spikeinterface.core.numpyextractors import NumpySorting
@@ -558,27 +558,15 @@ def test_synthesize_random_firings_length_with_insertion():
 
     insertions = [[15000, 12], [1, 2]]
 
-    spike_train = synthesize_random_firings(
-        num_units=num_units,
-        duration=duration,
-        firing_rates=firing_rates
-    )
+    spike_train = synthesize_random_firings(num_units=num_units, duration=duration, firing_rates=firing_rates)
 
-    spike_times, _ = _add_insertions(
-            spike_train, insertions=insertions, insertions_replace=False
-    )
+    spike_times, _ = _add_insertions(spike_train, insertions=insertions, insertions_replace=False)
 
     assert len(spike_times) == int(np.sum(firing_rates) * duration) + 2
 
-    spike_train = synthesize_random_firings(
-        num_units=num_units,
-        duration=duration,
-        firing_rates=firing_rates
-    )
+    spike_train = synthesize_random_firings(num_units=num_units, duration=duration, firing_rates=firing_rates)
 
-    spike_times, _ = _add_insertions(
-            spike_train, insertions=insertions, insertions_replace=True
-    )
+    spike_times, _ = _add_insertions(spike_train, insertions=insertions, insertions_replace=True)
 
     assert len(spike_times) == int(np.sum(firing_rates) * duration)
 

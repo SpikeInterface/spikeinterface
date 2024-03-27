@@ -709,7 +709,6 @@ def synthesize_poisson_spike_vector(
     spike_frames[:num_correct_frames] = spike_frames[mask]  # Avoids a malloc
     unit_indices = unit_indices[mask]
 
-
     # Sort globaly
     spike_frames = spike_frames[:num_correct_frames]
     sort_indices = np.argsort(spike_frames, kind="stable")  # I profiled the different kinds, this is the fastest.
@@ -808,6 +807,7 @@ def synthesize_random_firings(
 
     return (times, labels)
 
+
 def clean_refractory_period(times, refractory_period):
     """
     Remove spike that violate the refractory period in a given spike train.
@@ -829,6 +829,7 @@ def clean_refractory_period(times, refractory_period):
         times = times[keep]
 
     return times
+
 
 def _add_insertions(spike_train, insertions=None, insertions_replace=False, seed=None):
     """
@@ -874,6 +875,7 @@ def _add_insertions(spike_train, insertions=None, insertions_replace=False, seed
         new_spike_train = np.concatenate((new_spike_train, np.transpose(insertions)), axis=1)
 
     return new_spike_train
+
 
 def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=None):
     """
