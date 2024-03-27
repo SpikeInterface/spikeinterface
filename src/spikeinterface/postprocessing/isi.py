@@ -137,7 +137,7 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
 
-    bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
+    bins = np.arange(0, window_size + bin_size, bin_size, dtype=np.int64)  # * 1e3 / fs
     spikes = sorting.to_spike_vector(concatenated=False)
 
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
@@ -145,6 +145,8 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
     for seg_index in range(sorting.get_num_segments()):
         spike_times = spikes[seg_index]["sample_index"].astype(np.int64)
         spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
+
+        print("hey!")
 
         _compute_isi_histograms_numba(
             ISIs,
