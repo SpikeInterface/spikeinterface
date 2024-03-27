@@ -399,10 +399,10 @@ class ComputeTemplates(AnalyzerExtension):
         ----------
         unit_ids: list or None
             Unit ids to retrieve waveforms for
-        mode: "average" | "median" | "std" | "percentile", default: "average"
-            The mode to compute the templates
+        operator: "average" | "median" | "std" | "percentile", default: "average"
+            The operator to compute the templates
         percentile: float, default: None
-            Percentile to use for mode="percentile"
+            Percentile to use for operator="percentile"
         save: bool, default True
             In case, the operator is not computed yet it can be saved to folder or zarr.
 
@@ -436,6 +436,28 @@ class ComputeTemplates(AnalyzerExtension):
             templates = templates[unit_indices, :, :]
 
         return np.array(templates)
+
+    def get_unit_template(self, unit_id, operator="average"):
+        """
+        Return template for a single unit.
+
+        Parameters
+        ----------
+        unit_id: str | int
+            Unit id to retrieve waveforms for
+        operator: str
+             The operator to compute the templates
+
+        Returns
+        -------
+        template: np.array
+            The returned template (num_samples, num_channels)
+        """
+
+        templates = self.data[operator]
+        unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+
+        return np.array(templates[unit_index, :, :])
 
 
 compute_templates = ComputeTemplates.function_factory()
@@ -521,6 +543,55 @@ class ComputeFastTemplates(AnalyzerExtension):
         new_data["average"] = self.data["average"][keep_unit_indices, :, :]
 
         return new_data
+
+    def get_templates(self, unit_ids=None, operator="average"):
+        """
+        Return average templates for multiple units.
+
+        Parameters
+        ----------
+        unit_ids: list or None, default: None
+            Unit ids to retrieve waveforms for
+        operator: str
+            MUST be "average" (only one supported by fast_templates)
+            The argument exist to have the same signature as ComputeTemplates.get_templates
+
+        Returns
+        -------
+        templates: np.array
+            The returned templates (num_units, num_samples, num_channels)
+        """
+
+        assert (
+            operator == "average"
+        ), f"Analyzer extension `fast_templates` only works with 'average' templates. Given operator = {operator}"
+        templates = self.data["average"]
+
+        if unit_ids is not None:
+            unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+            templates = templates[unit_indices, :, :]
+
+        return np.array(templates)
+
+    def get_unit_template(self, unit_id):
+        """
+        Return average template for a single unit.
+
+        Parameters
+        ----------
+        unit_id: str | int
+            Unit id to retrieve waveforms for
+
+        Returns
+        -------
+        template: np.array
+            The returned template (num_samples, num_channels)
+        """
+
+        templates = self.data["average"]
+        unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+
+        return np.array(templates[unit_index, :, :])
 
 
 compute_fast_templates = ComputeFastTemplates.function_factory()
