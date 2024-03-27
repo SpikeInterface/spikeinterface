@@ -7,7 +7,7 @@ import datetime
 import json
 from copy import deepcopy
 import importlib
-
+from math import prod
 
 import numpy as np
 from tqdm import tqdm
@@ -164,7 +164,8 @@ def make_shared_array(shape, dtype):
     from multiprocessing.shared_memory import SharedMemory
 
     dtype = np.dtype(dtype)
-    nbytes = int(np.prod(shape) * dtype.itemsize)
+    shape = tuple(int(x) for x in shape)  # We need to be sure that shape comes in int instead of numpy scalars
+    nbytes = prod(shape) * dtype.itemsize
     shm = SharedMemory(name=None, create=True, size=nbytes)
     arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
     arr[:] = 0
