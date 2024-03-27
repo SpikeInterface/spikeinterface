@@ -44,6 +44,8 @@ class TracesWidget(BaseWidget):
     clim: None, tuple or dict, default: None
         When mode is "map", this argument controls color limits.
         If dict, keys should be the same as recording keys
+    scale: float, default: 1
+        Scale factor for the traces
     with_colorbar: bool, default: True
         When mode is "map", a colorbar is added
     tile_size: int, default: 1500
@@ -70,6 +72,7 @@ class TracesWidget(BaseWidget):
         clim=None,
         tile_size=1500,
         seconds_per_row=0.2,
+        scale=1,
         with_colorbar=True,
         add_legend=True,
         backend=None,
@@ -141,6 +144,8 @@ class TracesWidget(BaseWidget):
         times, list_traces, frame_range, channel_ids = _get_trace_list(
             recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled
         )
+
+        list_traces = [traces * scale for traces in list_traces]
 
         # stat for auto scaling done on the first layer
         traces0 = list_traces[0]

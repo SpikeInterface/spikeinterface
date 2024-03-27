@@ -52,6 +52,8 @@ class SpikesOnTracesWidget(BaseWidget):
     clim : None, tuple or dict, default: None
         When mode is "map", this argument controls color limits.
         If dict, keys should be the same as recording keys
+    scale : float, default: 1
+        Scale factor for the traces
     with_colorbar : bool, default: True
         When mode is "map", a colorbar is added
     tile_size : int, default: 512
@@ -79,6 +81,7 @@ class SpikesOnTracesWidget(BaseWidget):
         clim=None,
         tile_size=512,
         seconds_per_row=0.2,
+        scale=1,
         with_colorbar=True,
         backend=None,
         **backend_kwargs,
@@ -127,6 +130,7 @@ class SpikesOnTracesWidget(BaseWidget):
             clim=clim,
             tile_size=tile_size,
             with_colorbar=with_colorbar,
+            scale=scale,
         )
 
         plot_data = dict(
@@ -211,7 +215,7 @@ class SpikesOnTracesWidget(BaseWidget):
                 label_set = False
                 if len(spike_frames_to_plot) > 0:
                     vspacing = traces_widget.data_plot["vspacing"]
-                    traces = traces_widget.data_plot["list_traces"][0]
+                    traces = traces_widget.data_plot["list_traces"][0] * dp.options["scale"]
 
                     # TODO find a better way
                     nbefore = 30
@@ -296,6 +300,7 @@ class SpikesOnTracesWidget(BaseWidget):
 
         unit_ids = self.unit_selector.value
         start_frame, end_frame, segment_index = self._traces_widget.time_slider.value
+        scale = self._traces_widget.scaler.value
         channel_ids = self._traces_widget.channel_selector.value
         mode = self._traces_widget.mode_selector.value
 
@@ -305,7 +310,7 @@ class SpikesOnTracesWidget(BaseWidget):
             dict(
                 channel_ids=channel_ids,
                 segment_index=segment_index,
-                # frame_range=(start_frame, end_frame),
+                scale=scale,
                 time_range=np.array([start_frame, end_frame]) / self.sampling_frequency,
                 mode=mode,
                 with_colorbar=False,
