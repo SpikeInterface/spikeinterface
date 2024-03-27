@@ -1343,11 +1343,11 @@ default_unit_params_range = dict(
     smooth_ms=(0.03, 0.07),
     decay_power=(1.4, 1.8),
     propagation_speed=(250.0, 350.0),  # um  / ms
-    b=(0.5, 2),
-    c=(0.5, 2),
-    x_angle=(-np.pi, np.pi),
-    y_angle=(-np.pi, np.pi),
-    z_angle=(-np.pi, np.pi),
+    b=(0.1, 1),
+    c=(0.1, 1),
+    x_angle=(0, np.pi),
+    y_angle=(0, np.pi),
+    z_angle=(0, np.pi),
 )
 
 
@@ -1491,7 +1491,6 @@ def generate_templates(
                 0,
             )
         elif mode == "ellipsoid":
-            alpha /= 4
             distances = get_ellipse(
                 channel_locations,
                 units_locations[u],
