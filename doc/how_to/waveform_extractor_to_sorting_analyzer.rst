@@ -58,7 +58,7 @@ This section is split into four subsections:
 * `Compute Extensions <#id4>`_
 * `Quality Metrics <#id5>`_
 
-Throughout this section, we assume that all functions have been imported into the namespace. 
+Throughout this section, we assume that all functions have been imported into the namespace.
 E.g. we have run code such as ``from spikeinterface.core import create_sorting_analyzer`` for each function. If you have imported
 the full package (ie you have run ``import spikeinterface.full as si``) you need to prepend all
 functions by ``si.``. If you have imported individual modules (ie you have run `import spikeinterface.postprocessing as spost`)
@@ -102,7 +102,7 @@ First, create the object from a recording and a sorting.
         .. code-block:: python
 
             analyzer = create_sorting_analyzer(
-                sorting=sorting, 
+                sorting=sorting,
                 recording=recording
             )
 
@@ -128,7 +128,7 @@ Alternatively, we can save it locally at the point of creation by specifying a `
         .. code-block:: python
 
             analyzer = create_sorting_analyzer(
-                sorting=sorting, 
+                sorting=sorting,
                 recording=recording,
                 folder="my_sorting_analyzer",
                 format="binary_folder",
@@ -154,7 +154,7 @@ of saving it to a new format
         .. code-block:: python
 
             analyzer.save_as(
-                format="zarr", 
+                format="zarr",
                 folder="/path/to_my/result.zarr"
             )
 
@@ -466,7 +466,7 @@ on which extension you were interested in. We won't list them all here.
             wv_data = wvf_extractor.get_waveforms(
                 unit_id=0
             )
-            
+
             ul_data = compute_unit_locations(
                 waveform_extractor=wvf_extractor
             )
@@ -530,13 +530,13 @@ need to find the correct function. The old functions still work for SortingAnaly
         .. code-block:: python
 
             amp_cutoff = analyzer.compute(
-                "quality_metrics", 
+                "quality_metrics",
                 metric_names=["amplitude_cutoff"]
             )
             amp_cut_data = amp_cutoff.get_data()
             #or: compute_amplitude_cutoff(analyzer)
 
-Or you can calculate all available quality metrics. Here, we also pass a 
+Or you can calculate all available quality metrics. Here, we also pass a
 list of quality metric parameters.
 
 .. grid:: 2
