@@ -10,15 +10,6 @@ from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from spikeinterface.core.core_tools import define_function_from_class
 
 
-def import_lazily():
-    "Makes annotations / typing available lazily"
-    global NWBFile, ElectricalSeries, Units, NWBHDF5IO
-    from pynwb import NWBFile
-    from pynwb.ecephys import ElectricalSeries
-    from pynwb.misc import Units
-    from pynwb import NWBHDF5IO
-
-
 def read_file_from_backend(
     *,
     file_path: str | Path | None,
@@ -111,7 +102,7 @@ def read_nwbfile(
     cache: bool = False,
     stream_cache_path: str | Path | None = None,
     storage_options: dict | None = None,
-) -> NWBFile:
+) -> "NWBFile":
     """
     Read an NWB file and return the NWBFile object.
 
@@ -176,8 +167,8 @@ def read_nwbfile(
 
 
 def _retrieve_electrical_series_pynwb(
-    nwbfile: NWBFile, electrical_series_path: Optional[str] = None
-) -> ElectricalSeries:
+    nwbfile: "NWBFile", electrical_series_path: Optional[str] = None
+) -> "ElectricalSeries":
     """
     Get an ElectricalSeries object from an NWBFile.
 
@@ -230,7 +221,7 @@ def _retrieve_electrical_series_pynwb(
     return electrical_series
 
 
-def _retrieve_unit_table_pynwb(nwbfile: NWBFile, unit_table_path: Optional[str] = None) -> Units:
+def _retrieve_unit_table_pynwb(nwbfile: "NWBFile", unit_table_path: Optional[str] = None) -> "Units":
     """
     Get an Units object from an NWBFile.
     Units tables can be either the main unit table (nwbfile.units) or in the processing module.
