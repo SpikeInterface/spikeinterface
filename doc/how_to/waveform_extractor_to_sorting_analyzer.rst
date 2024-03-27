@@ -11,7 +11,7 @@ If you want to continue using ``WaveformExtractor`` you need to use spikeinterfa
 below.
 
 Updating your old code should be straightforward. On this page, we demonstrate how to `convert old WaveformExtractor folders
-to new SortingAnalyzer folders <#convert-a-waveformextractor-folder-to-a-sortinganalyzer-folder>`_ and have written a 
+to new SortingAnalyzer folders <#convert-a-waveformextractor-folder-to-a-sortinganalyzer-folder>`_ and have written a
 `code dictionary <#dictionary-between-sortinganalyzer-and-waveformextractor>`_ which should make updating your codebase simple.
 
 Why change?
@@ -32,7 +32,8 @@ This object contains a ``SortingAnalyzer`` which can be accessed and then saved 
 
     waveform_folder_path = "path_to/my_waveform_extractor_folder"
     new_sorting_analyzer_path = "path_to/my_new_sorting_analyzer_folder"
-
+    # On Windows
+    # new_sorting_analyzer_path = r"path_to\my_new_sorting_analyzer_folder"
     extractor = load_waveform(folder=waveform_folder_path)
     sorting_analyzer = extractor.sorting_analyzer
     sorting_analyzer.save_as(folder=new_sorting_analyzer_path, format="binary_folder")
@@ -40,14 +41,14 @@ This object contains a ``SortingAnalyzer`` which can be accessed and then saved 
 
 The above code creates a ``SortingAnalyzer`` folder at ``new_sorting_analyzer_path``.
 
-Dictionary between SortingAnalyzer and WaveformExtractor 
+Dictionary between SortingAnalyzer and WaveformExtractor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This section provides a dictionary for code, to help translate between a ``SortingAnalyzer``
 and a ``WaveformExtractor``, so that users can easily update old code. If you want to learn
-how to use ``SortingAnalyzer`` from scratch, the 
+how to use ``SortingAnalyzer`` from scratch, the
 `Get Started <https://spikeinterface.readthedocs.io/en/latest/how_to/get_started.html>`_ guide
-and the `PostProcessing module documentation <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_ 
+and the `PostProcessing module documentation <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_
 are better places to start.
 
 This section is split into four subsections:
@@ -66,18 +67,18 @@ we will need to prepend functions by the appropriate submodule name.
 
 In the following we start with a recording called `recording` and a sorting
 object called ``sorting``. We’ll then create, export, explore and compute things using a
-``SortingAnalyzer`` called ``analyzer`` and a ``WaveformExtractor`` called ``extractor``. 
+``SortingAnalyzer`` called ``analyzer`` and a ``WaveformExtractor`` called ``extractor``.
 We’ll do the same calculations for both objects. The WaveformExtractor code will be on
 the left while the SortingAnalyzer code will be displayed on the right:
 
 .. grid:: 2
 
-    .. grid-item:: 
+    .. grid-item::
 
         WaveformExtractor
         ^^^^^^^^^^^^^^^^^
 
-    .. grid-item:: 
+    .. grid-item::
 
         SortingAnalyzer
         ^^^^^^^^^^^^^^^
@@ -219,14 +220,14 @@ the channel locations as follows
 
         .. code-block:: python
 
-            channel_locations = 
+            channel_locations =
                 extractor.get_channel_locations()
 
     .. grid-item::
 
         .. code-block:: python
 
-            channel_locations = 
+            channel_locations =
                 analyzer.get_channel_locations()
 
 
@@ -328,7 +329,7 @@ looks slightly different. Let's calculate these extensions, and also add a param
     .. grid-item::
 
         .. code-block:: python
-  
+
             extractor.precompute_templates(
                 modes=("average",)
             )
@@ -503,14 +504,14 @@ You can also access the parameters used in the extension calculation, which is v
     .. grid-item::
 
         .. code-block:: python
-  
+
             ul_parms = ul.params
 
 Quality metrics
 +++++++++++++++
 
 Quality metrics for the ``SortingAnalyzer`` are also extensions. You can calculate a specific
-quality metric using the ``metric_names`` argument. In contrast, for WaveformExtractors  you 
+quality metric using the ``metric_names`` argument. In contrast, for WaveformExtractors  you
 need to find the correct function. The old functions still work for SortingAnalyzers.
 
 .. grid:: 2
