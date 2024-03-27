@@ -6,6 +6,7 @@ import sys
 import datetime
 import json
 from copy import deepcopy
+import importlib
 from math import prod
 
 import numpy as np
@@ -477,3 +478,38 @@ def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
     """
 
     return 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-((x - mu) ** 2) / (2 * sigma**2))
+
+
+def retrieve_importing_provenance(a_class):
+    """
+    Retrieve the import provenance of a class, including its import name (that consists of the class name and the module), the top-level module, and the module version.
+
+    Parameters
+    ----------
+    a_class : type
+        The class object for which to retrieve the import provenance.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+        - 'class':  The module path and the name of the class concatenated (e.g., 'package.subpackage.ClassName').
+        - 'module': The top-level module name where the class is defined.
+        - 'version': The version of the module if available, otherwise 'unknown'.
+    Get class info as a dict.
+    """
+    module_import_path = a_class.__module__
+    class_name_no_path = a_class.__name__
+    class_name = f"{module_import_path}.{class_name_no_path}"  # e.g. 'spikeinterface.core.generate.AClass'
+    module = class_name.split(".")[0]
+
+    imported_module = importlib.import_module(module)
+    module_version = getattr(imported_module, "__version__", "unknown")
+
+    info = {
+        "class": class_name,
+        "module": module,
+        "version": module_version,
+    }
+
+    return info
