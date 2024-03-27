@@ -189,16 +189,12 @@ def get_potential_auto_merge(
 
     # STEP 5 : check if potential merge with CC also have template similarity
     if "template_similarity" in steps:
-        templates_ext = sorting_analyzer.get_extension("templates")
-        if templates_ext is None:
-            templates_ext = sorting_analyzer.get_extension("fast_templates")
-            templates = templates_ext.get_templates()
-        else:
-            templates = templates_ext.get_templates(operator="average")
+        templates_ext = sorting_analyzer.get_extension("templates") or sorting_analyzer.get_extension("fast_templates")
         assert (
             templates_ext is not None
         ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates or fast_templates"
 
+        templates = templates_ext.get_templates(operator="average")
         templates_diff = compute_templates_diff(
             sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask
         )
