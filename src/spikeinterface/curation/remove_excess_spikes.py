@@ -41,6 +41,7 @@ class RemoveExcessSpikesSorting(BaseSorting):
             )
 
         sorting.copy_metadata(self, only_main=False)
+        self._parent = sorting
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 

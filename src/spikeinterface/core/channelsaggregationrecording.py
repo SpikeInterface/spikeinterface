@@ -93,6 +93,10 @@ class ChannelsAggregationRecording(BaseRecording):
         self._recordings = recording_list
         self._kwargs = {"recording_list": [rec for rec in recording_list], "renamed_channel_ids": renamed_channel_ids}
 
+    @property
+    def recordings(self):
+        return self._recordings
+
 
 class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
     """

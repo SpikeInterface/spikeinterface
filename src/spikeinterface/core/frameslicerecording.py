@@ -59,6 +59,7 @@ class FrameSliceRecording(BaseRecording):
 
         # copy properties and annotations
         parent_recording.copy_metadata(self)
+        self._parent = parent_recording
 
         # update dump dict
         self._kwargs = {
