@@ -1,12 +1,13 @@
 """
 Implement AnalyzerExtension that are essential and imported in core
+  * SelectRandomSpikes
   * ComputeWaveforms
   * ComputeTemplates
 Theses two classes replace the WaveformExtractor
 
 It also implement:
   * ComputeFastTemplates which is equivalent but without extacting waveforms.
-  * ComputeNoiseLevels which is very convinient to have
+  * ComputeNoiseLevels which is very convenient to have
 """
 
 import numpy as np
@@ -105,6 +106,7 @@ class SelectRandomSpikes(AnalyzerExtension):
         return selected_spikes_in_spike_train
 
 
+compute_select_random_spikes = SelectRandomSpikes.function_factory()
 register_result_extension(SelectRandomSpikes)
 
 
