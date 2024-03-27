@@ -32,8 +32,8 @@ print(sorting)
 # Create SortingAnalyzer
 # -----------------------
 #
-# For this example, we will need a :code:`SortingAnalyzer` and some extension
-# to be computed fist
+# For this example, we will need a :code:`SortingAnalyzer` and some extensions
+# to be computed first
 
 
 analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recording, format="memory")
