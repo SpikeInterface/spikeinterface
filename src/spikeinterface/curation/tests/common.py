@@ -22,7 +22,7 @@ def make_sorting_analyzer(sparse=True):
         num_channels=4,
         num_units=5,
         generate_sorting_kwargs=dict(firing_rates=20.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
         seed=2205,
     )
 

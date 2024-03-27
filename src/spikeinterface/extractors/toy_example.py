@@ -151,7 +151,7 @@ def toy_example(
         ms_after=ms_after,
         dtype="float32",
         seed=seed,
-        noise_kwargs=dict(noise_level=10.0, strategy="on_the_fly"),
+        noise_kwargs=dict(noise_levels=10.0, strategy="on_the_fly"),
     )
 
     return recording, sorting
