@@ -555,7 +555,6 @@ list of quality metric parameters.
                 waveform_extractor = extractor,
                 qm_params = dqm_params)
 
-
     .. grid-item::
 
         .. code-block:: python
