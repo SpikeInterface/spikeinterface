@@ -17,7 +17,7 @@ to new SortingAnalyzer folders <#convert-a-waveformextractor-folder-to-a-sorting
 Why change?
 ^^^^^^^^^^^
 
-Previously, a lot of post-processing was handled by the ``WaveformExtractor`` class. However, as the name suggests, this singles out waveforms as special. But many outputs don't care about waveforms. And this isn't just a naming problem: you had to create a WaveformExtractor object (and thus calculate waveforms) to calculate e.g. spike_amplitudes, which didn't necessarily depend on them. Then to access this data you had to access the WaveformExtractor. We felt that this was confusing to the user: why are the spike amplitudes stored in a waveform class?? This mixing of waveforms with non-waveform objects also makes the codebase messy and harder to develop.
+Previously, a lot of post-processing was handled by the ``WaveformExtractor`` class. However, as the name suggests, this singles out waveforms as special. But many outputs don't care about waveforms. And this isn't just a naming problem: you had to create a WaveformExtractor object (and thus calculate waveforms) to calculate e.g. correlograms, which didn't depend on them. Then to access this data you had to access the WaveformExtractor. We felt that this was confusing to the user: why are the correlograms stored in a waveform class?? This mixing of waveforms with non-waveform objects also makes the codebase messy and harder to develop.
 
 Our new class is called the ``SortingAnalyzer``. You can think of this as combining a recording and a sorting into one. There are then lots of ``extensions`` which you can calculate. Waveforms are one extension of the SortingAnalyzer, but aren't special. We hope the new class is simpler to understand, especially for beginners. It also comes with some new features: you can calculate multiple extensions at the same time, it has better caching and better zarr support (hopefully leading to fast interactive widgets in the future).
 
@@ -33,9 +33,9 @@ This object contains a ``SortingAnalyzer`` which can be accessed and then saved 
     waveform_folder_path = "path_to/my_waveform_extractor_folder"
     new_sorting_analyzer_path = "path_to/my_new_sorting_analyzer_folder"
 
-    extractor = load_waveform(folder = waveform_folder_path)
+    extractor = load_waveform(folder=waveform_folder_path)
     sorting_analyzer = extractor.sorting_analyzer
-    sorting_analyzer.save_as(folder = new_sorting_analyzer_path, format = "binary_folder")
+    sorting_analyzer.save_as(folder=new_sorting_analyzer_path, format="binary_folder")
 
 
 The above code creates a ``SortingAnalyzer`` folder at ``new_sorting_analyzer_path``.
@@ -58,7 +58,7 @@ This section is split into four subsections:
 * `Quality Metrics <#id5>`_
 
 Throughout this section, we assume that all functions have been imported into the namespace. 
-E.g. we have run code such as ``from spikeinterface.postprocessing import extract_waveforms`` for each function. If you have imported
+E.g. we have run code such as ``from spikeinterface.core import create_sorting_analyzer`` for each function. If you have imported
 the full package (ie you have run ``import spikeinterface.full as si``) you need to prepend all
 functions by ``si.``. If you have imported individual modules (ie you have run `import spikeinterface.postprocessing as spost`)
 we will need to prepend functions by the appropriate submodule name.
@@ -94,19 +94,21 @@ First, create the object from a recording and a sorting.
         .. code-block:: python
 
             extractor = extract_waveforms(
-                sorting = sorting, 
-                recording = recording)
+                sorting=sorting, 
+                recording=recording
+            )
 
     .. grid-item::
 
         .. code-block:: python
 
             analyzer = create_sorting_analyzer(
-                sorting = sorter, 
-                recording = recording)
+                sorting=sorting, 
+                recording=recording
+            )
 
-
-By default, the object is stored in memory. Alternatively, we can save it locally at the point of creation by specifying a ``folder`` and a ``format``. Additionally, you can decide whether to use sparsity or not
+By default, the object is stored in memory. In this case, if you end your session without saving (which you can do using `save_as`, see below) you'll lose everything!
+Alternatively, we can save it locally at the point of creation by specifying a ``folder`` and a ``format``. Additionally, you can decide whether to use sparsity or not
 
 .. grid:: 2
 
@@ -115,23 +117,24 @@ By default, the object is stored in memory. Alternatively, we can save it locall
         .. code-block:: python
 
             extractor = extract_waveforms(
-                sorting = sorter, 
-                recording = recording,
-                mode = "folder",
-                folder = "my_waveform_extractor",
-                sparse = True)
+                sorting=sorting, 
+                recording=recording,
+                mode="folder",
+                folder="my_waveform_extractor",
+                sparse=True
+            )
 
     .. grid-item::
 
         .. code-block:: python
 
             analyzer = create_sorting_analyzer(
-                sorting = sorter, 
-                recording = recording,
-                folder = "my_sorting_analyzer",
-                format = "binary_folder",
-                sparse = True)
-
+                sorting=sorting, 
+                recording=recording,
+                folder="my_sorting_analyzer",
+                format="binary_folder",
+                sparse=True
+            )
 
 You can save the object after you've created it, with the option
 of saving it to a new format
@@ -142,15 +145,19 @@ of saving it to a new format
 
         .. code-block:: python
 
-            extractor.save(format="zarr", 
-                folder="/path/to_my/result.zarr")
+            extractor.save(
+                format="zarr", 
+                folder="/path/to_my/result.zarr"
+            )
 
     .. grid-item::
 
         .. code-block:: python
 
-            analyzer.save_as(format="zarr", 
-                folder="/path/to_my/result.zarr")
+            analyzer.save_as(
+                format="zarr", 
+                folder="/path/to_my/result.zarr"
+            )
 
 
 
@@ -164,17 +171,16 @@ If you already have the object saved, you can load it
         .. code-block:: python
 
             extractor = load_waveforms(
-                folder="my_waveform_extractor")
+                folder="my_waveform_extractor"
+            )
 
     .. grid-item::
 
         .. code-block:: python
 
             analyzer = load_sorting_analyzer(
-                folder="my_sorting_analyzer")
-
-
-
+                folder="my_sorting_analyzer"
+            )
 
 Checking basic properties
 +++++++++++++++++++++++++
@@ -302,15 +308,12 @@ though these are mostly used internally:
             analyzer.get_dtype()
             analyzer.is_sparse()
 
-
-
-
 Compute Extensions
 ++++++++++++++++++
 
 Waveforms, templates, quality metrics etc are all extensions of the ``SortingAnalyzer`` object.
-Some extensions depend on other extensions. To calculate a *parent* we must first have calculated it's 
-_children_. The relationship between some commonly used extensions are shown below:
+Some extensions depend on other extensions. To calculate a *child* we must first have calculated it's 
+_parents_. The relationship between some commonly used extensions are shown below:
 
 .. image:: waveform_extractor_to_sorting_analyzer_files/child_parent_plot.svg
     :alt: Child parent relationships
@@ -327,9 +330,12 @@ looks slightly different. Let's calculate these extensions, and also add a param
         .. code-block:: python
   
             extractor.precompute_templates(
-            modes=("average",))
-            compute_spike_amplitudes(extractor,
-                peak_sign = "pos")
+                modes=("average",)
+            )
+            compute_spike_amplitudes(
+                waveform_extractor=extractor,
+                peak_sign="pos"
+            )
 
     .. grid-item::
 
@@ -338,11 +344,10 @@ looks slightly different. Let's calculate these extensions, and also add a param
             analyzer.compute("random_spikes")
             analyzer.compute("waveforms")
             analyzer.compute("templates")
-            analyzer.compute("spike_amplitudes",
-                peak_sign = "pos")
-
-
-
+            analyzer.compute(
+                "spike_amplitudes",
+                peak_sign="pos"
+            )
 
 Read more about extensions and their keyword arguments in the
 `PostProcessing module documentation <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_
@@ -367,9 +372,6 @@ locally too. You can check which extensions have been saved
 
             analyzer.get_saved_extension_names()
 
-
-
-
 You can now also check which extensions are currently loaded *in memory*. The WaveformExtractor
 checks the local folder *and* the memory:
 
@@ -387,9 +389,6 @@ checks the local folder *and* the memory:
 
             analyzer.get_loaded_extension_names()
 
-
-
-
 If there is an extensions which is saved but not yet loaded you can load it:
 
 .. grid:: 2
@@ -399,17 +398,16 @@ If there is an extensions which is saved but not yet loaded you can load it:
         .. code-block:: python
 
             extractor.load_extension(
-                extension_name = "spike_amplitudes")
+                extension_name="spike_amplitudes"
+            )
 
     .. grid-item::
 
         .. code-block:: python
 
             analyzer.load_extension(
-                extension_name = "spike_amplitudes")
-
-
-
+                extension_name="spike_amplitudes"
+            )
 
 You can also check if a certain extension is loaded
 
@@ -420,7 +418,8 @@ You can also check if a certain extension is loaded
         .. code-block:: python
 
             extractor.has_extension(
-                extension_name = "spike_amplitudes")
+                extension_name="spike_amplitudes"
+            )
 
 
     .. grid-item::
@@ -428,12 +427,10 @@ You can also check if a certain extension is loaded
         .. code-block:: python
 
             analyzer.has_extension(
-                extension_name = "spike_amplitudes")
+                extension_name="spike_amplitudes"
+            )
 
-
-
-
-You can delete extensions. Note that if you delete a child all of its parents
+You can delete extensions. Note that if you delete a parent, all of its children
 will be deleted too. We'll now delete ``templates`` from the SortingAnalyzer and ``spike_amplitudes`` from our WaveformExtractor.
 
 .. grid:: 2
@@ -443,7 +440,8 @@ will be deleted too. We'll now delete ``templates`` from the SortingAnalyzer and
           .. code-block:: python
 
             extractor.delete_extension(
-                extension_name = "spike_amplitudes")
+                extension_name="spike_amplitudes"
+            )
 
     .. grid-item::
 
@@ -452,10 +450,8 @@ will be deleted too. We'll now delete ``templates`` from the SortingAnalyzer and
             # This also deletes any parents
             # such as spike_amplitudes
             analyzer.delete_extension(
-                extension_name = "templates")
-
-
-
+                extension_name="templates"
+            )
 
 Once you have computed an extension, you often want to look at the data associated with it.
 This has been standardized for the ``SortingAnalyzer`` object, through the ``get_data`` method.
@@ -469,24 +465,25 @@ on which extension you were interested in. We won't list them all here.
           .. code-block:: python
 
             wv_data = extractor.get_waveforms(
-                unit_id=0)
+                unit_id=0
+            )
             
             ul_data = compute_unit_locations(
-                extractor)
+                waveform_extractor=extractor
+            )
 
     .. grid-item::
 
         .. code-block:: python
 
             wv = analyzer.get_extension(
-                extension_name = "waveforms")
+                extension_name="waveforms"
+            )
             wv_data = wv.get_data()
             ul = analyzer.get_extension(
-                extension_name = "unit_locations")
+                extension_name="unit_locations"
+            )
             ul_data = nl.get_data()
-
-
-
 
 You can also access the parameters used in the extension calculation, which is very simply for the new SortingAnalyzer:
 
@@ -497,18 +494,17 @@ You can also access the parameters used in the extension calculation, which is v
         .. code-block:: python
 
             ul_ex = extractor.load_extension(
-                "unit_locations")
+                extension_name="unit_locations"
+            )
             ul_parms = ul_ex.load_params_from_folder(
-                folder="my_waveform_extractor")
+                folder="my_waveform_extractor"
+            )
 
     .. grid-item::
 
         .. code-block:: python
   
             ul_parms = ul.params
-
-
-
 
 Quality metrics
 +++++++++++++++
@@ -524,7 +520,8 @@ need to find the correct function. The old functions still work for SortingAnaly
         .. code-block:: python
 
             amp_cut_data = compute_amplitude_cutoffs(
-                waveform_extractor = extractor)
+                waveform_extractor=extractor
+            )
             #or: compute_amplitude_cutoffs(extractor)
 
     .. grid-item::
@@ -533,13 +530,10 @@ need to find the correct function. The old functions still work for SortingAnaly
 
             amp_cutoff = analyzer.compute(
                 "quality_metrics", 
-                metric_names=["amplitude_cutoff"])
+                metric_names=["amplitude_cutoff"]
+            )
             amp_cut_data = amp_cutoff.get_data()
             #or: compute_amplitude_cutoff(analyzer)
-
-
-
-
 
 Or you can calculate all available quality metrics. Here, we also pass a 
 list of quality metric parameters.
@@ -552,8 +546,9 @@ list of quality metric parameters.
 
             dqm_params = get_default_qm_params()
             amp_cut_data = compute_quality_metrics(
-                waveform_extractor = extractor,
-                qm_params = dqm_params)
+                waveform_extractor=extractor,
+                qm_params=dqm_params
+            )
 
     .. grid-item::
 
@@ -562,11 +557,9 @@ list of quality metric parameters.
             dqm_params = get_default_qm_params()
             amp_cutoff = analyzer.compute(
                 "quality_metrics",
-                qm_params = dqm_params)
+                qm_params=dqm_params
+            )
             #alt: compute_quality_metrics(analyzer)
-
-
-
 
 Learn more about the possible quality metrics and their keyword arguments in the
 `quality metrics documentation page <https://spikeinterface.readthedocs.io/en/latest/modules/qualitymetrics.html>`_.
