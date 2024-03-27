@@ -242,7 +242,7 @@ class ComputeWaveforms(AnalyzerExtension):
             chan_inds = self.sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
             wfs = wfs[:, :, : chan_inds.size]
             if force_dense:
-                num_channels = self.get_num_channels()
+                num_channels = self.sorting_analyzer.get_num_channels()
                 dense_wfs = np.zeros((wfs.shape[0], wfs.shape[1], num_channels), dtype=wfs.dtype)
                 dense_wfs[:, :, chan_inds] = wfs
                 wfs = dense_wfs
