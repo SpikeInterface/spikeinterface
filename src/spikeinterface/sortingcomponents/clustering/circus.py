@@ -36,6 +36,7 @@ from spikeinterface.core.node_pipeline import (
     ExtractSparseWaveforms,
     PeakRetriever,
 )
+
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
 
@@ -87,7 +88,6 @@ class CircusClustering:
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
         np.random.seed(d["random_seed"])
-
         if params["tmp_folder"] is None:
             name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = get_global_tmp_folder() / name

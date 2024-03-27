@@ -16,6 +16,8 @@ from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
 
+from spikeinterface.sortingcomponents.tools import get_prototype_spike
+
 try:
     import hdbscan
 
@@ -41,6 +43,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "clustering": {"legacy": False},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
+        "matched_filtering": False,
         "cache_preprocessing": {"mode": None, "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
@@ -98,6 +101,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         sampling_frequency = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
+        ms_before = params["general"]["ms_before"]
+        ms_after = params["general"]["ms_after"]
+        radius_um = params["general"]["radius_um"]
 
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
@@ -121,14 +127,33 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
-        detection_params.update(job_kwargs)
-        if "radius_um" not in detection_params:
-            detection_params["radius_um"] = params["general"]["radius_um"]
+        detection_params["noise_levels"] = noise_levels
         if "exclude_sweep_ms" not in detection_params:
-            detection_params["exclude_sweep_ms"] = max(params["general"]["ms_before"], params["general"]["ms_after"])
+            detection_params["exclude_sweep_ms"] = max(ms_before, ms_after)
+        if "radius_um" not in detection_params:
+            detection_params["radius_um"] = radius_um
         detection_params["noise_levels"] = noise_levels
 
-        peaks = detect_peaks(recording_f, method="locally_exclusive", **detection_params)
+        fs = recording_f.get_sampling_frequency()
+        nbefore = int(ms_before * fs / 1000.0)
+        nafter = int(ms_after * fs / 1000.0)
+        num_samples = nbefore + nafter
+        num_chans = recording_f.get_num_channels()
+
+        peaks = detect_peaks(recording_f, "locally_exclusive", **detection_params, **job_kwargs)
+
+        if params["matched_filtering"]:
+            prototype = get_prototype_spike(recording_f, peaks, ms_before, ms_after, **job_kwargs)
+            detection_params["prototype"] = prototype
+
+            matching_job_params = job_kwargs.copy()
+            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+                if value in matching_job_params:
+                    matching_job_params.pop(value)
+
+            matching_job_params["chunk_duration"] = "100ms"
+
+            peaks = detect_peaks(recording_f, "matched_filtering", **detection_params, **matching_job_params)
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
