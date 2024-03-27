@@ -616,8 +616,6 @@ def synthesize_poisson_spike_vector(
     refractory_period_ms=4.0,
     firing_rates=3.0,
     seed=0,
-    insertions=None,
-    insertions_replace=True,
 ):
     """
     Generate random spike frames for neuronal units using a Poisson process.
@@ -642,11 +640,6 @@ def synthesize_poisson_spike_vector(
         each element being the firing rate for one unit
     seed : int, default: 0
         Seed for random number generator
-    insertions: array-like
-        List of manually inserted spikes, each spike formatted as [sample index, unit index]. Intended for
-        use in testing.
-    insertions_replace: bool
-        If True, randomly replace generated spikes. If False, add to generated spikes.
 
     Returns
     -------
@@ -716,11 +709,6 @@ def synthesize_poisson_spike_vector(
     spike_frames[:num_correct_frames] = spike_frames[mask]  # Avoids a malloc
     unit_indices = unit_indices[mask]
 
-    # Add insertions
-    if insertions is not None:
-        spike_frames, unit_indices = _add_insertions(
-            [spike_frames, unit_indices], insertions=insertions, insertions_replace=insertions_replace
-        )
 
     # Sort globaly
     spike_frames = spike_frames[:num_correct_frames]
@@ -740,8 +728,6 @@ def synthesize_random_firings(
     firing_rates=3.0,
     add_shift_shuffle=False,
     seed=None,
-    insertions=None,
-    insertions_replace=False,
 ):
     """ "
     Generate some spiketrain with random firing for one segment.
@@ -763,11 +749,6 @@ def synthesize_random_firings(
         Optionally add a small shuffle on half of the spikes to make the autocorrelogram less flat.
     seed: int, default: None
         seed for the generator
-    insertions: array-like
-        List of manually inserted spikes, each spike formatted as [sample index, unit index]. Intended for
-        use in testing.
-    insertions_replace: bool, default: False
-        If True, randomly replace generated spikes. If False, add to generated spikes.
 
     Returns
     -------
@@ -821,17 +802,35 @@ def synthesize_random_firings(
     times = np.concatenate(times)
     labels = np.concatenate(labels)
 
-    if insertions is not None:
-        times, labels = _add_insertions([times, labels], insertions=insertions, insertions_replace=insertions_replace)
-
     sort_inds = np.argsort(times)
     times = times[sort_inds]
     labels = labels[sort_inds]
 
     return (times, labels)
 
+def clean_refractory_period(times, refractory_period):
+    """
+    Remove spike that violate the refractory period in a given spike train.
 
-def _add_insertions(spike_train, insertions=None, insertions_replace=False, rng=None, seed=None):
+    times and refractory_period must have the same units : samples or second or ms
+    """
+
+    if times.size == 0:
+        return times
+
+    times = np.sort(times)
+    while True:
+        diffs = np.diff(times)
+        (inds,) = np.nonzero(diffs <= refractory_period)
+        if inds.size == 0:
+            break
+        keep = np.ones(times.size, dtype="bool")
+        keep[inds + 1] = False
+        times = times[keep]
+
+    return times
+
+def _add_insertions(spike_train, insertions=None, insertions_replace=False, seed=None):
     """
     Add specified insertions into a spike train
 
@@ -866,8 +865,7 @@ def _add_insertions(spike_train, insertions=None, insertions_replace=False, rng=
         insertions[0]
     ), "Number of spike train and insertions indices are not equal."
 
-    if rng is None:
-        rng = np.random.default_rng(seed=seed)
+    rng = np.random.default_rng(seed=seed)
 
     if insertions_replace:
         replacement_indices = rng.choice(len(spike_train), len(insertions), replace=False)
@@ -876,30 +874,6 @@ def _add_insertions(spike_train, insertions=None, insertions_replace=False, rng=
         new_spike_train = np.concatenate((new_spike_train, np.transpose(insertions)), axis=1)
 
     return new_spike_train
-
-
-def clean_refractory_period(times, refractory_period):
-    """
-    Remove spike that violate the refractory period in a given spike train.
-
-    times and refractory_period must have the same units : samples or second or ms
-    """
-
-    if times.size == 0:
-        return times
-
-    times = np.sort(times)
-    while True:
-        diffs = np.diff(times)
-        (inds,) = np.nonzero(diffs <= refractory_period)
-        if inds.size == 0:
-            break
-        keep = np.ones(times.size, dtype="bool")
-        keep[inds + 1] = False
-        times = times[keep]
-
-    return times
-
 
 def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=None):
     """
