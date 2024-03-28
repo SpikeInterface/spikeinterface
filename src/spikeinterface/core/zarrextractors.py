@@ -381,7 +381,7 @@ def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.hiera
     dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
 
     zarr_kwargs["dtype"] = kwargs.get("dtype", None) or recording.get_dtype()
-    if "compressor" not in zarr_group:
+    if "compressor" not in zarr_kwargs:
         zarr_kwargs["compressor"] = get_default_zarr_compressor()
 
     add_traces_to_zarr(
@@ -392,7 +392,7 @@ def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.hiera
         **job_kwargs,
     )
 
-    # # save probe
+    # save probe
     if recording.get_property("contact_vector") is not None:
         probegroup = recording.get_probegroup()
         zarr_group.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
