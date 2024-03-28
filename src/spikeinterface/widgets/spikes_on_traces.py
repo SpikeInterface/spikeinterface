@@ -82,6 +82,7 @@ class SpikesOnTracesWidget(BaseWidget):
         tile_size=512,
         seconds_per_row=0.2,
         scale=1,
+        spike_width_ms=1,
         with_colorbar=True,
         backend=None,
         **backend_kwargs,
@@ -140,6 +141,7 @@ class SpikesOnTracesWidget(BaseWidget):
             sparsity=sparsity,
             unit_colors=unit_colors,
             unit_locations=unit_locations,
+            spike_width_ms=spike_width_ms,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -166,8 +168,8 @@ class SpikesOnTracesWidget(BaseWidget):
 
         frame_range = traces_widget.data_plot["frame_range"]
         segment_index = traces_widget.data_plot["segment_index"]
-        min_y = np.min(traces_widget.data_plot["channel_locations"][:, 1])
-        max_y = np.max(traces_widget.data_plot["channel_locations"][:, 1])
+        min_y = np, min(recording.get_channel_locations()[:, 1])
+        y_pitch = np.min(np.diff(np.unique(recording.get_channel_locations()[:, 1])))
 
         n = len(traces_widget.data_plot["channel_ids"])
 
@@ -190,10 +192,10 @@ class SpikesOnTracesWidget(BaseWidget):
                 spike_times_to_plot = sorting.get_unit_spike_train(
                     unit, segment_index=segment_index, return_times=True
                 )[spike_start:spike_end]
-                unit_y_loc = min_y + max_y - dp.unit_locations[unit][1]
-                # markers = np.ones_like(spike_frames_to_plot) * (min_y + max_y - dp.unit_locations[unit][1])
-                width = 2 * 1e-3
-                ellipse_kwargs = dict(width=width, height=10, fc="none", ec=dp.unit_colors[unit], lw=2)
+                unit_y_loc = dp.unit_locations[unit][1]
+                width = dp.spike_width_ms / 1000
+                height = 2 * y_pitch
+                ellipse_kwargs = dict(width=width, height=height, fc="none", ec=dp.unit_colors[unit], lw=2)
                 patches = [Ellipse((s, unit_y_loc), **ellipse_kwargs) for s in spike_times_to_plot]
                 for p in patches:
                     ax.add_patch(p)
@@ -217,9 +219,7 @@ class SpikesOnTracesWidget(BaseWidget):
                     vspacing = traces_widget.data_plot["vspacing"]
                     traces = traces_widget.data_plot["list_traces"][0] * dp.options["scale"]
 
-                    # TODO find a better way
-                    nbefore = 30
-                    nafter = 60
+                    nbefore = nafter = dp.spike_width_ms // 2 * sorting_analyzer.sampling_frequency / 1000
                     waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-nbefore, nafter) - frame_range[0]
                     waveform_idxs = np.clip(waveform_idxs, 0, len(traces_widget.data_plot["times"]) - 1)
 
