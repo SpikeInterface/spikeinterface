@@ -209,6 +209,22 @@ def test_ComputeNoiseLevels(format, sparse):
     assert noise_levels.shape[0] == sorting_analyzer.channel_ids.size
 
 
+def test_ComputeFastTemplates_versus_ComputeTemplates():
+    sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
+
+    # compute fast_templates and templates
+    sorting_analyzer.compute(["fast_templates", "waveforms", "templates"])
+
+    templates_fast = sorting_analyzer.get_extension("fast_templates").get_templates()
+    templates_fast_std = sorting_analyzer.get_extension("fast_templates").get_templates(operator="std")
+    templates = sorting_analyzer.get_extension("templates").get_templates()
+    templates_std = sorting_analyzer.get_extension("fast_templates").get_templates(operator="std")
+
+    np.testing.assert_almost_equal(templates_fast, templates)
+    np.testing.assert_almost_equal(templates_fast_std, templates_std)
+
+
 if __name__ == "__main__":
 
     test_SelectRandomSpikes(format="memory", sparse=True)
@@ -228,3 +244,5 @@ if __name__ == "__main__":
     test_ComputeFastTemplates(format="memory", sparse=True)
 
     test_ComputeNoiseLevels(format="memory", sparse=False)
+
+    test_ComputeFastTemplates_versus_ComputeTemplates()

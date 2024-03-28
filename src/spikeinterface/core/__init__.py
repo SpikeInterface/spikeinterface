@@ -103,7 +103,7 @@ from .recording_tools import (
 )
 from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection
 
-from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_average
+from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_online
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor

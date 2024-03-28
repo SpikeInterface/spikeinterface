@@ -7,7 +7,7 @@ from .basesorting import BaseSorting
 from .baserecording import BaseRecording
 from .sorting_tools import random_spikes_selection
 from .job_tools import _shared_job_kwargs_doc
-from .waveform_tools import estimate_templates_average
+from .waveform_tools import estimate_templates_online
 
 
 _sparsity_doc = """
@@ -553,7 +553,7 @@ def estimate_sparsity(
       * all units are computed in one read of recording
       * it doesn't require a folder
       * it doesn't consume too much memory
-      * it uses internally the `estimate_templates_average()` which is fast and parallel
+      * it uses internally the `estimate_templates_online()` which is fast and parallel
 
     Parameters
     ----------
@@ -613,7 +613,7 @@ def estimate_sparsity(
     spikes = sorting.to_spike_vector()
     spikes = spikes[random_spikes_indices]
 
-    templates_array = estimate_templates_average(
+    templates_array = estimate_templates_online(
         recording,
         spikes,
         sorting.unit_ids,
