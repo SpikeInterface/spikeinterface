@@ -39,7 +39,7 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
 
         probegroup = probeinterface.read_spikegadgets(file_path)
-        print('Total channels found in recording:', probegroup.get_contact_count())
+        print("Total channels found in recording:", probegroup.get_contact_count())
 
         self.set_probes(probegroup, in_place=True)
 
