@@ -2,8 +2,9 @@ from __future__ import annotations
 from typing import Optional
 
 import numpy as np
-from spikeinterface.core import Templates, BaseRecording, BaseSorting, BaseRecordingSegment
-import math
+from spikeinterface.core.template import Templates
+from spikeinterface.generation import make_linear_displacement, InjectDriftingTemplatesRecording
+from spikeinterface.core.generate import generate_templates, generate_unit_locations, _ensure_seed, generate_sorting
 from spikeinterface.core.job_tools import split_job_kwargs
 
 
@@ -64,3 +65,98 @@ def estimate_templates_from_recording(
     )
 
     return templates
+
+
+def generate_hybrid_recording(recording, motion=None, num_units=10,
+                              sorting=None,
+                              templates=None,
+                              ms_before=1.0,
+                              ms_after=3.0,
+                              upsample_factor=None,
+                              upsample_vector=None,
+                              sorting_kwargs={'seed' : 2205},
+                              unit_locations_kwargs={'seed' : 2205},
+                              generate_templates_kwargs={'seed' : 2205},
+                              seed=None):
+
+    # if None so the same seed will be used for all steps
+    seed = _ensure_seed(seed)
+    rng = np.random.default_rng(seed)
+
+    fs = recording.sampling_frequency
+    probe = recording.get_probe()
+
+    sorting = generate_sorting(
+        num_units=num_units,
+        sampling_frequency=fs,
+        durations = [recording.get_duration()],
+        **sorting_kwargs)
+
+    num_spikes = sorting.to_spike_vector().size
+
+    if templates is None:
+        channel_locations = probe.contact_positions
+        unit_locations = generate_unit_locations(num_units, channel_locations, **unit_locations_kwargs)
+        templates_array = generate_templates(channel_locations, unit_locations, **generate_templates_kwargs)
+
+    nbefore = int(ms_before * sampling_frequency / 1000.0)
+    nafter = int(ms_after * sampling_frequency / 1000.0)
+    assert (nbefore + nafter) == templates.shape[1]
+
+
+    if templates.ndim == 3:
+        upsample_vector = None
+    else:
+        if upsample_vector is None:
+            upsample_factor = templates.shape[3]
+            upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
+
+    if motion is not None:
+        num_displacement = displacements.shape[0]
+        templates_array_moved = np.zeros(shape=(num_displacement, ) + templates_array.shape, dtype=templates_array.dtype)
+        for i in range(num_displacement):
+            unit_locations_moved = unit_locations.copy()
+            unit_locations_moved[:, :2] += displacements[i, :][np.newaxis, :]
+            templates_array_moved[i, :, :, :] = generate_templates(channel_locations, unit_locations_moved, **generate_templates_kwargs)
+
+        templates = Templates(
+            templates_array=templates_array,
+            sampling_frequency=fs,
+            nbefore=nbefore,
+            probe=probe,
+        )
+
+        # if drift_amplitude > 0:
+        #     start = np.array([0, -drift_amplitude/2])
+        #     stop = np.array([0, drift_amplitude/2])
+        #     num_step = int(drift_amplitude) * 2 + 1
+        #     # print('num_step', num_step)
+        #     displacements = make_linear_displacement(start, stop, num_step=num_step)
+        # else:
+        #     displacements = np.zeros((1, 2))
+        #     start = np.array([0, 0])
+        #     stop = np.array([0, 0])
+    
+
+        hybrid_recording = InjectDriftingTemplatesRecording(
+            sorting=sorting,
+            parent_recording=recording,
+            drifting_templates=drifting_templates,
+            displacement_vectors=[displacement_vectors],
+            displacement_sampling_frequency=displacement_sampling_frequency,
+            displacement_unit_factor=displacement_unit_factor,
+            num_samples=[int(duration*sampling_frequency)],
+            amplitude_factor=None,
+        )
+    
+    else:
+
+        hybrid_recording = InjectTemplatesRecording(
+            sorting,
+            templates,
+            nbefore=nbefore,
+            parent_recording=recording,
+            upsample_vector=upsample_vector,
+        )
+    
+    return hybrid_recording, sorting
