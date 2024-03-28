@@ -559,8 +559,10 @@ class NwbRecordingExtractor(BaseRecording):
         # fetch and add main recording properties
         if use_pynwb:
             gains, offsets, locations, groups = self._fetch_main_properties_pynwb()
+            self.extra_requirements.append("pynwb")
         else:
             gains, offsets, locations, groups = self._fetch_main_properties_backend()
+            self.extra_requirements.append("h5py")
         self.set_channel_gains(gains)
         self.set_channel_offsets(offsets)
         if locations is not None:
@@ -772,8 +774,6 @@ class NwbRecordingExtractor(BaseRecording):
         #########
         # Extract and re-name properties from nwbfile TODO: Should be a function
         ########
-        from pynwb.ecephys import ElectrodeGroup
-
         properties = dict()
         properties_to_skip = [
             "id",
@@ -789,9 +789,7 @@ class NwbRecordingExtractor(BaseRecording):
 
         for column in columns:
             first_value = electrodes_table[column][0]
-            if isinstance(first_value, ElectrodeGroup):
-                continue
-            elif column in properties_to_skip:
+            if column in properties_to_skip:
                 continue
             else:
                 column_name = rename_properties.get(column, column)
@@ -1015,8 +1013,10 @@ class NwbSortingExtractor(BaseSorting):
         if load_unit_properties:
             if use_pynwb:
                 columns = [c.name for c in self.units_table.columns]
+                self.extra_requirements.append("pynwb")
             else:
                 columns = list(self.units_table.keys())
+                self.extra_requirements.append("h5py")
             properties = self._fetch_properties(columns)
             for property_name, property_values in properties.items():
                 values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in property_values]
