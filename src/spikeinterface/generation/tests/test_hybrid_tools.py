@@ -18,16 +18,19 @@ def test_generate_hybrid_no_motion():
     rec, sorting = generate_ground_truth_recording(sampling_frequency=20000)
     hybrid, sorting = generate_hybrid_recording(rec)
 
+
 def test_generate_hybrid_motion():
     rec, sorting = generate_ground_truth_recording(sampling_frequency=20000)
     correct_motion(rec, folder=cache_folder / "motion")
     motion = load_motion_info(cache_folder / "motion")
     hybrid, sorting = generate_hybrid_recording(rec, motion)
 
+
 def test_estimate_templates():
     rec, sorting = generate_ground_truth_recording(num_units=10, sampling_frequency=20000)
-    templates = estimate_templates_from_recording(rec, output_folder=cache_folder / 'sc', remove_existing_folder=True)
+    templates = estimate_templates_from_recording(rec, output_folder=cache_folder / "sc", remove_existing_folder=True)
     assert len(templates.templates_array) > 0
+
 
 if __name__ == "__main__":
     test_generate_hybrid_no_motion()
