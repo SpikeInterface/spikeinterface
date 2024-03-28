@@ -1,17 +1,8 @@
 from __future__ import annotations
 
-from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
 from spikeinterface.core import NumpySorting
-from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import GroundTruthComparison
-from spikeinterface.widgets import (
-    plot_probe_map,
-    plot_agreement_matrix,
-    plot_comparison_collision_by_similarity,
-    plot_unit_templates,
-    plot_unit_waveforms,
-)
 from spikeinterface.comparison.comparisontools import make_matching_events
 from spikeinterface.core import get_noise_levels
 
@@ -21,7 +12,7 @@ import pylab as plt
 import os
 import numpy as np
 
-from .benchmark_tools import BenchmarkStudy, Benchmark
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
