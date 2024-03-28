@@ -18,6 +18,7 @@ class Kilosort4Sorter(BaseSorter):
     gpu_capability = "nvidia-optional"
 
     _default_params = {
+        "batch_size": 60000,
         "nblocks": 1,
         "Th_universal": 9,
         "Th_learned": 8,
@@ -53,6 +54,7 @@ class Kilosort4Sorter(BaseSorter):
     }
 
     _params_description = {
+        "batch_size": "Number of samples per batch. Default value: 60000.",
         "nblocks": "Number of non-overlapping blocks for drift correction (additional nblocks-1 blocks are created in the overlaps). Default value: 1.",
         "Th_universal": "Spike detection threshold for universal templates. Th(1) in previous versions of Kilosort. Default value: 9.",
         "Th_learned": "Spike detection threshold for learned templates. Th(2) in previous versions of Kilosort. Default value: 8.",
