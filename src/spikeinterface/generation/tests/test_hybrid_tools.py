@@ -19,6 +19,7 @@ def test_generate_hybrid_with_sorting():
     rec, _ = generate_ground_truth_recording(durations=[10], sampling_frequency=20000, sorting=gt_sorting)
     hybrid, _ = generate_hybrid_recording(rec)
 
+
 def test_generate_hybrid_no_motion():
     rec, sorting = generate_ground_truth_recording(sampling_frequency=20000)
     hybrid, sorting = generate_hybrid_recording(rec)
