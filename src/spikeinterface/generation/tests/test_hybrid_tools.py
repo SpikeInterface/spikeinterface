@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-from spikeinterface.core.generate import generate_ground_truth_recording
+from spikeinterface.core.generate import generate_ground_truth_recording, generate_sorting
 from spikeinterface.core import Templates, BaseRecording
 from spikeinterface.preprocessing.motion import correct_motion, load_motion_info
 from spikeinterface.generation.hybrid_tools import estimate_templates_from_recording, generate_hybrid_recording
@@ -13,6 +13,11 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "generation"
 
+
+def test_generate_hybrid_with_sorting():
+    gt_sorting = generate_sorting(durations=[10], num_units=20, sampling_frequency=20000)
+    rec, _ = generate_ground_truth_recording(durations=[10], sampling_frequency=20000, sorting=gt_sorting)
+    hybrid, _ = generate_hybrid_recording(rec)
 
 def test_generate_hybrid_no_motion():
     rec, sorting = generate_ground_truth_recording(sampling_frequency=20000)
@@ -33,3 +38,4 @@ if __name__ == "__main__":
     test_generate_hybrid_no_motion()
     test_generate_hybrid_motion()
     test_estimate_templates()
+    test_generate_hybrid_with_sorting()
