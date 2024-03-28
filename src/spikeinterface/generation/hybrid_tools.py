@@ -121,9 +121,9 @@ def generate_hybrid_recording(recording,
     Returns
     -------
     recording: Recording
-        The generated recording extractor.
+        The generated hybrid recording extractor.
     sorting: Sorting
-        The generated sorting extractor.
+        The generated sorting extractor for the injected units.
     """
 
     # if None so the same seed will be used for all steps
