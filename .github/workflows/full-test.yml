@@ -24,15 +24,15 @@ jobs:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", ]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: Get current year-month
         id: date
         run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
       - name: Restore cached virtual environment with dependencies
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         id: cache-venv
         with:
           path: ${{ github.workspace }}/test_env
@@ -43,7 +43,7 @@ jobs:
         run: |
           echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - name: Restore cached gin data for extractors tests
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         id: cache-datasets
         env:
           # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git

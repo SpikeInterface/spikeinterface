@@ -101,19 +101,21 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
-from .sorting_tools import spike_vector_to_spike_trains
+from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection
 
-from .waveform_tools import extract_waveforms_to_buffers
+from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_average
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
-from .waveform_extractor import (
-    WaveformExtractor,
-    BaseWaveformExtractorExtension,
-    extract_waveforms,
-    load_waveforms,
-    precompute_sparsity,
-)
+# Important not for compatibility!!
+# This wil be commented after 0.100 relase but the module will not be removed.
+# from .waveform_extractor import (
+#     WaveformExtractor,
+#     BaseWaveformExtractorExtension,
+# extract_waveforms,
+# load_waveforms,
+#     precompute_sparsity,
+# )
 
 # retrieve datasets
 from .datasets import download_dataset
@@ -134,10 +136,36 @@ from .template_tools import (
     get_template_extremum_channel,
     get_template_extremum_channel_peak_shift,
     get_template_extremum_amplitude,
-    get_template_channel_sparsity,
 )
 
 # channel sparsity
 from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
 
 from .template import Templates
+
+# SortingAnalyzer and AnalyzerExtension
+from .sortinganalyzer import (
+    SortingAnalyzer,
+    AnalyzerExtension,
+    create_sorting_analyzer,
+    load_sorting_analyzer,
+    get_available_analyzer_extensions,
+    get_default_analyzer_extension_params,
+)
+
+from .analyzer_extension_core import (
+    SelectRandomSpikes,
+    compute_select_random_spikes,
+    ComputeWaveforms,
+    compute_waveforms,
+    ComputeTemplates,
+    compute_templates,
+    ComputeFastTemplates,
+    compute_fast_templates,
+    ComputeNoiseLevels,
+    compute_noise_levels,
+)
+
+# Important not for compatibility!!
+# This wil be uncommented after 0.100
+from .waveforms_extractor_backwards_compatibility import extract_waveforms, load_waveforms

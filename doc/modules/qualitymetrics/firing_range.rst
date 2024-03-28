@@ -23,8 +23,8 @@ Example code
 
     import spikeinterface.qualitymetrics as sqm
 
-    # Make recording, sorting and wvf_extractor object for your data.
-    firing_range = sqm.compute_firing_ranges(waveform_extractor=wvf_extractor)
+    # Combine a sorting and recording into a sorting_analyzer
+    firing_range = sqm.compute_firing_ranges(sorting_analyzer=sorting_analyzer)
     # firing_range is a dict containing the unit IDs as keys,
     # and their firing firing_range as values (in Hz).
 

@@ -37,7 +37,7 @@
 	<td>Codecov</td>
 	<td>
 		<a href="https://codecov.io/github/spikeinterface/spikeinterface">
-		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/master/graphs/badge.svg" alt="codecov" />
+		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/main/graphs/badge.svg" alt="codecov" />
 		</a>
 	</td>
 </tr>
@@ -46,7 +46,11 @@
 [![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
 
 
-> :warning::warning::warning: **PRs with new features are frozen!**: after the 0.100.0 release, we will not accept PRs with new features (only bug fixes) until February 21st 2024.
+> :warning::warning::warning:
+> **New features under construction!** 🚧🚧🚧: after the 0.100.0 release (and related bug fixes), the next release will contain
+> a major API improvement: the `SortingAnalyzer`. To read more about this, checkout the
+> [enhancement proposal](https://github.com/SpikeInterface/spikeinterface/issues/2282).
+> Please refer to the stable documentation [here](https://spikeinterface.readthedocs.io/en/0.100.1)
 
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
@@ -70,7 +74,7 @@ With SpikeInterface, users can:
 
 ## Documentation
 
-Detailed documentation of the latest PyPI release of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/0.100.0).
+Detailed documentation of the latest PyPI release of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/0.100.1).
 
 Detailed documentation of the development version of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
 

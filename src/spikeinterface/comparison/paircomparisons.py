@@ -13,7 +13,7 @@ from .comparisontools import (
     do_count_score,
     compute_performance,
 )
-from ..postprocessing import compute_template_similarity
+from ..postprocessing import compute_template_similarity_by_pair
 
 
 class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
@@ -696,14 +696,14 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
 
     Parameters
     ----------
-    we1 : WaveformExtractor
-        The first waveform extractor to get templates to compare
-    we2 : WaveformExtractor
-        The second waveform extractor to get templates to compare
+    sorting_analyzer_1 : SortingAnalyzer
+        The first SortingAnalyzer to get templates to compare
+    sorting_analyzer_2 : SortingAnalyzer
+        The second SortingAnalyzer to get templates to compare
     unit_ids1 : list, default: None
-        List of units from we1 to compare
+        List of units from sorting_analyzer_1 to compare
     unit_ids2 : list, default: None
-        List of units from we2 to compare
+        List of units from sorting_analyzer_2 to compare
     similarity_method : str, default: "cosine_similarity"
         Method for the similaroty matrix
     sparsity_dict : dict, default: None
@@ -719,10 +719,10 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
 
     def __init__(
         self,
-        we1,
-        we2,
-        we1_name=None,
-        we2_name=None,
+        sorting_analyzer_1,
+        sorting_analyzer_2,
+        name1=None,
+        name2=None,
         unit_ids1=None,
         unit_ids2=None,
         match_score=0.7,
@@ -731,29 +731,29 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         sparsity_dict=None,
         verbose=False,
     ):
-        if we1_name is None:
-            we1_name = "sess1"
-        if we2_name is None:
-            we2_name = "sess2"
+        if name1 is None:
+            name1 = "sess1"
+        if name2 is None:
+            name2 = "sess2"
         BasePairComparison.__init__(
             self,
-            object1=we1,
-            object2=we2,
-            name1=we1_name,
-            name2=we2_name,
+            object1=sorting_analyzer_1,
+            object2=sorting_analyzer_2,
+            name1=name1,
+            name2=name2,
             match_score=match_score,
             chance_score=chance_score,
             verbose=verbose,
         )
         MixinTemplateComparison.__init__(self, similarity_method=similarity_method, sparsity_dict=sparsity_dict)
 
-        self.we1 = we1
-        self.we2 = we2
-        channel_ids1 = we1.recording.get_channel_ids()
-        channel_ids2 = we2.recording.get_channel_ids()
+        self.sorting_analyzer_1 = sorting_analyzer_1
+        self.sorting_analyzer_2 = sorting_analyzer_2
+        channel_ids1 = sorting_analyzer_1.recording.get_channel_ids()
+        channel_ids2 = sorting_analyzer_2.recording.get_channel_ids()
 
         # two options: all channels are shared or partial channels are shared
-        if we1.recording.get_num_channels() != we2.recording.get_num_channels():
+        if sorting_analyzer_1.recording.get_num_channels() != sorting_analyzer_2.recording.get_num_channels():
             raise NotImplementedError
         if np.any([ch1 != ch2 for (ch1, ch2) in zip(channel_ids1, channel_ids2)]):
             # TODO: here we can check location and run it on the union. Might be useful for reconfigurable probes
@@ -762,10 +762,10 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         self.matches = dict()
 
         if unit_ids1 is None:
-            unit_ids1 = we1.sorting.get_unit_ids()
+            unit_ids1 = sorting_analyzer_1.sorting.get_unit_ids()
 
         if unit_ids2 is None:
-            unit_ids2 = we2.sorting.get_unit_ids()
+            unit_ids2 = sorting_analyzer_2.sorting.get_unit_ids()
         self.unit_ids = [unit_ids1, unit_ids2]
 
         if sparsity_dict is not None:
@@ -780,8 +780,8 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         if self._verbose:
             print("Agreement scores...")
 
-        agreement_scores = compute_template_similarity(
-            self.we1, waveform_extractor_other=self.we2, method=self.similarity_method
+        agreement_scores = compute_template_similarity_by_pair(
+            self.sorting_analyzer_1, self.sorting_analyzer_2, method=self.similarity_method
         )
         import pandas as pd
 

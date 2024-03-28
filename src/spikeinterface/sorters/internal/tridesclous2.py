@@ -6,9 +6,11 @@ from .si_based import ComponentsBasedSorter
 
 from spikeinterface.core import (
     get_noise_levels,
-    extract_waveforms,
     NumpySorting,
     get_channel_distances,
+    estimate_templates_average,
+    Templates,
+    compute_sparsity,
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -277,33 +279,53 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         new_peaks["sample_index"] -= peak_shifts
 
         # clean very small cluster before peeler
-        minimum_cluster_size = 25
-        labels_set, count = np.unique(post_merge_label, return_counts=True)
-        to_remove = labels_set[count < minimum_cluster_size]
+        post_clean_label = post_merge_label.copy()
 
-        mask = np.isin(post_merge_label, to_remove)
-        post_merge_label[mask] = -1
+        minimum_cluster_size = 25
+        labels_set, count = np.unique(post_clean_label, return_counts=True)
+        to_remove = labels_set[count < minimum_cluster_size]
+        mask = np.isin(post_clean_label, to_remove)
+        post_clean_label[mask] = -1
 
         # final label sets
-        labels_set = np.unique(post_merge_label)
+        labels_set = np.unique(post_clean_label)
         labels_set = labels_set[labels_set >= 0]
 
-        mask = post_merge_label >= 0
-        sorting_temp = NumpySorting.from_times_labels(
+        mask = post_clean_label >= 0
+        sorting_pre_peeler = NumpySorting.from_times_labels(
             new_peaks["sample_index"][mask],
             post_merge_label[mask],
             sampling_frequency,
             unit_ids=labels_set,
         )
-        sorting_temp = sorting_temp.save(folder=sorter_output_folder / "sorting_temp")
+        # sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")
 
-        we = extract_waveforms(recording, sorting_temp, sorter_output_folder / "waveforms_temp", **params["templates"])
+        nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
+        nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
+        templates_array = estimate_templates_average(
+            recording,
+            sorting_pre_peeler.to_spike_vector(),
+            sorting_pre_peeler.unit_ids,
+            nbefore,
+            nafter,
+            return_scaled=False,
+            **job_kwargs,
+        )
+        templates_dense = Templates(
+            templates_array=templates_array,
+            sampling_frequency=sampling_frequency,
+            nbefore=nbefore,
+            probe=recording.get_probe(),
+        )
+        # TODO : try other methods for sparsity
+        # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=120.)
+        sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=1.0)
+        templates = templates_dense.to_sparse(sparsity)
 
         # snrs = compute_snrs(we, peak_sign=params["detection"]["peak_sign"], peak_mode="extremum")
         # print(snrs)
 
         # matching_params = params["matching"].copy()
-        # matching_params["waveform_extractor"] = we
         # matching_params["noise_levels"] = noise_levels
         # matching_params["peak_sign"] = params["detection"]["peak_sign"]
         # matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
@@ -316,7 +338,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         matching_method = params["matching"]["method"]
         matching_params = params["matching"]["method_kwargs"].copy()
 
-        matching_params["waveform_extractor"] = we
+        matching_params["templates"] = templates
         matching_params["noise_levels"] = noise_levels
         # matching_params["peak_sign"] = params["detection"]["peak_sign"]
         # matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
@@ -339,6 +361,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
 
         if params["save_array"]:
+            sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")
+
             np.save(sorter_output_folder / "noise_levels.npy", noise_levels)
             np.save(sorter_output_folder / "all_peaks.npy", all_peaks)
             np.save(sorter_output_folder / "post_split_label.npy", post_split_label)

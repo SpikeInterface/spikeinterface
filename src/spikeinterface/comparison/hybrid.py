@@ -6,8 +6,7 @@ import numpy as np
 from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
-    WaveformExtractor,
-    NumpySorting,
+    load_waveforms,
 )
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.core.generate import (
@@ -16,6 +15,8 @@ from spikeinterface.core.generate import (
     _ensure_seed,
     generate_sorting_to_inject,
 )
+
+# TODO aurelien : this is still using the WaveformExtractor!!! can you change it to use SortingAnalyzer ?
 
 
 class HybridUnitsRecording(InjectTemplatesRecording):
@@ -155,7 +156,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
 
     def __init__(
         self,
-        wvf_extractor: Union[WaveformExtractor, Path],
+        wvf_extractor,
         injected_sorting: Union[BaseSorting, None] = None,
         unit_ids: Union[List[int], None] = None,
         max_injected_per_unit: int = 1000,
@@ -164,7 +165,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
         injected_sorting_folder: Union[str, Path, None] = None,
     ) -> None:
         if isinstance(wvf_extractor, (Path, str)):
-            wvf_extractor = WaveformExtractor.load(wvf_extractor)
+            wvf_extractor = load_waveforms(wvf_extractor)
 
         target_recording = wvf_extractor.recording
         target_sorting = wvf_extractor.sorting
