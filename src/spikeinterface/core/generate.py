@@ -1555,6 +1555,8 @@ class InjectTemplatesRecording(BaseRecording):
             assert parent_recording.get_sampling_frequency() == sorting.get_sampling_frequency()
             assert parent_recording.get_num_channels() == templates.shape[2]
             parent_recording.copy_metadata(self)
+            if not parent_recording.check_serializability("json"):
+                self._serializability["json"] = False
 
         if num_samples is None:
             if parent_recording is None:
