@@ -52,7 +52,7 @@ class ComputeUnitLocations(AnalyzerExtension):
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, method="monopolar_triangulation", method_kwargs={}):
+    def _set_params(self, method="monopolar_triangulation", **method_kwargs):
         params = dict(method=method, method_kwargs=method_kwargs)
         return params
 
