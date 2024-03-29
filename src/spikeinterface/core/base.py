@@ -968,11 +968,11 @@ class BaseExtractor:
         channel_chunk_size: int or None, default: None
             Channels per chunk (only for BaseRecording)
         compressor: numcodecs.Codec or None, default: None
-            Global compressor. If None, Blosc-zstd level 5 is used.
+            Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
         filters: list[numcodecs.Codec] or None, default: None
             Global filters for zarr (global)
         compressor_by_dataset: dict or None, default: None
-            Optional compressor per dataset.:
+            Optional compressor per dataset:
                 - traces
                 - times
             If None, the global compressor is used
