@@ -1,6 +1,6 @@
 """
 Implement AnalyzerExtension that are essential and imported in core
-  * SelectRandomSpikes
+  * ComputeRandomSpikes
   * ComputeWaveforms
   * ComputeTemplates
 Theses two classes replace the WaveformExtractor
@@ -13,34 +13,35 @@ It also implement:
 import numpy as np
 
 from .sortinganalyzer import AnalyzerExtension, register_result_extension
-from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_online
+from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection
 
 
-class SelectRandomSpikes(AnalyzerExtension):
+class ComputeRandomSpikes(AnalyzerExtension):
     """
     AnalyzerExtension that select some random spikes.
 
-    This will be used by "compute_waveforms" and so "compute_templates" or "compute_fast_templates"
+    This will be used by the `waveforms`/`templates`/`fast_templates` extensions.
 
     This internally use `random_spikes_selection()` parameters are the same.
 
     Parameters
     ----------
-    unit_ids: list or None
-        Unit ids to retrieve waveforms for
-    mode: "average" | "median" | "std" | "percentile", default: "average"
-        The mode to compute the templates
-    percentile: float, default: None
-        Percentile to use for mode="percentile"
-    save: bool, default True
-        In case, the operator is not computed yet it can be saved to folder or zarr.
+    method: "uniform", default: "uniform"
+        The method to select the spikes
+    max_spikes_per_unit: int, default: 500
+        The maximum number of spikes per unit
+    margin_size: int, default: None
+        A margin on each border of segments to avoid border spikes
+    seed: int or None, default: None
+        A seed for the random generator
 
     Returns
     -------
-
+    random_spike_indices: np.array
+        The indices of the selected spikes
     """
 
     extension_name = "random_spikes"
@@ -80,7 +81,7 @@ class SelectRandomSpikes(AnalyzerExtension):
     def _get_data(self):
         return self.data["random_spikes_indices"]
 
-    def some_spikes(self):
+    def get_random_spikes(self):
         # utils to get the some_spikes vector
         # use internal cache
         if not hasattr(self, "_some_spikes"):
@@ -106,8 +107,8 @@ class SelectRandomSpikes(AnalyzerExtension):
         return selected_spikes_in_spike_train
 
 
-compute_select_random_spikes = SelectRandomSpikes.function_factory()
-register_result_extension(SelectRandomSpikes)
+compute_random_spikes = ComputeRandomSpikes.function_factory()
+register_result_extension(ComputeRandomSpikes)
 
 
 class ComputeWaveforms(AnalyzerExtension):
@@ -115,6 +116,22 @@ class ComputeWaveforms(AnalyzerExtension):
     AnalyzerExtension that extract some waveforms of each units.
 
     The sparsity is controlled by the SortingAnalyzer sparsity.
+
+    Parameters
+    ----------
+    ms_before: float, default: 1.0
+        The number of ms to extract before the spike events
+    ms_after: float, default: 2.0
+        The number of ms to extract after the spike events
+    return_scaled: bool, default: True
+        If True, the waveforms are scaled to uV (if the recording has scaling)
+    dtype: None | dtype, default: None
+        The dtype of the waveforms. If None, the dtype of the recording is used.
+
+    Returns
+    -------
+    waveforms: np.ndarray
+        Array with computed waveforms with shape (num_random_spikes, num_samples, num_channels)
     """
 
     extension_name = "waveforms"
@@ -134,19 +151,12 @@ class ComputeWaveforms(AnalyzerExtension):
     def _run(self, **job_kwargs):
         self.data.clear()
 
-        # if self.sorting_analyzer.random_spikes_indices is None:
-        #     raise ValueError("compute_waveforms need SortingAnalyzer.select_random_spikes() need to be run first")
-
-        # random_spikes_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
-
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
         unit_ids = sorting.unit_ids
 
         # retrieve spike vector and the sampling
-        # spikes = sorting.to_spike_vector()
-        # some_spikes = spikes[random_spikes_indices]
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         if self.format == "binary_folder":
             # in that case waveforms are extacted directly in files
@@ -213,7 +223,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
     def _select_extension_data(self, unit_ids):
         # random_spikes_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
@@ -234,7 +244,7 @@ class ComputeWaveforms(AnalyzerExtension):
         unit_index = sorting.id_to_index(unit_id)
         # spikes = sorting.to_spike_vector()
         # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = self.data["waveforms"][spike_mask, :, :]
 
@@ -259,16 +269,25 @@ register_result_extension(ComputeWaveforms)
 
 class ComputeTemplates(AnalyzerExtension):
     """
-    AnalyzerExtension that compute templates (average, str, median, percentile, ...)
+    AnalyzerExtension that computes templates (average, std, median, percentile, ...)
 
-    This must be run after "waveforms" extension (`SortingAnalyzer.compute("waveforms")`)
+    This depends on the "waveforms" extension (`SortingAnalyzer.compute("waveforms")`)
 
-    Note that when "waveforms" is already done, then the recording is not needed anymore for this extension.
+    When the "waveforms" extension is already computed, then the recording is not needed anymore for this extension.
 
-    Note: by default only the average is computed. Other operator (std, median, percentile) can be computed on demand
+    Note: by default only the average and std are computed. Other operators (std, median, percentile) can be computed on demand
     after the SortingAnalyzer.compute("templates") and then the data dict is updated on demand.
 
+    Parameters
+    ----------
+    operators: list[str] | list[(str, float)] (for percentile)
+        The operators to compute. Can be "average", "std", "median", "percentile"
+        If percentile is used, then the second element of the tuple is the percentile to compute.
 
+    Returns
+    -------
+    templates: np.ndarray
+        The computed templates with shape (num_units, num_samples, num_channels)
     """
 
     extension_name = "templates"
@@ -321,7 +340,7 @@ class ComputeTemplates(AnalyzerExtension):
 
         # spikes = self.sorting_analyzer.sorting.to_spike_vector()
         # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
             wfs = waveforms[spike_mask, :, :]
@@ -466,8 +485,23 @@ register_result_extension(ComputeTemplates)
 
 class ComputeFastTemplates(AnalyzerExtension):
     """
-    AnalyzerExtension which is similar to the extension "templates" (ComputeTemplates) **but only for average**.
-    This is way faster because it do not need "waveforms" to be computed first.
+    AnalyzerExtension which is similar to the extension "templates" (ComputeTemplates)
+    **but only for average and standard deviation**.
+    This is way faster because it does not need "waveforms" to be computed first.
+
+    Parameters
+    ----------
+    ms_before: float, default: 1.0
+        The number of ms to extract before the spike events
+    ms_after: float, default: 2.0
+        The number of ms to extract after the spike events
+    return_scaled: bool, default: True
+        If True, the waveforms are scaled to uV (if the recording has scaling)
+
+    Returns
+    -------
+    templates: np.ndarray
+        The computed templates with shape (num_units, num_samples, num_channels)
     """
 
     extension_name = "fast_templates"
@@ -487,22 +521,17 @@ class ComputeFastTemplates(AnalyzerExtension):
     def _run(self, **job_kwargs):
         self.data.clear()
 
-        # if self.sorting_analyzer.random_spikes_indices is None:
-        #     raise ValueError("compute_waveforms need SortingAnalyzer.select_random_spikes() need to be run first")
-
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
         unit_ids = sorting.unit_ids
 
         # retrieve spike vector and the sampling
-        # spikes = sorting.to_spike_vector()
-        # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         return_scaled = self.params["return_scaled"]
 
         # TODO jobw_kwargs
-        self.data["average"], self.data["std"] = estimate_templates_online(
+        self.data["average"], self.data["std"] = estimate_templates_with_accumulator(
             recording,
             some_spikes,
             unit_ids,
@@ -609,7 +638,7 @@ register_result_extension(ComputeFastTemplates)
 
 class ComputeNoiseLevels(AnalyzerExtension):
     """
-    Computes the noise level associated to each recording channel.
+    Computes the noise level associated with each recording channel.
 
     This function will wraps the `get_noise_levels(recording)` to make the noise levels persistent
     on disk (folder or zarr) as a `WaveformExtension`.
@@ -617,18 +646,18 @@ class ComputeNoiseLevels(AnalyzerExtension):
     retrieve the noise levels directly ine the WaveformExtractor.
 
     Note that the noise levels can be scaled or not, depending on the `return_scaled` parameter
-    of the `WaveformExtractor`.
+    of the `SortingAnalyzer`.
 
     Parameters
     ----------
     sorting_analyzer: SortingAnalyzer
         A SortingAnalyzer object
-    **params: dict with additional parameters
+    **params: dict with additional parameters for the `spikeinterface.get_noise_levels()` function
 
     Returns
     -------
     noise_levels: np.array
-        noise level vector.
+        The noise level vector
     """
 
     extension_name = "noise_levels"

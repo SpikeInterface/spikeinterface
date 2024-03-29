@@ -21,7 +21,7 @@ from .basesorting import BaseSorting
 
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
-from .core_tools import check_json
+from .core_tools import check_json, retrieve_importing_provenance
 from .job_tools import split_job_kwargs
 from .numpyextractors import SharedMemorySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
@@ -782,7 +782,10 @@ class SortingAnalyzer:
 
     def compute_one_extension(self, extension_name, save=True, **kwargs):
         """
-        Compute one extension
+        Compute one extension.
+
+        Important note: when computing again an extension, all extensions that depend on it
+        will be automatically and silently deleted to keep a coherent data.
 
         Parameters
         ----------
@@ -813,6 +816,8 @@ class SortingAnalyzer:
         >>> wfs = compute_waveforms(sorting_analyzer, **some_params)
 
         """
+        for child in _get_children_dependencies(extension_name):
+            self.delete_extension(child)
 
         extension_class = get_extension_class(extension_name)
 
@@ -845,6 +850,10 @@ class SortingAnalyzer:
         """
         Compute several extensions
 
+        Important note: when computing again an extension, all extensions that depend on it
+        will be automatically and silently deleted to keep a coherent data.
+
+
         Parameters
         ----------
         extensions: dict
@@ -865,8 +874,9 @@ class SortingAnalyzer:
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
-        # TODO this is a simple implementation
-        # this will be improved with nodepipeline!!!
+        for extension_name in extensions.keys():
+            for child in _get_children_dependencies(extension_name):
+                self.delete_extension(child)
 
         pipeline_mode = True
         for extension_name, extension_params in extensions.items():
@@ -1057,6 +1067,34 @@ class SortingAnalyzer:
 global _possible_extensions
 _possible_extensions = []
 
+global _extension_children
+_extension_children = {}
+
+
+def _get_children_dependencies(extension_name):
+    """
+    Extension classes have a `depend_on` attribute to declare on which class they
+    depend. For instance "templates" depend on "waveforms". "waveforms depends on "random_spikes".
+
+    This function is making the reverse way : get all children that depend of a
+    particular extension.
+
+    This is recurssive so this includes : children and so grand children and grand grand children
+
+    This function is usefull for deleting on recompute.
+    For instance recompute the "waveforms" need to delete "template"
+    This make sens if "ms_before" is change in "waveforms" because the template also depends
+    on this parameters.
+    """
+    names = []
+    children = _extension_children[extension_name]
+    for child in children:
+        if child not in names:
+            names.append(child)
+        grand_children = _get_children_dependencies(child)
+        names.extend(grand_children)
+    return list(set(names))
+
 
 def register_result_extension(extension_class):
     """
@@ -1081,6 +1119,15 @@ def register_result_extension(extension_class):
         ), "Extension name already exists"
 
         _possible_extensions.append(extension_class)
+
+        # create the children dpendencies to be able to delete on re-compute
+        _extension_children[extension_class.extension_name] = []
+        for parent_name in extension_class.depend_on:
+            if "|" in parent_name:
+                for name in parent_name.split("|"):
+                    _extension_children[name].append(extension_class.extension_name)
+            else:
+                _extension_children[parent_name].append(extension_class.extension_name)
 
 
 def get_extension_class(extension_name: str, auto_import=True):
@@ -1386,6 +1433,7 @@ class AnalyzerExtension:
         if save and not self.sorting_analyzer.is_read_only():
             # this also reset the folder or zarr group
             self._save_params()
+            self._save_importing_provenance()
 
         self._run(**kwargs)
 
@@ -1394,6 +1442,7 @@ class AnalyzerExtension:
 
     def save(self, **kwargs):
         self._save_params()
+        self._save_importing_provenance()
         self._save_data(**kwargs)
 
     def _save_data(self, **kwargs):
@@ -1512,6 +1561,7 @@ class AnalyzerExtension:
 
         if save:
             self._save_params()
+            self._save_importing_provenance()
 
     def _save_params(self):
         params_to_save = self.params.copy()
@@ -1533,6 +1583,21 @@ class AnalyzerExtension:
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["params"] = check_json(params_to_save)
+
+    def _save_importing_provenance(self):
+        # this saves the class info, this is not uselful at the moment but could be useful in future
+        # if some class changes the data model and if we need to make backwards compatibility
+        # we have the same machanism in base.py for recording and sorting
+
+        info = retrieve_importing_provenance(self.__class__)
+        if self.format == "binary_folder":
+            extension_folder = self._get_binary_extension_folder()
+            extension_folder.mkdir(exist_ok=True, parents=True)
+            info_file = extension_folder / "info.json"
+            info_file.write_text(json.dumps(info, indent=4), encoding="utf8")
+        elif self.format == "zarr":
+            extension_group = self._get_zarr_extension_group(mode="r+")
+            extension_group.attrs["info"] = info
 
     def get_pipeline_nodes(self):
         assert (

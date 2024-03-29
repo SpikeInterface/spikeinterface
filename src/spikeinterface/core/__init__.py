@@ -103,7 +103,7 @@ from .recording_tools import (
 )
 from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection
 
-from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_online
+from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_with_accumulator
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
@@ -154,8 +154,8 @@ from .sortinganalyzer import (
 )
 
 from .analyzer_extension_core import (
-    SelectRandomSpikes,
-    compute_select_random_spikes,
+    ComputeRandomSpikes,
+    compute_random_spikes,
     ComputeWaveforms,
     compute_waveforms,
     ComputeTemplates,

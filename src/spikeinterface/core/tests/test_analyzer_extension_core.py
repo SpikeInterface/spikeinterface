@@ -6,6 +6,8 @@ import shutil
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
 
+from spikeinterface.core.sortinganalyzer import _extension_children, _get_children_dependencies
+
 import numpy as np
 
 if hasattr(pytest, "global_test_folder"):
@@ -80,7 +82,7 @@ def _check_result_extension(sorting_analyzer, extension_name):
         False,
     ],
 )
-def test_SelectRandomSpikes(format, sparse):
+def test_ComputeRandomSpikes(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
     ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
@@ -225,24 +227,40 @@ def test_ComputeFastTemplates_versus_ComputeTemplates():
     np.testing.assert_almost_equal(templates_fast_std, templates_std)
 
 
+def test_get_children_dependencies():
+    assert "fast_templates" in _extension_children["random_spikes"]
+    assert "waveforms" in _extension_children["random_spikes"]
+
+    children = _get_children_dependencies("random_spikes")
+    assert "waveforms" in children
+    assert "templates" in children
+    assert "fast_templates" in children
+
+
+def test_delete_on_recompute():
+    sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
+    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute("waveforms")
+    sorting_analyzer.compute("templates")
+
+    # re compute random_spikes should delete waveforms and templates
+    sorting_analyzer.compute("random_spikes")
+    assert sorting_analyzer.get_extension("templates") is None
+    assert sorting_analyzer.get_extension("waveforms") is None
+
+
 if __name__ == "__main__":
 
-    test_SelectRandomSpikes(format="memory", sparse=True)
-
-    test_ComputeWaveforms(format="memory", sparse=True)
-    test_ComputeWaveforms(format="memory", sparse=False)
-    test_ComputeWaveforms(format="binary_folder", sparse=True)
-    test_ComputeWaveforms(format="binary_folder", sparse=False)
-    test_ComputeWaveforms(format="zarr", sparse=True)
-    test_ComputeWaveforms(format="zarr", sparse=False)
-
-    test_ComputeTemplates(format="memory", sparse=True)
-    test_ComputeTemplates(format="memory", sparse=False)
-    test_ComputeTemplates(format="binary_folder", sparse=True)
-    test_ComputeTemplates(format="zarr", sparse=True)
-
-    test_ComputeFastTemplates(format="memory", sparse=True)
-
-    test_ComputeNoiseLevels(format="memory", sparse=False)
+    # test_ComputeWaveforms(format="memory", sparse=True)
+    # test_ComputeWaveforms(format="memory", sparse=False)
+    # test_ComputeWaveforms(format="binary_folder", sparse=True)
+    # test_ComputeWaveforms(format="binary_folder", sparse=False)
+    # test_ComputeWaveforms(format="zarr", sparse=True)
+    # test_ComputeWaveforms(format="zarr", sparse=False)
+    # test_ComputeRandomSpikes(format="memory", sparse=True)
+    # test_ComputeFastTemplates(format="memory", sparse=True)
+    # test_ComputeNoiseLevels(format="memory", sparse=False)
 
     test_ComputeFastTemplates_versus_ComputeTemplates()
+    test_get_children_dependencies()
+    test_delete_on_recompute()
