@@ -96,7 +96,7 @@ print(analyzer)
 
 
 ###############################################################################
-# To speed up computation, some steps like ""waveforms" can also be extracted
+# To speed up computation, some steps like "waveforms" can also be extracted
 # using parallel processing (recommended!). Like this
 
 analyzer.compute(
@@ -107,6 +107,16 @@ analyzer.compute(
 job_kwargs = dict(n_jobs=8, chunk_duration="1s", progress_bar=True)
 analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True, **job_kwargs)
 
+#################################################################################
+# Because certain extensions rely on others (e.g. we need waveforms to calculate
+# the templates) if we recompute an extension it will delete any children extensions
+# Since we just recalculated "waveforms" when we print our analyzer we will see
+# that it no longer has templates
+
+print(analyzer)
+
+# so let's get our templates back.
+analyzer.compute("templates", operators=["average", "median", "std"])
 
 ###############################################################################
 # Each extension can retrieve some data
