@@ -235,7 +235,6 @@ def test_delete_on_recompute():
 
 if __name__ == "__main__":
 
-
     # test_ComputeWaveforms(format="memory", sparse=True)
     # test_ComputeWaveforms(format="memory", sparse=False)
     # test_ComputeWaveforms(format="binary_folder", sparse=True)
@@ -243,7 +242,6 @@ if __name__ == "__main__":
     # test_ComputeWaveforms(format="zarr", sparse=True)
     # test_ComputeWaveforms(format="zarr", sparse=False)
     # test_ComputeRandomSpikes(format="memory", sparse=True)
-
 
     # test_ComputeFastTemplates(format="memory", sparse=True)
 
