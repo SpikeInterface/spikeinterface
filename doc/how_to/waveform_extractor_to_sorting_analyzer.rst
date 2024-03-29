@@ -48,7 +48,7 @@ This section provides a dictionary for code, to help translate between a ``Sorti
 and a ``WaveformExtractor``, so that users can easily update old code. If you want to learn
 how to use ``SortingAnalyzer`` from scratch, the
 `Get Started <https://spikeinterface.readthedocs.io/en/latest/how_to/get_started.html>`_ guide
-and the `PostProcessing module documentation <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_
+and the `postprocessing module documentation <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_
 are better places to start.
 
 This section is split into four subsections:
@@ -61,7 +61,7 @@ This section is split into four subsections:
 Throughout this section, we assume that all functions have been imported into the namespace.
 E.g. we have run code such as ``from spikeinterface.core import create_sorting_analyzer`` for each function. If you have imported
 the full package (ie you have run ``import spikeinterface.full as si``) you need to prepend all
-functions by ``si.``. If you have imported individual modules (ie you have run `import spikeinterface.postprocessing as spost`)
+functions by ``si.``. If you have imported individual modules (ie you have run ``import spikeinterface.postprocessing as spost``)
 we will need to prepend functions by the appropriate submodule name.
 
 
@@ -106,7 +106,7 @@ First, create the object from a recording and a sorting.
                 recording=recording
             )
 
-By default, the object is stored in memory. In this case, if you end your session without saving (which you can do using `save_as`, see below) you'll lose everything!
+By default, the object is stored in memory. In this case, if you end your session without saving (which you can do using ``save_as``, see below) you'll lose everything!
 Alternatively, we can save it locally at the point of creation by specifying a ``folder`` and a ``format``. Additionally, you can decide whether to use sparsity or not
 
 .. grid:: 2
@@ -118,8 +118,8 @@ Alternatively, we can save it locally at the point of creation by specifying a `
             wvf_extractor = extract_waveforms(
                 sorting=sorting,
                 recording=recording,
-                mode="folder",
                 folder="my_waveform_extractor",
+                mode="folder",
                 sparse=True
             )
 
@@ -311,7 +311,7 @@ Compute Extensions
 ++++++++++++++++++
 
 Waveforms, templates, quality metrics etc are all extensions of the ``SortingAnalyzer`` object.
-Some extensions depend on other extensions. To calculate a *child* we must first have calculated it's
+Some extensions depend on other extensions. To calculate a *child* we must first have calculated its
 **parents**. The relationship between some commonly used extensions are shown below:
 
 .. image:: waveform_extractor_to_sorting_analyzer_files/child_parent_plot.svg
@@ -349,7 +349,7 @@ looks slightly different. Let's calculate these extensions, and also add a param
             )
 
 Read more about extensions and their keyword arguments in the
-`PostProcessing module documentation <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_
+`postprocessing module documentation <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_
 
 In many cases, you can still use the old notation for ``SortingAnalyzer`` objects,
 such as ``compute_spike_amplitudes(sorting_analyzer=analyzer)``.
@@ -446,7 +446,7 @@ will be deleted too. We'll now delete ``templates`` from the SortingAnalyzer and
 
         .. code-block:: python
 
-            # This also deletes any parents
+            # This also deletes any children
             # such as spike_amplitudes
             analyzer.delete_extension(
                 extension_name="templates"
@@ -482,9 +482,9 @@ on which extension you were interested in. We won't list them all here.
             ul = analyzer.get_extension(
                 extension_name="unit_locations"
             )
-            ul_data = nl.get_data()
+            ul_data = ul.get_data()
 
-You can also access the parameters used in the extension calculation, which is very simply for the new SortingAnalyzer:
+You can also access the parameters used in the extension calculation, which is very simple for the new SortingAnalyzer:
 
 .. grid:: 2
 
@@ -503,7 +503,7 @@ You can also access the parameters used in the extension calculation, which is v
 
         .. code-block:: python
 
-            ul_parms = ul.params
+            ul_params = ul.params
 
 Quality metrics
 +++++++++++++++
