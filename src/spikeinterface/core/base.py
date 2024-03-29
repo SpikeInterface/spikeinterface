@@ -972,7 +972,7 @@ class BaseExtractor:
         filters: list[numcodecs.Codec] or None, default: None
             Global filters for zarr (global)
         compressor_by_dataset: dict or None, default: None
-            Optional compressor per dataset.:
+            Optional compressor per dataset:
                 - traces
                 - times
             If None, the global compressor is used
