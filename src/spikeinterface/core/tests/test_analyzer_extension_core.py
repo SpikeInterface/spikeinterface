@@ -80,7 +80,7 @@ def _check_result_extension(sorting_analyzer, extension_name):
         False,
     ],
 )
-def test_SelectRandomSpikes(format, sparse):
+def test_ComputeRandomSpikes(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
     ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
@@ -211,7 +211,7 @@ def test_ComputeNoiseLevels(format, sparse):
 
 if __name__ == "__main__":
 
-    test_SelectRandomSpikes(format="memory", sparse=True)
+    test_ComputeRandomSpikes(format="memory", sparse=True)
 
     test_ComputeWaveforms(format="memory", sparse=True)
     test_ComputeWaveforms(format="memory", sparse=False)
