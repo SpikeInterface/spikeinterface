@@ -392,7 +392,7 @@ class DetectPeakByChannel(PeakDetectorWrapper):
         assert peak_sign in ("both", "neg", "pos")
 
         noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
-        abs_threholds = noise_levels * detect_threshold
+        abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
         return (peak_sign, abs_thresholds, exclude_sweep_size)
@@ -479,7 +479,7 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
-        abs_threholds = noise_levels * detect_threshold
+        abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
         return (peak_sign, abs_thresholds, exclude_sweep_size, device, return_tensor)
@@ -843,7 +843,7 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
         # TODO refactor with other classes
         assert peak_sign in ("both", "neg", "pos")
         noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
-        abs_threholds = noise_levels * detect_threshold
+        abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance <= radius_um
