@@ -6,7 +6,4 @@ from .drift_tools import (
     make_linear_displacement,
 )
 
-from .hybrid_tools import (
-    generate_hybrid_recording,
-    estimate_templates_from_recording
-)
+from .hybrid_tools import generate_hybrid_recording, estimate_templates_from_recording
