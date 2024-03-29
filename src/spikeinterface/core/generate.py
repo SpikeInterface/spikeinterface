@@ -1207,6 +1207,66 @@ def exp_growth(start_amp, end_amp, duration_ms, tau_ms, sampling_frequency, flip
     return y[:-1]
 
 
+def get_ellipse(positions, center, b=1, c=1, x_angle=0, y_angle=0, z_angle=0):
+    """
+    Compute the distances to a particular ellipsoid in order to take into account
+    spatial inhomogeneities while generating the template. In a carthesian, centered
+    space, the equation of the ellipsoid in 3D is given by
+        R = x**2 + (y/b)**2 + (z/c)**2, with R being the radius of the ellipsoid
+
+    Given the coordinates of the recording channels, we want to know what is the radius
+    (i.e. the distance) between these points and a given ellipsoidal volume. To to do,
+    we change the referential. To go from the centered space of our ellipsoidal volume, we
+    need to perform a translation of the center (given the center of the ellipsoids), and perform
+    three rotations along the three main axis (Rx, Ry, Rz). To go from one referential to the other,
+    we need to have
+                            x - x0
+        [X,Y,Z] = Rx.Ry.Rz (y - y0)
+                            z - z0
+
+    In this new space, we can compute the radius of the ellipsoidal shape given the same formula
+        R = X**2 + (Y/b)**2 + (Z/c)**2
+
+    and thus obtain putative amplitudes given the ellipsoidal projections. Note that in case of a=b=1 and
+    no rotation, the distance is the same as the euclidean distance
+
+    Returns
+    -------
+    The distances of the recording channels, as radius to a defined elliposoidal volume
+
+    """
+    p = np.zeros((3, len(positions)))
+    p[0] = positions[:, 0] - center[0]
+    p[1] = positions[:, 1] - center[1]
+    p[2] = -center[2]
+
+    Rx = np.zeros((3, 3))
+    Rx[0, 0] = 1
+    Rx[1, 1] = np.cos(-x_angle)
+    Rx[1, 0] = -np.sin(-x_angle)
+    Rx[2, 1] = np.sin(-x_angle)
+    Rx[2, 2] = np.cos(-x_angle)
+
+    Ry = np.zeros((3, 3))
+    Ry[1, 1] = 1
+    Ry[0, 0] = np.cos(-y_angle)
+    Ry[0, 2] = np.sin(-y_angle)
+    Ry[2, 0] = -np.sin(-y_angle)
+    Ry[2, 2] = np.cos(-y_angle)
+
+    Rz = np.zeros((3, 3))
+    Rz[2, 2] = 1
+    Rz[0, 0] = np.cos(-z_angle)
+    Rz[0, 1] = -np.sin(-z_angle)
+    Rz[1, 0] = np.sin(-z_angle)
+    Rz[1, 1] = np.cos(-z_angle)
+
+    inv_matrix = np.dot(Rx, Ry, Rz)
+    P = np.dot(inv_matrix, p)
+
+    return np.sqrt(P[0] ** 2 + (P[1] / b) ** 2 + (P[2] / c) ** 2)
+
+
 def generate_single_fake_waveform(
     sampling_frequency=None,
     ms_before=1.0,
@@ -1283,6 +1343,11 @@ default_unit_params_range = dict(
     smooth_ms=(0.03, 0.07),
     decay_power=(1.4, 1.8),
     propagation_speed=(250.0, 350.0),  # um  / ms
+    b=(0.1, 1),
+    c=(0.1, 1),
+    x_angle=(0, np.pi),
+    y_angle=(0, np.pi),
+    z_angle=(0, np.pi),
 )
 
 
@@ -1297,6 +1362,7 @@ def generate_templates(
     upsample_factor=None,
     unit_params=dict(),
     unit_params_range=dict(),
+    mode="ellipsoid",
 ):
     """
     Generate some templates from the given channel positions and neuron position.s
@@ -1361,8 +1427,6 @@ def generate_templates(
     if channel_locations.shape[1] == 2:
         channel_locations = np.hstack([channel_locations, np.zeros((channel_locations.shape[0], 1))])
 
-    distances = np.linalg.norm(units_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
-
     num_units = units_locations.shape[0]
     num_channels = channel_locations.shape[0]
     nbefore = int(sampling_frequency * ms_before / 1000.0)
@@ -1416,14 +1480,35 @@ def generate_templates(
         eps = 1.0
         # naive formula for spatial decay
         pow = params["decay_power"][u]
-        channel_factors = alpha / (distances[u, :] + eps) ** pow
+        if mode == "sphere":
+            distances = get_ellipse(
+                channel_locations,
+                units_locations[u],
+                1,
+                1,
+                0,
+                0,
+                0,
+            )
+        elif mode == "ellipsoid":
+            distances = get_ellipse(
+                channel_locations,
+                units_locations[u],
+                params["b"][u],
+                params["c"][u],
+                params["x_angle"][u],
+                params["y_angle"][u],
+                params["z_angle"][u],
+            )
+
+        channel_factors = alpha / (distances + eps) ** pow
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
 
         # This mimic a propagation delay for distant channel
         propagation_speed = params["propagation_speed"][u]
         if propagation_speed is not None:
             # the speed is um/ms
-            dist = distances[u, :].copy()
+            dist = distances.copy()
             dist -= np.min(dist)
             delay_s = dist / propagation_speed / 1000.0
             sample_shifts = delay_s * fs
@@ -1590,6 +1675,12 @@ class InjectTemplatesRecording(BaseRecording):
                 num_samples[segment_index],
             )
             self.add_recording_segment(recording_segment)
+
+        if not sorting.check_serializability("json"):
+            self._serializability["json"] = False
+        if parent_recording is not None:
+            if not parent_recording.check_serializability("json"):
+                self._serializability["json"] = False
 
         self._kwargs = {
             "sorting": sorting,

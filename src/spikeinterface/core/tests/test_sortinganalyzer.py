@@ -4,7 +4,12 @@ from pathlib import Path
 import shutil
 
 from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.core import SortingAnalyzer, create_sorting_analyzer, load_sorting_analyzer
+from spikeinterface.core import (
+    create_sorting_analyzer,
+    load_sorting_analyzer,
+    get_available_analyzer_extensions,
+    get_default_analyzer_extension_params,
+)
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 import numpy as np
@@ -143,6 +148,24 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting):
         assert np.all(~np.isin(data["result_two"], [1, 3]))
 
 
+def test_extension_params():
+    from spikeinterface.core.sortinganalyzer import _builtin_extensions
+
+    computable_extension = get_available_analyzer_extensions()
+
+    for ext, mod in _builtin_extensions.items():
+        assert ext in computable_extension
+        if mod == "spikeinterface.core":
+            default_params = get_default_analyzer_extension_params(ext)
+            print(ext, default_params)
+        else:
+            try:
+                default_params = get_default_analyzer_extension_params(ext)
+                print(ext, default_params)
+            except:
+                print(f"Failed to import {ext}")
+
+
 class DummyAnalyzerExtension(AnalyzerExtension):
     extension_name = "dummy"
     depend_on = []
@@ -201,3 +224,4 @@ if __name__ == "__main__":
     test_SortingAnalyzer_binary_folder()
     test_SortingAnalyzer_zarr()
     test_extension()
+    test_extension_params()
