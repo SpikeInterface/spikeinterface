@@ -273,12 +273,9 @@ class MockWaveformExtractor:
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
 
-
         assert self.sorting_analyzer.has_extension(
             "random_spikes"
         ), "get_sampled_indices() requires the 'random_spikes' extension."
-
-
 
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
