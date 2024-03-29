@@ -12,6 +12,7 @@ from spikeinterface.core.generate import (
     InjectTemplatesRecording,
 )
 from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.postprocessing.unit_localization import compute_monopolar_triangulation
 
 
 def estimate_templates_from_recording(
@@ -171,7 +172,11 @@ def generate_hybrid_recording(
             dtype=dtype,
             **generate_templates_kwargs,
         )
-        sorting.set_property("gt_unit_locations", unit_locations)
+    else:
+        unit_locations = compute_monopolar_triangulation(templates)
+        templates_array = templates.templates_array
+
+    sorting.set_property("gt_unit_locations", unit_locations)
 
     nbefore = int(ms_before * sampling_frequency / 1000.0)
     nafter = int(ms_after * sampling_frequency / 1000.0)
