@@ -51,6 +51,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_extra_kwargs": False,
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
+        "torch_device": "auto",
     }
 
     _params_description = {
@@ -87,6 +88,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_extra_kwargs": "If True, additional kwargs are saved to the output",
         "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
+        "torch_device": "Select the troch device auto/cuda/cpu"
     }
 
     sorter_description = """Kilosort4 is a Python package for spike sorting on GPUs with template matching.
@@ -152,7 +154,10 @@ class Kilosort4Sorter(BaseSorter):
 
         probe_filename = sorter_output_folder / "probe.prb"
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        torch_device = params["torch_device"]
+        if torch_device == "auto":
+            torch_device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = torch.device(torch_device)
 
         # load probe
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
