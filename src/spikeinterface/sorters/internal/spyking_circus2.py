@@ -101,9 +101,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         sampling_frequency = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
-        ms_before = params["general"]["ms_before"]
-        ms_after = params["general"]["ms_after"]
-        radius_um = params["general"]["radius_um"]
+        ms_before = params["general"].get("ms_before", 2)
+        ms_after = params["general"].get("ms_after", 2)
+        radius_um = params["general"].get("radius_um", 100)
 
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
@@ -137,8 +137,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         fs = recording_f.get_sampling_frequency()
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
-        num_samples = nbefore + nafter
-        num_chans = recording_f.get_num_channels()
 
         peaks = detect_peaks(recording_f, "locally_exclusive", **detection_params, **job_kwargs)
 
