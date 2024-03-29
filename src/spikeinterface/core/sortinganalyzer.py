@@ -776,7 +776,10 @@ class SortingAnalyzer:
 
     def compute_one_extension(self, extension_name, save=True, **kwargs):
         """
-        Compute one extension
+        Compute one extension.
+
+        Important note: when computing again an extension, all extensions that depend on it
+        will be automatically and silently deleted to keep a coherent data.
 
         Parameters
         ----------
@@ -807,6 +810,8 @@ class SortingAnalyzer:
         >>> wfs = compute_waveforms(sorting_analyzer, **some_params)
 
         """
+        for child in _get_children_dependencies(extension_name):
+            self.delete_extension(child)
 
         extension_class = get_extension_class(extension_name)
 
@@ -839,6 +844,10 @@ class SortingAnalyzer:
         """
         Compute several extensions
 
+        Important note: when computing again an extension, all extensions that depend on it
+        will be automatically and silently deleted to keep a coherent data.
+
+
         Parameters
         ----------
         extensions: dict
@@ -859,8 +868,9 @@ class SortingAnalyzer:
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
-        # TODO this is a simple implementation
-        # this will be improved with nodepipeline!!!
+        for extension_name in extensions.keys():
+            for child in _get_children_dependencies(extension_name):
+                self.delete_extension(child)
 
         pipeline_mode = True
         for extension_name, extension_params in extensions.items():
@@ -1051,6 +1061,34 @@ class SortingAnalyzer:
 global _possible_extensions
 _possible_extensions = []
 
+global _extension_children
+_extension_children = {}
+
+
+def _get_children_dependencies(extension_name):
+    """
+    Extension classes have a `depend_on` attribute to declare on which class they
+    depend. For instance "templates" depend on "waveforms". "waveforms depends on "random_spikes".
+
+    This function is making the reverse way : get all children that depend of a
+    particular extension.
+
+    This is recurssive so this includes : children and so grand children and grand grand children
+
+    This function is usefull for deleting on recompute.
+    For instance recompute the "waveforms" need to delete "template"
+    This make sens if "ms_before" is change in "waveforms" because the template also depends
+    on this parameters.
+    """
+    names = []
+    children = _extension_children[extension_name]
+    for child in children:
+        if child not in names:
+            names.append(child)
+        grand_children = _get_children_dependencies(child)
+        names.extend(grand_children)
+    return list(set(names))
+
 
 def register_result_extension(extension_class):
     """
@@ -1075,6 +1113,15 @@ def register_result_extension(extension_class):
         ), "Extension name already exists"
 
         _possible_extensions.append(extension_class)
+
+        # create the children dpendencies to be able to delete on re-compute
+        _extension_children[extension_class.extension_name] = []
+        for parent_name in extension_class.depend_on:
+            if "|" in parent_name:
+                for name in parent_name.split("|"):
+                    _extension_children[name].append(extension_class.extension_name)
+            else:
+                _extension_children[parent_name].append(extension_class.extension_name)
 
 
 def get_extension_class(extension_name: str, auto_import=True):
