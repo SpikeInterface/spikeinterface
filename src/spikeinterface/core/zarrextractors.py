@@ -255,7 +255,7 @@ def read_zarr(
         The loaded extractor
     """
     # TODO @alessio : we should have something more explicit in our zarr format to tell which object it is.
-    # for the futur SortingResult we will have this 2 fields!!!
+    # for the futur SortingAnalyzer we will have this 2 fields!!!
     root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
     if "channel_ids" in root.keys():
         return read_zarr_recording(folder_path, storage_options=storage_options)
