@@ -13,7 +13,7 @@ It also implement:
 import numpy as np
 
 from .sortinganalyzer import AnalyzerExtension, register_result_extension
-from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_average
+from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection
@@ -252,7 +252,7 @@ class ComputeWaveforms(AnalyzerExtension):
             chan_inds = self.sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
             wfs = wfs[:, :, : chan_inds.size]
             if force_dense:
-                num_channels = self.get_num_channels()
+                num_channels = self.sorting_analyzer.get_num_channels()
                 dense_wfs = np.zeros((wfs.shape[0], wfs.shape[1], num_channels), dtype=wfs.dtype)
                 dense_wfs[:, :, chan_inds] = wfs
                 wfs = dense_wfs
@@ -410,9 +410,9 @@ class ComputeTemplates(AnalyzerExtension):
 
     def get_templates(self, unit_ids=None, operator="average", percentile=None, save=True):
         """
-        Return templates (average, std, median or percentil) for multiple units.
+        Return templates (average, std, median or percentiles) for multiple units.
 
-        I not computed yet then this is computed on demand and optionally saved.
+        If not computed yet then this is computed on demand and optionally saved.
 
         Parameters
         ----------
@@ -486,7 +486,7 @@ register_result_extension(ComputeTemplates)
 class ComputeFastTemplates(AnalyzerExtension):
     """
     AnalyzerExtension which is similar to the extension "templates" (ComputeTemplates)
-    **but only for average**.
+    **but only for average and standard deviation**.
     This is way faster because it does not need "waveforms" to be computed first.
 
     Parameters
@@ -531,8 +531,15 @@ class ComputeFastTemplates(AnalyzerExtension):
         return_scaled = self.params["return_scaled"]
 
         # TODO jobw_kwargs
-        self.data["average"] = estimate_templates_average(
-            recording, some_spikes, unit_ids, self.nbefore, self.nafter, return_scaled=return_scaled, **job_kwargs
+        self.data["average"], self.data["std"] = estimate_templates_with_accumulator(
+            recording,
+            some_spikes,
+            unit_ids,
+            self.nbefore,
+            self.nafter,
+            return_scaled=return_scaled,
+            return_std=True,
+            **job_kwargs,
         )
 
     def _set_params(
@@ -573,28 +580,30 @@ class ComputeFastTemplates(AnalyzerExtension):
 
         return new_data
 
-    def get_templates(self, unit_ids=None, operator="average"):
+    def get_templates(self, unit_ids=None, operator="average", save=True):
         """
-        Return average templates for multiple units.
+        Return templates (average, std) for multiple units.
 
         Parameters
         ----------
-        unit_ids: list or None, default: None
+        unit_ids: list or None
             Unit ids to retrieve waveforms for
-        operator: str
-            MUST be "average" (only one supported by fast_templates)
-            The argument exist to have the same signature as ComputeTemplates.get_templates
+        operator: "average" | "std", default: "average"
+            The mode to compute the templates
+        save: bool, default True
+            In case, the operator is not computed yet it can be saved to folder or zarr.
 
         Returns
         -------
         templates: np.array
             The returned templates (num_units, num_samples, num_channels)
         """
+        assert operator in ("average", "std"), "ComputeFastTemplates only support average and std"
 
-        assert (
-            operator == "average"
-        ), f"Analyzer extension `fast_templates` only works with 'average' templates. Given operator = {operator}"
-        templates = self.data["average"]
+        templates = self.data[operator]
+
+        if save:
+            self.save()
 
         if unit_ids is not None:
             unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
