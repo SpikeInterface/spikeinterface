@@ -37,11 +37,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "n_peaks_per_channel": 5000,
             "min_n_peaks": 100000,
             "select_per_channel": False,
+            "seed": 42,
         },
         "clustering": {"legacy": False},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
-        "cache_preprocessing": {"mode": None, "memory_limit": 0.5, "delete_cache": True},
+        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
         "debug": False,
@@ -122,8 +123,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
         detection_params.update(job_kwargs)
+        radius_um = params["general"].get("radius_um", 100)
         if "radius_um" not in detection_params:
-            detection_params["radius_um"] = params["general"]["radius_um"]
+            detection_params["radius_um"] = radius_um
         if "exclude_sweep_ms" not in detection_params:
             detection_params["exclude_sweep_ms"] = max(params["general"]["ms_before"], params["general"]["ms_after"])
 
@@ -152,6 +154,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params = params["clustering"].copy()
             clustering_params["waveforms"] = {}
             clustering_params["sparsity"] = params["sparsity"]
+            clustering_params["radius_um"] = radius_um
 
             for k in ["ms_before", "ms_after"]:
                 clustering_params["waveforms"][k] = params["general"][k]
@@ -160,10 +163,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["noise_levels"] = noise_levels
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
 
-            if "legacy" in clustering_params:
-                legacy = clustering_params.pop("legacy")
-            else:
-                legacy = False
+            legacy = clustering_params.get("legacy", False)
 
             if legacy:
                 if verbose:
@@ -259,16 +259,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(sorting_folder)
 
         folder_to_delete = None
-
-        if "mode" in params["cache_preprocessing"]:
-            cache_mode = params["cache_preprocessing"]["mode"]
-        else:
-            cache_mode = "memory"
-
-        if "delete_cache" in params["cache_preprocessing"]:
-            delete_cache = params["cache_preprocessing"]
-        else:
-            delete_cache = True
+        cache_mode = params["cache_preprocessing"].get("mode", "memory")
+        delete_cache = params["cache_preprocessing"].get("delete_cache", True)
 
         if cache_mode in ["folder", "zarr"] and delete_cache:
             folder_to_delete = recording_f._kwargs["folder_path"]

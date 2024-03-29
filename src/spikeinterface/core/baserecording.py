@@ -656,10 +656,10 @@ class BaseRecording(BaseRecordingSnippets):
         # good job you pass all crucible
         return True
 
-    def astype(self, dtype):
+    def astype(self, dtype, round: bool | None = None):
         from ..preprocessing.astype import astype
 
-        return astype(self, dtype=dtype)
+        return astype(self, dtype=dtype, round=round)
 
 
 class BaseRecordingSegment(BaseSegment):

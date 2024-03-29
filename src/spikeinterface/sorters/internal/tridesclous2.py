@@ -8,7 +8,7 @@ from spikeinterface.core import (
     get_noise_levels,
     NumpySorting,
     get_channel_distances,
-    estimate_templates_average,
+    estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
 )
@@ -301,7 +301,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
         nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
-        templates_array = estimate_templates_average(
+        templates_array = estimate_templates_with_accumulator(
             recording,
             sorting_pre_peeler.to_spike_vector(),
             sorting_pre_peeler.unit_ids,
