@@ -23,6 +23,7 @@ from .core_tools import (
     make_paths_relative,
     make_paths_absolute,
     check_paths_relative,
+    retrieve_importing_provenance,
 )
 from .job_tools import _shared_job_kwargs_doc
 
@@ -81,6 +82,10 @@ class BaseExtractor:
     def get_num_segments(self) -> int:
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
+
+    def get_parent(self) -> Optional[BaseExtractor]:
+        """Returns parent object if it exists, otherwise None"""
+        return getattr(self, "_parent", None)
 
     def _check_segment_index(self, segment_index: Optional[int] = None) -> int:
         if segment_index is None:
@@ -427,22 +432,8 @@ class BaseExtractor:
 
             kwargs = new_kwargs
 
-        module_import_path = self.__class__.__module__
-        class_name_no_path = self.__class__.__name__
-        class_name = f"{module_import_path}.{class_name_no_path}"  # e.g. 'spikeinterface.core.generate.AClass'
-        module = class_name.split(".")[0]
-
-        imported_module = importlib.import_module(module)
-        module_version = getattr(imported_module, "__version__", "unknown")
-
-        dump_dict = {
-            "class": class_name,
-            "module": module,
-            "kwargs": kwargs,
-            "version": module_version,
-        }
-
-        dump_dict["version"] = module_version  # Can be spikeinterface, spikeforest, etc.
+        dump_dict = retrieve_importing_provenance(self.__class__)
+        dump_dict["kwargs"] = kwargs
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations
@@ -967,9 +958,24 @@ class BaseExtractor:
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
         channel_chunk_size: int or None, default: None
             Channels per chunk (only for BaseRecording)
+        compressor: numcodecs.Codec or None, default: None
+            Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
+        filters: list[numcodecs.Codec] or None, default: None
+            Global filters for zarr (global)
+        compressor_by_dataset: dict or None, default: None
+            Optional compressor per dataset:
+                - traces
+                - times
+            If None, the global compressor is used
+        filters_by_dataset: dict or None, default: None
+            Optional filters per dataset:
+                - traces
+                - times
+            If None, the global filters are used
         verbose: bool, default: True
             If True, the output is verbose
-        **save_kwargs: Keyword arguments for saving to zarr
+        auto_cast_uint: bool, default: True
+            If True, unsigned integers are cast to signed integers to avoid issues with zarr (only for BaseRecording)
 
         Returns
         -------
