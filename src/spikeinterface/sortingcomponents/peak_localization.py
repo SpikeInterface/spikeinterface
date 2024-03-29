@@ -27,10 +27,11 @@ from ..postprocessing.unit_localization import (
 )
 
 from ..postprocessing.localization_tools import (
-    make_radial_order_parents, 
-    solve_monopolar_triangulation, 
-    enforce_decrease_shells_data, 
-    get_grid_convolution_templates_and_weights)
+    make_radial_order_parents,
+    solve_monopolar_triangulation,
+    enforce_decrease_shells_data,
+    get_grid_convolution_templates_and_weights,
+)
 
 from .tools import get_prototype_spike
 
