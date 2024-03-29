@@ -241,9 +241,6 @@ def get_grid_convolution_templates_and_weights(
     y_min -= margin_um
     y_max += margin_um
 
-    dx = np.abs(x_max - x_min)
-    dy = np.abs(y_max - y_min)
-
     eps = upsampling_um / 10
 
     all_x, all_y = np.meshgrid(
