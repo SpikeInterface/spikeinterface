@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.100.4.rst
   releases/0.100.3.rst
   releases/0.100.2.rst
   releases/0.100.1.rst
@@ -37,20 +38,26 @@ Release notes
   releases/0.9.1.rst
 
 
+Version 0.100.4
+===============
+
+* Minor release with extended compression capability for Zarr
+
+
 Version 0.100.3
-==============
+===============
 
 * Minor release with bug fixes for Zarr compressor and NWB in container
 
 
 Version 0.100.2
-==============
+===============
 
 * Minor release with fix for running Kilosort4 with GPU support in container
 
 
 Version 0.100.1
-==============
+===============
 
 * Minor release with some bug fixes and Kilosort4 support
 
