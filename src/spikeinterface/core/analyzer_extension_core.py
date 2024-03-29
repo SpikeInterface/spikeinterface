@@ -13,7 +13,7 @@ It also implement:
 import numpy as np
 
 from .sortinganalyzer import AnalyzerExtension, register_result_extension
-from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_online
+from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection
@@ -502,7 +502,7 @@ class ComputeFastTemplates(AnalyzerExtension):
         return_scaled = self.params["return_scaled"]
 
         # TODO jobw_kwargs
-        self.data["average"], self.data["std"] = estimate_templates_online(
+        self.data["average"], self.data["std"] = estimate_templates_with_accumulator(
             recording,
             some_spikes,
             unit_ids,

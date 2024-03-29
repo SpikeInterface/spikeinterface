@@ -712,7 +712,7 @@ def estimate_templates(
 ):
     """
     Estimate dense templates with "average" or "median".
-    If "average" internaly estimate_templates_online() is used to saved memory/
+    If "average" internally estimate_templates_with_accumulator() is used to saved memory/
 
     Parameters
     ----------
@@ -742,7 +742,7 @@ def estimate_templates(
         job_name = "estimate_templates"
 
     if operator == "average":
-        templates_array = estimate_templates_online(
+        templates_array = estimate_templates_with_accumulator(
             recording, spikes, unit_ids, nbefore, nafter, return_scaled=return_scaled, job_name=job_name, **job_kwargs
         )
     elif operator == "median":
@@ -772,7 +772,7 @@ def estimate_templates(
     return templates_array
 
 
-def estimate_templates_online(
+def estimate_templates_with_accumulator(
     recording: BaseRecording,
     spikes: np.ndarray,
     unit_ids: list | np.ndarray,
@@ -826,9 +826,13 @@ def estimate_templates_online(
     shape = (num_worker, num_units, nbefore + nafter, num_chans)
     dtype = np.dtype("float32")
     waveform_accumulator_per_worker, shm = make_shared_array(shape, dtype)
-    waveform_squared_accumulator_per_worker, shm_squared = make_shared_array(shape, dtype)
     shm_name = shm.name
-    shm_squared_name = shm_squared.name
+    if return_std:
+        waveform_squared_accumulator_per_worker, shm_squared = make_shared_array(shape, dtype)
+        shm_squared_name = shm_squared.name
+    else:
+        waveform_squared_accumulator_per_worker = None
+        shm_squared_name = None
 
     # trick to get the work_index given pid arrays
     lock = multiprocessing.Lock()
@@ -854,7 +858,7 @@ def estimate_templates_online(
     )
 
     if job_name is None:
-        job_name = "estimate_templates_online"
+        job_name = "estimate_templates_with_accumulator"
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
     processor.run()
 
@@ -874,9 +878,12 @@ def estimate_templates_online(
             ) + count * template_means[unit_index] ** 2
             template_stds[unit_index] = np.sqrt(residuals / count)
         assert np.all(template_stds >= 0)
+        del waveform_squared_accumulator_per_worker
+        shm_squared.unlink()
+        shm_squared.close()
 
     # important : release the sharedmem
-    del waveform_accumulator_per_worker, waveform_squared_accumulator_per_worker
+    del waveform_accumulator_per_worker
     shm.unlink()
     shm.close()
 
@@ -911,13 +918,14 @@ def _init_worker_estimate_templates(
 
     shm = SharedMemory(shm_name)
     waveform_accumulator_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
-    shm_squared = SharedMemory(shm_squared_name)
-    waveform_squared_accumulator_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm_squared.buf)
 
     worker_ctx["shm"] = shm
     worker_ctx["waveform_accumulator_per_worker"] = waveform_accumulator_per_worker
-    worker_ctx["shm_squared"] = shm_squared
-    worker_ctx["waveform_squared_accumulator_per_worker"] = waveform_squared_accumulator_per_worker
+    if shm_squared_name is not None:
+        shm_squared = SharedMemory(shm_squared_name)
+        waveform_squared_accumulator_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm_squared.buf)
+        worker_ctx["shm_squared"] = shm_squared
+        worker_ctx["waveform_squared_accumulator_per_worker"] = waveform_squared_accumulator_per_worker
 
     # prepare segment slices
     segment_slices = []
@@ -950,7 +958,7 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_ctx
     nbefore = worker_ctx["nbefore"]
     nafter = worker_ctx["nafter"]
     waveform_accumulator_per_worker = worker_ctx["waveform_accumulator_per_worker"]
-    waveform_squared_accumulator_per_worker = worker_ctx["waveform_squared_accumulator_per_worker"]
+    waveform_squared_accumulator_per_worker = worker_ctx.get("waveform_squared_accumulator_per_worker", None)
     worker_index = worker_ctx["worker_index"]
     return_scaled = worker_ctx["return_scaled"]
 
@@ -985,4 +993,5 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_ctx
             wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
 
             waveform_accumulator_per_worker[worker_index, unit_index, :, :] += wf
-            waveform_squared_accumulator_per_worker[worker_index, unit_index, :, :] += wf**2
+            if waveform_squared_accumulator_per_worker is not None:
+                waveform_squared_accumulator_per_worker[worker_index, unit_index, :, :] += wf**2
