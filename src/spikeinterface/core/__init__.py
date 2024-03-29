@@ -154,8 +154,8 @@ from .sortinganalyzer import (
 )
 
 from .analyzer_extension_core import (
-    SelectRandomSpikes,
-    compute_select_random_spikes,
+    ComputeRandomSpikes,
+    compute_random_spikes,
     ComputeWaveforms,
     compute_waveforms,
     ComputeTemplates,
