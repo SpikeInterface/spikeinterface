@@ -967,9 +967,24 @@ class BaseExtractor:
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
         channel_chunk_size: int or None, default: None
             Channels per chunk (only for BaseRecording)
+        compressor: numcodecs.Codec or None, default: None
+            Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
+        filters: list[numcodecs.Codec] or None, default: None
+            Global filters for zarr (global)
+        compressor_by_dataset: dict or None, default: None
+            Optional compressor per dataset:
+                - traces
+                - times
+            If None, the global compressor is used
+        filters_by_dataset: dict or None, default: None
+            Optional filters per dataset:
+                - traces
+                - times
+            If None, the global filters are used
         verbose: bool, default: True
             If True, the output is verbose
-        **save_kwargs: Keyword arguments for saving to zarr
+        auto_cast_uint: bool, default: True
+            If True, unsigned integers are cast to signed integers to avoid issues with zarr (only for BaseRecording)
 
         Returns
         -------
