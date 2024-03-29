@@ -6,7 +6,11 @@ import warnings
 from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core import compute_sparsity
 from ..core.template_tools import get_template_extremum_channel, _get_nbefore, _get_dense_templates_array
-from .localization_tools import make_radial_order_parents, solve_monopolar_triangulation, get_grid_convolution_templates_and_weights
+from .localization_tools import (
+    make_radial_order_parents,
+    solve_monopolar_triangulation,
+    get_grid_convolution_templates_and_weights,
+)
 
 dtype_localize_by_method = {
     "center_of_mass": [("x", "float64"), ("y", "float64")],
