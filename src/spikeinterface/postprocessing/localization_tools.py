@@ -101,7 +101,6 @@ def estimate_distance_error_with_log(vec, wf_data, local_contact_locations, max_
     return err
 
 
-
 # ---
 # waveform cleaning for localization. could be moved to another file
 
