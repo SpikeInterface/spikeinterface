@@ -23,6 +23,7 @@ from .core_tools import (
     make_paths_relative,
     make_paths_absolute,
     check_paths_relative,
+    retrieve_importing_provenance,
 )
 from .job_tools import _shared_job_kwargs_doc
 
@@ -427,22 +428,8 @@ class BaseExtractor:
 
             kwargs = new_kwargs
 
-        module_import_path = self.__class__.__module__
-        class_name_no_path = self.__class__.__name__
-        class_name = f"{module_import_path}.{class_name_no_path}"  # e.g. 'spikeinterface.core.generate.AClass'
-        module = class_name.split(".")[0]
-
-        imported_module = importlib.import_module(module)
-        module_version = getattr(imported_module, "__version__", "unknown")
-
-        dump_dict = {
-            "class": class_name,
-            "module": module,
-            "kwargs": kwargs,
-            "version": module_version,
-        }
-
-        dump_dict["version"] = module_version  # Can be spikeinterface, spikeforest, etc.
+        dump_dict = retrieve_importing_provenance(self.__class__)
+        dump_dict["kwargs"] = kwargs
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations
