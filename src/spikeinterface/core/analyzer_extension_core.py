@@ -486,7 +486,7 @@ register_result_extension(ComputeTemplates)
 class ComputeFastTemplates(AnalyzerExtension):
     """
     AnalyzerExtension which is similar to the extension "templates" (ComputeTemplates)
-    **but only for average**.
+    **but only for average and standard deviation**.
     This is way faster because it does not need "waveforms" to be computed first.
 
     Parameters
