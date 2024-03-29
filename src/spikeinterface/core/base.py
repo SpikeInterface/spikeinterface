@@ -83,6 +83,10 @@ class BaseExtractor:
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
 
+    def get_parent(self) -> Optional[BaseExtractor]:
+        """Returns parent object if it exists, otherwise None"""
+        return getattr(self, "_parent", None)
+
     def _check_segment_index(self, segment_index: Optional[int] = None) -> int:
         if segment_index is None:
             if self.get_num_segments() == 1:
