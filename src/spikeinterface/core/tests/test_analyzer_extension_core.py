@@ -82,7 +82,7 @@ def _check_result_extension(sorting_analyzer, extension_name):
         False,
     ],
 )
-def test_SelectRandomSpikes(format, sparse):
+def test_ComputeRandomSpikes(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
     ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
@@ -235,7 +235,6 @@ def test_delete_on_recompute():
 
 if __name__ == "__main__":
 
-    # test_SelectRandomSpikes(format="memory", sparse=True)
 
     # test_ComputeWaveforms(format="memory", sparse=True)
     # test_ComputeWaveforms(format="memory", sparse=False)
@@ -243,11 +242,8 @@ if __name__ == "__main__":
     # test_ComputeWaveforms(format="binary_folder", sparse=False)
     # test_ComputeWaveforms(format="zarr", sparse=True)
     # test_ComputeWaveforms(format="zarr", sparse=False)
+    # test_ComputeRandomSpikes(format="memory", sparse=True)
 
-    # test_ComputeTemplates(format="memory", sparse=True)
-    # test_ComputeTemplates(format="memory", sparse=False)
-    # test_ComputeTemplates(format="binary_folder", sparse=True)
-    # test_ComputeTemplates(format="zarr", sparse=True)
 
     # test_ComputeFastTemplates(format="memory", sparse=True)
 
