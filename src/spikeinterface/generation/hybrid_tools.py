@@ -3,7 +3,7 @@ from typing import Optional
 
 import numpy as np
 from spikeinterface.core.template import Templates
-from spikeinterface.generation import make_linear_displacement, InjectDriftingTemplatesRecording, DriftingTemplates
+from spikeinterface.generation import make_linear_displacement, InjectDriftingTemplatesRecording, DriftingTemplates, interpolate_templates
 from spikeinterface.core.generate import (
     generate_templates,
     generate_unit_locations,
@@ -158,9 +158,10 @@ def generate_hybrid_recording(
 
     num_spikes = sorting.to_spike_vector().size
 
+    channel_locations = probe.contact_positions
+    unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
+
     if templates is None:
-        channel_locations = probe.contact_positions
-        unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
         templates_array = generate_templates(
             channel_locations,
             unit_locations,
@@ -173,8 +174,12 @@ def generate_hybrid_recording(
             **generate_templates_kwargs,
         )
     else:
-        unit_locations = compute_monopolar_triangulation(templates)
-        templates_array = templates.templates_array
+        template_locations = compute_monopolar_triangulation(templates)
+        templates_array = np.zeros(templates.templates_array.shape, dtype=dtype)
+        for i in range(len(templates_array)):
+            src_template = templates.templates_array[i][np.newaxis, :, :]
+            deltas = (unit_locations[i] - template_locations[i])
+            templates_array[i] = interpolate_templates(src_template, channel_locations, channel_locations + deltas[:2])
 
     sorting.set_property("gt_unit_locations", unit_locations)
 
@@ -186,7 +191,7 @@ def generate_hybrid_recording(
         upsample_vector = None
     else:
         if upsample_vector is None:
-            upsample_factor = templates.shape[3]
+            upsample_factor = templates_array.shape[3]
             upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
 
     if motion_info is not None:
