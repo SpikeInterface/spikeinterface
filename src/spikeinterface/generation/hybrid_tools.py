@@ -3,7 +3,12 @@ from typing import Optional
 
 import numpy as np
 from spikeinterface.core.template import Templates
-from spikeinterface.generation import make_linear_displacement, InjectDriftingTemplatesRecording, DriftingTemplates, interpolate_templates
+from spikeinterface.generation import (
+    make_linear_displacement,
+    InjectDriftingTemplatesRecording,
+    DriftingTemplates,
+    interpolate_templates,
+)
 from spikeinterface.core.generate import (
     generate_templates,
     generate_unit_locations,
@@ -178,7 +183,7 @@ def generate_hybrid_recording(
         templates_array = np.zeros(templates.templates_array.shape, dtype=dtype)
         for i in range(len(templates_array)):
             src_template = templates.templates_array[i][np.newaxis, :, :]
-            deltas = (unit_locations[i] - template_locations[i])
+            deltas = unit_locations[i] - template_locations[i]
             templates_array[i] = interpolate_templates(src_template, channel_locations, channel_locations + deltas[:2])
 
     sorting.set_property("gt_unit_locations", unit_locations)
