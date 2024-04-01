@@ -12,6 +12,7 @@ def test_basic_functions():
 
     sorting2 = UnitsSelectionSorting(sorting, unit_ids=[0, 2])
     assert np.array_equal(sorting2.unit_ids, [0, 2])
+    assert sorting2.get_parent() == sorting
 
     sorting3 = UnitsSelectionSorting(sorting, unit_ids=[0, 2], renamed_unit_ids=["a", "b"])
     assert np.array_equal(sorting3.unit_ids, ["a", "b"])
