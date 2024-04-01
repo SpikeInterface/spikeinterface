@@ -87,6 +87,7 @@ def generate_hybrid_recording(
     templates=None,
     ms_before=1.0,
     ms_after=3.0,
+    unit_locations=None,
     upsample_factor=None,
     upsample_vector=None,
     generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0, seed=2205),
@@ -117,6 +118,9 @@ def generate_hybrid_recording(
         Cut out in ms before spike peak.
     ms_after: float, default: 3
         Cut out in ms after spike peak.
+    unit_locations: np.array, default: None
+        The locations at which the templates should be injected. If not provided, generated (see
+        generate_unit_location_kwargs)
     upsample_factor: None or int, default: None
         A upsampling factor used only when templates are not provided.
     upsample_vector: np.array or None
@@ -164,7 +168,10 @@ def generate_hybrid_recording(
     num_spikes = sorting.to_spike_vector().size
 
     channel_locations = probe.contact_positions
-    unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
+    if unit_locations is None:
+        unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
+    else:
+        assert len(unit_locations) == num_units, "unit_locations and num_units should have the same length"
 
     if templates is None:
         templates_array = generate_templates(
