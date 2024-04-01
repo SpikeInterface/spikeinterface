@@ -78,7 +78,7 @@ def test_common_reference_select_channels(recording):
     traces_all = recording_segment.get_traces(start_frame=0, end_frame=10, channel_indices=[0,1,2,3])
     traces_sub = recording_segment.get_traces(start_frame=0, end_frame=10, channel_indices=[1,3])
     
-    np.all(traces_all[:,[1,3]] == traces_sub)
+    assert np.all(traces_all[:,[1,3]] == traces_sub)
 
 def test_common_reference_groups(recording):
     original_traces = recording.get_traces()
