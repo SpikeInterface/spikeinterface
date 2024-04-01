@@ -331,6 +331,7 @@ class BaseRecording(BaseRecordingSnippets):
             traces = self._scale_traces(traces, channel_indices)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             if not self.has_scaled():
                 if self._dtype.kind == "f":
@@ -349,6 +350,8 @@ class BaseRecording(BaseRecordingSnippets):
                 offsets = offsets[channel_indices].astype("float32", copy=False)
                 traces = traces.astype("float32", copy=False) * gains + offsets
 >>>>>>> 225d75faf79a711ddd91f905bfdd74fa7db7bebb
+=======
+>>>>>>> a5ead7846fd1520b84dc0036291764d4dc3c816f
         return traces
 
     def has_scaled_traces(self) -> bool:
