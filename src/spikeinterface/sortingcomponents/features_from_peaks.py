@@ -204,9 +204,7 @@ class RandomProjectionsFeature(PipelineNode):
                 local_map = np.median(features, axis=0) < self.noise_threshold
                 features[features < local_map] = 0
 
-            denom = np.sum(features, axis=1)
-            mask = denom != 0
-            all_projections[idx[mask]] = np.dot(features[mask], local_projections) / (denom[mask][:, np.newaxis])
+            all_projections[idx] = np.dot(features, local_projections)
 
         return all_projections
 

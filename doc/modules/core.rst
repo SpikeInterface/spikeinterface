@@ -166,10 +166,155 @@ Internally, any sorting object can construct 2 internal caches:
 SortingAnalyzer
 ---------------
 
-The :py:class:`~spikeinterface.core.SortingAnalyzer` is the class which connects a :code:`Recording` and a :code:`Sorting`.
+The :py:class:`~spikeinterface.core.SortingAnalyzer` class is the core object to combine a
+:py:class:`~spikeinterface.core.BaseRecording` and a :py:class:`~spikeinterface.core.BaseSorting` object.
+This is the first step for additional analyses, and the basis of several postprocessing and quality metrics
+computations.
 
-**To be filled in**
+The :py:class:`~spikeinterface.core.SortingAnalyzer` provides a convenient API to access the underlying
+:py:class:`~spikeinterface.core.BaseSorting` and :py:class:`~spikeinterface.core.BaseRecording` information,
+and it supports several extensions (derived from the :py:class:`~spikeinterface.core.AnalyzerExtension` class)
+to perform further analysis.
 
+Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* (see [Sparsity]_ section), i.e.,
+the channels on which waveforms and templates are defined on, for example, based on a physical distance from the
+channel with the largest peak amplitude.
+
+Most of the extensions live in the :code:`postprocessing` module (with the :code:`quality_metrics` extension in the :code:`qualitymetrics` module) , but there are some *core* extensions too:
+
+* select random spikes for downstream analysis (e.g., extracting waveforms or fitting a PCA model)
+* estimate templates
+* extract waveforms for single spikes
+* compute channel-wise noise levels
+
+.. note::
+
+    Some extensions depend on others, which must be pre-computed. For example :code:`waveforms`, the :code:`waveforms` extension depends on
+    the :code:`random_spikes` one. If the latter is not computed, computing :code:`waveforms` will throw an error.
+
+
+.. code-block:: python
+
+    from spikeinterface import create_sorting_analyzer
+
+    # create in-memory sorting analyzer object
+    sorting_analyzer = create_sorting_analyzer(
+        sorting=sorting,
+        recording=recording,
+        sparse=True, # default
+        format="memory", # default
+    )
+
+    print(sorting_analyzer)
+
+.. code-block:: bash
+
+    >>> SortingAnalyzer: 4 channels - 10 units - 1 segments - memory - sparse - has recording
+    >>> Loaded 0 extensions:
+
+The :code:`sorting_analyzer` object implements convenient functions to access the underlying :code:`recording` and
+:code:`sorting` objects' information:
+
+.. code-block:: python
+
+    num_channels = sorting_analyzer.get_num_channels()
+    num_units = sorting_analyzer.get_num_units()
+    sampling_frequency = sorting_analyzer.get_sampling_frequency()
+    # or: sampling_frequency = sorting_analyzer.sampling_frequency
+    total_num_samples = sorting_analyzer.get_total_samples()
+    total_duration = sorting_analyzer.get_total_duration()
+    ### NOTE ###
+    # 'segment_index' is required for multi-segment objects
+    num_samples = sorting_analyzer.get_num_samples(segment_index=0)
+
+    # channel_ids and unit_ids
+    channel_ids = sorting_analyzer.channel_ids
+    unit_ids = sorting_analyzer.unit_ids
+
+Once the :code:`sorting_analyzer` is instantiated, additional extensions can be computed:
+
+
+.. code-block:: python
+    # compute some additional extensions
+
+    # create in-memory sorting analyzer object
+    random_spikes_extension = sorting_analyzer.compute("random_spikes")
+    templates_extension = sorting_analyzer.compute("fast_templates")
+    waveforms_extension = sorting_analyzer.compute("waveforms")
+
+    # each extension has a .data field: a dictionary with computed data
+    print(templates_extension.data.keys())
+
+.. code-block:: bash
+
+    >>> dict_keys(['average'])
+
+# TODO: extension __repr__
+
+.. code-block:: python
+    # arguments can be passed directly to the compute function
+    # note that re-computing an extension will overwrite the existing one
+    waveform_extension_2 = sorting_analyzer.compute("waveforms", ms_before=2, ms_after=5)
+
+    # multiple extensions can be computed within the same `compute` call
+    sorting_analyzer.compute(
+        ["random_spikes", "waveforms", "templates", "noise_levels"]
+    )
+
+The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in memory*, but it can be saved at any time
+(or upon instantiation) to one of the following backends:
+
+* | :code:`zarr`: the sorting analyzer is saved to a [Zarr]() folder, and each extension is a Zarr group. This is the
+  | recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
+* | :code:`binary_folder`: the sorting analyzer is saved to a folder, and each extension creates a sub-folder. The extension
+  | data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
+
+
+The :code:`SortingAnalyzer.save_as` function will save the object **and all its extensions** to disk.
+
+.. code-block:: python
+    # create a "processed" folder
+    processed_folder = Path("processed")
+
+    sorting_analyzer_zarr = sorting_analyzer.save_as(
+        folder=processed_folder / "sorting_analyzer.zarr",
+        format="zarr"
+    )
+    sorting_analyzer_binary = sorting_analyzer.save_as(
+        folder=processed_folder / "sorting_analyzer_bin",
+        format="binary_folder"
+    )
+    # sorting_analyzer_zarr and sorting_analyzer_binary are valid SortingAnalyzers,
+    # now associated to a Zarr storage / binary folder backend
+
+    # We can also create directly a  SortingAnalyzer associated to a backend upon instantiation
+    # for instance, this create "zarr" SortingAnalyzer object
+    sorting_analyzer_with_backend = create_sorting_analyzer(
+        sorting=sorting,
+        recording=recording,
+        sparse=True,
+        format="zarr",
+        folder="my-sorting-analyzer.zarr"
+    )
+
+
+Once a :code:`SortingAnalyzer` object is saved to disk, it can be easily reloaded with:
+
+.. code-block:: python
+
+    sorting_analyzer = si.load_sorting_analyzer(folder="my-sorting-analyzer.zarr")
+
+
+.. note::
+
+    When saved to disk, the :code:`SortingAnalyzer` will store a copy of the :code:`Sorting`` object,
+    because it is relatively small and needed for most (if not all!) operations. The same is not
+    true for the :code:`Recording` object, for which only the main properties will be stored (e.g,
+    :code:`sampling_frequency`, :code:`channel_ids`, :code:`channel_locations`, etc.) and
+    a provenance to reload the :code:`Recording`. When loading a :code:`SortingAnalyzer` from disk,
+    an attempt is made to re-instantiate the :code:`Recording` object from the provenance. In cases
+    of failure, for example if the original file is not available, the :code:`SortingAnalyzer`
+    will be automatically instantiated in "recordingless" mode.
 
 Event
 -----
@@ -690,7 +835,6 @@ various formats:
     # SpikeGLX format
     local_folder_path = download_dataset(remote_path='/spikeglx/multi_trigger_multi_gate')
     rec = read_spikeglx(local_folder_path)
-
 
 
 LEGACY objects

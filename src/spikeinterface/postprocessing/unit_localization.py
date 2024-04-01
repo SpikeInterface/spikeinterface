@@ -37,9 +37,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         A SortingAnalyzer object
     method: "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The method to use for localization
-    outputs: "numpy" | "by_unit", default: "numpy"
-        The output format
-    method_kwargs:
+    method_kwargs: dict, default: {}
         Other kwargs depending on the method
 
     Returns

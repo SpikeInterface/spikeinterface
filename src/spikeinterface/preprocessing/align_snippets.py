@@ -27,6 +27,7 @@ class AlignSnippets(BaseSnippets):
         assert self.snippet_len >= new_nbefore + new_nafter, "snippet_len smaller than new_nbefore+new_nafter"
 
         snippets.copy_metadata(self, only_main=False, ids=None)
+        self._parent = snippets
 
         for i in range(snippets.get_num_segments()):
             self.add_snippets_segment(
