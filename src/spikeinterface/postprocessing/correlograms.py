@@ -2,8 +2,7 @@ from __future__ import annotations
 import math
 import warnings
 import numpy as np
-from ..core import WaveformExtractor
-from ..core.waveform_extractor import BaseWaveformExtractorExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension, SortingAnalyzer
 
 try:
     import numba
@@ -13,59 +12,92 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-class CorrelogramsCalculator(BaseWaveformExtractorExtension):
-    """Compute correlograms of spike trains.
+class ComputeCorrelograms(AnalyzerExtension):
+    """
+    Compute auto and cross correlograms.
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        A waveform extractor object
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    window_ms : float, default: 50.0
+        The window in ms
+    bin_ms : float, default: 1.0
+        The bin size in ms
+    method : "auto" | "numpy" | "numba", default: "auto"
+         If "auto" and numba is installed, numba is used, otherwise numpy is used
+
+    Returns
+    -------
+    ccgs : np.array
+        Correlograms with shape (num_units, num_units, num_bins)
+        The diagonal of ccgs is the auto correlogram.
+        ccgs[A, B, :] is the symetrie of ccgs[B, A, :]
+        ccgs[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
+    bins :  np.array
+        The bin edges in ms
+
+    Returns
+        -------
+        isi_histograms : np.array
+            2D array with ISI histograms (num_units, num_bins)
+        bins : np.array
+            1D array with bins in ms
+
     """
 
     extension_name = "correlograms"
+    depend_on = []
+    need_recording = False
+    use_nodepipeline = False
+    need_job_kwargs = False
 
-    def __init__(self, waveform_extractor):
-        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
+    def __init__(self, sorting_analyzer):
+        AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
+    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         return params
 
     def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
-        unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
-        new_ccgs = self._extension_data["ccgs"][unit_indices][:, unit_indices]
-        new_bins = self._extension_data["bins"]
-        new_extension_data = dict(ccgs=new_ccgs, bins=new_bins)
-        return new_extension_data
+        unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+        new_ccgs = self.data["ccgs"][unit_indices][:, unit_indices]
+        new_bins = self.data["bins"]
+        new_data = dict(ccgs=new_ccgs, bins=new_bins)
+        return new_data
 
     def _run(self):
-        ccgs, bins = _compute_correlograms(self.waveform_extractor.sorting, **self._params)
-        self._extension_data["ccgs"] = ccgs
-        self._extension_data["bins"] = bins
+        ccgs, bins = compute_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
+        self.data["ccgs"] = ccgs
+        self.data["bins"] = bins
 
-    def get_data(self):
-        """
-        Get the computed ISI histograms.
-
-        Returns
-        -------
-        isi_histograms : np.array
-            2D array with ISI histograms (num_units, num_bins)
-        bins : np.array
-            1D array with bins in ms
-        """
-        msg = "Crosscorrelograms are not computed. Use the 'run()' function."
-        assert self._extension_data["ccgs"] is not None and self._extension_data["bins"] is not None, msg
-        return self._extension_data["ccgs"], self._extension_data["bins"]
-
-    @staticmethod
-    def get_extension_function():
-        return compute_correlograms
+    def _get_data(self):
+        return self.data["ccgs"], self.data["bins"]
 
 
-WaveformExtractor.register_extension(CorrelogramsCalculator)
+register_result_extension(ComputeCorrelograms)
+compute_correlograms_sorting_analyzer = ComputeCorrelograms.function_factory()
+
+
+def compute_correlograms(
+    sorting_analyzer_or_sorting,
+    window_ms: float = 50.0,
+    bin_ms: float = 1.0,
+    method: str = "auto",
+):
+    if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+        return compute_correlograms_sorting_analyzer(
+            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
+        )
+    else:
+        return compute_correlograms_on_sorting(
+            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
+        )
+
+
+compute_correlograms.__doc__ = compute_correlograms_sorting_analyzer.__doc__
 
 
 def _make_bins(sorting, window_ms, bin_ms):
@@ -135,52 +167,7 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
     return _compute_crosscorr_numba(spike_times1.astype(np.int64), spike_times2.astype(np.int64), window_size, bin_size)
 
 
-def compute_correlograms(
-    waveform_or_sorting_extractor,
-    load_if_exists=False,
-    window_ms: float = 50.0,
-    bin_ms: float = 1.0,
-    method: "auto" | "numpy" | "numba" = "auto",
-):
-    """Compute auto and cross correlograms.
-
-    Parameters
-    ----------
-    waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-        If WaveformExtractor, the correlograms are saved as WaveformExtensions
-    load_if_exists : bool, default: False
-        Whether to load precomputed crosscorrelograms, if they already exist
-    window_ms : float, default: 100.0
-        The window in ms
-    bin_ms : float, default: 5
-        The bin size in ms
-    method : "auto" | "numpy" | "numba", default: "auto"
-         If "auto" and numba is installed, numba is used, otherwise numpy is used
-
-    Returns
-    -------
-    ccgs : np.array
-        Correlograms with shape (num_units, num_units, num_bins)
-        The diagonal of ccgs is the auto correlogram.
-        ccgs[A, B, :] is the symmetry of ccgs[B, A, :]
-        ccgs[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
-    bins :  np.array
-        The bin edges in ms
-    """
-    if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
-        if load_if_exists and waveform_or_sorting_extractor.is_extension(CorrelogramsCalculator.extension_name):
-            ccc = waveform_or_sorting_extractor.load_extension(CorrelogramsCalculator.extension_name)
-        else:
-            ccc = CorrelogramsCalculator(waveform_or_sorting_extractor)
-            ccc.set_params(window_ms=window_ms, bin_ms=bin_ms, method=method)
-            ccc.run()
-        ccgs, bins = ccc.get_data()
-        return ccgs, bins
-    else:
-        return _compute_correlograms(waveform_or_sorting_extractor, window_ms=window_ms, bin_ms=bin_ms, method=method)
-
-
-def _compute_correlograms(sorting, window_ms, bin_ms, method="auto"):
+def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
     """

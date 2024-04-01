@@ -330,6 +330,25 @@ class BaseRecording(BaseRecordingSnippets):
         if return_scaled:
             traces = self._scale_traces(traces, channel_indices)
 
+<<<<<<< HEAD
+=======
+            if not self.has_scaled():
+                if self._dtype.kind == "f":
+                    # here we do not truely have scale but we assume this is scaled
+                    # this helps a lot for simulated data
+                    pass
+                else:
+                    raise ValueError(
+                        "This recording does not support return_scaled=True (need gain_to_uV and offset_"
+                        "to_uV properties)"
+                    )
+            else:
+                gains = self.get_property("gain_to_uV")
+                offsets = self.get_property("offset_to_uV")
+                gains = gains[channel_indices].astype("float32", copy=False)
+                offsets = offsets[channel_indices].astype("float32", copy=False)
+                traces = traces.astype("float32", copy=False) * gains + offsets
+>>>>>>> 225d75faf79a711ddd91f905bfdd74fa7db7bebb
         return traces
 
     def has_scaled_traces(self) -> bool:
@@ -652,10 +671,10 @@ class BaseRecording(BaseRecordingSnippets):
         # good job you pass all crucible
         return True
 
-    def astype(self, dtype):
+    def astype(self, dtype, round: bool | None = None):
         from ..preprocessing.astype import astype
 
-        return astype(self, dtype=dtype)
+        return astype(self, dtype=dtype, round=round)
 
 
 class BaseRecordingSegment(BaseSegment):

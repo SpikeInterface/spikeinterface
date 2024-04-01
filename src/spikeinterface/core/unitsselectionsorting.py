@@ -40,6 +40,7 @@ class UnitsSelectionSorting(BaseSorting):
             self.add_sorting_segment(sub_segment)
 
         parent_sorting.copy_metadata(self, only_main=False, ids=self._unit_ids)
+        self._parent = parent_sorting
 
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
@@ -55,13 +56,15 @@ class UnitsSelectionSorting(BaseSorting):
 
         parent_spike_vector = self._parent_sorting._cached_spike_vector
         parent_unit_indices = self._parent_sorting.ids_to_indices(self._unit_ids)
+        sort_indices = np.argsort(parent_unit_indices)
         mask = np.isin(parent_spike_vector["unit_index"], parent_unit_indices)
         spike_vector = np.array(
             parent_spike_vector[mask]
         )  # np.array() necessary to fix 'read-only' crash with memmaps.
-        spike_vector["unit_index"] = np.searchsorted(
-            parent_unit_indices, spike_vector["unit_index"]
+        indices = np.searchsorted(
+            parent_unit_indices, spike_vector["unit_index"], sorter=sort_indices
         )  # Trick to make sure that the new indices are correct.
+        spike_vector["unit_index"] = np.arange(len(parent_unit_indices))[sort_indices][indices]
 
         self._cached_spike_vector = spike_vector
 

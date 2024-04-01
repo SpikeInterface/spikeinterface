@@ -3,9 +3,10 @@ import pytest
 import numpy as np
 import json
 
-from spikeinterface.core import ChannelSparsity, estimate_sparsity
+from spikeinterface.core import ChannelSparsity, estimate_sparsity, compute_sparsity, Templates
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.core import create_sorting_analyzer
 
 
 def test_ChannelSparsity():
@@ -144,8 +145,7 @@ def test_densify_waveforms():
         assert np.array_equal(template_sparse, template_sparse2)
 
 
-def test_estimate_sparsity():
-    num_units = 5
+def get_dataset():
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
         sampling_frequency=16000.0,
@@ -155,6 +155,14 @@ def test_estimate_sparsity():
         noise_kwargs=dict(noise_level=1.0, strategy="tile_pregenerated"),
         seed=2205,
     )
+    recording.set_property("group", ["a"] * 5 + ["b"] * 5)
+    sorting.set_property("group", ["a"] * 3 + ["b"] * 2)
+    return recording, sorting
+
+
+def test_estimate_sparsity():
+    recording, sorting = get_dataset()
+    num_units = sorting.unit_ids.size
 
     # small radius should give a very sparse = one channel per unit
     sparsity = estimate_sparsity(
@@ -188,6 +196,34 @@ def test_estimate_sparsity():
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
 
 
+def test_compute_sparsity():
+    recording, sorting = get_dataset()
+
+    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False)
+    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute("fast_templates", return_scaled=True)
+    sorting_analyzer.compute("noise_levels", return_scaled=True)
+    # this is needed for method="energy"
+    sorting_analyzer.compute("waveforms", return_scaled=True)
+
+    # using object SortingAnalyzer
+    sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2, peak_sign="neg")
+    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0, peak_sign="neg")
+    sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5, peak_sign="neg")
+    sparsity = compute_sparsity(sorting_analyzer, method="ptp", threshold=5)
+    sparsity = compute_sparsity(sorting_analyzer, method="energy", threshold=5)
+    sparsity = compute_sparsity(sorting_analyzer, method="by_property", by_property="group")
+
+    # using object Templates
+    templates = sorting_analyzer.get_extension("fast_templates").get_data(outputs="Templates")
+    noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
+    sparsity = compute_sparsity(templates, method="best_channels", num_channels=2, peak_sign="neg")
+    sparsity = compute_sparsity(templates, method="radius", radius_um=50.0, peak_sign="neg")
+    sparsity = compute_sparsity(templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg")
+    sparsity = compute_sparsity(templates, method="ptp", noise_levels=noise_levels, threshold=5)
+
+
 if __name__ == "__main__":
-    test_ChannelSparsity()
-    test_estimate_sparsity()
+    # test_ChannelSparsity()
+    # test_estimate_sparsity()
+    test_compute_sparsity()

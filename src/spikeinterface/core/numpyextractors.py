@@ -457,7 +457,8 @@ class NumpySorting(BaseSorting):
         spikes["sample_index"] = peaks["sample_index"]
         spikes["unit_index"] = peaks["channel_index"]
         spikes["segment_index"] = peaks["segment_index"]
-
+        order = np.lexsort((spikes["sample_index"], spikes["segment_index"]))
+        spikes = spikes[order]
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
         return sorting
@@ -504,7 +505,7 @@ class SharedMemorySorting(BaseSorting):
             self.shm.unlink()
 
     @staticmethod
-    def from_sorting(source_sorting):
+    def from_sorting(source_sorting, with_metadata=False):
         spikes = source_sorting.to_spike_vector()
         shm_spikes, shm = make_shared_array(spikes.shape, spikes.dtype)
         shm_spikes[:] = spikes
@@ -517,6 +518,8 @@ class SharedMemorySorting(BaseSorting):
             main_shm_owner=True,
         )
         shm.close()
+        if with_metadata:
+            source_sorting.copy_metadata(sorting)
         return sorting
 
 

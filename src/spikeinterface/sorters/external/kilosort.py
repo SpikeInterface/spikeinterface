@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import os
 from typing import Union
@@ -54,7 +56,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         "freq_max": "Low-pass filter cutoff frequency",
         "ntbuff": "Samples of symmetrical buffer for whitening and spike detection",
         "Nfilt": "Number of clusters to use (if None it is automatically computed)",
-        "NT": "Batch size (if None it is automatically computed)",
+        "NT": "Batch size (if None it is automatically computed--recommended Kilosort behavior if ntbuff also not changed)",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "delete_tmp_files": "Delete temporary files created during sorting (matlab files and the `temp_wh.dat` file that "
         "contains kilosort-preprocessed data). Accepts `False` (deletes no files), `True` (deletes all files) "
@@ -161,13 +163,13 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["nNeigh"] = 16.0  # visualization only (Phy): number of neighboring templates to retain projections of (16)
 
         # options for channel whitening
-        ops[
-            "whitening"
-        ] = "full"  # type of whitening (default 'full', for 'noSpikes' set options for spike detection below)
+        ops["whitening"] = (
+            "full"  # type of whitening (default 'full', for 'noSpikes' set options for spike detection below)
+        )
         ops["nSkipCov"] = 1.0  # compute whitening matrix from every N-th batch (1)
-        ops[
-            "whiteningRange"
-        ] = 32.0  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
+        ops["whiteningRange"] = (
+            32.0  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
+        )
 
         # ops['criterionNoiseChannels'] = 0.2  # fraction of "noise" templates allowed to span all channel groups (see createChannelMapFile for more info).
 

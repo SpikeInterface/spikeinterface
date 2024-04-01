@@ -70,6 +70,7 @@ def test_run_sorter_jobs_loop(job_list):
     print(sortings)
 
 
+@pytest.mark.skipif(True, reason="tridesclous is already multiprocessing, joblib cannot run it in parralel")
 def test_run_sorter_jobs_joblib(job_list):
     if base_output.is_dir():
         shutil.rmtree(base_output)

@@ -117,6 +117,8 @@ class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ["openephys"]
     entities = [
         "openephys/OpenEphys_SampleData_1",
+        # This has gaps!!!
+        "openephys/OpenEphys_SampleData_2_(multiple_starts)",
     ]
 
 
@@ -131,6 +133,21 @@ class IntanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("intan/intan_rhs_test_1.rhs", {"stream_id": "3"}),
         ("intan/intan_rhs_test_1.rhs", {"stream_id": "4"}),
         ("intan/intan_rhs_test_1.rhs", {"stream_id": "11"}),
+    ]
+
+
+class IntanRecordingTestMultipleFilesFormat(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = IntanRecordingExtractor
+    downloads = ["intan"]
+    entities = [
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "RHD2000 amplifier channel"}),
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "RHD2000 auxiliary input channel"}),
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "USB board ADC input channel"}),
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "USB board digital input channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "RHD2000 amplifier channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "RHD2000 auxiliary input channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "USB board ADC input channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "USB board digital input channel"}),
     ]
 
 

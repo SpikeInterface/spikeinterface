@@ -1,13 +1,14 @@
 """
 This module contains low-level functions to extract snippets of traces (aka "spike waveforms").
 
-This is internally used by WaveformExtractor, but can also be used as a sorting component.
+This is internally used by SortingAnalyzer, but can also be used as a sorting component.
 
 It is a 2-step approach:
   1. allocate buffers (shared file or memory)
   2. extract and distribute snippets into buffers (optionally in parallel)
 
 """
+
 from __future__ import annotations
 from pathlib import Path
 
@@ -407,7 +408,7 @@ def extract_waveforms_to_single_buffer(
     file_path=None,
     dtype=None,
     sparsity_mask=None,
-    copy=False,
+    copy=True,
     job_name=None,
     **job_kwargs,
 ):
@@ -482,7 +483,7 @@ def extract_waveforms_to_single_buffer(
     if sparsity_mask is None:
         num_chans = recording.get_num_channels()
     else:
-        num_chans = max(np.sum(sparsity_mask, axis=1))
+        num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
     shape = (num_spikes, nsamples, num_chans)
 
     if mode == "memmap":
@@ -704,17 +705,18 @@ def estimate_templates(
     unit_ids: list | np.ndarray,
     nbefore: int,
     nafter: int,
+    operator: str = "average",
     return_scaled: bool = True,
+    job_name=None,
     **job_kwargs,
 ):
     """
-    This is a fast implementation to compute average templates.
-    This is useful to estimate sparsity without the need to allocate large waveform buffers.
-    The mechanism is pretty simple: it accumulates and sums spike waveforms in-place per worker and per unit.
-    Note that std, median and percentiles can't be computed with this method.
+    Estimate dense templates with "average" or "median".
+    If "average" internally estimate_templates_with_accumulator() is used to saved memory/
 
     Parameters
     ----------
+
     recording: BaseRecording
         The recording object
     spikes: 1d numpy array with several fields
@@ -733,6 +735,84 @@ def estimate_templates(
     -------
     templates_array: np.array
         The average templates with shape (num_units, nbefore + nafter, num_channels)
+
+    """
+
+    if job_name is None:
+        job_name = "estimate_templates"
+
+    if operator == "average":
+        templates_array = estimate_templates_with_accumulator(
+            recording, spikes, unit_ids, nbefore, nafter, return_scaled=return_scaled, job_name=job_name, **job_kwargs
+        )
+    elif operator == "median":
+        all_waveforms, wf_array_info = extract_waveforms_to_single_buffer(
+            recording,
+            spikes,
+            unit_ids,
+            nbefore,
+            nafter,
+            mode="shared_memory",
+            return_scaled=return_scaled,
+            copy=False,
+            **job_kwargs,
+        )
+        templates_array = np.zeros(
+            (len(unit_ids), all_waveforms.shape[1], all_waveforms.shape[2]), dtype=all_waveforms.dtype
+        )
+        for unit_index, unit_id in enumerate(unit_ids):
+            wfs = all_waveforms[spikes["unit_index"] == unit_index]
+            templates_array[unit_index, :, :] = np.median(wfs, axis=0)
+        # release shared memory after the median
+        wf_array_info["shm"].unlink()
+
+    else:
+        raise ValueError(f"estimate_templates(..., operator={operator}) wrong operator must be average or median")
+
+    return templates_array
+
+
+def estimate_templates_with_accumulator(
+    recording: BaseRecording,
+    spikes: np.ndarray,
+    unit_ids: list | np.ndarray,
+    nbefore: int,
+    nafter: int,
+    return_scaled: bool = True,
+    job_name=None,
+    return_std: bool = False,
+    **job_kwargs,
+):
+    """
+    This is a fast implementation to compute template averages and standard deviations.
+    This is useful to estimate sparsity without the need to allocate large waveform buffers.
+    The mechanism is pretty simple: it accumulates and sums spike waveforms (and their squared)
+    in-place per worker and per unit.
+    Note that median and percentiles can't be computed with this method, because they don't support
+    the accumulator implementation.
+
+    Parameters
+    ----------
+    recording: BaseRecording
+        The recording object
+    spikes: 1d numpy array with several fields
+        Spikes handled as a unique vector.
+        This vector can be obtained with: `spikes = sorting.to_spike_vector()`
+    unit_ids: list ot numpy
+        List of unit_ids
+    nbefore: int
+        Number of samples to cut out before a spike
+    nafter: int
+        Number of samples to cut out after a spike
+    return_scaled: bool, default: True
+        If True, the traces are scaled before averaging
+    return_std: bool, default: False
+        If True, the standard deviation is also computed.
+
+    Returns
+    -------
+    templates_array: np.array
+        The average templates with shape (num_units, nbefore + nafter, num_channels)
     """
 
     assert spikes.size > 0, "estimate_templates() need non empty sorting"
@@ -745,8 +825,14 @@ def estimate_templates(
 
     shape = (num_worker, num_units, nbefore + nafter, num_chans)
     dtype = np.dtype("float32")
-    waveforms_per_worker, shm = make_shared_array(shape, dtype)
+    waveform_accumulator_per_worker, shm = make_shared_array(shape, dtype)
     shm_name = shm.name
+    if return_std:
+        waveform_squared_accumulator_per_worker, shm_squared = make_shared_array(shape, dtype)
+        shm_squared_name = shm_squared.name
+    else:
+        waveform_squared_accumulator_per_worker = None
+        shm_squared_name = None
 
     # trick to get the work_index given pid arrays
     lock = multiprocessing.Lock()
@@ -761,6 +847,7 @@ def estimate_templates(
         recording,
         spikes,
         shm_name,
+        shm_squared_name,
         shape,
         dtype,
         nbefore,
@@ -770,28 +857,47 @@ def estimate_templates(
         array_pid,
     )
 
-    processor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name="estimate_templates", **job_kwargs
-    )
+    if job_name is None:
+        job_name = "estimate_templates_with_accumulator"
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
     processor.run()
 
     # average
-    templates_array = np.sum(waveforms_per_worker, axis=0)
+    waveforms_sum = np.sum(waveform_accumulator_per_worker, axis=0)
+    template_means = waveforms_sum
     unit_indices, spike_count = np.unique(spikes["unit_index"], return_counts=True)
-    templates_array[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
+    template_means[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
 
-    # important : release the sharemem
-    del waveforms_per_worker
+    if return_std:
+        waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
+        # standard deviation
+        template_stds = np.zeros_like(template_means)
+        for i, (unit_index, count) in enumerate(zip(unit_indices, spike_count)):
+            residuals = (
+                waveforms_squared_sum[unit_index] - 2 * count * template_means[unit_index] * waveforms_sum[unit_index]
+            ) + count * template_means[unit_index] ** 2
+            template_stds[unit_index] = np.sqrt(residuals / count)
+        assert np.all(template_stds >= 0)
+        del waveform_squared_accumulator_per_worker
+        shm_squared.unlink()
+        shm_squared.close()
+
+    # important : release the sharedmem
+    del waveform_accumulator_per_worker
     shm.unlink()
     shm.close()
 
-    return templates_array
+    if return_std:
+        return template_means, template_stds
+    else:
+        return template_means
 
 
 def _init_worker_estimate_templates(
     recording,
     spikes,
     shm_name,
+    shm_squared_name,
     shape,
     dtype,
     nbefore,
@@ -811,9 +917,15 @@ def _init_worker_estimate_templates(
     import multiprocessing
 
     shm = SharedMemory(shm_name)
-    waveforms_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+    waveform_accumulator_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+
     worker_ctx["shm"] = shm
-    worker_ctx["waveforms_per_worker"] = waveforms_per_worker
+    worker_ctx["waveform_accumulator_per_worker"] = waveform_accumulator_per_worker
+    if shm_squared_name is not None:
+        shm_squared = SharedMemory(shm_squared_name)
+        waveform_squared_accumulator_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm_squared.buf)
+        worker_ctx["shm_squared"] = shm_squared
+        worker_ctx["waveform_squared_accumulator_per_worker"] = waveform_squared_accumulator_per_worker
 
     # prepare segment slices
     segment_slices = []
@@ -845,7 +957,8 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_ctx
     spikes = worker_ctx["spikes"]
     nbefore = worker_ctx["nbefore"]
     nafter = worker_ctx["nafter"]
-    waveforms_per_worker = worker_ctx["waveforms_per_worker"]
+    waveform_accumulator_per_worker = worker_ctx["waveform_accumulator_per_worker"]
+    waveform_squared_accumulator_per_worker = worker_ctx.get("waveform_squared_accumulator_per_worker", None)
     worker_index = worker_ctx["worker_index"]
     return_scaled = worker_ctx["return_scaled"]
 
@@ -879,4 +992,6 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_ctx
             unit_index = spikes[spike_index]["unit_index"]
             wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
 
-            waveforms_per_worker[worker_index, unit_index, :, :] += wf
+            waveform_accumulator_per_worker[worker_index, unit_index, :, :] += wf
+            if waveform_squared_accumulator_per_worker is not None:
+                waveform_squared_accumulator_per_worker[worker_index, unit_index, :, :] += wf**2
