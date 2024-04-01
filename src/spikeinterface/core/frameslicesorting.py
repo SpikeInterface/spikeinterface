@@ -83,6 +83,7 @@ class FrameSliceSorting(BaseSorting):
 
         # copy properties and annotations
         parent_sorting.copy_metadata(self)
+        self._parent = parent_sorting
 
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording.frame_slice(start_frame=start_frame, end_frame=end_frame))
