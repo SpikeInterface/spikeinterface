@@ -70,9 +70,9 @@ def test_common_reference_channel_slicing(recording):
     # local car
     local_trace = recording_local_car.get_traces(channel_ids=channel_ids)
 
-def test_common_reference_select_channels(recording):
+def test_common_reference_select_channels_local(recording):
 
-    recording_cmr = common_reference(recording)
+    recording_cmr = common_reference(recording, reference="local")
     recording_segment = recording_cmr._recording_segments[0]
 
     traces_all = recording_segment.get_traces(start_frame=0, end_frame=10, channel_indices=[0,1,2,3])
