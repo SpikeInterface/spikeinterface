@@ -28,9 +28,9 @@ def test_generate_hybrid_motion():
     hybrid, sorting = generate_hybrid_recording(rec, motion)
 
 
-def test_estimate_templates():
+def test_estimate_templates(tmp_path):
     rec, sorting = generate_ground_truth_recording(num_units=10, sampling_frequency=20000)
-    templates = estimate_templates_from_recording(rec, output_folder=cache_folder / "sc", remove_existing_folder=True)
+    templates = estimate_templates_from_recording(rec, output_folder=tmp_path / "sc", remove_existing_folder=True)
     assert len(templates.templates_array) > 0
 
 
