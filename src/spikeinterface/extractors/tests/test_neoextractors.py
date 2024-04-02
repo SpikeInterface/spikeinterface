@@ -299,6 +299,7 @@ class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("spikegadgets/20210225_em8_minirec2_ac.rec", {"stream_id": "ECU"}),
         ("spikegadgets/20210225_em8_minirec2_ac.rec", {"stream_id": "trodes"}),
         "spikegadgets/W122_06_09_2019_1_fromSD.rec",
+        "SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec",
     ]
 
 
