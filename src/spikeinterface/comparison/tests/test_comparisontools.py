@@ -15,7 +15,7 @@ from spikeinterface.comparison import (
     do_count_score,
     compute_performance,
 )
-from spikeinterface.core.generate import generate_sorting
+from spikeinterface.generation import generate_sorting
 
 
 def make_sorting(times1, labels1, times2, labels2):

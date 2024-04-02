@@ -16,9 +16,9 @@ from spikeinterface.core import (
     estimate_templates,
     Templates,
     generate_sorting,
-    NoiseGeneratorRecording,
+    noise_generator_recording,
 )
-from spikeinterface.core.generate import generate_unit_locations
+from spikeinterface.generation import generate_unit_locations
 from spikeinterface.generation import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 
 
@@ -154,10 +154,8 @@ def make_drifting_dataset():
         ],
         firing_rates=25.0,
     )
-    sorting
 
     times = np.arange(0, duration, 1 / displacement_sampling_frequency)
-    times
 
     # 2 rythm
     mid = (start + stop) / 2
@@ -183,7 +181,7 @@ def make_drifting_dataset():
         m = displacement_vectors[:, direction, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
         unit_displacements[:, :] += m
 
-    noise = NoiseGeneratorRecording(
+    noise = noise_generator_recording(
         num_channels=probe.contact_ids.size,
         sampling_frequency=sampling_frequency,
         durations=[duration],

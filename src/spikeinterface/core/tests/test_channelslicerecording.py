@@ -7,7 +7,7 @@ import numpy as np
 import probeinterface
 
 from spikeinterface.core import ChannelSliceRecording, BinaryRecordingExtractor
-from spikeinterface.core.generate import generate_recording
+from spikeinterface.core import generate_recording
 
 
 def test_ChannelSliceRecording():

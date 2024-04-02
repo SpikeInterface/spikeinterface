@@ -13,10 +13,6 @@ from spikeinterface.core.core_tools import (
     check_paths_relative,
     normal_pdf,
 )
-from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-from spikeinterface.core.generate import NoiseGeneratorRecording
-from spikeinterface.core.numpyextractors import NumpySorting
-
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"

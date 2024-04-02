@@ -11,7 +11,7 @@ ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 mark_names = ["core", "extractors", "preprocessing", "postprocessing",
               "sorters_external", "sorters_internal", "sorters",
               "qualitymetrics", "comparison", "curation",
-              "widgets", "exporters", "sortingcomponents", "generation"]
+              "widgets", "exporters", "sortingcomponents"]
 
 
 # define global test folder
@@ -45,6 +45,9 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker("sorters_external")
             else:
                 item.add_marker("sorters")
+        elif "generation" in str(rel_path):
+            # generation tests are core
+            item.add_marker("core")
         else:
             for mark_name in mark_names:
                 if f"/{mark_name}/" in str(rel_path):

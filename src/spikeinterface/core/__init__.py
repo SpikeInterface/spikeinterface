@@ -31,26 +31,6 @@ from .frameslicesorting import FrameSliceSorting
 from .channelsaggregationrecording import ChannelsAggregationRecording, aggregate_channels
 from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 
-# generator of simple object for testing or examples
-from .generate import (
-    generate_recording,
-    generate_sorting,
-    add_synchrony_to_sorting,
-    create_sorting_npz,
-    generate_snippets,
-    synthesize_random_firings,
-    inject_some_duplicate_units,
-    inject_some_split_units,
-    synthetize_spike_train_bad_isi,
-    generate_templates,
-    NoiseGeneratorRecording,
-    noise_generator_recording,
-    generate_recording_by_size,
-    InjectTemplatesRecording,
-    inject_templates,
-    generate_ground_truth_recording,
-)
-
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
 from .segmentutils import (
     append_recordings,
@@ -169,3 +149,20 @@ from .analyzer_extension_core import (
 # Important not for compatibility!!
 # This wil be uncommented after 0.100
 from .waveforms_extractor_backwards_compatibility import extract_waveforms, load_waveforms
+
+# expose generator functions at core level
+from ..generation import (
+    generate_recording,
+    generate_sorting,
+    add_synchrony_to_sorting,
+    create_sorting_npz,
+    generate_snippets,
+    synthesize_random_firings,
+    inject_some_duplicate_units,
+    inject_some_split_units,
+    synthetize_spike_train_bad_isi,
+    generate_templates,
+    noise_generator_recording,
+    generate_recording_by_size,
+    generate_ground_truth_recording,
+)

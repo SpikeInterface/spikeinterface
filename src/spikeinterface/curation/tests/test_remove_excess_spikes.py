@@ -1,6 +1,7 @@
 import numpy as np
-from spikeinterface.core.generate import generate_recording, NumpySorting
+from spikeinterface.core import NumpySorting
 from spikeinterface.core.waveform_tools import has_exceeding_spikes
+from spikeinterface.generation import generate_recording
 from spikeinterface.curation import remove_excess_spikes
 
 

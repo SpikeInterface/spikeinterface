@@ -7,7 +7,7 @@ import pytest
 import numpy as np
 
 from spikeinterface import create_sorting_analyzer
-from spikeinterface.core.generate import inject_some_duplicate_units
+from spikeinterface.generation import inject_some_duplicate_units
 
 
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation

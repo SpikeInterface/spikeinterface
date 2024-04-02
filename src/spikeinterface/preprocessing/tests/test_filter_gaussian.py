@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 from spikeinterface.core import load_extractor, set_global_tmp_folder
 from spikeinterface.core.testing import check_recordings_equal
-from spikeinterface.core.generate import generate_recording
+from spikeinterface.generation import generate_recording
 from spikeinterface.preprocessing import gaussian_filter
 from numpy.testing import assert_allclose
 import scipy

@@ -5,7 +5,7 @@ import numpy as np
 from spikeinterface.core import NumpyRecording, generate_recording
 
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-from spikeinterface.core.generate import NoiseGeneratorRecording
+from spikeinterface.generation import NoiseGeneratorRecording
 
 
 from spikeinterface.core.recording_tools import (

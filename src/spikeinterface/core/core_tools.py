@@ -22,6 +22,16 @@ from .job_tools import (
 )
 
 
+def _ensure_seed(seed):
+    # when seed is None:
+    # we want to set one to push it in the Recordind._kwargs to reconstruct the same signal
+    # this is a better approach than having seed=42 or seed=my_dog_birthday because we ensure to have
+    # a new signal for all call with seed=None but the dump/load will still work
+    if seed is None:
+        seed = np.random.default_rng(seed=None).integers(0, 2**63)
+    return seed
+
+
 def define_function_from_class(source_class, name):
     "Wrapper to change the name of a class"
 

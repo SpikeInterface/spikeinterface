@@ -4,7 +4,7 @@ import numpy as np
 
 from probeinterface import Probe
 from spikeinterface.core import NumpySorting
-from spikeinterface.core.generate import (
+from spikeinterface.generation import (
     generate_sorting,
     generate_channel_locations,
     generate_unit_locations,

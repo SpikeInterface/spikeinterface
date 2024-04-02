@@ -33,7 +33,7 @@ from .groundtruthstudy import GroundTruthStudy
 from .collision import CollisionGTComparison, CollisionGTStudy
 from .correlogram import CorrelogramGTComparison, CorrelogramGTStudy
 
-from .hybrid import (
+from ..generation.hybrid import (
     HybridSpikesRecording,
     HybridUnitsRecording,
     generate_sorting_to_inject,

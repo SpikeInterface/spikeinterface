@@ -5,7 +5,7 @@ import numpy as np
 
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.core_tools import SIJsonEncoder
-from spikeinterface.core.generate import generate_recording, generate_sorting
+from spikeinterface.generation import generate_recording, generate_sorting
 
 
 @pytest.fixture(scope="module")

@@ -1,5 +1,5 @@
 import numpy as np
-from spikeinterface.core.generate import generate_sorting
+from spikeinterface.generation import generate_sorting
 from spikeinterface.curation import remove_duplicated_spikes, find_duplicated_spikes
 
 

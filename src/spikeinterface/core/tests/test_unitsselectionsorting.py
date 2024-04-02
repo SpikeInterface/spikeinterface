@@ -4,7 +4,7 @@ from pathlib import Path
 
 from spikeinterface.core import UnitsSelectionSorting
 
-from spikeinterface.core.generate import generate_sorting
+from spikeinterface.generation import generate_sorting
 
 
 def test_basic_functions():

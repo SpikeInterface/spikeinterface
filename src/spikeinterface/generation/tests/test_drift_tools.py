@@ -10,7 +10,7 @@ from spikeinterface.generation import (
     DriftingTemplates,
     InjectDriftingTemplatesRecording,
 )
-from spikeinterface.core.generate import generate_templates, generate_sorting, NoiseGeneratorRecording
+from spikeinterface.generation import generate_templates, generate_sorting, noise_generator_recording
 from spikeinterface.core import Templates, BaseRecording
 
 from probeinterface import generate_multi_columns_probe
@@ -169,7 +169,7 @@ def test_InjectDriftingTemplatesRecording():
     drifting_templates.precompute_displacements(displacements)
 
     # recordings
-    noise = NoiseGeneratorRecording(
+    noise = noise_generator_recording(
         num_channels=probe.contact_ids.size,
         sampling_frequency=sampling_frequency,
         durations=[duration],

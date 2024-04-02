@@ -5,7 +5,7 @@ import numpy as np
 
 
 from spikeinterface.core import create_sorting_analyzer
-from spikeinterface.core.generate import inject_some_split_units
+from spikeinterface.generation import inject_some_split_units
 from spikeinterface.curation import get_potential_auto_merge
 
 
