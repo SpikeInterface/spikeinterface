@@ -24,9 +24,10 @@ def estimate_templates_from_recording(
     recording, ms_before=2, ms_after=2, sorter_name="spykingcircus2", **run_sorter_kwargs
 ):
     """
-     Get templates from a recording. Internally, SpyKING CIRCUS 2 is used (see parameters)
-    with the only twist that the template matching step is not launch. Instead, a Template
-    object is returned based on the results of the clutering.
+    Get templates from a recording. Internally, SpyKING CIRCUS 2 is used by default
+    with the only twist that the template matching step is not launched. Instead, a Template
+    object is returned based on the results of the clustering. Other sorters can be invoked 
+    with the `sorter_name` and `run_sorter_kwargs` parameters.
 
     Parameters
     ----------
