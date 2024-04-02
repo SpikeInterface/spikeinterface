@@ -88,7 +88,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_extra_kwargs": "If True, additional kwargs are saved to the output",
         "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
-        "torch_device": "Select the troch device auto/cuda/cpu",
+        "torch_device": "Select the torch device auto/cuda/cpu",
     }
 
     sorter_description = """Kilosort4 is a Python package for spike sorting on GPUs with template matching.
