@@ -17,6 +17,7 @@ def test_FrameSliceRecording():
     assert np.array_equal(traces[:, 0], np.arange(0, 1000, dtype="float64"))
     sub_times0 = sub_rec.get_times(0)
     assert np.allclose(times0, sub_times0)
+    assert sub_rec.get_parent() == rec
 
     sub_rec = rec.frame_slice(None, 10)
     assert sub_rec.get_num_samples(0) == 10
