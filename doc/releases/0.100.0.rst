@@ -1,0 +1,158 @@
+.. _release0.100.0:
+
+SpikeInterface 0.100.0 release notes
+------------------------------------
+
+6th February 2024
+
+Main changes:
+
+* Several improvements and bug fixes for Windows users
+* Important refactoring of NWB extractors:
+  * implemented direct backend implementation (to avoid using `pynwb`)
+  * sped up streaming using `remfile`
+  * added support for `zarr` backend
+* Removed `joblib` dependency in favor of `ParallelProcessExecutor`
+* Improved flexibility when running sorters in containers by adding several options for installing `spikeinterface`
+* Add `Templates` class to core, which handles unit templates and sparsity (#1982)
+* Added Zarr-backend to `Sorting` objects (`sorting.save(folder="...", format="zarr")`) (#2403)
+* Added `SharedmemRecording` for shared memory recordings (#2365)
+* Added machinery for moving/interpolating templates for generating hybrid recordings with drift (#2291)
+* Added new fast method for unit/spike/peak localization: `grid_convolution` (#2172)
+
+
+core:
+
+* Add `Templates` class (#1982)
+* Use python methods instead of parsing and eleminate try-except in to_dict
+(#2157)
+* `WaveformExtractor.is_extension` --> `has_extension` (#2158)
+* Speed improvement to `get_empty_units()` (#2173)
+* Allow precomputing spike trains (#2175)
+* Add 'percentile' to template modes and `plot_unit_templates` (#2179)
+* Add `rename_units` method in sorting (#2207)
+* Add an option for count_num_spikes_per_unit (#2209)
+* Remove joblib in favor of `ParallelProcessExecutor` (#2218)
+* Fixed a bug when caching recording noise levels (#2220)
+* Various fixes for Windows (#2221)
+* Fix num_samples in concatenation (#2223)
+* Disable writing templates modes npy in read-only mode (#2251)
+* Assert renamed_channels/unit_ids is unique (#2252)
+* Implement save_to_zarr for BaseSorting (#2254)
+* Improve the BaseExtractor.to_dict() relative_to machanism to make it safer on Windows (#2279)
+* Make sure sampling frequency is always float (#2283)
+* `NumpySorting.from_peaks`: make `unit_ids` mandatory (#2315)
+* Make chunksize in `get_random_data_chunks` throw warning and clip if under limit (#2321)
+* ids can be a tuple in `ids_to_indices` (#2324)
+* `get_num_frames` to return a python int (#2326)
+* Add an auto adjustment if n_jobs too high on Windows (#2329)
+* Cache spike_vector from parent (#2353)
+* Refactor recording tools (#2363)
+* Add rename_channels method to recording extractors (#2364)
+* Create `SharedmemRecording` (#2365)
+* `WaveformExtractor.select_units` also functional if `we.has_recording()=False` (#2368)
+* Add zarrrecordingextractor.py for backward compatibility (#2377, #2395, #2451)
+* Improve `ZarrSortingExtractor` (#2403)
+* Improvement to compute sparsity without `WaveformsExtractor` (#2410)
+* Zarr backcompatibility: map `root_path` to `folder_path` (#2451)
+* Fix spikes generation on borders (#2453)
+* Zarr IO for `Templates` object (#2423)
+* Avoid double parsing in Plexon (#2459)
+
+extractors:
+
+* Add .stream.cbin compatibility to `CompressedBinaryIblExtractor` (#2297)
+* Add stream_folders path to `OpenEphysBinaryRecordingExtractor` (#2369)
+* Deprecate `ignore_timestamps_errors` in `OpenEphysLegacyRecordingExtractor` (#2450)
+* Better auto-guess of open-ephys format (#2465)
+* Several improvements to NWB extractors:
+  *  Add option for no caching option to the NWB extractor when streaming (#2246, #2248, #2268)
+  *  Fix `NwbSortingExtractor` reading of ragged arrays (#2255)
+  *  Add nwb sorting `remfile` support (#2275)
+  *  Avoid loading `channel_name` property in `NwbRecordingExtractor` (#2285)
+  *  Add hdf5 backend support for Nwb extractors (#2294, #2297, #2341)
+  *  Refactor `NwbSortingSegment` (#2313)
+  *  Add `t_start` argument to NwbSortingExtractor (#2333)
+  *  Add support for NWB-Zarr enhancement and zarr streaming (#2441, #2464)
+
+preprocessing:
+
+* Fix filtering rounding error (#2189)
+* Fix: save a copy of group ids in `CommonReferenceRecording` (#2215)
+* Add `outside_channels_location` option in `detect_bad_channels` (#2250)
+* Fix overflow problems with CAR (#2362)
+* Fix for Silence periods (saving noise levels) (#2375)
+* Add `DecimateRecording` (#2385)
+* Add `margin_sd` argument to gaussian filtering (#2389)
+* Faster Gaussian filter implementation  preprocessing (#2420)
+* Faster unpickling of ZScoreRecording (#2431)
+* Add bit depth compensation to unsigned_to_signed (#2438)
+* Renaming: `GaussianBandpassFilter` -> `GaussianFilter` (and option for low/high pass filter) (#2397, #2466)
+
+sorters:
+
+* Several updates to SpykingCircus2 (#2205, #2236, #2244, #2276)
+* Handling segments in SpykingCircus2 and Tridesclous2 (#2208)
+* A couple updates to `mountainsort5` sorter (#2225)
+* `run_sorter` in containers: dump to json or pickle (#2271)
+* `run_sorter` in containers: add several options for installing spikeinterface (#2273)
+* Close `ShellScript` and pipes process at deletion (#2292, #2338)
+* Remove deprecated direct function to `run_sorter` (e.g., `run_kilosort2` -> `run_sorter('kilosort2')` (#2355)
+* Expose `lam` and `momentum` params in the appropriate kilosorts (#2358)
+* Tridesclous2 update (#2267)
+
+postprocessing:
+
+* Use sampling_frequency instead of get_sampling_frequency in _make_bins (#2284)
+* Multi-channel template metrics fix (#2323)
+* Fix bug in get_repolarization_slope with wrong index type (#2432)
+* Estimation of depth for `grid_convolution` localization (#2172)
+
+
+qualitymetrics:
+
+* Implemented sd_ratio as quality metric (#2146, #2402)
+* Avoid duplicated template and quality metric names (#2210)
+* Fix rp_violations when specifying unit_ids (#2247)
+
+curation:
+
+* Fix bug in `mergeunits` (#2443)
+* Fix sortingview curation and merge units with array properties (#2427)
+* Move computation away from __init__ in duplicated spikes (#2446)
+
+widgets:
+
+* Sorting summary updates in sortingview (#2318)
+* Add a more robust `delta_x` to unit_waveforms (#2287)
+* Prevent users from providing a `time_range` after the ending of the segment in `plot_traces` (#2286)
+* Fix sortingview checks for NaN if strings (#2243)
+
+generation:
+
+* Creation of a TransformSorting object to track modifications and bencharmk (#1999)
+* Add a minimum distance in generate_unit_locations (#2147)
+* Add Poisson statistics to generate_sorting and optimize memory profile (#2226)
+* Fix add_shift_shuffle section in synthesize_random_firings (#2334)
+* Machinery for moving templates and generating hybrid recordings with drift (#2291)
+
+sortingcomponents:
+
+* Strict inegality for sparsity with radius_um (#2277) by yger was merged on Dec 1, 2023
+* Fix memory leak in lsmr solver and optimize correct_motion (#2263)
+
+docs:
+
+* Various improvements to docs (#2168, #2229, #2407)
+* Improve `ids_to_indices` docstring (#2301)
+* Fix for docstring of `get_traces` (#2320)
+* Fix RTD warnings (#2348)
+* Improve CMR docstring (#2354)
+* Correct warning format in neo base extractors (#2357)
+* Typo fix for verbose setting in `Multicomparison` (#2399)
+
+ci / packaging / tests:
+
+* Add tests for unique names in channel slice and unit selection (#2258)
+* Add from `__future__` import annotations to all files for Python3.8 (#2340, #2468)
+* Add pickling test to streamers (#2170)

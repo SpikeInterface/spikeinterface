@@ -136,6 +136,21 @@ class IntanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class IntanRecordingTestMultipleFilesFormat(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = IntanRecordingExtractor
+    downloads = ["intan"]
+    entities = [
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "RHD2000 amplifier channel"}),
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "RHD2000 auxiliary input channel"}),
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "USB board ADC input channel"}),
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "USB board digital input channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "RHD2000 amplifier channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "RHD2000 auxiliary input channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "USB board ADC input channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "USB board digital input channel"}),
+    ]
+
+
 class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeRecordingExtractor
     downloads = ["neuroscope"]
