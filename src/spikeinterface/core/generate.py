@@ -1700,8 +1700,11 @@ class InjectTemplatesRecording(BaseRecording):
         max_value = np.max(np.abs(templates))
         threshold = 0.01 * max_value
 
+        from .globals import get_global_logger
+        logger = get_global_logger()
+
         if max(np.max(np.abs(templates[:, 0])), np.max(np.abs(templates[:, -1]))) > threshold:
-            warnings.warn(
+            logger.warn(
                 "Warning! Your templates do not go to 0 on the edges in InjectTemplatesRecording. Please make your window bigger."
             )
 
@@ -1875,7 +1878,9 @@ def generate_unit_locations(
                 "You can use distance_strict=False or reduce minimum distance"
             )
         else:
-            warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
+            from .globals import get_global_logger
+            logger = get_global_logger()
+            logger.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
 
     return units_locations
 

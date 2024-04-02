@@ -10,6 +10,7 @@ import tempfile
 from pathlib import Path
 from copy import deepcopy
 from .job_tools import job_keys, _shared_job_kwargs_doc
+import logging
 
 ########################################
 
@@ -103,12 +104,39 @@ global global_job_kwargs_set
 global_job_kwargs_set = False
 
 
+global logger
+logger = logging.getLogger(__name__)
+global global_logger_kwargs
+global_logger_kwargs = dict(level=logging.DEBUG)
+
+
 def get_global_job_kwargs():
     """
     Get the global job kwargs.
     """
     global global_job_kwargs
     return deepcopy(global_job_kwargs)
+
+def get_global_logger():
+    """
+    Get the global logger kwargs.
+    """
+    global logger
+    return deepcopy(logger)
+
+
+def set_global_logger(**logger_kwargs):
+    """
+    Set the global logger kwargs.
+
+    Parameters
+    ----------
+
+    {}
+    """
+    global global_logger_kwargs
+    global_logger_kwargs.update(logger_kwargs)
+    logging.basicConfig(**global_logger_kwargs)
 
 
 def set_global_job_kwargs(**job_kwargs):

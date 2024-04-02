@@ -179,7 +179,7 @@ write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_j
 
 
 def write_binary_recording_file_handle(
-    recording, file_handle=None, time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs
+    recording, file_handle=None, time_axis=0, dtype=None, byte_offset=0, **job_kwargs
 ):
     """
     Old variant version of write_binary_recording with one file handle.
@@ -194,11 +194,14 @@ def write_binary_recording_file_handle(
     if dtype is None:
         dtype = recording.get_dtype()
 
+    from .globals import get_global_logger
+    logger = get_global_logger()
+
     job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
 
     if chunk_size is not None and time_axis == 1:
-        print("Chunking disabled due to 'time_axis' == 1")
+        logger.info("Chunking disabled due to 'time_axis' == 1")
         chunk_size = None
 
     if chunk_size is None:

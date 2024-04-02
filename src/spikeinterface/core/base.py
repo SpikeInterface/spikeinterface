@@ -818,7 +818,6 @@ class BaseExtractor:
               If folder and name are not given, the object is saved in the global temporary folder with
               a random string
             * dump_ext: "json" or "pkl", default "json" (if format is "folder")
-            * verbose: if True output is verbose
             * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
             {}
 
@@ -846,7 +845,7 @@ class BaseExtractor:
         return cached
 
     # TODO rename to saveto_binary_folder
-    def save_to_folder(self, name=None, folder=None, overwrite=False, verbose=True, **save_kwargs):
+    def save_to_folder(self, name=None, folder=None, overwrite=False, **save_kwargs):
         """
         Save extractor to folder.
 
@@ -885,18 +884,19 @@ class BaseExtractor:
         cached: saved copy of the extractor.
         """
 
+        from .globals import get_global_logger
+        logger = get_global_logger()
+
         if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
                 name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 folder = cache_folder / name
-                if verbose:
-                    print(f"Use cache_folder={folder}")
+                logger.debug(f"Use cache_folder={folder}")
             else:
                 folder = cache_folder / name
                 if not is_set_global_tmp_folder():
-                    if verbose:
-                        print(f"Use cache_folder={folder}")
+                    logger.debug(f"Use cache_folder={folder}")
         else:
             folder = Path(folder)
         if overwrite and folder.is_dir():
@@ -919,7 +919,7 @@ class BaseExtractor:
         self.save_metadata_to_folder(folder)
 
         # save data (done the subclass)
-        cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
+        cached = self._save(folder=folder, **save_kwargs)
 
         # copy properties/
         self.copy_metadata(cached)
@@ -937,7 +937,6 @@ class BaseExtractor:
         overwrite=False,
         storage_options=None,
         channel_chunk_size=None,
-        verbose=True,
         **save_kwargs,
     ):
         """
@@ -972,8 +971,6 @@ class BaseExtractor:
                 - traces
                 - times
             If None, the global filters are used
-        verbose: bool, default: True
-            If True, the output is verbose
         auto_cast_uint: bool, default: True
             If True, unsigned integers are cast to signed integers to avoid issues with zarr (only for BaseRecording)
 
@@ -987,18 +984,19 @@ class BaseExtractor:
 
         save_kwargs.pop("format", None)
 
+        from .globals import get_global_logger
+        logger = get_global_logger()
+
         if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
                 name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 zarr_path = cache_folder / f"{name}.zarr"
-                if verbose:
-                    print(f"Use zarr_path={zarr_path}")
+                logger.debug(f"Use zarr_path={zarr_path}")
             else:
                 zarr_path = cache_folder / f"{name}.zarr"
                 if not is_set_global_tmp_folder():
-                    if verbose:
-                        print(f"Use zarr_path={zarr_path}")
+                    logger.debug(f"Use zarr_path={zarr_path}")
         else:
             if storage_options is None:
                 folder = Path(folder)
@@ -1015,7 +1013,7 @@ class BaseExtractor:
         save_kwargs["zarr_path"] = zarr_path
         save_kwargs["storage_options"] = storage_options
         save_kwargs["channel_chunk_size"] = channel_chunk_size
-        cached = self._save(format="zarr", verbose=verbose, **save_kwargs)
+        cached = self._save(format="zarr", **save_kwargs)
         cached = read_zarr(zarr_path)
 
         return cached

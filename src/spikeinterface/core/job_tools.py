@@ -46,7 +46,6 @@ job_keys = (
     "chunk_duration",
     "progress_bar",
     "mp_context",
-    "verbose",
     "max_threads_per_process",
 )
 
@@ -271,8 +270,6 @@ class ChunkRecordingExecutor:
         Initializer function to set the global context (accessible by "func")
     init_args: tuple
         Arguments for init_func
-    verbose: bool
-        If True, output is verbose
     job_name: str, default: ""
         Job name
     handle_returns: bool, default: False
@@ -313,7 +310,6 @@ class ChunkRecordingExecutor:
         func,
         init_func,
         init_args,
-        verbose=False,
         progress_bar=False,
         handle_returns=False,
         gather_func=None,
@@ -331,18 +327,18 @@ class ChunkRecordingExecutor:
         self.init_func = init_func
         self.init_args = init_args
 
+        from .globals import get_global_logger
+        logger = get_global_logger()
+
         if mp_context is None:
             mp_context = recording.get_preferred_mp_context()
         if mp_context is not None and platform.system() == "Windows":
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
         elif mp_context == "fork" and platform.system() == "Darwin":
-            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+            logger.warning('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
         self.mp_context = mp_context
-
-        self.verbose = verbose
         self.progress_bar = progress_bar
-
         self.handle_returns = handle_returns
         self.gather_func = gather_func
 
@@ -357,9 +353,7 @@ class ChunkRecordingExecutor:
         )
         self.job_name = job_name
         self.max_threads_per_process = max_threads_per_process
-
-        if verbose:
-            print(self.job_name, "with n_jobs =", self.n_jobs, "and chunk_size =", self.chunk_size)
+        logger.info(f"{self.job_name} with n_jobs = {self.n_jobs} and chunk_size = {self.chunk_size}")
 
     def run(self):
         """
