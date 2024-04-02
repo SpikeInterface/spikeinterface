@@ -8,10 +8,6 @@ from spikeinterface.preprocessing.motion import correct_motion, load_motion_info
 from spikeinterface.generation.hybrid_tools import estimate_templates_from_recording, generate_hybrid_recording
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "generation"
-else:
-    cache_folder = Path("cache_folder") / "generation"
 
 
 def test_generate_hybrid_with_sorting():
