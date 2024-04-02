@@ -876,8 +876,8 @@ def estimate_templates_with_accumulator(
             residuals = (
                 waveforms_squared_sum[unit_index] - 2 * template_means[unit_index] * waveforms_sum[unit_index]
             ) + count * template_means[unit_index] ** 2
+            residuals[residuals < 0] = 0
             template_stds[unit_index] = np.sqrt(residuals / count)
-        assert np.all(template_stds >= 0)
         del waveform_squared_accumulator_per_worker
         shm_squared.unlink()
         shm_squared.close()
