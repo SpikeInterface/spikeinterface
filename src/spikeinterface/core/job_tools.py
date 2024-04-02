@@ -328,6 +328,7 @@ class ChunkRecordingExecutor:
         self.init_args = init_args
 
         from .globals import get_global_logger
+
         logger = get_global_logger()
 
         if mp_context is None:

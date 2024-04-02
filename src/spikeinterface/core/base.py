@@ -885,6 +885,7 @@ class BaseExtractor:
         """
 
         from .globals import get_global_logger
+
         logger = get_global_logger()
 
         if folder is None:
@@ -985,6 +986,7 @@ class BaseExtractor:
         save_kwargs.pop("format", None)
 
         from .globals import get_global_logger
+
         logger = get_global_logger()
 
         if folder is None:

@@ -83,7 +83,7 @@ from .globals import (
     set_global_job_kwargs,
     reset_global_job_kwargs,
     get_global_logger,
-    set_global_logger
+    set_global_logger,
 )
 
 # tools

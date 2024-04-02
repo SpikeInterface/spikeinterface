@@ -195,6 +195,7 @@ def write_binary_recording_file_handle(
         dtype = recording.get_dtype()
 
     from .globals import get_global_logger
+
     logger = get_global_logger()
 
     job_kwargs = fix_job_kwargs(job_kwargs)

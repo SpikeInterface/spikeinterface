@@ -117,6 +117,7 @@ def get_global_job_kwargs():
     global global_job_kwargs
     return deepcopy(global_job_kwargs)
 
+
 def get_global_logger():
     """
     Get the global logger kwargs.
