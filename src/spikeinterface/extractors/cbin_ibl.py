@@ -43,7 +43,6 @@ class CompressedBinaryIblExtractor(BaseRecording):
     name = "cbin_ibl"
 
     def __init__(self, folder_path=None, load_sync_channel=False, stream_name="ap", cbin_file=None):
-        # this work only for future neo
         from neo.rawio.spikeglxrawio import read_meta_file
 
         try:

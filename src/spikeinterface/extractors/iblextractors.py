@@ -344,7 +344,12 @@ class IblSortingExtractor(BaseSorting):
 
         if load_unit_properties:
             for key, val in clusters.items():
-                self.set_property(key, val[good_cluster_slice])
+                # let's convert acronym to brain_area
+                if key == "acronym":
+                    property_name = "brain_area"
+                else:
+                    property_name = key
+                self.set_property(property_name, val[good_cluster_slice])
 
         self.extra_requirements.append("ibllib")
 

@@ -32,7 +32,7 @@ class ALFSortingExtractor(BaseSorting):
         try:
             import one.alf.io as alfio
         except ImportError as e:
-            raise ImportErrot(self.installation_mesg)
+            raise ImportError(self.installation_mesg)
 
         self._folder_path = Path(folder_path)
         spikes = alfio.load_object(self._folder_path, "spikes", short_keys=True)
@@ -44,7 +44,7 @@ class ALFSortingExtractor(BaseSorting):
         sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"])
         self.add_sorting_segment(sorting_segment)
         self.extra_requirements.append("ONE-api")
-        self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "sampling_frequency": sampling_frequency}
+        self._kwargs = {"folder_path": str(Path(folder_path).resolve()), "sampling_frequency": sampling_frequency}
 
 
 class ALFSortingSegment(BaseSortingSegment):

@@ -173,6 +173,8 @@ class TestIblSortingExtractor(TestCase):
 
         # check properties
         assert "firing_rate" in sorting.get_property_keys()
+        assert "acronym" not in sorting.get_property_keys()
+        assert "brain_location" in sorting_good.get_property_keys()
 
         # load without properties
         sorting_no_properties = read_ibl_sorting(pid=PID, load_unit_properties=False)
