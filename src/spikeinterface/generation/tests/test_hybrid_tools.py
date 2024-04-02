@@ -8,8 +8,6 @@ from spikeinterface.preprocessing.motion import correct_motion, load_motion_info
 from spikeinterface.generation.hybrid_tools import estimate_templates_from_recording, generate_hybrid_recording
 
 
-
-
 def test_generate_hybrid_with_sorting():
     gt_sorting = generate_sorting(durations=[10], num_units=20, sampling_frequency=20000)
     rec, _ = generate_ground_truth_recording(durations=[10], sampling_frequency=20000, sorting=gt_sorting)
