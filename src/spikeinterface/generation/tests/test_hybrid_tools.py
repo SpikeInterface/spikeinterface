@@ -19,10 +19,10 @@ def test_generate_hybrid_no_motion():
     hybrid, sorting = generate_hybrid_recording(rec)
 
 
-def test_generate_hybrid_motion():
+def test_generate_hybrid_motion(tmp_path):
     rec, sorting = generate_ground_truth_recording(sampling_frequency=20000)
-    correct_motion(rec, folder=cache_folder / "motion")
-    motion = load_motion_info(cache_folder / "motion")
+    correct_motion(rec, folder=tmp_path / "motion")
+    motion = load_motion_info(tmp_path / "motion")
     hybrid, sorting = generate_hybrid_recording(rec, motion)
 
 
