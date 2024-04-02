@@ -864,7 +864,7 @@ def estimate_templates_with_accumulator(
 
     # average
     waveforms_sum = np.sum(waveform_accumulator_per_worker, axis=0)
-    template_means = waveforms_sum
+    template_means = waveforms_sum.copy()
     unit_indices, spike_count = np.unique(spikes["unit_index"], return_counts=True)
     template_means[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
 
@@ -874,7 +874,7 @@ def estimate_templates_with_accumulator(
         template_stds = np.zeros_like(template_means)
         for i, (unit_index, count) in enumerate(zip(unit_indices, spike_count)):
             residuals = (
-                waveforms_squared_sum[unit_index] - 2 * count * template_means[unit_index] * waveforms_sum[unit_index]
+                waveforms_squared_sum[unit_index] - 2 * template_means[unit_index] * waveforms_sum[unit_index]
             ) + count * template_means[unit_index] ** 2
             template_stds[unit_index] = np.sqrt(residuals / count)
         assert np.all(template_stds >= 0)
