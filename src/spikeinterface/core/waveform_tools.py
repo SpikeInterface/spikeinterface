@@ -872,7 +872,7 @@ def estimate_templates_with_accumulator(
         waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
         # standard deviation
         template_stds = np.zeros_like(template_means)
-        for i, (unit_index, count) in enumerate(zip(unit_indices, spike_count)):
+        for unit_index, count in zip(unit_indices, spike_count):
             residuals = (
                 waveforms_squared_sum[unit_index] - 2 * template_means[unit_index] * waveforms_sum[unit_index]
             ) + count * template_means[unit_index] ** 2
