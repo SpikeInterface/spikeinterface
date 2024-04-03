@@ -72,6 +72,8 @@ extractors = [
 ]
 
 streaming_extractors = [
+    "ONE-api>=2.7.0", # alf sorter and streaming IBL
+    "ibllib>=2.32.5", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "fsspec",
     "aiohttp",
