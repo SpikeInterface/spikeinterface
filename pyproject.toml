@@ -73,6 +73,7 @@ extractors = [
 
 streaming_extractors = [
     # Following dependencies are for streaming with nwb files
+    "pynwb>=2.6.0",
     "fsspec",
     "aiohttp",
     "requests",
