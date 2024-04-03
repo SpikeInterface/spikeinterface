@@ -10,7 +10,7 @@ from tqdm import trange
 
 
 def _generate_test_recording():
-    recording = generate_recording(durations=[5.0], num_channels=4)
+    recording = generate_recording(durations=[1.0], num_channels=4)
     recording = recording.channel_slice(recording.channel_ids, np.array(["a", "b", "c", "d"]))
     return recording
 
@@ -46,11 +46,15 @@ def test_common_reference(recording):
 def test_common_reference_channel_slicing(recording):
     recording_cmr = common_reference(recording, reference="global", operator="median")
     recording_car = common_reference(recording, reference="global", operator="average")
-    recording_single_reference = common_reference(recording, reference="single", ref_channel_ids=["a"])
+    recording_single_reference = common_reference(recording, reference="single", ref_channel_ids=["b"])
     recording_local_car = common_reference(recording, reference="local", local_radius=(20, 65), operator="median")
 
-    channel_ids = ["a", "b"]
-    indices = recording.ids_to_indices(["a", "b"])
+    channel_ids = ["b", "d"]
+    indices = recording.ids_to_indices(channel_ids)
+
+    all_channel_ids = recording.channel_ids
+    all_indices = recording.ids_to_indices(all_channel_ids)
+
     original_traces = recording.get_traces()
 
     cmr_trace = recording_cmr.get_traces(channel_ids=channel_ids)
@@ -62,13 +66,50 @@ def test_common_reference_channel_slicing(recording):
     assert np.allclose(car_trace, expected_trace, atol=0.01)
 
     single_reference_trace = recording_single_reference.get_traces(channel_ids=channel_ids)
-    single_reference_index = recording.ids_to_indices(["a"])
+    single_reference_index = recording.ids_to_indices(["b"])
     expected_trace = original_traces[:, indices] - original_traces[:, single_reference_index]
 
     assert np.allclose(single_reference_trace, expected_trace, atol=0.01)
 
-    # local car
-    local_trace = recording_local_car.get_traces(channel_ids=channel_ids)
+    local_trace = recording_local_car.get_traces(channel_ids=all_channel_ids)
+    local_trace_sub = recording_local_car.get_traces(channel_ids=channel_ids)
+
+    assert np.all(local_trace[:, indices] == local_trace_sub)
+
+    # test segment slicing
+
+    start_frame = 0
+    end_frame = 10
+
+    recording_segment_cmr = recording_cmr._recording_segments[0]
+    traces_cmr_all = recording_segment_cmr.get_traces(
+        start_frame=start_frame, end_frame=end_frame, channel_indices=all_indices
+    )
+    traces_cmr_sub = recording_segment_cmr.get_traces(
+        start_frame=start_frame, end_frame=end_frame, channel_indices=indices
+    )
+
+    assert np.all(traces_cmr_all[:, indices] == traces_cmr_sub)
+
+    recording_segment_car = recording_car._recording_segments[0]
+    traces_car_all = recording_segment_car.get_traces(
+        start_frame=start_frame, end_frame=end_frame, channel_indices=all_indices
+    )
+    traces_car_sub = recording_segment_car.get_traces(
+        start_frame=start_frame, end_frame=end_frame, channel_indices=indices
+    )
+
+    assert np.all(traces_car_all[:, indices] == traces_car_sub)
+
+    recording_segment_local = recording_local_car._recording_segments[0]
+    traces_local_all = recording_segment_local.get_traces(
+        start_frame=start_frame, end_frame=end_frame, channel_indices=all_indices
+    )
+    traces_local_sub = recording_segment_local.get_traces(
+        start_frame=start_frame, end_frame=end_frame, channel_indices=indices
+    )
+
+    assert np.all(traces_local_all[:, indices] == traces_local_sub)
 
 
 def test_common_reference_groups(recording):

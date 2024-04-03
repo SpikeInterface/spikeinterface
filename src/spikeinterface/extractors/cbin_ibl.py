@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import numpy as np
 
 import probeinterface
 
@@ -41,28 +42,30 @@ class CompressedBinaryIblExtractor(BaseRecording):
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
     name = "cbin_ibl"
 
-    def __init__(self, folder_path, load_sync_channel=False, stream_name="ap"):
-        # this work only for future neo
-        from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
+    def __init__(self, folder_path=None, load_sync_channel=False, stream_name="ap", cbin_file=None):
+        from neo.rawio.spikeglxrawio import read_meta_file
 
         try:
             import mtscomp
         except:
             raise ImportError(self.installation_mesg)
-        folder_path = Path(folder_path)
+        if cbin_file is None:
+            folder_path = Path(folder_path)
+            # check bands
+            assert stream_name in ["ap", "lp"], "stream_name must be one of: 'ap', 'lp'"
+            # explore files
+            cbin_files = list(folder_path.glob(f"*{stream_name}.cbin"))
+            # snippets downloaded from IBL have the .stream.cbin suffix
+            cbin_stream_files = list(folder_path.glob(f"*.{stream_name}.stream.cbin"))
+            curr_cbin_files = cbin_stream_files if len(cbin_stream_files) > len(cbin_files) else cbin_files
+            assert (
+                len(curr_cbin_files) == 1
+            ), f"There should only be one `*.cbin` file in the folder, but {print(curr_cbin_files)} have been found"
+            cbin_file = curr_cbin_files[0]
+        else:
+            cbin_file = Path(cbin_file)
+            folder_path = cbin_file.parent
 
-        # check bands
-        assert stream_name in ["ap", "lp"], "stream_name must be one of: 'ap', 'lp'"
-
-        # explore files
-        cbin_files = list(folder_path.glob(f"*{stream_name}.cbin"))
-        # snippets downloaded from IBL have the .stream.cbin suffix
-        cbin_stream_files = list(folder_path.glob(f"*.{stream_name}.stream.cbin"))
-        curr_cbin_files = cbin_stream_files if len(cbin_stream_files) > len(cbin_files) else cbin_files
-        assert (
-            len(curr_cbin_files) == 1
-        ), f"There should only be one `*.cbin` file in the folder, but {print(curr_cbin_files)} have been found"
-        cbin_file = curr_cbin_files[0]
         ch_file = cbin_file.with_suffix(".ch")
         meta_file = cbin_file.with_suffix(".meta")
 
@@ -115,8 +118,9 @@ class CompressedBinaryIblExtractor(BaseRecording):
             self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs = {
-            "folder_path": str(Path(folder_path).absolute()),
+            "folder_path": str(Path(folder_path).resolve()),
             "load_sync_channel": load_sync_channel,
+            "cbin_file": str(Path(cbin_file).resolve()),
         }
 
 
@@ -145,3 +149,76 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
 
 
 read_cbin_ibl = define_function_from_class(source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl")
+
+
+def extract_stream_info(meta_file, meta):
+    """Extract info from the meta dict"""
+
+    num_chan = int(meta["nSavedChans"])
+    if "snsApLfSy" in meta:
+        # AP and LF meta have this field
+        ap, lf, sy = [int(s) for s in meta["snsApLfSy"].split(",")]
+        has_sync_trace = sy == 1
+    else:
+        # NIDQ case
+        has_sync_trace = False
+    fname = Path(meta_file).stem
+
+    session = ".".join(fname.split(".")[:-1])
+    stream_kind = fname.split(".")[-1]
+    stream_name = session + "." + stream_kind
+    units = "uV"
+    # please note the 1e6 in gain for this uV
+
+    # metad['imroTbl'] contain two gain per channel  AP and LF
+    # except for the last fake channel
+    per_channel_gain = np.ones(num_chan, dtype="float64")
+    if (
+        "imDatPrb_type" not in meta
+        or meta["imDatPrb_type"] == "0"
+        or meta["imDatPrb_type"] in ("1015", "1022", "1030", "1031", "1032")
+    ):
+        # This work with NP 1.0 case with different metadata versions
+        # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
+        if stream_kind == "ap":
+            index_imroTbl = 3
+        elif stream_kind == "lf":
+            index_imroTbl = 4
+        for c in range(num_chan - 1):
+            v = meta["imroTbl"][c].split(" ")[index_imroTbl]
+            per_channel_gain[c] = 1.0 / float(v)
+        gain_factor = float(meta["imAiRangeMax"]) / 512
+        channel_gains = gain_factor * per_channel_gain * 1e6
+    elif meta["imDatPrb_type"] in ("21", "24", "2003", "2004", "2013", "2014"):
+        # This work with NP 2.0 case with different metadata versions
+        # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md#imec
+        # We allow also LF streams for NP2.0 because CatGT can produce them
+        # See: https://github.com/SpikeInterface/spikeinterface/issues/1949
+        if "imChan0apGain" in meta:
+            per_channel_gain[:-1] = 1 / float(meta["imChan0apGain"])
+        else:
+            per_channel_gain[:-1] = 1 / 80.0
+        max_int = int(meta["imMaxInt"]) if "imMaxInt" in meta else 8192
+        gain_factor = float(meta["imAiRangeMax"]) / max_int
+        channel_gains = gain_factor * per_channel_gain * 1e6
+    else:
+        raise NotImplementedError("This meta file version of spikeglx" " is not implemented")
+
+    info = {}
+    info["fname"] = fname
+    info["meta"] = meta
+    for k in ("niSampRate", "imSampRate"):
+        if k in meta:
+            info["sampling_rate"] = float(meta[k])
+    info["num_chan"] = num_chan
+
+    info["sample_length"] = int(meta["fileSizeBytes"]) // 2 // num_chan
+    info["stream_kind"] = stream_kind
+    info["stream_name"] = stream_name
+    info["units"] = units
+    info["channel_names"] = [txt.split(";")[0] for txt in meta["snsChanMap"]]
+    info["channel_gains"] = channel_gains
+    info["channel_offsets"] = np.zeros(info["num_chan"])
+    info["has_sync_trace"] = has_sync_trace
+
+    return info

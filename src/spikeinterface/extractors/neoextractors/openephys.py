@@ -180,6 +180,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             exp_id = exp_ids[0]
         else:
             exp_id = exp_ids[block_index]
+        rec_ids = sorted(
+            list(self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["recordings"].keys())
+        )
 
         # do not load probe for NIDQ stream or if load_sync_channel is True
         if "NI-DAQmx" not in stream_name and not load_sync_channel:
@@ -229,10 +232,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         # load synchronized timestamps and set_times to recording
         recording_folder = Path(folder_path) / record_node
         stream_folders = []
-        for segment_index in range(self.get_num_segments()):
-            stream_folder = (
-                recording_folder / f"experiment{exp_id}" / f"recording{segment_index+1}" / "continuous" / oe_stream
-            )
+        for segment_index, rec_id in enumerate(rec_ids):
+            stream_folder = recording_folder / f"experiment{exp_id}" / f"recording{rec_id}" / "continuous" / oe_stream
             stream_folders.append(stream_folder)
             if load_sync_timestamps:
                 if (stream_folder / "sample_numbers.npy").is_file():
@@ -245,7 +246,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     sync_times = None
                 try:
                     self.set_times(times=sync_times, segment_index=segment_index, with_warning=False)
-                except AssertionError:
+                except:
                     warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
 
         self._stream_folders = stream_folders
