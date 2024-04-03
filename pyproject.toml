@@ -111,6 +111,7 @@ qualitymetrics = [
 
 test_core = [
     "pytest",
+    "pytest-dependency",
     "psutil",
 
     # for github test : probeinterface and neo from master
