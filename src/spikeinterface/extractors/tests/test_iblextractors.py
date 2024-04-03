@@ -1,23 +1,35 @@
 from re import escape
+from tkinter import ON
 from unittest import TestCase
 
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 import requests
-from spikeinterface.extractors import IblStreamingRecordingExtractor
 
+from spikeinterface.extractors import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
+from spikeinterface.extractors import read_ibl_sorting
+from spikeinterface.core import generate_sorting
 
-from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
+EID = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
+PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 
 
 @pytest.mark.streaming_extractors
-class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
+class TestDefaultIblRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.session = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
+        from one.api import ONE
+
+        cls.eid = EID
+        cls.one = ONE(
+            base_url="https://openalyx.internationalbrainlab.org",
+            password="international",
+            silent=True,
+            cache_dir=None,
+        )
         try:
-            cls.recording = IblStreamingRecordingExtractor(session=cls.session, stream_name="probe00.ap")
+            cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", one=cls.one)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 503:
                 pytest.skip("Skipping test due to server being down (HTTP 503).")
@@ -37,7 +49,7 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
         )  # return_scaled=False is SI default
 
     def test_get_stream_names(self):
-        stream_names = IblStreamingRecordingExtractor.get_stream_names(session=self.session)
+        stream_names = IblRecordingExtractor.get_stream_names(eid=self.eid, one=self.one)
 
         expected_stream_names = ["probe01.ap", "probe01.lf", "probe00.ap", "probe00.lf"]
         self.assertCountEqual(first=stream_names, second=expected_stream_names)
@@ -97,10 +109,16 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
 class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.session = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
-        cls.recording = IblStreamingRecordingExtractor(
-            session=cls.session, stream_name="probe00.ap", load_sync_channel=True
+        from one.api import ONE
+
+        cls.eid = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
+        cls.one = ONE(
+            base_url="https://openalyx.internationalbrainlab.org",
+            password="international",
+            silent=True,
+            cache_dir=None,
         )
+        cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", load_sync_channel=True, one=cls.one)
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
@@ -158,9 +176,40 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         assert self.small_unscaled_trace.dtype == expected_dtype
 
 
+@pytest.mark.streaming_extractors
+class TestIblSortingExtractor(TestCase):
+    def test_ibl_sorting_extractor(self):
+        """
+        Here we generate spike train with 3 clusters in a very basic ALF format\
+        and read it with the spikeinterface extractor
+        """
+        from one.api import ONE
+
+        one = ONE(
+            base_url="https://openalyx.internationalbrainlab.org",
+            password="international",
+            silent=True,
+            cache_dir=None,
+        )
+        sorting = read_ibl_sorting(pid=PID, one=one)
+        assert len(sorting.unit_ids) == 733
+        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True)
+        assert len(sorting_good.unit_ids) == 108
+
+        # check properties
+        assert "firing_rate" in sorting.get_property_keys()
+        assert "acronym" not in sorting.get_property_keys()
+        assert "brain_area" in sorting_good.get_property_keys()
+
+        # load without properties
+        sorting_no_properties = read_ibl_sorting(pid=PID, load_unit_properties=False)
+        # check properties
+        assert "firing_rate" not in sorting_no_properties.get_property_keys()
+
+
 if __name__ == "__main__":
     TestDefaultIblStreamingRecordingExtractorApBand.setUpClass()
-    test1 = TestDefaultIblStreamingRecordingExtractorApBand()
+    test1 = TestDefaultIblStreamingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
     test1.test_dtype()
@@ -175,7 +224,7 @@ if __name__ == "__main__":
     test1.test_unscaled_trace_dtype()
 
     TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel.setUpClass()
-    test2 = TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel()
+    test2 = TestIblStreamingExtractorApBandWithLoadSyncChannel()
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()

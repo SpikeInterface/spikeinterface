@@ -189,12 +189,12 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                 shift = traces[:, self.ref_channel_indices]
                 re_referenced_traces = traces[:, channel_indices] - shift
             else:  # then it must be local
-                re_referenced_traces = np.zeros_like(traces[:, channel_indices])
                 channel_indices_array = np.arange(traces.shape[1])[channel_indices]
-                for channel_index in channel_indices_array:
+                re_referenced_traces = np.zeros((traces.shape[0], len(channel_indices_array)), dtype="float32")
+                for i, channel_index in enumerate(channel_indices_array):
                     channel_neighborhood = self.neighbors[channel_index]
                     channel_shift = self.operator_func(traces[:, channel_neighborhood], axis=1)
-                    re_referenced_traces[:, channel_index] = traces[:, channel_index] - channel_shift
+                    re_referenced_traces[:, i] = traces[:, channel_index] - channel_shift
 
             return re_referenced_traces.astype(self.dtype, copy=False)
 
