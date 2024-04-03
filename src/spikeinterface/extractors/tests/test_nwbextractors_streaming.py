@@ -12,7 +12,6 @@ from spikeinterface.core.testing import check_recordings_equal, check_sortings_e
 from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
 
 
-@pytest.mark.ros3_test
 @pytest.mark.streaming_extractors
 @pytest.mark.skipif("ros3" not in h5py.registered_drivers(), reason="ROS3 driver not installed")
 def test_recording_s3_nwb_ros3(tmp_path):
@@ -155,7 +154,6 @@ def test_recording_s3_nwb_remfile_file_like(tmp_path):
     check_recordings_equal(rec, rec2)
 
 
-@pytest.mark.ros3_test
 @pytest.mark.streaming_extractors
 @pytest.mark.skipif("ros3" not in h5py.registered_drivers(), reason="ROS3 driver not installed")
 def test_sorting_s3_nwb_ros3(tmp_path):
