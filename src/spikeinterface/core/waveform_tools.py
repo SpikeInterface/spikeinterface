@@ -867,6 +867,8 @@ def estimate_templates_with_accumulator(
     if return_std:
         # we need a copy here because we will use the means to cpmpute the stds
         template_means = waveforms_sum.copy()
+    else:
+        template_means = waveforms_sum
 
     unit_indices, spike_count = np.unique(spikes["unit_index"], return_counts=True)
     template_means[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
