@@ -29,7 +29,7 @@ from .neoextractors import NeuroScopeSortingExtractor, MaxwellEventExtractor
 from .nwbextractors import NwbRecordingExtractor, NwbSortingExtractor, read_nwb, read_nwb_recording, read_nwb_sorting
 
 from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
-from .iblstreamingrecording import IblStreamingRecordingExtractor, read_ibl_streaming_recording
+from .iblextractors import IblRecordingExtractor, IblSortingExtractor, read_ibl_recording, read_ibl_sorting
 from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 
 # sorting extractors in relation with a sorter
@@ -75,7 +75,7 @@ recording_extractor_full_list = [
     NwbRecordingExtractor,
     # others
     CompressedBinaryIblExtractor,
-    IblStreamingRecordingExtractor,
+    IblRecordingExtractor,
     MCSH5RecordingExtractor,
 ]
 recording_extractor_full_list += neo_recording_extractors_list
@@ -101,6 +101,7 @@ sorting_extractor_full_list = [
     PhySortingExtractor,
     NwbSortingExtractor,
     NeuroScopeSortingExtractor,
+    IblSortingExtractor,
 ]
 sorting_extractor_full_list += neo_sorting_extractors_list
 
