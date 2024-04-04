@@ -210,7 +210,11 @@ class Mountainsort5Sorter(BaseSorter):
             print(f"An error occurred: {e}")
 
         if tmpdir and os.path.isdir(tmpdir.name):
-            shutil.rmtree(tmpdir.name, ignore_errors=True)
+            try:
+                shutil.rmtree(tmpdir.name, ignore_errors=True)
+            except Exception as e:
+                print(f"An error occurred while removing temporary directory: {e}")
+                print(f"Temporary directory was not removed: {tmpdir.name}. Please remove it manually.")
 
         NpzSortingExtractor.write_sorting(sorting, str(sorter_output_folder / "firings.npz"))
 
