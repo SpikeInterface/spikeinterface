@@ -263,7 +263,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         # upsample_vector: Union[list[int], None] = None,
     ):
         import scipy.spatial
-        
+
         # assert isinstance(
         #     drifting_templates, DriftingTemplates
         # ), "drifting_templates must be a DriftingTemplates object"

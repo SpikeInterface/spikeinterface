@@ -216,7 +216,7 @@ def generate_hybrid_recording(
         displacements = make_linear_displacement(start, stop, num_step=int((stop - start)[1]))
         drifting_templates = DriftingTemplates.from_static(templates)
         drifting_templates.precompute_displacements(displacements)
-        
+
         displacement_sampling_frequency = 1.0 / np.diff(motion_info["temporal_bins"])[0]
         displacement_vectors = np.zeros((len(motion_info["temporal_bins"]), 2, len(motion_info["spatial_bins"])))
         displacement_unit_factor = np.zeros((num_units, len(motion_info["spatial_bins"])))
