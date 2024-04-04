@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from packaging.version import parse
-
+import shutil
+import os
 from tempfile import TemporaryDirectory
 
 import numpy as np
@@ -186,10 +187,14 @@ class Mountainsort5Sorter(BaseSorter):
             block_sorting_parameters=scheme2_sorting_parameters, block_duration_sec=p["scheme3_block_duration_sec"]
         )
 
-        with TemporaryDirectory(dir=p["temporary_base_dir"]) as tmpdir:
+        tmpdir = TemporaryDirectory(dir=p["temporary_base_dir"])
+        try:
             # cache the recording to a temporary directory for efficient reading (so we don't have to re-filter)
             recording_cached = create_cached_recording(
-                recording=recording, folder=tmpdir, n_jobs=p["n_jobs_for_preprocessing"]
+                recording=recording,
+                folder=tmpdir.name,
+                n_jobs=p["n_jobs_for_preprocessing"],
+                chunk_duration="1s",
             )
 
             scheme = p["scheme"]
@@ -201,6 +206,11 @@ class Mountainsort5Sorter(BaseSorter):
                 sorting = ms5.sorting_scheme3(recording=recording_cached, sorting_parameters=scheme3_sorting_parameters)
             else:
                 raise ValueError(f"Invalid scheme: {scheme} given. scheme must be one of '1', '2' or '3'")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+        if tmpdir and os.path.isdir(tmpdir.name):
+            shutil.rmtree(tmpdir.name, ignore_errors=True)
 
         NpzSortingExtractor.write_sorting(sorting, str(sorter_output_folder / "firings.npz"))
 
