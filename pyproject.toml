@@ -64,7 +64,7 @@ extractors = [
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
-    "scipy",
+    "scipy<1.13",
     "ONE-api>=2.7.0", # alf sorter and streaming IBL
     "ibllib>=2.32.5", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
@@ -72,6 +72,8 @@ extractors = [
 ]
 
 streaming_extractors = [
+    "ONE-api>=2.7.0", # alf sorter and streaming IBL
+    "ibllib>=2.32.5", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -86,7 +88,7 @@ full = [
     "h5py",
     "pandas",
     "xarray",
-    "scipy",
+    "scipy<1.13",
     "scikit-learn",
     "networkx",
     "distinctipy",
