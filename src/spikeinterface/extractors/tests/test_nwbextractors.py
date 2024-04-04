@@ -34,6 +34,8 @@ from pynwb.testing.mock.ecephys import mock_ElectrodeGroup
 
 
 def nwbfile_with_ecephys_content():
+    to_micro_volts = 1e6
+
     nwbfile = mock_NWBFile()
     device = mock_Device(name="probe")
     nwbfile.add_device(device)
@@ -48,7 +50,7 @@ def nwbfile_with_ecephys_content():
     nwbfile.add_electrode_group(electrode_group)
     rel_x = 0.0
     property_value = "A"
-    offset = 1.0
+    offset = 1.0 * to_micro_volts
     electrical_series_name = "ElectricalSeries1"
     electrode_indices = [0, 1, 2, 3, 4]
 
@@ -67,7 +69,12 @@ def nwbfile_with_ecephys_content():
         nwbfile.add_electrode(id=index, **electrodes_info)
 
     electrode_region = nwbfile.create_electrode_table_region(region=electrode_indices, description="electrodes")
-    electrical_series = mock_ElectricalSeries(name=electrical_series_name, electrodes=electrode_region)
+    channel_conversion = 2.0 * np.ones(len(electrode_indices)) * to_micro_volts
+    electrical_series = mock_ElectricalSeries(
+        name=electrical_series_name,
+        electrodes=electrode_region,
+        channel_conversion=channel_conversion,
+    )
     nwbfile.add_acquisition(electrical_series)
 
     electrode_group = mock_ElectrodeGroup(device=device)
@@ -75,7 +82,7 @@ def nwbfile_with_ecephys_content():
 
     rel_x = 3.0
     property_value = "B"
-    offset = 2.0
+    offset = 2.0 * to_micro_volts
     electrical_series_name = "ElectricalSeries2"
     electrode_indices = [5, 6, 7, 8, 9]
 
@@ -98,8 +105,8 @@ def nwbfile_with_ecephys_content():
     rng = np.random.default_rng(0)
     data = rng.random(size=(num_frames, len(electrode_indices)))
     rate = 30_000.0
-    conversion = 5.0
-    a_different_offset = offset + 1.0
+    conversion = 5.0 * to_micro_volts
+    a_different_offset = offset + 1.0 * to_micro_volts
     electrical_series = ElectricalSeries(
         name=electrical_series_name,
         data=data,
@@ -115,8 +122,8 @@ def nwbfile_with_ecephys_content():
     electrode_indices = [5, 6, 7, 8, 9]
     data = rng.random(size=(num_frames, len(electrode_indices)))
     rate = 30_000.0
-    conversion = 5.0
-    a_different_offset = offset + 1.0
+    conversion = 5.0 * to_micro_volts
+    a_different_offset = offset + 1.0 * to_micro_volts
     electrical_series = ElectricalSeries(
         name=electrical_series_name,
         data=data,
@@ -130,13 +137,13 @@ def nwbfile_with_ecephys_content():
     ecephys_mod.data_interfaces["LFP"].add_electrical_series(electrical_series)
 
     # custom module
-    # add electrical series in processing
+    # add electrical series in custom preprocessing module
     electrical_series_name = "ElectricalSeries2"
     electrode_indices = [0, 1, 2, 3, 4]
     data = rng.random(size=(num_frames, len(electrode_indices)))
     rate = 30_000.0
-    conversion = 5.0
-    a_different_offset = offset + 1.0
+    conversion = 5.0 * to_micro_volts
+    a_different_offset = offset + 1.0 * to_micro_volts
     electrical_series = ElectricalSeries(
         name=electrical_series_name,
         data=data,
@@ -312,22 +319,22 @@ def test_retrieving_from_processing(generate_nwbfile, use_pynwb):
     assert np.array_equal(electrical_series_custom.data[:], recording_extractor_custom.get_traces())
 
 
-@pytest.mark.parametrize("electrical_series_name", ["acquisition/ElectricalSeries1", "acquisition/ElectricalSeries2"])
-def test_that_hdf5_and_pynwb_extractors_return_the_same_data(generate_nwbfile, electrical_series_name):
+@pytest.mark.parametrize("electrical_series_path", ["acquisition/ElectricalSeries1", "acquisition/ElectricalSeries2"])
+def test_recording_equality_with_pynwb_and_backend(generate_nwbfile, electrical_series_path):
     path_to_nwbfile, _ = generate_nwbfile
-    recording_extractor_hdf5 = NwbRecordingExtractor(
+    recording_extractor_backend = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_path=electrical_series_name,
+        electrical_series_path=electrical_series_path,
         use_pynwb=False,
     )
 
     recording_extractor_pynwb = NwbRecordingExtractor(
         path_to_nwbfile,
-        electrical_series_path=electrical_series_name,
+        electrical_series_path=electrical_series_path,
         use_pynwb=True,
     )
 
-    check_recordings_equal(recording_extractor_hdf5, recording_extractor_pynwb)
+    check_recordings_equal(recording_extractor_backend, recording_extractor_pynwb)
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
