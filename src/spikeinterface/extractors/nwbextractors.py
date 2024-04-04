@@ -14,7 +14,7 @@ def read_file_from_backend(
     *,
     file_path: str | Path | None,
     file: BinaryIO | None = None,
-    stream_mode: Literal["ffspec", "ros3", "remfile"] | None = None,
+    stream_mode: Literal["ffspec", "remfile"] | None = None,
     cache: bool = False,
     stream_cache_path: str | Path | None = None,
     storage_options: dict | None = None,
@@ -98,7 +98,7 @@ def read_nwbfile(
     backend: Literal["hdf5", "zarr"],
     file_path: str | Path | None,
     file: BinaryIO | None = None,
-    stream_mode: Literal["ffspec", "ros3", "remfile", "zarr"] | None = None,
+    stream_mode: Literal["ffspec", "remfile", "zarr"] | None = None,
     cache: bool = False,
     stream_cache_path: str | Path | None = None,
     storage_options: dict | None = None,
@@ -112,7 +112,7 @@ def read_nwbfile(
         The path to the NWB file. Either provide this or file.
     file : file-like object or None
         The file-like object to read from. Either provide this or file_path.
-    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
+    stream_mode : "fsspec" | "remfile" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
     cache: bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
@@ -132,12 +132,12 @@ def read_nwbfile(
 
     Notes
     -----
-    This function can stream data from the "fsspec", "ros3" and "rem" protocols.
+    This function can stream data from the "fsspec", and "rem" protocols.
 
 
     Examples
     --------
-    >>> nwbfile = read_nwbfile(file_path="data.nwb", backend="hdf5", stream_mode="ros3")
+    >>> nwbfile = read_nwbfile(file_path="data.nwb", backend="hdf5", stream_mode="fsspec")
     """
 
     if file_path is not None and file is not None:
@@ -428,7 +428,7 @@ class NwbRecordingExtractor(BaseRecording):
     samples_for_rate_estimation: int, default: 1000
         The number of timestamp samples used for estimating the sampling rate. This is relevant
         when the 'rate' attribute is not available in the ElectricalSeries.
-    stream_mode : "fsspec" | "ros3" | "remfile" | "zarr" | None, default: None
+    stream_mode : "fsspec" | "remfile" | "zarr" | None, default: None
         Determines the streaming mode for reading the file. Use this for optimized reading from
         different sources, such as local disk or remote servers.
     load_channel_properties: bool, default: True
@@ -485,7 +485,7 @@ class NwbRecordingExtractor(BaseRecording):
         electrical_series_name: str | None = None,  # deprecated
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 1_000,
-        stream_mode: Optional[Literal["fsspec", "ros3", "remfile", "zarr"]] = None,
+        stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
         stream_cache_path: str | Path | None = None,
         electrical_series_path: str | None = None,
         load_channel_properties: bool = True,
@@ -495,6 +495,14 @@ class NwbRecordingExtractor(BaseRecording):
         storage_options: dict | None = None,
         use_pynwb: bool = False,
     ):
+
+        if stream_mode == "ros3":
+            warnings.warn(
+                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
+                "Use 'fsspec' stream_mode instead.",
+                DeprecationWarning,
+            )
+
         if file_path is not None and file is not None:
             raise ValueError("Provide either file_path or file, not both")
         if file_path is None and file is None:
@@ -911,7 +919,7 @@ class NwbSortingExtractor(BaseSorting):
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
-    stream_mode : "fsspec" | "ros3" | "remfile" | "zarr" | None, default: None
+    stream_mode : "fsspec" | "remfile" | "zarr" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
     stream_cache_path: str or Path or None, default: None
         Local path for caching. If None it uses the system temporary directory.
@@ -965,6 +973,14 @@ class NwbSortingExtractor(BaseSorting):
         storage_options: dict | None = None,
         use_pynwb: bool = False,
     ):
+
+        if stream_mode == "ros3":
+            warnings.warn(
+                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
+                "Use 'fsspec' stream_mode instead.",
+                DeprecationWarning,
+            )
+
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
         self.electrical_series_path = electrical_series_path
