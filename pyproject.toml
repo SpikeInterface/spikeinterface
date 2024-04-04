@@ -59,7 +59,7 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 
 extractors = [
     "MEArec>=1.8",
-    "pynwb>=2.3.0",
+    "pynwb>=2.6.0",
     "hdmf-zarr>=0.5.0",
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
@@ -74,11 +74,13 @@ extractors = [
 streaming_extractors = [
     "ONE-api>=2.7.0", # alf sorter and streaming IBL
     "ibllib>=2.32.5", # streaming IBL
+    "scipy<1.13", # ibl has a dependency on scipy but it does not have an upper bound
+    # Remove this once https://github.com/int-brain-lab/ibllib/issues/753
     # Following dependencies are for streaming with nwb files
+    "pynwb>=2.6.0",
     "fsspec",
     "aiohttp",
     "requests",
-    "pynwb>=2.3.0",
     "hdmf-zarr>=0.5.0",
     "remfile",
     "s3fs"
@@ -113,6 +115,7 @@ qualitymetrics = [
 
 test_core = [
     "pytest",
+    "pytest-dependency",
     "psutil",
 
     # for github test : probeinterface and neo from master
@@ -200,7 +203,6 @@ markers = [
     "widgets",
     "sortingcomponents",
     "streaming_extractors: extractors that require streaming such as ross and fsspec",
-    "ros3_test"
 ]
 filterwarnings =[
     'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',
