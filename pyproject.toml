@@ -59,7 +59,7 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 
 extractors = [
     "MEArec>=1.8",
-    "pynwb>=2.3.0",
+    "pynwb>=2.6.0",
     "hdmf-zarr>=0.5.0",
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
@@ -77,10 +77,10 @@ streaming_extractors = [
     "scipy<1.13", # ibl has a dependency on scipy but it does not have an upper bound
     # Remove this once https://github.com/int-brain-lab/ibllib/issues/753
     # Following dependencies are for streaming with nwb files
+    "pynwb>=2.6.0",
     "fsspec",
     "aiohttp",
     "requests",
-    "pynwb>=2.3.0",
     "hdmf-zarr>=0.5.0",
     "remfile",
     "s3fs"

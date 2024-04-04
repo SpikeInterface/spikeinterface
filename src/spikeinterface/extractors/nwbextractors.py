@@ -848,7 +848,8 @@ class NwbRecordingExtractor(BaseRecording):
         data_attributes = self.electrical_series["data"].attrs
         electrical_series_conversion = data_attributes["conversion"]
         gains = electrical_series_conversion * 1e6
-        if "channel_conversion" in data_attributes:
+        channel_conversion = self.electrical_series.get("channel_conversion", None)
+        if channel_conversion:
             gains *= self.electrical_series["channel_conversion"][:]
 
         # Channel offsets
