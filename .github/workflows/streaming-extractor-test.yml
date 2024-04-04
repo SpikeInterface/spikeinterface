@@ -29,9 +29,6 @@ jobs:
           update-conda: true
           python-version: ${{ matrix.python-version }}
           conda-channels: conda-forge
-      - run: git fetch --prune --unshallow --tags
-      - name: Install openblas
-        run: sudo apt install libopenblas-dev  # Necessary for ROS3 support
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v41
@@ -47,12 +44,6 @@ jobs:
       - name: Install package and streaming extractor dependencies
         if: ${{ steps.modules-changed.outputs.STREAMING_CHANGED == 'true' }}
         run: pip install -e .[test_core,streaming_extractors]
-      # Temporary disabled because of complicated error with path
-      # - name: Install h5py with ROS3 support and test it works
-      #   run: |
-      #     pip uninstall -y h5py
-      #     conda install -c conda-forge "h5py>=3.2"
-      #     python -c "import h5py; assert 'ros3' in h5py.registered_drivers(), f'ros3 suppport not available, failed to install'"
       - name: run tests
         if: steps.modules-changed.outputs.STREAMING_CHANGED == 'true'
-        run: pytest -m "streaming_extractors and not ros3_test" -vv -ra
+        run: pytest -m "streaming_extractors" -vv -ra
