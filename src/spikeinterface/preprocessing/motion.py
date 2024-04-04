@@ -347,7 +347,7 @@ def correct_motion(
 
         node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
 
-        # node nolcalize
+        # node detect + localize
         method = localize_peaks_kwargs.pop("method", "center_of_mass")
         method_class = localize_peak_methods[method]
         node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs)

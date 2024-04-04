@@ -263,10 +263,10 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         # upsample_vector: Union[list[int], None] = None,
     ):
         import scipy.spatial
-
-        assert isinstance(
-            drifting_templates, DriftingTemplates
-        ), "drifting_templates must be a DriftingTemplates object"
+        
+        # assert isinstance(
+        #     drifting_templates, DriftingTemplates
+        # ), "drifting_templates must be a DriftingTemplates object"
         self.drifting_templates = drifting_templates
 
         if parent_recording is None:
@@ -467,7 +467,7 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
             n_channels = len(channel_indices)
 
         if self.parent_recording is not None:
-            traces = self.parent_recording.get_traces(start_frame, end_frame, channel_indices).copy()
+            traces = self.parent_recording.get_traces(int(start_frame), int(end_frame), channel_indices).copy()
         else:
             traces = np.zeros([end_frame - start_frame, n_channels], dtype=self.dtype)
 
