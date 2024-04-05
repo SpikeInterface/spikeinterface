@@ -602,16 +602,17 @@ def estimate_sparsity(
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
 
     num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-    random_spikes_indices = random_spikes_selection(
-        sorting,
-        num_samples,
-        method="uniform",
-        max_spikes_per_unit=num_spikes_for_sparsity,
-        margin_size=max(nbefore, nafter),
-        seed=2205,
-    )
     spikes = sorting.to_spike_vector()
-    spikes = spikes[random_spikes_indices]
+    if num_spikes_for_sparsity is not None:
+        random_spikes_indices = random_spikes_selection(
+            sorting,
+            num_samples,
+            method="uniform",
+            max_spikes_per_unit=num_spikes_for_sparsity,
+            margin_size=max(nbefore, nafter),
+            seed=2205,
+        )
+        spikes = spikes[random_spikes_indices]
 
     templates_array = estimate_templates_with_accumulator(
         recording,
