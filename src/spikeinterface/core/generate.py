@@ -986,6 +986,8 @@ class NoiseGeneratorRecording(BaseRecording):
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
     noise_level: float, default: 1
         Std of the white noise
+    cov_matrix: np.array, default None
+        The covariance matrix of the noise
     dtype : Optional[Union[np.dtype, str]], default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : Optional[int], default: None
@@ -1011,6 +1013,7 @@ class NoiseGeneratorRecording(BaseRecording):
         sampling_frequency: float,
         durations: List[float],
         noise_level: float = 1.0,
+        cov_matrix: Optional[np.array] = None,
         dtype: Optional[Union[np.dtype, str]] = "float32",
         seed: Optional[int] = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
@@ -1025,6 +1028,9 @@ class NoiseGeneratorRecording(BaseRecording):
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
         num_segments = len(durations)
+
+        if cov_matrix is not None:
+            assert cov_matrix.shape[0] == cov_matrix.shape[1] == num_channels, "cov_matrix should have a size (num_channels, num_channels)"
 
         # very important here when multiprocessing and dump/load
         seed = _ensure_seed(seed)
@@ -1041,6 +1047,7 @@ class NoiseGeneratorRecording(BaseRecording):
                 sampling_frequency,
                 noise_block_size,
                 noise_level,
+                cov_matrix,
                 dtype,
                 segments_seeds[i],
                 strategy,
@@ -1054,6 +1061,7 @@ class NoiseGeneratorRecording(BaseRecording):
             "noise_level": noise_level,
             "dtype": dtype,
             "seed": seed,
+            "cov_matrix": cov_matrix,
             "strategy": strategy,
             "noise_block_size": noise_block_size,
         }
@@ -1061,7 +1069,7 @@ class NoiseGeneratorRecording(BaseRecording):
 
 class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
     def __init__(
-        self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_level, dtype, seed, strategy
+        self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_level, cov_matrix, dtype, seed, strategy
     ):
         assert seed is not None
 
@@ -1071,6 +1079,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self.num_channels = num_channels
         self.noise_block_size = noise_block_size
         self.noise_level = noise_level
+        self.cov_matrix = cov_matrix
         self.dtype = dtype
         self.seed = seed
         self.strategy = strategy
@@ -1110,7 +1119,10 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
                 noise_block = self.noise_block
             elif self.strategy == "on_the_fly":
                 rng = np.random.default_rng(seed=(self.seed, block_index))
-                noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
+                if self.cov_matrix is None:
+                    noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
+                else:
+                    noise_block = rng.multivariate_normal(np.zeros(num_channels), cov_dist, size=self.noise_block_size)
                 noise_block *= self.noise_level
 
             if block_index == first_block_index:
