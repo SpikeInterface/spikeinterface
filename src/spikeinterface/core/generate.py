@@ -1035,7 +1035,9 @@ class NoiseGeneratorRecording(BaseRecording):
         num_segments = len(durations)
 
         if cov_matrix is not None:
-            assert cov_matrix.shape[0] == cov_matrix.shape[1] == num_channels, "cov_matrix should have a size (num_channels, num_channels)"
+            assert (
+                cov_matrix.shape[0] == cov_matrix.shape[1] == num_channels
+            ), "cov_matrix should have a size (num_channels, num_channels)"
 
         # very important here when multiprocessing and dump/load
         seed = _ensure_seed(seed)
@@ -1074,7 +1076,16 @@ class NoiseGeneratorRecording(BaseRecording):
 
 class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
     def __init__(
-        self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_level, cov_matrix, dtype, seed, strategy
+        self,
+        num_samples,
+        num_channels,
+        sampling_frequency,
+        noise_block_size,
+        noise_level,
+        cov_matrix,
+        dtype,
+        seed,
+        strategy,
     ):
         assert seed is not None
 
