@@ -27,6 +27,11 @@ def _ensure_seed(seed):
         seed = np.random.default_rng(seed=None).integers(0, 2**63)
     return seed
 
+def get_distances_from_probe(probe):
+    locations = probe.contact_positions
+    channel_distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
+    return channel_distances
+
 
 def generate_recording(
     num_channels: Optional[int] = 2,
@@ -1122,7 +1127,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
                 if self.cov_matrix is None:
                     noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
                 else:
-                    noise_block = rng.multivariate_normal(np.zeros(num_channels), cov_dist, size=self.noise_block_size)
+                    noise_block = rng.multivariate_normal(np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size)
                 noise_block *= self.noise_level
 
             if block_index == first_block_index:
@@ -1916,6 +1921,7 @@ def generate_ground_truth_recording(
     generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
     generate_templates_kwargs=dict(),
     dtype="float32",
+    correlated_noise=None,
     seed=None,
 ):
     """
@@ -1961,6 +1967,8 @@ def generate_ground_truth_recording(
         Dict used to generated template when template not provided.
     dtype: np.dtype, default: "float32"
         The dtype of the recording.
+    correlated_noise: float, default None
+        If not None, the half distance for the covariance matrix of the noise
     seed: int or None
         Seed for random initialization.
         If None a diffrent Recording is generated at every call.
@@ -2018,6 +2026,20 @@ def generate_ground_truth_recording(
     else:
         num_channels = probe.get_contact_count()
 
+
+    if correlated_noise is not None:
+        distances =  get_distances_from_probe(probe)
+        cov_matrix = np.zeros((num_channels, num_channels), dtype=np.float32)
+        for i in range(num_channels):
+            for j in range(num_channels):
+                if i != j:
+                    cov_matrix[i, j] = (0.5 * correlated_noise) / distances[i, j]
+                else:
+                    cov_matrix[i, j] = 1
+        
+    else:
+        cov_matrix = None
+
     if templates is None:
         channel_locations = probe.contact_positions
         unit_locations = generate_unit_locations(
@@ -2054,6 +2076,7 @@ def generate_ground_truth_recording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
+        cov_matrix=cov_matrix,
         dtype=dtype,
         seed=seed,
         noise_block_size=int(sampling_frequency),
