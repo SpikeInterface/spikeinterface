@@ -183,8 +183,7 @@ class SpikesOnTracesWidget(BaseWidget):
                 spike_times_to_plot = sorting.get_unit_spike_train(
                     unit, segment_index=segment_index, return_times=True
                 )[spike_start:spike_end]
-                unit_y_loc = min_y + max_y - dp.unit_locations[unit][1]
-                # markers = np.ones_like(spike_frames_to_plot) * (min_y + max_y - dp.unit_locations[unit][1])
+                unit_y_loc = dp.unit_locations[unit][1]
                 width = 2 * 1e-3
                 ellipse_kwargs = dict(width=width, height=10, fc="none", ec=dp.unit_colors[unit], lw=2)
                 patches = [Ellipse((s, unit_y_loc), **ellipse_kwargs) for s in spike_times_to_plot]
