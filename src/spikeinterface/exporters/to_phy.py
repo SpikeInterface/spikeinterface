@@ -181,9 +181,7 @@ def export_to_phy(
     # export templates/templates_ind/similar_templates
     # shape (num_units, num_samples, max_num_channels)
     templates_ext = sorting_analyzer.get_extension("templates")
-    assert (
-        templates_ext is not None
-    ), "export_to_phy need SortingAnalyzer with extension 'templates'"
+    assert templates_ext is not None, "export_to_phy need SortingAnalyzer with extension 'templates'"
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
     dense_templates = templates_ext.get_templates(unit_ids=unit_ids, operator=template_mode)
     num_samples = dense_templates.shape[1]

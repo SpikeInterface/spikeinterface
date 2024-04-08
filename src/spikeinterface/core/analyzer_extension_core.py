@@ -295,11 +295,8 @@ class ComputeTemplates(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
-    def _set_params(self,
-        ms_before: float = 1.0,
-        ms_after: float = 2.0,
-        return_scaled: bool = True,
-        operators=["average", "std"]
+    def _set_params(
+        self, ms_before: float = 1.0, ms_after: float = 2.0, return_scaled: bool = True, operators=["average", "std"]
     ):
         assert isinstance(operators, list)
         for operator in operators:
@@ -329,7 +326,7 @@ class ComputeTemplates(AnalyzerExtension):
 
     def _run(self, **job_kwargs):
         self.data.clear()
-        
+
         if self.sorting_analyzer.has_extension("waveforms"):
             self._compute_and_append_from_waveforms(self.params["operators"])
         else:
@@ -356,7 +353,6 @@ class ComputeTemplates(AnalyzerExtension):
                 return_std=True,
                 **job_kwargs,
             )
-
 
     def _compute_and_append_from_waveforms(self, operators):
         if not self.sorting_analyzer.has_extension("waveforms"):
@@ -514,7 +510,6 @@ class ComputeTemplates(AnalyzerExtension):
         else:
             raise ValueError("outputs must be numpy or Templates")
 
-
     def get_unit_template(self, unit_id, operator="average"):
         """
         Return template for a single unit.
@@ -540,7 +535,6 @@ class ComputeTemplates(AnalyzerExtension):
 
 compute_templates = ComputeTemplates.function_factory()
 register_result_extension(ComputeTemplates)
-
 
 
 class ComputeNoiseLevels(AnalyzerExtension):

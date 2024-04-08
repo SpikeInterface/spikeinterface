@@ -121,7 +121,7 @@ def test_ComputeTemplates(format, sparse):
 
     with pytest.raises(ValueError):
         # This require "waveforms first and should trig an error
-        sorting_analyzer.compute("templates", operators=[("percentile", 95.)])
+        sorting_analyzer.compute("templates", operators=[("percentile", 95.0)])
 
     ## without waveforms
     temp_ext = sorting_analyzer.compute("templates", operators=["average", "std"], **job_kwargs)
@@ -162,10 +162,14 @@ def test_ComputeTemplates(format, sparse):
         sparsity_mask = np.ones((sorting_analyzer.unit_ids.size, sorting_analyzer.channel_ids.size), dtype=bool)
     for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
         unit_mask = sparsity_mask[unit_index, :]
-        np.testing.assert_almost_equal(fast_avg[unit_index][:, unit_mask], temp_ext.data["average"][unit_index][:, unit_mask], decimal=4)
-        np.testing.assert_almost_equal(fast_std[unit_index][:, unit_mask], temp_ext.data["std"][unit_index][:, unit_mask], decimal=4)
+        np.testing.assert_almost_equal(
+            fast_avg[unit_index][:, unit_mask], temp_ext.data["average"][unit_index][:, unit_mask], decimal=4
+        )
+        np.testing.assert_almost_equal(
+            fast_std[unit_index][:, unit_mask], temp_ext.data["std"][unit_index][:, unit_mask], decimal=4
+        )
 
-    templates = temp_ext.get_templates(outputs='Templates')
+    templates = temp_ext.get_templates(outputs="Templates")
     assert isinstance(templates, Templates)
 
     # import matplotlib.pyplot as plt
@@ -180,7 +184,6 @@ def test_ComputeTemplates(format, sparse):
     # plt.show()
 
     _check_result_extension(sorting_analyzer, "templates")
-
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])

@@ -205,7 +205,6 @@ def test_compute_sparsity():
     sorting_analyzer.compute("templates", return_scaled=True)
     sorting_analyzer.compute("noise_levels", return_scaled=True)
     # this is needed for method="energy"
-    
 
     # using object SortingAnalyzer
     sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2, peak_sign="neg")
