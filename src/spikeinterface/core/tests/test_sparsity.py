@@ -201,10 +201,11 @@ def test_compute_sparsity():
 
     sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False)
     sorting_analyzer.compute("random_spikes")
-    sorting_analyzer.compute("fast_templates", return_scaled=True)
+    sorting_analyzer.compute("waveforms", return_scaled=True)
+    sorting_analyzer.compute("templates", return_scaled=True)
     sorting_analyzer.compute("noise_levels", return_scaled=True)
     # this is needed for method="energy"
-    sorting_analyzer.compute("waveforms", return_scaled=True)
+    
 
     # using object SortingAnalyzer
     sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2, peak_sign="neg")
@@ -215,7 +216,7 @@ def test_compute_sparsity():
     sparsity = compute_sparsity(sorting_analyzer, method="by_property", by_property="group")
 
     # using object Templates
-    templates = sorting_analyzer.get_extension("fast_templates").get_data(outputs="Templates")
+    templates = sorting_analyzer.get_extension("templates").get_data(outputs="Templates")
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
     sparsity = compute_sparsity(templates, method="best_channels", num_channels=2, peak_sign="neg")
     sparsity = compute_sparsity(templates, method="radius", radius_um=50.0, peak_sign="neg")
