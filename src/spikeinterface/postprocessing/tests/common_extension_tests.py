@@ -34,7 +34,7 @@ def get_dataset():
         ),
         generate_templates_kwargs=dict(
             unit_params_range=dict(
-                alpha=(9_000.0, 12_000.0),
+                alpha=(100.0, 500.0),
             )
         ),
         noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
