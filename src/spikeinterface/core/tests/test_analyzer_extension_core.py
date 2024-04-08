@@ -221,10 +221,10 @@ def test_ComputeFastTemplates_versus_ComputeTemplates():
     templates_fast = sorting_analyzer.get_extension("fast_templates").get_templates()
     templates_fast_std = sorting_analyzer.get_extension("fast_templates").get_templates(operator="std")
     templates = sorting_analyzer.get_extension("templates").get_templates()
-    templates_std = sorting_analyzer.get_extension("fast_templates").get_templates(operator="std")
+    templates_std = sorting_analyzer.get_extension("templates").get_templates(operator="std")
 
     np.testing.assert_almost_equal(templates_fast, templates)
-    np.testing.assert_almost_equal(templates_fast_std, templates_std)
+    np.testing.assert_almost_equal(templates_fast_std, templates_std, decimal=4)
 
 
 def test_get_children_dependencies():
