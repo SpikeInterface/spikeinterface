@@ -168,7 +168,7 @@ class SpikesOnTracesWidget(BaseWidget):
 
         frame_range = traces_widget.data_plot["frame_range"]
         segment_index = traces_widget.data_plot["segment_index"]
-        min_y = np, min(recording.get_channel_locations()[:, 1])
+        min_y = np.min(recording.get_channel_locations()[:, 1])
         y_pitch = np.min(np.diff(np.unique(recording.get_channel_locations()[:, 1])))
 
         n = len(traces_widget.data_plot["channel_ids"])
