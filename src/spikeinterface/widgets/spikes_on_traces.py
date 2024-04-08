@@ -219,7 +219,7 @@ class SpikesOnTracesWidget(BaseWidget):
                     vspacing = traces_widget.data_plot["vspacing"]
                     traces = traces_widget.data_plot["list_traces"][0] * dp.options["scale"]
 
-                    nbefore = nafter = dp.spike_width_ms // 2 * sorting_analyzer.sampling_frequency / 1000
+                    nbefore = nafter = int(dp.spike_width_ms / 2 * sorting_analyzer.sampling_frequency / 1000)
                     waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-nbefore, nafter) - frame_range[0]
                     waveform_idxs = np.clip(waveform_idxs, 0, len(traces_widget.data_plot["times"]) - 1)
 
