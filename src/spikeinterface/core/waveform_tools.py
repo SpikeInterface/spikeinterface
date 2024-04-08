@@ -865,9 +865,10 @@ def estimate_templates_with_accumulator(
     # average
     waveforms_sum = np.sum(waveform_accumulator_per_worker, axis=0)
     if return_std:
-        # we need a copy here because we will use the means to cpmpute the stds
+        # we need a copy here because we will use the means to compute the stds
         template_means = waveforms_sum.copy()
     else:
+        # waveforms_sum will also be changed in this case when acting on template_means
         template_means = waveforms_sum
 
     unit_indices, spike_count = np.unique(spikes["unit_index"], return_counts=True)
