@@ -1,7 +1,7 @@
 from __future__ import annotations
 import numpy as np
 
-from spikeinterface import WaveformExtractor
+from spikeinterface import SortingAnalyzer
 
 from ..core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
 from ..postprocessing import align_sorting
@@ -11,7 +11,7 @@ _remove_strategies = ("minimum_shift", "highest_amplitude", "max_spikes")
 
 
 def remove_redundant_units(
-    sorting_or_waveform_extractor,
+    sorting_or_sorting_analyzer,
     align=True,
     unit_peak_shifts=None,
     delta_time=0.4,
@@ -33,12 +33,12 @@ def remove_redundant_units(
 
     Parameters
     ----------
-    sorting_or_waveform_extractor : BaseSorting or WaveformExtractor
-        If WaveformExtractor, the spike trains can be optionally realigned using the peak shift in the
+    sorting_or_sorting_analyzer : BaseSorting or SortingAnalyzer
+        If SortingAnalyzer, the spike trains can be optionally realigned using the peak shift in the
         template to improve the matching procedure.
         If BaseSorting, the spike trains are not aligned.
     align : bool, default: False
-        If True, spike trains are aligned (if a WaveformExtractor is used)
+        If True, spike trains are aligned (if a SortingAnalyzer is used)
     delta_time : float, default: 0.4
         The time in ms to consider matching spikes
     agreement_threshold : float, default: 0.2
@@ -65,17 +65,17 @@ def remove_redundant_units(
         Sorting object without redundant units
     """
 
-    if isinstance(sorting_or_waveform_extractor, WaveformExtractor):
-        sorting = sorting_or_waveform_extractor.sorting
-        we = sorting_or_waveform_extractor
+    if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
+        sorting = sorting_or_sorting_analyzer.sorting
+        sorting_analyzer = sorting_or_sorting_analyzer
     else:
-        assert not align, "The 'align' option is only available when a WaveformExtractor is used as input"
-        sorting = sorting_or_waveform_extractor
-        we = None
+        assert not align, "The 'align' option is only available when a SortingAnalyzer is used as input"
+        sorting = sorting_or_sorting_analyzer
+        sorting_analyzer = None
 
     if align and unit_peak_shifts is None:
-        assert we is not None, "For align=True must give a WaveformExtractor or explicit unit_peak_shifts"
-        unit_peak_shifts = get_template_extremum_channel_peak_shift(we)
+        assert sorting_analyzer is not None, "For align=True must give a SortingAnalyzer or explicit unit_peak_shifts"
+        unit_peak_shifts = get_template_extremum_channel_peak_shift(sorting_analyzer)
 
     if align:
         sorting_aligned = align_sorting(sorting, unit_peak_shifts)
@@ -93,7 +93,7 @@ def remove_redundant_units(
 
     if remove_strategy in ("minimum_shift", "highest_amplitude"):
         # this is the values at spike index !
-        peak_values = get_template_amplitudes(we, peak_sign=peak_sign, mode="at_index")
+        peak_values = get_template_amplitudes(sorting_analyzer, peak_sign=peak_sign, mode="at_index")
         peak_values = {unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()}
 
     if remove_strategy == "minimum_shift":
@@ -125,7 +125,7 @@ def remove_redundant_units(
     elif remove_strategy == "with_metrics":
         # TODO
         # @aurelien @alessio
-        # here we can implement the choice of the best one given an external metrics table
+        # here sorting_analyzer can implement the choice of the best one given an external metrics table
         # this will be implemented in a futur PR by the first who need it!
         raise NotImplementedError()
     else:

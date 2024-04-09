@@ -14,11 +14,12 @@ spikeinterface.core
         :members:
     .. autoclass:: BaseEvent
         :members:
-    .. autoclass:: WaveformExtractor
+    .. autoclass:: SortingAnalyzer
         :members:
-    .. autofunction:: extract_waveforms
-    .. autofunction:: load_waveforms
+    .. autofunction:: create_sorting_analyzer
+    .. autofunction:: load_sorting_analyzer
     .. autofunction:: compute_sparsity
+    .. autofunction:: estimate_sparsity
     .. autoclass:: ChannelSparsity
         :members:
     .. autoclass:: BinaryRecordingExtractor
@@ -159,7 +160,7 @@ spikeinterface.preprocessing
     .. autofunction:: detect_bad_channels
     .. autofunction:: directional_derivative
     .. autofunction:: filter
-    .. autofunction:: gaussian_bandpass_filter
+    .. autofunction:: gaussian_filter
     .. autofunction:: highpass_filter
     .. autofunction:: highpass_spatial_filter
     .. autofunction:: interpolate_bad_channels
@@ -218,7 +219,6 @@ spikeinterface.sorters
     .. autofunction:: get_sorter_description
     .. autofunction:: run_sorter
     .. autofunction:: run_sorter_jobs
-    .. autofunction:: run_sorters
     .. autofunction:: run_sorter_by_property
     .. autofunction:: read_sorter_folder
 
@@ -330,6 +330,18 @@ spikeinterface.curation
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
     .. autofunction:: apply_sortingview_curation
+
+
+spikeinterface.generation
+-------------------------
+
+.. automodule:: spikeinterface.generation
+
+    .. autofunction:: make_linear_displacement
+    .. autofunction:: move_dense_templates
+    .. autofunction:: interpolate_templates
+    .. autoclass:: DriftingTemplates
+    .. autoclass:: InjectDriftingTemplatesRecording
 
 
 spikeinterface.sortingcomponents

@@ -1,4 +1,4 @@
-name: CI-Test in AWS for GPU
+name: Test GPU sorter images in singularity on AWS
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: iterative/setup-cml@v1
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Deploy runner on EC2
         env:
           REPO_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
@@ -28,7 +28,7 @@ jobs:
       image: docker://iterativeai/cml:0-dvc2-base1-gpu
       options: --privileged --gpus all
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
@@ -46,6 +46,5 @@ jobs:
       - name: Run test singularity containers with GPU
         env:
           REPO_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          SPIKEINTERFACE_DEV_PATH: ${{ github.workspace }}
         run: |
           pytest -vv --capture=tee-sys -rA src/spikeinterface/sorters/external/tests/test_singularity_containers_gpu.py

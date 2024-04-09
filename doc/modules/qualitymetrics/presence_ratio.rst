@@ -25,9 +25,9 @@ Example code
 
     import spikeinterface.qualitymetrics as sqm
 
-    # Make recording, sorting and wvf_extractor object for your data.
+    # Combine sorting and recording into a sorting_analyzer
 
-    presence_ratio = sqm.compute_presence_ratios(waveform_extractor=wvf_extractor)
+    presence_ratio = sqm.compute_presence_ratios(sorting_analyzer=sorting_analyzer)
     # presence_ratio is a dict containing the unit IDs as keys
     # and their presence ratio (between 0 and 1) as values.
 

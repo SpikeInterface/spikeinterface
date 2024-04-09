@@ -65,6 +65,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinx_design',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
     "IPython.sphinxext.ipython_directive",
@@ -130,7 +131,7 @@ sphinx_gallery_conf = {
 }
 
 intersphinx_mapping = {
-    "neo": ("https://neo.readthedocs.io/en/stable/", None),
+    "neo": ("https://neo.readthedocs.io/en/latest/", None),
     "probeinterface": ("https://probeinterface.readthedocs.io/en/stable/", None),
 }
 

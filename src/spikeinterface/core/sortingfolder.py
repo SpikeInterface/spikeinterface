@@ -1,12 +1,12 @@
+from __future__ import annotations
 from pathlib import Path
 import json
 
 import numpy as np
 
-from .basesorting import BaseSorting, BaseSortingSegment
+from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .npzsortingextractor import NpzSortingExtractor
 from .core_tools import define_function_from_class, make_paths_absolute
-from .numpyextractors import NumpySortingSegment
 
 
 class NumpyFolderSorting(BaseSorting):
@@ -41,7 +41,7 @@ class NumpyFolderSorting(BaseSorting):
         self.spikes = np.load(folder_path / "spikes.npy", mmap_mode="r")
 
         for segment_index in range(num_segments):
-            self.add_sorting_segment(NumpySortingSegment(self.spikes, segment_index, unit_ids))
+            self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.spikes

@@ -1,7 +1,11 @@
-from .mergeunitssorting import MergeUnitsSorting
-from .splitunitsorting import SplitUnitSorting
+from __future__ import annotations
+
 from collections import namedtuple
 import numpy as np
+
+from .mergeunitssorting import MergeUnitsSorting
+from .splitunitsorting import SplitUnitSorting
+from spikeinterface.core.core_tools import define_function_from_class
 
 node_t = namedtuple("node_t", "unit_id stage_id")
 
@@ -192,3 +196,6 @@ class CurationSorting:
 
     #     attr = object.__getattribute__(current_sorting, name)
     #     return attr
+
+
+curation_sorting = define_function_from_class(source_class=CurationSorting, name="curation_sorting")

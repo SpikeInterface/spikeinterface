@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 
 import numpy as np
 
@@ -40,11 +40,33 @@ class UnitsSelectionSorting(BaseSorting):
             self.add_sorting_segment(sub_segment)
 
         parent_sorting.copy_metadata(self, only_main=False, ids=self._unit_ids)
+        self._parent = parent_sorting
 
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
 
         self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
+
+    def _custom_cache_spike_vector(self) -> None:
+        if self._parent_sorting._cached_spike_vector is None:
+            self._parent_sorting._custom_cache_spike_vector()
+
+            if self._parent_sorting._cached_spike_vector is None:
+                return
+
+        parent_spike_vector = self._parent_sorting._cached_spike_vector
+        parent_unit_indices = self._parent_sorting.ids_to_indices(self._unit_ids)
+        sort_indices = np.argsort(parent_unit_indices)
+        mask = np.isin(parent_spike_vector["unit_index"], parent_unit_indices)
+        spike_vector = np.array(
+            parent_spike_vector[mask]
+        )  # np.array() necessary to fix 'read-only' crash with memmaps.
+        indices = np.searchsorted(
+            parent_unit_indices, spike_vector["unit_index"], sorter=sort_indices
+        )  # Trick to make sure that the new indices are correct.
+        spike_vector["unit_index"] = np.arange(len(parent_unit_indices))[sort_indices][indices]
+
+        self._cached_spike_vector = spike_vector
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
@@ -56,8 +78,8 @@ class UnitsSelectionSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         unit_id_parent = self._ids_conversion[unit_id]
         times = self._parent_segment.get_unit_spike_train(unit_id_parent, start_frame, end_frame)

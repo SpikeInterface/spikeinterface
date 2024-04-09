@@ -136,6 +136,18 @@ Kilosort3
 
 * See also for Matlab/CUDA: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
+Kilosort4
+^^^^^^^^^
+
+* Python, requires CUDA for GPU acceleration (highly recommended)
+* Url: https://github.com/MouseLand/Kilosort
+* Authors: Marius Pachitariu, Shashwat Sridhar, Carsen Stringer
+* Installation::
+
+      pip install kilosort==4.0 torch
+
+* For more installation instruction refer to https://github.com/MouseLand/Kilosort
+
 
 pyKilosort
 ^^^^^^^^^^

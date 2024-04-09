@@ -4,6 +4,8 @@ import pickle
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import ChannelSparsity
 
+from probeinterface import generate_multi_columns_probe
+
 
 def generate_test_template(template_type):
     num_units = 2
@@ -15,8 +17,12 @@ def generate_test_template(template_type):
     sampling_frequency = 30_000
     nbefore = 2
 
+    probe = generate_multi_columns_probe(num_columns=1, num_contact_per_column=[3])
+
     if template_type == "dense":
-        return Templates(templates_array=templates_array, sampling_frequency=sampling_frequency, nbefore=nbefore)
+        return Templates(
+            templates_array=templates_array, sampling_frequency=sampling_frequency, nbefore=nbefore, probe=probe
+        )
     elif template_type == "sparse":  # sparse with sparse templates
         sparsity_mask = np.array([[True, False, True], [False, True, False]])
         sparsity = ChannelSparsity(
@@ -35,6 +41,7 @@ def generate_test_template(template_type):
             sparsity_mask=sparsity_mask,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
+            probe=probe,
         )
 
     elif template_type == "sparse_with_dense_templates":  # sparse with dense templates
@@ -45,6 +52,7 @@ def generate_test_template(template_type):
             sparsity_mask=sparsity_mask,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
+            probe=probe,
         )
 
 
@@ -84,3 +92,21 @@ def test_get_dense_templates(template_type):
 def test_initialization_fail_with_dense_templates():
     with pytest.raises(ValueError, match="Sparsity mask passed but the templates are not sparse"):
         template = generate_test_template(template_type="sparse_with_dense_templates")
+
+
+@pytest.mark.parametrize("template_type", ["dense", "sparse"])
+def test_save_and_load_zarr(template_type, tmp_path):
+    original_template = generate_test_template(template_type)
+
+    zarr_path = tmp_path / "templates.zarr"
+    original_template.to_zarr(str(zarr_path))
+
+    # Load from the Zarr archive
+    loaded_template = Templates.from_zarr(str(zarr_path))
+
+    assert original_template == loaded_template
+
+
+if __name__ == "__main__":
+    # test_json_serialization("sparse")
+    test_json_serialization("dense")

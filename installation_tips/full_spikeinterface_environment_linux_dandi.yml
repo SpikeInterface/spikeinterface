@@ -3,37 +3,35 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10
-  - pip>=21.0
-  - mamba
-  - numpy<1.22
+  - python=3.11
+  - pip
+  - numpy
+  - scipy
   - joblib
   - tqdm
   - matplotlib
   - h5py
   - pandas
+  - xarray
+  - zarr
   - scikit-learn
+  - hdbscan
   - networkx
   - pybind11
   - loky
-  - hdbscan
   - numba
   - jupyter
-  - mpi4py
-  - cxx-compiler
-  - libxcb
   - pyqt=5
   - pyqtgraph
-  - htop
   - ipywidgets
   - ipympl
+  - htop
+  - cxx-compiler
+  - libxcb
   - pip:
     - ephyviewer
-    - neo>=0.12
-    - probeinterface>=0.2.11
-    - MEArec>=1.8
-    - spikeinterface[full, widgets]
+    - MEArec
+    - spikeinterface[full,widgets]
     - spikeinterface-gui
-    - tridesclous>=1.6.8
-    - spyking-circus>=1.1.0
+    - tridesclous
     # - phy==2.0b5

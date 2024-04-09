@@ -17,41 +17,54 @@ def _create_recording():
     rec.save(folder='./toy_example_recording')
 
 
-def _run_one_sorter_and_exctract_wf(sorter_name):
+def _run_one_sorter_and_analyzer(sorter_name):
+    job_kwargs = dict(n_jobs=-1, progress_bar=True, chunk_duration="1s")
     import spikeinterface.full as si
-    rec = si.load_extractor('./toy_example_recording')
-    sorting = si.run_sorter(sorter_name, rec, output_folder=f'{sorter_name}_output', verbose=False)
-    si.extract_waveforms(rec, sorting, f'{sorter_name}_waveforms',
-                         n_jobs=1, total_memory="10M", max_spikes_per_unit=500, return_scaled=False)
+    recording = si.load_extractor('./toy_example_recording')
+    sorting = si.run_sorter(sorter_name, recording, output_folder=f'./sorter_with_{sorter_name}', verbose=False)
+
+    sorting_analyzer = si.create_sorting_analyzer(sorting, recording,
+                                                format="binary_folder", folder=f"./analyzer_with_{sorter_name}",
+                                                **job_kwargs)
+    sorting_analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500)
+    sorting_analyzer.compute("waveforms", **job_kwargs)
+    sorting_analyzer.compute("templates")
+    sorting_analyzer.compute("noise_levels")
+    sorting_analyzer.compute("unit_locations", method="monopolar_triangulation")
+    sorting_analyzer.compute("correlograms", window_ms=100, bin_ms=5.)
+    sorting_analyzer.compute("principal_components", n_components=3, mode='by_channel_global', whiten=True, **job_kwargs)
+    sorting_analyzer.compute("quality_metrics", metric_names=["snr", "firing_rate"])
+
 
 def run_tridesclous():
-    _run_one_sorter_and_exctract_wf('tridesclous')
+    _run_one_sorter_and_analyzer('tridesclous')
 
+def run_tridesclous2():
+    _run_one_sorter_and_analyzer('tridesclous2')
 
-def run_spykingcircus():
-    _run_one_sorter_and_exctract_wf('spykingcircus')
-
-
-def run_herdingspikes():
-    _run_one_sorter_and_exctract_wf('herdingspikes')
 
 
 def open_sigui():
     import spikeinterface.full as si
     import spikeinterface_gui
     app = spikeinterface_gui.mkQApp()
-    waveform_forlder = 'tridesclous_waveforms'
-    we = si.WaveformExtractor.load_from_folder(waveform_forlder)
-    pc = si.compute_principal_components(we, n_components=3, mode='by_channel_local', whiten=True, dtype='float32')
-    win = spikeinterface_gui.MainWindow(we)
+
+    sorter_name = "tridesclous2"
+    folder = f"./analyzer_with_{sorter_name}"
+    analyzer = si.load_sorting_analyzer(folder)
+
+    win = spikeinterface_gui.MainWindow(analyzer)
     win.show()
     app.exec_()
 
 def export_to_phy():
     import spikeinterface.full as si
-    we = si.WaveformExtractor.load_from_folder("tridesclous_waveforms")
+    sorter_name = "tridesclous2"
+    folder = f"./analyzer_with_{sorter_name}"
+    analyzer = si.load_sorting_analyzer(folder)
+
     phy_folder = "./phy_example"
-    si.export_to_phy(we, output_folder=phy_folder, verbose=False)
+    si.export_to_phy(analyzer, output_folder=phy_folder, verbose=False)
 
 
 def open_phy():
@@ -61,10 +74,12 @@ def open_phy():
 def _clean():
     # clean
     folders = [
-        'toy_example_recording',
-        "tridesclous_output", "tridesclous_waveforms",
-        "spykingcircus_output", "spykingcircus_waveforms",
-        "phy_example"
+        "./toy_example_recording",
+        "./sorter_with_tridesclous",
+        "./analyzer_with_tridesclous",
+        "./sorter_with_tridesclous2",
+        "./analyzer_with_tridesclous2",
+        "./phy_example"
     ]
     for folder in folders:
         if Path(folder).exists():
@@ -86,25 +101,24 @@ if __name__ == '__main__':
         ('Import spikeinterface', check_import_si),
         ('Import spikeinterface.full', check_import_si_full),
         ('Run tridesclous', run_tridesclous),
+        ('Run tridesclous2', run_tridesclous2),
         ]
 
     # backwards logic because default is True for end-user
     if args.ci:
-        steps.insert(3, ('Open spikeinterface-gui', open_sigui) )
+        steps.append(('Open spikeinterface-gui', open_sigui))
 
     steps.append(('Export to phy', export_to_phy)),
         # phy is removed from the env because it force a pip install PyQt5
         # which break the conda env
         # ('Open phy', open_phy),
 
-    if platform.system() == "Windows":
-        pass
-        # steps.insert(3, ('Run spykingcircus', run_spykingcircus))
-    elif platform.system() == "Darwin":
-        steps.insert(3, ('Run herdingspikes', run_herdingspikes))
-    else:
-        steps.insert(3, ('Run spykingcircus', run_spykingcircus))
-        steps.insert(4, ('Run herdingspikes', run_herdingspikes))
+    # if platform.system() == "Windows":
+    #     pass
+    # elif platform.system() == "Darwin":
+    #     pass
+    # else:
+    #     pass
 
     for label, func in steps:
         try:

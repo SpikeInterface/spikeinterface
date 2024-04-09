@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .basesorting import BaseSorting
 import numpy as np
 
 
@@ -46,6 +47,50 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
     return spike_trains
 
 
+def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array):
+    """
+    Similar to spike_vector_to_spike_trains but instead having the spike_trains (aka spike times) return
+    spike indices by segment and units.
+
+    This is usefull to split back other unique vector like "spike_amplitudes", "spike_locations" into dict of dict
+    Internally calls numba if numba is installed.
+
+    Parameters
+    ----------
+    spike_vector: list[np.ndarray]
+        List of spike vectors optained with sorting.to_spike_vector(concatenated=False)
+    unit_ids: np.array
+        Unit ids
+    Returns
+    -------
+    spike_indices: dict[dict]:
+        A dict containing, for each segment, the spike indices of all units
+        (as a dict: unit_id --> index).
+    """
+    try:
+        import numba
+
+        HAVE_NUMBA = True
+    except:
+        HAVE_NUMBA = False
+
+    if HAVE_NUMBA:
+        # the trick here is to have a function getter
+        vector_to_list_of_spiketrain = get_numba_vector_to_list_of_spiketrain()
+    else:
+        vector_to_list_of_spiketrain = vector_to_list_of_spiketrain_numpy
+
+    num_units = unit_ids.size
+    spike_indices = {}
+    for segment_index, spikes in enumerate(spike_vector):
+        indices = np.arange(spikes.size, dtype=np.int64)
+        unit_indices = np.array(spikes["unit_index"]).astype(np.int64, copy=False)
+        list_of_spike_indices = vector_to_list_of_spiketrain(indices, unit_indices, num_units)
+        spike_indices[segment_index] = dict(zip(unit_ids, list_of_spike_indices))
+
+    return spike_indices
+
+
 def vector_to_list_of_spiketrain_numpy(sample_indices, unit_indices, num_units):
     """
     Slower implementation of vetor_to_dict using numpy boolean mask.
@@ -90,3 +135,77 @@ def get_numba_vector_to_list_of_spiketrain():
     get_numba_vector_to_list_of_spiketrain._cached_numba_function = vector_to_list_of_spiketrain_numba
 
     return vector_to_list_of_spiketrain_numba
+
+
+# TODO later : implement other method like "maximum_rate", "by_percent", ...
+def random_spikes_selection(
+    sorting: BaseSorting,
+    num_samples: int | None = None,
+    method: str = "uniform",
+    max_spikes_per_unit: int = 500,
+    margin_size: int | None = None,
+    seed: int | None = None,
+):
+    """
+    This replaces `select_random_spikes_uniformly()`.
+    Random spikes selection of spike across per units.
+    Can optionally avoid spikes on segment borders if
+    margin_size is not None.
+
+    Parameters
+    ----------
+    sorting: BaseSorting
+        The sorting object
+    num_samples: list of int
+        The number of samples per segment.
+        Can be retrieved from recording with
+        num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
+    method: "uniform", default: "uniform"
+        The method to use. Only "uniform" is implemented for now
+    max_spikes_per_unit: int, default: 500
+        The number of spikes per units
+    margin_size: None | int, default: None
+        A margin on each border of segments to avoid border spikes
+    seed: None | int, default: None
+        A seed for random generator
+
+    Returns
+    -------
+    random_spikes_indices: np.array
+        Selected spike indices coresponding to the sorting spike vector.
+    """
+    rng = np.random.default_rng(seed=seed)
+    spikes = sorting.to_spike_vector()
+
+    random_spikes_indices = []
+    for unit_index, unit_id in enumerate(sorting.unit_ids):
+        all_unit_indices = np.flatnonzero(unit_index == spikes["unit_index"])
+
+        if method == "uniform":
+            selected_unit_indices = rng.choice(
+                all_unit_indices, size=min(max_spikes_per_unit, all_unit_indices.size), replace=False, shuffle=False
+            )
+        else:
+            raise ValueError(f"random_spikes_selection wrong method {method}, currently only 'uniform' can be used.")
+
+        if margin_size is not None:
+            assert num_samples is not None
+            margin_size = int(margin_size)
+            keep = np.ones(selected_unit_indices.size, dtype=bool)
+            # left margin
+            keep[selected_unit_indices < margin_size] = False
+            # right margin
+            for segment_index in range(sorting.get_num_segments()):
+                remove_mask = np.flatnonzero(
+                    (spikes[selected_unit_indices]["segment_index"] == segment_index)
+                    & (spikes[selected_unit_indices]["sample_index"] >= (num_samples[segment_index] - margin_size))
+                )
+                keep[remove_mask] = False
+            selected_unit_indices = selected_unit_indices[keep]
+
+        random_spikes_indices.append(selected_unit_indices)
+
+    random_spikes_indices = np.concatenate(random_spikes_indices)
+    random_spikes_indices = np.sort(random_spikes_indices)
+
+    return random_spikes_indices

@@ -3,6 +3,7 @@ import os
 import pytest
 from pathlib import Path
 
+from spikeinterface.core.core_tools import is_editable_mode
 import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
 
@@ -24,8 +25,7 @@ def clean_singularity_cache():
 
 def check_gh_settings():
     if ON_GITHUB:
-        si_dev_path = os.getenv("SPIKEINTERFACE_DEV_PATH")
-        assert si_dev_path is not None, "Tests on GITHUB CI must run with the SPIKEINTERFACE_DEV_PATH"
+        assert is_editable_mode(), "Tests on GITHUB CI must run with SpikeInterface in editable mode"
 
 
 def generate_run_kwargs():
@@ -35,6 +35,7 @@ def generate_run_kwargs():
     test_recording.set_channel_offsets(0)
     run_kwargs = dict(recording=test_recording, verbose=True)
     run_kwargs["singularity_image"] = True
+    run_kwargs["installation_mode"] = "dev"
     return run_kwargs
 
 

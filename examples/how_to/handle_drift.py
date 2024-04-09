@@ -54,10 +54,11 @@ import numpy as np
 import shutil
 
 import spikeinterface.full as si
+
 # -
 
-base_folder = Path('/mnt/data/sam/DataSpikeSorting/imposed_motion_nick')
-dataset_folder = base_folder / 'dataset1/NP1'
+base_folder = Path("/mnt/data/sam/DataSpikeSorting/imposed_motion_nick")
+dataset_folder = base_folder / "dataset1/NP1"
 
 # read the file
 raw_rec = si.read_spikeglx(dataset_folder)
@@ -67,13 +68,16 @@ raw_rec
 # We preprocess the recording with bandpass filter and a common median reference.
 # Note, that it is better to not whiten the recording before motion estimation to get a better estimate of peak locations!
 
+
 def preprocess_chain(rec):
-    rec = si.bandpass_filter(rec, freq_min=300., freq_max=6000.)
-    rec = si.common_reference(rec, reference='global', operator='median')
+    rec = si.bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)
+    rec = si.common_reference(rec, reference="global", operator="median")
     return rec
+
+
 rec = preprocess_chain(raw_rec)
 
-job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
+job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
 
 # ### Run motion correction with one function!
 #
@@ -87,21 +91,22 @@ job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
 # internally, we can explore a preset like this
 # every parameter can be overwritten at runtime
 from spikeinterface.preprocessing.motion import motion_options_preset
-motion_options_preset['kilosort_like']
+
+motion_options_preset["kilosort_like"]
 
 # lets try theses 3 presets
-some_presets = ('rigid_fast',  'kilosort_like', 'nonrigid_accurate')
+some_presets = ("rigid_fast", "kilosort_like", "nonrigid_accurate")
 # some_presets = ('kilosort_like',  )
 
 # compute motion with 3 presets
 for preset in some_presets:
-    print('Computing with', preset)
-    folder = base_folder / 'motion_folder_dataset1' / preset
+    print("Computing with", preset)
+    folder = base_folder / "motion_folder_dataset1" / preset
     if folder.exists():
         shutil.rmtree(folder)
-    recording_corrected, motion_info = si.correct_motion(rec, preset=preset,
-                                                         folder=folder,
-                                                         output_motion_info=True, **job_kwargs)
+    recording_corrected, motion_info = si.correct_motion(
+        rec, preset=preset, folder=folder, output_motion_info=True, **job_kwargs
+    )
 
 # ### Plot the results
 #
@@ -130,13 +135,19 @@ for preset in some_presets:
 
 for preset in some_presets:
     # load
-    folder = base_folder / 'motion_folder_dataset1' / preset
+    folder = base_folder / "motion_folder_dataset1" / preset
     motion_info = si.load_motion_info(folder)
 
     # and plot
     fig = plt.figure(figsize=(14, 8))
-    si.plot_motion(motion_info, figure=fig, depth_lim=(400, 600),
-                   color_amplitude=True, amplitude_cmap='inferno',  scatter_decimate=10)
+    si.plot_motion(
+        motion_info,
+        figure=fig,
+        depth_lim=(400, 600),
+        color_amplitude=True,
+        amplitude_cmap="inferno",
+        scatter_decimate=10,
+    )
 
     fig.suptitle(f"{preset=}")
 
@@ -159,7 +170,7 @@ for preset in some_presets:
 from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 
 for preset in some_presets:
-    folder = base_folder / 'motion_folder_dataset1' / preset
+    folder = base_folder / "motion_folder_dataset1" / preset
     motion_info = si.load_motion_info(folder)
 
     fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
@@ -167,29 +178,36 @@ for preset in some_presets:
     ax = axs[0]
     si.plot_probe_map(rec, ax=ax)
 
-    peaks = motion_info['peaks']
+    peaks = motion_info["peaks"]
     sr = rec.get_sampling_frequency()
-    time_lim0 = 750.
-    time_lim1 = 1500.
-    mask = (peaks['sample_index'] > int(sr * time_lim0)) & (peaks['sample_index'] < int(sr * time_lim1))
+    time_lim0 = 750.0
+    time_lim1 = 1500.0
+    mask = (peaks["sample_index"] > int(sr * time_lim0)) & (peaks["sample_index"] < int(sr * time_lim1))
     sl = slice(None, None, 5)
-    amps = np.abs(peaks['amplitude'][mask][sl])
+    amps = np.abs(peaks["amplitude"][mask][sl])
     amps /= np.quantile(amps, 0.95)
-    c = plt.get_cmap('inferno')(amps)
+    c = plt.get_cmap("inferno")(amps)
 
     color_kargs = dict(alpha=0.2, s=2, c=c)
 
-    loc = motion_info['peak_locations']
-    #color='black',
-    ax.scatter(loc['x'][mask][sl], loc['y'][mask][sl], **color_kargs)
+    loc = motion_info["peak_locations"]
+    # color='black',
+    ax.scatter(loc["x"][mask][sl], loc["y"][mask][sl], **color_kargs)
 
-    loc2 = correct_motion_on_peaks(motion_info['peaks'], motion_info['peak_locations'], rec.sampling_frequency,
-                                   motion_info['motion'], motion_info['temporal_bins'], motion_info['spatial_bins'], direction="y")
+    loc2 = correct_motion_on_peaks(
+        motion_info["peaks"],
+        motion_info["peak_locations"],
+        rec.sampling_frequency,
+        motion_info["motion"],
+        motion_info["temporal_bins"],
+        motion_info["spatial_bins"],
+        direction="y",
+    )
 
     ax = axs[1]
     si.plot_probe_map(rec, ax=ax)
     #  color='black',
-    ax.scatter(loc2['x'][mask][sl], loc2['y'][mask][sl], **color_kargs)
+    ax.scatter(loc2["x"][mask][sl], loc2["y"][mask][sl], **color_kargs)
 
     ax.set_ylim(400, 600)
     fig.suptitle(f"{preset=}")
@@ -204,16 +222,16 @@ for preset in some_presets:
 # +
 run_times = []
 for preset in some_presets:
-    folder = base_folder / 'motion_folder_dataset1' / preset
+    folder = base_folder / "motion_folder_dataset1" / preset
     motion_info = si.load_motion_info(folder)
-    run_times.append(motion_info['run_times'])
+    run_times.append(motion_info["run_times"])
 keys = run_times[0].keys()
 
 bottom = np.zeros(len(run_times))
 fig, ax = plt.subplots()
 for k in keys:
     rtimes = np.array([rt[k] for rt in run_times])
-    if np.any(rtimes>0.):
+    if np.any(rtimes > 0.0):
         ax.bar(some_presets, rtimes, bottom=bottom, label=k)
     bottom += rtimes
 ax.legend()

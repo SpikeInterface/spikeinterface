@@ -60,6 +60,7 @@ class ChannelSliceRecording(BaseRecording):
 
         # copy annotation and properties
         parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
+        self._parent = parent_recording
 
         # change the wiring of the probe
         contact_vector = self.get_property("contact_vector")
@@ -90,9 +91,9 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[list, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         parent_indices = self._parent_channel_indices[channel_indices]
         traces = self._parent_recording_segment.get_traces(start_frame, end_frame, parent_indices)
@@ -187,7 +188,7 @@ class ChannelSliceSnippetsSegment(BaseSnippetsSegment):
     def get_snippets(
         self,
         indices: list[int],
-        channel_indices: Union[list, None] = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
@@ -196,7 +197,7 @@ class ChannelSliceSnippetsSegment(BaseSnippetsSegment):
         ----------
         indices: list[int]
             Indices of the snippets to return
-        channel_indices: Union[List, None], default: None
+        channel_indices: list | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
