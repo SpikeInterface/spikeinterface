@@ -34,7 +34,7 @@ class PeakDetectionBenchmark(Benchmark):
         self.gt_sorting = gt_sorting
 
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute(["random_spikes", "fast_templates", "spike_amplitudes"])
+        sorting_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
         self.gt_peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         self.params = params
