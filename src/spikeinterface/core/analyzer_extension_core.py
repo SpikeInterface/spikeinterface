@@ -5,8 +5,7 @@ Implement AnalyzerExtension that are essential and imported in core
   * ComputeTemplates
 Theses two classes replace the WaveformExtractor
 
-It also implement:
-  * ComputeFastTemplates which is equivalent but without extacting waveforms.
+It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
@@ -23,7 +22,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
     """
     AnalyzerExtension that select some random spikes.
 
-    This will be used by the `waveforms`/`templates`/`fast_templates` extensions.
+    This will be used by the `waveforms`/`templates` extensions.
 
     This internally use `random_spikes_selection()` parameters are the same.
 
@@ -291,12 +290,14 @@ class ComputeTemplates(AnalyzerExtension):
     """
 
     extension_name = "templates"
-    depend_on = ["waveforms"]
-    need_recording = False
+    depend_on = ["random_spikes|waveforms"]
+    need_recording = True
     use_nodepipeline = False
-    need_job_kwargs = False
+    need_job_kwargs = True
 
-    def _set_params(self, operators=["average", "std"]):
+    def _set_params(
+        self, ms_before: float = 1.0, ms_after: float = 2.0, return_scaled: bool = True, operators=["average", "std"]
+    ):
         assert isinstance(operators, list)
         for operator in operators:
             if isinstance(operator, str):
@@ -307,19 +308,56 @@ class ComputeTemplates(AnalyzerExtension):
                 assert operator[0] == "percentile"
 
         waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
+        if waveforms_extension is not None:
+            nbefore = waveforms_extension.nbefore
+            nafter = waveforms_extension.nafter
+            return_scaled = waveforms_extension.params["return_scaled"]
+        else:
+            nbefore = int(ms_before * self.sorting_analyzer.sampling_frequency / 1000.0)
+            nafter = int(ms_after * self.sorting_analyzer.sampling_frequency / 1000.0)
 
         params = dict(
             operators=operators,
-            nbefore=waveforms_extension.nbefore,
-            nafter=waveforms_extension.nafter,
-            return_scaled=waveforms_extension.params["return_scaled"],
+            nbefore=nbefore,
+            nafter=nafter,
+            return_scaled=return_scaled,
         )
         return params
 
-    def _run(self):
-        self._compute_and_append(self.params["operators"])
+    def _run(self, **job_kwargs):
+        self.data.clear()
 
-    def _compute_and_append(self, operators):
+        if self.sorting_analyzer.has_extension("waveforms"):
+            self._compute_and_append_from_waveforms(self.params["operators"])
+        else:
+            for operator in self.params["operators"]:
+                if operator not in ("average", "std"):
+                    raise ValueError(f"Computing templates with operators {operator} needs the 'waveforms' extension")
+
+            recording = self.sorting_analyzer.recording
+            sorting = self.sorting_analyzer.sorting
+            unit_ids = sorting.unit_ids
+
+            # retrieve spike vector and the sampling
+            some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+            return_scaled = self.params["return_scaled"]
+
+            self.data["average"], self.data["std"] = estimate_templates_with_accumulator(
+                recording,
+                some_spikes,
+                unit_ids,
+                self.nbefore,
+                self.nafter,
+                return_scaled=return_scaled,
+                return_std=True,
+                **job_kwargs,
+            )
+
+    def _compute_and_append_from_waveforms(self, operators):
+        if not self.sorting_analyzer.has_extension("waveforms"):
+            raise ValueError(f"Computing templates with operators {operators} needs the 'waveforms' extension")
+
         unit_ids = self.sorting_analyzer.unit_ids
         channel_ids = self.sorting_analyzer.channel_ids
         waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
@@ -408,7 +446,7 @@ class ComputeTemplates(AnalyzerExtension):
         else:
             raise ValueError("outputs must be numpy or Templates")
 
-    def get_templates(self, unit_ids=None, operator="average", percentile=None, save=True):
+    def get_templates(self, unit_ids=None, operator="average", percentile=None, save=True, outputs="numpy"):
         """
         Return templates (average, std, median or percentiles) for multiple units.
 
@@ -423,7 +461,9 @@ class ComputeTemplates(AnalyzerExtension):
         percentile: float, default: None
             Percentile to use for operator="percentile"
         save: bool, default True
-            In case, the operator is not computed yet it can be saved to folder or zarr.
+            In case, the operator is not computed yet it can be saved to folder or zarr
+        outputs: "numpy" | "Templates"
+            Whether to return a numpy array or a Templates object
 
         Returns
         -------
@@ -437,24 +477,38 @@ class ComputeTemplates(AnalyzerExtension):
             key = f"pencentile_{percentile}"
 
         if key in self.data:
-            templates = self.data[key]
+            templates_array = self.data[key]
         else:
             if operator != "percentile":
-                self._compute_and_append([operator])
+                self._compute_and_append_from_waveforms([operator])
                 self.params["operators"] += [operator]
             else:
-                self._compute_and_append([(operator, percentile)])
+                self._compute_and_append_from_waveforms([(operator, percentile)])
                 self.params["operators"] += [(operator, percentile)]
-            templates = self.data[key]
+            templates_array = self.data[key]
 
         if save:
             self.save()
 
         if unit_ids is not None:
             unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-            templates = templates[unit_indices, :, :]
+            templates_array = templates_array[unit_indices, :, :]
+        else:
+            unit_ids = self.sorting_analyzer.unit_ids
 
-        return np.array(templates)
+        if outputs == "numpy":
+            return templates_array
+        elif outputs == "Templates":
+            return Templates(
+                templates_array=templates_array,
+                sampling_frequency=self.sorting_analyzer.sampling_frequency,
+                nbefore=self.nbefore,
+                channel_ids=self.sorting_analyzer.channel_ids,
+                unit_ids=unit_ids,
+                probe=self.sorting_analyzer.get_probe(),
+            )
+        else:
+            raise ValueError("outputs must be numpy or Templates")
 
     def get_unit_template(self, unit_id, operator="average"):
         """
@@ -481,159 +535,6 @@ class ComputeTemplates(AnalyzerExtension):
 
 compute_templates = ComputeTemplates.function_factory()
 register_result_extension(ComputeTemplates)
-
-
-class ComputeFastTemplates(AnalyzerExtension):
-    """
-    AnalyzerExtension which is similar to the extension "templates" (ComputeTemplates)
-    **but only for average and standard deviation**.
-    This is way faster because it does not need "waveforms" to be computed first.
-
-    Parameters
-    ----------
-    ms_before: float, default: 1.0
-        The number of ms to extract before the spike events
-    ms_after: float, default: 2.0
-        The number of ms to extract after the spike events
-    return_scaled: bool, default: True
-        If True, the waveforms are scaled to uV (if the recording has scaling)
-
-    Returns
-    -------
-    templates: np.ndarray
-        The computed templates with shape (num_units, num_samples, num_channels)
-    """
-
-    extension_name = "fast_templates"
-    depend_on = ["random_spikes"]
-    need_recording = True
-    use_nodepipeline = False
-    need_job_kwargs = True
-
-    @property
-    def nbefore(self):
-        return int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
-
-    @property
-    def nafter(self):
-        return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
-
-    def _run(self, **job_kwargs):
-        self.data.clear()
-
-        recording = self.sorting_analyzer.recording
-        sorting = self.sorting_analyzer.sorting
-        unit_ids = sorting.unit_ids
-
-        # retrieve spike vector and the sampling
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-
-        return_scaled = self.params["return_scaled"]
-
-        # TODO jobw_kwargs
-        self.data["average"], self.data["std"] = estimate_templates_with_accumulator(
-            recording,
-            some_spikes,
-            unit_ids,
-            self.nbefore,
-            self.nafter,
-            return_scaled=return_scaled,
-            return_std=True,
-            **job_kwargs,
-        )
-
-    def _set_params(
-        self,
-        ms_before: float = 1.0,
-        ms_after: float = 2.0,
-        return_scaled: bool = True,
-    ):
-        params = dict(
-            ms_before=float(ms_before),
-            ms_after=float(ms_after),
-            return_scaled=return_scaled,
-        )
-        return params
-
-    def _get_data(self, outputs="numpy"):
-        templates_array = self.data["average"]
-
-        if outputs == "numpy":
-            return templates_array
-        elif outputs == "Templates":
-            return Templates(
-                templates_array=templates_array,
-                sampling_frequency=self.sorting_analyzer.sampling_frequency,
-                nbefore=self.nbefore,
-                channel_ids=self.sorting_analyzer.channel_ids,
-                unit_ids=self.sorting_analyzer.unit_ids,
-                probe=self.sorting_analyzer.get_probe(),
-            )
-        else:
-            raise ValueError("outputs must be numpy or Templates")
-
-    def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
-
-        new_data = dict()
-        new_data["average"] = self.data["average"][keep_unit_indices, :, :]
-
-        return new_data
-
-    def get_templates(self, unit_ids=None, operator="average", save=True):
-        """
-        Return templates (average, std) for multiple units.
-
-        Parameters
-        ----------
-        unit_ids: list or None
-            Unit ids to retrieve waveforms for
-        operator: "average" | "std", default: "average"
-            The mode to compute the templates
-        save: bool, default True
-            In case, the operator is not computed yet it can be saved to folder or zarr.
-
-        Returns
-        -------
-        templates: np.array
-            The returned templates (num_units, num_samples, num_channels)
-        """
-        assert operator in ("average", "std"), "ComputeFastTemplates only support average and std"
-
-        templates = self.data[operator]
-
-        if save:
-            self.save()
-
-        if unit_ids is not None:
-            unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-            templates = templates[unit_indices, :, :]
-
-        return np.array(templates)
-
-    def get_unit_template(self, unit_id):
-        """
-        Return average template for a single unit.
-
-        Parameters
-        ----------
-        unit_id: str | int
-            Unit id to retrieve waveforms for
-
-        Returns
-        -------
-        template: np.array
-            The returned template (num_samples, num_channels)
-        """
-
-        templates = self.data["average"]
-        unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
-
-        return np.array(templates[unit_index, :, :])
-
-
-compute_fast_templates = ComputeFastTemplates.function_factory()
-register_result_extension(ComputeFastTemplates)
 
 
 class ComputeNoiseLevels(AnalyzerExtension):

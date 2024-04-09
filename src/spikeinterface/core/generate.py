@@ -963,8 +963,6 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
 
 
 ## Noise generator zone ##
-
-
 class NoiseGeneratorRecording(BaseRecording):
     """
     A lazy recording that generates white noise samples if and only if `get_traces` is called.
@@ -1335,13 +1333,13 @@ def generate_single_fake_waveform(
 
 
 default_unit_params_range = dict(
-    alpha=(6_000.0, 9_000.0),
+    alpha=(100.0, 500.0),
     depolarization_ms=(0.09, 0.14),
     repolarization_ms=(0.5, 0.8),
     recovery_ms=(1.0, 1.5),
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
-    decay_power=(1.4, 1.8),
+    spatial_constant=(20, 40),
     propagation_speed=(250.0, 350.0),  # um  / ms
     b=(0.1, 1),
     c=(0.1, 1),
@@ -1402,7 +1400,7 @@ def generate_templates(
             * "recovery_ms": the recovery interval in ms (default range: (1.0-1.5))
             * "positive_amplitude": the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
             * "smooth_ms": the gaussian smooth in ms (default range: (0.03-0.07))
-            * "decay_power": the decay power (default range: (1.2-1.8))
+            * "spatial_constant": the spatial constant (default range: (20-40))
             * "propagation_speed": mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
         Values contains vector with same size of num_units.
         If the key is not in dict then it is generated using unit_params_range
@@ -1476,10 +1474,9 @@ def generate_templates(
 
         ## Add a spatial decay depend on distance from unit to each channel
         alpha = params["alpha"][u]
-        # the espilon avoid enormous factors
-        eps = 1.0
+
         # naive formula for spatial decay
-        pow = params["decay_power"][u]
+        spatial_constant = params["spatial_constant"][u]
         if mode == "sphere":
             distances = get_ellipse(
                 channel_locations,
@@ -1501,7 +1498,7 @@ def generate_templates(
                 params["z_angle"][u],
             )
 
-        channel_factors = alpha / (distances + eps) ** pow
+        channel_factors = alpha * np.exp(-distances / spatial_constant)
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
 
         # This mimic a propagation delay for distant channel

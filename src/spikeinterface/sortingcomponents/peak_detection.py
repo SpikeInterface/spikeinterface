@@ -743,6 +743,8 @@ if HAVE_TORCH:
         # this will be adjusted based on: num jobs, num gpus, num neighbors
         MAXCOPY = 8
 
+        # center traces by excluding the sweep size
+        traces = traces[exclude_sweep_size:-exclude_sweep_size, :]
         num_samples, num_channels = traces.shape
         dtype = torch.float32
         empty_return_value = (torch.tensor([], dtype=dtype), torch.tensor([], dtype=dtype))
@@ -825,7 +827,7 @@ if HAVE_TORCH:
             ).squeeze()
             if not deduplication_indices.numel():
                 return empty_return_value
-            sample_indices = sample_indices[deduplication_indices]
+            sample_indices = sample_indices[deduplication_indices] + exclude_sweep_size
             channel_indices = channel_indices[deduplication_indices]
             amplitudes = amplitudes[deduplication_indices]
 

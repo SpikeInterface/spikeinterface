@@ -42,7 +42,7 @@ class PeakLocalizationBenchmark(Benchmark):
     def run(self, **job_kwargs):
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
         sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("fast_templates", **self.templates_params)
+        ext = sorting_analyzer.compute("templates", **self.templates_params)
         templates = ext.get_data(outputs="Templates")
         ext = sorting_analyzer.compute("spike_locations", **self.params)
         spikes_locations = ext.get_data(outputs="by_unit")

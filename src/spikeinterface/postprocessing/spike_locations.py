@@ -50,9 +50,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
     """
 
     extension_name = "spike_locations"
-    depend_on = [
-        "fast_templates|templates",
-    ]
+    depend_on = ["templates"]
     need_recording = True
     use_nodepipeline = True
     nodepipeline_variables = ["spike_locations"]
