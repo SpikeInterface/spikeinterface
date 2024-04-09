@@ -646,7 +646,7 @@ def nearest_neighbors_noise_overlap(
     if sorting_analyzer.has_extension("waveforms"):
         template_operator = "median"
     else:
-        template_operator = "mean"
+        template_operator = "average"
     if n_spikes_all_units is None:
         n_spikes_all_units = compute_num_spikes(sorting_analyzer)
     if fr_all_units is None:
