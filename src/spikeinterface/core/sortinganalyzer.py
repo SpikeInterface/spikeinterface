@@ -832,7 +832,6 @@ class SortingAnalyzer:
             assert self.has_recording(), f"Extension {extension_name} requires the recording"
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
-                # at least one extension must be done : usefull for "templates|fast_templates" for instance
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
             else:
                 ok = self.get_extension(dependency_name) is not None
@@ -1617,7 +1616,7 @@ _builtin_extensions = {
     "random_spikes": "spikeinterface.core",
     "waveforms": "spikeinterface.core",
     "templates": "spikeinterface.core",
-    "fast_templates": "spikeinterface.core",
+    # "fast_templates": "spikeinterface.core",
     "noise_levels": "spikeinterface.core",
     # from postprocessing
     "amplitude_scalings": "spikeinterface.postprocessing",
