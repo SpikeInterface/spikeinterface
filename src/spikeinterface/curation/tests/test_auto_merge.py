@@ -34,7 +34,6 @@ def test_get_auto_merge_list(sorting_analyzer_for_curation):
         seed=42,
     )
 
-
     job_kwargs = dict(n_jobs=-1)
 
     sorting_analyzer = create_sorting_analyzer(sorting_with_split, recording, format="memory")
