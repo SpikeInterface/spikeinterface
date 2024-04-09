@@ -10,29 +10,22 @@ This module implements generation of more realistics signal than `spikeinterface
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from pathlib import Path
 
 
-import probeinterface
-import probeinterface.plotting
+# import probeinterface.plotting
 
 import spikeinterface.full as si
 from spikeinterface.core.generate import generate_unit_locations
 
-from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
-from spikeinterface.generation import interpolate_templates, move_dense_templates, DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
-from spikeinterface.core.generate import generate_templates, generate_unit_locations
-from spikeinterface.core import Templates
+from probeinterface import generate_multi_columns_probe
+from spikeinterface.generation import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
+from spikeinterface.core.generate import generate_unit_locations
 
-from spikeinterface.generation.tests.test_drift_tools import make_some_templates
 
-from probeinterface.plotting import plot_probe
-
-from spikeinterface.generation import interpolate_templates, move_dense_templates, DriftingTemplates
-from spikeinterface.core.generate import generate_templates, default_unit_params_range
-from spikeinterface.core import Templates
+from spikeinterface.core.generate import default_unit_params_range
 
 
 def make_one_displacement_vector(
@@ -137,7 +130,18 @@ _toy_probes = {
             y_shift_per_column=[20, 0, 20, 0],
             contact_shapes="square",
             contact_shape_params={"width": 12},
-        )
+    ),
+    "Neuronexus-32" :dict(
+            num_columns=3,
+            num_contact_per_column=[10,12, 10],
+            xpitch=30,
+            ypitch=30,
+            y_shift_per_column=[0, -15, 0],
+            contact_shapes="circle",
+            contact_shape_params={"radius": 8},
+    )
+    
+
 }
 
 
@@ -151,8 +155,8 @@ def make_displacement_vector(
 
     motion_list=[
         dict(
-            amplitude_factor=1.,
             drift_mode="zigzag",
+            amplitude_factor=1.,
             non_rigid_gradient=None,
             t_start_drift=60.,
             t_end_drift=None,
@@ -193,7 +197,6 @@ def make_displacement_vector(
         else:
             gradient_direction = (drift_stop_um - drift_start_um)
             gradient_direction /= np.linalg.norm(gradient_direction)
-            gradient_direction = gradient_direction.reshape(-1, 1)
 
             proj = np.dot(unit_locations, gradient_direction).squeeze()
             factors = (proj - np.min(proj)) / (np.max(proj) - np.min(proj))
@@ -287,7 +290,9 @@ def generate_drifting_recording(
     )
 
 
-    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = make_displacement_vector(duration, unit_locations, **displacement_vector_kwargs)
+    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = make_displacement_vector(
+        duration, unit_locations[:, :2], **displacement_vector_kwargs
+    )
 
 
 
@@ -333,10 +338,10 @@ def generate_drifting_recording(
         probe=probe,
     )
 
-    fig, ax = plt.subplots()
-    probeinterface.plotting.plot_probe(probe, ax=ax)
-    ax.scatter(unit_locations[:, 0], unit_locations[:, 1], marker='*')
-    plt.show()
+    # fig, ax = plt.subplots()
+    # probeinterface.plotting.plot_probe(probe, ax=ax)
+    # ax.scatter(unit_locations[:, 0], unit_locations[:, 1], marker='*')
+    # plt.show()
 
     drifting_templates = DriftingTemplates.from_static(templates)
 

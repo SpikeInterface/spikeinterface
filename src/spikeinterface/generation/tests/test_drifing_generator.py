@@ -44,16 +44,16 @@ def test_make_displacement_vector():
         drift_stop_um=[5, -20.],
         motion_list=[
             dict(
-                amplitude_factor=1.,
                 drift_mode="zigzag",
+                amplitude_factor=1.,
                 non_rigid_gradient=0.4,
                 t_start_drift=60.,
                 t_end_drift=None,
                 period_s=200,
             ),
             dict(
-                amplitude_factor=0.3,
                 drift_mode="bump",
+                amplitude_factor=0.3,
                 non_rigid_gradient=0.4,
                 t_start_drift=60.,
                 t_end_drift=None,
@@ -61,7 +61,6 @@ def test_make_displacement_vector():
             ),
 
         ],
-        
         )
     assert unit_locations.shape[0] == displacement_unit_factor.shape[0]
     assert displacement_vectors.shape[2] == displacement_unit_factor.shape[1]
@@ -84,5 +83,5 @@ def test_generate_drifting_recording():
 
 if __name__ == "__main__":
     # test_make_one_displacement_vector()
-    # test_make_displacement_vector()
-    test_generate_drifting_recording()
+    test_make_displacement_vector()
+    # test_generate_drifting_recording()
