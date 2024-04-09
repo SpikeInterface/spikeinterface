@@ -11,9 +11,6 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from ..core.template_tools import get_template_extremum_channel, _get_nbefore, _get_dense_templates_array
-
-
 def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um, initial_z=20):
     # constant for initial guess and bounds
     ind_max = np.argmax(wf_data)
