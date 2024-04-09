@@ -26,11 +26,6 @@ from spikeinterface.core.node_pipeline import run_node_pipeline
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sortingcomponents"
-else:
-    cache_folder = Path("cache_folder") / "sortingcomponents"
-
 try:
     import pyopencl
 
@@ -345,7 +340,7 @@ def test_peak_sign_consistency(recording, job_kwargs, detection_class):
         assert all_peaks.size > 0
 
 
-def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
+def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs, tmp_path):
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1.0, ms_after=1.0, return_output=False)
 
     pipeline_nodes = [
@@ -367,7 +362,7 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
     assert "x" in peak_locations.dtype.fields
 
     # same pipeline but saved to npy
-    folder = cache_folder / "peak_detection_folder"
+    folder = tmp_path / "peak_detection_folder"
     if folder.is_dir():
         shutil.rmtree(folder)
     peaks2, ptp2, peak_locations2 = detect_peaks(
@@ -467,6 +462,7 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
 
 if __name__ == "__main__":
     recording, sorting = make_dataset()
+    tmp_path = Path(tempfile.mkdtemp())
 
     job_kwargs_main = job_kwargs()
     torch_job_kwargs_main = torch_job_kwargs(job_kwargs_main)
@@ -479,4 +475,5 @@ if __name__ == "__main__":
     #     recording, job_kwargs_main, pca_model_folder_path_main, peak_detector_kwargs_main
     # )
 
-    test_peak_sign_consistency(recording, torch_job_kwargs_main, DetectPeakLocallyExclusiveTorch)
+    # test_peak_sign_consistency(recording, torch_job_kwargs_main, DetectPeakLocallyExclusiveTorch)
+    test_peak_detection_with_pipeline(recording, job_kwargs_main, torch_job_kwargs_main, tmp_path)
