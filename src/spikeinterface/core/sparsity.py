@@ -276,6 +276,7 @@ class ChannelSparsity:
         """
         from .template_tools import get_template_amplitudes
 
+        print(templates_or_sorting_analyzer)
         mask = np.zeros(
             (templates_or_sorting_analyzer.unit_ids.size, templates_or_sorting_analyzer.channel_ids.size), dtype="bool"
         )
@@ -372,11 +373,11 @@ class ChannelSparsity:
         elif isinstance(templates_or_sorting_analyzer, Templates):
             assert noise_levels is not None
 
-        from .template_tools import _get_dense_templates_array
+        from .template_tools import get_dense_templates_array
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
-        templates_array = _get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=True)
+        templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=True)
         templates_ptps = np.ptp(templates_array, axis=1)
 
         for unit_ind, unit_id in enumerate(unit_ids):
