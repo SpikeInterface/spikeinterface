@@ -3,8 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from packaging.version import parse
 
-from tempfile import TemporaryDirectory
-
+import shutil
 import numpy as np
 
 from spikeinterface.preprocessing import bandpass_filter, whiten
@@ -43,8 +42,8 @@ class Mountainsort5Sorter(BaseSorter):
         "freq_max": 6000,
         "filter": True,
         "whiten": True,  # Important to do whitening
-        "temporary_base_dir": None,
         "n_jobs_for_preprocessing": -1,
+        "delete_temporary_recording": True,
     }
 
     _params_description = {
@@ -68,8 +67,8 @@ class Mountainsort5Sorter(BaseSorter):
         "freq_max": "Low-pass filter cutoff frequency",
         "filter": "Enable or disable filter",
         "whiten": "Enable or disable whitening",
-        "temporary_base_dir": "Temporary directory base directory for storing cached recording",
         "n_jobs_for_preprocessing": "Number of parallel jobs for creating the cached recording",
+        "delete_temporary_recording": "If True, the temporary recording file is deleted after sorting",
     }
 
     sorter_description = "MountainSort5 uses Isosplit clustering. It is an updated version of MountainSort4. See https://doi.org/10.1016/j.neuron.2017.08.030"
@@ -186,21 +185,25 @@ class Mountainsort5Sorter(BaseSorter):
             block_sorting_parameters=scheme2_sorting_parameters, block_duration_sec=p["scheme3_block_duration_sec"]
         )
 
-        with TemporaryDirectory(dir=p["temporary_base_dir"]) as tmpdir:
-            # cache the recording to a temporary directory for efficient reading (so we don't have to re-filter)
-            recording_cached = create_cached_recording(
-                recording=recording, folder=tmpdir, n_jobs=p["n_jobs_for_preprocessing"]
+        if not recording.is_binary_compatible():
+            recording_cached = recording.save(
+                folder=sorter_output_folder / "recording", n_jobs=p["n_jobs_for_preprocessing"], progress_bar=verbose
             )
+        else:
+            recording_cached = recording
 
-            scheme = p["scheme"]
-            if scheme == "1":
-                sorting = ms5.sorting_scheme1(recording=recording_cached, sorting_parameters=scheme1_sorting_parameters)
-            elif p["scheme"] == "2":
-                sorting = ms5.sorting_scheme2(recording=recording_cached, sorting_parameters=scheme2_sorting_parameters)
-            elif p["scheme"] == "3":
-                sorting = ms5.sorting_scheme3(recording=recording_cached, sorting_parameters=scheme3_sorting_parameters)
-            else:
-                raise ValueError(f"Invalid scheme: {scheme} given. scheme must be one of '1', '2' or '3'")
+        scheme = p["scheme"]
+        if scheme == "1":
+            sorting = ms5.sorting_scheme1(recording=recording_cached, sorting_parameters=scheme1_sorting_parameters)
+        elif p["scheme"] == "2":
+            sorting = ms5.sorting_scheme2(recording=recording_cached, sorting_parameters=scheme2_sorting_parameters)
+        elif p["scheme"] == "3":
+            sorting = ms5.sorting_scheme3(recording=recording_cached, sorting_parameters=scheme3_sorting_parameters)
+        else:
+            raise ValueError(f"Invalid scheme: {scheme} given. scheme must be one of '1', '2' or '3'")
+
+        if p["delete_temporary_recording"]:
+            shutil.rmtree(sorter_output_folder / "recording", ignore_errors=True)
 
         NpzSortingExtractor.write_sorting(sorting, str(sorter_output_folder / "firings.npz"))
 
