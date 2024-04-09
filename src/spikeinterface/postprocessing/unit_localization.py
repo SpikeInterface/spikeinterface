@@ -42,9 +42,7 @@ class ComputeUnitLocations(AnalyzerExtension):
     """
 
     extension_name = "unit_locations"
-    depend_on = [
-        "fast_templates|templates",
-    ]
+    depend_on = ["templates"]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
@@ -149,7 +147,7 @@ def compute_monopolar_triangulation(
     contact_locations = sorting_analyzer.get_channel_locations()
 
     sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=radius_um)
-    templates = _get_dense_templates_array(sorting_analyzer)
+    templates = get_dense_templates_array(sorting_analyzer)
     nbefore = _get_nbefore(sorting_analyzer)
 
     if enforce_decrease:
@@ -213,7 +211,7 @@ def compute_center_of_mass(sorting_analyzer, peak_sign="neg", radius_um=75, feat
     assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
 
     sparsity = compute_sparsity(sorting_analyzer, peak_sign=peak_sign, method="radius", radius_um=radius_um)
-    templates = _get_dense_templates_array(sorting_analyzer)
+    templates = get_dense_templates_array(sorting_analyzer)
     nbefore = _get_nbefore(sorting_analyzer)
 
     unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
@@ -284,7 +282,7 @@ def compute_grid_convolution(
     contact_locations = sorting_analyzer.get_channel_locations()
     unit_ids = sorting_analyzer.unit_ids
 
-    templates = _get_dense_templates_array(sorting_analyzer)
+    templates = get_dense_templates_array(sorting_analyzer)
     nbefore = _get_nbefore(sorting_analyzer)
     nafter = templates.shape[1] - nbefore
 
