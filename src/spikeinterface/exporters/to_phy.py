@@ -32,7 +32,7 @@ def export_to_phy(
     copy_binary: bool = True,
     remove_if_exists: bool = False,
     peak_sign: Literal["both", "neg", "pos"] = "neg",
-    template_mode: str = "median",
+    template_mode: str = "average",
     dtype: Optional[npt.DTypeLike] = None,
     verbose: bool = True,
     use_relative_path: bool = False,
@@ -59,7 +59,7 @@ def export_to_phy(
         If True and "output_folder" exists, it is removed and overwritten
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Used by compute_spike_amplitudes
-    template_mode: str, default: "median"
+    template_mode: str, default: "average"
         Parameter "mode" to be given to SortingAnalyzer.get_template()
     dtype: dtype or None, default: None
         Dtype to save binary data

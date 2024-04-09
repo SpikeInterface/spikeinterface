@@ -643,7 +643,10 @@ def nearest_neighbors_noise_overlap(
 
     templates_ext = sorting_analyzer.get_extension("templates")
     assert templates_ext is not None, "nearest_neighbors_isolation() need extension 'templates'"
-
+    if sorting_analyzer.has_extension("waveforms"):
+        template_operator = "median"
+    else:
+        template_operator = "mean"
     if n_spikes_all_units is None:
         n_spikes_all_units = compute_num_spikes(sorting_analyzer)
     if fr_all_units is None:
@@ -700,7 +703,7 @@ def nearest_neighbors_noise_overlap(
 
         # compute weighted noise snippet (Z)
         # median_waveform = sorting_analyzer.get_template(unit_id=this_unit_id, mode="median")
-        all_templates = templates_ext.get_data(operator="median")
+        all_templates = templates_ext.get_data(operator=template_operator)
         this_unit_index = sorting_analyzer.sorting.id_to_index(this_unit_id)
         median_waveform = all_templates[this_unit_index, :, :]
 
