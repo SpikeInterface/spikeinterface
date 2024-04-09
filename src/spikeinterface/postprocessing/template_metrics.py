@@ -14,7 +14,7 @@ from copy import deepcopy
 from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core import ChannelSparsity
 from ..core.template_tools import get_template_extremum_channel
-from ..core.template_tools import _get_dense_templates_array
+from ..core.template_tools import get_dense_templates_array
 
 # DEBUG = False
 
@@ -96,9 +96,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
     """
 
     extension_name = "template_metrics"
-    depend_on = [
-        "fast_templates|templates",
-    ]
+    depend_on = ["templates"]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
@@ -184,7 +182,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             )
             template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
 
-        all_templates = _get_dense_templates_array(self.sorting_analyzer, return_scaled=True)
+        all_templates = get_dense_templates_array(self.sorting_analyzer, return_scaled=True)
 
         channel_locations = self.sorting_analyzer.get_channel_locations()
 
