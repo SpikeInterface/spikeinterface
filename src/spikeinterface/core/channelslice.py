@@ -60,6 +60,7 @@ class ChannelSliceRecording(BaseRecording):
 
         # copy annotation and properties
         parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
+        self._parent = parent_recording
 
         # change the wiring of the probe
         contact_vector = self.get_property("contact_vector")

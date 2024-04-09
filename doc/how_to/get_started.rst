@@ -245,6 +245,7 @@ object to disk.
     BinaryFolderRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
                            float32 dtype - 39.06 MiB
 
+To reload a preprocessed recording that was saved to disk, you can use ``load_extractor()`` function from the ``core`` module.
 
 Now you are ready to spike sort using the ``spikeinterface.sorters``
 module! Let’s first check which sorters are implemented and which are

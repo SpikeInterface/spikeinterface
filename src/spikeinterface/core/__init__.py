@@ -103,7 +103,7 @@ from .recording_tools import (
 )
 from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection
 
-from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_average
+from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_with_accumulator
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
@@ -144,16 +144,22 @@ from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
 from .template import Templates
 
 # SortingAnalyzer and AnalyzerExtension
-from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, create_sorting_analyzer, load_sorting_analyzer
+from .sortinganalyzer import (
+    SortingAnalyzer,
+    AnalyzerExtension,
+    create_sorting_analyzer,
+    load_sorting_analyzer,
+    get_available_analyzer_extensions,
+    get_default_analyzer_extension_params,
+)
+
 from .analyzer_extension_core import (
-    SelectRandomSpikes,
-    compute_select_random_spikes,
+    ComputeRandomSpikes,
+    compute_random_spikes,
     ComputeWaveforms,
     compute_waveforms,
     ComputeTemplates,
     compute_templates,
-    ComputeFastTemplates,
-    compute_fast_templates,
     ComputeNoiseLevels,
     compute_noise_levels,
 )

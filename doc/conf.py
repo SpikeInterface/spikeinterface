@@ -65,6 +65,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinx_design',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
     "IPython.sphinxext.ipython_directive",
