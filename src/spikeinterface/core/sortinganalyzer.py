@@ -62,7 +62,7 @@ def create_sorting_analyzer(
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity: ChannelSparsity or None, default: None
         The sparsity used to compute waveforms. If this is given, `sparse` is ignored.
-    return_scaled: bool, default True
+    return_scaled: bool, default: True
         All extensions that play with traces will use this global return_scaled: "waveforms", "noise_levels", "templates".
         This prevent return_scaled being differents from different extensions and having wrong snr for instance.
 
@@ -122,7 +122,7 @@ def create_sorting_analyzer(
         sparsity = None
 
     if return_scaled and not recording.has_scaled_traces() and recording.get_dtype().kind == "i":
-        print("create_sorting_analyzer: recording do not have scale to uV, force return_scaled=False")
+        print("create_sorting_analyzer: recording does not have scaling to uV, forcing return_scaled=False")
         return_scaled = False
 
     sorting_analyzer = SortingAnalyzer.create(sorting, recording, format=format, folder=folder, sparsity=sparsity, return_scaled=return_scaled)
