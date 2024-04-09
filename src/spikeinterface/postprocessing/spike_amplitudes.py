@@ -17,7 +17,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
     AnalyzerExtension
     Computes the spike amplitudes.
 
-    Need "templates" or "fast_templates" to be computed first.
+    Needs "templates" to be computed first.
     Localize spikes in 2D or 3D with several methods given the template.
 
     Parameters
@@ -55,9 +55,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
     """
 
     extension_name = "spike_amplitudes"
-    depend_on = [
-        "fast_templates|templates",
-    ]
+    depend_on = ["templates"]
     need_recording = True
     use_nodepipeline = True
     nodepipeline_variables = ["amplitudes"]

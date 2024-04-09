@@ -16,7 +16,7 @@ def get_sorting_analyzer():
     recording, sorting = make_dataset()
     sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
     sorting_analyzer.compute("random_spikes")
-    sorting_analyzer.compute("fast_templates", **job_kwargs)
+    sorting_analyzer.compute("templates", **job_kwargs)
     sorting_analyzer.compute("noise_levels")
     return sorting_analyzer
 
@@ -33,7 +33,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     # num_waveforms, _, _ = waveform.shape
     # assert num_waveforms != 0
 
-    templates = sorting_analyzer.get_extension("fast_templates").get_data(outputs="Templates")
+    templates = sorting_analyzer.get_extension("templates").get_data(outputs="Templates")
     sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=0.5)
     templates = templates.to_sparse(sparsity)
 
