@@ -32,7 +32,7 @@ from .node_pipeline import run_node_pipeline
 
 # high level function
 def create_sorting_analyzer(
-    sorting, recording, format="memory", folder=None, sparse=True, sparsity=None, overwrite=False, **sparsity_kwargs
+    sorting, recording, format="memory", folder=None, sparse=True, sparsity=None, return_scaled=True, overwrite=False, **sparsity_kwargs
 ):
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
@@ -62,6 +62,9 @@ def create_sorting_analyzer(
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity: ChannelSparsity or None, default: None
         The sparsity used to compute waveforms. If this is given, `sparse` is ignored.
+    return_scaled: bool, default True
+        All extensions that play with traces will use this global return_scaled: "waveforms", "noise_levels", "templates".
+        This prevent return_scaled being differents from different extensions and having wrong snr for instance.
 
     Returns
     -------
@@ -118,7 +121,11 @@ def create_sorting_analyzer(
     else:
         sparsity = None
 
-    sorting_analyzer = SortingAnalyzer.create(sorting, recording, format=format, folder=folder, sparsity=sparsity)
+    if return_scaled and not recording.has_scaled_traces() and recording.get_dtype().kind == "i":
+        print("create_sorting_analyzer: recording do not have scale to uV, force return_scaled=False")
+        return_scaled = False
+
+    sorting_analyzer = SortingAnalyzer.create(sorting, recording, format=format, folder=folder, sparsity=sparsity, return_scaled=return_scaled)
 
     return sorting_analyzer
 
@@ -174,6 +181,7 @@ class SortingAnalyzer:
         rec_attributes=None,
         format=None,
         sparsity=None,
+        return_scaled=True,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -182,6 +190,7 @@ class SortingAnalyzer:
         self.rec_attributes = rec_attributes
         self.format = format
         self.sparsity = sparsity
+        self.return_scaled = return_scaled
 
         # extensions are not loaded at init
         self.extensions = dict()
@@ -214,6 +223,7 @@ class SortingAnalyzer:
         ] = "memory",
         folder=None,
         sparsity=None,
+        return_scaled=True,
     ):
         # some checks
         assert sorting.sampling_frequency == recording.sampling_frequency
@@ -222,13 +232,13 @@ class SortingAnalyzer:
         check_probe_do_not_overlap(all_probes)
 
         if format == "memory":
-            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, rec_attributes=None)
+            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_scaled, rec_attributes=None)
         elif format == "binary_folder":
-            cls.create_binary_folder(folder, sorting, recording, sparsity, rec_attributes=None)
+            cls.create_binary_folder(folder, sorting, recording, sparsity, return_scaled, rec_attributes=None)
             sorting_analyzer = cls.load_from_binary_folder(folder, recording=recording)
             sorting_analyzer.folder = Path(folder)
         elif format == "zarr":
-            cls.create_zarr(folder, sorting, recording, sparsity, rec_attributes=None)
+            cls.create_zarr(folder, sorting, recording, sparsity, return_scaled, rec_attributes=None)
             sorting_analyzer = cls.load_from_zarr(folder, recording=recording)
             sorting_analyzer.folder = Path(folder)
         else:
@@ -265,7 +275,7 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_memory(cls, sorting, recording, sparsity, rec_attributes):
+    def create_memory(cls, sorting, recording, sparsity, return_scaled, rec_attributes):
         # used by create and save_as
 
         if rec_attributes is None:
@@ -279,12 +289,12 @@ class SortingAnalyzer:
         # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
         sorting_copy = SharedMemorySorting.from_sorting(sorting, with_metadata=True)
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes, format="memory", sparsity=sparsity
+            sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes, format="memory", sparsity=sparsity, return_scaled=return_scaled,
         )
         return sorting_analyzer
 
     @classmethod
-    def create_binary_folder(cls, folder, sorting, recording, sparsity, rec_attributes):
+    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes):
         # used by create and save_as
 
         assert recording is not None, "To create a SortingAnalyzer you need recording not None"
@@ -338,6 +348,14 @@ class SortingAnalyzer:
         if sparsity is not None:
             np.save(folder / "sparsity_mask.npy", sparsity.mask)
 
+        settings_file = folder / f"settings.json"
+        settings = dict(
+            return_scaled=return_scaled,
+        )
+        with open(settings_file, mode="w") as f:
+            json.dump(check_json(settings), f, indent=4)
+
+
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None):
         folder = Path(folder)
@@ -384,12 +402,19 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
+        
+        settings_file = folder / f"settings.json"
+        with open(settings_file, "r") as f:
+            settings = json.load(f)
+        return_scaled = settings["return_scaled"]
+
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
             recording=recording,
             rec_attributes=rec_attributes,
             format="binary_folder",
             sparsity=sparsity,
+            return_scaled=return_scaled,
         )
 
         return sorting_analyzer
@@ -401,7 +426,7 @@ class SortingAnalyzer:
         return zarr_root
 
     @classmethod
-    def create_zarr(cls, folder, sorting, recording, sparsity, rec_attributes):
+    def create_zarr(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes):
         # used by create and save_as
         import zarr
         import numcodecs
@@ -418,6 +443,12 @@ class SortingAnalyzer:
 
         info = dict(version=spikeinterface.__version__, dev_mode=spikeinterface.DEV_MODE, object="SortingAnalyzer")
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
+
+        settings = dict(
+            return_scaled=return_scaled
+        )
+        zarr_root.attrs["settings"] = check_json(settings)
+        
 
         # the recording
         rec_dict = recording.to_dict(relative_to=folder, recursive=True)
@@ -518,12 +549,15 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
+        return_scaled = zarr_root.attrs["settings"]["return_scaled"]
+
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
             recording=recording,
             rec_attributes=rec_attributes,
             format="zarr",
             sparsity=sparsity,
+            return_scaled=return_scaled,
         )
 
         return sorting_analyzer
@@ -560,14 +594,14 @@ class SortingAnalyzer:
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
             new_sorting_analyzer = SortingAnalyzer.create_memory(
-                sorting_provenance, recording, sparsity, self.rec_attributes
+                sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
             )
 
         elif format == "binary_folder":
             # create  a new folder
             assert folder is not None, "For format='binary_folder' folder must be provided"
             folder = Path(folder)
-            SortingAnalyzer.create_binary_folder(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
+            SortingAnalyzer.create_binary_folder(folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes)
             new_sorting_analyzer = SortingAnalyzer.load_from_binary_folder(folder, recording=recording)
             new_sorting_analyzer.folder = folder
 
@@ -576,7 +610,7 @@ class SortingAnalyzer:
             folder = Path(folder)
             if folder.suffix != ".zarr":
                 folder = folder.parent / f"{folder.stem}.zarr"
-            SortingAnalyzer.create_zarr(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
+            SortingAnalyzer.create_zarr(folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes)
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
         else:

@@ -26,12 +26,11 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_sc
     if isinstance(one_object, Templates):
         templates_array = one_object.get_dense_templates()
     elif isinstance(one_object, SortingAnalyzer):
+        if return_scaled != one_object.return_scaled:
+            raise ValueError(f"get_dense_templates_array: return_scaled={return_scaled} is not possible SortingAnalyzer has the reverse")
         ext = one_object.get_extension("templates")
         if ext is not None:
             templates_array = ext.data["average"]
-            assert (
-                return_scaled == ext.params["return_scaled"]
-            ), f"templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
         else:
             raise ValueError("SortingAnalyzer need extension 'templates' to be computed to retrieve templates")
     else:

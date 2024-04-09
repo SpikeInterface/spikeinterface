@@ -43,7 +43,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         return dict(similarity=new_similarity)
 
     def _run(self):
-        templates_array = get_dense_templates_array(self.sorting_analyzer, return_scaled=True)
+        templates_array = get_dense_templates_array(self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled)
         similarity = compute_similarity_with_templates_array(
             templates_array, templates_array, method=self.params["method"]
         )
