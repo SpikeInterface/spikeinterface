@@ -5,7 +5,7 @@ import warnings
 
 from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core import compute_sparsity
-from ..core.template_tools import get_template_extremum_channel, _get_nbefore, _get_dense_templates_array
+from ..core.template_tools import get_template_extremum_channel, _get_nbefore
 from .localization_tools import (
     make_radial_order_parents,
     solve_monopolar_triangulation,
