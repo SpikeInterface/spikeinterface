@@ -139,7 +139,7 @@ _toy_probes = {
             y_shift_per_column=[0, -15, 0],
             contact_shapes="circle",
             contact_shape_params={"radius": 8},
-    )
+    ),
     
 
 }
@@ -219,6 +219,9 @@ def generate_drifting_recording(
     probe_name="Neuropixel-128",
     generate_probe_kwargs=None,
 
+    ms_before = 1.5,
+    ms_after = 3.,
+
     generate_unit_locations_kwargs=dict(
         margin_um=20.0,
         minimum_z=5.0,
@@ -247,8 +250,6 @@ def generate_drifting_recording(
     unit_params_range=None,
     mode="ellipsoid",
 
-    
-    
     generate_sorting_kwargs=dict(firing_rates=8., refractory_period_ms=4.0),
     noise_kwargs=dict(noise_level=5.0),
 
@@ -262,8 +263,6 @@ def generate_drifting_recording(
     
     rng = np.random.default_rng(seed=seed)
     
-    ms_before = 1.5
-    ms_after = 3.
 
     nbefore = int(sampling_frequency * ms_before / 1000.)
 
