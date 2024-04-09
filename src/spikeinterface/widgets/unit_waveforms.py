@@ -144,15 +144,13 @@ class UnitWaveformsWidget(BaseWidget):
                 assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
 
         # get templates
-        self.templates_ext = sorting_analyzer.get_extension("templates") or sorting_analyzer.get_extension(
-            "fast_templates"
-        )
-        assert self.templates_ext is not None, "plot_waveforms() need extension 'templates' or 'fast_templates'"
+        self.templates_ext = sorting_analyzer.get_extension("templates")
+        assert self.templates_ext is not None, "plot_waveforms() need extension 'templates'"
         templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
 
-        if templates_percentile_shading is not None and sorting_analyzer.get_extension("templates") is None:
+        if templates_percentile_shading is not None and not sorting_analyzer.has_extension("waveforms"):
             warn(
-                "templates_percentile_shading can only be used if the 'templates' extension is available. "
+                "templates_percentile_shading can only be used if the 'waveforms' extension is available. "
                 "Settimg templates_percentile_shading to None."
             )
             templates_percentile_shading = None
