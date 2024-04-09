@@ -864,7 +864,13 @@ def estimate_templates_with_accumulator(
 
     # average
     waveforms_sum = np.sum(waveform_accumulator_per_worker, axis=0)
-    template_means = waveforms_sum
+    if return_std:
+        # we need a copy here because we will use the means to compute the stds
+        template_means = waveforms_sum.copy()
+    else:
+        # waveforms_sum will also be changed in this case when acting on template_means
+        template_means = waveforms_sum
+
     unit_indices, spike_count = np.unique(spikes["unit_index"], return_counts=True)
     template_means[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
 
@@ -872,12 +878,12 @@ def estimate_templates_with_accumulator(
         waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
         # standard deviation
         template_stds = np.zeros_like(template_means)
-        for i, (unit_index, count) in enumerate(zip(unit_indices, spike_count)):
+        for unit_index, count in zip(unit_indices, spike_count):
             residuals = (
-                waveforms_squared_sum[unit_index] - 2 * count * template_means[unit_index] * waveforms_sum[unit_index]
+                waveforms_squared_sum[unit_index] - 2 * template_means[unit_index] * waveforms_sum[unit_index]
             ) + count * template_means[unit_index] ** 2
+            residuals[residuals < 0] = 0
             template_stds[unit_index] = np.sqrt(residuals / count)
-        assert np.all(template_stds >= 0)
         del waveform_squared_accumulator_per_worker
         shm_squared.unlink()
         shm_squared.close()
