@@ -164,7 +164,7 @@ class UnitWaveformsWidget(BaseWidget):
         if plot_waveforms:
             wf_ext = sorting_analyzer.get_extension("waveforms")
             if wf_ext is None:
-                raise ValueError("plot_waveforms() need extension 'waveforms'")
+                raise ValueError("plot_waveforms() needs the extension 'waveforms'")
             for unit_id in unit_ids:
                 unit_index = list(sorting.unit_ids).index(unit_id)
                 if not extra_sparsity:
