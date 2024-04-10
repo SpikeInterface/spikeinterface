@@ -190,15 +190,14 @@ class Mountainsort5Sorter(BaseSorter):
         else:
             recording_cached = recording
 
-        scheme = p["scheme"]
-        if scheme == "1":
+        if p["scheme"] == "1":
             sorting = ms5.sorting_scheme1(recording=recording_cached, sorting_parameters=scheme1_sorting_parameters)
         elif p["scheme"] == "2":
             sorting = ms5.sorting_scheme2(recording=recording_cached, sorting_parameters=scheme2_sorting_parameters)
         elif p["scheme"] == "3":
             sorting = ms5.sorting_scheme3(recording=recording_cached, sorting_parameters=scheme3_sorting_parameters)
         else:
-            raise ValueError(f"Invalid scheme: {scheme} given. scheme must be one of '1', '2' or '3'")
+            raise ValueError(f"Invalid scheme: {p['scheme']} given. scheme must be one of '1', '2' or '3'")
 
         if p["delete_temporary_recording"]:
             if not recording.is_binary_compatible():
