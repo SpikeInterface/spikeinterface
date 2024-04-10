@@ -174,7 +174,7 @@ def random_spikes_selection(
     random_spikes_indices: np.array
         Selected spike indices coresponding to the sorting spike vector.
     """
-    
+
     if method == "uniform":
         rng = np.random.default_rng(seed=seed)
 

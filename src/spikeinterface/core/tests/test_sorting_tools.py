@@ -42,7 +42,7 @@ def test_spike_vector_to_indices():
 
 def test_random_spikes_selection():
     recording, sorting = generate_ground_truth_recording(
-        durations=[20.0, 10.],
+        durations=[20.0, 10.0],
         sampling_frequency=16000.0,
         num_channels=10,
         num_units=5,
