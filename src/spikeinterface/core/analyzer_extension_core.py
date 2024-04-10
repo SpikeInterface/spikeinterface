@@ -28,14 +28,14 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
     Parameters
     ----------
-    method: "uniform", default: "uniform"
+    method: "uniform" | "all", default: "uniform"
         The method to select the spikes
     max_spikes_per_unit: int, default: 500
-        The maximum number of spikes per unit
+        The maximum number of spikes per unit, ignored if method="all"
     margin_size: int, default: None
-        A margin on each border of segments to avoid border spikes
+        A margin on each border of segments to avoid border spikes, ignored if method="all"
     seed: int or None, default: None
-        A seed for the random generator
+        A seed for the random generator, ignored if method="all"
 
     Returns
     -------
@@ -52,11 +52,15 @@ class ComputeRandomSpikes(AnalyzerExtension):
     def _run(
         self,
     ):
-        self.data["random_spikes_indices"] = random_spikes_selection(
-            self.sorting_analyzer.sorting,
-            num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
-            **self.params,
-        )
+        if self.params["method"] == "all":
+            all_spikes_indices = np.arange(len(self.sorting_analyzer.sorting.to_spike_vector()))
+            self.data["random_spikes_indices"] = all_spikes_indices
+        else:
+            self.data["random_spikes_indices"] = random_spikes_selection(
+                self.sorting_analyzer.sorting,
+                num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
+                **self.params,
+            )
 
     def _set_params(self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None):
         params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
