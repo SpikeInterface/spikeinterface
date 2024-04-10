@@ -5,6 +5,7 @@ from packaging.version import parse
 
 import shutil
 import numpy as np
+from warnings import warn
 
 from spikeinterface.preprocessing import bandpass_filter, whiten
 
@@ -67,8 +68,7 @@ class Mountainsort5Sorter(BaseSorter):
         "freq_max": "Low-pass filter cutoff frequency",
         "filter": "Enable or disable filter",
         "whiten": "Enable or disable whitening",
-        "n_jobs_for_preprocessing": "Number of parallel jobs for creating the cached recording",
-        "delete_temporary_recording": "If True, the temporary recording file is deleted after sorting",
+        "delete_temporary_recording": "If True, the temporary recording file is deleted after sorting (this may fail on Windows requiring the end-user to delete the file themselves later)",
     }
 
     sorter_description = "MountainSort5 uses Isosplit clustering. It is an updated version of MountainSort4. See https://doi.org/10.1016/j.neuron.2017.08.030"
@@ -148,7 +148,7 @@ class Mountainsort5Sorter(BaseSorter):
                 print("whitening")
             recording = whiten(recording=recording, dtype="float32")
         else:
-            print("WARNING: Not whitening (MountainSort5 expects whitened data)")
+            warn("Not whitening (MountainSort5 expects whitened data)")
 
         scheme1_sorting_parameters = ms5.Scheme1SortingParameters(
             detect_threshold=p["detect_threshold"],
@@ -201,7 +201,11 @@ class Mountainsort5Sorter(BaseSorter):
             raise ValueError(f"Invalid scheme: {scheme} given. scheme must be one of '1', '2' or '3'")
 
         if p["delete_temporary_recording"]:
-            shutil.rmtree(sorter_output_folder / "recording", ignore_errors=True)
+            if not recording.is_binary_compatible():
+                del recording_cached
+                shutil.rmtree(sorter_output_folder / "recording", ignore_errors=True)
+                if Path(sorter_output_folder / "recording").is_dir():
+                    warn("cleanup failed, please remove file yourself if desired")
 
         NpzSortingExtractor.write_sorting(sorting, str(sorter_output_folder / "firings.npz"))
 
