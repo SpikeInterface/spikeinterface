@@ -963,8 +963,6 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
 
 
 ## Noise generator zone ##
-
-
 class NoiseGeneratorRecording(BaseRecording):
     """
     A lazy recording that generates white noise samples if and only if `get_traces` is called.
@@ -984,8 +982,8 @@ class NoiseGeneratorRecording(BaseRecording):
         The sampling frequency of the recorder.
     durations : List[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
-    noise_level: float, default: 1
-        Std of the white noise
+    noise_levels: float or array, default: 1
+        Std of the white noise (if an array, defined by per channels)
     dtype : Optional[Union[np.dtype, str]], default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : Optional[int], default: None
@@ -1010,17 +1008,27 @@ class NoiseGeneratorRecording(BaseRecording):
         num_channels: int,
         sampling_frequency: float,
         durations: List[float],
-        noise_level: float = 1.0,
+        noise_levels: float = 1.0,
         dtype: Optional[Union[np.dtype, str]] = "float32",
         seed: Optional[int] = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
+
         channel_ids = np.arange(num_channels)
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
         assert strategy in ("tile_pregenerated", "on_the_fly"), "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
+
+        if np.isscalar(noise_levels):
+            noise_levels = np.ones((1, num_channels)) * noise_levels
+        else:
+            noise_levels = np.asarray(noise_levels)
+            if len(noise_levels.shape) < 2:
+                noise_levels = noise_levels[np.newaxis, :]
+
+        assert len(noise_levels[0]) == num_channels, "Noise levels should have a size of num_channels"
 
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
@@ -1040,7 +1048,7 @@ class NoiseGeneratorRecording(BaseRecording):
                 num_channels,
                 sampling_frequency,
                 noise_block_size,
-                noise_level,
+                noise_levels,
                 dtype,
                 segments_seeds[i],
                 strategy,
@@ -1051,7 +1059,7 @@ class NoiseGeneratorRecording(BaseRecording):
             "num_channels": num_channels,
             "durations": durations,
             "sampling_frequency": sampling_frequency,
-            "noise_level": noise_level,
+            "noise_levels": noise_levels,
             "dtype": dtype,
             "seed": seed,
             "strategy": strategy,
@@ -1061,7 +1069,7 @@ class NoiseGeneratorRecording(BaseRecording):
 
 class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
     def __init__(
-        self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_level, dtype, seed, strategy
+        self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_levels, dtype, seed, strategy
     ):
         assert seed is not None
 
@@ -1070,7 +1078,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self.num_samples = num_samples
         self.num_channels = num_channels
         self.noise_block_size = noise_block_size
-        self.noise_level = noise_level
+        self.noise_levels = noise_levels
         self.dtype = dtype
         self.seed = seed
         self.strategy = strategy
@@ -1078,7 +1086,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         if self.strategy == "tile_pregenerated":
             rng = np.random.default_rng(seed=self.seed)
             self.noise_block = (
-                rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype) * noise_level
+                rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype) * noise_levels
             )
         elif self.strategy == "on_the_fly":
             pass
@@ -1111,7 +1119,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
             elif self.strategy == "on_the_fly":
                 rng = np.random.default_rng(seed=(self.seed, block_index))
                 noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                noise_block *= self.noise_level
+                noise_block *= self.noise_levels
 
             if block_index == first_block_index:
                 if first_block_index != last_block_index:
@@ -1335,13 +1343,13 @@ def generate_single_fake_waveform(
 
 
 default_unit_params_range = dict(
-    alpha=(6_000.0, 9_000.0),
+    alpha=(100.0, 500.0),
     depolarization_ms=(0.09, 0.14),
     repolarization_ms=(0.5, 0.8),
     recovery_ms=(1.0, 1.5),
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
-    decay_power=(1.4, 1.8),
+    spatial_constant=(20, 40),
     propagation_speed=(250.0, 350.0),  # um  / ms
     b=(0.1, 1),
     c=(0.1, 1),
@@ -1402,7 +1410,7 @@ def generate_templates(
             * "recovery_ms": the recovery interval in ms (default range: (1.0-1.5))
             * "positive_amplitude": the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
             * "smooth_ms": the gaussian smooth in ms (default range: (0.03-0.07))
-            * "decay_power": the decay power (default range: (1.2-1.8))
+            * "spatial_constant": the spatial constant (default range: (20-40))
             * "propagation_speed": mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
         Values contains vector with same size of num_units.
         If the key is not in dict then it is generated using unit_params_range
@@ -1476,10 +1484,9 @@ def generate_templates(
 
         ## Add a spatial decay depend on distance from unit to each channel
         alpha = params["alpha"][u]
-        # the espilon avoid enormous factors
-        eps = 1.0
+
         # naive formula for spatial decay
-        pow = params["decay_power"][u]
+        spatial_constant = params["spatial_constant"][u]
         if mode == "sphere":
             distances = get_ellipse(
                 channel_locations,
@@ -1501,7 +1508,7 @@ def generate_templates(
                 params["z_angle"][u],
             )
 
-        channel_factors = alpha / (distances + eps) ** pow
+        channel_factors = alpha * np.exp(-distances / spatial_constant)
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
 
         # This mimic a propagation delay for distant channel
@@ -1900,7 +1907,7 @@ def generate_ground_truth_recording(
     upsample_factor=None,
     upsample_vector=None,
     generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0),
-    noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
+    noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
     generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
     generate_templates_kwargs=dict(),
     dtype="float32",

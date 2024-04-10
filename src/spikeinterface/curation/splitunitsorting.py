@@ -4,6 +4,7 @@ from typing import List, Union
 import numpy as np
 from copy import deepcopy
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
 
 
 class SplitUnitSorting(BaseSorting):
@@ -108,6 +109,9 @@ class SplitUnitSorting(BaseSorting):
             new_unit_ids=new_unit_ids,
             properties_policy=properties_policy,
         )
+
+
+split_unit_sorting = define_function_from_class(source_class=SplitUnitSorting, name="split_unit_sorting")
 
 
 class SplitSortingUnitSegment(BaseSortingSegment):

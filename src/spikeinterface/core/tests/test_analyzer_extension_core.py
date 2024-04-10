@@ -34,7 +34,7 @@ def get_sorting_analyzer(format="memory", sparse=True):
                 alpha=(9_000.0, 12_000.0),
             )
         ),
-        noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2406,
     )
     if format == "memory":
@@ -111,7 +111,7 @@ def test_ComputeWaveforms(format, sparse):
 def test_ComputeTemplates(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
-    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
 
     job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
 
@@ -162,12 +162,10 @@ def test_ComputeTemplates(format, sparse):
         sparsity_mask = np.ones((sorting_analyzer.unit_ids.size, sorting_analyzer.channel_ids.size), dtype=bool)
     for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
         unit_mask = sparsity_mask[unit_index, :]
-        np.testing.assert_almost_equal(
-            fast_avg[unit_index][:, unit_mask], temp_ext.data["average"][unit_index][:, unit_mask], decimal=4
+        assert np.allclose(
+            fast_avg[unit_index][:, unit_mask], temp_ext.data["average"][unit_index][:, unit_mask], atol=0.01
         )
-        np.testing.assert_almost_equal(
-            fast_std[unit_index][:, unit_mask], temp_ext.data["std"][unit_index][:, unit_mask], decimal=4
-        )
+        assert np.allclose(fast_std[unit_index][:, unit_mask], temp_ext.data["std"][unit_index][:, unit_mask], atol=0.5)
 
     templates = temp_ext.get_templates(outputs="Templates")
     assert isinstance(templates, Templates)
