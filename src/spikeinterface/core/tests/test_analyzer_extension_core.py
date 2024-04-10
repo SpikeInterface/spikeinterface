@@ -92,6 +92,14 @@ def test_ComputeRandomSpikes(format, sparse):
     # print(indices)
 
     _check_result_extension(sorting_analyzer, "random_spikes")
+    sorting_analyzer.delete_extension("random_spikes")
+
+    ext = sorting_analyzer.compute("random_spikes", method="all")
+    indices = ext.data["random_spikes_indices"]
+    assert indices.size == len(sorting_analyzer.sorting.to_spike_vector())
+    # print(indices)
+
+    _check_result_extension(sorting_analyzer, "random_spikes")
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
