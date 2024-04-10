@@ -5,9 +5,9 @@ from .drift_tools import (
     InjectDriftingTemplatesRecording,
     make_linear_displacement,
 )
+from .noise_tools import generate_noise
 from .drifting_generator import (
     make_one_displacement_vector,
     generate_displacement_vector,
-    generate_noise,
     generate_drifting_recording,
 )
