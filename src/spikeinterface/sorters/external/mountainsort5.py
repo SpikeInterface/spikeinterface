@@ -9,7 +9,7 @@ import numpy as np
 from spikeinterface.preprocessing import bandpass_filter, whiten
 
 from spikeinterface.core.baserecording import BaseRecording
-from ..basesorter import BaseSorter
+from ..basesorter import BaseSorter, get_job_kwargs
 
 from spikeinterface.extractors import NpzSortingExtractor
 
@@ -20,6 +20,7 @@ class Mountainsort5Sorter(BaseSorter):
     sorter_name = "mountainsort5"
     requires_locations = False
     compatible_with_parallel = {"loky": False, "multiprocessing": False, "threading": False}
+    requires_binary_data = True
 
     _default_params = {
         "scheme": "2",  # '1', '2', '3'
@@ -42,7 +43,6 @@ class Mountainsort5Sorter(BaseSorter):
         "freq_max": 6000,
         "filter": True,
         "whiten": True,  # Important to do whitening
-        "n_jobs_for_preprocessing": -1,
         "delete_temporary_recording": True,
     }
 
@@ -186,9 +186,7 @@ class Mountainsort5Sorter(BaseSorter):
         )
 
         if not recording.is_binary_compatible():
-            recording_cached = recording.save(
-                folder=sorter_output_folder / "recording", n_jobs=p["n_jobs_for_preprocessing"], progress_bar=verbose
-            )
+            recording_cached = recording.save(folder=sorter_output_folder / "recording", **get_job_kwargs(p, verbose))
         else:
             recording_cached = recording
 
