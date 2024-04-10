@@ -135,6 +135,9 @@ class Mountainsort5Sorter(BaseSorter):
         # alias to params
         p = params
 
+        if p["scheme"] not in ["1", "2", "3"]:
+            raise ValueError("Invalid scheme. scheme must be one of '1', '2' or '3'")
+
         # Bandpass filter
         if p["filter"] and p["freq_min"] is not None and p["freq_max"] is not None:
             if verbose:
@@ -204,8 +207,7 @@ class Mountainsort5Sorter(BaseSorter):
                 sorting = ms5.sorting_scheme2(recording=recording_cached, sorting_parameters=scheme2_sorting_parameters)
             elif p["scheme"] == "3":
                 sorting = ms5.sorting_scheme3(recording=recording_cached, sorting_parameters=scheme3_sorting_parameters)
-            else:
-                raise ValueError(f"Invalid scheme: {scheme} given. scheme must be one of '1', '2' or '3'")
+
         except Exception as e:
             print(f"An error occurred: {e}")
 
