@@ -246,8 +246,6 @@ def generate_displacement_vector(
     return displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps
 
 
-
-
 def generate_drifting_recording(
     num_units=250,
     duration=600.0,

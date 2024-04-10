@@ -80,8 +80,6 @@ def test_generate_displacement_vector():
     # plt.show()
 
 
-
-
 def test_generate_drifting_recording():
     static_recording, drifting_recording, sorting = generate_drifting_recording(
         num_units=10,
