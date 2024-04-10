@@ -351,11 +351,10 @@ def generate_drifting_recording(
         )
     ),
     
-
     generate_sorting_kwargs=dict(firing_rates=(2., 8.), refractory_period_ms=4.0),
     generate_noise_kwargs=dict(noise_levels=(12., 15.), spatial_decay=25.),
 
-    seed=2205,
+    seed=None,
 ):
 
     """
@@ -384,8 +383,8 @@ def generate_drifting_recording(
         Parameters given to generate_sorting().
     generate_noise_kwargs: dict
         Parameters given to generate_noise().
-
-    seed=2205,
+    seed: None ot int
+        A unique seed for all steps.
 
     Returns
     -------
@@ -401,9 +400,6 @@ def generate_drifting_recording(
     
     rng = np.random.default_rng(seed=seed)
     
-
-    
-
     # probe
     if generate_probe_kwargs is None:
         generate_probe_kwargs = _toy_probes[probe_name]
@@ -460,7 +456,7 @@ def generate_drifting_recording(
         unit_locations_moved[:, :2] += displacements_steps[i, :][np.newaxis, :]
         templates_array_moved[i, :, :, :] = generate_templates(
             channel_locations,
-            unit_locations,
+            unit_locations_moved,
             sampling_frequency=sampling_frequency,
             seed=seed,
             **generate_templates_kwargs
@@ -481,10 +477,6 @@ def generate_drifting_recording(
     # plt.show()
 
     drifting_templates = DriftingTemplates.from_static(templates)
-
-    firing_rates_range = (1., 8.)
-    lim0, lim1 = firing_rates_range
-    firing_rates = rng.random(num_units) * (lim1 - lim0) + lim0    
 
     sorting = generate_sorting(
         num_units=num_units,

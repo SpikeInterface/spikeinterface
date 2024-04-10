@@ -109,7 +109,11 @@ def test_generate_noise():
 
 
 def test_generate_drifting_recording():
-    static_recording, drifting_recording, sorting = generate_drifting_recording(num_units=10, probe_name="Neuronexus-32")
+    static_recording, drifting_recording, sorting = generate_drifting_recording(
+        num_units=10,
+        probe_name="Neuronexus-32",
+        seed=2205,
+    )
 
     # print(static_recording)
     # print(drifting_recording)
