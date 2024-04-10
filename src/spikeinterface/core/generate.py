@@ -624,7 +624,6 @@ def _ensure_firing_rates(firing_rates, num_units, seed):
         assert firing_rates.size == num_units
     else:
         raise ValueError(f"firing_rates: wrong firing_rates {firing_rates}")
-    print(firing_rates)
     return firing_rates
 
 def synthesize_poisson_spike_vector(
