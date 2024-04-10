@@ -21,7 +21,7 @@ from ..core import SortingAnalyzer, get_noise_levels
 from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
-    _get_dense_templates_array,
+    get_dense_templates_array,
 )
 
 
@@ -1434,7 +1434,7 @@ def compute_sd_ratio(
     n_spikes = sorting.count_num_spikes_per_unit()
 
     if correct_for_template_itself:
-        tamplates_array = _get_dense_templates_array(sorting_analyzer, return_scaled=True)
+        tamplates_array = get_dense_templates_array(sorting_analyzer, return_scaled=True)
 
     spikes = sorting.to_spike_vector()
     sd_ratio = {}
