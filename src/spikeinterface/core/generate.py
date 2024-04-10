@@ -609,6 +609,24 @@ def generate_snippets(
 
 
 ## spiketrain zone ##
+
+def _ensure_firing_rates(firing_rates, num_units, seed):
+    rng = np.random.default_rng(seed=seed)
+
+    if isinstance(firing_rates, tuple):
+        rng = np.random.default_rng(seed=seed)
+        lim0, lim1 = firing_rates
+        firing_rates = rng.random(num_units) * (lim1 - lim0) + lim0
+    elif np.isscalar(firing_rates):
+        firing_rates = np.full(num_units, firing_rates, dtype="float64")
+    elif isinstance(firing_rates, (list, np.ndarray)):
+        firing_rates = np.asarray(firing_rates)
+        assert firing_rates.size == num_units
+    else:
+        raise ValueError(f"firing_rates: wrong firing_rates {firing_rates}")
+    print(firing_rates)
+    return firing_rates
+
 def synthesize_poisson_spike_vector(
     num_units=20,
     sampling_frequency=30000.0,
@@ -635,7 +653,7 @@ def synthesize_poisson_spike_vector(
         Duration of the simulation in seconds
     refractory_period_ms : float, default: 4.0
         Refractory period between spikes in milliseconds
-    firing_rates : float or array_like, default: 3.0
+    firing_rates : float or array_like or tuple, default: 3.0
         Firing rate(s) in Hz. Can be a single value for all units or an array of firing rates with
         each element being the firing rate for one unit
     seed : int, default: 0
@@ -667,8 +685,7 @@ def synthesize_poisson_spike_vector(
 
     rng = np.random.default_rng(seed=seed)
 
-    if np.isscalar(firing_rates):
-        firing_rates = np.full(num_units, firing_rates, dtype="float64")
+    firing_rates = _ensure_firing_rates(firing_rates, num_units, seed)
 
     # Calculate the number of frames in the refractory period
     refractory_period_seconds = refractory_period_ms / 1000.0
@@ -760,8 +777,7 @@ def synthesize_random_firings(
 
     rng = np.random.default_rng(seed=seed)
 
-    if np.isscalar(firing_rates):
-        firing_rates = np.full(num_units, firing_rates, dtype="float64")
+    firing_rates = _ensure_firing_rates(firing_rates, num_units, seed)
 
     refractory_sample = int(refractory_period_ms / 1000.0 * sampling_frequency)
 
