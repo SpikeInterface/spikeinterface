@@ -612,8 +612,6 @@ def generate_snippets(
 
 
 def _ensure_firing_rates(firing_rates, num_units, seed):
-    rng = np.random.default_rng(seed=seed)
-
     if isinstance(firing_rates, tuple):
         rng = np.random.default_rng(seed=seed)
         lim0, lim1 = firing_rates
