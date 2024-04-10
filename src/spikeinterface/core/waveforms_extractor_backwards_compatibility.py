@@ -93,12 +93,19 @@ def extract_waveforms(
         **job_kwargs,
     )
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format=format, folder=folder, sparse=sparse, sparsity=sparsity, return_scaled=return_scaled, **sparsity_kwargs
+        sorting,
+        recording,
+        format=format,
+        folder=folder,
+        sparse=sparse,
+        sparsity=sparsity,
+        return_scaled=return_scaled,
+        **sparsity_kwargs,
     )
 
     sorting_analyzer.compute("random_spikes", max_spikes_per_unit=max_spikes_per_unit, seed=seed)
 
-    waveforms_params = dict(ms_before=ms_before, ms_after=ms_after,  dtype=dtype)
+    waveforms_params = dict(ms_before=ms_before, ms_after=ms_after, dtype=dtype)
     sorting_analyzer.compute("waveforms", **waveforms_params, **job_kwargs)
 
     templates_params = dict(operators=list(precompute_template))
@@ -360,8 +367,8 @@ def _read_old_waveforms_extractor_binary(folder):
         raise ValueError(f"This folder is not a WaveformsExtractor folder {folder}")
     with open(params_file, "r") as f:
         params = json.load(f)
-    
-    return_scaled = params["return_scaled"],
+
+    return_scaled = (params["return_scaled"],)
 
     sparsity_file = folder / "sparsity.json"
     if sparsity_file.exists():
@@ -400,7 +407,9 @@ def _read_old_waveforms_extractor_binary(folder):
     elif (folder / "sorting.pickle").exists():
         sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
 
-    sorting_analyzer = SortingAnalyzer.create_memory(sorting, recording, sparsity=sparsity, return_scaled=return_scaled, rec_attributes=rec_attributes)
+    sorting_analyzer = SortingAnalyzer.create_memory(
+        sorting, recording, sparsity=sparsity, return_scaled=return_scaled, rec_attributes=rec_attributes
+    )
 
     # waveforms
     # need to concatenate all waveforms in one unique buffer
@@ -449,7 +458,6 @@ def _read_old_waveforms_extractor_binary(folder):
         ext.params = dict(
             ms_before=params["ms_before"],
             ms_after=params["ms_after"],
-            
             dtype=params["dtype"],
         )
         ext.data["waveforms"] = waveforms
@@ -464,9 +472,7 @@ def _read_old_waveforms_extractor_binary(folder):
             templates[mode] = np.load(template_file)
     if len(templates) > 0:
         ext = ComputeTemplates(sorting_analyzer)
-        ext.params = dict(
-            nbefore=nbefore, nafter=nafter, operators=list(templates.keys())
-        )
+        ext.params = dict(nbefore=nbefore, nafter=nafter, operators=list(templates.keys()))
         for mode, arr in templates.items():
             ext.data[mode] = arr
         sorting_analyzer.extensions["templates"] = ext

@@ -41,13 +41,16 @@ def test_SortingAnalyzer_memory():
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting)
 
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, return_scaled=True, sparsity=None)
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=False, return_scaled=True, sparsity=None
+    )
     assert sorting_analyzer.return_scaled
     _check_sorting_analyzers(sorting_analyzer, sorting)
 
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, return_scaled=False, sparsity=None)
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=False, return_scaled=False, sparsity=None
+    )
     assert not sorting_analyzer.return_scaled
-    
 
 
 def test_SortingAnalyzer_binary_folder():
@@ -68,12 +71,16 @@ def test_SortingAnalyzer_binary_folder():
         shutil.rmtree(folder)
 
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="binary_folder", folder=folder, sparse=False, sparsity=None, return_scaled=False,
+        sorting,
+        recording,
+        format="binary_folder",
+        folder=folder,
+        sparse=False,
+        sparsity=None,
+        return_scaled=False,
     )
     assert not sorting_analyzer.return_scaled
     _check_sorting_analyzers(sorting_analyzer, sorting)
-    
-
 
 
 def test_SortingAnalyzer_zarr():
@@ -95,7 +102,6 @@ def test_SortingAnalyzer_zarr():
     sorting_analyzer = create_sorting_analyzer(
         sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None, return_scaled=False
     )
-
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting):

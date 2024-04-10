@@ -32,7 +32,15 @@ from .node_pipeline import run_node_pipeline
 
 # high level function
 def create_sorting_analyzer(
-    sorting, recording, format="memory", folder=None, sparse=True, sparsity=None, return_scaled=True, overwrite=False, **sparsity_kwargs
+    sorting,
+    recording,
+    format="memory",
+    folder=None,
+    sparse=True,
+    sparsity=None,
+    return_scaled=True,
+    overwrite=False,
+    **sparsity_kwargs,
 ):
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
@@ -125,7 +133,9 @@ def create_sorting_analyzer(
         print("create_sorting_analyzer: recording does not have scaling to uV, forcing return_scaled=False")
         return_scaled = False
 
-    sorting_analyzer = SortingAnalyzer.create(sorting, recording, format=format, folder=folder, sparsity=sparsity, return_scaled=return_scaled)
+    sorting_analyzer = SortingAnalyzer.create(
+        sorting, recording, format=format, folder=folder, sparsity=sparsity, return_scaled=return_scaled
+    )
 
     return sorting_analyzer
 
@@ -289,7 +299,12 @@ class SortingAnalyzer:
         # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
         sorting_copy = SharedMemorySorting.from_sorting(sorting, with_metadata=True)
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes, format="memory", sparsity=sparsity, return_scaled=return_scaled,
+            sorting=sorting_copy,
+            recording=recording,
+            rec_attributes=rec_attributes,
+            format="memory",
+            sparsity=sparsity,
+            return_scaled=return_scaled,
         )
         return sorting_analyzer
 
@@ -355,7 +370,6 @@ class SortingAnalyzer:
         with open(settings_file, mode="w") as f:
             json.dump(check_json(settings), f, indent=4)
 
-
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None):
         folder = Path(folder)
@@ -402,7 +416,6 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
-        
         settings_file = folder / f"settings.json"
         with open(settings_file, "r") as f:
             settings = json.load(f)
@@ -444,11 +457,8 @@ class SortingAnalyzer:
         info = dict(version=spikeinterface.__version__, dev_mode=spikeinterface.DEV_MODE, object="SortingAnalyzer")
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
 
-        settings = dict(
-            return_scaled=return_scaled
-        )
+        settings = dict(return_scaled=return_scaled)
         zarr_root.attrs["settings"] = check_json(settings)
-        
 
         # the recording
         rec_dict = recording.to_dict(relative_to=folder, recursive=True)
@@ -601,7 +611,9 @@ class SortingAnalyzer:
             # create  a new folder
             assert folder is not None, "For format='binary_folder' folder must be provided"
             folder = Path(folder)
-            SortingAnalyzer.create_binary_folder(folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes)
+            SortingAnalyzer.create_binary_folder(
+                folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
+            )
             new_sorting_analyzer = SortingAnalyzer.load_from_binary_folder(folder, recording=recording)
             new_sorting_analyzer.folder = folder
 
@@ -610,7 +622,9 @@ class SortingAnalyzer:
             folder = Path(folder)
             if folder.suffix != ".zarr":
                 folder = folder.parent / f"{folder.stem}.zarr"
-            SortingAnalyzer.create_zarr(folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes)
+            SortingAnalyzer.create_zarr(
+                folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
+            )
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
         else:

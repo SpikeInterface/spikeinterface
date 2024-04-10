@@ -27,7 +27,9 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_sc
         templates_array = one_object.get_dense_templates()
     elif isinstance(one_object, SortingAnalyzer):
         if return_scaled != one_object.return_scaled:
-            raise ValueError(f"get_dense_templates_array: return_scaled={return_scaled} is not possible SortingAnalyzer has the reverse")
+            raise ValueError(
+                f"get_dense_templates_array: return_scaled={return_scaled} is not possible SortingAnalyzer has the reverse"
+            )
         ext = one_object.get_extension("templates")
         if ext is not None:
             templates_array = ext.data["average"]

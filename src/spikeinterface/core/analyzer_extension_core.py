@@ -285,9 +285,7 @@ class ComputeTemplates(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
-    def _set_params(
-        self, ms_before: float = 1.0, ms_after: float = 2.0,operators=["average", "std"]
-    ):
+    def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=["average", "std"]):
         assert isinstance(operators, list)
         for operator in operators:
             if isinstance(operator, str):
@@ -559,9 +557,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, num_chunks_per_segment=20, chunk_size=10000, seed=None):
-        params = dict(
-            num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, seed=seed
-        )
+        params = dict(num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, seed=seed)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -569,7 +565,9 @@ class ComputeNoiseLevels(AnalyzerExtension):
         return self.data
 
     def _run(self):
-        self.data["noise_levels"] = get_noise_levels(self.sorting_analyzer.recording, return_scaled=self.sorting_analyzer.return_scaled, **self.params)
+        self.data["noise_levels"] = get_noise_levels(
+            self.sorting_analyzer.recording, return_scaled=self.sorting_analyzer.return_scaled, **self.params
+        )
 
     def _get_data(self):
         return self.data["noise_levels"]
