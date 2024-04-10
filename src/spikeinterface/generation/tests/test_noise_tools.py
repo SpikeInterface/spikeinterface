@@ -40,6 +40,5 @@ def test_generate_noise():
     # plt.show()
 
 
-
 if __name__ == "__main__":
     test_generate_noise()

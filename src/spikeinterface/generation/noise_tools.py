@@ -3,7 +3,6 @@ import numpy as np
 from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
-
 def generate_noise(
     probe, sampling_frequency, durations, dtype="float32", noise_levels=15.0, spatial_decay=None, seed=None
 ):
