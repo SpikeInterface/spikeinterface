@@ -327,9 +327,6 @@ class ChannelSparsity:
         if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
             ext = templates_or_sorting_analyzer.get_extension("noise_levels")
             assert ext is not None, "To compute sparsity from snr you need to compute 'noise_levels' first"
-            # assert ext.params[
-            #     "return_scaled"
-            # ], "To compute sparsity from snr you need return_scaled=True for extensions"
             noise_levels = ext.data["noise_levels"]
             return_scaled = templates_or_sorting_analyzer.return_scaled
         elif isinstance(templates_or_sorting_analyzer, Templates):
