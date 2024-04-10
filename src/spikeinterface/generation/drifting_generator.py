@@ -24,6 +24,32 @@ from spikeinterface.core.generate import (
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 
 
+# this should be moved in probeinterface but later
+_toy_probes = {
+    "Neuropixel-128": dict(
+        num_columns=4,
+        num_contact_per_column=[
+            32,
+        ]
+        * 4,
+        xpitch=16,
+        ypitch=40,
+        y_shift_per_column=[20, 0, 20, 0],
+        contact_shapes="square",
+        contact_shape_params={"width": 12},
+    ),
+    "Neuronexus-32": dict(
+        num_columns=3,
+        num_contact_per_column=[10, 12, 10],
+        xpitch=30,
+        ypitch=30,
+        y_shift_per_column=[0, -15, 0],
+        contact_shapes="circle",
+        contact_shape_params={"radius": 8},
+    ),
+}
+
+
 def make_one_displacement_vector(
     drift_mode="zigzag",
     duration=600.0,
@@ -37,32 +63,31 @@ def make_one_displacement_vector(
     seed=None,
 ):
     """
-    Generator a toy discplacement vector like ziagzag or bumps.
-
+    Generates a toy displacement vector with ziagzag or bumps patterns.
 
     Parameters
     ----------
-    drift_mode: "zigzag" | "bumps"
-        Kind of drift.
-    duration: float, default :600.
-        Duration in seconds.
-    displacement_sampling_frequency: float, default 5.
-        Sample rate of the vector.
-    t_start_drift: float | None, default None
-        Time before the drift start.
-    t_end_drift: float | None, default None
-        End of drift.
-    period_s: float, default 200.
-        Period of the zigzag in second.
-    bump_interval_s: tuple, default (30, 90.)
-        Range interval between random bump.
+    drift_mode: "zigzag" | "bumps", default: "zigzag"
+        The drift mode
+    duration: float, default: 600
+        Duration in seconds
+    displacement_sampling_frequency: float, default: 5
+        Sample rate of the vector
+    t_start_drift: float | None, default: None
+        Time in s when drift starts
+    t_end_drift: float | None, default: None
+        Time in s when drift ends
+    period_s: float, default: 200.
+        Period of the zigzag in seconds
+    bump_interval_s: tuple, default: (30, 90.)
+        Range interval between random bumps in seconds
     seed: None | int
-        The seed for the random bumps.
+        The seed for the random bumps
 
     Returns
     -------
     displacement_vector: np.array
-        The discplacement vector. magntide is micrometers
+        The discplacement vector in micrometers
     """
     import scipy.signal
 
@@ -115,32 +140,6 @@ def make_one_displacement_vector(
     return displacement_vector * amplitude_factor
 
 
-# this should be moved in probeinterface but later
-_toy_probes = {
-    "Neuropixel-128": dict(
-        num_columns=4,
-        num_contact_per_column=[
-            32,
-        ]
-        * 4,
-        xpitch=16,
-        ypitch=40,
-        y_shift_per_column=[20, 0, 20, 0],
-        contact_shapes="square",
-        contact_shape_params={"width": 12},
-    ),
-    "Neuronexus-32": dict(
-        num_columns=3,
-        num_contact_per_column=[10, 12, 10],
-        xpitch=30,
-        ypitch=30,
-        y_shift_per_column=[0, -15, 0],
-        contact_shapes="circle",
-        contact_shape_params={"radius": 8},
-    ),
-}
-
-
 def generate_displacement_vector(
     duration,
     unit_locations,
@@ -161,42 +160,42 @@ def generate_displacement_vector(
     seed=None,
 ):
     """
-    This create displacement vectors and related per units factor.
-    This can be used to create complex drift on a linear motion but with multiplexed
-    motion shape, zigzag + bumps for instance.
+    This creates displacement vectors and related per-unit factors.
+    This can be used to create complex drift on a linear motion but with multiple
+    motion shapes, like zigzag + bumps for example.
 
     This is needed by InjectDriftingTemplatesRecording.
 
-    The amplitude of drift is controlled by `drift_start_um` and `drift_stop_um`. Theses the boundaries
-    of the motion.
+    The amplitude of the drift is controlled by `drift_start_um` and `drift_stop_um`.
+    These are the boundaries of the motion.
 
     Parameters
     ----------
     duration: float
-        Duration
+        Duration of the displacement vector in seconds
     unit_locations: np.array
         The unit location with shape (num_units, 3)
-    displacement_sampling_frequency: float, default 5.
-    drift_start_um: list of float, default [0, 20.]
-        start boundary of the motion
-    drift_stop_um: list of float, default [0, -20.]
-        start boundary of the motion
-    drift_step_um: float, default 1
+    displacement_sampling_frequency: float, default: 5.
+        The sampling frequency of the displacement vector
+    drift_start_um: list of float, default: [0, 20.]
+        The start boundary of the motion
+    drift_stop_um: list of float, default: [0, -20.]
+        The stop boundary of the motion
+    drift_step_um: float, default: 1
         Use to create the displacements_steps array.
-        This ensure an odd number of steps.
+        This ensures an odd number of steps
     motion_list: list of dict
-        List of dict containing individual motion vector parameters.
+        List of dicts containing individual motion vector parameters.
         len(motion_list) == displacement_vectors.shape[2]
 
     Returns
     -------
-    displacement_vectors: numpy array
+    displacement_vectors: numpy.ndarray
         The drift vector is a numpy array with shape (num_times, 2, num_motions)
-        num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
-    displacement_unit_factor: numpy array or None, default: None
-        A array containing the factor per unit of each drift.
-        This is used to create non rigid with a factor gradient of depending on units position.
-        shape (num_units, num_motions)
+        num_motions is generally 1, but can be > 1 in case of combining several drift vectors
+    displacement_unit_factor: numpy array | None, default: None
+        A array containing the factor per unit of each drift (num_units, num_motions).
+        This is used to create non-rigid drift with a factor gradient of depending on the unit positions
     displacement_sampling_frequency: float
         The sampling frequency of drift vector
     displacements_steps: numpy array
@@ -422,12 +421,6 @@ def generate_drifting_recording(
         generate_displacement_vector(duration, unit_locations[:, :2], **generate_displacement_vector_kwargs)
     )
 
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # print(unit_locations.shape)
-    # ax.scatter(unit_locations[:, 1], displacement_unit_factor)
-    # plt.show()
-
     # unit_params need to be fixed before the displacement steps
     generate_templates_kwargs = generate_templates_kwargs.copy()
     unit_params = _ensure_unit_params(generate_templates_kwargs.get("unit_params", {}), num_units, seed)
@@ -460,11 +453,6 @@ def generate_drifting_recording(
         probe=probe,
     )
 
-    # fig, ax = plt.subplots()
-    # probeinterface.plotting.plot_probe(probe, ax=ax)
-    # ax.scatter(unit_locations[:, 0], unit_locations[:, 1], marker='*')
-    # plt.show()
-
     drifting_templates = DriftingTemplates.from_static(templates)
 
     sorting = generate_sorting(
@@ -476,12 +464,6 @@ def generate_drifting_recording(
         **generate_sorting_kwargs,
         seed=seed,
     )
-
-    # fig, ax = plt.subplots()
-    # ax.plot(times, displacement_vector0[:, 0], label='x0')
-    # ax.plot(times, displacement_vector0[:, 1], label='y0')
-    # ax.legend()
-    # plt.show()
 
     ## Important precompute displacement do not work on border and so do not work for tetrode
     # here we bypass the interpolation and regenrate templates at severals positions.
