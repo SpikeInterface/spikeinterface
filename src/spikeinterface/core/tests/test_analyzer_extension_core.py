@@ -89,7 +89,13 @@ def test_ComputeRandomSpikes(format, sparse):
     ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
     indices = ext.data["random_spikes_indices"]
     assert indices.size == 10 * sorting_analyzer.sorting.unit_ids.size
-    # print(indices)
+
+    _check_result_extension(sorting_analyzer, "random_spikes")
+    sorting_analyzer.delete_extension("random_spikes")
+
+    ext = sorting_analyzer.compute("random_spikes", method="all")
+    indices = ext.data["random_spikes_indices"]
+    assert indices.size == len(sorting_analyzer.sorting.to_spike_vector())
 
     _check_result_extension(sorting_analyzer, "random_spikes")
 
