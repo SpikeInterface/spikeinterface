@@ -368,7 +368,7 @@ def _read_old_waveforms_extractor_binary(folder):
     with open(params_file, "r") as f:
         params = json.load(f)
 
-    return_scaled = (params["return_scaled"],)
+    return_scaled = params["return_scaled"]
 
     sparsity_file = folder / "sparsity.json"
     if sparsity_file.exists():
