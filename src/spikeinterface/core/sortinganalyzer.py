@@ -765,6 +765,11 @@ class SortingAnalyzer:
         input: str or dict or list
             If the input is a string then computes one extension with compute_one_extension(extension_name=input, ...)
             If the input is a dict then compute several extensions with compute_several_extensions(extensions=input)
+            if the input is a list then compute several extensions with compute_several_extensions(extensions=input)
+        save: bool, default: True
+            If True the extension is saved to disk
+        **kwargs:
+            All other kwargs are transmitted to extension.set_params() (if input is list) or job_kwargs
         """
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, **kwargs)
@@ -774,8 +779,10 @@ class SortingAnalyzer:
             self.compute_several_extensions(extensions=input, save=save, **job_kwargs)
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
             extensions = {k: {} for k in input}
+            for p in params_:
+                assert p in input, f"SortingAnalyzer.compute() : Parameters specified for {p}, which is not in {input}"
+                extensions[p] = params_[p]
             self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
@@ -792,7 +799,7 @@ class SortingAnalyzer:
         extension_name: str
             The name of the extension.
             For instance "waveforms", "templates", ...
-        save: bool, default True
+        save: bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
@@ -857,7 +864,7 @@ class SortingAnalyzer:
         ----------
         extensions: dict
             Keys are extension_names and values are params.
-        save: bool, default True
+        save: bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
@@ -1137,7 +1144,7 @@ def get_extension_class(extension_name: str, auto_import=True):
     ----------
     extension_name: str
         The extension name.
-    auto_import: bool, default True
+    auto_import: bool, default: True
         Auto import the module if the extension class is not registered yet.
 
     Returns
