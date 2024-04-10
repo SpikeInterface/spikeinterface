@@ -755,7 +755,7 @@ class SortingAnalyzer:
 
     ## extensions zone
 
-    def compute(self, input, save=True, **kwargs):
+    def compute(self, input, save=True, extension_params=None, **kwargs):
         """
         Compute one extension or several extensiosn.
         Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
