@@ -189,7 +189,7 @@ def make_displacement_vector(
                 **motion_kwargs,
                 seed=seed,
             )
-        one_displacement = one_displacement[:, np.newaxis] * (drift_start_um - drift_stop_um) / 2 + mid
+        one_displacement = one_displacement[:, np.newaxis] * (drift_stop_um - drift_start_um) + mid
         displacement_vectors.append(one_displacement[:, :,  np.newaxis])
 
         if non_rigid_gradient is None:
