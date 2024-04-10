@@ -60,12 +60,10 @@ def make_some_templates():
         ms_after=ms_after,
         seed=2205,
         unit_params=dict(
-            decay_power=np.ones(num_units) * 2,
-            repolarization_ms=np.ones(num_units) * 0.8,
-        ),
-        unit_params_range=dict(
             alpha=(4_000.0, 8_000.0),
             depolarization_ms=(0.09, 0.16),
+            spatial_decay=np.ones(num_units) * 35,
+            repolarization_ms=np.ones(num_units) * 0.8,
         ),
     )
     templates_array = generate_templates(channel_locations, unit_locations, **generate_kwargs)
@@ -173,7 +171,7 @@ def test_InjectDriftingTemplatesRecording():
         num_channels=probe.contact_ids.size,
         sampling_frequency=sampling_frequency,
         durations=[duration],
-        noise_level=1.0,
+        noise_levels=1.0,
         dtype="float32",
     )
 

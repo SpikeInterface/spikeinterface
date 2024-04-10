@@ -7,7 +7,7 @@ from .drift_tools import (
 )
 from .drifting_generator import (
     make_one_displacement_vector,
-    make_displacement_vector,
+    generate_displacement_vector,
+    generate_noise,
     generate_drifting_recording,
-
 )
