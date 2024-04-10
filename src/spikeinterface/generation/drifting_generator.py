@@ -13,26 +13,33 @@ import numpy as np
 from probeinterface import generate_multi_columns_probe
 
 from spikeinterface import Templates
-from spikeinterface.core.generate import generate_unit_locations, default_unit_params_range, NoiseGeneratorRecording, generate_sorting, generate_templates, _ensure_unit_params
+from spikeinterface.core.generate import (
+    generate_unit_locations,
+    default_unit_params_range,
+    NoiseGeneratorRecording,
+    generate_sorting,
+    generate_templates,
+    _ensure_unit_params,
+)
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 
 
 def make_one_displacement_vector(
-        drift_mode="zigzag",
-        duration=600.,
-        amplitude_factor=1.,
-        displacement_sampling_frequency=5.,
-        t_start_drift=None,
-        t_end_drift=None,
-        period_s=200,
-        # amplitude_um=20.,
-        bump_interval_s=(30, 90.),
-        seed=None
-    ):
+    drift_mode="zigzag",
+    duration=600.0,
+    amplitude_factor=1.0,
+    displacement_sampling_frequency=5.0,
+    t_start_drift=None,
+    t_end_drift=None,
+    period_s=200,
+    # amplitude_um=20.,
+    bump_interval_s=(30, 90.0),
+    seed=None,
+):
     """
     Generator a toy discplacement vector like ziagzag or bumps.
 
-    
+
     Parameters
     ----------
     drift_mode: "zigzag" | "bumps"
@@ -73,7 +80,7 @@ def make_one_displacement_vector(
 
         times = np.arange(end_drift_index - start_drift_index) / displacement_sampling_frequency
 
-        freq = 1. / period_s
+        freq = 1.0 / period_s
         triangle = np.abs(scipy.signal.sawtooth(2 * np.pi * freq * times + np.pi / 2))
         # triangle *= amplitude_um
         # triangle -= amplitude_um / 2.0
@@ -81,24 +88,23 @@ def make_one_displacement_vector(
 
         displacement_vector[start_drift_index:end_drift_index] = triangle
         displacement_vector[end_drift_index:] = triangle[-1]
-    
+
     elif drift_mode == "bump":
         drift_times = np.arange(0, duration, 1 / displacement_sampling_frequency)
 
         min_bump_interval, max_bump_interval = bump_interval_s
 
-
         rg = np.random.RandomState(seed=seed)
         diff = rg.uniform(min_bump_interval, max_bump_interval, size=int(duration / min_bump_interval))
         bumps_times = np.cumsum(diff) + t_start_drift
-        bumps_times = bumps_times[bumps_times<t_end_drift]
-        
+        bumps_times = bumps_times[bumps_times < t_end_drift]
+
         # displacement_vector = np.zeros(drift_times.size) - amplitude_um / 2
         displacement_vector = np.zeros(drift_times.size)
         for i in range(bumps_times.size - 1):
-            ind0 = int(bumps_times[i] * displacement_sampling_frequency )
-            ind1 = int(bumps_times[i+1] * displacement_sampling_frequency )
-            if i % 2 ==0:
+            ind0 = int(bumps_times[i] * displacement_sampling_frequency)
+            ind1 = int(bumps_times[i + 1] * displacement_sampling_frequency)
+            if i % 2 == 0:
                 displacement_vector[ind0:ind1] = 0.5
             else:
                 displacement_vector[ind0:ind1] = -0.5
@@ -112,22 +118,25 @@ def make_one_displacement_vector(
 # this should be moved in probeinterface but later
 _toy_probes = {
     "Neuropixel-128": dict(
-            num_columns=4,
-            num_contact_per_column=[32,] * 4,
-            xpitch=16,
-            ypitch=40,
-            y_shift_per_column=[20, 0, 20, 0],
-            contact_shapes="square",
-            contact_shape_params={"width": 12},
+        num_columns=4,
+        num_contact_per_column=[
+            32,
+        ]
+        * 4,
+        xpitch=16,
+        ypitch=40,
+        y_shift_per_column=[20, 0, 20, 0],
+        contact_shapes="square",
+        contact_shape_params={"width": 12},
     ),
-    "Neuronexus-32" :dict(
-            num_columns=3,
-            num_contact_per_column=[10,12, 10],
-            xpitch=30,
-            ypitch=30,
-            y_shift_per_column=[0, -15, 0],
-            contact_shapes="circle",
-            contact_shape_params={"radius": 8},
+    "Neuronexus-32": dict(
+        num_columns=3,
+        num_contact_per_column=[10, 12, 10],
+        xpitch=30,
+        ypitch=30,
+        y_shift_per_column=[0, -15, 0],
+        contact_shapes="circle",
+        contact_shape_params={"radius": 8},
     ),
 }
 
@@ -135,26 +144,25 @@ _toy_probes = {
 def generate_displacement_vector(
     duration,
     unit_locations,
-    displacement_sampling_frequency=5.,
-    drift_start_um=[0, 20.],
-    drift_stop_um=[0, -20.],
+    displacement_sampling_frequency=5.0,
+    drift_start_um=[0, 20.0],
+    drift_stop_um=[0, -20.0],
     drift_step_um=1,
-
     motion_list=[
         dict(
             drift_mode="zigzag",
-            amplitude_factor=1.,
+            amplitude_factor=1.0,
             non_rigid_gradient=None,
-            t_start_drift=60.,
+            t_start_drift=60.0,
             t_end_drift=None,
             period_s=200,
         ),
     ],
     seed=None,
-):  
+):
     """
     This create displacement vectors and related per units factor.
-    This can be used to create complex drift on a linear motion but with multiplexed 
+    This can be used to create complex drift on a linear motion but with multiplexed
     motion shape, zigzag + bumps for instance.
 
     This is needed by InjectDriftingTemplatesRecording.
@@ -179,7 +187,7 @@ def generate_displacement_vector(
     motion_list: list of dict
         List of dict containing individual motion vector parameters.
         len(motion_list) == displacement_vectors.shape[2]
-    
+
     Returns
     -------
     displacement_vectors: numpy array
@@ -197,7 +205,7 @@ def generate_displacement_vector(
 
     drift_start_um = np.asanyarray(drift_start_um, dtype=float)
     drift_stop_um = np.asanyarray(drift_stop_um, dtype=float)
-    
+
     num_step = np.linalg.norm(drift_stop_um - drift_start_um) / drift_step_um
     num_step = int(num_step // 2 * 2 + 1)
 
@@ -213,18 +221,18 @@ def generate_displacement_vector(
         motion_kwargs = motion_kwargs.copy()
         non_rigid_gradient = motion_kwargs.pop("non_rigid_gradient", None)
         one_displacement = make_one_displacement_vector(
-                duration=duration,
-                displacement_sampling_frequency=displacement_sampling_frequency,
-                **motion_kwargs,
-                seed=seed,
-            )
+            duration=duration,
+            displacement_sampling_frequency=displacement_sampling_frequency,
+            **motion_kwargs,
+            seed=seed,
+        )
         one_displacement = one_displacement[:, np.newaxis] * (drift_stop_um - drift_start_um) + mid
-        displacement_vectors.append(one_displacement[:, :,  np.newaxis])
+        displacement_vectors.append(one_displacement[:, :, np.newaxis])
 
         if non_rigid_gradient is None:
             displacement_unit_factor[:, m] = 1
         else:
-            gradient_direction = (drift_stop_um - drift_start_um)
+            gradient_direction = drift_stop_um - drift_start_um
             gradient_direction /= np.linalg.norm(gradient_direction)
 
             proj = np.dot(unit_locations, gradient_direction).squeeze()
@@ -240,14 +248,11 @@ def generate_displacement_vector(
     return displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps
 
 
-
-def generate_noise(probe, sampling_frequency, durations, 
-                   dtype="float32",
-                   noise_levels=15.0,
-                   spatial_decay=None,
-                   seed=None):
+def generate_noise(
+    probe, sampling_frequency, durations, dtype="float32", noise_levels=15.0, spatial_decay=None, seed=None
+):
     """
-    
+
     Parameters
     ----------
     probe: Probe
@@ -292,7 +297,7 @@ def generate_noise(probe, sampling_frequency, durations,
         assert noise_levels.size == num_channels
     else:
         raise ValueError("generate_noise: wrong noise_levels type")
-    
+
     noise = NoiseGeneratorRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -307,16 +312,12 @@ def generate_noise(probe, sampling_frequency, durations,
     return noise
 
 
-
 def generate_drifting_recording(
     num_units=250,
-    duration=600.,
-    sampling_frequency = 30000.,
-    
+    duration=600.0,
+    sampling_frequency=30000.0,
     probe_name="Neuropixel-128",
     generate_probe_kwargs=None,
-
-
     generate_unit_locations_kwargs=dict(
         margin_um=20.0,
         minimum_z=5.0,
@@ -325,44 +326,34 @@ def generate_drifting_recording(
         max_iteration=100,
         distance_strict=False,
     ),
-
     generate_displacement_vector_kwargs=dict(
-        displacement_sampling_frequency=5.,
+        displacement_sampling_frequency=5.0,
         drift_start_um=[0, 20],
         drift_stop_um=[0, -20],
         drift_step_um=1,
         motion_list=[
-            dict(drift_mode="zigzag",
-            non_rigid_gradient=None,
-            t_start_drift=60.,
-            t_end_drift=None,
-            period_s=200,
+            dict(
+                drift_mode="zigzag",
+                non_rigid_gradient=None,
+                t_start_drift=60.0,
+                t_end_drift=None,
+                period_s=200,
             ),
         ],
     ),
-
     generate_templates_kwargs=dict(
-        ms_before = 1.5,
-        ms_after = 3.,
+        ms_before=1.5,
+        ms_after=3.0,
         mode="ellipsoid",
         unit_params=dict(
             alpha=(150.0, 500.0),
             spatial_decay=(10, 45),
-        )
+        ),
     ),
-    
-    generate_sorting_kwargs=dict(
-        firing_rates=(2., 8.),
-        refractory_period_ms=4.0
-    ),
-    generate_noise_kwargs=dict(
-        noise_levels=(12., 15.),
-        spatial_decay=25.
-    ),
-
+    generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
+    generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
     seed=None,
 ):
-
     """
     Generated two synthetic recordings: one static and one drifting but with same
     units and same spiketrains.
@@ -403,9 +394,9 @@ def generate_drifting_recording(
         Same for both recordings.
 
     """
-    
+
     rng = np.random.default_rng(seed=seed)
-    
+
     # probe
     if generate_probe_kwargs is None:
         generate_probe_kwargs = _toy_probes[probe_name]
@@ -419,7 +410,6 @@ def generate_drifting_recording(
     # probeinterface.plotting.plot_probe(probe, ax=ax)
     # plt.show()
 
-    
     # unit locations
     unit_locations = generate_unit_locations(
         num_units,
@@ -428,12 +418,9 @@ def generate_drifting_recording(
         **generate_unit_locations_kwargs,
     )
 
-
-    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = generate_displacement_vector(
-        duration, unit_locations[:, :2], **generate_displacement_vector_kwargs
+    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
+        generate_displacement_vector(duration, unit_locations[:, :2], **generate_displacement_vector_kwargs)
     )
-
-
 
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
@@ -448,15 +435,11 @@ def generate_drifting_recording(
 
     # generate templates
     templates_array = generate_templates(
-        channel_locations,
-        unit_locations,
-        sampling_frequency=sampling_frequency,
-        seed=seed,
-        **generate_templates_kwargs
+        channel_locations, unit_locations, sampling_frequency=sampling_frequency, seed=seed, **generate_templates_kwargs
     )
 
     num_displacement = displacements_steps.shape[0]
-    templates_array_moved = np.zeros(shape=(num_displacement, ) + templates_array.shape, dtype=templates_array.dtype)
+    templates_array_moved = np.zeros(shape=(num_displacement,) + templates_array.shape, dtype=templates_array.dtype)
     for i in range(num_displacement):
         unit_locations_moved = unit_locations.copy()
         unit_locations_moved[:, :2] += displacements_steps[i, :][np.newaxis, :]
@@ -465,11 +448,11 @@ def generate_drifting_recording(
             unit_locations_moved,
             sampling_frequency=sampling_frequency,
             seed=seed,
-            **generate_templates_kwargs
+            **generate_templates_kwargs,
         )
 
     ms_before = generate_templates_kwargs["ms_before"]
-    nbefore = int(sampling_frequency * ms_before / 1000.)
+    nbefore = int(sampling_frequency * ms_before / 1000.0)
     templates = Templates(
         templates_array=templates_array,
         sampling_frequency=sampling_frequency,
@@ -487,11 +470,12 @@ def generate_drifting_recording(
     sorting = generate_sorting(
         num_units=num_units,
         sampling_frequency=sampling_frequency,
-        durations = [duration,],
+        durations=[
+            duration,
+        ],
         **generate_sorting_kwargs,
-        seed=seed)
-
-
+        seed=seed,
+    )
 
     # fig, ax = plt.subplots()
     # ax.plot(times, displacement_vector0[:, 0], label='x0')
@@ -506,15 +490,13 @@ def generate_drifting_recording(
     drifting_templates.templates_array_moved = templates_array_moved
     drifting_templates.displacements = displacements_steps
 
-
     noise = generate_noise(
         probe=probe,
         sampling_frequency=sampling_frequency,
         durations=[duration],
         seed=seed,
         **generate_noise_kwargs,
-        )
-    
+    )
 
     static_recording = InjectDriftingTemplatesRecording(
         sorting=sorting,
@@ -523,7 +505,7 @@ def generate_drifting_recording(
         displacement_vectors=[np.zeros_like(displacement_vectors)],
         displacement_sampling_frequency=displacement_sampling_frequency,
         displacement_unit_factor=np.zeros_like(displacement_unit_factor),
-        num_samples=[int(duration*sampling_frequency)],
+        num_samples=[int(duration * sampling_frequency)],
         amplitude_factor=None,
     )
 
@@ -534,7 +516,7 @@ def generate_drifting_recording(
         displacement_vectors=[displacement_vectors],
         displacement_sampling_frequency=displacement_sampling_frequency,
         displacement_unit_factor=displacement_unit_factor,
-        num_samples=[int(duration*sampling_frequency)],
+        num_samples=[int(duration * sampling_frequency)],
         amplitude_factor=None,
     )
 

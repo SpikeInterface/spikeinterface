@@ -392,9 +392,7 @@ def test_generate_templates():
         upsample_factor=None,
         seed=42,
         dtype="float32",
-        unit_params=dict(
-            alpha=np.ones(num_units) * 500.0,
-            smooth_ms=(0.04, 0.05)),
+        unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
     )
 
     # upsampling case

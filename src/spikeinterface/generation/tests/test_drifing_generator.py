@@ -13,14 +13,15 @@ from spikeinterface.generation import (
 )
 
 
-
 def test_make_one_displacement_vector():
 
-    displacement_vector = make_one_displacement_vector(drift_mode="zigzag", duration=700., period_s=300, t_start_drift=100.)
+    displacement_vector = make_one_displacement_vector(
+        drift_mode="zigzag", duration=700.0, period_s=300, t_start_drift=100.0
+    )
 
-    displacement_vector = make_one_displacement_vector(drift_mode="bump", duration=700., period_s=300,
-                                                   bump_interval_s=(30, 90.), t_start_drift=100.,
-                                                    seed=2205)
+    displacement_vector = make_one_displacement_vector(
+        drift_mode="bump", duration=700.0, period_s=300, bump_interval_s=(30, 90.0), t_start_drift=100.0, seed=2205
+    )
 
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
@@ -29,41 +30,45 @@ def test_make_one_displacement_vector():
 
 
 def test_generate_displacement_vector():
-    duration = 600.
+    duration = 600.0
     unit_locations = np.zeros((10, 2))
     unit_locations[:, 1] = np.linspace(-50, 50, 10)
 
     # one motion Y only
-    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = generate_displacement_vector(duration, unit_locations)
+    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
+        generate_displacement_vector(duration, unit_locations)
+    )
     assert unit_locations.shape[0] == displacement_unit_factor.shape[0]
     assert displacement_vectors.shape[2] == displacement_unit_factor.shape[1]
     assert displacement_vectors.shape[2] == 1
 
     # two motion X and Y
-    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = generate_displacement_vector(
-        duration, unit_locations,
-        drift_start_um=[-5, 20.],
-        drift_stop_um=[5, -20.],
-        motion_list=[
-            dict(
-                drift_mode="zigzag",
-                amplitude_factor=1.,
-                non_rigid_gradient=0.4,
-                t_start_drift=60.,
-                t_end_drift=None,
-                period_s=200,
-            ),
-            dict(
-                drift_mode="bump",
-                amplitude_factor=0.3,
-                non_rigid_gradient=0.4,
-                t_start_drift=60.,
-                t_end_drift=None,
-                bump_interval_s=(30, 90.),
-            ),
-
-        ],
+    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
+        generate_displacement_vector(
+            duration,
+            unit_locations,
+            drift_start_um=[-5, 20.0],
+            drift_stop_um=[5, -20.0],
+            motion_list=[
+                dict(
+                    drift_mode="zigzag",
+                    amplitude_factor=1.0,
+                    non_rigid_gradient=0.4,
+                    t_start_drift=60.0,
+                    t_end_drift=None,
+                    period_s=200,
+                ),
+                dict(
+                    drift_mode="bump",
+                    amplitude_factor=0.3,
+                    non_rigid_gradient=0.4,
+                    t_start_drift=60.0,
+                    t_end_drift=None,
+                    bump_interval_s=(30, 90.0),
+                ),
+            ],
         )
+    )
     assert unit_locations.shape[0] == displacement_unit_factor.shape[0]
     assert displacement_vectors.shape[2] == displacement_unit_factor.shape[1]
     assert displacement_vectors.shape[2] == 2
@@ -75,24 +80,29 @@ def test_generate_displacement_vector():
     #         axs[r].plot(displacement_vectors[:, r, m])
     # plt.show()
 
+
 def test_generate_noise():
     probe = probeinterface.generate_multi_columns_probe()
 
-    noise = generate_noise(probe,
-        sampling_frequency=25000.,
-        durations=[10.], 
+    noise = generate_noise(
+        probe,
+        sampling_frequency=25000.0,
+        durations=[10.0],
         dtype="float32",
         noise_levels=15.0,
         spatial_decay=None,
-        seed=2205)
+        seed=2205,
+    )
 
-    noise = generate_noise(probe,
-        sampling_frequency=25000.,
-        durations=[10.], 
+    noise = generate_noise(
+        probe,
+        sampling_frequency=25000.0,
+        durations=[10.0],
         dtype="float32",
-        noise_levels=(12., 18.),
-        spatial_decay=20.,
-        seed=2205)
+        noise_levels=(12.0, 18.0),
+        spatial_decay=20.0,
+        seed=2205,
+    )
 
     # print(noise)
 
@@ -104,8 +114,6 @@ def test_generate_noise():
     # im = ax.matshow(noise._kwargs["cov_matrix"])
     # fig.colorbar(im)
     # plt.show()
-
-
 
 
 def test_generate_drifting_recording():

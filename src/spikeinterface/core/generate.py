@@ -610,6 +610,7 @@ def generate_snippets(
 
 ## spiketrain zone ##
 
+
 def _ensure_firing_rates(firing_rates, num_units, seed):
     rng = np.random.default_rng(seed=seed)
 
@@ -625,6 +626,7 @@ def _ensure_firing_rates(firing_rates, num_units, seed):
     else:
         raise ValueError(f"firing_rates: wrong firing_rates {firing_rates}")
     return firing_rates
+
 
 def synthesize_poisson_spike_vector(
     num_units=20,
@@ -1095,7 +1097,16 @@ class NoiseGeneratorRecording(BaseRecording):
 
 class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
     def __init__(
-        self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_levels, cov_matrix, dtype, seed, strategy
+        self,
+        num_samples,
+        num_channels,
+        sampling_frequency,
+        noise_block_size,
+        noise_levels,
+        cov_matrix,
+        dtype,
+        seed,
+        strategy,
     ):
         assert seed is not None
 
@@ -1115,12 +1126,13 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
 
             if self.cov_matrix is None:
                 self.noise_block = (
-                    rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype) * noise_levels
+                    rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
+                    * noise_levels
                 )
             else:
                 self.noise_block = rng.multivariate_normal(
-                        np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
-                    )
+                    np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
+                )
 
         elif self.strategy == "on_the_fly":
             pass
@@ -1398,6 +1410,7 @@ default_unit_params_range = dict(
     z_angle=(0, np.pi),
 )
 
+
 def _ensure_unit_params(unit_params, num_units, seed):
     rng = np.random.default_rng(seed=seed)
     # check or generate params per units
@@ -1414,7 +1427,7 @@ def _ensure_unit_params(unit_params, num_units, seed):
         elif isinstance(v, (list, np.ndarray)):
             # already vector
             values = np.asarray(v)
-            assert values.shape == (num_units, ), f"generate_templates: wrong shape for {k} in unit_params"
+            assert values.shape == (num_units,), f"generate_templates: wrong shape for {k} in unit_params"
         elif v is None:
             values = [None] * num_units
         else:
@@ -1422,6 +1435,7 @@ def _ensure_unit_params(unit_params, num_units, seed):
 
         params[k] = values
     return params
+
 
 def generate_templates(
     channel_locations,
@@ -1475,7 +1489,7 @@ def generate_templates(
             * "smooth_ms": the gaussian smooth in ms (default range: (0.03-0.07))
             * "spatial_decay": the spatial constant (default range: (20-40))
             * "propagation_speed": mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
-        
+
         Values can be:
             * array of the same length of units
             * scalar, then an array is created
