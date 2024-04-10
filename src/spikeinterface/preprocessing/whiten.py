@@ -55,7 +55,7 @@ class WhitenRecording(BasePreprocessor):
         recording,
         dtype=None,
         apply_mean=False,
-        regularize=True,
+        regularize=False,
         mode="global",
         radius_um=100.0,
         int_scale=None,
