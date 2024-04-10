@@ -52,15 +52,11 @@ class ComputeRandomSpikes(AnalyzerExtension):
     def _run(
         self,
     ):
-        if self.params["method"] == "all":
-            all_spikes_indices = np.arange(len(self.sorting_analyzer.sorting.to_spike_vector()))
-            self.data["random_spikes_indices"] = all_spikes_indices
-        else:
-            self.data["random_spikes_indices"] = random_spikes_selection(
-                self.sorting_analyzer.sorting,
-                num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
-                **self.params,
-            )
+        self.data["random_spikes_indices"] = random_spikes_selection(
+            self.sorting_analyzer.sorting,
+            num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
+            **self.params,
+        )
 
     def _set_params(self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None):
         params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
