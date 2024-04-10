@@ -118,8 +118,8 @@ def test_generate_drifting_recording():
     # print(static_recording)
     # print(drifting_recording)
     # print(sorting)
-    from spikeinterface.widgets import plot_traces
-    plot_traces(static_recording, backend="ephyviewer")
+    # from spikeinterface.widgets import plot_traces
+    # plot_traces(static_recording, backend="ephyviewer")
 
 
 if __name__ == "__main__":

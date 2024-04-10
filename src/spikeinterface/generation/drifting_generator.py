@@ -351,8 +351,14 @@ def generate_drifting_recording(
         )
     ),
     
-    generate_sorting_kwargs=dict(firing_rates=(2., 8.), refractory_period_ms=4.0),
-    generate_noise_kwargs=dict(noise_levels=(12., 15.), spatial_decay=25.),
+    generate_sorting_kwargs=dict(
+        firing_rates=(2., 8.),
+        refractory_period_ms=4.0
+    ),
+    generate_noise_kwargs=dict(
+        noise_levels=(12., 15.),
+        spatial_decay=25.
+    ),
 
     seed=None,
 ):
