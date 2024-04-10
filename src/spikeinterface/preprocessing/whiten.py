@@ -55,6 +55,7 @@ class WhitenRecording(BasePreprocessor):
         recording,
         dtype=None,
         apply_mean=False,
+        regularize=True,
         mode="global",
         radius_um=100.0,
         int_scale=None,
@@ -75,7 +76,7 @@ class WhitenRecording(BasePreprocessor):
                 M = np.asarray(M)
         else:
             W, M = compute_whitening_matrix(
-                recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um, eps=eps
+                recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um, eps=eps, regularize=regularize
             )
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
@@ -90,6 +91,7 @@ class WhitenRecording(BasePreprocessor):
             mode=mode,
             radius_um=radius_um,
             apply_mean=apply_mean,
+            regularize=regularize,
             int_scale=float(int_scale) if int_scale is not None else None,
             M=M.tolist() if M is not None else None,
             W=W.tolist(),
@@ -129,7 +131,7 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
 whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
 
 
-def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None):
+def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None, regularize=False):
     """
     Compute whitening matrix
 
@@ -162,7 +164,7 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
 
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
-    random_data = random_data.astype("float32")
+    random_data = random_data   
 
     if apply_mean:
         M = np.mean(random_data, axis=0)
@@ -172,8 +174,14 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
         M = None
         data = random_data
 
-    cov = data.T @ data
-    cov = cov / data.shape[0]
+    if not regularize:
+        cov = data.T @ data
+        cov = cov / data.shape[0]
+    else:
+        import sklearn.covariance
+        estimator = sklearn.covariance.GraphicalLassoCV()
+        estimator.fit(data)
+        cov = estimator.covariance_
 
     # Here we determine eps used below to avoid division by zero.
     # Typically we can assume that data is either unscaled integers or in units of
