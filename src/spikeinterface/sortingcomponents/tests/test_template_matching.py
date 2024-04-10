@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-from spikeinterface import NumpySorting, create_sorting_analyzer, get_noise_levels, compute_sparsity
+from spikeinterface import NumpySorting, create_sorting_analyzer, compute_sparsity
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods
 

@@ -3,8 +3,6 @@ import numpy as np
 
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
 
-from spikeinterface.core import get_noise_levels
-
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
@@ -15,14 +13,11 @@ def test_features_from_peaks():
 
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
-    noise_levels = get_noise_levels(recording, return_scaled=False)
-
     peaks = detect_peaks(
         recording,
         method="locally_exclusive",
         peak_sign="neg",
         detect_threshold=5,
-        noise_levels=noise_levels,
         **job_kwargs,
     )
 

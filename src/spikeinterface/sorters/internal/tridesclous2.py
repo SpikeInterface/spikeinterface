@@ -133,7 +133,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         # detection
         detection_params = params["detection"].copy()
-        detection_params["noise_levels"] = noise_levels
         all_peaks = detect_peaks(recording, method="locally_exclusive", **detection_params, **job_kwargs)
 
         if verbose:
@@ -324,39 +323,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=1.0)
         templates = templates_dense.to_sparse(sparsity)
 
-        # snrs = compute_snrs(we, peak_sign=params["detection"]["peak_sign"], peak_mode="extremum")
-        # print(snrs)
-
-        # matching_params = params["matching"].copy()
-        # matching_params["noise_levels"] = noise_levels
-        # matching_params["peak_sign"] = params["detection"]["peak_sign"]
-        # matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
-        # matching_params["radius_um"] = params["detection"]["radius_um"]
-
-        # spikes = find_spikes_from_templates(
-        #     recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
-        # )
-
-        matching_method = params["matching"]["method"]
-        matching_params = params["matching"]["method_kwargs"].copy()
-
-        matching_params["templates"] = templates
-        matching_params["noise_levels"] = noise_levels
-        # matching_params["peak_sign"] = params["detection"]["peak_sign"]
-        # matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
-        # matching_params["radius_um"] = params["detection"]["radius_um"]
-
-        # spikes = find_spikes_from_templates(
-        #     recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
-        # )
-        # )
-
-        if matching_method == "circus-omp-svd":
-            job_kwargs = job_kwargs.copy()
-            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                if value in job_kwargs:
-                    job_kwargs.pop(value)
-            job_kwargs["chunk_duration"] = "100ms"
+        matching_params = params["matching"].copy()
+        matching_params["waveform_extractor"] = we
+        matching_params["peak_sign"] = params["detection"]["peak_sign"]
+        matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
+        matching_params["radius_um"] = params["detection"]["radius_um"]
 
         spikes = find_spikes_from_templates(
             recording_w, method=matching_method, method_kwargs=matching_params, **job_kwargs

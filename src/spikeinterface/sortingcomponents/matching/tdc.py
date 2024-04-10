@@ -51,7 +51,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         "peak_sign": "neg",
         "peak_shift_ms": 0.2,
         "detect_threshold": 5,
-        "noise_levels": None,
         "radius_um": 100,
         "num_closest": 5,
         "sample_shift": 3,
@@ -97,9 +96,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
         d["peak_shift"] = int(d["peak_shift_ms"] / 1000 * sr)
 
-        if d["noise_levels"] is None:
-            print("TridesclousPeeler : noise should be computed outside")
-            d["noise_levels"] = get_noise_levels(recording)
+        d["noise_levels"] = get_noise_levels(recording)
 
         d["abs_thresholds"] = d["noise_levels"] * d["detect_threshold"]
 
