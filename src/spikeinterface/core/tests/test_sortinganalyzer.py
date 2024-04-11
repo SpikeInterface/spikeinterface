@@ -40,7 +40,7 @@ def test_SortingAnalyzer_memory(tmp_path):
         sorting, recording, format="memory", sparse=False, return_scaled=True, sparsity=None
     )
     assert sorting_analyzer.return_scaled
-    _check_sorting_analyzers(sorting_analyzer, sorting)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(
         sorting, recording, format="memory", sparse=False, return_scaled=False, sparsity=None
@@ -61,7 +61,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path):
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
-    folder = cache_folder / "test_SortingAnalyzer_binary_folder"
+    folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
         shutil.rmtree(folder)
 
@@ -75,7 +75,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path):
         return_scaled=False,
     )
     assert not sorting_analyzer.return_scaled
-    _check_sorting_analyzers(sorting_analyzer, sorting)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
 
 def test_SortingAnalyzer_zarr(tmp_path):
@@ -91,7 +91,7 @@ def test_SortingAnalyzer_zarr(tmp_path):
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
-    folder = cache_folder / "test_SortingAnalyzer_zarr.zarr"
+    folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
         shutil.rmtree(folder)
     sorting_analyzer = create_sorting_analyzer(
