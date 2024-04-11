@@ -43,8 +43,8 @@ def get_sorting_analyzer(seed=2205):
             maximum_z=20.0,
         ),
         generate_templates_kwargs=dict(
-            unit_params_range=dict(
-                alpha=(9_000.0, 12_000.0),
+            unit_params=dict(
+                alpha=(200.0, 500.0),
             )
         ),
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
