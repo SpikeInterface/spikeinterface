@@ -61,7 +61,7 @@ class CurationSorting:
 
     def split(self, split_unit_id, indices_list):
         current_sorting = self._sorting_stages[self._sorting_stages_i]
-        if type(indices_list) is not list:
+        if not isinstance(indices_list, list):
             indices_list = [indices_list]
         new_unit_ids = self._get_unused_id(max([v.max() for v in indices_list]) + 1)
         new_sorting = SplitUnitSorting(
