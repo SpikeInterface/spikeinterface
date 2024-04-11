@@ -615,7 +615,7 @@ def _ensure_firing_rates(firing_rates, num_units, seed):
     if isinstance(firing_rates, tuple):
         rng = np.random.default_rng(seed=seed)
         lim0, lim1 = firing_rates
-        firing_rates = rng.random(num_units) * (lim1 - lim0) + lim0
+        firing_rates = rng.uniform(lim0, lim1, num_units)
     elif np.isscalar(firing_rates):
         firing_rates = np.full(num_units, firing_rates, dtype="float64")
     elif isinstance(firing_rates, (list, np.ndarray)):
@@ -1418,7 +1418,7 @@ def _ensure_unit_params(unit_params, num_units, seed):
         if isinstance(v, tuple):
             # limits
             lim0, lim1 = v
-            values = rng.random(num_units) * (lim1 - lim0) + lim0
+            values = rng.uniform(lim0, lim1, num_units)
         elif np.isscalar(v):
             # scalar
             values = np.full(shape=(num_units), fill_value=v)
