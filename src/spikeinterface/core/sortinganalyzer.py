@@ -921,6 +921,9 @@ class SortingAnalyzer:
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
+
+        extensions = _sort_extensions_by_dependency(extensions)
+
         for extension_name in extensions.keys():
             for child in _get_children_dependencies(extension_name):
                 self.delete_extension(child)
@@ -1109,6 +1112,56 @@ class SortingAnalyzer:
             The default parameters for the extension
         """
         return get_default_analyzer_extension_params(extension_name)
+
+
+def _sort_extensions_by_dependency(extensions):
+    """
+    Sorts a dictionary of extensions so that the parents of each extension are on the "left" of their children.
+    Assumes there is a valid ordering of the included extensions. An _invalid_ ordering would be that
+    A is a parent of B, B is a parent of C and C is a parent of A.
+
+    Parameters
+    ----------
+    extensions: dict
+        A dict of extensions.
+
+    Returns
+    -------
+    sorted_extensions: dict
+        A dict of extensions, with the parents on the left of their children.
+    """
+
+    extensions_list = list(extensions.keys())
+    extension_params = list(extensions.values())
+
+    i = 0
+    while i < len(extensions_list):
+
+        extension = extensions_list[i]
+        dependencies = get_extension_class(extension).depend_on
+
+        # Should only iterate if nothing has happened. 
+        # Otherwise, should check the dependency which has just been moved => at position i
+        did_nothing = True
+        for dependency in dependencies:
+            
+            # if dependency is on the right, move it left of the current dependency
+            if dependency in extensions_list[i:]:
+
+                dependency_arg = extensions_list.index(dependency)
+
+                extension_params.pop(dependency_arg)
+                extension_params.insert(i, extensions[dependency])
+
+                extensions_list.pop(dependency_arg)
+                extensions_list.insert(i, dependency)
+
+                did_nothing = False
+
+        if did_nothing:
+            i += 1
+
+    return dict(zip(extensions_list, extension_params))
 
 
 global _possible_extensions
