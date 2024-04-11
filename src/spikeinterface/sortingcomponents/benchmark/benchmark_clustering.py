@@ -134,7 +134,7 @@ class ClusteringStudy(BenchmarkStudy):
                 "Noise (%):",
                 np.mean(noise),
             )
-    
+
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
         import pandas as pd
 
@@ -147,13 +147,13 @@ class ClusteringStudy(BenchmarkStudy):
             index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
 
         columns = ["num_gt", "num_sorter", "num_well_detected"]
-        comp = self.get_result(case_keys[0])['gt_comparison']
+        comp = self.get_result(case_keys[0])["gt_comparison"]
         if comp.exhaustive_gt:
             columns.extend(["num_false_positive", "num_redundant", "num_overmerged", "num_bad"])
         count_units = pd.DataFrame(index=index, columns=columns, dtype=int)
 
         for key in case_keys:
-            comp = self.get_result(key)['gt_comparison']
+            comp = self.get_result(key)["gt_comparison"]
             assert comp is not None, "You need to do study.run_comparisons() first"
 
             gt_sorting = comp.sorting1
@@ -173,6 +173,7 @@ class ClusteringStudy(BenchmarkStudy):
 
     def plot_unit_counts(self, case_keys=None, figsize=(15, 15)):
         from spikeinterface.widgets.widget_list import plot_study_unit_counts
+
         plot_study_unit_counts(self, case_keys, figsize=figsize)
 
     def plot_agreements(self, case_keys=None, figsize=(15, 15)):
