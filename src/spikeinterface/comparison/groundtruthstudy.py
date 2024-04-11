@@ -299,7 +299,7 @@ class GroundTruthStudy:
             recording, gt_sorting = self.datasets[dataset_key]
             sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
             sorting_analyzer.compute("random_spikes", **random_params)
-            sorting_analyzer.compute("templates", , **job_kwargs)
+            sorting_analyzer.compute("templates", **job_kwargs)
             sorting_analyzer.compute("noise_levels")
 
     def get_sorting_analyzer(self, case_key=None, dataset_key=None):
