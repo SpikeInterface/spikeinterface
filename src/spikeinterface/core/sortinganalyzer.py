@@ -754,7 +754,6 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
-
     def compute(self, input, save=True, extension_params=None, **kwargs):
         """
         Compute one extension or several extensiosn.
@@ -763,13 +762,19 @@ class SortingAnalyzer:
         Parameters
         ----------
         input: str or dict or list
-            If the input is a string then computes one extension with compute_one_extension(extension_name=input, ...)
-            If the input is a dict then compute several extensions with compute_several_extensions(extensions=input)
-            if the input is a list then compute several extensions with compute_several_extensions(extensions=input)
+            The extesions to compute, which can be passed as:
+
+            * a string: compute one extension. Additional parameters can be passed as key word arguments.
+            * a dict: compute several extensions. The keys are the extension names and the values are the extension parameters.
+            * a list: compute several extensions. The list contains the extension names. Additional parameters can be passed with the extension_params
+              argument.
         save: bool, default: True
             If True the extension is saved to disk
+        extension_params: dict or None, default: None
+            If input is a list, this parameter can be used to specify parameters for each extension.
+            The extension_params keys must be included in the input list.
         **kwargs:
-            All other kwargs are transmitted to extension.set_params() (if input is list) or job_kwargs
+            All other kwargs are transmitted to extension.set_params() (if input is a string) or job_kwargs
         """
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, **kwargs)
@@ -779,10 +784,14 @@ class SortingAnalyzer:
             self.compute_several_extensions(extensions=input, save=save, **job_kwargs)
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
+            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
             extensions = {k: {} for k in input}
-            for p in params_:
-                assert p in input, f"SortingAnalyzer.compute() : Parameters specified for {p}, which is not in {input}"
-                extensions[p] = params_[p]
+            if extension_params is not None:
+                for ext_name, ext_params in extension_params.items():
+                    assert (
+                        ext_name in input
+                    ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
+                    extensions[ext_name] = ext_params
             self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
@@ -884,27 +893,28 @@ class SortingAnalyzer:
             for child in _get_children_dependencies(extension_name):
                 self.delete_extension(child)
 
-        pipeline_mode = True
+        extensions_with_pipeline = {}
+        extensions_without_pipeline = {}
         for extension_name, extension_params in extensions.items():
             extension_class = get_extension_class(extension_name)
-            if not extension_class.use_nodepipeline:
-                pipeline_mode = False
-                break
+            if extension_class.use_nodepipeline:
+                extensions_with_pipeline[extension_name] = extension_params
+            else:
+                extensions_without_pipeline[extension_name] = extension_params
 
-        if not pipeline_mode:
-            # simple loop
-            for extension_name, extension_params in extensions.items():
-                extension_class = get_extension_class(extension_name)
-                if extension_class.need_job_kwargs:
-                    self.compute_one_extension(extension_name, save=save, **extension_params)
-                else:
-                    self.compute_one_extension(extension_name, save=save, **extension_params)
-        else:
-
+        # First extensions without pipeline
+        for extension_name, extension_params in extensions_without_pipeline.items():
+            extension_class = get_extension_class(extension_name)
+            if extension_class.need_job_kwargs:
+                self.compute_one_extension(extension_name, save=save, **extension_params)
+            else:
+                self.compute_one_extension(extension_name, save=save, **extension_params)
+        # then extensions with pipeline
+        if len(extensions_with_pipeline) > 0:
             all_nodes = []
             result_routage = []
             extension_instances = {}
-            for extension_name, extension_params in extensions.items():
+            for extension_name, extension_params in extensions_with_pipeline.items():
                 extension_class = get_extension_class(extension_name)
                 assert self.has_recording(), f"Extension {extension_name} need the recording"
 

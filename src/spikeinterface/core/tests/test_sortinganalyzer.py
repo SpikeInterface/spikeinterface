@@ -143,7 +143,9 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         assert np.all(~np.isin(data["result_two"], [1, 3]))
 
     # test compute with extension-specific params
-    sorting_analyzer.compute(input=["dummy"], dummy=dict(param1=5.5))
+    sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})
+    dummy_ext = sorting_analyzer.get_extension("dummy")
+    assert dummy_ext.params["param1"] == 5.5
 
 
 def test_extension_params():
