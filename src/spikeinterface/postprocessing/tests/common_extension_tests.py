@@ -33,7 +33,7 @@ def get_dataset():
             maximum_z=20.0,
         ),
         generate_templates_kwargs=dict(
-            unit_params_range=dict(
+            unit_params=dict(
                 alpha=(100.0, 500.0),
             )
         ),

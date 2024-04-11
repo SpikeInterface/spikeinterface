@@ -392,8 +392,7 @@ def test_generate_templates():
         upsample_factor=None,
         seed=42,
         dtype="float32",
-        unit_params=dict(alpha=np.ones(num_units) * 8000.0),
-        unit_params_range=dict(smooth_ms=(0.04, 0.05)),
+        unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
     )
 
     # upsampling case
@@ -567,8 +566,8 @@ if __name__ == "__main__":
     # test_noise_generator_consistency_after_dump(strategy, None)
     # test_generate_recording()
     # test_generate_single_fake_waveform()
-    test_transformsorting()
-    # test_generate_templates()
+    # test_transformsorting()
+    test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
     # test_generate_sorting_with_spikes_on_borders()
