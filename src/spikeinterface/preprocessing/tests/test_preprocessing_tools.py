@@ -32,6 +32,5 @@ def test_get_spatial_interpolation_kernel():
     # plt.show()
 
 
-
 if __name__ == "__main__":
     test_get_spatial_interpolation_kernel()
