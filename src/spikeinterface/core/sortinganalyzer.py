@@ -954,7 +954,7 @@ class SortingAnalyzer:
         for extension_name, extension_params in extensions_without_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
-                self.compute_one_extension(extension_name, save=save, **extension_params)
+                self.compute_one_extension(extension_name, save=save, **extension_params, **job_kwargs)
             else:
                 self.compute_one_extension(extension_name, save=save, **extension_params)
         # then extensions with pipeline
