@@ -28,14 +28,14 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
     Parameters
     ----------
-    method: "uniform", default: "uniform"
+    method: "uniform" | "all", default: "uniform"
         The method to select the spikes
     max_spikes_per_unit: int, default: 500
-        The maximum number of spikes per unit
+        The maximum number of spikes per unit, ignored if method="all"
     margin_size: int, default: None
-        A margin on each border of segments to avoid border spikes
+        A margin on each border of segments to avoid border spikes, ignored if method="all"
     seed: int or None, default: None
-        A seed for the random generator
+        A seed for the random generator, ignored if method="all"
 
     Returns
     -------
@@ -52,11 +52,15 @@ class ComputeRandomSpikes(AnalyzerExtension):
     def _run(
         self,
     ):
-        self.data["random_spikes_indices"] = random_spikes_selection(
-            self.sorting_analyzer.sorting,
-            num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
-            **self.params,
-        )
+        if self.params["method"] == "all":
+            all_spikes_indices = np.arange(len(self.sorting_analyzer.sorting.to_spike_vector()))
+            self.data["random_spikes_indices"] = all_spikes_indices
+        else:
+            self.data["random_spikes_indices"] = random_spikes_selection(
+                self.sorting_analyzer.sorting,
+                num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
+                **self.params,
+            )
 
     def _set_params(self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None):
         params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
@@ -122,8 +126,6 @@ class ComputeWaveforms(AnalyzerExtension):
         The number of ms to extract before the spike events
     ms_after: float, default: 2.0
         The number of ms to extract after the spike events
-    return_scaled: bool, default: True
-        If True, the waveforms are scaled to uV (if the recording has scaling)
     dtype: None | dtype, default: None
         The dtype of the waveforms. If None, the dtype of the recording is used.
 
@@ -179,7 +181,7 @@ class ComputeWaveforms(AnalyzerExtension):
             self.nbefore,
             self.nafter,
             mode=mode,
-            return_scaled=self.params["return_scaled"],
+            return_scaled=self.sorting_analyzer.return_scaled,
             file_path=file_path,
             dtype=self.params["dtype"],
             sparsity_mask=sparsity_mask,
@@ -194,20 +196,13 @@ class ComputeWaveforms(AnalyzerExtension):
         self,
         ms_before: float = 1.0,
         ms_after: float = 2.0,
-        return_scaled: bool = True,
         dtype=None,
     ):
         recording = self.sorting_analyzer.recording
         if dtype is None:
             dtype = recording.get_dtype()
 
-        if return_scaled:
-            # check if has scaled values:
-            if not recording.has_scaled() and recording.get_dtype().kind == "i":
-                print("Setting 'return_scaled' to False")
-                return_scaled = False
-
-        if np.issubdtype(dtype, np.integer) and return_scaled:
+        if np.issubdtype(dtype, np.integer) and self.sorting_analyzer.return_scaled:
             dtype = "float32"
 
         dtype = np.dtype(dtype)
@@ -215,7 +210,6 @@ class ComputeWaveforms(AnalyzerExtension):
         params = dict(
             ms_before=float(ms_before),
             ms_after=float(ms_after),
-            return_scaled=return_scaled,
             dtype=dtype.str,
         )
         return params
@@ -295,9 +289,7 @@ class ComputeTemplates(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
-    def _set_params(
-        self, ms_before: float = 1.0, ms_after: float = 2.0, return_scaled: bool = True, operators=["average", "std"]
-    ):
+    def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=["average", "std"]):
         assert isinstance(operators, list)
         for operator in operators:
             if isinstance(operator, str):
@@ -311,7 +303,6 @@ class ComputeTemplates(AnalyzerExtension):
         if waveforms_extension is not None:
             nbefore = waveforms_extension.nbefore
             nafter = waveforms_extension.nafter
-            return_scaled = waveforms_extension.params["return_scaled"]
         else:
             nbefore = int(ms_before * self.sorting_analyzer.sampling_frequency / 1000.0)
             nafter = int(ms_after * self.sorting_analyzer.sampling_frequency / 1000.0)
@@ -320,7 +311,6 @@ class ComputeTemplates(AnalyzerExtension):
             operators=operators,
             nbefore=nbefore,
             nafter=nafter,
-            return_scaled=return_scaled,
         )
         return params
 
@@ -341,7 +331,7 @@ class ComputeTemplates(AnalyzerExtension):
             # retrieve spike vector and the sampling
             some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-            return_scaled = self.params["return_scaled"]
+            return_scaled = self.sorting_analyzer.return_scaled
 
             self.data["average"], self.data["std"] = estimate_templates_with_accumulator(
                 recording,
@@ -570,10 +560,8 @@ class ComputeNoiseLevels(AnalyzerExtension):
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, num_chunks_per_segment=20, chunk_size=10000, return_scaled=True, seed=None):
-        params = dict(
-            num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, return_scaled=return_scaled, seed=seed
-        )
+    def _set_params(self, num_chunks_per_segment=20, chunk_size=10000, seed=None):
+        params = dict(num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, seed=seed)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -581,7 +569,9 @@ class ComputeNoiseLevels(AnalyzerExtension):
         return self.data
 
     def _run(self):
-        self.data["noise_levels"] = get_noise_levels(self.sorting_analyzer.recording, **self.params)
+        self.data["noise_levels"] = get_noise_levels(
+            self.sorting_analyzer.recording, return_scaled=self.sorting_analyzer.return_scaled, **self.params
+        )
 
     def _get_data(self):
         return self.data["noise_levels"]
