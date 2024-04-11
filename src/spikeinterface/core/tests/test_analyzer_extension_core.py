@@ -221,6 +221,7 @@ def test_delete_on_recompute():
     assert sorting_analyzer.get_extension("templates") is None
     assert sorting_analyzer.get_extension("waveforms") is None
 
+
 def test_compute_several():
     sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
 

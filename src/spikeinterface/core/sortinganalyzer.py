@@ -1139,11 +1139,11 @@ def _sort_extensions_by_dependency(extensions):
         extension = extensions_list[i]
         dependencies = get_extension_class(extension).depend_on
 
-        # Should only iterate if nothing has happened. 
+        # Should only iterate if nothing has happened.
         # Otherwise, should check the dependency which has just been moved => at position i
         did_nothing = True
         for dependency in dependencies:
-            
+
             # if dependency is on the right, move it left of the current dependency
             if dependency in extensions_list[i:]:
 
