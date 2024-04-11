@@ -299,7 +299,7 @@ class GroundTruthStudy:
             recording, gt_sorting = self.datasets[dataset_key]
             sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
             sorting_analyzer.compute("random_spikes", **random_params)
-            sorting_analyzer.compute("waveforms", **waveforms_params, **job_kwargs)
+            # sorting_analyzer.compute("waveforms", **waveforms_params, **job_kwargs)
             sorting_analyzer.compute("templates")
             sorting_analyzer.compute("noise_levels")
 
@@ -362,7 +362,6 @@ class GroundTruthStudy:
             case_keys = self.cases.keys()
 
         perf_by_unit = []
-        print('get_performance_by_unit')
         for key in case_keys:
             comp = self.comparisons.get(key, None)
             assert comp is not None, "You need to do study.run_comparisons() first"
