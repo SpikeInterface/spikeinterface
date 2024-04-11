@@ -303,7 +303,7 @@ class GroundTruthStudy:
             sorting_analyzer.compute("templates")
             sorting_analyzer.compute("noise_levels")
 
-    def get_waveform_extractor(self, case_key=None, dataset_key=None):
+    def get_sorting_analyzer(self, case_key=None, dataset_key=None):
         if case_key is not None:
             dataset_key = self.cases[case_key]["dataset"]
 
@@ -311,10 +311,10 @@ class GroundTruthStudy:
         sorting_analyzer = load_sorting_analyzer(folder)
         return sorting_analyzer
 
-    def get_templates(self, key, mode="average"):
-        we = self.get_waveform_extractor(case_key=key)
-        templates = we.get_all_templates(mode=mode)
-        return templates
+    # def get_templates(self, key, mode="average"):
+    #     analyzer = self.get_sorting_analyzer(case_key=key)
+    #     templates = sorting_analyzer.get_all_templates(mode=mode)
+    #     return templates
 
     def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False):
         if case_keys is None:
@@ -333,8 +333,8 @@ class GroundTruthStudy:
                     os.remove(filename)
                 else:
                     continue
-            we = self.get_waveform_extractor(key)
-            metrics = compute_quality_metrics(we, metric_names=metric_names)
+            analyzer = self.get_sorting_analyzer(key)
+            metrics = compute_quality_metrics(analyzer, metric_names=metric_names)
             metrics.to_csv(filename, sep="\t", index=True)
 
     def get_metrics(self, key):
@@ -362,11 +362,13 @@ class GroundTruthStudy:
             case_keys = self.cases.keys()
 
         perf_by_unit = []
+        print('get_performance_by_unit')
         for key in case_keys:
             comp = self.comparisons.get(key, None)
             assert comp is not None, "You need to do study.run_comparisons() first"
 
             perf = comp.get_performance(method="by_unit", output="pandas")
+            
             if isinstance(key, str):
                 perf[self.levels] = key
             elif isinstance(key, tuple):
@@ -377,7 +379,7 @@ class GroundTruthStudy:
             perf_by_unit.append(perf)
 
         perf_by_unit = pd.concat(perf_by_unit)
-        perf_by_unit = perf_by_unit.set_index(self.levels).sort_index()
+        perf_by_unit = perf_by_unit.set_index(self.levels)
         return perf_by_unit
 
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
