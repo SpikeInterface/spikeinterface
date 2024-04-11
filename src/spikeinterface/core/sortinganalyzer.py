@@ -823,6 +823,31 @@ class SortingAnalyzer:
             The extension_params keys must be included in the input list.
         **kwargs:
             All other kwargs are transmitted to extension.set_params() (if input is a string) or job_kwargs
+
+        Returns
+        -------
+        extension: SortingAnalyzerExtension | None
+            The extension instance if input is a string, None otherwise.
+
+        Examples
+        --------
+        This function accepts the following possible signatures for flexibility:
+
+        Compute one extension, with parameters:
+        >>> analyzer.compute("waveforms", ms_before=1.5, ms_after=2.5)
+
+        Compute two extensions with a list as input and with default parameters:
+        >>> analyzer.compute(["random_spikes", "waveforms"])
+
+        Compute two extensions with dict as input, one dict per extension
+        >>> analyzer.compute({"random_spikes":{}, "waveforms":{"ms_before":1.5, "ms_after", "2.5"}})
+
+        Compute two extensions with an input list specifying custom parameters for one
+        (the other will use default parameters):
+        >>> analyzer.compute(
+            ["random_spikes", "waveforms"],
+            extension_params={"waveforms":{"ms_before":1.5, "ms_after", "2.5"}}
+        )
         """
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, **kwargs)
