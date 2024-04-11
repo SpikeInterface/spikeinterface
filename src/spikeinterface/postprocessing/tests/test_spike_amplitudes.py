@@ -8,8 +8,7 @@ from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerE
 class ComputeSpikeAmplitudesTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeSpikeAmplitudes
     extension_function_params_list = [
-        dict(return_scaled=True),
-        dict(return_scaled=False),
+        dict(),
     ]
 
 
