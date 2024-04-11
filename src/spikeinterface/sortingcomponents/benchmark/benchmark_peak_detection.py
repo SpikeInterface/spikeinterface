@@ -45,7 +45,7 @@ class PeakDetectionBenchmark(Benchmark):
         self.params = self.params["method_kwargs"]
         self.result = {"gt_peaks": self.gt_peaks}
         self.result["gt_amplitudes"] = sorting_analyzer.get_extension("spike_amplitudes").get_data()
-        self.result["gt_templates"] = sorting_analyzer.get_extension("fast_templates").get_data()
+        self.result["gt_templates"] = sorting_analyzer.get_extension("templates").get_data()
 
     def run(self, **job_kwargs):
         peaks = detect_peaks(self.recording, self.method, **self.params, **job_kwargs)
@@ -99,9 +99,9 @@ class PeakDetectionBenchmark(Benchmark):
         sorting_analyzer = create_sorting_analyzer(
             self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False
         )
-        sorting_analyzer.compute({"random_spikes": {}, "fast_templates": {}})
+        sorting_analyzer.compute({"random_spikes": {}, "templates": {}})
 
-        self.result["templates"] = sorting_analyzer.get_extension("fast_templates").get_data()
+        self.result["templates"] = sorting_analyzer.get_extension("templates").get_data()
 
     _run_key_saved = [("peaks", "npy"), ("gt_peaks", "npy"), ("gt_amplitudes", "npy"), ("gt_templates", "npy")]
 
