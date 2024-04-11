@@ -210,10 +210,10 @@ class MatchingStudy(BenchmarkStudy):
         from spikeinterface.widgets.widget_list import plot_study_unit_counts
 
         plot_study_unit_counts(self, case_keys, figsize=figsize)
-    
+
     def plot_unit_losses(self, before, after, figsize=(15, 15)):
 
-        #if case_keys is None:
+        # if case_keys is None:
         #    case_keys = list(self.cases.keys())
 
         fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
@@ -221,19 +221,19 @@ class MatchingStudy(BenchmarkStudy):
         for count, k in enumerate(("accuracy", "recall", "precision")):
 
             ax = axs[count]
-            
+
             label = self.cases[after]["label"]
-                
+
             analyzer = self.get_sorting_analyzer(before)
             metrics_before = analyzer.get_extension("quality_metrics").get_data()
             x = metrics_before["snr"].values
-                
+
             y_before = self.get_result(before)["gt_comparison"].get_performance()[k].values
             y_after = self.get_result(after)["gt_comparison"].get_performance()[k].values
 
             ax.scatter(x, y_after - y_before, marker=".", label=label)
             ax.set_title(k)
-            ax.set_ylabel('After - Before')
+            ax.set_ylabel("After - Before")
 
         if count == 2:
             ax.legend()
