@@ -1117,8 +1117,7 @@ class SortingAnalyzer:
 def _sort_extensions_by_dependency(extensions):
     """
     Sorts a dictionary of extensions so that the parents of each extension are on the "left" of their children.
-    Assumes there is a valid ordering of the included extensions. An _invalid_ ordering would be that
-    A is a parent of B, B is a parent of C and C is a parent of A.
+    Assumes there is a valid ordering of the included extensions.
 
     Parameters
     ----------
