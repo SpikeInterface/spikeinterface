@@ -227,7 +227,7 @@ class SpikesOnTracesWidget(BaseWidget):
                     # discontinuity
                     times[:, -1] = np.nan
                     times_r = times.reshape(times.shape[0] * times.shape[1])
-                    waveforms = traces[waveform_idxs]
+                    waveforms = traces[waveform_idxs] * dp.options["scale"]
                     waveforms_r = waveforms.reshape((waveforms.shape[0] * waveforms.shape[1], waveforms.shape[2]))
 
                     for i, chan_id in enumerate(traces_widget.data_plot["channel_ids"]):
