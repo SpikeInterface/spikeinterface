@@ -109,11 +109,12 @@ class Templates:
                     raise ValueError("Sparsity mask passed but the templates are not sparse")
 
     def __repr__(self):
+        sampling_frequency_khz = self.sampling_frequency / 1000
         repr_str = (
-            f"Teamplates: {self.num_units} units - {self.num_samples} samples - {self.num_channels} channels \n"
-            f"sampling_frequency={self.sampling_frequency:.2f} Hz - "
-            f"ms_before={self.ms_before:.2f}ms - "
-            f"ms_after={self.ms_after:.2f}ms"
+            f"Templates: {self.num_units} units - {self.num_samples} samples - {self.num_channels} channels \n"
+            f"sampling_frequency={sampling_frequency_khz:.2f} kHz - "
+            f"ms_before={self.ms_before:.2f} ms - "
+            f"ms_after={self.ms_after:.2f} ms"
         )
 
         if self.probe is not None:
