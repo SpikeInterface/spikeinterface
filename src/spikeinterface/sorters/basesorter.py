@@ -21,11 +21,11 @@ from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
 
 
-default_job_kwargs = {"n_jobs": -1}
+default_job_kwargs = {}
 
 default_job_kwargs_description = {
-    "n_jobs": "Number of jobs (when saving ti binary) - default -1 (all cores)",
-    "chunk_size": "Number of samples per chunk (when saving ti binary) - default global",
+    "n_jobs": "Number of jobs (when saving to binary) - default global",
+    "chunk_size": "Number of samples per chunk (when saving to binary) - default global",
     "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default global",
     "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default global",
     "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)"
