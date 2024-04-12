@@ -30,8 +30,8 @@ def get_sorting_analyzer(format="memory", sparse=True):
             maximum_z=20.0,
         ),
         generate_templates_kwargs=dict(
-            unit_params_range=dict(
-                alpha=(9_000.0, 12_000.0),
+            unit_params=dict(
+                alpha=(200.0, 500.0),
             )
         ),
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
@@ -89,7 +89,13 @@ def test_ComputeRandomSpikes(format, sparse):
     ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
     indices = ext.data["random_spikes_indices"]
     assert indices.size == 10 * sorting_analyzer.sorting.unit_ids.size
-    # print(indices)
+
+    _check_result_extension(sorting_analyzer, "random_spikes")
+    sorting_analyzer.delete_extension("random_spikes")
+
+    ext = sorting_analyzer.compute("random_spikes", method="all")
+    indices = ext.data["random_spikes_indices"]
+    assert indices.size == len(sorting_analyzer.sorting.to_spike_vector())
 
     _check_result_extension(sorting_analyzer, "random_spikes")
 
@@ -189,7 +195,7 @@ def test_ComputeTemplates(format, sparse):
 def test_ComputeNoiseLevels(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
-    sorting_analyzer.compute("noise_levels", return_scaled=True)
+    sorting_analyzer.compute("noise_levels")
     print(sorting_analyzer)
 
     noise_levels = sorting_analyzer.get_extension("noise_levels").data["noise_levels"]
@@ -218,15 +224,15 @@ def test_delete_on_recompute():
 
 if __name__ == "__main__":
 
-    # test_ComputeWaveforms(format="memory", sparse=True)
-    # test_ComputeWaveforms(format="memory", sparse=False)
-    # test_ComputeWaveforms(format="binary_folder", sparse=True)
-    # test_ComputeWaveforms(format="binary_folder", sparse=False)
-    # test_ComputeWaveforms(format="zarr", sparse=True)
-    # test_ComputeWaveforms(format="zarr", sparse=False)
-    # test_ComputeRandomSpikes(format="memory", sparse=True)
+    test_ComputeWaveforms(format="memory", sparse=True)
+    test_ComputeWaveforms(format="memory", sparse=False)
+    test_ComputeWaveforms(format="binary_folder", sparse=True)
+    test_ComputeWaveforms(format="binary_folder", sparse=False)
+    test_ComputeWaveforms(format="zarr", sparse=True)
+    test_ComputeWaveforms(format="zarr", sparse=False)
+    test_ComputeRandomSpikes(format="memory", sparse=True)
     test_ComputeTemplates(format="memory", sparse=True)
-    # test_ComputeNoiseLevels(format="memory", sparse=False)
+    test_ComputeNoiseLevels(format="memory", sparse=False)
 
     test_get_children_dependencies()
     test_delete_on_recompute()
