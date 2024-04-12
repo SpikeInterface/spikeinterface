@@ -566,7 +566,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     """
     assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
     # Sort the synchrony times so we can slice numpy arrays, instead of using dicts
-    synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int64)
+    synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int16)
     synchrony_sizes_np.sort()
 
     res = namedtuple("synchrony", [f"sync_spike_{size}" for size in synchrony_sizes_np])
