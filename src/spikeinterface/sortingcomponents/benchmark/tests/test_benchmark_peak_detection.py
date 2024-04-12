@@ -11,6 +11,8 @@ import numpy as np
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset, cache_folder
 from spikeinterface.sortingcomponents.benchmark.benchmark_peak_detection import PeakDetectionStudy
+from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
+from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
 @pytest.mark.skip()
@@ -23,11 +25,23 @@ def test_benchmark_peak_detection():
     study_folder = cache_folder / "study_peak_detection"
     datasets = {"toy": (recording, gt_sorting)}
     cases = {}
+
+    peaks = {}
+    for dataset in datasets.keys():
+
+        recording, gt_sorting = datasets[dataset]
+
+        sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False)
+        sorting_analyzer.compute(["random_spikes", "templates"])
+        extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
+        spikes = gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+        peaks[dataset] = spikes        
+
     for method in ["locally_exclusive", "by_channel"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
-            "init_kwargs": {},
+            "init_kwargs": {"gt_peaks" : peaks["toy"]},
             "params": {"ms_before": 2, "method": method, "method_kwargs": {}},
         }
 

@@ -29,34 +29,36 @@ from spikeinterface.core.template_tools import get_template_extremum_channel
 
 class PeakDetectionBenchmark(Benchmark):
 
-    def __init__(self, recording, gt_sorting, params, exhaustive_gt=True, delta_t_ms=0.2):
+    def __init__(self, recording, gt_sorting, params, gt_peaks, exhaustive_gt=True, delta_t_ms=0.2):
         self.recording = recording
         self.gt_sorting = gt_sorting
-
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
-        extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
-        self.gt_peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+        self.gt_peaks = gt_peaks
         self.params = params
         self.exhaustive_gt = exhaustive_gt
         assert "method" in self.params, "Method should be specified in the params!"
         self.method = self.params.get("method")
         self.delta_frames = int(delta_t_ms * self.recording.sampling_frequency / 1000)
         self.params = self.params["method_kwargs"]
-        self.result = {"gt_peaks": self.gt_peaks}
-        self.result["gt_amplitudes"] = sorting_analyzer.get_extension("spike_amplitudes").get_data()
-        self.result["gt_templates"] = sorting_analyzer.get_extension("templates").get_data()
+        self.result = {}
 
     def run(self, **job_kwargs):
         peaks = detect_peaks(self.recording, self.method, **self.params, **job_kwargs)
         self.result["peaks"] = peaks
 
     def compute_result(self, **result_params):
+
+        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
+        sorting_analyzer.compute("random_spikes")
+        sorting_analyzer.compute("templates")
+        sorting_analyzer.compute("spike_amplitudes")
+        self.result["gt_amplitudes"] = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+        self.result["gt_templates"] = sorting_analyzer.get_extension("templates").get_data()
+
         spikes = self.result["peaks"]
         self.result["peak_on_channels"] = NumpySorting.from_peaks(
             spikes, self.recording.sampling_frequency, unit_ids=self.recording.channel_ids
         )
-        spikes = self.result["gt_peaks"]
+        spikes = self.gt_peaks
         self.result["gt_on_channels"] = NumpySorting.from_peaks(
             spikes, self.recording.sampling_frequency, unit_ids=self.recording.channel_ids
         )
@@ -68,7 +70,7 @@ class PeakDetectionBenchmark(Benchmark):
         gt_peaks = self.gt_sorting.to_spike_vector()
         peaks = self.result["peaks"]
         times1 = peaks["sample_index"]
-        times2 = self.result["gt_peaks"]["sample_index"]
+        times2 = spikes["sample_index"]
 
         print("The gt recording has {} peaks and {} have been detected".format(len(times1), len(times2)))
 
@@ -78,7 +80,7 @@ class PeakDetectionBenchmark(Benchmark):
 
         self.result["matches"] = {"deltas": matches["delta_frame"]}
         self.result["matches"]["labels"] = gt_peaks["unit_index"][gt_matches]
-        self.result["matches"]["channels"] = self.result["gt_peaks"]["unit_index"][gt_matches]
+        self.result["matches"]["channels"] = spikes["unit_index"][gt_matches]
 
         sorting = np.zeros(gt_matches.size, dtype=minimum_spike_dtype)
         sorting["sample_index"] = peaks[detected_matches]["sample_index"]
@@ -103,7 +105,7 @@ class PeakDetectionBenchmark(Benchmark):
 
         self.result["templates"] = sorting_analyzer.get_extension("templates").get_data()
 
-    _run_key_saved = [("peaks", "npy"), ("gt_peaks", "npy"), ("gt_amplitudes", "npy"), ("gt_templates", "npy")]
+    _run_key_saved = [("peaks", "npy")]
 
     _result_key_saved = [
         ("gt_comparison", "pickle"),
@@ -114,6 +116,8 @@ class PeakDetectionBenchmark(Benchmark):
         ("gt_on_channels", "sorting"),
         ("matches", "pickle"),
         ("templates", "npy"),
+        ("gt_amplitudes", "npy"), 
+        ("gt_templates", "npy")
     ]
 
 
