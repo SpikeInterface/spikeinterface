@@ -281,7 +281,7 @@ class ScaleWidget(W.VBox):
         assert factor > 1.0
         self.factor = factor
 
-        self.scale_label = W.Label("Scale", layout=W.Layout(layout=W.Layout(width="95%"), justify_content="center"))
+        self.scale_label = W.Label("Scale", layout=W.Layout(width="95%", justify_content="center"))
 
         self.plus_selector = W.Button(
             description="",
