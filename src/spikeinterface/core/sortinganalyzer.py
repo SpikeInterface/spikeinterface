@@ -922,14 +922,14 @@ class SortingAnalyzer:
 
         """
 
-        extensions = _sort_extensions_by_dependency(extensions)
+        sorted_extensions = _sort_extensions_by_dependency(extensions)
 
-        for extension_name in extensions.keys():
+        for extension_name in sorted_extensions.keys():
             for child in _get_children_dependencies(extension_name):
                 self.delete_extension(child)
 
         pipeline_mode = True
-        for extension_name, extension_params in extensions.items():
+        for extension_name, extension_params in sorted_extensions.items():
             extension_class = get_extension_class(extension_name)
             if not extension_class.use_nodepipeline:
                 pipeline_mode = False
@@ -937,7 +937,7 @@ class SortingAnalyzer:
 
         if not pipeline_mode:
             # simple loop
-            for extension_name, extension_params in extensions.items():
+            for extension_name, extension_params in sorted_extensions.items():
                 extension_class = get_extension_class(extension_name)
                 if extension_class.need_job_kwargs:
                     self.compute_one_extension(extension_name, save=save, **extension_params)
@@ -948,7 +948,7 @@ class SortingAnalyzer:
             all_nodes = []
             result_routage = []
             extension_instances = {}
-            for extension_name, extension_params in extensions.items():
+            for extension_name, extension_params in sorted_extensions.items():
                 extension_class = get_extension_class(extension_name)
                 assert self.has_recording(), f"Extension {extension_name} need the recording"
 
@@ -962,7 +962,7 @@ class SortingAnalyzer:
                 nodes = extension_instance.get_pipeline_nodes()
                 all_nodes.extend(nodes)
 
-            job_name = "Compute : " + " + ".join(extensions.keys())
+            job_name = "Compute : " + " + ".join(sorted_extensions.keys())
             results = run_node_pipeline(
                 self.recording, all_nodes, job_kwargs=job_kwargs, job_name=job_name, gather_mode="memory"
             )
@@ -972,7 +972,7 @@ class SortingAnalyzer:
                 extension_instances[extension_name].data[variable_name] = result
 
             for extension_name, extension_instance in extension_instances.items():
-                self.extensions[extension_name] = extension_instance
+                self.sorted_extensions[extension_name] = extension_instance
                 if save:
                     extension_instance.save()
 
