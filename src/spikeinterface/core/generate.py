@@ -832,15 +832,15 @@ def clean_refractory_period(times, refractory_period):
 
 
 def _add_spikes_to_spiketrain(
-        spike_indices, 
-        spike_labels, 
-        segment_indices=[], 
-        added_spikes_indices=None, 
-        added_spikes_labels=None, 
-        added_segment_indices=[], 
-        replace=False, 
-        seed=None
-    ):  
+    spike_indices,
+    spike_labels,
+    segment_indices=[],
+    added_spikes_indices=None,
+    added_spikes_labels=None,
+    added_segment_indices=[],
+    replace=False,
+    seed=None,
+):
     """
     Add specified spikes into a spike train
 
@@ -873,14 +873,16 @@ def _add_spikes_to_spiketrain(
     """
 
     # check lengths are consistent
-    assert len(spike_indices) == len(spike_labels
-                                     ), "Length of spike indices and labels are not equal"
-    assert (len(segment_indices) == 0) or (len(spike_indices) == len(segment_indices)
-                                       ), "Length of spike indices and segments are not equal"
-    assert len(added_spikes_indices) == len(added_spikes_labels
-                                     ), "Length of added spike indices and labels are not equal"
-    assert (len(added_segment_indices) == 0) or (len(added_spikes_indices) == len(added_segment_indices)
-                                       ), "Length of added spike indices and segments are not equal"
+    assert len(spike_indices) == len(spike_labels), "Length of spike indices and labels are not equal"
+    assert (len(segment_indices) == 0) or (
+        len(spike_indices) == len(segment_indices)
+    ), "Length of spike indices and segments are not equal"
+    assert len(added_spikes_indices) == len(
+        added_spikes_labels
+    ), "Length of added spike indices and labels are not equal"
+    assert (len(added_segment_indices) == 0) or (
+        len(added_spikes_indices) == len(added_segment_indices)
+    ), "Length of added spike indices and segments are not equal"
 
     new_spike_indices = np.array(spike_indices)
     new_spike_labels = np.array(spike_labels)
@@ -904,7 +906,7 @@ def _add_spikes_to_spiketrain(
 
     if len(segment_indices) == 0:
         return new_spike_indices, new_spike_labels
-    else: 
+    else:
         return new_spike_indices, new_spike_labels, new_spike_segments
 
 
