@@ -34,7 +34,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
         If None, then also ms_before must be None and a single sample is removed
     list_labels: list of lists/arrays or None
         One list per segment of labels with the stimulation labels for the given
-        artefacs. labels should be strings, for JSON serialization.
+        artifacts. labels should be strings, for JSON serialization.
         Required for "median" and "average" modes.
     mode: "zeros", "linear", "cubic", "average", "median", default: "zeros"
         Determines what artifacts are replaced by. Can be one of the following:
@@ -83,7 +83,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
         If non 0, then for mode "median" or "average", a time jitter in ms
         can be allowed to minimize the residuals
     waveforms_kwargs: None
-        Depracted and ignored
+        Deprecated and ignored
 
     Returns
     -------
