@@ -110,31 +110,30 @@ def test_read_old_waveforms_extractor_binary():
             print(type(data))
 
 
-@pytest.mark.skip("This test is run locally")
-def test_read_old_waveforms_extractor_zarr():
-    import pandas as pd
+# @pytest.mark.skip("This test is run locally")
+# def test_read_old_waveforms_extractor_zarr():
+#     import pandas as pd
 
-    folder = Path(__file__).parent / "old_waveforms"
-    mock_waveforms = load_waveforms_backwards(folder / "we-0.100.0.zarr")
-    sorting_analyzer = load_waveforms_backwards(folder / "we-0.100.0.zarr", output="SortingAnalyzer")
+#     folder = Path(__file__).parent / "old_waveforms"
+#     mock_waveforms = load_waveforms_backwards(folder / "we-0.100.0.zarr")
+#     sorting_analyzer = load_waveforms_backwards(folder / "we-0.100.0.zarr", output="SortingAnalyzer")
 
-    assert isinstance(mock_waveforms, MockWaveformExtractor)
-    assert isinstance(sorting_analyzer, SortingAnalyzer)
+#     assert isinstance(mock_waveforms, MockWaveformExtractor)
+#     assert isinstance(sorting_analyzer, SortingAnalyzer)
 
-    for ext_name in sorting_analyzer.get_loaded_extension_names():
-        print(ext_name)
-        keys = sorting_analyzer.get_extension(ext_name).data.keys()
-        print(keys)
-        data = sorting_analyzer.get_extension(ext_name).get_data()
-        if isinstance(data, np.ndarray):
-            print(data.shape)
-        elif isinstance(data, pd.DataFrame):
-            print(data.columns)
-        else:
-            print(type(data))
+#     for ext_name in sorting_analyzer.get_loaded_extension_names():
+#         print(ext_name)
+#         keys = sorting_analyzer.get_extension(ext_name).data.keys()
+#         print(keys)
+#         data = sorting_analyzer.get_extension(ext_name).get_data()
+#         if isinstance(data, np.ndarray):
+#             print(data.shape)
+#         elif isinstance(data, pd.DataFrame):
+#             print(data.columns)
+#         else:
+#             print(type(data))
 
 
 if __name__ == "__main__":
     test_read_old_waveforms_extractor_binary()
-    test_read_old_waveforms_extractor_zarr()
     # test_read_old_waveforms_extractor_binary()
