@@ -66,7 +66,7 @@ class ClusteringBenchmark(Benchmark):
         data = spikes[self.indices][~self.noise]
         # data["unit_index"] = self.result["peak_labels"][~self.noise]
 
-        #self.result["positions"] = self.gt_sorting.get_property('gt_unit_locations')
+        # self.result["positions"] = self.gt_sorting.get_property('gt_unit_locations')
 
         self.result["clustering"] = NumpySorting.from_times_labels(
             data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
@@ -175,6 +175,7 @@ class ClusteringStudy(BenchmarkStudy):
 
     def plot_unit_counts(self, case_keys=None, figsize=None, **extra_kwargs):
         from spikeinterface.widgets.widget_list import plot_study_unit_counts
+
         plot_study_unit_counts(self, case_keys, figsize=figsize, **extra_kwargs)
 
     def plot_agreements(self, case_keys=None, figsize=(15, 15)):
@@ -295,7 +296,7 @@ class ClusteringStudy(BenchmarkStudy):
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
             axs[0, count].legend()
-    
+
     def plot_metrics_vs_depth_and_snr(self, metric="agreement", case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
@@ -308,8 +309,8 @@ class ClusteringStudy(BenchmarkStudy):
             result = self.get_result(key)
             scores = result["gt_comparison"].agreement_scores
 
-            #positions = result["gt_comparison"].sorting1.get_property('gt_unit_locations')
-            positions = self.datasets[key[1]][1].get_property('gt_unit_locations')
+            # positions = result["gt_comparison"].sorting1.get_property('gt_unit_locations')
+            positions = self.datasets[key[1]][1].get_property("gt_unit_locations")
             depth = positions[:, 1]
 
             analyzer = self.get_sorting_analyzer(key)
