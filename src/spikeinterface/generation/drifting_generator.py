@@ -353,7 +353,7 @@ def generate_drifting_recording(
     )
 
     displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
-        generate_displacement_vector(duration, unit_locations[:, :2], **generate_displacement_vector_kwargs)
+        generate_displacement_vector(duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs)
     )
 
     # unit_params need to be fixed before the displacement steps

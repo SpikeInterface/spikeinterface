@@ -18,11 +18,6 @@ from spikeinterface.core.sortinganalyzer import (
 
 import numpy as np
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-
 
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
@@ -37,19 +32,19 @@ def get_dataset():
     return recording, sorting
 
 
-def test_SortingAnalyzer_memory():
+def test_SortingAnalyzer_memory(tmp_path):
     recording, sorting = get_dataset()
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
-    _check_sorting_analyzers(sorting_analyzer, sorting)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True, sparsity=None)
-    _check_sorting_analyzers(sorting_analyzer, sorting)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(
         sorting, recording, format="memory", sparse=False, return_scaled=True, sparsity=None
     )
     assert sorting_analyzer.return_scaled
-    _check_sorting_analyzers(sorting_analyzer, sorting)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(
         sorting, recording, format="memory", sparse=False, return_scaled=False, sparsity=None
@@ -57,10 +52,10 @@ def test_SortingAnalyzer_memory():
     assert not sorting_analyzer.return_scaled
 
 
-def test_SortingAnalyzer_binary_folder():
+def test_SortingAnalyzer_binary_folder(tmp_path):
     recording, sorting = get_dataset()
 
-    folder = cache_folder / "test_SortingAnalyzer_binary_folder"
+    folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
         shutil.rmtree(folder)
 
@@ -68,9 +63,9 @@ def test_SortingAnalyzer_binary_folder():
         sorting, recording, format="binary_folder", folder=folder, sparse=False, sparsity=None
     )
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
-    _check_sorting_analyzers(sorting_analyzer, sorting)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
-    folder = cache_folder / "test_SortingAnalyzer_binary_folder"
+    folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
         shutil.rmtree(folder)
 
@@ -84,13 +79,13 @@ def test_SortingAnalyzer_binary_folder():
         return_scaled=False,
     )
     assert not sorting_analyzer.return_scaled
-    _check_sorting_analyzers(sorting_analyzer, sorting)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
 
-def test_SortingAnalyzer_zarr():
+def test_SortingAnalyzer_zarr(tmp_path):
     recording, sorting = get_dataset()
 
-    folder = cache_folder / "test_SortingAnalyzer_zarr.zarr"
+    folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
         shutil.rmtree(folder)
 
@@ -98,9 +93,9 @@ def test_SortingAnalyzer_zarr():
         sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
     )
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
-    _check_sorting_analyzers(sorting_analyzer, sorting)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
-    folder = cache_folder / "test_SortingAnalyzer_zarr.zarr"
+    folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
         shutil.rmtree(folder)
     sorting_analyzer = create_sorting_analyzer(
@@ -108,7 +103,7 @@ def test_SortingAnalyzer_zarr():
     )
 
 
-def _check_sorting_analyzers(sorting_analyzer, original_sorting):
+def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     print()
     print(sorting_analyzer)
@@ -186,6 +181,11 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting):
         assert data["result_one"] == sorting_analyzer.get_extension("dummy").data["result_one"]
         # unit 1, 3, ... should be removed
         assert np.all(~np.isin(data["result_two"], [1, 3]))
+
+    # test compute with extension-specific params
+    sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})
+    dummy_ext = sorting_analyzer.get_extension("dummy")
+    assert dummy_ext.params["param1"] == 5.5
 
 
 def test_extension_params():
@@ -282,8 +282,9 @@ def test_extensions_sorting():
 
 
 if __name__ == "__main__":
-    test_SortingAnalyzer_memory()
-    test_SortingAnalyzer_binary_folder()
-    test_SortingAnalyzer_zarr()
+    tmp_path = Path("test_SortingAnalyzer")
+    test_SortingAnalyzer_memory(tmp_path)
+    test_SortingAnalyzer_binary_folder(tmp_path)
+    test_SortingAnalyzer_zarr(tmp_path)
     test_extension()
     test_extension_params()

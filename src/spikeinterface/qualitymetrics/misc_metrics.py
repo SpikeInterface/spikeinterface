@@ -1329,7 +1329,7 @@ def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, cont
 
 if HAVE_NUMBA:
 
-    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=False)
     def _compute_nb_violations_numba(spike_train, t_r):
         n_v = 0
         N = len(spike_train)
@@ -1352,7 +1352,7 @@ if HAVE_NUMBA:
         (numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
         nopython=True,
         nogil=True,
-        cache=True,
+        cache=False,
         parallel=True,
     )
     def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
