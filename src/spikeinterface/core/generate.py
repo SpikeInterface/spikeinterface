@@ -831,19 +831,35 @@ def clean_refractory_period(times, refractory_period):
     return times
 
 
-def _add_insertions(spike_train, insertions=None, insertions_replace=False, seed=None):
+def _add_spikes_to_spiketrain(
+        spike_indices, 
+        spike_labels, 
+        segment_indices=[], 
+        added_spikes_indices=None, 
+        added_spikes_labels=None, 
+        added_segment_indices=[], 
+        replace=False, 
+        seed=None
+    ):  
     """
-    Add specified insertions into a spike train
+    Add specified spikes into a spike train
 
     Parameters
     ----------
-    spike_train: array-like
-        Taking the form [spike_times, spike_units, segment_indices]. Segments are optional.
-    insertions: array-like
-        List of manually inserted spikes, each spike formatted as [sample index, unit index, segment_index]. Intended for
-        use in testing. Segment index is optional.
-    insertions_replace: bool, default: False
-        If True, randomly replace generated spikes. If False, add to generated spikes.
+    spike_indices: array-like
+        List of sample-indices for each spike
+    spike_labels: array-like
+        List of units for each spike
+    segment_indices: array
+        List of segment numbers for each spike
+    added_spike_indices: array-like
+        List of sample-indices for added spikes
+    added_spike_labels: array-like
+        List of units for added spikes
+    added_segment_indices: array-like
+        List of segments for added spikes
+    replace: bool, default: False
+        If True, randomly replace generated spikes. If False, add to existing spike train
     rng: numpy.random.Generator
         A random number generator
     seed: int, default: None
@@ -851,30 +867,45 @@ def _add_insertions(spike_train, insertions=None, insertions_replace=False, seed
 
     Returns
     -------
-        spike_train: np.ndarray
-        Numpy array in same form as spike_train input, including insertions.
+    spike_train: np.ndarray
+        Numpy array in same form as spike_train input, including added spikes
 
     """
 
-    if insertions is None:
-        return spike_train
+    # check lengths are consistent
+    assert len(spike_indices) == len(spike_labels
+                                     ), "Length of spike indices and labels are not equal"
+    assert (len(segment_indices) == 0) or (len(spike_indices) == len(segment_indices)
+                                       ), "Length of spike indices and segments are not equal"
+    assert len(added_spikes_indices) == len(added_spikes_labels
+                                     ), "Length of added spike indices and labels are not equal"
+    assert (len(added_segment_indices) == 0) or (len(added_spikes_indices) == len(added_segment_indices)
+                                       ), "Length of added spike indices and segments are not equal"
 
-    new_spike_train = np.array(spike_train)
-    insertions = np.array(insertions)
-
-    assert np.shape(new_spike_train)[0] == len(
-        insertions[0]
-    ), "Number of spike train and insertions indices are not equal."
+    new_spike_indices = np.array(spike_indices)
+    new_spike_labels = np.array(spike_labels)
+    new_spike_segments = np.array(segment_indices)
 
     rng = np.random.default_rng(seed=seed)
 
-    if insertions_replace:
-        replacement_indices = rng.choice(len(spike_train), len(insertions), replace=False)
-        new_spike_train[:, replacement_indices] = np.transpose(insertions)
+    if replace:
+        replacement_indices = rng.choice(len(spike_indices), len(added_spikes_indices), replace=False)
+        new_spike_indices[replacement_indices] = added_spikes_indices
+        new_spike_labels[replacement_indices] = added_spikes_labels
+        if len(segment_indices) != 0:
+            print(new_spike_segments[replacement_indices])
+            print(added_segment_indices)
+            new_spike_segments[replacement_indices] = added_segment_indices
     else:
-        new_spike_train = np.concatenate((new_spike_train, np.transpose(insertions)), axis=1)
+        new_spike_indices = np.concatenate((new_spike_indices, added_spikes_indices))
+        new_spike_labels = np.concatenate((new_spike_labels, added_spikes_labels))
+        if len(segment_indices) != 0:
+            new_spike_segments = np.concatenate((new_spike_segments, added_segment_indices))
 
-    return new_spike_train
+    if len(segment_indices) == 0:
+        return new_spike_indices, new_spike_labels
+    else: 
+        return new_spike_indices, new_spike_labels, new_spike_segments
 
 
 def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=None):

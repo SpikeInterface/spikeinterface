@@ -11,7 +11,7 @@ from spikeinterface.core import (
     synthesize_random_firings,
 )
 
-from spikeinterface.core.generate import _add_insertions
+from spikeinterface.core.generate import _add_spikes_to_spiketrain
 
 # from spikeinterface.extractors.toy_example import toy_example
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
@@ -149,15 +149,21 @@ def test_synchrony_counts_no_sync():
 
 def test_synchrony_counts_one_sync():
     # a spike train containing two synchronized spikes
-    spike_train = synthesize_random_firings(
+    spike_train_indices, spike_train_labels = synthesize_random_firings(
         num_units=2,
         duration=1,
         firing_rates=1.0,
     )
 
-    insertions = [[100, 1], [100, 0]]
+    added_spikes_indices = [100, 100]
+    added_spikes_labels = [1, 0]
 
-    spike_times, spike_units = _add_insertions(spike_train, insertions=insertions)
+    spike_times, spike_units = _add_spikes_to_spiketrain(
+        spike_train_indices, 
+        spike_train_labels,
+        added_spikes_indices=added_spikes_indices, 
+        added_spikes_labels=added_spikes_labels,
+    )
 
     two_spikes = np.zeros(len(spike_times), minimum_spike_dtype)
     two_spikes["sample_index"] = spike_times
@@ -170,15 +176,21 @@ def test_synchrony_counts_one_sync():
 
 def test_synchrony_counts_one_quad_sync():
     # a spike train containing four synchronized spikes
-    spike_train = synthesize_random_firings(
+    spike_train_indices, spike_train_labels = synthesize_random_firings(
         num_units=4,
         duration=1,
         firing_rates=1.0,
     )
 
-    insertions = [[100, 0], [100, 1], [100, 2], [100, 3]]
+    added_spikes_indices = [100, 100, 100, 100]
+    added_spikes_labels = [0, 1, 2, 3]
 
-    spike_times, spike_units = _add_insertions(spike_train, insertions=insertions)
+    spike_times, spike_units = _add_spikes_to_spiketrain(
+        spike_train_indices, 
+        spike_train_labels,
+        added_spikes_indices=added_spikes_indices, 
+        added_spikes_labels=added_spikes_labels,
+    )
 
     four_spikes = np.zeros(len(spike_times), minimum_spike_dtype)
     four_spikes["sample_index"] = spike_times
@@ -192,11 +204,21 @@ def test_synchrony_counts_one_quad_sync():
 
 def test_synchrony_counts_not_all_units():
     # a spike train containing two synchronized spikes
-    spike_train = synthesize_random_firings(num_units=3, duration=1, firing_rates=1.0)
+    spike_train_indices, spike_train_labels = synthesize_random_firings(
+        num_units=3, 
+        duration=1, 
+        firing_rates=1.0
+    )
 
-    insertions = [[50, 0], [100, 1], [100, 2]]
+    added_spikes_indices = [50, 100, 100]
+    added_spikes_labels = [0, 1, 2]
 
-    spike_times, spike_units = _add_insertions(spike_train, insertions=insertions)
+    spike_times, spike_units = _add_spikes_to_spiketrain(
+        spike_train_indices, 
+        spike_train_labels,
+        added_spikes_indices=added_spikes_indices, 
+        added_spikes_labels=added_spikes_labels,
+    )
 
     three_spikes = np.zeros(len(spike_times), minimum_spike_dtype)
     three_spikes["sample_index"] = spike_times

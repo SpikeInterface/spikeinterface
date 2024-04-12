@@ -20,7 +20,7 @@ from spikeinterface.core.generate import (
     generate_ground_truth_recording,
     generate_sorting_to_inject,
     synthesize_random_firings,
-    _add_insertions,
+    _add_spikes_to_spiketrain,
 )
 
 from spikeinterface.core.numpyextractors import NumpySorting
@@ -556,17 +556,38 @@ def test_synthesize_random_firings_length_with_insertion():
     duration = 2
     num_units = 2
 
-    insertions = [[15000, 12], [1, 2]]
+    added_spikes_indices = [15000, 1]
+    added_spikes_labels = [12, 2]
 
-    spike_train = synthesize_random_firings(num_units=num_units, duration=duration, firing_rates=firing_rates)
+    spike_train_indices, spike_train_labels = synthesize_random_firings(
+        num_units=num_units, 
+        duration=duration, 
+        firing_rates=firing_rates
+    )
 
-    spike_times, _ = _add_insertions(spike_train, insertions=insertions, insertions_replace=False)
+    spike_times, _ = _add_spikes_to_spiketrain(
+        spike_train_indices, 
+        spike_train_labels,
+        added_spikes_indices=added_spikes_indices, 
+        added_spikes_labels=added_spikes_labels,
+        replace=False
+    )
 
     assert len(spike_times) == int(np.sum(firing_rates) * duration) + 2
 
-    spike_train = synthesize_random_firings(num_units=num_units, duration=duration, firing_rates=firing_rates)
+    spike_train_indices, spike_train_labels = synthesize_random_firings(
+        num_units=num_units, 
+        duration=duration, 
+        firing_rates=firing_rates
+    )
 
-    spike_times, _ = _add_insertions(spike_train, insertions=insertions, insertions_replace=True)
+    spike_times, _ = _add_spikes_to_spiketrain(
+        spike_train_indices, 
+        spike_train_labels,
+        added_spikes_indices=added_spikes_indices, 
+        added_spikes_labels=added_spikes_labels,
+        replace=True
+    )
 
     assert len(spike_times) == int(np.sum(firing_rates) * duration)
 
@@ -575,35 +596,56 @@ def test_add_insertions_replacement():
 
     train_length = 10
 
-    spike_train = [np.zeros(train_length), np.zeros(train_length), np.zeros(train_length)]
+    spike_train_indices=np.zeros(train_length)
+    spike_train_labels=np.zeros(train_length)
+    segment_indices=np.zeros(train_length)
 
-    insertion_1 = (15, 12, 0)
-    insertion_2 = (1, 2, 3)
+    added_spikes_indices = [15.0,1.0]
+    added_spikes_labels = [12.0,2.0]
+    added_segment_indices = [0.0,3.0]
 
-    insertions = [insertion_1, insertion_2]
+    new_spike_indices, new_spike_labels, new_segment_indices = _add_spikes_to_spiketrain(
+        spike_train_indices,
+        spike_train_labels,
+        segment_indices=segment_indices,
+        added_spikes_indices=added_spikes_indices,
+        added_spikes_labels=added_spikes_labels,
+        added_segment_indices=added_segment_indices,
+        replace=True
+    )
 
-    spike_train_replace = _add_insertions(spike_train, insertions=insertions, insertions_replace=True)
-
-    assert np.any(np.all(np.transpose(spike_train_replace) == np.array(insertion_1), axis=1))
-    assert np.shape(spike_train_replace)[1] == train_length
+    assert added_spikes_indices[0] in new_spike_indices
+    assert added_spikes_labels[1] in new_spike_labels
+    assert added_segment_indices[1] in new_segment_indices
+    assert np.shape(new_spike_indices) == np.shape(spike_train_indices)
 
 
 def test_add_insertions_no_replacement():
 
     train_length = 10
 
-    spike_train = [np.zeros(train_length), np.zeros(train_length), np.zeros(train_length)]
+    spike_train_indices=np.zeros(train_length)
+    spike_train_labels=np.zeros(train_length)
+    segment_indices=np.zeros(train_length)
 
-    insertion_1 = [15, 12, 0]
-    insertion_2 = [1, 2, 3]
+    added_spikes_indices = [15.0,1.0]
+    added_spikes_labels = [12.0,2.0]
+    added_segment_indices = [0.0,3.0]
 
-    insertions = [insertion_1, insertion_2]
+    new_spike_indices, new_spike_labels, new_segment_indices = _add_spikes_to_spiketrain(
+        spike_train_indices,
+        spike_train_labels,
+        segment_indices=segment_indices,
+        added_spikes_indices=added_spikes_indices,
+        added_spikes_labels=added_spikes_labels,
+        added_segment_indices=added_segment_indices,
+        replace=False
+    )
 
-    spike_train_replace = _add_insertions(spike_train, insertions=insertions, insertions_replace=False)
-
-    assert np.any(np.all(np.transpose(spike_train_replace) == np.array(insertion_1), axis=1))
-
-    assert np.shape(spike_train_replace)[1] == train_length + len(insertions)
+    assert added_spikes_indices[0] in new_spike_indices
+    assert added_spikes_labels[1] in new_spike_labels
+    assert added_segment_indices[1] in new_segment_indices
+    assert len(new_spike_indices) == len(spike_train_indices) + len(added_spikes_indices)
 
 
 if __name__ == "__main__":
