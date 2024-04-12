@@ -1329,7 +1329,7 @@ def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, cont
 
 if HAVE_NUMBA:
 
-    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=False)
     def _compute_nb_violations_numba(spike_train, t_r):
         n_v = 0
         N = len(spike_train)
@@ -1352,7 +1352,7 @@ if HAVE_NUMBA:
         (numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
         nopython=True,
         nogil=True,
-        cache=True,
+        cache=False,
         parallel=True,
     )
     def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
@@ -1428,13 +1428,13 @@ def compute_sd_ratio(
         return {unit_id: np.nan for unit_id in unit_ids}
 
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_scaled=amplitudes_ext.params["return_scaled"], method="std"
+        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std"
     )
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
     n_spikes = sorting.count_num_spikes_per_unit()
 
     if correct_for_template_itself:
-        tamplates_array = get_dense_templates_array(sorting_analyzer, return_scaled=True)
+        tamplates_array = get_dense_templates_array(sorting_analyzer, return_scaled=sorting_analyzer.return_scaled)
 
     spikes = sorting.to_spike_vector()
     sd_ratio = {}

@@ -25,13 +25,14 @@ def test_get_auto_merge_list(sorting_analyzer_for_curation):
     num_unit_splited = 1
     num_split = 2
 
+    split_ids = sorting.unit_ids[:num_unit_splited]
     sorting_with_split, other_ids = inject_some_split_units(
-        sorting, split_ids=sorting.unit_ids[:num_unit_splited], num_split=num_split, output_ids=True, seed=42
+        sorting,
+        split_ids=split_ids,
+        num_split=num_split,
+        output_ids=True,
+        seed=42,
     )
-
-    # print(sorting_with_split)
-    # print(sorting_with_split.unit_ids)
-    # print(other_ids)
 
     job_kwargs = dict(n_jobs=-1)
 
@@ -59,8 +60,6 @@ def test_get_auto_merge_list(sorting_analyzer_for_curation):
         firing_contamination_balance=1.5,
         extra_outputs=True,
     )
-    # print(potential_merges)
-    # print(num_unit_splited)
 
     assert len(potential_merges) == num_unit_splited
     for true_pair in other_ids.values():
