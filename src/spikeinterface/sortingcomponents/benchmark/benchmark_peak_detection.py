@@ -116,8 +116,8 @@ class PeakDetectionBenchmark(Benchmark):
         ("gt_on_channels", "sorting"),
         ("matches", "pickle"),
         ("templates", "npy"),
-        ("gt_amplitudes", "npy"), 
-        ("gt_templates", "npy")
+        ("gt_amplitudes", "npy"),
+        ("gt_templates", "npy"),
     ]
 
 

@@ -35,13 +35,13 @@ def test_benchmark_peak_detection():
         sorting_analyzer.compute(["random_spikes", "templates"])
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
         spikes = gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-        peaks[dataset] = spikes        
+        peaks[dataset] = spikes
 
     for method in ["locally_exclusive", "by_channel"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
-            "init_kwargs": {"gt_peaks" : peaks["toy"]},
+            "init_kwargs": {"gt_peaks": peaks["toy"]},
             "params": {"ms_before": 2, "method": method, "method_kwargs": {}},
         }
 
