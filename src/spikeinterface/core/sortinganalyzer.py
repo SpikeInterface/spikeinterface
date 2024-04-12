@@ -1015,7 +1015,7 @@ class SortingAnalyzer:
                 extension_instances[extension_name].data[variable_name] = result
 
             for extension_name, extension_instance in extension_instances.items():
-                self.sorted_extensions[extension_name] = extension_instance
+                self.extensions[extension_name] = extension_instance
                 if save:
                     extension_instance.save()
 
