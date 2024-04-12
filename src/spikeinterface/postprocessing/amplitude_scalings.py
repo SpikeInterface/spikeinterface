@@ -107,8 +107,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        # TODO return_scaled is not any more a property of SortingAnalyzer this is hard coded for now
-        return_scaled = True
+        return_scaled = self.sorting_analyzer.return_scaled
 
         all_templates = get_dense_templates_array(self.sorting_analyzer, return_scaled=return_scaled)
         nbefore = _get_nbefore(self.sorting_analyzer)

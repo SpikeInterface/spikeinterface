@@ -668,7 +668,7 @@ def nearest_neighbors_noise_overlap(
         recording = sorting_analyzer.recording
         noise_cluster = get_random_data_chunks(
             recording,
-            return_scaled=waveforms_ext.params["return_scaled"],
+            return_scaled=sorting_analyzer.return_scaled,
             num_chunks_per_segment=max_spikes,
             chunk_size=nsamples,
             seed=seed,
