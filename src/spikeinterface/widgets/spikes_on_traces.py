@@ -171,10 +171,6 @@ class SpikesOnTracesWidget(BaseWidget):
         frame_range = traces_widget.data_plot["frame_range"]
         segment_index = traces_widget.data_plot["segment_index"]
 
-        recordings = traces_widget.data_plot["recordings"]
-        rec0 = recordings[list(recordings.keys())[0]]
-        channel_indices = rec0.ids_to_indices(traces_widget.data_plot["channel_ids"])
-
         if ax.get_legend() is not None:
             ax.get_legend().remove()
 
@@ -196,7 +192,6 @@ class SpikesOnTracesWidget(BaseWidget):
                 )[spike_start:spike_end]
                 width = dp.spike_width_ms / 1000
                 height = dp.spike_height_um
-                # spike_times_to_plot -= width / 2
                 unit_y_loc = dp.unit_locations[unit][1]
                 ellipse_kwargs = dict(width=width, height=height, fc="none", ec=dp.unit_colors[unit], lw=2)
                 patches = [Ellipse((s, unit_y_loc), **ellipse_kwargs) for s in spike_times_to_plot]
@@ -217,6 +212,7 @@ class SpikesOnTracesWidget(BaseWidget):
                 labels.append(unit)
             else:
                 # construct waveforms
+                # TODO: fix scale here
                 label_set = False
                 if len(spike_frames_to_plot) > 0:
                     vspacing = traces_widget.data_plot["vspacing"]
