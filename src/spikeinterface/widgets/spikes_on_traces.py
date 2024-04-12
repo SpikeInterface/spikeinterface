@@ -165,7 +165,6 @@ class SpikesOnTracesWidget(BaseWidget):
         self.ax = traces_widget.ax
         self.axes = traces_widget.axes
         self.figure = traces_widget.figure
-        self.tw = traces_widget
 
         ax = self.ax
 
@@ -175,13 +174,6 @@ class SpikesOnTracesWidget(BaseWidget):
         recordings = traces_widget.data_plot["recordings"]
         rec0 = recordings[list(recordings.keys())[0]]
         channel_indices = rec0.ids_to_indices(traces_widget.data_plot["channel_ids"])
-
-        if traces_widget.data_plot["channel_locations"] is not None:
-            y_locs = traces_widget.data_plot["channel_locations"][channel_indices, 1]
-        else:
-            y_locs = np.arange(len(channel_indices))
-        min_y = np.min(y_locs)
-        max_y = np.max(y_locs)
 
         if ax.get_legend() is not None:
             ax.get_legend().remove()
