@@ -537,7 +537,7 @@ def remove_duplicates(
 
 def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-    from spikeinterface.core import BinaryRecordingExtractor
+    from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, SharedMemoryRecording
     from spikeinterface.core import NumpySorting
     from spikeinterface.core import get_global_tmp_folder
     import os
@@ -553,25 +553,25 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
     fs = templates.sampling_frequency
     num_chans = len(templates.channel_ids)
 
-    zdata = templates_array.reshape(nb_templates, -1)
-
     padding = 2 * duration
-    blanck = np.zeros(padding * num_chans, dtype=np.float32)
+    tmp_filename = None
+    zdata = templates_array.reshape(nb_templates * duration, num_chans)
+    blank = np.zeros((2 * duration, num_chans), dtype=zdata.dtype)
+    zdata = np.vstack((blank, zdata, blank))
 
-    if tmp_folder is None:
-        tmp_folder = get_global_tmp_folder()
+    if tmp_folder is not None:
+        tmp_folder.mkdir(parents=True, exist_ok=True)
+        tmp_filename = tmp_folder / "tmp.raw"
+        f = open(tmp_filename, "wb")
+        f.write(zdata.flatten())
+        f.close()
+        recording = BinaryRecordingExtractor(
+            tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype=zdata.dtype
+        )
+    else:
+        recording = NumpyRecording(zdata, sampling_frequency=fs)
+        recording = SharedMemoryRecording.from_recording(recording)
 
-    tmp_folder.mkdir(parents=True, exist_ok=True)
-
-    tmp_filename = tmp_folder / "tmp.raw"
-
-    f = open(tmp_filename, "wb")
-    f.write(blanck)
-    f.write(zdata.flatten())
-    f.write(blanck)
-    f.close()
-
-    recording = BinaryRecordingExtractor(tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype="float32")
     recording = recording.set_probe(templates.probe)
     recording.annotate(is_filtered=True)
 
@@ -580,7 +580,7 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
 
     local_params = method_kwargs.copy()
 
-    local_params.update({"templates": templates, "amplitudes": [0.975, 1.025]})
+    local_params.update({"templates": templates, "amplitudes": [0.95, 1.05]})
 
     ignore_ids = []
     similar_templates = [[], []]
@@ -631,7 +631,8 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
     labels = labels[labels >= 0]
 
     del recording, sub_recording, local_params, templates
-    os.remove(tmp_filename)
+    if tmp_filename is not None:
+        os.remove(tmp_filename)
 
     return labels, new_labels
 

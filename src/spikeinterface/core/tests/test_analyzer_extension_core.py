@@ -5,6 +5,9 @@ import shutil
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
+from spikeinterface.core import Templates
+
+from spikeinterface.core.sortinganalyzer import _extension_children, _get_children_dependencies
 
 import numpy as np
 
@@ -27,11 +30,11 @@ def get_sorting_analyzer(format="memory", sparse=True):
             maximum_z=20.0,
         ),
         generate_templates_kwargs=dict(
-            unit_params_range=dict(
-                alpha=(9_000.0, 12_000.0),
+            unit_params=dict(
+                alpha=(200.0, 500.0),
             )
         ),
-        noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2406,
     )
     if format == "memory":
@@ -80,13 +83,19 @@ def _check_result_extension(sorting_analyzer, extension_name):
         False,
     ],
 )
-def test_SelectRandomSpikes(format, sparse):
+def test_ComputeRandomSpikes(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
     ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
     indices = ext.data["random_spikes_indices"]
     assert indices.size == 10 * sorting_analyzer.sorting.unit_ids.size
-    # print(indices)
+
+    _check_result_extension(sorting_analyzer, "random_spikes")
+    sorting_analyzer.delete_extension("random_spikes")
+
+    ext = sorting_analyzer.compute("random_spikes", method="all")
+    indices = ext.data["random_spikes_indices"]
+    assert indices.size == len(sorting_analyzer.sorting.to_spike_vector())
 
     _check_result_extension(sorting_analyzer, "random_spikes")
 
@@ -108,13 +117,26 @@ def test_ComputeWaveforms(format, sparse):
 def test_ComputeTemplates(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
-    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
-
-    with pytest.raises(AssertionError):
-        # This require "waveforms first and should trig an error
-        sorting_analyzer.compute("templates")
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
 
     job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
+
+    with pytest.raises(ValueError):
+        # This require "waveforms first and should trig an error
+        sorting_analyzer.compute("templates", operators=["median"])
+
+    with pytest.raises(ValueError):
+        # This require "waveforms first and should trig an error
+        sorting_analyzer.compute("templates", operators=[("percentile", 95.0)])
+
+    ## without waveforms
+    temp_ext = sorting_analyzer.compute("templates", operators=["average", "std"], **job_kwargs)
+
+    fast_avg = temp_ext.get_templates(operator="average")
+    fast_std = temp_ext.get_templates(operator="std")
+
+    # with waveforms
+
     sorting_analyzer.compute("waveforms", **job_kwargs)
 
     # compute some operators
@@ -128,9 +150,9 @@ def test_ComputeTemplates(format, sparse):
     )
 
     # ask for more operator later
-    ext = sorting_analyzer.get_extension("templates")
-    templated_median = ext.get_templates(operator="median")
-    templated_per_5 = ext.get_templates(operator="percentile", percentile=5.0)
+    temp_ext = sorting_analyzer.get_extension("templates")
+    templated_median = temp_ext.get_templates(operator="median")
+    templated_per_5 = temp_ext.get_templates(operator="percentile", percentile=5.0)
 
     # they all should be in data
     data = sorting_analyzer.get_extension("templates").data
@@ -140,12 +162,28 @@ def test_ComputeTemplates(format, sparse):
         assert data[k].shape[2] == sorting_analyzer.channel_ids.size
         assert np.any(data[k] > 0)
 
+    if sorting_analyzer.sparsity is not None:
+        sparsity_mask = sorting_analyzer.sparsity.mask
+    else:
+        sparsity_mask = np.ones((sorting_analyzer.unit_ids.size, sorting_analyzer.channel_ids.size), dtype=bool)
+    for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
+        unit_mask = sparsity_mask[unit_index, :]
+        assert np.allclose(
+            fast_avg[unit_index][:, unit_mask], temp_ext.data["average"][unit_index][:, unit_mask], atol=0.01
+        )
+        assert np.allclose(fast_std[unit_index][:, unit_mask], temp_ext.data["std"][unit_index][:, unit_mask], atol=0.5)
+
+    templates = temp_ext.get_templates(outputs="Templates")
+    assert isinstance(templates, Templates)
+
     # import matplotlib.pyplot as plt
     # for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
     #     fig, ax = plt.subplots()
     #     for k in data.keys():
     #         wf0 = data[k][unit_index, :, :]
     #         ax.plot(wf0.T.flatten(), label=k)
+    #     ax.plot(fast_avg[unit_index].T.flatten(), label='fast_av', ls='--', color='k')
+    #     ax.plot(fast_std[unit_index].T.flatten(), label='fast_std', ls='--', color='k')
     #     ax.legend()
     # plt.show()
 
@@ -154,64 +192,37 @@ def test_ComputeTemplates(format, sparse):
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
-def test_ComputeFastTemplates(format, sparse):
-    sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
-
-    # TODO check this because this is not passing with n_jobs=2
-    job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
-
-    ms_before = 1.0
-    ms_after = 2.5
-
-    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
-
-    sorting_analyzer.compute("fast_templates", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs)
-
-    _check_result_extension(sorting_analyzer, "fast_templates")
-
-    # compare ComputeTemplates with dense and ComputeFastTemplates: should give the same on "average"
-    other_sorting_analyzer = get_sorting_analyzer(format=format, sparse=False)
-    other_sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
-    other_sorting_analyzer.compute(
-        "waveforms", ms_before=ms_before, ms_after=ms_after, return_scaled=True, **job_kwargs
-    )
-    other_sorting_analyzer.compute(
-        "templates",
-        operators=[
-            "average",
-        ],
-    )
-
-    templates0 = sorting_analyzer.get_extension("fast_templates").data["average"]
-    templates1 = other_sorting_analyzer.get_extension("templates").data["average"]
-    np.testing.assert_almost_equal(templates0, templates1)
-
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
-    #     wf0 = templates0[unit_index, :, :]
-    #     ax.plot(wf0.T.flatten(), label=f"{unit_id}")
-    #     wf1 = templates1[unit_index, :, :]
-    #     ax.plot(wf1.T.flatten(), ls='--', color='k')
-    # ax.legend()
-    # plt.show()
-
-
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
-@pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeNoiseLevels(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
-    sorting_analyzer.compute("noise_levels", return_scaled=True)
+    sorting_analyzer.compute("noise_levels")
     print(sorting_analyzer)
 
     noise_levels = sorting_analyzer.get_extension("noise_levels").data["noise_levels"]
     assert noise_levels.shape[0] == sorting_analyzer.channel_ids.size
 
 
-if __name__ == "__main__":
+def test_get_children_dependencies():
+    assert "waveforms" in _extension_children["random_spikes"]
 
-    test_SelectRandomSpikes(format="memory", sparse=True)
+    children = _get_children_dependencies("random_spikes")
+    assert "waveforms" in children
+    assert "templates" in children
+
+
+def test_delete_on_recompute():
+    sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
+    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute("waveforms")
+    sorting_analyzer.compute("templates")
+
+    # re compute random_spikes should delete waveforms and templates
+    sorting_analyzer.compute("random_spikes")
+    assert sorting_analyzer.get_extension("templates") is None
+    assert sorting_analyzer.get_extension("waveforms") is None
+
+
+if __name__ == "__main__":
 
     test_ComputeWaveforms(format="memory", sparse=True)
     test_ComputeWaveforms(format="memory", sparse=False)
@@ -219,12 +230,9 @@ if __name__ == "__main__":
     test_ComputeWaveforms(format="binary_folder", sparse=False)
     test_ComputeWaveforms(format="zarr", sparse=True)
     test_ComputeWaveforms(format="zarr", sparse=False)
-
+    test_ComputeRandomSpikes(format="memory", sparse=True)
     test_ComputeTemplates(format="memory", sparse=True)
-    test_ComputeTemplates(format="memory", sparse=False)
-    test_ComputeTemplates(format="binary_folder", sparse=True)
-    test_ComputeTemplates(format="zarr", sparse=True)
-
-    test_ComputeFastTemplates(format="memory", sparse=True)
-
     test_ComputeNoiseLevels(format="memory", sparse=False)
+
+    test_get_children_dependencies()
+    test_delete_on_recompute()

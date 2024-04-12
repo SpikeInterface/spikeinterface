@@ -7,8 +7,8 @@ from .auto_merge import get_potential_auto_merge
 
 
 # manual sorting,
-from .curationsorting import CurationSorting
-from .mergeunitssorting import MergeUnitsSorting
-from .splitunitsorting import SplitUnitSorting
+from .curationsorting import CurationSorting, curation_sorting
+from .mergeunitssorting import MergeUnitsSorting, merge_units_sorting
+from .splitunitsorting import SplitUnitSorting, split_unit_sorting
 
 from .sortingview_curation import apply_sortingview_curation

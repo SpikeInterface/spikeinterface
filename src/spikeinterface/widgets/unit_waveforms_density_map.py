@@ -79,8 +79,8 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         channel_inds = used_sparsity.unit_id_to_channel_indices
 
         # bins
-        # templates = we.get_all_templates(unit_ids=unit_ids)
-        templates = sorting_analyzer.get_extension("templates").get_templates(unit_ids=unit_ids)
+        ext_templates = sorting_analyzer.get_extension("templates")
+        templates = ext_templates.get_templates(unit_ids=unit_ids)
         bin_min = np.min(templates) * 1.3
         bin_max = np.max(templates) * 1.3
         bin_size = (bin_max - bin_min) / 100

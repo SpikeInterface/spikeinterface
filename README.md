@@ -50,7 +50,7 @@
 > **New features under construction!** 🚧🚧🚧: after the 0.100.0 release (and related bug fixes), the next release will contain
 > a major API improvement: the `SortingAnalyzer`. To read more about this, checkout the
 > [enhancement proposal](https://github.com/SpikeInterface/spikeinterface/issues/2282).
-> Please refer to the stable documentation [here](https://spikeinterface.readthedocs.io/en/0.100.1)
+> Please refer to the stable documentation [here](https://spikeinterface.readthedocs.io/en/0.100.4)
 
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.

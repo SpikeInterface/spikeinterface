@@ -23,7 +23,7 @@ from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
 from .sortinganalyzer import SortingAnalyzer, load_sorting_analyzer
 from .base import load_extractor
-from .analyzer_extension_core import SelectRandomSpikes, ComputeWaveforms, ComputeTemplates
+from .analyzer_extension_core import ComputeRandomSpikes, ComputeWaveforms, ComputeTemplates
 
 _backwards_compatibility_msg = """####
 # extract_waveforms() and WaveformExtractor() have been replaced by the `SortingAnalyzer` since version 0.101.0.
@@ -94,12 +94,19 @@ def extract_waveforms(
         **job_kwargs,
     )
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format=format, folder=folder, sparse=sparse, sparsity=sparsity, **sparsity_kwargs
+        sorting,
+        recording,
+        format=format,
+        folder=folder,
+        sparse=sparse,
+        sparsity=sparsity,
+        return_scaled=return_scaled,
+        **sparsity_kwargs,
     )
 
     sorting_analyzer.compute("random_spikes", max_spikes_per_unit=max_spikes_per_unit, seed=seed)
 
-    waveforms_params = dict(ms_before=ms_before, ms_after=ms_after, return_scaled=return_scaled, dtype=dtype)
+    waveforms_params = dict(ms_before=ms_before, ms_after=ms_after, dtype=dtype)
     sorting_analyzer.compute("waveforms", **waveforms_params, **job_kwargs)
 
     templates_params = dict(operators=list(precompute_template))
@@ -253,7 +260,7 @@ class MockWaveformExtractor:
         # lazy and cache are ingnored
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
@@ -391,6 +398,8 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
     with open(params_file, "r") as f:
         params = json.load(f)
 
+    return_scaled = params["return_scaled"]
+
     sparsity_file = folder / "sparsity.json"
     if sparsity_file.exists():
         with open(sparsity_file, "r") as f:
@@ -429,7 +438,9 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         elif (folder / "sorting.pickle").exists():
             sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
 
-    sorting_analyzer = SortingAnalyzer.create_memory(sorting, recording, sparsity, rec_attributes=rec_attributes)
+    sorting_analyzer = SortingAnalyzer.create_memory(
+        sorting, recording, sparsity=sparsity, return_scaled=return_scaled, rec_attributes=rec_attributes
+    )
 
     # waveforms
     # need to concatenate all waveforms in one unique buffer
@@ -469,7 +480,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
             mask = some_spikes["unit_index"] == unit_index
             waveforms[:, :, : wfs.shape[2]][mask, :, :] = wfs
 
-        ext = SelectRandomSpikes(sorting_analyzer)
+        ext = ComputeRandomSpikes(sorting_analyzer)
         ext.params = dict()
         ext.data = dict(random_spikes_indices=random_spikes_indices)
 
@@ -477,7 +488,6 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext.params = dict(
             ms_before=params["ms_before"],
             ms_after=params["ms_after"],
-            return_scaled=params["return_scaled"],
             dtype=params["dtype"],
         )
         ext.data["waveforms"] = waveforms
@@ -492,9 +502,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
             templates[mode] = np.load(template_file)
     if len(templates) > 0:
         ext = ComputeTemplates(sorting_analyzer)
-        ext.params = dict(
-            nbefore=nbefore, nafter=nafter, return_scaled=params["return_scaled"], operators=list(templates.keys())
-        )
+        ext.params = dict(nbefore=nbefore, nafter=nafter, operators=list(templates.keys()))
         for mode, arr in templates.items():
             ext.data[mode] = arr
         sorting_analyzer.extensions["templates"] = ext

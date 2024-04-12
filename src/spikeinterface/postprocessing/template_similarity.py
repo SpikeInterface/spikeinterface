@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from ..core.template_tools import _get_dense_templates_array
+from ..core.template_tools import get_dense_templates_array
 
 
 class ComputeTemplateSimilarity(AnalyzerExtension):
@@ -24,9 +24,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     """
 
     extension_name = "template_similarity"
-    depend_on = [
-        "fast_templates|templates",
-    ]
+    depend_on = ["templates"]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
@@ -45,7 +43,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         return dict(similarity=new_similarity)
 
     def _run(self):
-        templates_array = _get_dense_templates_array(self.sorting_analyzer, return_scaled=True)
+        templates_array = get_dense_templates_array(
+            self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
+        )
         similarity = compute_similarity_with_templates_array(
             templates_array, templates_array, method=self.params["method"]
         )
@@ -76,10 +76,10 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
 
 
 def compute_template_similarity_by_pair(sorting_analyzer_1, sorting_analyzer_2, method="cosine_similarity"):
-    templates_array_1 = _get_dense_templates_array(sorting_analyzer_1, return_scaled=True)
-    templates_array_2 = _get_dense_templates_array(sorting_analyzer_2, return_scaled=True)
-    similmarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method)
-    return similmarity
+    templates_array_1 = get_dense_templates_array(sorting_analyzer_1, return_scaled=True)
+    templates_array_2 = get_dense_templates_array(sorting_analyzer_2, return_scaled=True)
+    similarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method)
+    return similarity
 
 
 def check_equal_template_with_distribution_overlap(

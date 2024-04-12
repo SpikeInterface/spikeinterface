@@ -7,28 +7,36 @@ from .sparsity import _sparsity_doc
 from .sortinganalyzer import SortingAnalyzer
 
 
-# TODO make this function a non private function
-def _get_dense_templates_array(one_object, return_scaled=True):
+def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_scaled: bool = True):
+    """
+    Return dense templates as numpy array from either a Templates object or a SortingAnalyzer.
+
+    Parameters
+    ----------
+    one_object: Templates | SortingAnalyzer
+        The Templates or SortingAnalyzer objects. If SortingAnalyzer, it needs the "templates" extension.
+    return_scaled: bool, default: True
+        If True, templates are scaled.
+
+    Returns
+    -------
+    dense_templates: np.ndarray
+        The dense templates (num_units, num_samples, num_channels)
+    """
     if isinstance(one_object, Templates):
         templates_array = one_object.get_dense_templates()
     elif isinstance(one_object, SortingAnalyzer):
+        if return_scaled != one_object.return_scaled:
+            raise ValueError(
+                f"get_dense_templates_array: return_scaled={return_scaled} is not possible SortingAnalyzer has the reverse"
+            )
         ext = one_object.get_extension("templates")
         if ext is not None:
             templates_array = ext.data["average"]
-            assert (
-                return_scaled == ext.params["return_scaled"]
-            ), f"templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
         else:
-            ext = one_object.get_extension("fast_templates")
-            assert (
-                return_scaled == ext.params["return_scaled"]
-            ), f"fast_templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
-            if ext is not None:
-                templates_array = ext.data["average"]
-            else:
-                raise ValueError("SortingAnalyzer need extension 'templates' or 'fast_templates' to be computed")
+            raise ValueError("SortingAnalyzer need extension 'templates' to be computed to retrieve templates")
     else:
-        raise ValueError("Input should be Templates or SortingAnalyzer or SortingAnalyzer")
+        raise ValueError("Input should be Templates or SortingAnalyzer")
 
     return templates_array
 
@@ -38,12 +46,9 @@ def _get_nbefore(one_object):
         return one_object.nbefore
     elif isinstance(one_object, SortingAnalyzer):
         ext = one_object.get_extension("templates")
-        if ext is not None:
-            return ext.nbefore
-        ext = one_object.get_extension("fast_templates")
-        if ext is not None:
-            return ext.nbefore
-        raise ValueError("SortingAnalyzer need extension 'templates' or 'fast_templates' to be computed")
+        if ext is None:
+            raise ValueError("SortingAnalyzer need extension 'templates' to be computed")
+        return ext.nbefore
     else:
         raise ValueError("Input should be Templates or SortingAnalyzer or SortingAnalyzer")
 
@@ -82,7 +87,7 @@ def get_template_amplitudes(
 
     peak_values = {}
 
-    templates_array = _get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
+    templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
 
     for unit_ind, unit_id in enumerate(unit_ids):
         template = templates_array[unit_ind, :, :]
@@ -182,7 +187,7 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
 
     shifts = {}
 
-    templates_array = _get_dense_templates_array(templates_or_sorting_analyzer)
+    templates_array = get_dense_templates_array(templates_or_sorting_analyzer)
 
     for unit_ind, unit_id in enumerate(unit_ids):
         template = templates_array[unit_ind, :, :]

@@ -4,7 +4,12 @@ from pathlib import Path
 import shutil
 
 from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.core import SortingAnalyzer, create_sorting_analyzer, load_sorting_analyzer
+from spikeinterface.core import (
+    create_sorting_analyzer,
+    load_sorting_analyzer,
+    get_available_analyzer_extensions,
+    get_default_analyzer_extension_params,
+)
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 import numpy as np
@@ -22,7 +27,7 @@ def get_dataset():
         num_channels=10,
         num_units=5,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
     return recording, sorting
@@ -35,6 +40,17 @@ def test_SortingAnalyzer_memory():
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting)
+
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=False, return_scaled=True, sparsity=None
+    )
+    assert sorting_analyzer.return_scaled
+    _check_sorting_analyzers(sorting_analyzer, sorting)
+
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=False, return_scaled=False, sparsity=None
+    )
+    assert not sorting_analyzer.return_scaled
 
 
 def test_SortingAnalyzer_binary_folder():
@@ -50,6 +66,22 @@ def test_SortingAnalyzer_binary_folder():
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
     _check_sorting_analyzers(sorting_analyzer, sorting)
 
+    folder = cache_folder / "test_SortingAnalyzer_binary_folder"
+    if folder.exists():
+        shutil.rmtree(folder)
+
+    sorting_analyzer = create_sorting_analyzer(
+        sorting,
+        recording,
+        format="binary_folder",
+        folder=folder,
+        sparse=False,
+        sparsity=None,
+        return_scaled=False,
+    )
+    assert not sorting_analyzer.return_scaled
+    _check_sorting_analyzers(sorting_analyzer, sorting)
+
 
 def test_SortingAnalyzer_zarr():
     recording, sorting = get_dataset()
@@ -63,6 +95,13 @@ def test_SortingAnalyzer_zarr():
     )
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
     _check_sorting_analyzers(sorting_analyzer, sorting)
+
+    folder = cache_folder / "test_SortingAnalyzer_zarr.zarr"
+    if folder.exists():
+        shutil.rmtree(folder)
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None, return_scaled=False
+    )
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting):
@@ -119,6 +158,8 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting):
         assert "result_one" in data
         assert data["result_two"].size == original_sorting.to_spike_vector().size
 
+        assert sorting_analyzer2.return_scaled == sorting_analyzer.return_scaled
+
     # select unit_ids to several format
     for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
@@ -141,6 +182,24 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting):
         assert data["result_one"] == sorting_analyzer.get_extension("dummy").data["result_one"]
         # unit 1, 3, ... should be removed
         assert np.all(~np.isin(data["result_two"], [1, 3]))
+
+
+def test_extension_params():
+    from spikeinterface.core.sortinganalyzer import _builtin_extensions
+
+    computable_extension = get_available_analyzer_extensions()
+
+    for ext, mod in _builtin_extensions.items():
+        assert ext in computable_extension
+        if mod == "spikeinterface.core":
+            default_params = get_default_analyzer_extension_params(ext)
+            print(ext, default_params)
+        else:
+            try:
+                default_params = get_default_analyzer_extension_params(ext)
+                print(ext, default_params)
+            except:
+                print(f"Failed to import {ext}")
 
 
 class DummyAnalyzerExtension(AnalyzerExtension):
@@ -201,3 +260,4 @@ if __name__ == "__main__":
     test_SortingAnalyzer_binary_folder()
     test_SortingAnalyzer_zarr()
     test_extension()
+    test_extension_params()

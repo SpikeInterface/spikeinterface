@@ -59,28 +59,28 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 
 extractors = [
     "MEArec>=1.8",
-    "pynwb>=2.3.0",
+    "pynwb>=2.6.0",
     "hdmf-zarr>=0.5.0",
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
-    "scipy",
-    # ONE-api and ibllib for streaming IBL
-    "ONE-api>=1.19.1",
-    "ibllib>=2.21.0",
+    "scipy<1.13",
+    "ONE-api>=2.7.0", # alf sorter and streaming IBL
+    "ibllib>=2.32.5", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    # ONE-api and ibllib for streaming IBL
-    "ONE-api>=1.19.1",
-    "ibllib>=2.21.0",
+    "ONE-api>=2.7.0", # alf sorter and streaming IBL
+    "ibllib>=2.32.5", # streaming IBL
+    "scipy<1.13", # ibl has a dependency on scipy but it does not have an upper bound
+    # Remove this once https://github.com/int-brain-lab/ibllib/issues/753
     # Following dependencies are for streaming with nwb files
+    "pynwb>=2.6.0",
     "fsspec",
     "aiohttp",
     "requests",
-    "pynwb>=2.3.0",
     "hdmf-zarr>=0.5.0",
     "remfile",
     "s3fs"
@@ -90,7 +90,7 @@ full = [
     "h5py",
     "pandas",
     "xarray",
-    "scipy",
+    "scipy<1.13",
     "scikit-learn",
     "networkx",
     "distinctipy",
@@ -115,6 +115,7 @@ qualitymetrics = [
 
 test_core = [
     "pytest",
+    "pytest-dependency",
     "psutil",
 
     # for github test : probeinterface and neo from master
@@ -160,6 +161,7 @@ docs = [
     "Sphinx==5.1.1",
     "sphinx_rtd_theme==1.0.0",
     "sphinx-gallery",
+    "sphinx-design",
     "numpydoc",
     "ipython",
 
@@ -201,7 +203,6 @@ markers = [
     "widgets",
     "sortingcomponents",
     "streaming_extractors: extractors that require streaming such as ross and fsspec",
-    "ros3_test"
 ]
 filterwarnings =[
     'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',

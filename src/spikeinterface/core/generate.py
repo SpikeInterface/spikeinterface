@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import math
 import warnings
 import numpy as np
@@ -609,6 +608,23 @@ def generate_snippets(
 
 
 ## spiketrain zone ##
+
+
+def _ensure_firing_rates(firing_rates, num_units, seed):
+    if isinstance(firing_rates, tuple):
+        rng = np.random.default_rng(seed=seed)
+        lim0, lim1 = firing_rates
+        firing_rates = rng.uniform(lim0, lim1, num_units)
+    elif np.isscalar(firing_rates):
+        firing_rates = np.full(num_units, firing_rates, dtype="float64")
+    elif isinstance(firing_rates, (list, np.ndarray)):
+        firing_rates = np.asarray(firing_rates)
+        assert firing_rates.size == num_units
+    else:
+        raise ValueError(f"firing_rates: wrong firing_rates {firing_rates}")
+    return firing_rates
+
+
 def synthesize_poisson_spike_vector(
     num_units=20,
     sampling_frequency=30000.0,
@@ -635,7 +651,7 @@ def synthesize_poisson_spike_vector(
         Duration of the simulation in seconds
     refractory_period_ms : float, default: 4.0
         Refractory period between spikes in milliseconds
-    firing_rates : float or array_like, default: 3.0
+    firing_rates : float or array_like or tuple, default: 3.0
         Firing rate(s) in Hz. Can be a single value for all units or an array of firing rates with
         each element being the firing rate for one unit
     seed : int, default: 0
@@ -667,8 +683,7 @@ def synthesize_poisson_spike_vector(
 
     rng = np.random.default_rng(seed=seed)
 
-    if np.isscalar(firing_rates):
-        firing_rates = np.full(num_units, firing_rates, dtype="float64")
+    firing_rates = _ensure_firing_rates(firing_rates, num_units, seed)
 
     # Calculate the number of frames in the refractory period
     refractory_period_seconds = refractory_period_ms / 1000.0
@@ -760,8 +775,7 @@ def synthesize_random_firings(
 
     rng = np.random.default_rng(seed=seed)
 
-    if np.isscalar(firing_rates):
-        firing_rates = np.full(num_units, firing_rates, dtype="float64")
+    firing_rates = _ensure_firing_rates(firing_rates, num_units, seed)
 
     refractory_sample = int(refractory_period_ms / 1000.0 * sampling_frequency)
 
@@ -893,9 +907,9 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     return sorting_with_dup
 
 
-def inject_some_split_units(sorting, split_ids=[], num_split=2, output_ids=False, seed=None):
+def inject_some_split_units(sorting, split_ids: list, num_split=2, output_ids=False, seed=None):
     """ """
-    assert len(split_ids) > 0, "you need to provide some ids to split"
+
     unit_ids = sorting.unit_ids
     assert unit_ids.dtype.kind == "i"
 
@@ -963,8 +977,6 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
 
 
 ## Noise generator zone ##
-
-
 class NoiseGeneratorRecording(BaseRecording):
     """
     A lazy recording that generates white noise samples if and only if `get_traces` is called.
@@ -984,8 +996,10 @@ class NoiseGeneratorRecording(BaseRecording):
         The sampling frequency of the recorder.
     durations : List[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
-    noise_level: float, default: 1
-        Std of the white noise
+    noise_levels: float or array, default: 1
+        Std of the white noise (if an array, defined by per channels)
+    cov_matrix: np.array, default None
+        The covariance matrix of the noise
     dtype : Optional[Union[np.dtype, str]], default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : Optional[int], default: None
@@ -1010,21 +1024,37 @@ class NoiseGeneratorRecording(BaseRecording):
         num_channels: int,
         sampling_frequency: float,
         durations: List[float],
-        noise_level: float = 1.0,
+        noise_levels: float = 1.0,
+        cov_matrix: Optional[np.array] = None,
         dtype: Optional[Union[np.dtype, str]] = "float32",
         seed: Optional[int] = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
+
         channel_ids = np.arange(num_channels)
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
         assert strategy in ("tile_pregenerated", "on_the_fly"), "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
 
+        if np.isscalar(noise_levels):
+            noise_levels = np.ones((1, num_channels)) * noise_levels
+        else:
+            noise_levels = np.asarray(noise_levels)
+            if len(noise_levels.shape) < 2:
+                noise_levels = noise_levels[np.newaxis, :]
+
+        assert len(noise_levels[0]) == num_channels, "Noise levels should have a size of num_channels"
+
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
         num_segments = len(durations)
+
+        if cov_matrix is not None:
+            assert (
+                cov_matrix.shape[0] == cov_matrix.shape[1] == num_channels
+            ), "cov_matrix should have a size (num_channels, num_channels)"
 
         # very important here when multiprocessing and dump/load
         seed = _ensure_seed(seed)
@@ -1040,7 +1070,8 @@ class NoiseGeneratorRecording(BaseRecording):
                 num_channels,
                 sampling_frequency,
                 noise_block_size,
-                noise_level,
+                noise_levels,
+                cov_matrix,
                 dtype,
                 segments_seeds[i],
                 strategy,
@@ -1051,7 +1082,9 @@ class NoiseGeneratorRecording(BaseRecording):
             "num_channels": num_channels,
             "durations": durations,
             "sampling_frequency": sampling_frequency,
-            "noise_level": noise_level,
+            "noise_levels": noise_levels,
+            "cov_matrix": cov_matrix,
+            "noise_levels": noise_levels,
             "dtype": dtype,
             "seed": seed,
             "strategy": strategy,
@@ -1061,7 +1094,16 @@ class NoiseGeneratorRecording(BaseRecording):
 
 class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
     def __init__(
-        self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_level, dtype, seed, strategy
+        self,
+        num_samples,
+        num_channels,
+        sampling_frequency,
+        noise_block_size,
+        noise_levels,
+        cov_matrix,
+        dtype,
+        seed,
+        strategy,
     ):
         assert seed is not None
 
@@ -1070,16 +1112,25 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self.num_samples = num_samples
         self.num_channels = num_channels
         self.noise_block_size = noise_block_size
-        self.noise_level = noise_level
+        self.noise_levels = noise_levels
+        self.cov_matrix = cov_matrix
         self.dtype = dtype
         self.seed = seed
         self.strategy = strategy
 
         if self.strategy == "tile_pregenerated":
             rng = np.random.default_rng(seed=self.seed)
-            self.noise_block = (
-                rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype) * noise_level
-            )
+
+            if self.cov_matrix is None:
+                self.noise_block = (
+                    rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
+                    * noise_levels
+                )
+            else:
+                self.noise_block = rng.multivariate_normal(
+                    np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
+                )
+
         elif self.strategy == "on_the_fly":
             pass
 
@@ -1110,8 +1161,14 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
                 noise_block = self.noise_block
             elif self.strategy == "on_the_fly":
                 rng = np.random.default_rng(seed=(self.seed, block_index))
-                noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                noise_block *= self.noise_level
+                if self.cov_matrix is None:
+                    noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
+                else:
+                    noise_block = rng.multivariate_normal(
+                        np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
+                    )
+
+                noise_block *= self.noise_levels
 
             if block_index == first_block_index:
                 if first_block_index != last_block_index:
@@ -1207,6 +1264,66 @@ def exp_growth(start_amp, end_amp, duration_ms, tau_ms, sampling_frequency, flip
     return y[:-1]
 
 
+def get_ellipse(positions, center, b=1, c=1, x_angle=0, y_angle=0, z_angle=0):
+    """
+    Compute the distances to a particular ellipsoid in order to take into account
+    spatial inhomogeneities while generating the template. In a carthesian, centered
+    space, the equation of the ellipsoid in 3D is given by
+        R = x**2 + (y/b)**2 + (z/c)**2, with R being the radius of the ellipsoid
+
+    Given the coordinates of the recording channels, we want to know what is the radius
+    (i.e. the distance) between these points and a given ellipsoidal volume. To to do,
+    we change the referential. To go from the centered space of our ellipsoidal volume, we
+    need to perform a translation of the center (given the center of the ellipsoids), and perform
+    three rotations along the three main axis (Rx, Ry, Rz). To go from one referential to the other,
+    we need to have
+                            x - x0
+        [X,Y,Z] = Rx.Ry.Rz (y - y0)
+                            z - z0
+
+    In this new space, we can compute the radius of the ellipsoidal shape given the same formula
+        R = X**2 + (Y/b)**2 + (Z/c)**2
+
+    and thus obtain putative amplitudes given the ellipsoidal projections. Note that in case of a=b=1 and
+    no rotation, the distance is the same as the euclidean distance
+
+    Returns
+    -------
+    The distances of the recording channels, as radius to a defined elliposoidal volume
+
+    """
+    p = np.zeros((3, len(positions)))
+    p[0] = positions[:, 0] - center[0]
+    p[1] = positions[:, 1] - center[1]
+    p[2] = -center[2]
+
+    Rx = np.zeros((3, 3))
+    Rx[0, 0] = 1
+    Rx[1, 1] = np.cos(-x_angle)
+    Rx[1, 0] = -np.sin(-x_angle)
+    Rx[2, 1] = np.sin(-x_angle)
+    Rx[2, 2] = np.cos(-x_angle)
+
+    Ry = np.zeros((3, 3))
+    Ry[1, 1] = 1
+    Ry[0, 0] = np.cos(-y_angle)
+    Ry[0, 2] = np.sin(-y_angle)
+    Ry[2, 0] = -np.sin(-y_angle)
+    Ry[2, 2] = np.cos(-y_angle)
+
+    Rz = np.zeros((3, 3))
+    Rz[2, 2] = 1
+    Rz[0, 0] = np.cos(-z_angle)
+    Rz[0, 1] = -np.sin(-z_angle)
+    Rz[1, 0] = np.sin(-z_angle)
+    Rz[1, 1] = np.cos(-z_angle)
+
+    inv_matrix = np.dot(Rx, Ry, Rz)
+    P = np.dot(inv_matrix, p)
+
+    return np.sqrt(P[0] ** 2 + (P[1] / b) ** 2 + (P[2] / c) ** 2)
+
+
 def generate_single_fake_waveform(
     sampling_frequency=None,
     ms_before=1.0,
@@ -1275,15 +1392,46 @@ def generate_single_fake_waveform(
 
 
 default_unit_params_range = dict(
-    alpha=(6_000.0, 9_000.0),
+    alpha=(100.0, 500.0),
     depolarization_ms=(0.09, 0.14),
     repolarization_ms=(0.5, 0.8),
     recovery_ms=(1.0, 1.5),
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
-    decay_power=(1.4, 1.8),
+    spatial_decay=(20, 40),
     propagation_speed=(250.0, 350.0),  # um  / ms
+    b=(0.1, 1),
+    c=(0.1, 1),
+    x_angle=(0, np.pi),
+    y_angle=(0, np.pi),
+    z_angle=(0, np.pi),
 )
+
+
+def _ensure_unit_params(unit_params, num_units, seed):
+    rng = np.random.default_rng(seed=seed)
+    # check or generate params per units
+    params = dict()
+    for k, default_lims in default_unit_params_range.items():
+        v = unit_params.get(k, default_lims)
+        if isinstance(v, tuple):
+            # limits
+            lim0, lim1 = v
+            values = rng.uniform(lim0, lim1, num_units)
+        elif np.isscalar(v):
+            # scalar
+            values = np.full(shape=(num_units), fill_value=v)
+        elif isinstance(v, (list, np.ndarray)):
+            # already vector
+            values = np.asarray(v)
+            assert values.shape == (num_units,), f"generate_templates: wrong shape for {k} in unit_params"
+        elif v is None:
+            values = [None] * num_units
+        else:
+            raise ValueError(f"generate_templates: wrong {k} in unit_params {v}")
+
+        params[k] = values
+    return params
 
 
 def generate_templates(
@@ -1295,8 +1443,9 @@ def generate_templates(
     seed=None,
     dtype="float32",
     upsample_factor=None,
-    unit_params=dict(),
-    unit_params_range=dict(),
+    unit_params=None,
+    unit_params_range=None,
+    mode="ellipsoid",
 ):
     """
     Generate some templates from the given channel positions and neuron position.s
@@ -1326,7 +1475,7 @@ def generate_templates(
         If not None then template are generated upsampled by this factor.
         Then a new dimention (axis=3) is added to the template with intermediate inter sample representation.
         This allow easy random jitter by choising a template this new dim
-    unit_params: dict of arrays
+    unit_params: dict of arrays or dict of scalar of dict of tuple
         An optional dict containing parameters per units.
         Keys are parameter names:
 
@@ -1336,13 +1485,13 @@ def generate_templates(
             * "recovery_ms": the recovery interval in ms (default range: (1.0-1.5))
             * "positive_amplitude": the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
             * "smooth_ms": the gaussian smooth in ms (default range: (0.03-0.07))
-            * "decay_power": the decay power (default range: (1.2-1.8))
+            * "spatial_decay": the spatial constant (default range: (20-40))
             * "propagation_speed": mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
-        Values contains vector with same size of num_units.
-        If the key is not in dict then it is generated using unit_params_range
-    unit_params_range: dict of tuple
-        Used to generate parameters when unit_params are not given.
-        In this case, a uniform ranfom value for each unit is generated within the provided range.
+
+        Values can be:
+            * array of the same length of units
+            * scalar, then an array is created
+            * tuple, then this difine a range for random values.
 
     Returns
     -------
@@ -1352,6 +1501,9 @@ def generate_templates(
             * (num_units, num_samples, num_channels, upsample_factor) if upsample_factor is not None
 
     """
+
+    unit_params = unit_params or dict()
+    unit_params_range = unit_params_range or dict()
     rng = np.random.default_rng(seed=seed)
 
     # neuron location must be 3D
@@ -1360,8 +1512,6 @@ def generate_templates(
     # channel_locations to 3D
     if channel_locations.shape[1] == 2:
         channel_locations = np.hstack([channel_locations, np.zeros((channel_locations.shape[0], 1))])
-
-    distances = np.linalg.norm(units_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
 
     num_units = units_locations.shape[0]
     num_channels = channel_locations.shape[0]
@@ -1378,23 +1528,7 @@ def generate_templates(
         templates = np.zeros((num_units, width, num_channels), dtype=dtype)
         fs = sampling_frequency
 
-    # check or generate params per units
-    params = dict()
-    for k in default_unit_params_range.keys():
-        if k in unit_params:
-            assert unit_params[k].size == num_units
-            params[k] = unit_params[k]
-        else:
-            if k in unit_params_range:
-                lims = unit_params_range[k]
-            else:
-                lims = default_unit_params_range[k]
-            if lims is not None:
-                lim0, lim1 = lims
-                v = rng.random(num_units)
-                params[k] = v * (lim1 - lim0) + lim0
-            else:
-                params[k] = [None] * num_units
+    params = _ensure_unit_params(unit_params, num_units, seed)
 
     for u in range(num_units):
         wf = generate_single_fake_waveform(
@@ -1412,18 +1546,38 @@ def generate_templates(
 
         ## Add a spatial decay depend on distance from unit to each channel
         alpha = params["alpha"][u]
-        # the espilon avoid enormous factors
-        eps = 1.0
+
         # naive formula for spatial decay
-        pow = params["decay_power"][u]
-        channel_factors = alpha / (distances[u, :] + eps) ** pow
+        spatial_decay = params["spatial_decay"][u]
+        if mode == "sphere":
+            distances = get_ellipse(
+                channel_locations,
+                units_locations[u],
+                1,
+                1,
+                0,
+                0,
+                0,
+            )
+        elif mode == "ellipsoid":
+            distances = get_ellipse(
+                channel_locations,
+                units_locations[u],
+                params["b"][u],
+                params["c"][u],
+                params["x_angle"][u],
+                params["y_angle"][u],
+                params["z_angle"][u],
+            )
+
+        channel_factors = alpha * np.exp(-distances / spatial_decay)
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
 
         # This mimic a propagation delay for distant channel
         propagation_speed = params["propagation_speed"][u]
         if propagation_speed is not None:
             # the speed is um/ms
-            dist = distances[u, :].copy()
+            dist = distances.copy()
             dist -= np.min(dist)
             delay_s = dist / propagation_speed / 1000.0
             sample_shifts = delay_s * fs
@@ -1590,6 +1744,12 @@ class InjectTemplatesRecording(BaseRecording):
                 num_samples[segment_index],
             )
             self.add_recording_segment(recording_segment)
+
+        if not sorting.check_serializability("json"):
+            self._serializability["json"] = False
+        if parent_recording is not None:
+            if not parent_recording.check_serializability("json"):
+                self._serializability["json"] = False
 
         self._kwargs = {
             "sorting": sorting,
@@ -1809,9 +1969,9 @@ def generate_ground_truth_recording(
     upsample_factor=None,
     upsample_vector=None,
     generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0),
-    noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
+    noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
     generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
-    generate_templates_kwargs=dict(),
+    generate_templates_kwargs=None,
     dtype="float32",
     seed=None,
 ):
@@ -1870,6 +2030,7 @@ def generate_ground_truth_recording(
     sorting: Sorting
         The generated sorting extractor.
     """
+    generate_templates_kwargs = generate_templates_kwargs or dict()
 
     # TODO implement upsample_factor in InjectTemplatesRecording and propagate into toy_example
 

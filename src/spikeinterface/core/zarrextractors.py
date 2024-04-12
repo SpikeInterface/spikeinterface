@@ -366,7 +366,9 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
 
 
 # Recording
-def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.hierarchy.Group, **kwargs):
+def add_recording_to_zarr_group(
+    recording: BaseRecording, zarr_group: zarr.hierarchy.Group, verbose=False, auto_cast_uint=True, dtype=None, **kwargs
+):
     zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if recording.check_if_json_serializable():
@@ -380,19 +382,29 @@ def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.hiera
     zarr_group.create_dataset(name="channel_ids", data=recording.get_channel_ids(), compressor=None)
     dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
 
-    zarr_kwargs["dtype"] = kwargs.get("dtype", None) or recording.get_dtype()
-    if "compressor" not in zarr_group:
-        zarr_kwargs["compressor"] = get_default_zarr_compressor()
+    dtype = recording.get_dtype() if dtype is None else dtype
+    channel_chunk_size = zarr_kwargs.get("channel_chunk_size", None)
+    global_compressor = zarr_kwargs.pop("compressor", get_default_zarr_compressor())
+    compressor_by_dataset = zarr_kwargs.pop("compressor_by_dataset", {})
+    global_filters = zarr_kwargs.pop("filters", None)
+    filters_by_dataset = zarr_kwargs.pop("filters_by_dataset", {})
 
+    compressor_traces = compressor_by_dataset.get("traces", global_compressor)
+    filters_traces = filters_by_dataset.get("traces", global_filters)
     add_traces_to_zarr(
         recording=recording,
         zarr_group=zarr_group,
         dataset_paths=dataset_paths,
-        **zarr_kwargs,
+        compressor=compressor_traces,
+        filters=filters_traces,
+        dtype=dtype,
+        channel_chunk_size=channel_chunk_size,
+        auto_cast_uint=auto_cast_uint,
+        verbose=verbose,
         **job_kwargs,
     )
 
-    # # save probe
+    # save probe
     if recording.get_property("contact_vector") is not None:
         probegroup = recording.get_probegroup()
         zarr_group.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
@@ -402,12 +414,16 @@ def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.hiera
     for segment_index, rs in enumerate(recording._recording_segments):
         d = rs.get_times_kwargs()
         time_vector = d["time_vector"]
+
+        compressor_times = compressor_by_dataset.get("times", global_compressor)
+        filters_times = filters_by_dataset.get("times", global_filters)
+
         if time_vector is not None:
             _ = zarr_group.create_dataset(
                 name=f"times_seg{segment_index}",
                 data=time_vector,
-                filters=zarr_kwargs.get("filters", None),
-                compressor=zarr_kwargs["compressor"],
+                filters=filters_times,
+                compressor=compressor_times,
             )
         elif d["t_start"] is not None:
             t_starts[segment_index] = d["t_start"]
