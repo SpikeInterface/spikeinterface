@@ -64,7 +64,7 @@ class ClusteringBenchmark(Benchmark):
         )
 
         data = spikes[self.indices][~self.noise]
-        data["unit_index"] = self.result["peak_labels"][~self.noise]
+        # data["unit_index"] = self.result["peak_labels"][~self.noise]
 
         #self.result["positions"] = self.gt_sorting.get_property('gt_unit_locations')
 
@@ -244,7 +244,7 @@ class ClusteringStudy(BenchmarkStudy):
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
 
-    def plot_metrics_vs_snr(self, metric="cosine", case_keys=None, figsize=(15, 5)):
+    def plot_metrics_vs_snr(self, metric="agreement", case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -254,15 +254,18 @@ class ClusteringStudy(BenchmarkStudy):
         for count, key in enumerate(case_keys):
 
             result = self.get_result(key)
-            scores = result["gt_comparison"].get_ordered_agreement_scores()
+            scores = result["gt_comparison"].agreement_scores
 
             analyzer = self.get_sorting_analyzer(key)
             metrics = analyzer.get_extension("quality_metrics").get_data()
 
-            unit_ids1 = scores.index.values
-            unit_ids2 = scores.columns.values
-            inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1)
-            inds_2 = result["gt_comparison"].sorting2.ids_to_indices(unit_ids2)
+            unit_ids1 = result["gt_comparison"].unit1_ids
+            matched_ids2 = result["gt_comparison"].hungarian_match_12.values
+            mask = matched_ids2 > -1
+
+            inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1[mask])
+            inds_2 = result["gt_comparison"].sorting2.ids_to_indices(matched_ids2[mask])
+
             t1 = result["sliced_gt_templates"].templates_array[:]
             t2 = result["clustering_templates"].templates_array[:]
             a = t1.reshape(len(t1), -1)
@@ -272,20 +275,21 @@ class ClusteringStudy(BenchmarkStudy):
 
             if metric == "cosine":
                 distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
-            else:
+            elif metric == "l2":
                 distances = sklearn.metrics.pairwise_distances(a, b, metric)
 
-            snr = metrics["snr"][unit_ids1][inds_1[: len(inds_2)]]
+            snr_matched = metrics["snr"][unit_ids1[mask]]
+            snr_missed = metrics["snr"][unit_ids1[~mask]]
+
             to_plot = []
-            for found, real in zip(inds_2, inds_1):
-                to_plot += [distances[real, found]]
-            axs[0, count].plot(snr, to_plot, ".", label=f"#matched {len(snr)}")
-
-            noise_level = analyzer.get_extension("noise_levels").get_data().mean()
-
-            snr = metrics["snr"][unit_ids1][inds_1[len(inds_2):]]
-            axs[0, count].plot(snr, np.zeros(len(snr)), ".", c='r', label=f"#misses {len(snr)}")
-            axs[0, count].plot([noise_level, noise_level], [0, 1], 'k--')
+            if metric in ["cosine", "l2"]:
+                for found, real in zip(inds_2, inds_1):
+                    to_plot += [distances[real, found]]
+            elif metric == "agreement":
+                for found, real in zip(matched_ids2[mask], unit_ids1[mask]):
+                    to_plot += [scores.at[real, found]]
+            axs[0, count].plot(snr_matched, to_plot, ".", label="matched")
+            axs[0, count].plot(snr_missed, np.zeros(len(snr_missed)), ".", c="r", label="missed")
             axs[0, count].set_xlabel("snr")
             axs[0, count].set_ylabel(metric)
             label = self.cases[key]["label"]
@@ -400,6 +404,7 @@ class ClusteringStudy(BenchmarkStudy):
                     ax.set_xticks([])
                     ax.set_yticks([])
         plt.tight_layout(h_pad=0, w_pad=0)
+<<<<<<< HEAD
 
     # def plot_unit_losses(self, before, after, figsize=None):
 
@@ -621,3 +626,5 @@ class ClusteringStudy(BenchmarkStudy):
 #             ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
 
 #         plt.tight_layout()
+=======
+>>>>>>> 0b77c5da8fe62595e29b7139c49976c0448ad7ac

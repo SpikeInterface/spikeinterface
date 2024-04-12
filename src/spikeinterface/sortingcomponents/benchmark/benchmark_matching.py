@@ -210,16 +210,8 @@ class MatchingStudy(BenchmarkStudy):
         from spikeinterface.widgets.widget_list import plot_study_unit_counts
 
         plot_study_unit_counts(self, case_keys, figsize=figsize)
-<<<<<<< Updated upstream
-
-    def plot_unit_losses(self, before, after, figsize=(15, 15)):
-
-        # if case_keys is None:
-        #    case_keys = list(self.cases.keys())
-=======
     
     def plot_unit_losses(self, before, after, figsize=None):
->>>>>>> Stashed changes
 
         fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
 
@@ -229,11 +221,8 @@ class MatchingStudy(BenchmarkStudy):
 
             label = self.cases[after]["label"]
 
-<<<<<<< Updated upstream
-=======
             positions = self.get_result(before)["gt_comparison"].sorting1.get_property('gt_unit_locations')
 
->>>>>>> Stashed changes
             analyzer = self.get_sorting_analyzer(before)
             metrics_before = analyzer.get_extension("quality_metrics").get_data()
             x = metrics_before["snr"].values
@@ -247,11 +236,7 @@ class MatchingStudy(BenchmarkStudy):
             im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), marker=".", s=50, cmap='copper')
             fig.colorbar(im, ax=ax)
             ax.set_title(k)
-<<<<<<< Updated upstream
-            ax.set_ylabel("After - Before")
-=======
             ax.set_ylabel('snr')
->>>>>>> Stashed changes
 
         #if count == 2:
         #    ax.legend()
