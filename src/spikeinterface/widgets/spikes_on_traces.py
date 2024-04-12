@@ -212,7 +212,6 @@ class SpikesOnTracesWidget(BaseWidget):
                 labels.append(unit)
             else:
                 # construct waveforms
-                # TODO: fix scale here
                 label_set = False
                 if len(spike_frames_to_plot) > 0:
                     vspacing = traces_widget.data_plot["vspacing"]
