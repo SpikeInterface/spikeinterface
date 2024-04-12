@@ -810,14 +810,14 @@ class SortingAnalyzer:
         Parameters
         ----------
         input: str or dict or list
-            The extesions to compute, which can be passed as:
+            The extensions to compute, which can be passed as:
 
             * a string: compute one extension. Additional parameters can be passed as key word arguments.
             * a dict: compute several extensions. The keys are the extension names and the values are dictiopnaries with the extension parameters.
             * a list: compute several extensions. The list contains the extension names. Additional parameters can be passed with the extension_params
               argument.
         save: bool, default: True
-            If True the extension is saved to disk (only of sorting analyzer format is not "memory")
+            If True the extension is saved to disk (only if sorting analyzer format is not "memory")
         extension_params: dict or None, default: None
             If input is a list, this parameter can be used to specify parameters for each extension.
             The extension_params keys must be included in the input list.
