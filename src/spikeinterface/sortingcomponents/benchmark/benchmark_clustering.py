@@ -66,6 +66,8 @@ class ClusteringBenchmark(Benchmark):
         data = spikes[self.indices][~self.noise]
         data["unit_index"] = self.result["peak_labels"][~self.noise]
 
+        #self.result["positions"] = self.gt_sorting.get_property('gt_unit_locations')
+
         self.result["clustering"] = NumpySorting.from_times_labels(
             data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
         )
@@ -171,10 +173,9 @@ class ClusteringStudy(BenchmarkStudy):
 
         return count_units
 
-    def plot_unit_counts(self, case_keys=None, figsize=(15, 15)):
+    def plot_unit_counts(self, case_keys=None, figsize=None, **extra_kwargs):
         from spikeinterface.widgets.widget_list import plot_study_unit_counts
-
-        plot_study_unit_counts(self, case_keys, figsize=figsize)
+        plot_study_unit_counts(self, case_keys, figsize=figsize, **extra_kwargs)
 
     def plot_agreements(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
@@ -278,11 +279,69 @@ class ClusteringStudy(BenchmarkStudy):
             to_plot = []
             for found, real in zip(inds_2, inds_1):
                 to_plot += [distances[real, found]]
-            axs[0, count].plot(snr, to_plot, ".")
+            axs[0, count].plot(snr, to_plot, ".", label=f"#matched {len(snr)}")
+
+            noise_level = analyzer.get_extension("noise_levels").get_data().mean()
+
+            snr = metrics["snr"][unit_ids1][inds_1[len(inds_2):]]
+            axs[0, count].plot(snr, np.zeros(len(snr)), ".", c='r', label=f"#misses {len(snr)}")
+            axs[0, count].plot([noise_level, noise_level], [0, 1], 'k--')
             axs[0, count].set_xlabel("snr")
             axs[0, count].set_ylabel(metric)
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
+            axs[0, count].legend()
+    
+    def plot_metrics_vs_depth_and_snr(self, metric="cosine", case_keys=None, figsize=(15, 5)):
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+
+        for count, key in enumerate(case_keys):
+
+            result = self.get_result(key)
+            scores = result["gt_comparison"].get_ordered_agreement_scores()
+
+            analyzer = self.get_sorting_analyzer(key)
+            metrics = analyzer.get_extension("quality_metrics").get_data()
+
+            unit_ids1 = scores.index.values
+            unit_ids2 = scores.columns.values
+            inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1)
+            inds_2 = result["gt_comparison"].sorting2.ids_to_indices(unit_ids2)
+            t1 = result["sliced_gt_templates"].templates_array[:]
+            t2 = result["clustering_templates"].templates_array[:]
+            a = t1.reshape(len(t1), -1)
+            b = t2.reshape(len(t2), -1)
+
+            #positions = result["gt_comparison"].sorting1.get_property('gt_unit_locations')
+            positions = self.datasets[key[1]][1].get_property('gt_unit_locations')
+            positions = positions[:, 1]
+
+            import sklearn
+
+            if metric == "cosine":
+                distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
+            else:
+                distances = sklearn.metrics.pairwise_distances(a, b, metric)
+
+            snr = metrics["snr"][unit_ids1][inds_1[: len(inds_2)]]
+            depth = positions[unit_ids1][inds_1[: len(inds_2)]]
+            to_plot = []
+            for found, real in zip(inds_2, inds_1):
+                to_plot += [distances[real, found]]
+            axs[0, count].scatter(depth, snr, c=to_plot)
+
+            snr = metrics["snr"][unit_ids1][inds_1[len(inds_2):]]
+            depth = positions[unit_ids1][inds_1[len(inds_2):]]
+            axs[0, count].scatter(depth, snr, c=np.zeros(len(snr)), alpha=0.25)
+            axs[0, count].set_xlabel("depth")
+            axs[0, count].set_ylabel("snr")
+            label = self.cases[key]["label"]
+            axs[0, count].set_title(label)
+            axs[0, count].legend()
 
     def plot_comparison_clustering(
         self,
@@ -342,168 +401,33 @@ class ClusteringStudy(BenchmarkStudy):
                     ax.set_yticks([])
         plt.tight_layout(h_pad=0, w_pad=0)
 
+    # def plot_unit_losses(self, before, after, figsize=None):
 
-#     def _scatter_clusters(
-#         self,
-#         xs,
-#         ys,
-#         sorting,
-#         colors=None,
-#         labels=None,
-#         ax=None,
-#         n_std=2.0,
-#         force_black_for=[],
-#         s=1,
-#         alpha=0.5,
-#         show_ellipses=True,
-#     ):
-#         if colors is None:
-#             from spikeinterface.widgets import get_unit_colors
+    #     fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
 
-#             colors = get_unit_colors(sorting)
+    #     for count, k in enumerate(("accuracy", "recall", "precision")):
 
-#         from matplotlib.patches import Ellipse
-#         import matplotlib.transforms as transforms
+    #         ax = axs[count]
+            
+    #         label = self.cases[after]["label"]
 
-#         ax = ax or plt.gca()
-#         # scatter and collect gaussian info
-#         means = {}
-#         covs = {}
-#         labels = sorting.to_spike_vector(concatenated=False)[0]["unit_index"]
+    #         positions = self.get_result(before)["gt_comparison"].sorting1.get_property('gt_unit_locations')
 
-#         for unit_ind, unit_id in enumerate(sorting.unit_ids):
-#             where = np.flatnonzero(labels == unit_ind)
+    #         analyzer = self.get_sorting_analyzer(before)
+    #         metrics_before = analyzer.get_extension("quality_metrics").get_data()
+    #         x = metrics_before["snr"].values
+                
+    #         y_before = self.get_result(before)["gt_comparison"].get_performance()[k].values
+    #         y_after = self.get_result(after)["gt_comparison"].get_performance()[k].values
+    #         if count < 2:
+    #             ax.set_xticks([], [])
+    #         elif count == 2:
+    #             ax.set_xlabel('depth (um)')
+    #         im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), marker=".", s=50, cmap='copper')
+    #         fig.colorbar(im, ax=ax)
+    #         ax.set_title(k)
+    #         ax.set_ylabel('snr')
 
-#             xk = xs[where]
-#             yk = ys[where]
-
-#             if unit_id not in force_black_for:
-#                 ax.scatter(xk, yk, s=s, color=colors[unit_id], alpha=alpha, marker=".")
-#                 x_mean, y_mean = xk.mean(), yk.mean()
-#                 xycov = np.cov(xk, yk)
-#                 means[unit_id] = x_mean, y_mean
-#                 covs[unit_id] = xycov
-#                 ax.annotate(unit_id, (x_mean, y_mean))
-#                 ax.scatter([x_mean], [y_mean], s=50, c="k")
-#             else:
-#                 ax.scatter(xk, yk, s=s, color="k", alpha=alpha, marker=".")
-
-#         for unit_id in means.keys():
-#             mean_x, mean_y = means[unit_id]
-#             cov = covs[unit_id]
-
-#             with np.errstate(invalid="ignore"):
-#                 vx, vy = cov[0, 0], cov[1, 1]
-#                 rho = cov[0, 1] / np.sqrt(vx * vy)
-#             if not np.isfinite([vx, vy, rho]).all():
-#                 continue
-
-#             if show_ellipses:
-#                 ell = Ellipse(
-#                     (0, 0),
-#                     width=2 * np.sqrt(1 + rho),
-#                     height=2 * np.sqrt(1 - rho),
-#                     facecolor=(0, 0, 0, 0),
-#                     edgecolor=colors[unit_id],
-#                     linewidth=1,
-#                 )
-#                 transform = (
-#                     transforms.Affine2D()
-#                     .rotate_deg(45)
-#                     .scale(n_std * np.sqrt(vx), n_std * np.sqrt(vy))
-#                     .translate(mean_x, mean_y)
-#                 )
-#                 ell.set_transform(transform + ax.transData)
-#                 ax.add_patch(ell)
-
-#     def plot_clusters(self, show_probe=True, show_ellipses=True):
-#         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
-#         fig.suptitle(f"Clustering results with {self.method}")
-#         ax = axs[0]
-#         ax.set_title("Full gt clusters")
-#         if show_probe:
-#             plot_probe_map(self.recording_f, ax=ax)
-
-#         from spikeinterface.widgets import get_unit_colors
-
-#         colors = get_unit_colors(self.gt_sorting)
-#         self._scatter_clusters(
-#             self.gt_positions["x"],
-#             self.gt_positions["y"],
-#             self.gt_sorting,
-#             colors,
-#             s=1,
-#             alpha=0.5,
-#             ax=ax,
-#             show_ellipses=show_ellipses,
-#         )
-#         xlim = ax.get_xlim()
-#         ylim = ax.get_ylim()
-#         ax.set_xlabel("x")
-#         ax.set_ylabel("y")
-
-#         ax = axs[1]
-#         ax.set_title("Sliced gt clusters")
-#         if show_probe:
-#             plot_probe_map(self.recording_f, ax=ax)
-
-#         self._scatter_clusters(
-#             self.sliced_gt_positions["x"],
-#             self.sliced_gt_positions["y"],
-#             self.sliced_gt_sorting,
-#             colors,
-#             s=1,
-#             alpha=0.5,
-#             ax=ax,
-#             show_ellipses=show_ellipses,
-#         )
-#         if self.exhaustive_gt:
-#             ax.set_xlim(xlim)
-#             ax.set_ylim(ylim)
-#         ax.set_xlabel("x")
-#         ax.set_yticks([], [])
-
-#         ax = axs[2]
-#         ax.set_title("Found clusters")
-#         if show_probe:
-#             plot_probe_map(self.recording_f, ax=ax)
-#         ax.scatter(self.positions["x"][self.noise], self.positions["y"][self.noise], c="k", s=1, alpha=0.1)
-#         self._scatter_clusters(
-#             self.positions["x"][~self.noise],
-#             self.positions["y"][~self.noise],
-#             self.clustering,
-#             s=1,
-#             alpha=0.5,
-#             ax=ax,
-#             show_ellipses=show_ellipses,
-#         )
-
-#         ax.set_xlabel("x")
-#         if self.exhaustive_gt:
-#             ax.set_xlim(xlim)
-#             ax.set_ylim(ylim)
-#             ax.set_yticks([], [])
-
-#     def plot_found_clusters(self, show_probe=True, show_ellipses=True):
-#         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 10))
-#         fig.suptitle(f"Clustering results with {self.method}")
-#         ax.set_title("Found clusters")
-#         if show_probe:
-#             plot_probe_map(self.recording_f, ax=ax)
-#         ax.scatter(self.positions["x"][self.noise], self.positions["y"][self.noise], c="k", s=1, alpha=0.1)
-#         self._scatter_clusters(
-#             self.positions["x"][~self.noise],
-#             self.positions["y"][~self.noise],
-#             self.clustering,
-#             s=1,
-#             alpha=0.5,
-#             ax=ax,
-#             show_ellipses=show_ellipses,
-#         )
-
-#         ax.set_xlabel("x")
-#         if self.exhaustive_gt:
-#             ax.set_yticks([], [])
 
 #     def plot_statistics(self, metric="cosine", annotations=True, detect_threshold=5):
 #         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
