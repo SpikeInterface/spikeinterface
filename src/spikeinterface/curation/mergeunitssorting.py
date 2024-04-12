@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import List, Union
+from typing import Union
 import numpy as np
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
 from copy import deepcopy
 
 
@@ -144,6 +145,9 @@ class MergeUnitsSorting(BaseSorting):
             properties_policy=properties_policy,
             delta_time_ms=delta_time_ms,
         )
+
+
+merge_units_sorting = define_function_from_class(source_class=MergeUnitsSorting, name="merge_units_sorting")
 
 
 class MergeUnitsSortingSegment(BaseSortingSegment):

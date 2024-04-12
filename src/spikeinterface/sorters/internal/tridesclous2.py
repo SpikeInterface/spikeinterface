@@ -8,7 +8,7 @@ from spikeinterface.core import (
     get_noise_levels,
     NumpySorting,
     get_channel_distances,
-    estimate_templates_average,
+    estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
 )
@@ -300,10 +300,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
         # sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")
 
+        recording_w = whiten(recording, mode="local", radius_um=100.0)
+
         nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
         nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
-        templates_array = estimate_templates_average(
-            recording,
+        templates_array = estimate_templates_with_accumulator(
+            recording_w,
             sorting_pre_peeler.to_spike_vector(),
             sorting_pre_peeler.unit_ids,
             nbefore,
@@ -315,7 +317,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             templates_array=templates_array,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
-            probe=recording.get_probe(),
+            probe=recording_w.get_probe(),
         )
         # TODO : try other methods for sparsity
         # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=120.)
@@ -357,7 +359,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             job_kwargs["chunk_duration"] = "100ms"
 
         spikes = find_spikes_from_templates(
-            recording, method=matching_method, method_kwargs=matching_params, **job_kwargs
+            recording_w, method=matching_method, method_kwargs=matching_params, **job_kwargs
         )
 
         if params["save_array"]:

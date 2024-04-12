@@ -5,13 +5,12 @@ import shutil
 
 import numpy as np
 
-from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.core import generate_ground_truth_recording, SortingAnalyzer
 
+from spikeinterface.core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
 from spikeinterface.core.waveforms_extractor_backwards_compatibility import extract_waveforms as mock_extract_waveforms
 from spikeinterface.core.waveforms_extractor_backwards_compatibility import load_waveforms as load_waveforms_backwards
-from spikeinterface.core.waveforms_extractor_backwards_compatibility import _read_old_waveforms_extractor_binary
 
-import spikeinterface.full as si
 
 # remove this when WaveformsExtractor will be removed
 from spikeinterface.core import extract_waveforms as old_extract_waveforms
@@ -36,11 +35,11 @@ def get_dataset():
             maximum_z=20.0,
         ),
         generate_templates_kwargs=dict(
-            unit_params_range=dict(
-                alpha=(9_000.0, 12_000.0),
+            unit_params=dict(
+                alpha=(100.0, 500.0),
             )
         ),
-        noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2406,
     )
     return recording, sorting
@@ -87,23 +86,54 @@ def test_extract_waveforms():
     print(mock_loaded_we_old)
 
 
-@pytest.mark.skip()
+@pytest.mark.skip("This test is run locally")
 def test_read_old_waveforms_extractor_binary():
-    folder = "/data_local/DataSpikeSorting/waveform_extractor_backward_compatibility/waveforms_extractor_1"
-    sorting_analyzer = _read_old_waveforms_extractor_binary(folder)
+    import pandas as pd
 
-    print(sorting_analyzer)
+    folder = Path(__file__).parent / "old_waveforms"
+    mock_waveforms = load_waveforms_backwards(folder / "we-0.100.0")
+    sorting_analyzer = load_waveforms_backwards(folder / "we-0.100.0", output="SortingAnalyzer")
+
+    assert isinstance(mock_waveforms, MockWaveformExtractor)
+    assert isinstance(sorting_analyzer, SortingAnalyzer)
 
     for ext_name in sorting_analyzer.get_loaded_extension_names():
-        print()
         print(ext_name)
         keys = sorting_analyzer.get_extension(ext_name).data.keys()
         print(keys)
         data = sorting_analyzer.get_extension(ext_name).get_data()
         if isinstance(data, np.ndarray):
             print(data.shape)
+        elif isinstance(data, pd.DataFrame):
+            print(data.columns)
+        else:
+            print(type(data))
+
+
+# @pytest.mark.skip("This test is run locally")
+# def test_read_old_waveforms_extractor_zarr():
+#     import pandas as pd
+
+#     folder = Path(__file__).parent / "old_waveforms"
+#     mock_waveforms = load_waveforms_backwards(folder / "we-0.100.0.zarr")
+#     sorting_analyzer = load_waveforms_backwards(folder / "we-0.100.0.zarr", output="SortingAnalyzer")
+
+#     assert isinstance(mock_waveforms, MockWaveformExtractor)
+#     assert isinstance(sorting_analyzer, SortingAnalyzer)
+
+#     for ext_name in sorting_analyzer.get_loaded_extension_names():
+#         print(ext_name)
+#         keys = sorting_analyzer.get_extension(ext_name).data.keys()
+#         print(keys)
+#         data = sorting_analyzer.get_extension(ext_name).get_data()
+#         if isinstance(data, np.ndarray):
+#             print(data.shape)
+#         elif isinstance(data, pd.DataFrame):
+#             print(data.columns)
+#         else:
+#             print(type(data))
 
 
 if __name__ == "__main__":
-    test_extract_waveforms()
+    test_read_old_waveforms_extractor_binary()
     # test_read_old_waveforms_extractor_binary()

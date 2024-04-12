@@ -32,7 +32,7 @@ class Kilosort4Sorter(BaseSorter):
         "sig_interp": 20,
         "nt0min": None,
         "dmin": None,
-        "dminx": None,
+        "dminx": 32,
         "min_template_size": 10,
         "template_sizes": 5,
         "nearest_chans": 10,
@@ -51,6 +51,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_extra_kwargs": False,
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
+        "torch_device": "auto",
     }
 
     _params_description = {
@@ -68,7 +69,7 @@ class Kilosort4Sorter(BaseSorter):
         "sig_interp": "For drift correction, sigma for interpolation (spatial standard deviation). Approximate smoothness scale in units of microns. Default value: 20.",
         "nt0min": "Sample index for aligning waveforms, so that their minimum or maximum value happens here. Default of 20. Default value: None.",
         "dmin": "Vertical spacing of template centers used for spike detection, in microns. Determined automatically by default. Default value: None.",
-        "dminx": "Horizontal spacing of template centers used for spike detection, in microns. Determined automatically by default. Default value: None.",
+        "dminx": "Horizontal spacing of template centers used for spike detection, in microns. Default value: 32.",
         "min_template_size": "Standard deviation of the smallest, spatial envelope Gaussian used for universal templates. Default value: 10.",
         "template_sizes": "Number of sizes for universal spike templates (multiples of the min_template_size). Default value: 5.",
         "nearest_chans": "Number of nearest channels to consider when finding local maxima during spike detection. Default value: 10.",
@@ -87,6 +88,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_extra_kwargs": "If True, additional kwargs are saved to the output",
         "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
+        "torch_device": "Select the torch device auto/cuda/cpu",
     }
 
     sorter_description = """Kilosort4 is a Python package for spike sorting on GPUs with template matching.
@@ -152,7 +154,10 @@ class Kilosort4Sorter(BaseSorter):
 
         probe_filename = sorter_output_folder / "probe.prb"
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        torch_device = params["torch_device"]
+        if torch_device == "auto":
+            torch_device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = torch.device(torch_device)
 
         # load probe
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)

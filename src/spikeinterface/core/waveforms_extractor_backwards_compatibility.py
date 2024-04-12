@@ -23,12 +23,13 @@ from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
 from .sortinganalyzer import SortingAnalyzer, load_sorting_analyzer
 from .base import load_extractor
-from .analyzer_extension_core import SelectRandomSpikes, ComputeWaveforms, ComputeTemplates
+from .analyzer_extension_core import ComputeRandomSpikes, ComputeWaveforms, ComputeTemplates
 
 _backwards_compatibility_msg = """####
-# extract_waveforms() and WaveformExtractor() have been replace by SortingAnalyzer since version 0.101
-# You should use create_sorting_analyzer() instead.
-# extract_waveforms() is now mocking the old behavior for backwards compatibility only and will be removed after 0.103
+# extract_waveforms() and WaveformExtractor() have been replaced by the `SortingAnalyzer` since version 0.101.0.
+# You should use `spikeinterface.create_sorting_analyzer()` instead.
+# `spikeinterface.extract_waveforms()` is now mocking the old behavior for backwards compatibility only,
+# and will be removed with version 0.103.0
 ####"""
 
 
@@ -93,12 +94,19 @@ def extract_waveforms(
         **job_kwargs,
     )
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format=format, folder=folder, sparse=sparse, sparsity=sparsity, **sparsity_kwargs
+        sorting,
+        recording,
+        format=format,
+        folder=folder,
+        sparse=sparse,
+        sparsity=sparsity,
+        return_scaled=return_scaled,
+        **sparsity_kwargs,
     )
 
     sorting_analyzer.compute("random_spikes", max_spikes_per_unit=max_spikes_per_unit, seed=seed)
 
-    waveforms_params = dict(ms_before=ms_before, ms_after=ms_after, return_scaled=return_scaled, dtype=dtype)
+    waveforms_params = dict(ms_before=ms_before, ms_after=ms_after, dtype=dtype)
     sorting_analyzer.compute("waveforms", **waveforms_params, **job_kwargs)
 
     templates_params = dict(operators=list(precompute_template))
@@ -252,7 +260,7 @@ class MockWaveformExtractor:
         # lazy and cache are ingnored
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").some_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
@@ -325,7 +333,21 @@ def load_waveforms(
     >>> we = load_waveforms("/my_we")
     >>> templates = we.get_all_templates()
 
+    Parameters
+    ----------
+    folder: str | Path
+        The folder to the waveform extractor (binary or zarr)
+    with_recording: bool
+        For back-compatibility, ignored
+    sorting: BaseSorting | None, default: None
+        The sorting object to instantiate with the Waveforms
+    output: "MockWaveformExtractor" | "SortingAnalyzer", default: "MockWaveformExtractor"
+        The output format
 
+    Returns
+    -------
+    waveforms_or_analyzer: MockWaveformExtractor | SortingAnalyzer
+        The returned MockWaveformExtractor or SortingAnalyzer
     """
 
     folder = Path(folder)
@@ -342,10 +364,10 @@ def load_waveforms(
             return we
 
     if folder.suffix == ".zarr":
-        raise NotImplementedError
-        # Alessio this is for you
+        raise NotImplementedError("Waveform extractors back-compatibility from Zarr format is not supported")
+        # sorting_analyzer = _read_old_waveforms_extractor_zarr(folder, sorting)
     else:
-        sorting_analyzer = _read_old_waveforms_extractor_binary(folder)
+        sorting_analyzer = _read_old_waveforms_extractor_binary(folder, sorting)
 
     if output == "SortingAnalyzer":
         return sorting_analyzer
@@ -353,13 +375,31 @@ def load_waveforms(
         return MockWaveformExtractor(sorting_analyzer)
 
 
-def _read_old_waveforms_extractor_binary(folder):
+# old extensions with same names and equvalent data except similarity>template_similarity
+old_extension_to_new_class_map = {
+    "spike_amplitudes": "spike_amplitudes",
+    "spike_locations": "spike_locations",
+    "amplitude_scalings": "amplitude_scalings",
+    "template_metrics": "template_metrics",
+    "similarity": "template_similarity",
+    "unit_locations": "unit_locations",
+    "correlograms": "correlograms",
+    "isi_histograms": "isi_histograms",
+    "noise_levels": "noise_levels",
+    "quality_metrics": "quality_metrics",
+    "principal_components": "principal_components",
+}
+
+
+def _read_old_waveforms_extractor_binary(folder, sorting):
     folder = Path(folder)
     params_file = folder / "params.json"
     if not params_file.exists():
         raise ValueError(f"This folder is not a WaveformsExtractor folder {folder}")
     with open(params_file, "r") as f:
         params = json.load(f)
+
+    return_scaled = params["return_scaled"]
 
     sparsity_file = folder / "sparsity.json"
     if sparsity_file.exists():
@@ -393,12 +433,15 @@ def _read_old_waveforms_extractor_binary(folder):
             pass
 
     # sorting
-    if (folder / "sorting.json").exists():
-        sorting = load_extractor(folder / "sorting.json", base_folder=folder)
-    elif (folder / "sorting.pickle").exists():
-        sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
+    if sorting is None:
+        if (folder / "sorting.json").exists():
+            sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+        elif (folder / "sorting.pickle").exists():
+            sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
 
-    sorting_analyzer = SortingAnalyzer.create_memory(sorting, recording, sparsity, rec_attributes=rec_attributes)
+    sorting_analyzer = SortingAnalyzer.create_memory(
+        sorting, recording, sparsity=sparsity, return_scaled=return_scaled, rec_attributes=rec_attributes
+    )
 
     # waveforms
     # need to concatenate all waveforms in one unique buffer
@@ -409,8 +452,7 @@ def _read_old_waveforms_extractor_binary(folder):
         spikes = sorting.to_spike_vector()
         random_spike_mask = np.zeros(spikes.size, dtype="bool")
 
-        all_sampled_indices = []
-        # first readd all sampled_index to get the correct ordering
+        # first read all sampled_index to get the correct ordering
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             # unit_indices has dtype=[("spike_index", "int64"), ("segment_index", "int64")]
             unit_indices = np.load(waveform_folder / f"sampled_index_{unit_id}.npy")
@@ -439,7 +481,7 @@ def _read_old_waveforms_extractor_binary(folder):
             mask = some_spikes["unit_index"] == unit_index
             waveforms[:, :, : wfs.shape[2]][mask, :, :] = wfs
 
-        ext = SelectRandomSpikes(sorting_analyzer)
+        ext = ComputeRandomSpikes(sorting_analyzer)
         ext.params = dict()
         ext.data = dict(random_spikes_indices=random_spikes_indices)
 
@@ -447,7 +489,6 @@ def _read_old_waveforms_extractor_binary(folder):
         ext.params = dict(
             ms_before=params["ms_before"],
             ms_after=params["ms_after"],
-            return_scaled=params["return_scaled"],
             dtype=params["dtype"],
         )
         ext.data["waveforms"] = waveforms
@@ -462,28 +503,12 @@ def _read_old_waveforms_extractor_binary(folder):
             templates[mode] = np.load(template_file)
     if len(templates) > 0:
         ext = ComputeTemplates(sorting_analyzer)
-        ext.params = dict(
-            nbefore=nbefore, nafter=nafter, return_scaled=params["return_scaled"], operators=list(templates.keys())
-        )
+        ext.params = dict(nbefore=nbefore, nafter=nafter, operators=list(templates.keys()))
         for mode, arr in templates.items():
             ext.data[mode] = arr
         sorting_analyzer.extensions["templates"] = ext
 
-    # old extensions with same names and equvalent data except similarity>template_similarity
-    old_extension_to_new_class = {
-        "spike_amplitudes": "spike_amplitudes",
-        "spike_locations": "spike_locations",
-        "amplitude_scalings": "amplitude_scalings",
-        "template_metrics": "template_metrics",
-        "similarity": "template_similarity",
-        "unit_locations": "unit_locations",
-        "correlograms": "correlograms",
-        "isi_histograms": "isi_histograms",
-        "noise_levels": "noise_levels",
-        "quality_metrics": "quality_metrics",
-        # "principal_components" : "principal_components",
-    }
-    for old_name, new_name in old_extension_to_new_class.items():
+    for old_name, new_name in old_extension_to_new_class_map.items():
         ext_folder = folder / old_name
         if not ext_folder.is_dir():
             continue
@@ -522,9 +547,209 @@ def _read_old_waveforms_extractor_binary(folder):
             import pandas as pd
 
             ext.data["metrics"] = pd.read_csv(ext_folder / "metrics.csv", index_col=0)
-        # elif new_name == "principal_components":
-        #     # TODO: alessio this is for you
-        #     pass
+        elif new_name == "principal_components":
+            # the waveform folder is needed to get the sampled indices
+            if waveform_folder.exists():
+                # read params
+                params_file = ext_folder / "params.json"
+                with open(params_file, "r") as f:
+                    params = json.load(f)
+                n_components = params["n_components"]
+                n_channels = len(rec_attributes["channel_ids"])
+                num_spikes = len(random_spikes_indices)
+                mode = params["mode"]
+                if mode == "by_channel_local":
+                    pc_all = np.zeros((num_spikes, n_components, n_channels), dtype=params["dtype"])
+                elif mode == "by_channel_global":
+                    pc_all = np.zeros((num_spikes, n_components, n_channels), dtype=params["dtype"])
+                elif mode == "concatenated":
+                    pc_all = np.zeros((num_spikes, n_components), dtype=params["dtype"])
+                # then read pc per units
+                some_spikes = spikes[random_spikes_indices]
+                for unit_index, unit_id in enumerate(sorting.unit_ids):
+                    pc_one = np.load(ext_folder / f"pca_{unit_id}.npy")
+                    mask = some_spikes["unit_index"] == unit_index
+                    pc_all[mask, ...] = pc_one
+                ext.data["pca_projection"] = pc_all
+
         sorting_analyzer.extensions[new_name] = ext
 
     return sorting_analyzer
+
+
+# this was never used, let's comment it out
+# def _read_old_waveforms_extractor_zarr(folder, sorting):
+#     import zarr
+
+#     folder = Path(folder)
+#     waveforms_root = zarr.open(folder, mode="r")
+
+#     params = waveforms_root.attrs["params"]
+
+#     rec_attributes = waveforms_root.get("recording_info").attrs["recording_attributes"]
+#     # the probe is handle ouside the main json
+#     if "probegroup" in waveforms_root.get("recording_info").attrs:
+#         probegroup_dict = waveforms_root.get("recording_info").attrs["probegroup"]
+#         rec_attributes["probegroup"] = probeinterface.ProbeGroup.from_dict(probegroup_dict)
+#     else:
+#         rec_attributes["probegroup"] = None
+
+#     # recording
+#     recording = None
+#     try:
+#         recording_dict = waveforms_root.attrs["recording"]
+#         recording = load_extractor(recording_dict, base_folder=folder)
+#     except:
+#         pass
+
+#     # sorting
+#     if sorting is None:
+#         assert "sorting" in waveforms_root.attrs, "Could not load sorting object"
+#         sorting_dict = waveforms_root.attrs["sorting"]
+#         sorting = load_extractor(sorting_dict, base_folder=folder)
+
+#     if "sparsity" in waveforms_root.attrs:
+#         sparsity_dict = waveforms_root.attrs["sparsity"]
+#         sparsity = ChannelSparsity.from_dict(sparsity_dict)
+#     else:
+#         sparsity = None
+
+#     sorting_analyzer = SortingAnalyzer.create_memory(sorting, recording, sparsity, rec_attributes=rec_attributes)
+
+#     # waveforms
+#     # need to concatenate all waveforms in one unique buffer
+#     # need to concatenate sampled_index and order it
+#     waveform_group = waveforms_root.get("waveforms", None)
+#     if waveform_group:
+#         spikes = sorting.to_spike_vector()
+#         random_spike_mask = np.zeros(spikes.size, dtype="bool")
+
+#         # first read all sampled_index to get the correct ordering
+#         for unit_index, unit_id in enumerate(sorting.unit_ids):
+#             # unit_indices has dtype=[("spike_index", "int64"), ("segment_index", "int64")]
+#             unit_indices = waveform_group[f"sampled_index_{unit_id}"][:]
+#             for segment_index in range(sorting.get_num_segments()):
+#                 in_seg_selected = unit_indices[unit_indices["segment_index"] == segment_index]["spike_index"]
+#                 spikes_indices = np.flatnonzero(
+#                     (spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index)
+#                 )
+#                 random_spike_mask[spikes_indices[in_seg_selected]] = True
+#         random_spikes_indices = np.flatnonzero(random_spike_mask)
+
+#         num_spikes = random_spikes_indices.size
+#         if sparsity is None:
+#             max_num_channel = len(rec_attributes["channel_ids"])
+#         else:
+#             max_num_channel = np.max(np.sum(sparsity.mask, axis=1))
+
+#         nbefore = int(params["ms_before"] * sorting.sampling_frequency / 1000.0)
+#         nafter = int(params["ms_after"] * sorting.sampling_frequency / 1000.0)
+
+#         waveforms = np.zeros((num_spikes, nbefore + nafter, max_num_channel), dtype=params["dtype"])
+#         # then read waveforms per units
+#         some_spikes = spikes[random_spikes_indices]
+#         for unit_index, unit_id in enumerate(sorting.unit_ids):
+#             wfs = waveform_group[f"waveforms_{unit_id}"]
+#             mask = some_spikes["unit_index"] == unit_index
+#             waveforms[:, :, : wfs.shape[2]][mask, :, :] = wfs
+
+#         ext = ComputeRandomSpikes(sorting_analyzer)
+#         ext.params = dict()
+#         ext.data = dict(random_spikes_indices=random_spikes_indices)
+
+#         ext = ComputeWaveforms(sorting_analyzer)
+#         ext.params = dict(
+#             ms_before=params["ms_before"],
+#             ms_after=params["ms_after"],
+#             return_scaled=params["return_scaled"],
+#             dtype=params["dtype"],
+#         )
+#         ext.data["waveforms"] = waveforms
+#         sorting_analyzer.extensions["waveforms"] = ext
+
+#     # templates saved dense
+#     # load cached templates
+#     templates = {}
+#     for mode in ("average", "std", "median", "percentile"):
+#         template_data = waveforms_root.get(f"templates_{mode}", None)
+#         if template_data:
+#             templates[mode] = template_data
+#     if len(templates) > 0:
+#         ext = ComputeTemplates(sorting_analyzer)
+#         ext.params = dict(
+#             nbefore=nbefore, nafter=nafter, return_scaled=params["return_scaled"], operators=list(templates.keys())
+#         )
+#         for mode, arr in templates.items():
+#             ext.data[mode] = arr
+#         sorting_analyzer.extensions["templates"] = ext
+
+#     for old_name, new_name in old_extension_to_new_class_map.items():
+#         ext_group = waveforms_root.get(old_name, None)
+#         if ext_group is None:
+#             continue
+#         new_class = get_extension_class(new_name)
+#         ext = new_class(sorting_analyzer)
+#         params = ext_group.attrs["params"]
+#         ext.params = params
+#         if new_name == "spike_amplitudes":
+#             amplitudes = []
+#             for segment_index in range(sorting.get_num_segments()):
+#                 amplitudes.append(ext_group[f"amplitude_segment_{segment_index}"])
+#             amplitudes = np.concatenate(amplitudes)
+#             ext.data["amplitudes"] = amplitudes
+#         elif new_name == "spike_locations":
+#             ext.data["spike_locations"] = ext_group["spike_locations"]
+#         elif new_name == "amplitude_scalings":
+#             ext.data["amplitude_scalings"] = ext_group["amplitude_scalings"]
+#         elif new_name == "template_metrics":
+#             import xarray
+
+#             ext_data = xarray.open_zarr(folder, group="template_metrics/metrics").to_pandas()
+#             ext_data.index.rename("", inplace=True)
+
+#             ext.data["metrics"] = ext_data
+#         elif new_name == "template_similarity":
+#             ext.data["similarity"] = ext_group["similarity"]
+#         elif new_name == "unit_locations":
+#             ext.data["unit_locations"] = ext_group["unit_locations"]
+#         elif new_name == "correlograms":
+#             ext.data["ccgs"] = ext_group["ccgs"]
+#             ext.data["bins"] = ext_group["bins"]
+#         elif new_name == "isi_histograms":
+#             ext.data["isi_histograms"] = ext_group["isi_histograms"]
+#             ext.data["bins"] = ext_group["bins"]
+#         elif new_name == "noise_levels":
+#             ext.data["noise_levels"] = ext_group["noise_levels"]
+#         elif new_name == "quality_metrics":
+#             import xarray
+
+#             ext_data = xarray.open_zarr(folder, group="quality_metrics/metrics").to_pandas()
+#             ext_data.index.rename("", inplace=True)
+
+#             ext.data["metrics"] = ext_data
+#         elif new_name == "principal_components":
+#             # the waveform folder is needed to get the sampled indices
+#             if waveform_group is not None:
+#                 # read params
+#                 params = ext_group.attrs["params"]
+#                 n_components = params["n_components"]
+#                 n_channels = len(rec_attributes["channel_ids"])
+#                 num_spikes = len(random_spikes_indices)
+#                 mode = params["mode"]
+#                 if mode == "by_channel_local":
+#                     pc_all = np.zeros((num_spikes, n_components, n_channels), dtype=params["dtype"])
+#                 elif mode == "by_channel_global":
+#                     pc_all = np.zeros((num_spikes, n_components, n_channels), dtype=params["dtype"])
+#                 elif mode == "concatenated":
+#                     pc_all = np.zeros((num_spikes, n_components), dtype=params["dtype"])
+#                 # then read pc per units
+#                 some_spikes = spikes[random_spikes_indices]
+#                 for unit_index, unit_id in enumerate(sorting.unit_ids):
+#                     pc_one = ext_group[f"pca_{unit_id}"]
+#                     mask = some_spikes["unit_index"] == unit_index
+#                     pc_all[mask, ...] = pc_one
+#                 ext.data["pca_projection"] = pc_all
+
+#         sorting_analyzer.extensions[new_name] = ext
+
+#     return sorting_analyzer

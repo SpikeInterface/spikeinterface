@@ -13,14 +13,9 @@ try:
 except:
     HAVE_HDBSCAN = False
 
-import random, string, os
 from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.core import get_global_tmp_folder, get_channel_distances, get_random_data_chunks
-from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
-from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers, estimate_templates
-from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
-from spikeinterface.core import NumpySorting
-from spikeinterface.core import extract_waveforms
+from spikeinterface.core.waveform_tools import estimate_templates
+from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
@@ -30,7 +25,6 @@ from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
-    ExtractDenseWaveforms,
     ExtractSparseWaveforms,
     PeakRetriever,
 )
@@ -47,12 +41,14 @@ class RandomProjectionClustering:
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "leaf",
+            "cluster_selection_epsilon": 2,
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "ptp", "threshold": 0.25},
         "radius_um": 100,
         "nb_projections": 10,
+        "feature": "energy",
         "ms_before": 0.5,
         "ms_after": 0.5,
         "random_seed": 42,
@@ -69,25 +65,14 @@ class RandomProjectionClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        if "verbose" in job_kwargs:
-            verbose = job_kwargs["verbose"]
-        else:
-            verbose = False
+        verbose = job_kwargs.get("verbose", False)
 
         fs = recording.get_sampling_frequency()
+        radius_um = params["radius_um"]
         nbefore = int(params["ms_before"] * fs / 1000.0)
         nafter = int(params["ms_after"] * fs / 1000.0)
-        num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
-        np.random.seed(d["random_seed"])
-
-        if params["tmp_folder"] is None:
-            name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-            tmp_folder = get_global_tmp_folder() / name
-        else:
-            tmp_folder = Path(params["tmp_folder"]).absolute()
-
-        tmp_folder.mkdir(parents=True, exist_ok=True)
+        rng = np.random.RandomState(d["random_seed"])
 
         node0 = PeakRetriever(recording, peaks)
         node1 = ExtractSparseWaveforms(
@@ -96,30 +81,33 @@ class RandomProjectionClustering:
             return_output=False,
             ms_before=params["ms_before"],
             ms_after=params["ms_after"],
-            radius_um=params["radius_um"],
+            radius_um=radius_um,
         )
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
 
         num_projections = min(num_chans, d["nb_projections"])
-        projections = np.random.randn(num_chans, num_projections)
+        projections = rng.randn(num_chans, num_projections)
         if num_chans > 1:
-            projections -= projections.mean(0)
-            projections /= projections.std(0)
+            projections -= projections.mean()
+            projections /= projections.std()
 
         nbefore = int(params["ms_before"] * fs / 1000)
         nafter = int(params["ms_after"] * fs / 1000)
-        nsamples = nbefore + nafter
 
-        # noise_ptps = np.linalg.norm(np.random.randn(1000, nsamples), axis=1)
-        # noise_threshold = np.mean(noise_ptps) + 3 * np.std(noise_ptps)
+        # if params["feature"] == "ptp":
+        #     noise_values = np.ptp(rng.randn(1000, nsamples), axis=1)
+        # elif params["feature"] == "energy":
+        #     noise_values = np.linalg.norm(rng.randn(1000, nsamples), axis=1)
+        # noise_threshold = np.mean(noise_values) + 3 * np.std(noise_values)
 
         node3 = RandomProjectionsFeature(
             recording,
             parents=[node0, node2],
             return_output=True,
+            feature=params["feature"],
             projections=projections,
-            radius_um=params["radius_um"],
+            radius_um=radius_um,
             noise_threshold=None,
             sparse=True,
         )
@@ -129,8 +117,6 @@ class RandomProjectionClustering:
         hdbscan_data = run_node_pipeline(
             recording, pipeline_nodes, job_kwargs=job_kwargs, job_name="extracting features"
         )
-
-        import sklearn
 
         clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
         peak_labels = clustering[0]
@@ -175,7 +161,6 @@ class RandomProjectionClustering:
         cleaning_matching_params["progress_bar"] = False
 
         cleaning_params = params["cleaning_kwargs"].copy()
-        cleaning_params["tmp_folder"] = tmp_folder
 
         labels, peak_labels = remove_duplicates_via_matching(
             templates, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params

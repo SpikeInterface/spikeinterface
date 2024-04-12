@@ -14,7 +14,7 @@ def read_file_from_backend(
     *,
     file_path: str | Path | None,
     file: BinaryIO | None = None,
-    stream_mode: Literal["ffspec", "ros3", "remfile"] | None = None,
+    stream_mode: Literal["ffspec", "remfile"] | None = None,
     cache: bool = False,
     stream_cache_path: str | Path | None = None,
     storage_options: dict | None = None,
@@ -98,7 +98,7 @@ def read_nwbfile(
     backend: Literal["hdf5", "zarr"],
     file_path: str | Path | None,
     file: BinaryIO | None = None,
-    stream_mode: Literal["ffspec", "ros3", "remfile", "zarr"] | None = None,
+    stream_mode: Literal["ffspec", "remfile", "zarr"] | None = None,
     cache: bool = False,
     stream_cache_path: str | Path | None = None,
     storage_options: dict | None = None,
@@ -112,7 +112,7 @@ def read_nwbfile(
         The path to the NWB file. Either provide this or file.
     file : file-like object or None
         The file-like object to read from. Either provide this or file_path.
-    stream_mode : "fsspec" | "ros3" | "remfile" | None, default: None
+    stream_mode : "fsspec" | "remfile" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
     cache: bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
@@ -132,12 +132,12 @@ def read_nwbfile(
 
     Notes
     -----
-    This function can stream data from the "fsspec", "ros3" and "rem" protocols.
+    This function can stream data from the "fsspec", and "rem" protocols.
 
 
     Examples
     --------
-    >>> nwbfile = read_nwbfile(file_path="data.nwb", backend="hdf5", stream_mode="ros3")
+    >>> nwbfile = read_nwbfile(file_path="data.nwb", backend="hdf5", stream_mode="fsspec")
     """
 
     if file_path is not None and file is not None:
@@ -428,7 +428,7 @@ class NwbRecordingExtractor(BaseRecording):
     samples_for_rate_estimation: int, default: 1000
         The number of timestamp samples used for estimating the sampling rate. This is relevant
         when the 'rate' attribute is not available in the ElectricalSeries.
-    stream_mode : "fsspec" | "ros3" | "remfile" | "zarr" | None, default: None
+    stream_mode : "fsspec" | "remfile" | "zarr" | None, default: None
         Determines the streaming mode for reading the file. Use this for optimized reading from
         different sources, such as local disk or remote servers.
     load_channel_properties: bool, default: True
@@ -485,7 +485,7 @@ class NwbRecordingExtractor(BaseRecording):
         electrical_series_name: str | None = None,  # deprecated
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 1_000,
-        stream_mode: Optional[Literal["fsspec", "ros3", "remfile", "zarr"]] = None,
+        stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
         stream_cache_path: str | Path | None = None,
         electrical_series_path: str | None = None,
         load_channel_properties: bool = True,
@@ -495,6 +495,14 @@ class NwbRecordingExtractor(BaseRecording):
         storage_options: dict | None = None,
         use_pynwb: bool = False,
     ):
+
+        if stream_mode == "ros3":
+            warnings.warn(
+                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
+                "Use 'fsspec' stream_mode instead.",
+                DeprecationWarning,
+            )
+
         if file_path is not None and file is not None:
             raise ValueError("Provide either file_path or file, not both")
         if file_path is None and file is None:
@@ -548,7 +556,6 @@ class NwbRecordingExtractor(BaseRecording):
                 segment_data,
                 times_kwargs,
             ) = self._fetch_recording_segment_info_backend(file, cache, load_time_vector, samples_for_rate_estimation)
-
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         recording_segment = NwbRecordingSegment(
             electrical_series_data=segment_data,
@@ -559,8 +566,10 @@ class NwbRecordingExtractor(BaseRecording):
         # fetch and add main recording properties
         if use_pynwb:
             gains, offsets, locations, groups = self._fetch_main_properties_pynwb()
+            self.extra_requirements.append("pynwb")
         else:
             gains, offsets, locations, groups = self._fetch_main_properties_backend()
+            self.extra_requirements.append("h5py")
         self.set_channel_gains(gains)
         self.set_channel_offsets(offsets)
         if locations is not None:
@@ -772,8 +781,6 @@ class NwbRecordingExtractor(BaseRecording):
         #########
         # Extract and re-name properties from nwbfile TODO: Should be a function
         ########
-        from pynwb.ecephys import ElectrodeGroup
-
         properties = dict()
         properties_to_skip = [
             "id",
@@ -788,10 +795,7 @@ class NwbRecordingExtractor(BaseRecording):
         rename_properties = dict(location="brain_area")
 
         for column in columns:
-            first_value = electrodes_table[column][0]
-            if isinstance(first_value, ElectrodeGroup):
-                continue
-            elif column in properties_to_skip:
+            if column in properties_to_skip:
                 continue
             else:
                 column_name = rename_properties.get(column, column)
@@ -844,7 +848,8 @@ class NwbRecordingExtractor(BaseRecording):
         data_attributes = self.electrical_series["data"].attrs
         electrical_series_conversion = data_attributes["conversion"]
         gains = electrical_series_conversion * 1e6
-        if "channel_conversion" in data_attributes:
+        channel_conversion = self.electrical_series.get("channel_conversion", None)
+        if channel_conversion:
             gains *= self.electrical_series["channel_conversion"][:]
 
         # Channel offsets
@@ -914,7 +919,7 @@ class NwbSortingExtractor(BaseSorting):
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
-    stream_mode : "fsspec" | "ros3" | "remfile" | "zarr" | None, default: None
+    stream_mode : "fsspec" | "remfile" | "zarr" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
     stream_cache_path: str or Path or None, default: None
         Local path for caching. If None it uses the system temporary directory.
@@ -968,6 +973,14 @@ class NwbSortingExtractor(BaseSorting):
         storage_options: dict | None = None,
         use_pynwb: bool = False,
     ):
+
+        if stream_mode == "ros3":
+            warnings.warn(
+                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
+                "Use 'fsspec' stream_mode instead.",
+                DeprecationWarning,
+            )
+
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
         self.electrical_series_path = electrical_series_path
@@ -1015,8 +1028,10 @@ class NwbSortingExtractor(BaseSorting):
         if load_unit_properties:
             if use_pynwb:
                 columns = [c.name for c in self.units_table.columns]
+                self.extra_requirements.append("pynwb")
             else:
                 columns = list(self.units_table.keys())
+                self.extra_requirements.append("h5py")
             properties = self._fetch_properties(columns)
             for property_name, property_values in properties.items():
                 values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in property_values]
