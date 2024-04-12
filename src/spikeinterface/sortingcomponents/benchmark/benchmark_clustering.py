@@ -64,7 +64,7 @@ class ClusteringBenchmark(Benchmark):
         )
 
         data = spikes[self.indices][~self.noise]
-        #data["unit_index"] = self.result["peak_labels"][~self.noise]
+        # data["unit_index"] = self.result["peak_labels"][~self.noise]
 
         self.result["clustering"] = NumpySorting.from_times_labels(
             data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
@@ -258,11 +258,10 @@ class ClusteringStudy(BenchmarkStudy):
             analyzer = self.get_sorting_analyzer(key)
             metrics = analyzer.get_extension("quality_metrics").get_data()
 
-            
             unit_ids1 = result["gt_comparison"].unit1_ids
             matched_ids2 = result["gt_comparison"].hungarian_match_12.values
             mask = matched_ids2 > -1
-            
+
             inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1[mask])
             inds_2 = result["gt_comparison"].sorting2.ids_to_indices(matched_ids2[mask])
 
@@ -275,21 +274,21 @@ class ClusteringStudy(BenchmarkStudy):
 
             if metric == "cosine":
                 distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
-            elif metric == 'l2':
+            elif metric == "l2":
                 distances = sklearn.metrics.pairwise_distances(a, b, metric)
 
             snr_matched = metrics["snr"][unit_ids1[mask]]
             snr_missed = metrics["snr"][unit_ids1[~mask]]
 
             to_plot = []
-            if metric in ['cosine', 'l2']:
+            if metric in ["cosine", "l2"]:
                 for found, real in zip(inds_2, inds_1):
                     to_plot += [distances[real, found]]
-            elif metric == 'agreement':
+            elif metric == "agreement":
                 for found, real in zip(matched_ids2[mask], unit_ids1[mask]):
                     to_plot += [scores.at[real, found]]
-            axs[0, count].plot(snr_matched, to_plot, ".", label='matched')
-            axs[0, count].plot(snr_missed, np.zeros(len(snr_missed)), ".", c='r', label='missed')
+            axs[0, count].plot(snr_matched, to_plot, ".", label="matched")
+            axs[0, count].plot(snr_missed, np.zeros(len(snr_missed)), ".", c="r", label="missed")
             axs[0, count].set_xlabel("snr")
             axs[0, count].set_ylabel(metric)
             label = self.cases[key]["label"]
