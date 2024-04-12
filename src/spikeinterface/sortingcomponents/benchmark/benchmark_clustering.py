@@ -30,18 +30,10 @@ from spikeinterface.core.template_tools import get_template_extremum_channel
 
 class ClusteringBenchmark(Benchmark):
 
-    def __init__(self, recording, gt_sorting, params, indices, exhaustive_gt=True):
+    def __init__(self, recording, gt_sorting, params, indices, peaks, exhaustive_gt=True):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.indices = indices
-
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute(["random_spikes", "templates"])
-        extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
-
-        peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-        if self.indices is None:
-            self.indices = np.arange(len(peaks))
         self.peaks = peaks[self.indices]
         self.params = params
         self.exhaustive_gt = exhaustive_gt
@@ -65,9 +57,9 @@ class ClusteringBenchmark(Benchmark):
 
         data = spikes[self.indices][~self.noise]
         # data["unit_index"] = self.result["peak_labels"][~self.noise]
-
-        #self.result["positions"] = self.gt_sorting.get_property('gt_unit_locations')
-
+        positions = self.gt_sorting.get_property('gt_unit_locations')
+        self.result["sliced_gt_sorting"].set_property('gt_unit_locations', positions)
+        
         self.result["clustering"] = NumpySorting.from_times_labels(
             data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
         )
@@ -353,6 +345,34 @@ class ClusteringStudy(BenchmarkStudy):
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
             axs[0, count].legend()
+
+    def plot_unit_losses(self, before, after, metric='agreement', figsize=None):
+
+        fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
+
+        for count, k in enumerate(("accuracy", "recall", "precision")):
+
+            ax = axs[count]
+
+            label = self.cases[after]["label"]
+
+            positions = self.get_result(before)["gt_comparison"].sorting1.get_property("gt_unit_locations")
+
+            analyzer = self.get_sorting_analyzer(before)
+            metrics_before = analyzer.get_extension("quality_metrics").get_data()
+            x = metrics_before["snr"].values
+
+            y_before = self.get_result(before)["gt_comparison"].get_performance()[k].values
+            y_after = self.get_result(after)["gt_comparison"].get_performance()[k].values
+            if count < 2:
+                ax.set_xticks([], [])
+            elif count == 2:
+                ax.set_xlabel("depth (um)")
+            im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), marker=".", s=50, cmap="copper")
+            fig.colorbar(im, ax=ax)
+            ax.set_title(k)
+            ax.set_ylabel("snr")
+
 
     def plot_comparison_clustering(
         self,
