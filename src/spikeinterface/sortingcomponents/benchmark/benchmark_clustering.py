@@ -295,8 +295,8 @@ class ClusteringStudy(BenchmarkStudy):
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
             axs[0, count].legend()
-
-    def plot_metrics_vs_depth_and_snr(self, metric="cosine", case_keys=None, figsize=(15, 5)):
+    
+    def plot_metrics_vs_depth_and_snr(self, metric="agreement", case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -306,43 +306,50 @@ class ClusteringStudy(BenchmarkStudy):
         for count, key in enumerate(case_keys):
 
             result = self.get_result(key)
-            scores = result["gt_comparison"].get_ordered_agreement_scores()
+            scores = result["gt_comparison"].agreement_scores
+
+            #positions = result["gt_comparison"].sorting1.get_property('gt_unit_locations')
+            positions = self.datasets[key[1]][1].get_property('gt_unit_locations')
+            depth = positions[:, 1]
 
             analyzer = self.get_sorting_analyzer(key)
             metrics = analyzer.get_extension("quality_metrics").get_data()
 
-            unit_ids1 = scores.index.values
-            unit_ids2 = scores.columns.values
-            inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1)
-            inds_2 = result["gt_comparison"].sorting2.ids_to_indices(unit_ids2)
+            unit_ids1 = result["gt_comparison"].unit1_ids
+            matched_ids2 = result["gt_comparison"].hungarian_match_12.values
+            mask = matched_ids2 > -1
+
+            inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1[mask])
+            inds_2 = result["gt_comparison"].sorting2.ids_to_indices(matched_ids2[mask])
+
             t1 = result["sliced_gt_templates"].templates_array[:]
             t2 = result["clustering_templates"].templates_array[:]
             a = t1.reshape(len(t1), -1)
             b = t2.reshape(len(t2), -1)
 
-            #positions = result["gt_comparison"].sorting1.get_property('gt_unit_locations')
-            positions = self.datasets[key[1]][1].get_property('gt_unit_locations')
-            positions = positions[:, 1]
-
             import sklearn
 
             if metric == "cosine":
                 distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
-            else:
+            elif metric == "l2":
                 distances = sklearn.metrics.pairwise_distances(a, b, metric)
 
-            snr = metrics["snr"][unit_ids1][inds_1[: len(inds_2)]]
-            depth = positions[unit_ids1][inds_1[: len(inds_2)]]
-            to_plot = []
-            for found, real in zip(inds_2, inds_1):
-                to_plot += [distances[real, found]]
-            axs[0, count].scatter(depth, snr, c=to_plot)
+            snr_matched = metrics["snr"][unit_ids1[mask]]
+            snr_missed = metrics["snr"][unit_ids1[~mask]]
+            depth_matched = depth[mask]
+            depth_missed = depth[~mask]
 
-            snr = metrics["snr"][unit_ids1][inds_1[len(inds_2):]]
-            depth = positions[unit_ids1][inds_1[len(inds_2):]]
-            axs[0, count].scatter(depth, snr, c=np.zeros(len(snr)), alpha=0.25)
-            axs[0, count].set_xlabel("depth")
-            axs[0, count].set_ylabel("snr")
+            to_plot = []
+            if metric in ["cosine", "l2"]:
+                for found, real in zip(inds_2, inds_1):
+                    to_plot += [distances[real, found]]
+            elif metric == "agreement":
+                for found, real in zip(matched_ids2[mask], unit_ids1[mask]):
+                    to_plot += [scores.at[real, found]]
+            axs[0, count].scatter(depth_matched, snr_matched, c=to_plot, label="matched")
+            axs[0, count].scatter(depth_missed, snr_missed, c=np.zeros(len(snr_missed)), label="missed")
+            axs[0, count].set_xlabel("snr")
+            axs[0, count].set_ylabel(metric)
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
             axs[0, count].legend()
@@ -403,228 +410,5 @@ class ClusteringStudy(BenchmarkStudy):
                     ax.spines["right"].set_visible(False)
                     ax.set_xticks([])
                     ax.set_yticks([])
+
         plt.tight_layout(h_pad=0, w_pad=0)
-<<<<<<< HEAD
-
-    # def plot_unit_losses(self, before, after, figsize=None):
-
-    #     fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
-
-    #     for count, k in enumerate(("accuracy", "recall", "precision")):
-
-    #         ax = axs[count]
-
-    #         label = self.cases[after]["label"]
-
-    #         positions = self.get_result(before)["gt_comparison"].sorting1.get_property('gt_unit_locations')
-
-    #         analyzer = self.get_sorting_analyzer(before)
-    #         metrics_before = analyzer.get_extension("quality_metrics").get_data()
-    #         x = metrics_before["snr"].values
-
-    #         y_before = self.get_result(before)["gt_comparison"].get_performance()[k].values
-    #         y_after = self.get_result(after)["gt_comparison"].get_performance()[k].values
-    #         if count < 2:
-    #             ax.set_xticks([], [])
-    #         elif count == 2:
-    #             ax.set_xlabel('depth (um)')
-    #         im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), marker=".", s=50, cmap='copper')
-    #         fig.colorbar(im, ax=ax)
-    #         ax.set_title(k)
-    #         ax.set_ylabel('snr')
-
-
-#     def plot_statistics(self, metric="cosine", annotations=True, detect_threshold=5):
-#         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
-
-#         fig.suptitle(f"Clustering results with {self.method}")
-#         metrics = compute_quality_metrics(self.waveforms["gt"], metric_names=["snr"], load_if_exists=False)
-
-#         ax = axs[0, 0]
-#         plot_agreement_matrix(self.comp, ax=ax)
-#         scores = self.comp.get_ordered_agreement_scores()
-#         ymin, ymax = ax.get_ylim()
-#         xmin, xmax = ax.get_xlim()
-#         unit_ids1 = scores.index.values
-#         unit_ids2 = scores.columns.values
-#         inds_1 = self.comp.sorting1.ids_to_indices(unit_ids1)
-#         snrs = metrics["snr"][inds_1]
-
-#         nb_detectable = len(unit_ids1)
-
-#         if detect_threshold is not None:
-#             for count, snr in enumerate(snrs):
-#                 if snr < detect_threshold:
-#                     ax.plot([xmin, xmax], [count, count], "k")
-#                     nb_detectable -= 1
-
-#         ax.plot([nb_detectable + 0.5, nb_detectable + 0.5], [ymin, ymax], "r")
-
-#         # import MEArec as mr
-#         # mearec_recording = mr.load_recordings(self.mearec_file)
-#         # positions = mearec_recording.template_locations[:]
-
-#         # self.found_positions = np.zeros((len(self.labels), 2))
-#         # for i in range(len(self.labels)):
-#         #     data = self.positions[self.selected_peaks_labels == self.labels[i]]
-#         #     self.found_positions[i] = np.median(data['x']), np.median(data['y'])
-
-#         unit_ids1 = scores.index.values
-#         unit_ids2 = scores.columns.values
-#         inds_1 = self.comp.sorting1.ids_to_indices(unit_ids1)
-#         inds_2 = self.comp.sorting2.ids_to_indices(unit_ids2)
-
-#         a = self.templates["gt"].reshape(len(self.templates["gt"]), -1)[inds_1]
-#         b = self.templates["clustering"].reshape(len(self.templates["clustering"]), -1)[inds_2]
-
-#         import sklearn
-
-#         if metric == "cosine":
-#             distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
-#         else:
-#             distances = sklearn.metrics.pairwise_distances(a, b, metric)
-
-#         ax = axs[0, 1]
-#         nb_peaks = np.array(
-#             [len(self.sliced_gt_sorting.get_unit_spike_train(i)) for i in self.sliced_gt_sorting.unit_ids]
-#         )
-
-#         nb_potentials = np.sum(scores.max(1).values > 0.1)
-
-#         ax.plot(
-#             metrics["snr"][unit_ids1][inds_1[:nb_potentials]],
-#             nb_peaks[inds_1[:nb_potentials]],
-#             markersize=10,
-#             marker=".",
-#             ls="",
-#             c="k",
-#             label="Cluster potentially found",
-#         )
-#         ax.plot(
-#             metrics["snr"][unit_ids1][inds_1[nb_potentials:]],
-#             nb_peaks[inds_1[nb_potentials:]],
-#             markersize=10,
-#             marker=".",
-#             ls="",
-#             c="r",
-#             label="Cluster clearly missed",
-#         )
-
-#         if annotations:
-#             for l, x, y in zip(
-#                 unit_ids1[: len(inds_2)],
-#                 metrics["snr"][unit_ids1][inds_1[: len(inds_2)]],
-#                 nb_peaks[inds_1[: len(inds_2)]],
-#             ):
-#                 ax.annotate(l, (x, y))
-
-#             for l, x, y in zip(
-#                 unit_ids1[len(inds_2) :],
-#                 metrics["snr"][unit_ids1][inds_1[len(inds_2) :]],
-#                 nb_peaks[inds_1[len(inds_2) :]],
-#             ):
-#                 ax.annotate(l, (x, y), c="r")
-
-#         if detect_threshold is not None:
-#             ymin, ymax = ax.get_ylim()
-#             ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
-
-#         ax.legend()
-#         ax.set_xlabel("template snr")
-#         ax.set_ylabel("nb spikes")
-#         ax.spines["top"].set_visible(False)
-#         ax.spines["right"].set_visible(False)
-
-#         ax = axs[0, 2]
-#         im = ax.imshow(distances, aspect="auto")
-#         ax.set_title(metric)
-#         fig.colorbar(im, ax=ax)
-
-#         if detect_threshold is not None:
-#             for count, snr in enumerate(snrs):
-#                 if snr < detect_threshold:
-#                     ax.plot([xmin, xmax], [count, count], "w")
-
-#             ymin, ymax = ax.get_ylim()
-#             ax.plot([nb_detectable + 0.5, nb_detectable + 0.5], [ymin, ymax], "r")
-
-#         ax.set_yticks(np.arange(0, len(scores.index)))
-#         ax.set_yticklabels(scores.index, fontsize=8)
-
-#         res = []
-#         nb_spikes = []
-#         energy = []
-#         nb_channels = []
-
-#         noise_levels = get_noise_levels(self.recording_f, return_scaled=False)
-
-#         for found, real in zip(unit_ids2, unit_ids1):
-#             wfs = self.waveforms["clustering"].get_waveforms(found)
-#             wfs_real = self.waveforms["gt"].get_waveforms(real)
-#             template = self.waveforms["clustering"].get_template(found)
-#             template_real = self.waveforms["gt"].get_template(real)
-#             nb_channels += [np.sum(np.std(template_real, 0) < noise_levels)]
-
-#             wfs = wfs.reshape(len(wfs), -1)
-#             template = template.reshape(template.size, 1).T
-#             template_real = template_real.reshape(template_real.size, 1).T
-
-#             if metric == "cosine":
-#                 dist = sklearn.metrics.pairwise.cosine_similarity(template, template_real).flatten().tolist()
-#             else:
-#                 dist = sklearn.metrics.pairwise_distances(template, template_real, metric).flatten().tolist()
-#             res += dist
-#             nb_spikes += [self.sliced_gt_sorting.get_unit_spike_train(real).size]
-#             energy += [np.linalg.norm(template_real)]
-
-#         ax = axs[1, 0]
-#         res = np.array(res)
-#         nb_spikes = np.array(nb_spikes)
-#         nb_channels = np.array(nb_channels)
-#         energy = np.array(energy)
-
-#         snrs = metrics["snr"][unit_ids1][inds_1[: len(inds_2)]]
-#         cm = ax.scatter(snrs, nb_spikes, c=res)
-#         ax.set_xlabel("template snr")
-#         ax.set_ylabel("nb spikes")
-#         ax.spines["top"].set_visible(False)
-#         ax.spines["right"].set_visible(False)
-#         cb = fig.colorbar(cm, ax=ax)
-#         cb.set_label(metric)
-#         if detect_threshold is not None:
-#             ymin, ymax = ax.get_ylim()
-#             ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
-
-#         if annotations:
-#             for l, x, y in zip(unit_ids1[: len(inds_2)], snrs, nb_spikes):
-#                 ax.annotate(l, (x, y))
-
-#         ax = axs[1, 1]
-#         cm = ax.scatter(energy, nb_channels, c=res)
-#         ax.set_xlabel("template energy")
-#         ax.set_ylabel("nb channels")
-#         ax.spines["top"].set_visible(False)
-#         ax.spines["right"].set_visible(False)
-#         cb = fig.colorbar(cm, ax=ax)
-#         cb.set_label(metric)
-
-#         if annotations:
-#             for l, x, y in zip(unit_ids1[: len(inds_2)], energy, nb_channels):
-#                 ax.annotate(l, (x, y))
-
-#         ax = axs[1, 2]
-#         for performance_name in ["accuracy", "recall", "precision"]:
-#             perf = self.comp.get_performance()[performance_name]
-#             ax.plot(metrics["snr"], perf, markersize=10, marker=".", ls="", label=performance_name)
-#         ax.set_xlabel("template snr")
-#         ax.set_ylabel("performance")
-#         ax.spines["top"].set_visible(False)
-#         ax.spines["right"].set_visible(False)
-#         ax.legend()
-#         if detect_threshold is not None:
-#             ymin, ymax = ax.get_ylim()
-#             ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
-
-#         plt.tight_layout()
-=======
->>>>>>> 0b77c5da8fe62595e29b7139c49976c0448ad7ac
