@@ -82,7 +82,8 @@ class SpikesOnTracesWidget(BaseWidget):
         tile_size=512,
         seconds_per_row=0.2,
         scale=1,
-        spike_width_ms=1,
+        spike_width_ms=4,
+        spike_height_um=20,
         with_colorbar=True,
         backend=None,
         **backend_kwargs,
@@ -91,6 +92,7 @@ class SpikesOnTracesWidget(BaseWidget):
         self.check_extensions(sorting_analyzer, "unit_locations")
 
         sorting: BaseSorting = sorting_analyzer.sorting
+        recording: BaseRecording = sorting_analyzer.recording
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
@@ -116,7 +118,6 @@ class SpikesOnTracesWidget(BaseWidget):
                 assert isinstance(sparsity, ChannelSparsity)
 
         unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
-
         options = dict(
             segment_index=segment_index,
             channel_ids=channel_ids,
@@ -142,6 +143,7 @@ class SpikesOnTracesWidget(BaseWidget):
             unit_colors=unit_colors,
             unit_locations=unit_locations,
             spike_width_ms=spike_width_ms,
+            spike_height_um=spike_height_um,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -163,15 +165,23 @@ class SpikesOnTracesWidget(BaseWidget):
         self.ax = traces_widget.ax
         self.axes = traces_widget.axes
         self.figure = traces_widget.figure
+        self.tw = traces_widget
 
         ax = self.ax
 
         frame_range = traces_widget.data_plot["frame_range"]
         segment_index = traces_widget.data_plot["segment_index"]
-        min_y = np.min(recording.get_channel_locations()[:, 1])
-        y_pitch = np.min(np.diff(np.unique(recording.get_channel_locations()[:, 1])))
 
-        n = len(traces_widget.data_plot["channel_ids"])
+        recordings = traces_widget.data_plot["recordings"]
+        rec0 = recordings[list(recordings.keys())[0]]
+        channel_indices = rec0.ids_to_indices(traces_widget.data_plot["channel_ids"])
+
+        if traces_widget.data_plot["channel_locations"] is not None:
+            y_locs = traces_widget.data_plot["channel_locations"][channel_indices, 1]
+        else:
+            y_locs = np.arange(len(channel_indices))
+        min_y = np.min(y_locs)
+        max_y = np.max(y_locs)
 
         if ax.get_legend() is not None:
             ax.get_legend().remove()
@@ -192,9 +202,10 @@ class SpikesOnTracesWidget(BaseWidget):
                 spike_times_to_plot = sorting.get_unit_spike_train(
                     unit, segment_index=segment_index, return_times=True
                 )[spike_start:spike_end]
-                unit_y_loc = dp.unit_locations[unit][1]
                 width = dp.spike_width_ms / 1000
-                height = 2 * y_pitch
+                height = dp.spike_height_um
+                # spike_times_to_plot -= width / 2
+                unit_y_loc = dp.unit_locations[unit][1]
                 ellipse_kwargs = dict(width=width, height=height, fc="none", ec=dp.unit_colors[unit], lw=2)
                 patches = [Ellipse((s, unit_y_loc), **ellipse_kwargs) for s in spike_times_to_plot]
                 for p in patches:
@@ -239,7 +250,6 @@ class SpikesOnTracesWidget(BaseWidget):
                                 handles.append(l[0])
                                 labels.append(unit)
                                 label_set = True
-        # ax.legend(handles, labels)
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt

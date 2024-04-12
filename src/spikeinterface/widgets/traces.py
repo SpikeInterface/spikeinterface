@@ -94,12 +94,7 @@ class TracesWidget(BaseWidget):
                 f"is currently of type {type(recording)}"
             )
 
-        if rec0.has_channel_location():
-            channel_locations = rec0.get_channel_locations()
-        else:
-            channel_locations = None
-
-        if order_channel_by_depth and channel_locations is not None:
+        if order_channel_by_depth and rec0.has_channel_location():
             from ..preprocessing import depth_order
 
             rec0 = depth_order(rec0)
@@ -113,6 +108,11 @@ class TracesWidget(BaseWidget):
 
         if channel_ids is None:
             channel_ids = rec0.channel_ids
+
+        if rec0.has_channel_location():
+            channel_locations = rec0.get_channel_locations()
+        else:
+            channel_locations = None
 
         layer_keys = list(recordings.keys())
 
@@ -242,8 +242,11 @@ class TracesWidget(BaseWidget):
 
         ax = self.ax
         n = len(dp.channel_ids)
+        rec0 = dp.recordings[list(dp.recordings.keys())[0]]
+        channel_indices = rec0.ids_to_indices(dp.channel_ids)
+
         if dp.channel_locations is not None:
-            y_locs = dp.channel_locations[:, 1]
+            y_locs = dp.channel_locations[channel_indices, 1]
         else:
             y_locs = np.arange(n)
         min_y = np.min(y_locs)
@@ -292,7 +295,8 @@ class TracesWidget(BaseWidget):
                 channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])
                 ax.set_yticklabels(channel_labels)
             else:
-                ax.get_yaxis().set_visible(False)
+                ax.set_yticks([min_y, max_y])
+                ax.set_yticklabels([min_y, max_y])
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
