@@ -210,7 +210,7 @@ class MatchingStudy(BenchmarkStudy):
         from spikeinterface.widgets.widget_list import plot_study_unit_counts
 
         plot_study_unit_counts(self, case_keys, figsize=figsize)
-    
+
     def plot_unit_losses(self, before, after, figsize=None):
 
         fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
@@ -221,7 +221,7 @@ class MatchingStudy(BenchmarkStudy):
 
             label = self.cases[after]["label"]
 
-            positions = self.get_result(before)["gt_comparison"].sorting1.get_property('gt_unit_locations')
+            positions = self.get_result(before)["gt_comparison"].sorting1.get_property("gt_unit_locations")
 
             analyzer = self.get_sorting_analyzer(before)
             metrics_before = analyzer.get_extension("quality_metrics").get_data()
@@ -232,11 +232,11 @@ class MatchingStudy(BenchmarkStudy):
             if count < 2:
                 ax.set_xticks([], [])
             elif count == 2:
-                ax.set_xlabel('depth (um)')
-            im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), marker=".", s=50, cmap='copper')
+                ax.set_xlabel("depth (um)")
+            im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), marker=".", s=50, cmap="copper")
             fig.colorbar(im, ax=ax)
             ax.set_title(k)
-            ax.set_ylabel('snr')
+            ax.set_ylabel("snr")
 
-        #if count == 2:
+        # if count == 2:
         #    ax.legend()

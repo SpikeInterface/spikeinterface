@@ -295,7 +295,7 @@ class ClusteringStudy(BenchmarkStudy):
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
             axs[0, count].legend()
-    
+
     def plot_metrics_vs_depth_and_snr(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
@@ -413,7 +413,7 @@ class ClusteringStudy(BenchmarkStudy):
     #     for count, k in enumerate(("accuracy", "recall", "precision")):
 
     #         ax = axs[count]
-            
+
     #         label = self.cases[after]["label"]
 
     #         positions = self.get_result(before)["gt_comparison"].sorting1.get_property('gt_unit_locations')
@@ -421,7 +421,7 @@ class ClusteringStudy(BenchmarkStudy):
     #         analyzer = self.get_sorting_analyzer(before)
     #         metrics_before = analyzer.get_extension("quality_metrics").get_data()
     #         x = metrics_before["snr"].values
-                
+
     #         y_before = self.get_result(before)["gt_comparison"].get_performance()[k].values
     #         y_after = self.get_result(after)["gt_comparison"].get_performance()[k].values
     #         if count < 2:
