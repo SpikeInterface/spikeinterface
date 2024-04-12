@@ -57,9 +57,9 @@ class ClusteringBenchmark(Benchmark):
 
         data = spikes[self.indices][~self.noise]
         # data["unit_index"] = self.result["peak_labels"][~self.noise]
-        positions = self.gt_sorting.get_property('gt_unit_locations')
-        self.result["sliced_gt_sorting"].set_property('gt_unit_locations', positions)
-        
+        positions = self.gt_sorting.get_property("gt_unit_locations")
+        self.result["sliced_gt_sorting"].set_property("gt_unit_locations", positions)
+
         self.result["clustering"] = NumpySorting.from_times_labels(
             data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
         )
@@ -347,7 +347,7 @@ class ClusteringStudy(BenchmarkStudy):
             axs[0, count].set_title(label)
             axs[0, count].legend()
 
-    def plot_unit_losses(self, before, after, metric='agreement', figsize=None):
+    def plot_unit_losses(self, before, after, metric="agreement", figsize=None):
 
         fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
 
@@ -373,7 +373,6 @@ class ClusteringStudy(BenchmarkStudy):
             fig.colorbar(im, ax=ax)
             ax.set_title(k)
             ax.set_ylabel("snr")
-
 
     def plot_comparison_clustering(
         self,

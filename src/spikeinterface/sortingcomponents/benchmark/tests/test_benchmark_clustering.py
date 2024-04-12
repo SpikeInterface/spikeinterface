@@ -30,7 +30,7 @@ def test_benchmark_clustering():
     for dataset in datasets.keys():
 
         recording, gt_sorting = datasets[dataset]
-        
+
         sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False)
         sorting_analyzer.compute(["random_spikes", "templates"])
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
@@ -42,7 +42,7 @@ def test_benchmark_clustering():
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
-            "init_kwargs": {"indices": spike_indices, "peaks" : peaks["toy"]},
+            "init_kwargs": {"indices": spike_indices, "peaks": peaks["toy"]},
             "params": {"method": method, "method_kwargs": {}},
         }
 
