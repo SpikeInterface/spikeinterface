@@ -6,6 +6,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from ..core import get_random_data_chunks, get_noise_levels
+from ..core.generate import NoiseGeneratorRecording
 
 
 class SilencedPeriodsRecording(BasePreprocessor):
@@ -43,7 +44,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
     name = "silence_periods"
 
-    def __init__(self, recording, list_periods, mode="zeros", noise_levels=None, **random_chunk_kwargs):
+    def __init__(self, recording, list_periods, mode="zeros", noise_levels=None, seed=None, **random_chunk_kwargs):
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
 
@@ -71,28 +72,39 @@ class SilencedPeriodsRecording(BasePreprocessor):
         if mode in ["noise"]:
             if noise_levels is None:
                 noise_levels = get_noise_levels(
-                    recording, return_scaled=False, concatenated=True, **random_chunk_kwargs
+                    recording, return_scaled=False, concatenated=True, seed=seed, **random_chunk_kwargs
                 )
+            noise_generator = NoiseGeneratorRecording(
+                num_channels=recording.get_num_channels(),
+                sampling_frequency=recording.sampling_frequency,
+                durations=[recording.select_segments(i).get_duration() for i in range(recording.get_num_segments())],
+                dtype=recording.dtype,
+                seed=seed,
+                noise_levels=noise_levels,
+                strategy="on_the_fly",
+                noise_block_size=int(recording.sampling_frequency),
+            )
         else:
-            noise_levels = None
+            noise_generator = None
 
         BasePreprocessor.__init__(self, recording)
         for seg_index, parent_segment in enumerate(recording._recording_segments):
             periods = list_periods[seg_index]
             periods = np.asarray(periods, dtype="int64")
             periods = np.sort(periods, axis=0)
-            rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_levels)
+            rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_generator, seg_index)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode, noise_levels=noise_levels)
+        self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode, noise_generator=noise_generator)
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, periods, mode, noise_levels):
+    def __init__(self, parent_recording_segment, periods, mode, noise_generator, seg_index):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.periods = periods
         self.mode = mode
-        self.noise_levels = noise_levels
+        self.seg_index = seg_index
+        self.noise_generator = noise_generator
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
@@ -119,10 +131,10 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                     if self.mode == "zeros":
                         traces[onset:offset, :] = 0
                     elif self.mode == "noise":
-                        num_samples = traces[onset:offset, :].shape[0]
-                        traces[onset:offset, :] = self.noise_levels[channel_indices] * np.random.randn(
-                            num_samples, num_channels
-                        )
+                        noise = self.noise_generator.get_traces(self.seg_index, start_frame, end_frame)[
+                            :, channel_indices
+                        ]
+                        traces[onset:offset, :] = noise[onset:offset]
 
         return traces
 
