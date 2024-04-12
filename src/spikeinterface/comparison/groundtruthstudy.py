@@ -366,7 +366,7 @@ class GroundTruthStudy:
             assert comp is not None, "You need to do study.run_comparisons() first"
 
             perf = comp.get_performance(method="by_unit", output="pandas")
-            
+
             if isinstance(key, str):
                 perf[self.levels] = key
             elif isinstance(key, tuple):
