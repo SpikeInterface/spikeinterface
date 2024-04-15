@@ -1005,7 +1005,6 @@ class SortingAnalyzer:
                 nodes = extension_instance.get_pipeline_nodes()
                 all_nodes.extend(nodes)
 
-
             job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
 
             results = run_node_pipeline(
