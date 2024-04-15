@@ -108,6 +108,23 @@ class Templates:
                 if not self._are_passed_templates_sparse():
                     raise ValueError("Sparsity mask passed but the templates are not sparse")
 
+    def __repr__(self):
+        sampling_frequency_khz = self.sampling_frequency / 1000
+        repr_str = (
+            f"Templates: {self.num_units} units - {self.num_samples} samples - {self.num_channels} channels \n"
+            f"sampling_frequency={sampling_frequency_khz:.2f} kHz - "
+            f"ms_before={self.ms_before:.2f} ms - "
+            f"ms_after={self.ms_after:.2f} ms"
+        )
+
+        if self.probe is not None:
+            repr_str += f"\n{self.probe.__repr__()}"
+
+        if self.sparsity is not None:
+            repr_str += f"\n{self.sparsity.__repr__()}"
+
+        return repr_str
+
     def to_sparse(self, sparsity):
         # Turn a dense representation of templates into a sparse one, given some sparsity.
         # Note that nothing prevent Templates tobe empty after sparsification if the sparse mask have no channels for some units
