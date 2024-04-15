@@ -569,7 +569,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int16)
     synchrony_sizes_np.sort()
 
-    res = namedtuple("synchrony", [f"sync_spike_{size}" for size in synchrony_sizes_np])
+    res = namedtuple("synchrony_metrics", [f"sync_spike_{size}" for size in synchrony_sizes_np])
 
     sorting = sorting_analyzer.sorting
 
