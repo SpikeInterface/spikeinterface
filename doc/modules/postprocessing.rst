@@ -75,7 +75,7 @@ in spikeinterface can be found in this diagram:
 |
 
 If you try to calculate a child before calculating a parent, an error will be thrown. Further, if a parent is recalculated we delete
-its children. Why? Well, consider calculating :code:`principal_components`. This depends on random selection of spikes chosen 
+its children. Why? Well, consider calculating :code:`principal_components`. This depends on random selection of spikes chosen
 during the computation of :code:`random_spikes`. If you recalculate the random spikes, a different selection will be chosen and your
 :code:`principal_components` will change (a little bit). Hence your principal components are inconsistent with the random spikes. To
 avoid this inconsistency, we delete the children.
@@ -107,7 +107,7 @@ You can also compute several extensions at the same time by passing a list:
 
     sorting_analyzer.compute(["principal_components", "templates"])
 
-You might want to change the parameters. Two parameters of principal_components are :code:`n_components` and :code:`mode`. 
+You might want to change the parameters. Two parameters of principal_components are :code:`n_components` and :code:`mode`.
 We can choose these are follows:
 
 .. code-block:: python

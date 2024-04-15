@@ -178,7 +178,7 @@ to perform further analysis, such as calculating :code:`waveforms` and :code:`te
 
 Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* (see :ref:`Sparsity` section), i.e.,
 the channels on which waveforms and templates are defined on, for example, based on a physical distance from the
-channel with the largest peak amplitude. 
+channel with the largest peak amplitude.
 
 Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 
@@ -276,8 +276,8 @@ The :code:`sorting_analyzer` object implements convenient functions to access th
     channel_ids = sorting_analyzer.channel_ids
     unit_ids = sorting_analyzer.unit_ids
 
-To calculate extensions, we need to have included the module they come from. Most of the extensions live in the 
-:code:`postprocessing` module (with the :code:`quality_metrics` extension 
+To calculate extensions, we need to have included the module they come from. Most of the extensions live in the
+:code:`postprocessing` module (with the :code:`quality_metrics` extension
 in the :code:`qualitymetrics` module) , but there are some *core* extensions too:
 
 * :code:`random_spikes`: select random spikes for downstream analysis (e.g., extracting waveforms or fitting a PCA model)
@@ -285,15 +285,15 @@ in the :code:`qualitymetrics` module) , but there are some *core* extensions too
 * :code:`waveforms`: extract waveforms for single spikes
 * :code:`noise_levels`: compute channel-wise noise levels
 
-Extensions have a parent/child structure. You can only compute a child _after_ you've computed the parent. For the core 
+Extensions have a parent/child structure. You can only compute a child _after_ you've computed the parent. For the core
 extensions, the structure is fairly straightforward. :code:`random_spikes` and :code:`noise_levels` have no parents. :code:`waveforms` is the child
-of :code:`random_spikes`. :code:`templates` is the child of :code:`waveforms` or :code:`random_spikes`, as it can be computed using either (albeit with 
+of :code:`random_spikes`. :code:`templates` is the child of :code:`waveforms` or :code:`random_spikes`, as it can be computed using either (albeit with
 different methods).
 
 .. note::
 
-    Some extension, like :code:`waveforms`, depend on other extension, like which spikes were randomly selected by :code:`random_spikes`. 
-    So if we were to recalculate :code:`random_spikes`, the :code:`waveforms` will change (a little). To avoid this inconsistency, 
+    Some extension, like :code:`waveforms`, depend on other extension, like which spikes were randomly selected by :code:`random_spikes`.
+    So if we were to recalculate :code:`random_spikes`, the :code:`waveforms` will change (a little). To avoid this inconsistency,
     spike interface deletes children if the parent is recalculated. E.g. if :code:`random_spikes` is recalculated, :code:`waveforms`
     is deleted. This keeps consistency between your extensions, and is better for provenance.
 
