@@ -1001,9 +1001,14 @@ class SortingAnalyzer:
                 nodes = extension_instance.get_pipeline_nodes()
                 all_nodes.extend(nodes)
 
-            job_name = "Compute : " + " + ".join(extensions.keys())
+            job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
             results = run_node_pipeline(
-                self.recording, all_nodes, job_kwargs=job_kwargs, job_name=job_name, gather_mode="memory"
+                self.recording,
+                all_nodes,
+                job_kwargs=job_kwargs,
+                job_name=job_name,
+                gather_mode="memory",
+                squeeze_output=False,
             )
 
             for r, result in enumerate(results):
