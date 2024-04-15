@@ -581,13 +581,13 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
 
     synchrony_metrics_dict = {}
     for sync_idx, synchrony_size in enumerate(synchrony_sizes_np):
-        synch_id_metrics_dict = {}
+        sync_id_metrics_dict = {}
         for i, unit_id in enumerate(all_unit_ids):
             if spike_counts[unit_id] != 0:
-                synch_id_metrics_dict[unit_id] = synchrony_counts[sync_idx][i] / spike_counts[unit_id]
+                sync_id_metrics_dict[unit_id] = synchrony_counts[sync_idx][i] / spike_counts[unit_id]
             else:
-                synch_id_metrics_dict[unit_id] = 0
-        synchrony_metrics_dict[f"sync_spike_{synchrony_size}"] = synch_id_metrics_dict
+                sync_id_metrics_dict[unit_id] = 0
+        synchrony_metrics_dict[f"sync_spike_{synchrony_size}"] = sync_id_metrics_dict
 
     if np.all(unit_ids == None) or (len(unit_ids) == len(all_unit_ids)):
         return res(**synchrony_metrics_dict)
