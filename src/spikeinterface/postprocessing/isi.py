@@ -162,7 +162,7 @@ if HAVE_NUMBA:
         (numba.int64[:, ::1], numba.int64[::1], numba.int32[::1], numba.int64[::1]),
         nopython=True,
         nogil=True,
-        cache=True,
+        cache=False,
     )
     def _compute_isi_histograms_numba(ISIs, spike_trains, spike_clusters, bins):
         n_units = ISIs.shape[0]
