@@ -9,8 +9,8 @@ the spike sorting output. Most of the post-processing functions require a
 
 .. _waveform_extensions:
 
-ResultExtensions
-----------------------------
+Extensions as ResultExtensions
+------------------------------
 
 There are several postprocessing tools available, and all
 of them are implemented as a :py:class:`~spikeinterface.core.ResultExtension`. All computations on top
@@ -22,7 +22,7 @@ This workflow is convenient for retrieval of time-consuming computations (such a
 parent :code:`SortingAnalyzer` object, so that operations done on the :code:`SortingAnalyzer`, such as saving,
 loading, or selecting units, will be automatically applied to all extensions.
 
-To check what extensions are available for a :code:`SortingAnalyzer` named :code:`sorting_analyzer`, you can use:
+To check what extensions have already been calculated for a :code:`SortingAnalyzer` named :code:`sorting_analyzer`, you can use:
 
 .. code-block:: python
 
@@ -33,7 +33,7 @@ To check what extensions are available for a :code:`SortingAnalyzer` named :code
 
 .. code-block:: bash
 
-    ["principal_components", "spike_amplitudes"]
+    >>> ["principal_components", "spike_amplitudes"]
 
 In this case, for example, principal components and spike amplitudes have already been computed.
 To load the extension object you can run:
@@ -48,12 +48,97 @@ contain the actual amplitude data. Note that different extensions might have dif
 You can use :code:`ext.get_data?` for documentation.
 
 
-We can also delete an extension:
+To check what extensions spikeinterface can calculate, you can use the :code:`get_computable_extensions` method.
+
+.. code-block:: python
+
+    all_computable_extensions = sorting_analyzer.get_computable_extensions()
+    print(all_computable_extensions)
+
+.. code-block:: bash
+
+    >>> ['random_spikes', 'waveforms', 'templates', 'noise_levels', 'amplitude_scalings', 'correlograms', 'isi_histograms', 'principal_components', 'spike_amplitudes', 'spike_locations', 'template_metrics', 'template_similarity', 'unit_locations', 'quality_metrics']
+
+There is detailed documentation about each extension :ref:`below`<Available postprocessing extensions>.
+Each extension comes from a different module. To use the :code:`postprocessing` extensions, you'll need to have the `postprocessing`
+module loaded.
+
+Some extensions depend on another extension. For instance, you can only calculate `principal_components` if you've already calculated
+both `random_spikes` and `waveforms`. We say that `principal_components` is a child of the other two. On the other hand, `isi_histograms`
+doesn't depend on anything. It has no children and no parents. The parent/child relationships of all the extensions currently defined
+in spikeinterface can be found in this diagram:
+
+|
+.. figure:: ../images/parent_child.svg
+    :alt: Parent child relationships for the extensions in spikeinterface
+    :align: center
+|
+
+If you try to calculate a child before calculating a parent, an error will be thrown. Further, if a parent is recalculated we delete
+its children. Why? Well, consider calculating :code:`principal_components`. This depends on random selection of spikes chosen 
+during the computation of :code:`random_spikes`. If you recalculate the random spikes, a different selection will be chosen and your
+:code:`principal_components` will change (a little bit). Hence your principal components are inconsistent with the random spikes. To
+avoid this inconsistency, we delete the children.
+
+We can also delete an extension ourselves:
 
 .. code-block:: python
 
     sorting_analyzer.delete_extension("spike_amplitudes")
 
+This does *not* cascade delete, since there are some cases where you might want to delete the (large) waveforms but keep the (smaller)
+postprocessing outputs.
+
+Computing extensions
+--------------------
+
+To compute extensions we can use the :code:`compute` method. There are several ways to pass parameters so we'll go through them here,
+focusing on the :code:`principal_components` extension. Here's one way to compute
+the principal components of a :code:`SortingAnalyzer` object called :code:`sorting_analyzer` with default parameters:
+
+.. code-block:: python
+
+    sorting_analyzer.compute("principal_components")
+
+In this simple case you can alternatively use :code:`compute_principal_components(sorting_analyzer)`, which matches legacy syntax.
+You can also compute several extensions at the same time by passing a list:
+
+.. code-block:: python
+
+    sorting_analyzer.compute(["principal_components", "templates"])
+
+You might want to change the parameters. Two parameters of principal_components are :code:`n_components` and :code:`mode`. 
+We can choose these are follows:
+
+.. code-block:: python
+
+    sorting_analyzer.compute("principal_components", n_components=3, mode="by_channel_local")
+
+As your code gets more complicated it might be easier to store your calculation in a dict, especially if you're calculating more
+than one thing:
+
+.. code-block:: python
+
+    compute_dict = {
+        'principal_components': {'n_components': 3, 'mode': 'by_channel_local'},
+        'templates': {'operators': ["average"]}
+    }
+    sorting_analyzer.compute(compute_dict)
+
+There are also hybrid options, which can be helpful if you're mostly using default parameters:
+
+.. code-block:: python
+
+    # here `templates` will be calculated using default parameters.
+    extension_params = {
+        'principal_components': {'n_components': 3, 'mode': 'by_channel_local'},
+    }
+    sorting_analyzer.compute(
+        ["principal_components", "templates"],
+        extension_params=extension_params
+    )
+
+TODO: saving stuff, when decided.
 
 Available postprocessing extensions
 -----------------------------------

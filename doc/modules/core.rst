@@ -173,25 +173,14 @@ computations.
 
 The :py:class:`~spikeinterface.core.SortingAnalyzer` provides a convenient API to access the underlying
 :py:class:`~spikeinterface.core.BaseSorting` and :py:class:`~spikeinterface.core.BaseRecording` information,
-and it supports several extensions (derived from the :py:class:`~spikeinterface.core.AnalyzerExtension` class)
-to perform further analysis.
+and it supports several **extensions** (derived from the :py:class:`~spikeinterface.core.AnalyzerExtension` class)
+to perform further analysis, such as calculating :code:`waveforms` and :code:`templates`.
 
-Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* (see [Sparsity]_ section), i.e.,
+Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* (see :ref:`Sparsity` section), i.e.,
 the channels on which waveforms and templates are defined on, for example, based on a physical distance from the
-channel with the largest peak amplitude.
+channel with the largest peak amplitude. 
 
-Most of the extensions live in the :code:`postprocessing` module (with the :code:`quality_metrics` extension in the :code:`qualitymetrics` module) , but there are some *core* extensions too:
-
-* select random spikes for downstream analysis (e.g., extracting waveforms or fitting a PCA model)
-* estimate templates
-* extract waveforms for single spikes
-* compute channel-wise noise levels
-
-.. note::
-
-    Some extensions depend on others, which must be pre-computed. For example :code:`waveforms`, the :code:`waveforms` extension depends on
-    the :code:`random_spikes` one. If the latter is not computed, computing :code:`waveforms` will throw an error.
-
+Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 
 .. code-block:: python
 
@@ -212,54 +201,6 @@ Most of the extensions live in the :code:`postprocessing` module (with the :code
     >>> SortingAnalyzer: 4 channels - 10 units - 1 segments - memory - sparse - has recording
     >>> Loaded 0 extensions:
 
-The :code:`sorting_analyzer` object implements convenient functions to access the underlying :code:`recording` and
-:code:`sorting` objects' information:
-
-.. code-block:: python
-
-    num_channels = sorting_analyzer.get_num_channels()
-    num_units = sorting_analyzer.get_num_units()
-    sampling_frequency = sorting_analyzer.get_sampling_frequency()
-    # or: sampling_frequency = sorting_analyzer.sampling_frequency
-    total_num_samples = sorting_analyzer.get_total_samples()
-    total_duration = sorting_analyzer.get_total_duration()
-    ### NOTE ###
-    # 'segment_index' is required for multi-segment objects
-    num_samples = sorting_analyzer.get_num_samples(segment_index=0)
-
-    # channel_ids and unit_ids
-    channel_ids = sorting_analyzer.channel_ids
-    unit_ids = sorting_analyzer.unit_ids
-
-Once the :code:`sorting_analyzer` is instantiated, additional extensions can be computed:
-
-
-.. code-block:: python
-    # compute some additional extensions
-
-    # create in-memory sorting analyzer object
-    random_spikes_extension = sorting_analyzer.compute("random_spikes")
-    templates_extension = sorting_analyzer.compute("fast_templates")
-    waveforms_extension = sorting_analyzer.compute("waveforms")
-
-    # each extension has a .data field: a dictionary with computed data
-    print(templates_extension.data.keys())
-
-.. code-block:: bash
-
-    >>> dict_keys(['average'])
-
-# TODO: extension __repr__
-
-.. code-block:: python
-    # arguments can be passed directly to the compute function
-    # note that re-computing an extension will overwrite the existing one
-    waveform_extension_2 = sorting_analyzer.compute("waveforms", ms_before=2, ms_after=5)
-
-    # multiple extensions can be computed within the same `compute` call
-    sorting_analyzer.compute(
-        ["random_spikes", "waveforms", "templates", "noise_levels"]
-    )
 
 The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in memory*, but it can be saved at any time
 (or upon instantiation) to one of the following backends:
@@ -273,6 +214,7 @@ The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in m
 The :code:`SortingAnalyzer.save_as` function will save the object **and all its extensions** to disk.
 
 .. code-block:: python
+
     # create a "processed" folder
     processed_folder = Path("processed")
 
@@ -297,7 +239,6 @@ The :code:`SortingAnalyzer.save_as` function will save the object **and all its 
         folder="my-sorting-analyzer.zarr"
     )
 
-
 Once a :code:`SortingAnalyzer` object is saved to disk, it can be easily reloaded with:
 
 .. code-block:: python
@@ -315,6 +256,78 @@ Once a :code:`SortingAnalyzer` object is saved to disk, it can be easily reloade
     an attempt is made to re-instantiate the :code:`Recording` object from the provenance. In cases
     of failure, for example if the original file is not available, the :code:`SortingAnalyzer`
     will be automatically instantiated in "recordingless" mode.
+
+The :code:`sorting_analyzer` object implements convenient functions to access the underlying :code:`recording` and
+:code:`sorting` objects' information:
+
+.. code-block:: python
+
+    num_channels = sorting_analyzer.get_num_channels()
+    num_units = sorting_analyzer.get_num_units()
+    sampling_frequency = sorting_analyzer.get_sampling_frequency()
+    # or: sampling_frequency = sorting_analyzer.sampling_frequency
+    total_num_samples = sorting_analyzer.get_total_samples()
+    total_duration = sorting_analyzer.get_total_duration()
+    ### NOTE ###
+    # 'segment_index' is required for multi-segment objects
+    num_samples = sorting_analyzer.get_num_samples(segment_index=0)
+
+    # channel_ids and unit_ids
+    channel_ids = sorting_analyzer.channel_ids
+    unit_ids = sorting_analyzer.unit_ids
+
+To calculate extensions, we need to have included the module they come from. Most of the extensions live in the 
+:code:`postprocessing` module (with the :code:`quality_metrics` extension 
+in the :code:`qualitymetrics` module) , but there are some *core* extensions too:
+
+* :code:`random_spikes`: select random spikes for downstream analysis (e.g., extracting waveforms or fitting a PCA model)
+* :code:`templates`: estimate templates
+* :code:`waveforms`: extract waveforms for single spikes
+* :code:`noise_levels`: compute channel-wise noise levels
+
+Extensions have a parent/child structure. You can only compute a child _after_ you've computed the parent. For the core 
+extensions, the structure is fairly straightforward. :code:`random_spikes` and :code:`noise_levels` have no parents. :code:`waveforms` is the child
+of :code:`random_spikes`. :code:`templates` is the child of :code:`waveforms` or :code:`random_spikes`, as it can be computed using either (albeit with 
+different methods).
+
+.. note::
+
+    Some extension, like :code:`waveforms`, depend on other extension, like which spikes were randomly selected by :code:`random_spikes`. 
+    So if we were to recalculate :code:`random_spikes`, the :code:`waveforms` will change (a little). To avoid this inconsistency, 
+    spike interface deletes children if the parent is recalculated. E.g. if :code:`random_spikes` is recalculated, :code:`waveforms`
+    is deleted. This keeps consistency between your extensions, and is better for provenance.
+
+In practice, we use the :code:`compute` method to compute extensions. Provided the :code:`sorting_analyzer` is instantiated,
+additional extensions are computed as follows:
+
+.. code-block:: python
+
+    # compute some additional extensions
+    random_spikes_extension = sorting_analyzer.compute("random_spikes")
+    templates_extension = sorting_analyzer.compute("templates")
+    waveforms_extension = sorting_analyzer.compute("waveforms")
+
+    # each extension has a .data field: a dictionary with computed data
+    print(templates_extension.data.keys())
+
+.. code-block:: bash
+
+    >>> dict_keys(['average', 'std'])
+
+You can also pass parameters to the :code:`compute`, or compute several extensions at once. There are more details in
+the `PostProcessing docs <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_.
+
+.. code-block:: python
+
+    # arguments can be passed directly to the compute function
+    # note that re-computing an extension will overwrite the existing one
+    waveform_extension_2 = sorting_analyzer.compute("waveforms", ms_before=2, ms_after=5)
+
+    # multiple extensions can be computed within the same `compute` call
+    sorting_analyzer.compute(
+        ["random_spikes", "waveforms", "templates", "noise_levels"]
+    )
+
 
 Event
 -----
