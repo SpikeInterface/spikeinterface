@@ -574,7 +574,6 @@ def test_synthesize_random_firings_length():
     assert np.sum(counts) == int(np.sum(firing_rates) * duration)
 
 
-
 if __name__ == "__main__":
     strategy = "tile_pregenerated"
     # strategy = "on_the_fly"
