@@ -898,14 +898,14 @@ def _add_spikes_to_spiketrain(
         len(spike_indices) == len(segment_indices)
     ), "Length of spike indices and segments are not equal"
     assert (added_spikes_indices is None) or len(added_spikes_indices) == len(
-            added_spikes_labels
-        ), "Length of added spike indices and labels are not equal"
+        added_spikes_labels
+    ), "Length of added spike indices and labels are not equal"
     assert (added_segment_indices is None) or (
         len(added_spikes_indices) == len(added_segment_indices)
     ), "Length of added spike indices and segments are not equal"
     assert (segment_indices is None and added_segment_indices is None) or (
         segment_indices is not None and added_segment_indices is not None
-        ), "Existing and added segment indices are inconsistent. Possibly one is non-zero."
+    ), "Existing and added segment indices are inconsistent. Possibly one is non-zero."
 
     new_spike_indices = np.array(spike_indices)
     new_spike_labels = np.array(spike_labels)
