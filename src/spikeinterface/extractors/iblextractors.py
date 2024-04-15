@@ -157,7 +157,7 @@ class IblRecordingExtractor(BaseRecording):
             one = IblRecordingExtractor._get_default_one(cache_folder=cache_folder)
 
         if pid is not None:
-            eid = one.pid2eid(pid)
+            eid, _ = one.pid2eid(pid)
 
         stream_names = IblRecordingExtractor.get_stream_names(eid=eid, cache_folder=cache_folder, one=one)
         if len(stream_names) > 1:
