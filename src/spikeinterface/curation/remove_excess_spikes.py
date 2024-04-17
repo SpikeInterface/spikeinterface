@@ -62,7 +62,8 @@ class RemoveExcessSpikesSorting(BaseSorting):
         for segment_index in range(num_segments):
             spike_vector = parent_spike_vector[segments_bounds[segment_index] : segments_bounds[segment_index + 1]]
             end = np.searchsorted(spike_vector["sample_index"], self._num_samples[segment_index])
-            list_spike_vectors.append(spike_vector[:end])
+            start = np.searchsorted(spike_vector["sample_index"], 0, side="left")
+            list_spike_vectors.append(spike_vector[start:end])
 
         spike_vector = np.concatenate(list_spike_vectors)
         self._cached_spike_vector = spike_vector
@@ -79,9 +80,7 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
     ) -> np.ndarray:
         spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=start_frame, end_frame=end_frame)
         max_spike = np.searchsorted(spike_train, self._num_samples, side="left")
-        min_spike = np.searchsorted(
-            spike_train, 0, side="right"
-        )  # in cases of no 0 spike time we need to remove one extra spike
+        min_spike = np.searchsorted(spike_train, 0, side="left")
 
         return spike_train[min_spike:max_spike]
 
