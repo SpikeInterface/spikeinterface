@@ -65,7 +65,7 @@ module loaded.
 
 Some extensions depend on another extension. For instance, you can only calculate `principal_components` if you've already calculated
 both `random_spikes` and `waveforms`. We say that `principal_components` is a child of the other two or that is *depends* on the other
-two. Other extensions, like `isi_histograms`, don't depend on anything. It has no children and no parents. The parent/child 
+two. Other extensions, like `isi_histograms`, don't depend on anything. It has no children and no parents. The parent/child
 relationships of all the extensions currently defined in spikeinterface can be found in this diagram:
 
 |
@@ -86,7 +86,7 @@ We can also delete an extension ourselves:
 
     sorting_analyzer.delete_extension("spike_amplitudes")
 
-This does *not* delete the children of the extension, since there are some cases where you might want to delete e.g. the (large) 
+This does *not* delete the children of the extension, since there are some cases where you might want to delete e.g. the (large)
 waveforms but keep the (smaller) postprocessing outputs.
 
 Computing extensions

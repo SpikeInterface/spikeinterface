@@ -177,7 +177,7 @@ and it supports several **extensions** (derived from the :py:class:`~spikeinterf
 to perform further analysis, such as calculating :code:`waveforms` and :code:`templates`.
 
 Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* and the physical *scaling*.
-Sparsity defines the channels on which waveforms and templates are calculating using, for example, based on a 
+Sparsity defines the channels on which waveforms and templates are calculating using, for example, based on a
 physical distance from the channel with the largest peak amplitude (see the :ref:`Sparsity` section). Scaling, set by
 the :code:`return_scaled` argument, says whether the data has been converted from integer values to physical units such as
 Voltage (see the end of the :ref:`Recording` section).
@@ -288,17 +288,17 @@ in the :code:`qualitymetrics` module) , but there are some *core* extensions too
 * :code:`waveforms`: extract waveforms for single spikes
 * :code:`noise_levels`: compute channel-wise noise levels
 
-Extensions have a parent/child structure. Children *depend* on parents, meaning that you can only compute a child *after* 
-you've computed the parent. For the core extensions, the structure is fairly straightforward. :code:`random_spikes` and 
-:code:`noise_levels` depend on nothing. :code:`waveforms` depends on :code:`random_spikes`. :code:`templates` depends on :code:`waveforms` 
+Extensions have a parent/child structure. Children *depend* on parents, meaning that you can only compute a child *after*
+you've computed the parent. For the core extensions, the structure is fairly straightforward. :code:`random_spikes` and
+:code:`noise_levels` depend on nothing. :code:`waveforms` depends on :code:`random_spikes`. :code:`templates` depends on :code:`waveforms`
 or :code:`random_spikes`, as it can be computed using either (albeit with different methods). If it is available :code:`templates`
 is calculated using :code:`waveforms`.
 
 .. note::
 
-    Consider the case when an extension (e.g. :code:`waveforms`) depends on another extension (the spikes which were randomly selected 
-    by :code:`random_spikes`). If we were to recalculate :code:`random_spikes`, the :code:`waveforms` will change (a little). 
-    To avoid this inconsistency, spike interface deletes children if the parent is recalculated. E.g. if :code:`random_spikes` 
+    Consider the case when an extension (e.g. :code:`waveforms`) depends on another extension (the spikes which were randomly selected
+    by :code:`random_spikes`). If we were to recalculate :code:`random_spikes`, the :code:`waveforms` will change (a little).
+    To avoid this inconsistency, spike interface deletes children if the parent is recalculated. E.g. if :code:`random_spikes`
     is recalculated, :code:`waveforms` is deleted. This keeps consistency between your extensions, and is better for provenance.
 
 In practice, we use the :code:`compute` method to compute extensions. Provided the :code:`sorting_analyzer` is instantiated,
