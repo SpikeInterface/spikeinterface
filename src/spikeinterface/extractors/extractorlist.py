@@ -45,6 +45,7 @@ from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spyking
 from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
 from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
 from .phykilosortextractors import PhySortingExtractor, KiloSortSortingExtractor, read_phy, read_kilosort
+from .sinapsrecordingextractor import SinapsResearchPlatformRecordingExtractor, read_sinaps_research_platform
 
 # sorting in relation with simulator
 from .shybridextractors import (
@@ -77,6 +78,7 @@ recording_extractor_full_list = [
     CompressedBinaryIblExtractor,
     IblRecordingExtractor,
     MCSH5RecordingExtractor,
+    SinapsResearchPlatformRecordingExtractor,
 ]
 recording_extractor_full_list += neo_recording_extractors_list
 
