@@ -214,7 +214,10 @@ The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in m
   | data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
 
 
-The :code:`SortingAnalyzer.save_as` function will save the object **and all its extensions** to disk.
+The :code:`SortingAnalyzer.save_as` function will save the object **and all its extensions** to disk if in memory. It can
+also be used to switch a :code:`zarr` or :code:`binary_folder` into an in-memory object. This can be useful if you want to
+keep your original analysis, but want to test changing parameters. Once a :code:`SortingAnalyzer` has been moved into
+memory it will only write to disk by running :code:`SortingAnalyzer.save_as` again and supplying one of the backends.
 
 .. code-block:: python
 
@@ -232,7 +235,7 @@ The :code:`SortingAnalyzer.save_as` function will save the object **and all its 
     # sorting_analyzer_zarr and sorting_analyzer_binary are valid SortingAnalyzers,
     # now associated to a Zarr storage / binary folder backend
 
-    # We can also create directly a  SortingAnalyzer associated to a backend upon instantiation
+    # We can also create directly a SortingAnalyzer associated to a backend upon instantiation
     # for instance, this create "zarr" SortingAnalyzer object
     sorting_analyzer_with_backend = create_sorting_analyzer(
         sorting=sorting,
@@ -284,8 +287,8 @@ To calculate extensions, we need to have included the module they come from. Mos
 in the :code:`qualitymetrics` module) , but there are some *core* extensions too:
 
 * :code:`random_spikes`: select random spikes for downstream analysis (e.g., extracting waveforms or fitting a PCA model)
-* :code:`templates`: estimate templates
 * :code:`waveforms`: extract waveforms for single spikes
+* :code:`templates`: estimate templates (using raw data or waveforms)
 * :code:`noise_levels`: compute channel-wise noise levels
 
 Extensions have a parent/child structure. Children *depend* on parents, meaning that you can only compute a child *after*
@@ -301,6 +304,30 @@ is calculated using :code:`waveforms`.
     To avoid this inconsistency, spike interface deletes children if the parent is recalculated. E.g. if :code:`random_spikes`
     is recalculated, :code:`waveforms` is deleted. This keeps consistency between your extensions, and is better for provenance.
 
+Since these core extensions are important for all other extensions it is important to understand how they work and what they are.
+:code:`random_spikes` allows the user fine control in how they wish to sample their raw data. For example for neuron with 10,000 spikes
+it may be too computationally expensive (& memory expensive) to load all spikes so in this case :code:`random_spikes` allows you to
+chose the number of spikes you wish to subsample for downstream analyses. :code:`waveforms` is the extension that goes through your
+raw data and creates a waveform for each spike within the :code:`random_spikes`. You can control the time before (:code:`ms_before`)
+and the time after (:code:`ms_after`) to ensure that you have a full waveform. Because waveforms occur on multiple channels with multiple
+samples this can be a big data structure. :code:`templates` are calculated from the raw waveform data and are used for downstream analyses
+(e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question of if the :code:`templates` are what are used
+then why save the :code:`waveforms`? Thus there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
+:code:`random_spikes`) or 2) from the :code:`waveforms`. If getting :code:`templates` from the raw data we are limited to obtaining averages
+and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the templates as medians or percentiles
+in addition to the average or standard deviations of the :code:`waveforms`. So it important to think about the type of downstream analyses that
+you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or after :code:`waveforms`. Finally the
+:code:`noise_levels` compute noise-levels in a channel-wise fashion. This provides important information about the specific recording session
+and is important for some downstream quality analyses.
+
+
+.. note::
+
+    All of the core extensions rely on the :code:`recording` being present (expect :code:`random_spikes` which determine what parts of the raw
+    data will be analyzed.) So if you plan on recomputing these values for downstream work you need the :code:`recording`. The other extensions
+    build off of these extensions and so can be recomputed without the :code:`recording` being present.
+
+
 In practice, we use the :code:`compute` method to compute extensions. Provided the :code:`sorting_analyzer` is instantiated,
 additional extensions are computed as follows:
 
@@ -308,8 +335,8 @@ additional extensions are computed as follows:
 
     # compute some additional extensions
     random_spikes_extension = sorting_analyzer.compute("random_spikes")
-    templates_extension = sorting_analyzer.compute("templates")
     waveforms_extension = sorting_analyzer.compute("waveforms")
+    templates_extension = sorting_analyzer.compute("templates")
 
     # each extension has a .data field: a dictionary with computed data
     print(templates_extension.data.keys())
@@ -332,6 +359,23 @@ examples is seen below:
     sorting_analyzer.compute(
         ["random_spikes", "waveforms", "templates", "noise_levels"]
     )
+
+It is important when calculating extensions to remember which backend you are using. :code:`compute` accepts an argument
+:code:`save` which will write results to disk if using the :code:`zarr` or :code:`binary_folder` backends. Although you
+can enter :code:`save=True` this does nothing if your :code:`SortingAnalyzer` is *in-memory*.
+
+The reason to use :code:`save=False` is it allows you to test parameters with the :code:`zarr` or :code:`binary_folder`
+backends without writing to disk. So, you can compute an extension *in-memory* with different parameters and then when
+you have decided on your desired parameters you can either use :code:`compute` with :code:`save=True` or use :code:`save_as`
+to write everything out to disk.
+
+.. note::
+
+    When using :code:`SortingAnalyzer.compute` the default is :code:`save=True`. This does nothing for *in-memory*, but
+    means that the default is to write every computation to disk. This is to allow end-users to save their work as they
+    perform an analysis if they use a disk based backend. So if you wish to save your results at each step (and overwrite)
+    you need to initialize or :code:`save_as` to a :code:`zarr` or :code:`binary_folder`. If your :code:`SortingAnalyzer`
+    is in memory using :code:`save` **will not** write to disk.
 
 
 Event
