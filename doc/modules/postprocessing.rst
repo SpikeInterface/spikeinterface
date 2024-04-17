@@ -9,8 +9,8 @@ the spike sorting output. Most of the post-processing functions require a
 
 .. _waveform_extensions:
 
-Extensions as ResultExtensions
-------------------------------
+Extensions as AnalyzerExtensions
+--------------------------------
 
 There are several postprocessing tools available, and all
 of them are implemented as a :py:class:`~spikeinterface.core.ResultExtension`. All computations on top
@@ -28,7 +28,7 @@ To check what extensions have already been calculated for a :code:`SortingAnalyz
 
     import spikeinterface as si
 
-    available_extension_names = sorting_analyzer.get_load_extension_names()
+    available_extension_names = sorting_analyzer.get_loaded_extension_names()
     print(available_extension_names)
 
 .. code-block:: bash
@@ -64,9 +64,9 @@ Each extension comes from a different module. To use the :code:`postprocessing` 
 module loaded.
 
 Some extensions depend on another extension. For instance, you can only calculate `principal_components` if you've already calculated
-both `random_spikes` and `waveforms`. We say that `principal_components` is a child of the other two. On the other hand, `isi_histograms`
-doesn't depend on anything. It has no children and no parents. The parent/child relationships of all the extensions currently defined
-in spikeinterface can be found in this diagram:
+both `random_spikes` and `waveforms`. We say that `principal_components` is a child of the other two or that is *depends* on the other
+two. Other extensions, like `isi_histograms`, don't depend on anything. It has no children and no parents. The parent/child 
+relationships of all the extensions currently defined in spikeinterface can be found in this diagram:
 
 |
 .. figure:: ../images/parent_child.svg
@@ -74,8 +74,8 @@ in spikeinterface can be found in this diagram:
     :align: center
 |
 
-If you try to calculate a child before calculating a parent, an error will be thrown. Further, if a parent is recalculated we delete
-its children. Why? Well, consider calculating :code:`principal_components`. This depends on random selection of spikes chosen
+If you try to calculate a child before calculating a parent, an error will be thrown. Further, when a parent is recalculated we delete
+its children. Why? Consider calculating :code:`principal_components`. This depends on random selection of spikes chosen
 during the computation of :code:`random_spikes`. If you recalculate the random spikes, a different selection will be chosen and your
 :code:`principal_components` will change (a little bit). Hence your principal components are inconsistent with the random spikes. To
 avoid this inconsistency, we delete the children.
@@ -86,8 +86,8 @@ We can also delete an extension ourselves:
 
     sorting_analyzer.delete_extension("spike_amplitudes")
 
-This does *not* cascade delete, since there are some cases where you might want to delete the (large) waveforms but keep the (smaller)
-postprocessing outputs.
+This does *not* delete the children of the extension, since there are some cases where you might want to delete e.g. the (large) 
+waveforms but keep the (smaller) postprocessing outputs.
 
 Computing extensions
 --------------------

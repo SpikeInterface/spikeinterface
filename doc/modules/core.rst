@@ -176,9 +176,12 @@ The :py:class:`~spikeinterface.core.SortingAnalyzer` provides a convenient API t
 and it supports several **extensions** (derived from the :py:class:`~spikeinterface.core.AnalyzerExtension` class)
 to perform further analysis, such as calculating :code:`waveforms` and :code:`templates`.
 
-Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* (see :ref:`Sparsity` section), i.e.,
-the channels on which waveforms and templates are defined on, for example, based on a physical distance from the
-channel with the largest peak amplitude.
+Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* and the physical *scaling*.
+Sparsity defines the channels on which waveforms and templates are calculating using, for example, based on a 
+physical distance from the channel with the largest peak amplitude (see the :ref:`Sparsity` section). Scaling, set by
+the :code:`return_scaled` argument, says whether the data has been converted from integer values to physical units such as
+Voltage (see the end of the :ref:`Recording` section).
+
 
 Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 
@@ -268,7 +271,7 @@ The :code:`sorting_analyzer` object implements convenient functions to access th
     # or: sampling_frequency = sorting_analyzer.sampling_frequency
     total_num_samples = sorting_analyzer.get_total_samples()
     total_duration = sorting_analyzer.get_total_duration()
-    ### NOTE ###
+
     # 'segment_index' is required for multi-segment objects
     num_samples = sorting_analyzer.get_num_samples(segment_index=0)
 
@@ -285,17 +288,18 @@ in the :code:`qualitymetrics` module) , but there are some *core* extensions too
 * :code:`waveforms`: extract waveforms for single spikes
 * :code:`noise_levels`: compute channel-wise noise levels
 
-Extensions have a parent/child structure. You can only compute a child _after_ you've computed the parent. For the core
-extensions, the structure is fairly straightforward. :code:`random_spikes` and :code:`noise_levels` have no parents. :code:`waveforms` is the child
-of :code:`random_spikes`. :code:`templates` is the child of :code:`waveforms` or :code:`random_spikes`, as it can be computed using either (albeit with
-different methods).
+Extensions have a parent/child structure. Children *depend* on parents, meaning that you can only compute a child *after* 
+you've computed the parent. For the core extensions, the structure is fairly straightforward. :code:`random_spikes` and 
+:code:`noise_levels` depend on nothing. :code:`waveforms` depends on :code:`random_spikes`. :code:`templates` depends on :code:`waveforms` 
+or :code:`random_spikes`, as it can be computed using either (albeit with different methods). If it is available :code:`templates`
+is calculated using :code:`waveforms`.
 
 .. note::
 
-    Some extension, like :code:`waveforms`, depend on other extension, like which spikes were randomly selected by :code:`random_spikes`.
-    So if we were to recalculate :code:`random_spikes`, the :code:`waveforms` will change (a little). To avoid this inconsistency,
-    spike interface deletes children if the parent is recalculated. E.g. if :code:`random_spikes` is recalculated, :code:`waveforms`
-    is deleted. This keeps consistency between your extensions, and is better for provenance.
+    Consider the case when an extension (e.g. :code:`waveforms`) depends on another extension (the spikes which were randomly selected 
+    by :code:`random_spikes`). If we were to recalculate :code:`random_spikes`, the :code:`waveforms` will change (a little). 
+    To avoid this inconsistency, spike interface deletes children if the parent is recalculated. E.g. if :code:`random_spikes` 
+    is recalculated, :code:`waveforms` is deleted. This keeps consistency between your extensions, and is better for provenance.
 
 In practice, we use the :code:`compute` method to compute extensions. Provided the :code:`sorting_analyzer` is instantiated,
 additional extensions are computed as follows:
@@ -315,7 +319,8 @@ additional extensions are computed as follows:
     >>> dict_keys(['average', 'std'])
 
 You can also pass parameters to the :code:`compute`, or compute several extensions at once. There are more details in
-the `PostProcessing docs <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_.
+the `postprocessing docs <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_ and a simple
+examples is seen below:
 
 .. code-block:: python
 
