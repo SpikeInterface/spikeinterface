@@ -49,7 +49,7 @@ Intan files.
 
     """
     IntanRecordingExtractor: 64 Channels - 30.0Khz - 1 segments - 1,800,000 samples
-                             60.00s (1.00 minutes) - unin16 dtype - 219.73 MiB
+                             60.00s (1.00 minutes) - uin16 dtype - 219.73 MiB
     """
 
     concatenated_recording = si.concatenate_recordings([intan_rec_one, intan_rec_two])
@@ -97,7 +97,7 @@ append them instead of concatenate them.
 
     """
     AppendSegmentRecording: 64 Channels - 30.0khz - 2 segments - 3,600,000 samples
-                            120.00s (2.00 minutes) - unint16 dtype - 439.47 MiB
+                            120.00s (2.00 minutes) - uint16 dtype - 439.47 MiB
     Segments:
     Samples:    1,800,000 | 1,800,000
     Durations:  60.00s (1.00 minutes) | 60.00s (1.00 minutes)
