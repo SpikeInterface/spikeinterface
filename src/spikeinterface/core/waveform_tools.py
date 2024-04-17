@@ -696,6 +696,8 @@ def has_exceeding_spikes(recording, sorting):
         if len(spike_vector_seg) > 0:
             if spike_vector_seg["sample_index"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:
                 return True
+            if spike_vector_seg["sample_index"][0] < 0:
+                return True
     return False
 
 
