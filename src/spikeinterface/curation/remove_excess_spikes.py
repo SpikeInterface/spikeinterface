@@ -79,8 +79,9 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
     ) -> np.ndarray:
         spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=start_frame, end_frame=end_frame)
         max_spike = np.searchsorted(spike_train, self._num_samples, side="left")
+        min_spike = np.searchsorted(spike_train, 0, side="left")
 
-        return spike_train[:max_spike]
+        return spike_train[min_spike:max_spike]
 
 
 def remove_excess_spikes(sorting, recording):
