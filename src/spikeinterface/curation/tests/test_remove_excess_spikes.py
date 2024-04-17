@@ -22,7 +22,7 @@ def test_remove_excess_spikes():
         times_segment = np.array([], dtype=int)
         labels_segment = np.array([], dtype=int)
         for unit in range(num_units):
-            neg_spike_times = np.random.randint(-50, 0, num_neg_spike_times_per_segment)
+            neg_spike_times = np.random.randint(-50, -1, num_neg_spike_times_per_segment)
             spike_times = np.random.randint(0, num_samples, num_spikes)
             last_samples_spikes = (num_samples - 1) * np.ones(num_num_samples_spikes_per_segment, dtype=int)
             num_samples_spike_times = num_samples * np.ones(num_num_samples_spikes_per_segment, dtype=int)
