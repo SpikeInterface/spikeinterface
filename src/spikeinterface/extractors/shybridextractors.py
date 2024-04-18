@@ -1,11 +1,19 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
 
-from probeinterface import read_prb, write_prb
+import probeinterface
 
-from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
+from spikeinterface.core import (
+    BinaryRecordingExtractor,
+    BaseRecordingSegment,
+    BaseSorting,
+    BaseSortingSegment,
+    write_binary_recording,
+)
+from spikeinterface.core.core_tools import define_function_from_class
 
 
 class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
@@ -23,8 +31,6 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     """
 
     extractor_name = "SHYBRIDRecording"
-    has_default_locations = True
-    is_writable = True
     mode = "folder"
     installation_mesg = (
         "To use the SHYBRID extractors, install SHYBRID and pyyaml: " "\n\n pip install shybrid pyyaml\n\n"
@@ -65,32 +71,32 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
             self,
             file_paths=bin_file,
             sampling_frequency=float(params["fs"]),
-            num_chan=nb_channels,
+            num_channels=nb_channels,
             dtype=params["dtype"],
             time_axis=time_axis,
         )
 
         # load probe file
-        probegroup = read_prb(params["probe"])
+        probegroup = probeinterface.read_prb(params["probe"])
         self.set_probegroup(probegroup, in_place=True)
         self._kwargs = {"file_path": str(Path(file_path).absolute())}
         self.extra_requirements.extend(["hybridizer", "pyyaml"])
 
     @staticmethod
-    def write_recording(recording, save_path, initial_sorting_fn, dtype="float32", verbose=True, **job_kwargs):
+    def write_recording(recording, save_path, initial_sorting_fn, dtype="float32", **job_kwargs):
         """Convert and save the recording extractor to SHYBRID format.
 
         Parameters
         ----------
         recording: RecordingExtractor
-            The recording extractor to be converted and saved.
+            The recording extractor to be converted and saved
         save_path: str
-            Full path to desired target folder.
+            Full path to desired target folder
         initial_sorting_fn: str
             Full path to the initial sorting csv file (can also be generated
-            using write_sorting static method from the SHYBRIDSortingExtractor).
-        dtype: dtype
-            Type of the saved data. Default float32.
+            using write_sorting static method from the SHYBRIDSortingExtractor)
+        dtype: dtype, default: float32
+            Type of the saved data
         **write_binary_kwargs: keyword arguments for write_to_binary_dat_format() function
         """
         try:
@@ -116,12 +122,12 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
         # write recording
         recording_fn = (save_path / recording_name).absolute()
-        write_binary_recording(recording, file_paths=recording_fn, dtype=dtype, verbose=verbose, **job_kwargs)
+        write_binary_recording(recording, file_paths=recording_fn, dtype=dtype, **job_kwargs)
 
         # write probe file
         probe_fn = (save_path / probe_name).absolute()
         probegroup = recording.get_probegroup()
-        write_prb(probe_fn, probegroup, total_nb_channels=recording.get_num_channels())
+        probeinterface.write_prb(probe_fn, probegroup, total_nb_channels=recording.get_num_channels())
 
         # create parameters file
         parameters = dict(
@@ -154,7 +160,6 @@ class SHYBRIDSortingExtractor(BaseSorting):
     """
 
     extractor_name = "SHYBRIDSorting"
-    is_writable = True
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
     name = "shybrid"
 

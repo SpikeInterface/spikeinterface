@@ -4,9 +4,10 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface.core import ChannelSliceRecording, BinaryRecordingExtractor
+from spikeinterface.core.generate import generate_recording
 
 
 def test_ChannelSliceRecording():
@@ -25,7 +26,12 @@ def test_ChannelSliceRecording():
     for i in range(num_seg):
         traces = np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
         traces[:] = np.arange(3)[None, :]
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_chan,
+        dtype=dtype,
+    )
 
     # keep original ids
     rec_sliced = ChannelSliceRecording(rec, channel_ids=[0, 2])
@@ -36,6 +42,7 @@ def test_ChannelSliceRecording():
     assert traces.shape[1] == 2
     traces = rec_sliced.get_traces(segment_index=1, channel_ids=[2, 0])
     assert traces.shape[1] == 2
+    assert rec_sliced.get_parent() == rec
 
     assert np.allclose(rec_sliced.get_times(0), rec.get_times(0))
 
@@ -53,7 +60,7 @@ def test_ChannelSliceRecording():
     assert np.all(traces[:, 1] == 0)
 
     # with probe and after save()
-    probe = pi.generate_linear_probe(num_elec=num_chan)
+    probe = probeinterface.generate_linear_probe(num_elec=num_chan)
     probe.set_device_channel_indices(np.arange(num_chan))
     rec_p = rec.set_probe(probe)
     rec_sliced3 = ChannelSliceRecording(rec_p, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
@@ -66,6 +73,14 @@ def test_ChannelSliceRecording():
     traces3 = rec_saved.get_traces(segment_index=0)
     assert np.all(traces3[:, 0] == 0)
     assert np.all(traces3[:, 1] == 2)
+
+
+def test_failure_with_non_unique_channel_ids():
+    durations = [1.0]
+    seed = 10
+    rec = generate_recording(num_channels=4, durations=durations, set_probe=False, seed=seed)
+    with pytest.raises(AssertionError):
+        rec_sliced = ChannelSliceRecording(rec, channel_ids=[0, 1], renamed_channel_ids=[0, 0])
 
 
 if __name__ == "__main__":

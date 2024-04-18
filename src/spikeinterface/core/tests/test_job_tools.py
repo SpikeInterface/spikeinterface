@@ -1,7 +1,7 @@
 import pytest
 import os
 
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, set_global_job_kwargs, get_global_job_kwargs
 
 from spikeinterface.core.job_tools import (
     divide_segment_into_chunks,
@@ -36,7 +36,7 @@ def test_ensure_n_jobs():
     n_jobs = ensure_n_jobs(recording, n_jobs=1)
     assert n_jobs == 1
 
-    # dumpable
+    # check serializable
     n_jobs = ensure_n_jobs(recording.save(), n_jobs=-1)
     assert n_jobs > 1
 
@@ -45,7 +45,7 @@ def test_ensure_chunk_size():
     recording = generate_recording(num_channels=2)
     dtype = recording.get_dtype()
     assert dtype == "float32"
-    # make dumpable
+    # make serializable
     recording = recording.save()
 
     chunk_size = ensure_chunk_size(recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
@@ -90,7 +90,7 @@ def init_func(arg1, arg2, arg3):
 
 def test_ChunkRecordingExecutor():
     recording = generate_recording(num_channels=2)
-    # make dumpable
+    # make serializable
     recording = recording.save()
 
     init_args = "a", 120, "yep"
@@ -190,6 +190,19 @@ def test_fix_job_kwargs():
         job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s", other_param="other")
         fixed_job_kwargs = fix_job_kwargs(job_kwargs)
 
+    # test mutually exclusive
+    _old_global = get_global_job_kwargs().copy()
+    set_global_job_kwargs(chunk_memory="50M")
+    job_kwargs = dict()
+    fixed_job_kwargs = fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    assert "chunk_memory" in fixed_job_kwargs
+
+    job_kwargs = dict(chunk_duration="300ms")
+    fixed_job_kwargs = fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    assert "chunk_memory" not in fixed_job_kwargs
+    assert fixed_job_kwargs["chunk_duration"] == "300ms"
+    set_global_job_kwargs(**_old_global)
+
 
 def test_split_job_kwargs():
     kwargs = dict(n_jobs=2, progress_bar=False, other_param="other")
@@ -204,6 +217,6 @@ if __name__ == "__main__":
     # test_divide_segment_into_chunks()
     # test_ensure_n_jobs()
     # test_ensure_chunk_size()
-    test_ChunkRecordingExecutor()
-    # test_fix_job_kwargs()
+    # test_ChunkRecordingExecutor()
+    test_fix_job_kwargs()
     # test_split_job_kwargs()

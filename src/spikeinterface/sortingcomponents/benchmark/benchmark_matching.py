@@ -1,265 +1,175 @@
-from spikeinterface.core import extract_waveforms
-from spikeinterface.preprocessing import bandpass_filter, common_reference
+from __future__ import annotations
+
+from spikeinterface.postprocessing import compute_template_similarity
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+from spikeinterface.core.template import Templates
 from spikeinterface.core import NumpySorting
-from spikeinterface.qualitymetrics import compute_quality_metrics
-from spikeinterface.comparison import CollisionGTComparison
+from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
-    plot_sorting_performance,
     plot_agreement_matrix,
     plot_comparison_collision_by_similarity,
-    plot_unit_templates,
-    plot_unit_waveforms,
-    plot_gt_performances,
 )
 
-
-import time
-import os
-import string, random
+from pathlib import Path
 import pylab as plt
+import matplotlib.patches as mpatches
 import numpy as np
+import pandas as pd
+from .benchmark_tools import BenchmarkStudy, Benchmark
+from spikeinterface.core.basesorting import minimum_spike_dtype
 
 
-class BenchmarkMatching:
-    def __init__(
-        self, recording, gt_sorting, method, exhaustive_gt=True, method_kwargs={}, tmp_folder=None, job_kwargs={}
-    ):
-        self.method = method
-        self.method_kwargs = method_kwargs
+class MatchingBenchmark(Benchmark):
+
+    def __init__(self, recording, gt_sorting, params):
         self.recording = recording
         self.gt_sorting = gt_sorting
-        self.job_kwargs = job_kwargs
-        self.exhaustive_gt = exhaustive_gt
-        self.sampling_rate = self.recording.get_sampling_frequency()
-        self.job_kwargs = job_kwargs
-        self.method_kwargs = method_kwargs
-        self.metrics = None
+        self.method = params["method"]
+        self.templates = params["method_kwargs"]["templates"]
+        self.method_kwargs = params["method_kwargs"]
+        self.result = {}
 
-        self.tmp_folder = tmp_folder
-        if self.tmp_folder is None:
-            self.tmp_folder = os.path.join(".", "".join(random.choices(string.ascii_uppercase + string.digits, k=8)))
-
-        self.we = extract_waveforms(
-            self.recording,
-            self.gt_sorting,
-            self.tmp_folder,
-            load_if_exists=False,
-            ms_before=2.5,
-            ms_after=2.5,
-            max_spikes_per_unit=500,
-            return_scaled=False,
-            **self.job_kwargs,
+    def run(self, **job_kwargs):
+        spikes = find_spikes_from_templates(
+            self.recording, method=self.method, method_kwargs=self.method_kwargs, **job_kwargs
         )
+        unit_ids = self.templates.unit_ids
+        sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+        sorting["sample_index"] = spikes["sample_index"]
+        sorting["unit_index"] = spikes["cluster_index"]
+        sorting["segment_index"] = spikes["segment_index"]
+        sorting = NumpySorting(sorting, self.recording.sampling_frequency, unit_ids)
+        self.result = {"sorting": sorting}
+        self.result["templates"] = self.templates
 
-        self.method_kwargs.update({"waveform_extractor": self.we})
-        self.templates = self.we.get_all_templates(mode="median")
+    def compute_result(self, **result_params):
+        sorting = self.result["sorting"]
+        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
+        self.result["gt_comparison"] = comp
+        self.result["gt_collision"] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
 
-    def __del__(self):
-        import shutil
+    _run_key_saved = [
+        ("sorting", "sorting"),
+        ("templates", "zarr_templates"),
+    ]
+    _result_key_saved = [("gt_collision", "pickle"), ("gt_comparison", "pickle")]
 
-        shutil.rmtree(self.tmp_folder)
 
-    def run(self):
-        t_start = time.time()
-        self.spikes = find_spikes_from_templates(
-            self.recording, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs
-        )
-        self.run_time = time.time() - t_start
-        self.sorting = NumpySorting.from_times_labels(
-            self.spikes["sample_index"], self.spikes["cluster_index"], self.sampling_rate
-        )
-        self.comp = CollisionGTComparison(self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt)
-        self.metrics = compute_quality_metrics(self.we, metric_names=["snr"], load_if_exists=True)
+class MatchingStudy(BenchmarkStudy):
 
-    def plot(self, title=None):
-        if title is None:
-            title = self.method
+    benchmark_class = MatchingBenchmark
 
-        if self.metrics is None:
-            self.metrics = compute_quality_metrics(self.we, metric_names=["snr"], load_if_exists=True)
+    def create_benchmark(self, key):
+        dataset_key = self.cases[key]["dataset"]
+        recording, gt_sorting = self.datasets[dataset_key]
+        params = self.cases[key]["params"]
+        benchmark = MatchingBenchmark(recording, gt_sorting, params)
+        return benchmark
 
-        fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
-        ax = axs[0, 0]
-        ax.set_title(title)
-        plot_agreement_matrix(self.comp, ax=ax)
-        ax.set_title(title)
+    def plot_agreements(self, case_keys=None, figsize=None):
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
 
-        ax = axs[1, 0]
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        plot_sorting_performance(
-            self.comp, self.metrics, performance_name="accuracy", metric_name="snr", ax=ax, color="r"
-        )
-        plot_sorting_performance(
-            self.comp, self.metrics, performance_name="recall", metric_name="snr", ax=ax, color="g"
-        )
-        plot_sorting_performance(
-            self.comp, self.metrics, performance_name="precision", metric_name="snr", ax=ax, color="b"
-        )
-        # ax.set_ylim(0.8, 1)
-        ax.legend(["accuracy", "recall", "precision"])
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
-        ax = axs[1, 1]
-        plot_gt_performances(self.comp, ax=ax)
+        for count, key in enumerate(case_keys):
+            ax = axs[0, count]
+            ax.set_title(self.cases[key]["label"])
+            plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
 
-        ax = axs[0, 1]
-        if self.exhaustive_gt:
+    def plot_performances_vs_snr(self, case_keys=None, figsize=None):
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
+
+        for count, k in enumerate(("accuracy", "recall", "precision")):
+
+            ax = axs[count]
+            for key in case_keys:
+                label = self.cases[key]["label"]
+
+                analyzer = self.get_sorting_analyzer(key)
+                metrics = analyzer.get_extension("quality_metrics").get_data()
+                x = metrics["snr"].values
+                y = self.get_result(key)["gt_comparison"].get_performance()[k].values
+                ax.scatter(x, y, marker=".", label=label)
+                ax.set_title(k)
+
+            if count == 2:
+                ax.legend()
+
+    def plot_collisions(self, case_keys=None, figsize=None):
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+
+        for count, key in enumerate(case_keys):
+            templates_array = self.get_result(key)["templates"].templates_array
             plot_comparison_collision_by_similarity(
-                self.comp, self.templates, ax=ax, show_legend=True, mode="lines", good_only=False
+                self.get_result(key)["gt_collision"],
+                templates_array,
+                ax=axs[0, count],
+                show_legend=True,
+                mode="lines",
+                good_only=False,
             )
 
+    def plot_comparison_matching(
+        self,
+        case_keys=None,
+        performance_names=["accuracy", "recall", "precision"],
+        colors=["g", "b", "r"],
+        ylim=(-0.1, 1.1),
+        figsize=None,
+    ):
 
-def plot_errors_matching(benchmark, unit_id, nb_spikes=200, metric="cosine"):
-    fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
 
-    benchmark.we.sorting.get_unit_spike_train(unit_id)
-    template = benchmark.we.get_template(unit_id)
-    a = template.reshape(template.size, 1).T
-    count = 0
-    colors = ["r", "b"]
-    for label in ["TP", "FN"]:
-        idx_1 = np.where(benchmark.comp.get_labels1(unit_id) == label)
-        idx_2 = benchmark.we.get_sampled_indices(unit_id)["spike_index"]
-        intersection = np.where(np.in1d(idx_2, idx_1))[0]
-        intersection = np.random.permutation(intersection)[:nb_spikes]
-        ### Should be able to give a subset of waveforms only...
-        ax = axs[count, 0]
-        plot_unit_waveforms(
-            benchmark.we,
-            unit_ids=[unit_id],
-            axes=ax,
-            unit_selected_waveforms={unit_id: intersection},
-            unit_colors={unit_id: colors[count]},
-        )
-        ax.set_title(label)
-
-        wfs = benchmark.we.get_waveforms(unit_id)
-        wfs = wfs[intersection, :, :]
-
-        import sklearn
-
-        nb_spikes = len(wfs)
-        b = wfs.reshape(nb_spikes, -1)
-        distances = sklearn.metrics.pairwise_distances(a, b, metric).flatten()
-        ax = axs[count, 1]
-        ax.set_title(label)
-        ax.hist(distances, color=colors[count])
-        ax.set_ylabel("# waveforms")
-        ax.set_xlabel(metric)
-
-        count += 1
-
-
-def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric="cosine"):
-    templates = benchmark.templates
-    nb_units = len(benchmark.we.unit_ids)
-    colors = ["r", "b"]
-
-    results = {"TP": {"mean": [], "std": []}, "FN": {"mean": [], "std": []}}
-
-    for i in range(nb_units):
-        unit_id = benchmark.we.unit_ids[i]
-        idx_2 = benchmark.we.get_sampled_indices(unit_id)["spike_index"]
-        wfs = benchmark.we.get_waveforms(unit_id)
-        template = benchmark.we.get_template(unit_id)
-        a = template.reshape(template.size, 1).T
-
-        for label in ["TP", "FN"]:
-            idx_1 = np.where(benchmark.comp.get_labels1(unit_id) == label)[0]
-            intersection = np.where(np.in1d(idx_2, idx_1))[0]
-            intersection = np.random.permutation(intersection)[:nb_spikes]
-            wfs_sliced = wfs[intersection, :, :]
-
-            import sklearn
-
-            all_spikes = len(wfs_sliced)
-            if all_spikes > 0:
-                b = wfs_sliced.reshape(all_spikes, -1)
-                if metric == "cosine":
-                    distances = sklearn.metrics.pairwise.cosine_similarity(a, b).flatten()
+        num_methods = len(case_keys)
+        fig, axs = plt.subplots(ncols=num_methods, nrows=num_methods, figsize=(10, 10))
+        for i, key1 in enumerate(case_keys):
+            for j, key2 in enumerate(case_keys):
+                if len(axs.shape) > 1:
+                    ax = axs[i, j]
                 else:
-                    distances = sklearn.metrics.pairwise_distances(a, b, metric).flatten()
-                results[label]["mean"] += [np.nanmean(distances)]
-                results[label]["std"] += [np.nanstd(distances)]
-            else:
-                results[label]["mean"] += [0]
-                results[label]["std"] += [0]
+                    ax = axs[j]
+                comp1 = self.get_result(key1)["gt_comparison"]
+                comp2 = self.get_result(key2)["gt_comparison"]
+                if i <= j:
+                    for performance, color in zip(performance_names, colors):
+                        perf1 = comp1.get_performance()[performance]
+                        perf2 = comp2.get_performance()[performance]
+                        ax.plot(perf2, perf1, ".", label=performance, color=color)
 
-    fig, axs = plt.subplots(ncols=2, nrows=1, figsize=(15, 5))
-    for count, label in enumerate(["TP", "FN"]):
-        ax = axs[count]
-        idx = np.argsort(benchmark.metrics.snr)
-        means = np.array(results[label]["mean"])[idx]
-        stds = np.array(results[label]["std"])[idx]
-        ax.errorbar(benchmark.metrics.snr[idx], means, yerr=stds, c=colors[count])
-        ax.set_title(label)
-        ax.set_xlabel("snr")
-        ax.set_ylabel(metric)
+                    ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
+                    ax.set_ylim(ylim)
+                    ax.set_xlim(ylim)
+                    ax.spines[["right", "top"]].set_visible(False)
+                    ax.set_aspect("equal")
 
-
-def plot_comparison_matching(
-    benchmarks, performance_names=["accuracy", "recall", "precision"], colors=["g", "b", "r"], ylim=(0.5, 1)
-):
-    nb_benchmarks = len(benchmarks)
-    fig, axs = plt.subplots(ncols=nb_benchmarks, nrows=nb_benchmarks - 1, figsize=(10, 10))
-    for i in range(nb_benchmarks - 1):
-        for j in range(nb_benchmarks):
-            if len(axs.shape) > 1:
-                ax = axs[i, j]
-            else:
-                ax = axs[j]
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
-            ax.spines["left"].set_visible(False)
-            ax.spines["bottom"].set_visible(False)
-            if j > i:
-                for performance, color in zip(performance_names, colors):
-                    perf1 = benchmarks[i].comp.get_performance()[performance]
-                    perf2 = benchmarks[j].comp.get_performance()[performance]
-                    ax.plot(perf2, perf1, ".", label=performance, color=color)
-                ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
-                ax.spines["left"].set_visible(True)
-                ax.spines["bottom"].set_visible(True)
-                ax.set_ylim(ylim)
-                ax.set_xlim(ylim)
-
-                if j > i + 1:
-                    ax.set_yticks([], [])
-                    ax.set_xticks([], [])
-
-                if j == i + 1:
-                    ax.set_ylabel(f"{benchmarks[i].method}")
-                    ax.set_xlabel(f"{benchmarks[j].method}")
-            else:
-                ax.set_yticks([], [])
-                ax.set_xticks([], [])
-                if (i == 0) and (j == 0):
-                    for color, k in zip(colors, range(len(performance_names))):
-                        ax.plot([0, 0], [0, 0], c=color)
-                    ax.legend(performance_names)
-    plt.tight_layout()
-
-    # def plot_average_comparison_matching(benchmarks, performance_names=['recall'], ylim=(0, 1)):
-    #     nb_benchmarks = len(benchmarks)
-    #     results = {}
-    #     for i in range(nb_benchmarks):
-    #         results[benchmarks[i].method] = {}
-    #         for performance in performance_names:
-    #             results[benchmarks[i].method][performance] = benchmarks[i].comp.get_performance()[performance]
-
-    #     width = 1/(ncol+2)
-    #     methods = [i.method for i in benchmarks]
-
-    #     for c, col in enumerate(methods):
-    #         x = np.arange(performances) + 1 + c / (ncol + 2)
-    #         yerr = results[]
-    #         ax.bar(x, m[col].values.flatten(), yerr=yerr.flatten(), width=width, color=cmap(c), label=clean_labels[c])
-
-    #     ax.legend()
-
-    #     ax.set_xticks(np.arange(sorter_names.size) + 1 + width)
-    #     ax.set_xticklabels(sorter_names, rotation=45)
-    #     ax.set_ylabel('metric')
-    #     ax.set_xlim(0, sorter_names.size + 1)
-    #
+                    label1 = self.cases[key1]["label"]
+                    label2 = self.cases[key2]["label"]
+                    if j == i:
+                        ax.set_ylabel(f"{label1}")
+                    else:
+                        ax.set_yticks([])
+                    if i == j:
+                        ax.set_xlabel(f"{label2}")
+                    else:
+                        ax.set_xticks([])
+                    if i == num_methods - 1 and j == num_methods - 1:
+                        patches = []
+                        for color, name in zip(colors, performance_names):
+                            patches.append(mpatches.Patch(color=color, label=name))
+                        ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+                else:
+                    ax.spines["bottom"].set_visible(False)
+                    ax.spines["left"].set_visible(False)
+                    ax.spines["top"].set_visible(False)
+                    ax.spines["right"].set_visible(False)
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+        plt.tight_layout(h_pad=0, w_pad=0)

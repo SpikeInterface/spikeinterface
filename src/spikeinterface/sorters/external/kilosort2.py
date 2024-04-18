@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import os
 from typing import Union
@@ -35,34 +37,52 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "detect_threshold": 6,
         "projection_threshold": [10, 4],
         "preclust_threshold": 8,
+        "momentum": [20.0, 400.0],
         "car": True,
         "minFR": 0.1,
         "minfr_goodchannels": 0.1,
         "freq_min": 150,
         "sigmaMask": 30,
+        "lam": 10.0,
         "nPCs": 3,
         "ntbuff": 64,
         "nfilt_factor": 4,
         "NT": None,
+        "AUCsplit": 0.9,
         "wave_length": 61,
         "keep_good_only": False,
+        "skip_kilosort_preprocessing": False,
+        "scaleproc": None,
+        "save_rez_to_mat": False,
+        "delete_tmp_files": ("matlab_files",),
+        "delete_recording_dat": False,
     }
 
     _params_description = {
         "detect_threshold": "Threshold for spike detection",
         "projection_threshold": "Threshold on projections",
         "preclust_threshold": "Threshold crossings for pre-clustering (in PCA projection space)",
+        "momentum": "Number of samples to average over (annealed from first to second value)",
         "car": "Enable or disable common reference",
         "minFR": "Minimum spike rate (Hz), if a cluster falls below this for too long it gets removed",
         "minfr_goodchannels": "Minimum firing rate on a 'good' channel",
         "freq_min": "High-pass filter cutoff frequency",
         "sigmaMask": "Spatial constant in um for computing residual variance of spike",
+        "lam": "The importance of the amplitude penalty (like in Kilosort1: 0 means not used, 10 is average, 50 is a lot)",
         "nPCs": "Number of PCA dimensions",
         "ntbuff": "Samples of symmetrical buffer for whitening and spike detection",
         "nfilt_factor": "Max number of clusters per good channel (even temporary ones) 4",
-        "NT": "Batch size (if None it is automatically computed)",
+        "NT": "Batch size (if None it is automatically computed--recommended Kilosort behavior if ntbuff also not changed)",
+        "AUCsplit": "Threshold on the area under the curve (AUC) criterion for performing a split in the final step",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "keep_good_only": "If True only 'good' units are returned",
+        "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
+        "scaleproc": "int16 scaling of whitened data, if None set to 200.",
+        "save_rez_to_mat": "Save the full rez internal struc to mat file",
+        "delete_tmp_files": "Delete temporary files created during sorting (matlab files and the `temp_wh.dat` file that "
+        "contains kilosort-preprocessed data). Accepts `False` (deletes no files), `True` (deletes all files) "
+        "or a Tuple containing the files to delete. Options are: ('temp_wh.dat', 'matlab_files')",
+        "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
     }
 
     sorter_description = """Kilosort2 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
@@ -116,7 +136,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         if p["wave_length"] % 2 != 1:
             p["wave_length"] = p["wave_length"] + 1  # The wave_length must be odd
         if p["wave_length"] > 81:
-            p["wave_length"] = 81  # The wave_length must be less than 81.
+            p["wave_length"] = 81  # The wave_length must be <=81
         return p
 
     @classmethod
@@ -148,16 +168,17 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         ops["Th"] = projection_threshold
 
         # how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
-        ops["lam"] = 10.0
+        ops["lam"] = params["lam"]
 
         # splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
-        ops["AUCsplit"] = 0.9
+        ops["AUCsplit"] = params["AUCsplit"]
 
         # minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
         ops["minFR"] = params["minFR"]
 
+        momentum = [float(mom) for mom in params["momentum"]]
         # number of samples to average over (annealed from first to second value)
-        ops["momentum"] = [20.0, 400.0]
+        ops["momentum"] = momentum
 
         # spatial constant in um for computing residual variance of spike
         ops["sigmaMask"] = params["sigmaMask"]
@@ -180,7 +201,6 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         ]  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
         ops["whiteningRange"] = 32.0  # number of channels to use for whitening each channel
         ops["nSkipCov"] = 25.0  # compute whitening matrix from every N-th batch
-        ops["scaleproc"] = 200.0  # int16 scaling of whitened data
         ops["nPCs"] = params["nPCs"]  # how many PCs to project the spikes into
         ops["useRAM"] = 0.0  # not yet available
 
@@ -188,4 +208,18 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         ops["nt0"] = params[
             "wave_length"
         ]  # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
+
+        ops["skip_kilosort_preprocessing"] = params["skip_kilosort_preprocessing"]
+        if params["skip_kilosort_preprocessing"]:
+            ops["fproc"] = ops["fbinary"]
+            assert (
+                params["scaleproc"] is not None
+            ), "When skip_kilosort_preprocessing=True scaleproc must explicitly given"
+
+        # int16 scaling of whitened data, when None then scaleproc is set to 200.
+        scaleproc = params["scaleproc"]
+        ops["scaleproc"] = scaleproc if scaleproc is not None else 200.0
+
+        ops["save_rez_to_mat"] = params["save_rez_to_mat"]
+
         return ops

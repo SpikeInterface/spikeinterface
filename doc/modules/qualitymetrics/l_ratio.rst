@@ -37,6 +37,17 @@ Since this metric identifies unit separation, a high value indicates a highly co
 
 A well separated unit should have a low L-ratio ([Schmitzer-Torbert]_ et al.).
 
+
+Example code
+------------
+
+.. code-block:: python
+
+    import spikeinterface.qualitymetrics as sqm
+
+    _, l_ratio = sqm.isolation_distance(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
+
+
 References
 ----------
 

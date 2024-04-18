@@ -26,7 +26,7 @@ class CellExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
         (
             "cellexplorer/dataset_2/20170504_396um_0um_merge.spikes.cellinfo.mat",
             {
-                "session_info_matfile_path": local_folder
+                "session_info_file_path": local_folder
                 / "cellexplorer/dataset_2/20170504_396um_0um_merge.sessionInfo.mat"
             },
         ),

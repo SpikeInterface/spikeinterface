@@ -1,14 +1,22 @@
+from __future__ import annotations
+
 from typing import Type
 
 # most important extractor are in spikeinterface.core
 from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
+    BinaryFolderRecording,
     BinaryRecordingExtractor,
     NumpyRecording,
     NpzSortingExtractor,
     NumpySorting,
     NpySnippetsExtractor,
+    ZarrRecordingExtractor,
+    ZarrSortingExtractor,
+    read_binary,
+    read_zarr,
+    read_npz_sorting,
 )
 
 # sorting/recording/event from neo
@@ -21,7 +29,7 @@ from .neoextractors import NeuroScopeSortingExtractor, MaxwellEventExtractor
 from .nwbextractors import NwbRecordingExtractor, NwbSortingExtractor, read_nwb, read_nwb_recording, read_nwb_sorting
 
 from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
-from .iblstreamingrecording import IblStreamingRecordingExtractor, read_ibl_streaming_recording
+from .iblextractors import IblRecordingExtractor, IblSortingExtractor, read_ibl_recording, read_ibl_sorting
 from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 
 # sorting extractors in relation with a sorter
@@ -57,7 +65,9 @@ from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 ########################################
 
 recording_extractor_full_list = [
+    BinaryFolderRecording,
     BinaryRecordingExtractor,
+    ZarrRecordingExtractor,
     # natively implemented in spikeinterface.extractors
     NumpyRecording,
     SHYBRIDRecordingExtractor,
@@ -65,15 +75,16 @@ recording_extractor_full_list = [
     NwbRecordingExtractor,
     # others
     CompressedBinaryIblExtractor,
-    IblStreamingRecordingExtractor,
+    IblRecordingExtractor,
     MCSH5RecordingExtractor,
 ]
 recording_extractor_full_list += neo_recording_extractors_list
 
 sorting_extractor_full_list = [
     NpzSortingExtractor,
-    # natively implemented in spikeinterface.extractors
+    ZarrSortingExtractor,
     NumpySorting,
+    # natively implemented in spikeinterface.extractors
     MdaSortingExtractor,
     SHYBRIDSortingExtractor,
     ALFSortingExtractor,
@@ -90,6 +101,7 @@ sorting_extractor_full_list = [
     PhySortingExtractor,
     NwbSortingExtractor,
     NeuroScopeSortingExtractor,
+    IblSortingExtractor,
 ]
 sorting_extractor_full_list += neo_sorting_extractors_list
 

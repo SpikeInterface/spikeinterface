@@ -65,8 +65,11 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinx_design',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
+    "IPython.sphinxext.ipython_directive",
+    "IPython.sphinxext.ipython_console_highlighting"
 ]
 
 numpydoc_show_class_members = False
@@ -116,18 +119,19 @@ sphinx_gallery_conf = {
     'examples_dirs': ['../examples/modules_gallery'],
     'gallery_dirs': ['modules_gallery', ],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
-                                       '../examples/modules_gallery/core/',
-                                       '../examples/modules_gallery/extractors/',
+                                       '../examples/modules_gallery/core',
+                                       '../examples/modules_gallery/extractors',
                                        '../examples/modules_gallery/qualitymetrics',
                                        '../examples/modules_gallery/comparison',
                                        '../examples/modules_gallery/widgets',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_',
+    'nested_sections': False,
 }
 
 intersphinx_mapping = {
-    "neo": ("https://neo.readthedocs.io/en/stable/", None),
+    "neo": ("https://neo.readthedocs.io/en/latest/", None),
     "probeinterface": ("https://probeinterface.readthedocs.io/en/stable/", None),
 }
 

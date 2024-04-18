@@ -27,11 +27,11 @@ With SpikeInterface:
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as qm
+    import spikeinterface.qualitymetrics as sqm
 
-    # Make recording, sorting and wvf_extractor object for your data.
+    # Combine sorting and recording into a sorting_analyzer
 
-    contamination = qm.compute_sliding_rp_violations(wvf_extractor, bin_size_ms=0.25)
+    contamination = sqm.compute_sliding_rp_violations(sorting_analyzer=sorting_analyzer, bin_size_ms=0.25)
 
 References
 ----------

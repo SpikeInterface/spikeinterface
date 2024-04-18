@@ -1,4 +1,6 @@
-from spikeinterface.core import load_extractor
+from __future__ import annotations
+
+from spikeinterface.core import load_extractor, NumpyRecording
 
 from spikeinterface.sorters import BaseSorter
 
@@ -14,7 +16,6 @@ class ComponentsBasedSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        # nothing to do here because the spikeinterface_recording.json is here anyway
         pass
 
     @classmethod

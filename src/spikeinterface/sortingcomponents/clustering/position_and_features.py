@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # """Sorting components: clustering"""
 from pathlib import Path
 
@@ -12,12 +14,11 @@ except:
     HAVE_HDBSCAN = False
 
 import random, string, os
-from spikeinterface.core import get_global_tmp_folder, get_noise_levels, get_channel_distances
-from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
+from spikeinterface.core import get_global_tmp_folder, get_noise_levels
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
 from spikeinterface.core import NumpySorting
-from spikeinterface.core import extract_waveforms
+from spikeinterface.core import estimate_templates_with_accumulator, Templates
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
 
 
@@ -35,7 +36,7 @@ class PositionAndFeaturesClustering:
             "cluster_selection_method": "leaf",
         },
         "cleaning_kwargs": {},
-        "local_radius_um": 100,
+        "radius_um": 100,
         "max_spikes_per_unit": 200,
         "selection_method": "random",
         "ms_before": 1.5,
@@ -46,7 +47,9 @@ class PositionAndFeaturesClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-        assert HAVE_HDBSCAN, "twisted clustering need hdbscan to be installed"
+        from sklearn.preprocessing import QuantileTransformer
+
+        assert HAVE_HDBSCAN, "twisted clustering needs hdbscan to be installed"
 
         if "n_jobs" in params["job_kwargs"]:
             if params["job_kwargs"]["n_jobs"] == -1:
@@ -67,41 +70,43 @@ class PositionAndFeaturesClustering:
 
         position_method = d["peak_localization_kwargs"]["method"]
 
-        features_list = [position_method, "ptp", "energy"]
+        features_list = [
+            position_method,
+            "ptp",
+        ]
         features_params = {
-            position_method: {"local_radius_um": params["local_radius_um"]},
-            "ptp": {"all_channels": False, "local_radius_um": params["local_radius_um"]},
-            "energy": {"local_radius_um": params["local_radius_um"]},
+            position_method: {"radius_um": params["radius_um"]},
+            "ptp": {"all_channels": False, "radius_um": params["radius_um"]},
         }
 
         features_data = compute_features_from_peaks(
             recording, peaks, features_list, features_params, ms_before=1, ms_after=1, **params["job_kwargs"]
         )
 
-        hdbscan_data = np.zeros((len(peaks), 4), dtype=np.float32)
+        hdbscan_data = np.zeros((len(peaks), 3), dtype=np.float32)
         hdbscan_data[:, 0] = features_data[0]["x"]
         hdbscan_data[:, 1] = features_data[0]["y"]
         hdbscan_data[:, 2] = features_data[1]
-        hdbscan_data[:, 3] = features_data[2]
 
         preprocessing = QuantileTransformer(output_distribution="uniform")
         hdbscan_data = preprocessing.fit_transform(hdbscan_data)
 
-        import sklearn
-
-        clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
-        peak_labels = clustering[0]
+        clusterer = hdbscan.HDBSCAN(**d["hdbscan_kwargs"])
+        clusterer.fit(X=hdbscan_data)
+        peak_labels = clusterer.labels_
 
         labels = np.unique(peak_labels)
-        labels = labels[labels >= 0]
+        labels = labels[labels >= 0]  #  Noisy samples are given the label -1 in hdbscan
 
         best_spikes = {}
-        nb_spikes = 0
+        num_spikes = 0
 
         all_indices = np.arange(0, peak_labels.size)
 
         max_spikes = params["max_spikes_per_unit"]
         selection_method = params["selection_method"]
+
+        import sklearn
 
         for unit_ind in labels:
             mask = peak_labels == unit_ind
@@ -112,9 +117,9 @@ class PositionAndFeaturesClustering:
                 best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:max_spikes]]
             elif selection_method == "random":
                 best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[:max_spikes]
-            nb_spikes += best_spikes[unit_ind].size
+            num_spikes += best_spikes[unit_ind].size
 
-        spikes = np.zeros(nb_spikes, dtype=peak_dtype)
+        spikes = np.zeros(num_spikes, dtype=peak_dtype)
 
         mask = np.zeros(0, dtype=np.int32)
         for unit_ind in labels:
@@ -166,18 +171,24 @@ class PositionAndFeaturesClustering:
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
 
             sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["unit_index"], fs)
-            we = extract_waveforms(
+
+            nbefore = int(params["ms_before"] * fs / 1000.0)
+            nafter = int(params["ms_after"] * fs / 1000.0)
+            templates_array = estimate_templates_with_accumulator(
                 recording,
-                sorting,
-                tmp_folder,
-                overwrite=True,
-                ms_before=params["ms_before"],
-                ms_after=params["ms_after"],
-                **params["job_kwargs"],
+                sorting.to_spike_vector(),
+                sorting.unit_ids,
+                nbefore,
+                nafter,
                 return_scaled=False,
+                **params["job_kwargs"],
             )
+            templates = Templates(
+                templates_array=templates_array, sampling_frequency=fs, nbefore=nbefore, probe=recording.get_probe()
+            )
+
             labels, peak_labels = remove_duplicates_via_matching(
-                we, peak_labels, job_kwargs=params["job_kwargs"], **params["cleaning_kwargs"]
+                templates, peak_labels, job_kwargs=params["job_kwargs"], **params["cleaning_kwargs"]
             )
             shutil.rmtree(tmp_folder)
 

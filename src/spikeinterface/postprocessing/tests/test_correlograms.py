@@ -2,17 +2,6 @@ import unittest
 import numpy as np
 from typing import List
 
-
-from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite, cache_folder
-
-from spikeinterface import download_dataset, extract_waveforms, NumpySorting
-import spikeinterface.extractors as se
-
-from spikeinterface.postprocessing import compute_correlograms, CorrelogramsCalculator
-from spikeinterface.postprocessing.correlograms import _make_bins
-from spikeinterface.core import generate_sorting
-
-
 try:
     import numba
 
@@ -21,24 +10,24 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-class CorrelogramsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
-    extension_class = CorrelogramsCalculator
-    extension_data_names = ["ccgs", "bins"]
-    extension_function_kwargs_list = [dict(method="numpy")]
+from spikeinterface import NumpySorting, generate_sorting
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
+from spikeinterface.postprocessing import ComputeCorrelograms
+from spikeinterface.postprocessing.correlograms import compute_correlograms_on_sorting, _make_bins
 
-    def test_compute_correlograms(self):
-        methods = ["numpy", "auto"]
-        if HAVE_NUMBA:
-            methods.append("numba")
 
-        sorting = self.we1.sorting
-
-        _test_correlograms(sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
-        _test_correlograms(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
+class ComputeCorrelogramsTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
+    extension_class = ComputeCorrelograms
+    extension_function_params_list = [
+        dict(method="numpy"),
+        dict(method="auto"),
+    ]
+    if HAVE_NUMBA:
+        extension_function_params_list.append(dict(method="numba"))
 
 
 def test_make_bins():
-    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5])
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     window_ms = 43.57
     bin_ms = 1.6421
@@ -55,7 +44,7 @@ def test_make_bins():
 
 def _test_correlograms(sorting, window_ms, bin_ms, methods):
     for method in methods:
-        correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
+        correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
         if method == "numpy":
             ref_correlograms = correlograms
             ref_bins = bins
@@ -82,14 +71,14 @@ def test_equal_results_correlograms():
     if HAVE_NUMBA:
         methods.append("numba")
 
-    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5])
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     _test_correlograms(sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
     _test_correlograms(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
 
 
 def test_flat_cross_correlogram():
-    sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0])
+    sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0], seed=0)
 
     methods = ["numpy"]
     if HAVE_NUMBA:
@@ -99,7 +88,7 @@ def test_flat_cross_correlogram():
     # ~ fig, ax = plt.subplots()
 
     for method in methods:
-        correlograms, bins = compute_correlograms(sorting, window_ms=50.0, bin_ms=1.0, method=method)
+        correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=50.0, bin_ms=1.0, method=method)
         cc = correlograms[0, 1, :].copy()
         m = np.mean(cc)
         assert np.all(cc > (m * 0.90))
@@ -128,10 +117,10 @@ def test_auto_equal_cross_correlograms():
     spike_times = np.sort(np.unique(np.random.randint(0, 100000, num_spike)))
     num_spike = spike_times.size
     units_dict = {"1": spike_times, "2": spike_times}
-    sorting = NumpySorting.from_dict([units_dict], sampling_frequency=10000.0)
+    sorting = NumpySorting.from_unit_dict([units_dict], sampling_frequency=10000.0)
 
     for method in methods:
-        correlograms, bins = compute_correlograms(sorting, window_ms=10.0, bin_ms=0.1, method=method)
+        correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=10.0, bin_ms=0.1, method=method)
 
         num_half_bins = correlograms.shape[2] // 2
 
@@ -178,10 +167,10 @@ def test_detect_injected_correlation():
     spike_times2 = np.sort(spike_times2)
 
     units_dict = {"1": spike_times1, "2": spike_times2}
-    sorting = NumpySorting.from_dict([units_dict], sampling_frequency=sampling_frequency)
+    sorting = NumpySorting.from_unit_dict([units_dict], sampling_frequency=sampling_frequency)
 
     for method in methods:
-        correlograms, bins = compute_correlograms(sorting, window_ms=10.0, bin_ms=0.1, method=method)
+        correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=10.0, bin_ms=0.1, method=method)
 
         cc_01 = correlograms[0, 1, :]
         cc_10 = correlograms[1, 0, :]
@@ -204,13 +193,12 @@ def test_detect_injected_correlation():
 
 
 if __name__ == "__main__":
-    # ~ test_make_bins()
+    # test_make_bins()
     # test_equal_results_correlograms()
-    # ~ test_flat_cross_correlogram()
-    # ~ test_auto_equal_cross_correlograms()
-    test_detect_injected_correlation()
+    # test_flat_cross_correlogram()
+    # test_auto_equal_cross_correlograms()
+    # test_detect_injected_correlation()
 
-    # test = CorrelogramsExtensionTest()
-    # test.setUp()
-    # test.test_compute_correlograms()
-    # test.test_extension()
+    test = ComputeCorrelogramsTest()
+    test.setUpClass()
+    test.test_extension()

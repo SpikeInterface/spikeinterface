@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 from pathlib import Path
 
 import numpy as np
@@ -13,10 +16,14 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str, optional
+    exclude_cluster_groups: list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
         Whether to only keep good units.
+    remove_empty_units : bool, default: True
+        If True, empty units are removed from the sorting extractor.
+    load_all_cluster_properties : bool, default: True
+        If True, all cluster properties are loaded from the tsv/csv files.
     """
 
     extractor_name = "BasePhyKilosortSorting"
@@ -28,7 +35,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     name = "phykilosort"
 
     def __init__(
-        self, folder_path, exclude_cluster_groups=None, keep_good_only=False, load_all_cluster_properties=True
+        self,
+        folder_path: Path | str,
+        exclude_cluster_groups: Optional[list[str] | str] = None,
+        keep_good_only: bool = False,
+        remove_empty_units: bool = False,
+        load_all_cluster_properties: bool = True,
     ):
         try:
             import pandas as pd
@@ -52,7 +64,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         spike_clusters = np.atleast_1d(spike_clusters.squeeze())
 
         clust_id = np.unique(spike_clusters)
-        unit_ids = list(clust_id)
+        unique_unit_ids = list(clust_id)
         params = read_python(str(phy_folder / "params.py"))
         sampling_frequency = params["sample_rate"]
 
@@ -87,8 +99,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         # in case no tsv/csv files are found populate cluster info with minimal info
         if cluster_info is None:
-            cluster_info = pd.DataFrame({"cluster_id": unit_ids})
-            cluster_info["group"] = ["unsorted"] * len(unit_ids)
+            cluster_info = pd.DataFrame({"cluster_id": unique_unit_ids})
+            cluster_info["group"] = ["unsorted"] * len(unique_unit_ids)
 
         if exclude_cluster_groups is not None:
             if isinstance(exclude_cluster_groups, str):
@@ -105,6 +117,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             assert "id" in cluster_info.columns, "Couldn't find cluster ids in the tsv files!"
             cluster_info.loc[:, "cluster_id"] = cluster_info["id"].values
             del cluster_info["id"]
+
+        if remove_empty_units:
+            cluster_info = cluster_info.query(f"cluster_id in {unique_unit_ids}")
 
         # update spike clusters and times values
         bad_clusters = [clust for clust in clust_id if clust not in cluster_info["cluster_id"].values]
@@ -123,7 +138,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             for i, (phy_id, si_id) in enumerate(
                 zip(cluster_info["cluster_id"].values, cluster_info["si_unit_id"].values)
             ):
-                if np.isnan(si_id):
+                if np.isnan(si_id) or np.count_nonzero(cluster_info["si_unit_id"].values == si_id) != 1:
                     max_si_unit_id += 1
                     new_si_id = int(max_si_unit_id)
                 else:
@@ -159,6 +174,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 if load_all_cluster_properties:
                     self.set_property(key=prop_name, values=cluster_info[prop_name])
 
+        self.annotate(phy_folder=str(phy_folder.resolve()))
+
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
 
@@ -170,7 +187,9 @@ class PhySortingSegment(BaseSortingSegment):
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         start = 0 if start_frame is None else np.searchsorted(self._all_spikes, start_frame, side="left")
-        end = len(self._all_spikes) if end_frame is None else np.searchsorted(self._all_spikes, end_frame, side="right")
+        end = (
+            len(self._all_spikes) if end_frame is None else np.searchsorted(self._all_spikes, end_frame, side="left")
+        )  # Exclude end frame
 
         spike_times = self._all_spikes[start:end][self._all_clusters[start:end] == unit_id]
         return np.atleast_1d(spike_times.copy().squeeze())
@@ -183,20 +202,33 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py).
-    exclude_cluster_groups: list or str, optional
+    exclude_cluster_groups: list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+    load_all_cluster_properties : bool, default: True
+        If True, all cluster properties are loaded from the tsv/csv files.
 
     Returns
     -------
     extractor : PhySortingExtractor
-        The loaded data.
+        The loaded Sorting object.
     """
 
     extractor_name = "PhySorting"
     name = "phy"
 
-    def __init__(self, folder_path, exclude_cluster_groups=None):
-        BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups, keep_good_only=False)
+    def __init__(
+        self,
+        folder_path: Path | str,
+        exclude_cluster_groups: Optional[list[str] | str] = None,
+        load_all_cluster_properties: bool = True,
+    ):
+        BasePhyKilosortSortingExtractor.__init__(
+            self,
+            folder_path,
+            exclude_cluster_groups,
+            keep_good_only=False,
+            load_all_cluster_properties=load_all_cluster_properties,
+        )
 
         self._kwargs = {
             "folder_path": str(Path(folder_path).absolute()),
@@ -211,24 +243,28 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py).
-    exclude_cluster_groups: list or str, optional
-        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
         Whether to only keep good units.
         If True, only Kilosort-labeled 'good' units are returned.
+    remove_empty_units : bool, default: True
+        If True, empty units are removed from the sorting extractor.
 
     Returns
     -------
     extractor : KiloSortSortingExtractor
-        The loaded data.
+        The loaded Sorting object.
     """
 
     extractor_name = "KiloSortSorting"
     name = "kilosort"
 
-    def __init__(self, folder_path, keep_good_only=False):
+    def __init__(self, folder_path: Path | str, keep_good_only: bool = False, remove_empty_units: bool = True):
         BasePhyKilosortSortingExtractor.__init__(
-            self, folder_path, exclude_cluster_groups=None, keep_good_only=keep_good_only
+            self,
+            folder_path,
+            exclude_cluster_groups=None,
+            keep_good_only=keep_good_only,
+            remove_empty_units=remove_empty_units,
         )
 
         self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "keep_good_only": keep_good_only}

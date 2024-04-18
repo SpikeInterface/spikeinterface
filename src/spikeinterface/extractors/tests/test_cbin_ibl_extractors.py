@@ -22,7 +22,7 @@ class CompressedBinaryIblExtractorTest(RecordingCommonTestSuite, unittest.TestCa
 # ~ import matplotlib.pyplot as plt
 # ~ import spikeinterface.widgets as sw
 # ~ from probeinterface.plotting import plot_probe
-# ~ sw.plot_timeseries(rec)
+# ~ sw.plot_traces(rec)
 # ~ plot_probe(rec.get_probe())
 # ~ plt.show()
 

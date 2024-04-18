@@ -15,3 +15,5 @@ Modules documentation
     widgets
     curation
     sortingcomponents
+    motion_correction
+    generation

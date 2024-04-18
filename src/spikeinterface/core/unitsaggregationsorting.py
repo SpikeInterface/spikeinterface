@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 import warnings
 import numpy as np
 
@@ -95,7 +95,7 @@ class UnitsAggregationSorting(BaseSorting):
                 try:
                     property_dict[prop_name] = np.concatenate((property_dict[prop_name], values))
                 except Exception as e:
-                    print(f"Skipping property '{prop_name}' for shape inconsistency")
+                    print(f"Skipping property '{prop_name}' due to shape inconsistency")
                     del property_dict[prop_name]
                     break
         for prop_name, prop_values in property_dict.items():
@@ -124,8 +124,8 @@ class UnitsAggregationSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         sorting_id = self._unit_map[unit_id]["sorting_id"]
         unit_id_sorting = self._unit_map[unit_id]["unit_id"]

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from tempfile import tempdir
 from packaging.version import parse
@@ -89,7 +91,7 @@ class Mountainsort4Sorter(BaseSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import mountainsort4
 
-        recording = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json")
+        recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
         # alias to params
         p = params
@@ -138,7 +140,7 @@ class Mountainsort4Sorter(BaseSorter):
         # convert sorting to new API and save it
         unit_ids = old_api_sorting.get_unit_ids()
         units_dict_list = [{u: old_api_sorting.get_unit_spike_train(u) for u in unit_ids}]
-        new_api_sorting = NumpySorting.from_dict(units_dict_list, samplerate)
+        new_api_sorting = NumpySorting.from_unit_dict(units_dict_list, samplerate)
         NpzSortingExtractor.write_sorting(new_api_sorting, str(sorter_output_folder / "firings.npz"))
 
     @classmethod

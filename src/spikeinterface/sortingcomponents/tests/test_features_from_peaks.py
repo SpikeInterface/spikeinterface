@@ -1,21 +1,17 @@
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset, BaseSorting
-from spikeinterface.extractors import MEArecRecordingExtractor
-
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
 
 from spikeinterface.core import get_noise_levels
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
+from spikeinterface.sortingcomponents.tests.common import make_dataset
+
 
 def test_features_from_peaks():
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    recording = MEArecRecordingExtractor(local_path)
+    recording, sorting = make_dataset()
 
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
@@ -30,12 +26,15 @@ def test_features_from_peaks():
         **job_kwargs,
     )
 
-    feature_list = ["amplitude", "ptp", "center_of_mass", "energy"]
+    feature_list = [
+        "amplitude",
+        "ptp",
+        "center_of_mass",
+    ]
     feature_params = {
         "amplitude": {"all_channels": False, "peak_sign": "neg"},
         "ptp": {"all_channels": False},
-        "center_of_mass": {"local_radius_um": 120.0},
-        "energy": {"local_radius_um": 160.0},
+        "center_of_mass": {"radius_um": 120.0},
     }
     features = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
 
@@ -49,14 +48,15 @@ def test_features_from_peaks():
 
     # split feature variable
     job_kwargs["n_jobs"] = 2
-    amplitude, ptp, com, energy = compute_features_from_peaks(
-        recording, peaks, feature_list, feature_params=feature_params, **job_kwargs
-    )
+    (
+        amplitude,
+        ptp,
+        com,
+    ) = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
     assert amplitude.ndim == 1  # because all_channels=False
     assert ptp.ndim == 1  # because all_channels=False
     assert com.ndim == 1
     assert "x" in com.dtype.fields
-    assert energy.ndim == 1
 
     # amplitude and peak to peak with multi channels
     d = {"all_channels": True}

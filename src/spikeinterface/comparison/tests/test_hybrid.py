@@ -1,12 +1,11 @@
 import pytest
 import shutil
 from pathlib import Path
-from spikeinterface.core import WaveformExtractor, extract_waveforms, load_extractor
+from spikeinterface.core import extract_waveforms, load_waveforms, load_extractor
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.comparison import (
     create_hybrid_units_recording,
     create_hybrid_spikes_recording,
-    generate_injected_sorting,
 )
 from spikeinterface.extractors import toy_example
 from spikeinterface.preprocessing import bandpass_filter
@@ -35,7 +34,10 @@ def setup_module():
 
 
 def test_hybrid_units_recording():
-    wvf_extractor = WaveformExtractor.load(cache_folder / "wvf_extractor")
+    wvf_extractor = load_waveforms(cache_folder / "wvf_extractor")
+    print(wvf_extractor)
+    print(wvf_extractor.sorting_analyzer)
+
     recording = wvf_extractor.recording
     templates = wvf_extractor.get_all_templates()
     templates[:, 0, :] = 0
@@ -62,7 +64,7 @@ def test_hybrid_units_recording():
 
 
 def test_hybrid_spikes_recording():
-    wvf_extractor = WaveformExtractor.load_from_folder(cache_folder / "wvf_extractor")
+    wvf_extractor = load_waveforms(cache_folder / "wvf_extractor")
     recording = wvf_extractor.recording
     sorting = wvf_extractor.sorting
     hybrid_spikes_recording = create_hybrid_spikes_recording(
@@ -89,16 +91,7 @@ def test_hybrid_spikes_recording():
     check_recordings_equal(hybrid_spikes_recording, saved_2job, return_scaled=False)
 
 
-def test_generate_injected_sorting():
-    recording = load_extractor(cache_folder / "recording")
-    sorting = load_extractor(cache_folder / "sorting")
-    injected_sorting = generate_injected_sorting(
-        sorting, [recording.get_num_frames(seg_index) for seg_index in range(recording.get_num_segments())]
-    )
-
-
 if __name__ == "__main__":
     setup_module()
-    test_generate_injected_sorting()
     test_hybrid_units_recording()
     test_hybrid_spikes_recording()

@@ -1,8 +1,10 @@
 """
-'global_tmp_folder' is a variable that is generated or can be set manually.
+"global_tmp_folder" is a variable that is generated or can be set manually.
 
-It is useful when we do extractor.save(name='name').
+It is useful when we do extractor.save(name="name").
 """
+
+from __future__ import annotations
 
 import tempfile
 from pathlib import Path
@@ -96,7 +98,7 @@ def is_set_global_dataset_folder():
 
 ########################################
 global global_job_kwargs
-global_job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
+global_job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_process=1)
 global global_job_kwargs_set
 global_job_kwargs_set = False
 

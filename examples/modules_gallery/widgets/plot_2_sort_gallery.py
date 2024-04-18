@@ -1,9 +1,10 @@
-'''
+"""
 SortingExtractor Widgets Gallery
 ===================================
 
 Here is a gallery of all the available widgets using SortingExtractor objects.
-'''
+"""
+
 import matplotlib.pyplot as plt
 
 import spikeinterface.extractors as se
@@ -16,15 +17,15 @@ recording, sorting = se.toy_example(duration=100, num_channels=1, seed=0, num_se
 
 ##############################################################################
 # plot_rasters()
-# ~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~
 
 w_rs = sw.plot_rasters(sorting)
 
 ##############################################################################
 # plot_isi_distribution()
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~
 
-w_isi = sw.plot_isi_distribution(sorting, window_ms=150.0, bin_ms=5.0)
+w_isi = sw.plot_isi_distribution(sorting, window_ms=150.0, bin_ms=5.0, figsize=(20, 8))
 
 ##############################################################################
 # plot_autocorrelograms()
@@ -43,10 +44,10 @@ plt.show()
 
 
 ##############################################################################
-# plot_presence()
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# plot_unit_presence()
+# ~~~~~~~~~~~~~~~~~~~~
 
 
-w_pr = sw.plot_presence(sorting)
+w_pr = sw.plot_unit_presence(sorting)
 
 plt.show()

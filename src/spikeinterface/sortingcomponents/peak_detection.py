@@ -1,4 +1,8 @@
 """Sorting components: peak detection."""
+
+from __future__ import annotations
+
+
 import copy
 from typing import Tuple, Union, List, Dict, Any, Optional, Callable
 
@@ -13,11 +17,16 @@ from spikeinterface.core.job_tools import (
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
 from spikeinterface.core.baserecording import BaseRecording
-from spikeinterface.sortingcomponents.peak_pipeline import PeakDetector, WaveformsNode, ExtractSparseWaveforms
+from spikeinterface.core.node_pipeline import (
+    PeakDetector,
+    WaveformsNode,
+    ExtractSparseWaveforms,
+    run_node_pipeline,
+    base_peak_dtype,
+)
 
 from ..core import get_chunk_with_margin
 
-from .peak_pipeline import PeakDetector, run_node_pipeline, base_peak_dtype
 from .tools import make_multi_method_doc
 
 try:
@@ -48,8 +57,8 @@ def detect_peaks(
 ):
     """Peak detection based on threshold crossing in term of k x MAD.
 
-    In 'by_channel' : peak are detected in each channel independently
-    In 'locally_exclusive' : a single best peak is taken from a set of neighboring channels
+    In "by_channel" : peak are detected in each channel independently
+    In "locally_exclusive" : a single best peak is taken from a set of neighboring channels
 
     Parameters
     ----------
@@ -60,10 +69,9 @@ def detect_peaks(
         This avoid reading the recording multiple times.
     gather_mode: str
         How to gather the results:
-
         * "memory": results are returned as in-memory numpy arrays
-
         * "npy": results are stored to .npy files in `folder`
+
     folder: str or Path
         If gather_mode is "npy", the folder where the files are created.
     names: list
@@ -76,9 +84,11 @@ def detect_peaks(
     -------
     peaks: array
         Detected peaks.
+
     Notes
     -----
     This peak detection ported from tridesclous into spikeinterface.
+
     """
 
     assert method in detect_peak_methods
@@ -146,16 +156,17 @@ class IterativePeakDetector(PeakDetector):
         Parameters
         ----------
         recording : BaseRecording
-            The recording to process.
+            The recording to process
         peak_detector_node : PeakDetector
-            The peak detector node to use.
+            The peak detector node to use
         waveform_extraction_node : WaveformsNode
-            The waveform extraction node to use.
+            The waveform extraction node to use
         waveform_denoising_node
-            The waveform denoising node to use.
-        num_iterations : int, optional, default=2
-            The number of iterations to run the algorithm.
-        return_output : bool, optional, default=True
+            The waveform denoising node to use
+        num_iterations : int, default: 2
+            The number of iterations to run the algorithm
+        return_output : bool, default: True
+            Whether to return the output of the algorithm
         """
         PeakDetector.__init__(self, recording, return_output=return_output)
         self.peak_detector_node = peak_detector_node
@@ -350,26 +361,27 @@ class PeakDetectorWrapper(PeakDetector):
 
 
 class DetectPeakByChannel(PeakDetectorWrapper):
-    """Detect peaks using the 'by channel' method."""
+    """Detect peaks using the "by channel" method."""
 
     name = "by_channel"
     engine = "numpy"
     preferred_mp_context = None
     params_doc = """
-    peak_sign: 'neg', 'pos', 'both'
-        Sign of the peak.
-    detect_threshold: float
-        Threshold, in median absolute deviations (MAD), to use to detect peaks.
-    exclude_sweep_ms: float or None
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of the peak
+    detect_threshold: float, default: 5
+        Threshold, in median absolute deviations (MAD), to use to detect peaks
+    exclude_sweep_ms: float, default: 0.1
         Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
         For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
-        and no larger peaks are located during the 0.1ms preceding and following the peak.
-    noise_levels: array, optional
-        Estimated noise levels to use, if already computed.
-        If not provide then it is estimated from a random snippet of the data.
-    random_chunk_kwargs: dict, optional
+        and no larger peaks are located during the 0.1ms preceding and following the peak
+    noise_levels: array or None, default: None
+        Estimated noise levels to use, if already computed
+        If not provide then it is estimated from a random snippet of the data
+    random_chunk_kwargs: dict, default: dict()
         A dict that contain option to randomize chunk for get_noise_levels().
-        Only used if noise_levels is None."""
+        Only used if noise_levels is None
+    """
 
     @classmethod
     def check_params(
@@ -385,10 +397,10 @@ class DetectPeakByChannel(PeakDetectorWrapper):
 
         if noise_levels is None:
             noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
-        abs_threholds = noise_levels * detect_threshold
+        abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
-        return (peak_sign, abs_threholds, exclude_sweep_size)
+        return (peak_sign, abs_thresholds, exclude_sweep_size)
 
     @classmethod
     def get_method_margin(cls, *args):
@@ -396,12 +408,12 @@ class DetectPeakByChannel(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size):
+    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size):
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
         length = traces_center.shape[0]
 
         if peak_sign in ("pos", "both"):
-            peak_mask = traces_center > abs_threholds[None, :]
+            peak_mask = traces_center > abs_thresholds[None, :]
             for i in range(exclude_sweep_size):
                 peak_mask &= traces_center > traces[i : i + length, :]
                 peak_mask &= (
@@ -412,7 +424,7 @@ class DetectPeakByChannel(PeakDetectorWrapper):
             if peak_sign == "both":
                 peak_mask_pos = peak_mask.copy()
 
-            peak_mask = traces_center < -abs_threholds[None, :]
+            peak_mask = traces_center < -abs_thresholds[None, :]
             for i in range(exclude_sweep_size):
                 peak_mask &= traces_center < traces[i : i + length, :]
                 peak_mask &= (
@@ -431,30 +443,31 @@ class DetectPeakByChannel(PeakDetectorWrapper):
 
 
 class DetectPeakByChannelTorch(PeakDetectorWrapper):
-    """Detect peaks using the 'by channel' method with pytorch."""
+    """Detect peaks using the "by channel" method with pytorch."""
 
     name = "by_channel_torch"
     engine = "torch"
     preferred_mp_context = "spawn"
     params_doc = """
-    peak_sign: 'neg', 'pos', 'both'
-        Sign of the peak.
-    detect_threshold: float
-        Threshold, in median absolute deviations (MAD), to use to detect peaks.
-    exclude_sweep_ms: float or None
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of the peak
+    detect_threshold: float, default: 5
+        Threshold, in median absolute deviations (MAD), to use to detect peaks
+    exclude_sweep_ms: float, default: 0.1
         Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
         For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
-        and no larger peaks are located during the 0.1ms preceding and following the peak.
-    noise_levels: array, optional
+        and no larger peaks are located during the 0.1ms preceding and following the peak
+    noise_levels: array or None, default: None
         Estimated noise levels to use, if already computed.
-        If not provide then it is estimated from a random snippet of the data.
-    device : str, optional
-            "cpu", "cuda", or None. If None and cuda is available, "cuda" is selected, by default None
-    return_tensor : bool, optional
-        If True, the output is returned as a tensor, otherwise as a numpy array, by default False
-    random_chunk_kwargs: dict, optional
+        If not provide then it is estimated from a random snippet of the data
+    device : str or None, default: None
+            "cpu", "cuda", or None. If None and cuda is available, "cuda" is selected
+    return_tensor : bool, default: False
+        If True, the output is returned as a tensor, otherwise as a numpy array
+    random_chunk_kwargs: dict, default: dict()
         A dict that contain option to randomize chunk for get_noise_levels().
-        Only used if noise_levels is None."""
+        Only used if noise_levels is None.
+    """
 
     @classmethod
     def check_params(
@@ -476,10 +489,10 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
 
         if noise_levels is None:
             noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
-        abs_threholds = noise_levels * detect_threshold
+        abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
-        return (peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor)
+        return (peak_sign, abs_thresholds, exclude_sweep_size, device, return_tensor)
 
     @classmethod
     def get_method_margin(cls, *args):
@@ -487,8 +500,10 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor):
-        sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, None, device)
+    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, device, return_tensor):
+        sample_inds, chan_inds = _torch_detect_peaks(
+            traces, peak_sign, abs_thresholds, exclude_sweep_size, None, device
+        )
         if not return_tensor:
             sample_inds = np.array(sample_inds.cpu())
             chan_inds = np.array(chan_inds.cpu())
@@ -496,7 +511,7 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
 
 
 class DetectPeakLocallyExclusive(PeakDetectorWrapper):
-    """Detect peaks using the 'locally exclusive' method."""
+    """Detect peaks using the "locally exclusive" method."""
 
     name = "locally_exclusive"
     engine = "numba"
@@ -504,7 +519,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
-    local_radius_um: float
+    radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
     )
@@ -516,7 +531,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
-        local_radius_um=50,
+        radius_um=50,
         noise_levels=None,
         random_chunk_kwargs={},
     ):
@@ -533,7 +548,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         )
 
         channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < local_radius_um
+        neighbours_mask = channel_distance <= radius_um
         return args + (neighbours_mask,)
 
     @classmethod
@@ -542,23 +557,23 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask):
+    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask):
         assert HAVE_NUMBA, "You need to install numba"
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
 
         if peak_sign in ("pos", "both"):
-            peak_mask = traces_center > abs_threholds[None, :]
+            peak_mask = traces_center > abs_thresholds[None, :]
             peak_mask = _numba_detect_peak_pos(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
             )
 
         if peak_sign in ("neg", "both"):
             if peak_sign == "both":
                 peak_mask_pos = peak_mask.copy()
 
-            peak_mask = traces_center < -abs_threholds[None, :]
+            peak_mask = traces_center < -abs_thresholds[None, :]
             peak_mask = _numba_detect_peak_neg(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
             )
 
             if peak_sign == "both":
@@ -572,7 +587,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
-    """Detect peaks using the 'locally exclusive' method with pytorch."""
+    """Detect peaks using the "locally exclusive" method with pytorch."""
 
     name = "locally_exclusive_torch"
     engine = "torch"
@@ -580,7 +595,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
-    local_radius_um: float
+    radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
     )
@@ -594,7 +609,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
         exclude_sweep_ms=0.1,
         noise_levels=None,
         device=None,
-        local_radius_um=50,
+        radius_um=50,
         return_tensor=False,
         random_chunk_kwargs={},
     ):
@@ -615,7 +630,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
         neighbour_indices_by_chan = []
         num_channels = recording.get_num_channels()
         for chan in range(num_channels):
-            neighbour_indices_by_chan.append(np.nonzero(channel_distance[chan] < local_radius_um)[0])
+            neighbour_indices_by_chan.append(np.nonzero(channel_distance[chan] <= radius_um)[0])
         max_neighbs = np.max([len(neigh) for neigh in neighbour_indices_by_chan])
         neighbours_idxs = num_channels * np.ones((num_channels, max_neighbs), dtype=int)
         for i, neigh in enumerate(neighbour_indices_by_chan):
@@ -628,9 +643,9 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor, neighbor_idxs):
+    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, device, return_tensor, neighbor_idxs):
         sample_inds, chan_inds = _torch_detect_peaks(
-            traces, peak_sign, abs_threholds, exclude_sweep_size, neighbor_idxs, device
+            traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbor_idxs, device
         )
         if not return_tensor and isinstance(sample_inds, torch.Tensor) and isinstance(chan_inds, torch.Tensor):
             sample_inds = np.array(sample_inds.cpu())
@@ -640,9 +655,9 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
 
 if HAVE_NUMBA:
 
-    @numba.jit(parallel=False)
+    @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_pos(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
     ):
         num_chans = traces_center.shape[1]
         for chan_ind in range(num_chans):
@@ -665,9 +680,9 @@ if HAVE_NUMBA:
                         break
         return peak_mask
 
-    @numba.jit(parallel=False)
+    @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_neg(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
     ):
         num_chans = traces_center.shape[1]
         for chan_ind in range(num_chans):
@@ -705,18 +720,18 @@ if HAVE_TORCH:
             Chunk of traces
         abs_thresholds : np.array
             Absolute thresholds by channel
-        peak_sign : str, optional
-            "neg", "pos" or "both", by default "neg"
-        exclude_sweep_size : int, optional
-            How many temporal neighbors to compare with during argrelmin, by default 5
+        peak_sign : "neg" | "pos" | "both", default: "neg"
+            The sign of the peak to detect peaks
+        exclude_sweep_size : int, default: 5
+            How many temporal neighbors to compare with during argrelmin
             Called `order` in original the implementation. The `max_window` parameter, used
             for deduplication, is now set as 2* exclude_sweep_size
-        neighbor_mask : np.array, optional
+        neighbor_mask : np.array or None, default: None
             If given, a matrix with shape (num_channels, num_neighbours) with
             neighbour indices for each channel. The matrix needs to be rectangular and
-            padded to num_channels, by default None
-        device : str, optional
-            "cpu", "cuda", or None. If None and cuda is available, "cuda" is selected, by default None
+            padded to num_channels
+        device : str or None, default: None
+            "cpu", "cuda", or None. If None and cuda is available, "cuda" is selected
 
         Returns
         -------
@@ -728,6 +743,8 @@ if HAVE_TORCH:
         # this will be adjusted based on: num jobs, num gpus, num neighbors
         MAXCOPY = 8
 
+        # center traces by excluding the sweep size
+        traces = traces[exclude_sweep_size:-exclude_sweep_size, :]
         num_samples, num_channels = traces.shape
         dtype = torch.float32
         empty_return_value = (torch.tensor([], dtype=dtype), torch.tensor([], dtype=dtype))
@@ -772,7 +789,7 @@ if HAVE_TORCH:
 
         # we need this due to the padding in convolution
         valid_indices = torch.nonzero((0 < sample_indices) & (sample_indices < traces.shape[0] - 1)).squeeze()
-        if not sample_indices.numel():
+        if not valid_indices.numel():
             return empty_return_value
         sample_indices = sample_indices[valid_indices]
         channel_indices = channel_indices[valid_indices]
@@ -810,7 +827,7 @@ if HAVE_TORCH:
             ).squeeze()
             if not deduplication_indices.numel():
                 return empty_return_value
-            sample_indices = sample_indices[deduplication_indices]
+            sample_indices = sample_indices[deduplication_indices] + exclude_sweep_size
             channel_indices = channel_indices[deduplication_indices]
             amplitudes = amplitudes[deduplication_indices]
 
@@ -836,7 +853,7 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
-        local_radius_um=50,
+        radius_um=50,
         noise_levels=None,
         random_chunk_kwargs={},
     ):
@@ -844,12 +861,12 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
         assert peak_sign in ("both", "neg", "pos")
         if noise_levels is None:
             noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
-        abs_threholds = noise_levels * detect_threshold
+        abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < local_radius_um
+        neighbours_mask = channel_distance <= radius_um
 
-        executor = OpenCLDetectPeakExecutor(abs_threholds, exclude_sweep_size, neighbours_mask, peak_sign)
+        executor = OpenCLDetectPeakExecutor(abs_thresholds, exclude_sweep_size, neighbours_mask, peak_sign)
 
         return (executor,)
 
@@ -866,12 +883,12 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
 
 
 class OpenCLDetectPeakExecutor:
-    def __init__(self, abs_threholds, exclude_sweep_size, neighbours_mask, peak_sign):
+    def __init__(self, abs_thresholds, exclude_sweep_size, neighbours_mask, peak_sign):
         import pyopencl
 
         self.chunk_size = None
 
-        self.abs_threholds = abs_threholds.astype("float32")
+        self.abs_thresholds = abs_thresholds.astype("float32")
         self.exclude_sweep_size = exclude_sweep_size
         self.neighbours_mask = neighbours_mask.astype("uint8")
         self.peak_sign = peak_sign
@@ -896,7 +913,7 @@ class OpenCLDetectPeakExecutor:
         self.neighbours_mask_cl = pyopencl.Buffer(
             self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.neighbours_mask
         )
-        self.abs_threholds_cl = pyopencl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.abs_threholds)
+        self.abs_thresholds_cl = pyopencl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.abs_thresholds)
 
         num_channels = self.neighbours_mask.shape[0]
         self.traces_cl = pyopencl.Buffer(self.ctx, mf.READ_WRITE, size=int(chunk_size * num_channels * 4))
@@ -922,7 +939,7 @@ class OpenCLDetectPeakExecutor:
         self.kern_detect_peaks = getattr(self.opencl_prg, "detect_peaks")
 
         self.kern_detect_peaks.set_args(
-            self.traces_cl, self.neighbours_mask_cl, self.abs_threholds_cl, self.peaks_cl, self.num_peaks_cl
+            self.traces_cl, self.neighbours_mask_cl, self.abs_thresholds_cl, self.peaks_cl, self.num_peaks_cl
         )
 
         s = self.chunk_size - 2 * self.exclude_sweep_size
@@ -976,7 +993,7 @@ __kernel void detect_peaks(
                         //in
                         __global  float *traces,
                         __global  uchar *neighbours_mask,
-                        __global  float *abs_threholds,
+                        __global  float *abs_thresholds,
                         //out
                         __global  st_peak *peaks,
                         volatile __global int *num_peaks
@@ -1010,11 +1027,11 @@ __kernel void detect_peaks(
         v = traces[index];
 
         if(peak_sign==1){
-            if (v>abs_threholds[chan]){peak=1;}
+            if (v>abs_thresholds[chan]){peak=1;}
             else {peak=0;}
         }
         else if(peak_sign==-1){
-            if (v<-abs_threholds[chan]){peak=1;}
+            if (v<-abs_thresholds[chan]){peak=1;}
             else {peak=0;}
         }
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
@@ -13,11 +14,11 @@ class FrameSliceRecording(BaseRecording):
     Parameters
     ----------
     parent_recording: BaseRecording
-    start_frame: None or int
+    start_frame: None or int, default: None
         Earliest included frame in the parent recording.
         Times are re-referenced to start_frame in the
         sliced object. Set to 0 by default.
-    end_frame: None or int
+    end_frame: None or int, default: None
         Latest frame in the parent recording. As for usual
         python slicing, the end frame is excluded.
         Set to the recording's total number of samples by
@@ -27,7 +28,7 @@ class FrameSliceRecording(BaseRecording):
     def __init__(self, parent_recording, start_frame=None, end_frame=None):
         channel_ids = parent_recording.get_channel_ids()
 
-        assert parent_recording.get_num_segments() == 1, "FrameSliceRecording work only with one segment"
+        assert parent_recording.get_num_segments() == 1, "FrameSliceRecording only works with one segment"
 
         parent_size = parent_recording.get_num_samples(0)
         if start_frame is None:
@@ -38,7 +39,9 @@ class FrameSliceRecording(BaseRecording):
         if end_frame is None:
             end_frame = parent_size
         else:
-            assert 0 < end_frame <= parent_size
+            assert (
+                0 < end_frame <= parent_size
+            ), f"'end_frame' must be fewer than number of samples in parent: {parent_size}"
 
         assert end_frame > start_frame, "'start_frame' must be smaller than 'end_frame'!"
 
@@ -56,6 +59,7 @@ class FrameSliceRecording(BaseRecording):
 
         # copy properties and annotations
         parent_recording.copy_metadata(self)
+        self._parent = parent_recording
 
         # update dump dict
         self._kwargs = {

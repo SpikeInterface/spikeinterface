@@ -28,16 +28,15 @@ from .multicomparisons import (
     compare_multiple_templates,
     MultiTemplateComparison,
 )
-from .collisioncomparison import CollisionGTComparison
-from .correlogramcomparison import CorrelogramGTComparison
+
 from .groundtruthstudy import GroundTruthStudy
-from .collisionstudy import CollisionGTStudy
-from .correlogramstudy import CorrelogramGTStudy
-from .studytools import aggregate_performances_table
+from .collision import CollisionGTComparison, CollisionGTStudy
+from .correlogram import CorrelogramGTComparison, CorrelogramGTStudy
+
 from .hybrid import (
     HybridSpikesRecording,
     HybridUnitsRecording,
-    generate_injected_sorting,
+    generate_sorting_to_inject,
     create_hybrid_units_recording,
     create_hybrid_spikes_recording,
 )

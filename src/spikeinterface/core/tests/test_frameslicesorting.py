@@ -20,13 +20,13 @@ def test_FrameSliceSorting():
         "1": np.arange(min_spike_time, max_spike_time),
     }
     # Sorting with attached rec
-    sorting = NumpySorting.from_dict([spike_times], sf)
+    sorting = NumpySorting.from_unit_dict([spike_times], sf)
     rec = NumpyRecording([np.zeros((nsamp, 5))], sampling_frequency=sf)
     sorting.register_recording(rec)
     # Sorting without attached rec
-    sorting_norec = NumpySorting.from_dict([spike_times], sf)
+    sorting_norec = NumpySorting.from_unit_dict([spike_times], sf)
     # Sorting with attached rec and exceeding spikes
-    sorting_exceeding = NumpySorting.from_dict([spike_times], sf)
+    sorting_exceeding = NumpySorting.from_unit_dict([spike_times], sf)
     rec_exceeding = NumpyRecording([np.zeros((max_spike_time - 1, 5))], sampling_frequency=sf)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
@@ -42,6 +42,7 @@ def test_FrameSliceSorting():
     assert sub_sorting._recording.get_total_samples() == nsamp
     sub_sorting_norec = sorting.frame_slice(start_frame, end_frame)
     assert np.array_equal(sub_sorting_norec.get_unit_spike_train("0"), unit_0_train)
+    assert sub_sorting.get_parent() == sorting
 
     start_frame, end_frame = None, mid_frame
     sub_sorting = sorting.frame_slice(start_frame, end_frame)

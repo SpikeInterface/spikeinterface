@@ -104,9 +104,9 @@ def test_phase_shift():
 
     # ~ import matplotlib.pyplot as plt
     # ~ import spikeinterface.full as si
-    # ~ si.plot_timeseries(rec, segment_index=0, time_range=[0, 10])
-    # ~ si.plot_timeseries(rec2, segment_index=0, time_range=[0, 10])
-    # ~ si.plot_timeseries(rec3, segment_index=0, time_range=[0, 10])
+    # ~ si.plot_traces(rec, segment_index=0, time_range=[0, 10])
+    # ~ si.plot_traces(rec2, segment_index=0, time_range=[0, 10])
+    # ~ si.plot_traces(rec3, segment_index=0, time_range=[0, 10])
     # ~ plt.show()
 
 

@@ -7,6 +7,9 @@ Some of then come from or the old implementation:
 Implementations here have been refactored to support the multi-segment API of spikeinterface.
 """
 
+from __future__ import annotations
+
+
 from collections import namedtuple
 
 import math
@@ -14,11 +17,13 @@ import numpy as np
 import warnings
 
 from ..postprocessing import correlogram_for_one_segment
-from ..core import get_noise_levels
+from ..core import SortingAnalyzer, get_noise_levels
 from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
+    get_dense_templates_array,
 )
+
 
 try:
     import numba
@@ -31,13 +36,15 @@ except ModuleNotFoundError as err:
 _default_params = dict()
 
 
-def compute_num_spikes(waveform_extractor, **kwargs):
+def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
     """Compute the number of spike across segments.
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    unit_ids : list or None
+        The list of unit ids to compute the number of spikes. If None, all units are used.
 
     Returns
     -------
@@ -45,8 +52,9 @@ def compute_num_spikes(waveform_extractor, **kwargs):
         The number of spikes, across all segments, for each unit ID.
     """
 
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
+    sorting = sorting_analyzer.sorting
+    if unit_ids is None:
+        unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
 
     num_spikes = {}
@@ -60,13 +68,15 @@ def compute_num_spikes(waveform_extractor, **kwargs):
     return num_spikes
 
 
-def compute_firing_rates(waveform_extractor):
+def compute_firing_rates(sorting_analyzer, unit_ids=None, **kwargs):
     """Compute the firing rate across segments.
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    unit_ids : list or None
+        The list of unit ids to compute the firing rate. If None, all units are used.
 
     Returns
     -------
@@ -74,30 +84,33 @@ def compute_firing_rates(waveform_extractor):
         The firing rate, across all segments, for each unit ID.
     """
 
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
-    total_duration = waveform_extractor.get_total_duration()
+    sorting = sorting_analyzer.sorting
+    if unit_ids is None:
+        unit_ids = sorting.unit_ids
+    total_duration = sorting_analyzer.get_total_duration()
 
     firing_rates = {}
-    num_spikes = compute_num_spikes(waveform_extractor)
+    num_spikes = compute_num_spikes(sorting_analyzer)
     for unit_id in unit_ids:
         firing_rates[unit_id] = num_spikes[unit_id] / total_duration
     return firing_rates
 
 
-def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0):
+def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0, unit_ids=None, **kwargs):
     """Calculate the presence ratio, the fraction of time the unit is firing above a certain threshold.
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
     bin_duration_s : float, default: 60
         The duration of each bin in seconds. If the duration is less than this value,
         presence_ratio is set to NaN
     mean_fr_ratio_thresh: float, default: 0
         The unit is considered active in a bin if its firing rate during that bin
         is strictly above `mean_fr_ratio_thresh` times its mean firing rate throughout the recording.
+    unit_ids : list or None
+        The list of unit ids to compute the presence ratio. If None, all units are used.
 
     Returns
     -------
@@ -109,14 +122,15 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_rat
     The total duration, across all segments, is divided into "num_bins".
     To do so, spike trains across segments are concatenated to mimic a continuous segment.
     """
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
-    num_segs = sorting.get_num_segments()
+    sorting = sorting_analyzer.sorting
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+    num_segs = sorting_analyzer.get_num_segments()
 
-    seg_lengths = [waveform_extractor.get_num_samples(i) for i in range(num_segs)]
-    total_length = waveform_extractor.get_total_samples()
-    total_duration = waveform_extractor.get_total_duration()
-    bin_duration_samples = int((bin_duration_s * waveform_extractor.sampling_frequency))
+    seg_lengths = [sorting_analyzer.get_num_samples(i) for i in range(num_segs)]
+    total_length = sorting_analyzer.get_total_samples()
+    total_duration = sorting_analyzer.get_total_duration()
+    bin_duration_samples = int((bin_duration_s * sorting_analyzer.sampling_frequency))
     num_bin_edges = total_length // bin_duration_samples + 1
     bin_edges = np.arange(num_bin_edges) * bin_duration_samples
 
@@ -133,7 +147,7 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_rat
         warnings.warn(
             f"Bin duration of {bin_duration_s}s is larger than recording duration. " f"Presence ratios are set to NaN."
         )
-        presence_ratios = {unit_id: np.nan for unit_id in sorting.unit_ids}
+        presence_ratios = {unit_id: np.nan for unit_id in unit_ids}
     else:
         for unit_id in unit_ids:
             spike_train = []
@@ -163,47 +177,43 @@ _default_params["presence_ratio"] = dict(
 
 
 def compute_snrs(
-    waveform_extractor, peak_sign: str = "neg", peak_mode: str = "extremum", random_chunk_kwargs_dict=None
+    sorting_analyzer,
+    peak_sign: str = "neg",
+    peak_mode: str = "extremum",
+    unit_ids=None,
 ):
     """Compute signal to noise ratio.
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    peak_sign : {'neg', 'pos', 'both'}
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the template to compute best channels.
-    peak_mode: {'extremum', 'at_index'}
+    peak_mode: "extremum" | "at_index", default: "extremum"
         How to compute the amplitude.
         Extremum takes the maxima/minima
-        At_index takes the value at t=waveform_extractor.nbefore
-    random_chunk_kwarg_dict: dict or None
-        Dictionary to control the get_random_data_chunks() function.
-        If None, default values are used
+        At_index takes the value at t=sorting_analyzer.nbefore
+    unit_ids : list or None
+        The list of unit ids to compute the SNR. If None, all units are used.
 
     Returns
     -------
     snrs : dict
         Computed signal to noise ratio for each unit.
     """
-    if waveform_extractor.is_extension("noise_levels"):
-        noise_levels = waveform_extractor.load_extension("noise_levels").get_data()
-    else:
-        if random_chunk_kwargs_dict is None:
-            random_chunk_kwargs_dict = {}
-        noise_levels = get_noise_levels(
-            waveform_extractor.recording, return_scaled=waveform_extractor.return_scaled, **random_chunk_kwargs_dict
-        )
+    assert sorting_analyzer.has_extension("noise_levels")
+    noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     assert peak_sign in ("neg", "pos", "both")
     assert peak_mode in ("extremum", "at_index")
 
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
-    channel_ids = waveform_extractor.channel_ids
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+    channel_ids = sorting_analyzer.channel_ids
 
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
-    unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
+    extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, mode=peak_mode)
+    unit_amplitudes = get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign, mode=peak_mode)
 
     # make a dict to access by chan_id
     noise_levels = dict(zip(channel_ids, noise_levels))
@@ -218,33 +228,35 @@ def compute_snrs(
     return snrs
 
 
-_default_params["snr"] = dict(peak_sign="neg", peak_mode="extremum", random_chunk_kwargs_dict=None)
+_default_params["snr"] = dict(peak_sign="neg", peak_mode="extremum")
 
 
-def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0):
+def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0, unit_ids=None):
     """Calculate Inter-Spike Interval (ISI) violations.
 
     It computes several metrics related to isi violations:
         * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are
-                                generating the ISI violations. Described in [1]. See Notes.
+                                generating the ISI violations. Described in [Hill]_. See Notes.
         * isi_violation_count: number of ISI violations
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer object
     isi_threshold_ms : float, default: 1.5
         Threshold for classifying adjacent spikes as an ISI violation, in ms.
-        This is the biophysical refractory period (default=1.5).
+        This is the biophysical refractory period
     min_isi_ms : float, default: 0
         Minimum possible inter-spike interval, in ms.
         This is the artificial refractory period enforced
         by the data acquisition system or post-processing algorithms.
+    unit_ids : list or None
+        List of unit ids to compute the ISI violations. If None, all units are used.
 
     Returns
     -------
     isi_violations_ratio : dict
-        The isi violation ratio described in [1].
+        The isi violation ratio described in [Hill]_.
     isi_violation_count : dict
         Number of violations.
 
@@ -263,12 +275,13 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     """
     res = namedtuple("isi_violation", ["isi_violations_ratio", "isi_violations_count"])
 
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
-    num_segs = sorting.get_num_segments()
+    sorting = sorting_analyzer.sorting
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+    num_segs = sorting_analyzer.get_num_segments()
 
-    total_duration_s = waveform_extractor.get_total_duration()
-    fs = waveform_extractor.sampling_frequency
+    total_duration_s = sorting_analyzer.get_total_duration()
+    fs = sorting_analyzer.sampling_frequency
 
     isi_threshold_s = isi_threshold_ms / 1000
     min_isi_s = min_isi_ms / 1000
@@ -278,13 +291,17 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     # all units converted to seconds
     for unit_id in unit_ids:
-        spike_trains = []
+        spike_train_list = []
 
         for segment_index in range(num_segs):
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            spike_trains.append(spike_train / fs)
+            if len(spike_train) > 0:
+                spike_train_list.append(spike_train / fs)
 
-        ratio, _, count = isi_violations(spike_trains, total_duration_s, isi_threshold_s, min_isi_s)
+        if not any([len(train) > 0 for train in spike_train_list]):
+            continue
+
+        ratio, _, count = isi_violations(spike_train_list, total_duration_s, isi_threshold_s, min_isi_s)
 
         isi_violations_ratio[unit_id] = ratio
         isi_violations_count[unit_id] = count
@@ -296,7 +313,7 @@ _default_params["isi_violation"] = dict(isi_threshold_ms=1.5, min_isi_ms=0)
 
 
 def compute_refrac_period_violations(
-    waveform_extractor, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0
+    sorting_analyzer, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0, unit_ids=None
 ):
     """Calculates the number of refractory period violations.
 
@@ -307,18 +324,20 @@ def compute_refrac_period_violations(
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer object
     refractory_period_ms : float, default: 1.0
         The period (in ms) where no 2 good spikes can occur.
-    censored_period_ùs : float, default: 0.0
+    censored_period_ms : float, default: 0.0
         The period (in ms) where no 2 spikes can occur (because they are not detected, or
         because they were removed by another mean).
+    unit_ids : list or None
+        List of unit ids to compute the refractory period violations. If None, all units are used.
 
     Returns
     -------
     rp_contamination : dict
-        The refactory period contamination described in [1].
+        The refactory period contamination described in [Llobet]_.
     rp_violations : dict
         Number of refractory period violations.
 
@@ -338,28 +357,36 @@ def compute_refrac_period_violations(
         print("compute_refrac_period_violations cannot run without numba.")
         return None
 
-    sorting = waveform_extractor.sorting
-    fs = sorting.get_sampling_frequency()
-    num_units = len(sorting.unit_ids)
-    num_segments = sorting.get_num_segments()
-    spikes = sorting.get_all_spike_trains(outputs="unit_index")
-    num_spikes = compute_num_spikes(waveform_extractor)
+    sorting = sorting_analyzer.sorting
+    fs = sorting_analyzer.sampling_frequency
+    num_units = len(sorting_analyzer.unit_ids)
+    num_segments = sorting_analyzer.get_num_segments()
+
+    spikes = sorting.to_spike_vector(concatenated=False)
+
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    num_spikes = compute_num_spikes(sorting_analyzer)
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
     nb_rp_violations = np.zeros((num_units), dtype=np.int64)
 
     for seg_index in range(num_segments):
-        _compute_rp_violations_numba(
-            nb_rp_violations, spikes[seg_index][0].astype(np.int64), spikes[seg_index][1].astype(np.int32), t_c, t_r
-        )
+        spike_times = spikes[seg_index]["sample_index"].astype(np.int64)
+        spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
+        _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r)
 
-    T = waveform_extractor.get_total_samples()
+    T = sorting_analyzer.get_total_samples()
 
     nb_violations = {}
     rp_contamination = {}
 
     for i, unit_id in enumerate(sorting.unit_ids):
+        if unit_id not in unit_ids:
+            continue
+
         nb_violations[unit_id] = n_v = nb_rp_violations[i]
         N = num_spikes[unit_id]
         if N == 0:
@@ -375,13 +402,14 @@ _default_params["rp_violation"] = dict(refractory_period_ms=1.0, censored_period
 
 
 def compute_sliding_rp_violations(
-    waveform_extractor,
+    sorting_analyzer,
     min_spikes=0,
     bin_size_ms=0.25,
     window_size_s=1,
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
+    unit_ids=None,
 ):
     """Compute sliding refractory period violations, a metric developed by IBL which computes
     contamination by using a sliding refractory period.
@@ -389,21 +417,23 @@ def compute_sliding_rp_violations(
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    min_spikes : int, default 0
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    min_spikes : int, default: 0
         Contamination  is set to np.nan if the unit has less than this many
         spikes across all segments.
-    bin_size_ms : float
-        The size of binning for the autocorrelogram in ms, by default 0.25
-    window_size_s : float
-        Window in seconds to compute correlogram, by default 1
-    exclude_ref_period_below_ms : float
-        Refractory periods below this value are excluded, by default 0.5
-    max_ref_period_ms : float
-        Maximum refractory period to test in ms, by default 10 ms
-    contamination_values : 1d array or None
-        The contamination values to test, by default np.arange(0.5, 35, 0.5) %
+    bin_size_ms : float, default: 0.25
+        The size of binning for the autocorrelogram in ms
+    window_size_s : float, default: 1
+        Window in seconds to compute correlogram
+    exclude_ref_period_below_ms : float, default: 0.5
+        Refractory periods below this value are excluded
+    max_ref_period_ms : float, default: 10
+        Maximum refractory period to test in ms
+    contamination_values : 1d array or None, default: None
+        The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5)
+    unit_ids : list or None
+        List of unit ids to compute the sliding RP violations. If None, all units are used.
 
     Returns
     -------
@@ -413,13 +443,15 @@ def compute_sliding_rp_violations(
     References
     ----------
     Based on metrics described in [IBL]_
-    This code was adapted from https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
+    This code was adapted from:
+    https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
     """
-    duration = waveform_extractor.get_total_duration()
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
-    num_segs = sorting.get_num_segments()
-    fs = waveform_extractor.sampling_frequency
+    duration = sorting_analyzer.get_total_duration()
+    sorting = sorting_analyzer.sorting
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+    num_segs = sorting_analyzer.get_num_segments()
+    fs = sorting_analyzer.sampling_frequency
 
     contamination = {}
 
@@ -429,7 +461,11 @@ def compute_sliding_rp_violations(
 
         for segment_index in range(num_segs):
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            spike_train_list.append(spike_train)
+            if np.any(spike_train):
+                spike_train_list.append(spike_train)
+
+        if not any([np.any(train) for train in spike_train_list]):
+            continue
 
         unit_n_spikes = np.sum([len(train) for train in spike_train_list])
         if unit_n_spikes <= min_spikes:
@@ -460,20 +496,327 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
+def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
+    """Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`
+
+    Parameters
+    ----------
+    spikes : np.array
+        Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
+    synchrony_sizes : numpy array
+        The synchrony sizes to compute. Should be pre-sorted.
+    unit_ids : list or None, default: None
+        List of unit ids to compute the synchrony metrics. Expecting all units.
+
+    Returns
+    -------
+    synchrony_counts : dict
+        The synchrony counts for the synchrony sizes.
+
+    References
+    ----------
+    Based on concepts described in [Gruen]_
+    This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
+    """
+
+    synchrony_counts = np.zeros((np.size(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
+
+    # compute the occurrence of each sample_index. Count >2 means there's synchrony
+    _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
+
+    sync_indices = unique_spike_index[counts >= 2]
+    sync_counts = counts[counts >= 2]
+
+    for i, sync_index in enumerate(sync_indices):
+
+        num_of_syncs = sync_counts[i]
+        units_with_sync = [spikes[sync_index + a][1] for a in range(0, num_of_syncs)]
+
+        # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
+        # to the 2 simultaneous spike bins.
+        how_many_bins_to_add_to = np.size(synchrony_sizes[synchrony_sizes <= num_of_syncs])
+        synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
+
+    return synchrony_counts
+
+
+def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None):
+    """Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
+    "synchrony_size" spikes at the exact same sample index.
+
+    Parameters
+    ----------
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    synchrony_sizes : list or tuple, default: (2, 4, 8)
+        The synchrony sizes to compute.
+    unit_ids : list or None, default: None
+        List of unit ids to compute the synchrony metrics. If None, all units are used.
+
+    Returns
+    -------
+    sync_spike_{X} : dict
+        The synchrony metric for synchrony size X.
+        Returns are as many as synchrony_sizes.
+
+    References
+    ----------
+    Based on concepts described in [Gruen]_
+    This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
+    """
+    assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
+    # Sort the synchrony times so we can slice numpy arrays, instead of using dicts
+    synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int16)
+    synchrony_sizes_np.sort()
+
+    res = namedtuple("synchrony_metrics", [f"sync_spike_{size}" for size in synchrony_sizes_np])
+
+    sorting = sorting_analyzer.sorting
+
+    spike_counts = sorting.count_num_spikes_per_unit(outputs="dict")
+
+    spikes = sorting.to_spike_vector()
+    all_unit_ids = sorting.unit_ids
+    synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes_np, all_unit_ids)
+
+    synchrony_metrics_dict = {}
+    for sync_idx, synchrony_size in enumerate(synchrony_sizes_np):
+        sync_id_metrics_dict = {}
+        for i, unit_id in enumerate(all_unit_ids):
+            if spike_counts[unit_id] != 0:
+                sync_id_metrics_dict[unit_id] = synchrony_counts[sync_idx][i] / spike_counts[unit_id]
+            else:
+                sync_id_metrics_dict[unit_id] = 0
+        synchrony_metrics_dict[f"sync_spike_{synchrony_size}"] = sync_id_metrics_dict
+
+    if np.all(unit_ids == None) or (len(unit_ids) == len(all_unit_ids)):
+        return res(**synchrony_metrics_dict)
+    else:
+        reduced_synchrony_metrics_dict = {}
+        for key in synchrony_metrics_dict:
+            reduced_synchrony_metrics_dict[key] = {
+                unit_id: synchrony_metrics_dict[key][unit_id] for unit_id in unit_ids
+            }
+        return res(**reduced_synchrony_metrics_dict)
+
+
+_default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))
+
+
+def compute_firing_ranges(sorting_analyzer, bin_size_s=5, percentiles=(5, 95), unit_ids=None, **kwargs):
+    """Calculate firing range, the range between the 5th and 95th percentiles of the firing rates distribution
+    computed in non-overlapping time bins.
+
+    Parameters
+    ----------
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    bin_size_s : float, default: 5
+        The size of the bin in seconds.
+    percentiles : tuple, default: (5, 95)
+        The percentiles to compute.
+    unit_ids : list or None
+        List of unit ids to compute the firing range. If None, all units are used.
+
+    Returns
+    -------
+    firing_ranges : dict
+        The firing range for each unit.
+
+    Notes
+    -----
+    Designed by Simon Musall and ported to SpikeInterface by Alessio Buccino.
+    """
+    sampling_frequency = sorting_analyzer.sampling_frequency
+    bin_size_samples = int(bin_size_s * sampling_frequency)
+    sorting = sorting_analyzer.sorting
+    if unit_ids is None:
+        unit_ids = sorting.unit_ids
+
+    if all(
+        [
+            sorting_analyzer.get_num_samples(segment_index) < bin_size_samples
+            for segment_index in range(sorting_analyzer.get_num_segments())
+        ]
+    ):
+        warnings.warn(f"Bin size of {bin_size_s}s is larger than each segment duration. Firing ranges are set to NaN.")
+        return {unit_id: np.nan for unit_id in unit_ids}
+
+    # for each segment, we compute the firing rate histogram and we concatenate them
+    firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in sorting.unit_ids}
+    for segment_index in range(sorting_analyzer.get_num_segments()):
+        num_samples = sorting_analyzer.get_num_samples(segment_index)
+        edges = np.arange(0, num_samples + 1, bin_size_samples)
+
+        for unit_id in unit_ids:
+            spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            spike_counts, _ = np.histogram(spike_times, bins=edges)
+            firing_rates = spike_counts / bin_size_s
+            firing_rate_histograms[unit_id] = np.concatenate((firing_rate_histograms[unit_id], firing_rates))
+
+    # finally we compute the percentiles
+    firing_ranges = {}
+    for unit_id in unit_ids:
+        firing_ranges[unit_id] = np.percentile(firing_rate_histograms[unit_id], percentiles[1]) - np.percentile(
+            firing_rate_histograms[unit_id], percentiles[0]
+        )
+
+    return firing_ranges
+
+
+_default_params["firing_range"] = dict(bin_size_s=5, percentiles=(5, 95))
+
+
+def compute_amplitude_cv_metrics(
+    sorting_analyzer,
+    average_num_spikes_per_bin=50,
+    percentiles=(5, 95),
+    min_num_bins=10,
+    amplitude_extension="spike_amplitudes",
+    unit_ids=None,
+):
+    """Calculate coefficient of variation of spike amplitudes within defined temporal bins.
+    From the distribution of coefficient of variations, both the median and the "range" (the distance between the
+    percentiles defined by `percentiles` parameter) are returned.
+
+    Parameters
+    ----------
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    average_num_spikes_per_bin : int, default: 50
+        The average number of spikes per bin. This is used to estimate a temporal bin size using the firing rate
+        of each unit. For example, if a unit has a firing rate of 10 Hz, amd the average number of spikes per bin is
+        100, then the temporal bin size will be 100/10 Hz = 10 s.
+    min_num_bins : int, default: 10
+        The minimum number of bins to compute the median and range. If the number of bins is less than this then
+        the median and range are set to NaN.
+    amplitude_extension : str, default: "spike_amplitudes"
+        The name of the extension to load the amplitudes from. "spike_amplitudes" or "amplitude_scalings".
+    unit_ids : list or None
+        List of unit ids to compute the amplitude spread. If None, all units are used.
+
+    Returns
+    -------
+    amplitude_cv_median : dict
+        The median of the CV
+    amplitude_cv_range : dict
+        The range of the CV, computed as the distance between the percentiles.
+
+    Notes
+    -----
+    Designed by Simon Musall and Alessio Buccino.
+    """
+    res = namedtuple("amplitude_cv", ["amplitude_cv_median", "amplitude_cv_range"])
+    assert amplitude_extension in (
+        "spike_amplitudes",
+        "amplitude_scalings",
+    ), "Invalid amplitude_extension. It can be either 'spike_amplitudes' or 'amplitude_scalings'"
+    sorting = sorting_analyzer.sorting
+    total_duration = sorting_analyzer.get_total_duration()
+    spikes = sorting.to_spike_vector()
+    num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
+    if unit_ids is None:
+        unit_ids = sorting.unit_ids
+
+    if sorting_analyzer.has_extension(amplitude_extension):
+        amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
+    else:
+        warnings.warn("compute_amplitude_cv_metrics() need 'spike_amplitudes' or 'amplitude_scalings'")
+        empty_dict = {unit_id: np.nan for unit_id in unit_ids}
+        return empty_dict
+
+    # precompute segment slice
+    segment_slices = []
+    for segment_index in range(sorting_analyzer.get_num_segments()):
+        i0 = np.searchsorted(spikes["segment_index"], segment_index)
+        i1 = np.searchsorted(spikes["segment_index"], segment_index + 1)
+        segment_slices.append(slice(i0, i1))
+
+    all_unit_ids = list(sorting.unit_ids)
+    amplitude_cv_medians, amplitude_cv_ranges = {}, {}
+    for unit_id in unit_ids:
+        firing_rate = num_spikes[unit_id] / total_duration
+        temporal_bin_size_samples = int(
+            (average_num_spikes_per_bin / firing_rate) * sorting_analyzer.sampling_frequency
+        )
+
+        amp_spreads = []
+        # bins and amplitude means are computed for each segment
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+            sample_bin_edges = np.arange(
+                0, sorting_analyzer.get_num_samples(segment_index) + 1, temporal_bin_size_samples
+            )
+            spikes_in_segment = spikes[segment_slices[segment_index]]
+            amps_in_segment = amps[segment_slices[segment_index]]
+            unit_mask = spikes_in_segment["unit_index"] == all_unit_ids.index(unit_id)
+            spike_indices_unit = spikes_in_segment["sample_index"][unit_mask]
+            amps_unit = amps_in_segment[unit_mask]
+            amp_mean = np.abs(np.mean(amps_unit))
+            for t0, t1 in zip(sample_bin_edges[:-1], sample_bin_edges[1:]):
+                i0 = np.searchsorted(spike_indices_unit, t0)
+                i1 = np.searchsorted(spike_indices_unit, t1)
+                amp_spreads.append(np.std(amps_unit[i0:i1]) / amp_mean)
+
+        if len(amp_spreads) < min_num_bins:
+            amplitude_cv_medians[unit_id] = np.nan
+            amplitude_cv_ranges[unit_id] = np.nan
+        else:
+            amplitude_cv_medians[unit_id] = np.median(amp_spreads)
+            amplitude_cv_ranges[unit_id] = np.percentile(amp_spreads, percentiles[1]) - np.percentile(
+                amp_spreads, percentiles[0]
+            )
+
+    return res(amplitude_cv_medians, amplitude_cv_ranges)
+
+
+_default_params["amplitude_cv"] = dict(
+    average_num_spikes_per_bin=50, percentiles=(5, 95), min_num_bins=10, amplitude_extension="spike_amplitudes"
+)
+
+
+def _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign):
+    # used by compute_amplitude_cutoffs and compute_amplitude_medians
+    amplitudes_by_units = {}
+    if sorting_analyzer.has_extension("spike_amplitudes"):
+        spikes = sorting_analyzer.sorting.to_spike_vector()
+        ext = sorting_analyzer.get_extension("spike_amplitudes")
+        all_amplitudes = ext.get_data()
+        for unit_id in unit_ids:
+            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+            spike_mask = spikes["unit_index"] == unit_index
+            amplitudes_by_units[unit_id] = all_amplitudes[spike_mask]
+
+    elif sorting_analyzer.has_extension("waveforms"):
+        waveforms_ext = sorting_analyzer.get_extension("waveforms")
+        before = waveforms_ext.nbefore
+        extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)
+        for unit_id in unit_ids:
+            waveforms = waveforms_ext.get_waveforms_one_unit(unit_id, force_dense=False)
+            chan_id = extremum_channels_ids[unit_id]
+            if sorting_analyzer.is_sparse():
+                chan_ind = np.where(sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
+            else:
+                chan_ind = sorting_analyzer.channel_ids_to_indices([chan_id])[0]
+            amplitudes_by_units[unit_id] = waveforms[:, before, chan_ind]
+
+    return amplitudes_by_units
+
+
 def compute_amplitude_cutoffs(
-    waveform_extractor,
+    sorting_analyzer,
     peak_sign="neg",
     num_histogram_bins=500,
     histogram_smoothing_value=3,
     amplitudes_bins_min_ratio=5,
+    unit_ids=None,
 ):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    peak_sign : {'neg', 'pos', 'both'}
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the peaks.
     num_histogram_bins : int, default: 100
         The number of bins to use to compute the amplitude histogram.
@@ -483,6 +826,8 @@ def compute_amplitude_cutoffs(
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
         to NaN.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude cutoffs. If None, all units are used.
 
     Returns
     -------
@@ -494,61 +839,50 @@ def compute_amplitude_cutoffs(
     -----
     This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
     If available, amplitudes are extracted from the "spike_amplitude" extension (recommended).
-    If the "spike_amplitude" extension is not available, the amplitudes are extracted from the waveform extractor,
+    If the "spike_amplitude" extension is not available, the amplitudes are extracted from the SortingAnalyzer,
     which usually has waveforms for a small subset of spikes (500 by default).
 
     References
     ----------
     Inspired by metric described in [Hill]_
 
-    This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
+    This code was adapted from:
+    https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
 
     """
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
-
-    before = waveform_extractor.nbefore
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
-
-    spike_amplitudes = None
-    invert_amplitudes = False
-    if waveform_extractor.is_extension("spike_amplitudes"):
-        amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
-        spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
-        if amp_calculator._params["peak_sign"] == "pos":
-            invert_amplitudes = True
-    else:
-        if peak_sign == "pos":
-            invert_amplitudes = True
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
 
     all_fraction_missing = {}
-    nan_units = []
-    for unit_id in unit_ids:
-        if spike_amplitudes is None:
-            waveforms = waveform_extractor.get_waveforms(unit_id)
-            chan_id = extremum_channels_ids[unit_id]
-            if waveform_extractor.is_sparse():
-                chan_ind = np.where(waveform_extractor.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
-            else:
-                chan_ind = waveform_extractor.channel_ids_to_indices([chan_id])[0]
-            amplitudes = waveforms[:, before, chan_ind]
-        else:
-            amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
+    if sorting_analyzer.has_extension("spike_amplitudes") or sorting_analyzer.has_extension("waveforms"):
 
-        # change amplitudes signs in case peak_sign is pos
-        if invert_amplitudes:
-            amplitudes = -amplitudes
+        invert_amplitudes = False
+        if (
+            sorting_analyzer.has_extension("spike_amplitudes")
+            and sorting_analyzer.get_extension("spike_amplitudes").params["peak_sign"] == "pos"
+        ):
+            invert_amplitudes = True
+        elif sorting_analyzer.has_extension("waveforms") and peak_sign == "pos":
+            invert_amplitudes = True
 
-        fraction_missing = amplitude_cutoff(
-            amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
-        )
-        if np.isnan(fraction_missing):
-            nan_units.append(unit_id)
+        amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
 
-        all_fraction_missing[unit_id] = fraction_missing
+        for unit_id in unit_ids:
+            amplitudes = amplitudes_by_units[unit_id]
+            if invert_amplitudes:
+                amplitudes = -amplitudes
 
-    if len(nan_units) > 0:
-        warnings.warn(f"Units {nan_units} have too few spikes and " "amplitude_cutoff is set to NaN")
+            all_fraction_missing[unit_id] = amplitude_cutoff(
+                amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
+            )
+
+        if np.any(np.isnan(list(all_fraction_missing.values()))):
+            warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
+
+    else:
+        warnings.warn("compute_amplitude_cutoffs need 'spike_amplitudes' or 'waveforms' extension")
+        for unit_id in unit_ids:
+            all_fraction_missing[unit_id] = np.nan
 
     return all_fraction_missing
 
@@ -558,15 +892,17 @@ _default_params["amplitude_cutoff"] = dict(
 )
 
 
-def compute_amplitude_medians(waveform_extractor, peak_sign="neg"):
+def compute_amplitude_medians(sorting_analyzer, peak_sign="neg", unit_ids=None):
     """Compute median of the amplitude distributions (in absolute value).
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    peak_sign : {'neg', 'pos', 'both'}
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the peaks.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude medians. If None, all units are used.
 
     Returns
     -------
@@ -579,34 +915,19 @@ def compute_amplitude_medians(waveform_extractor, peak_sign="neg"):
     This code is ported from:
     https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
     """
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
-
-    before = waveform_extractor.nbefore
-
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
-
-    spike_amplitudes = None
-    if waveform_extractor.is_extension("spike_amplitudes"):
-        amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
-        spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
+    sorting = sorting_analyzer.sorting
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
 
     all_amplitude_medians = {}
-    for unit_id in unit_ids:
-        if spike_amplitudes is None:
-            waveforms = waveform_extractor.get_waveforms(unit_id)
-            chan_id = extremum_channels_ids[unit_id]
-            if waveform_extractor.is_sparse():
-                chan_ind = np.where(waveform_extractor.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
-            else:
-                chan_ind = waveform_extractor.channel_ids_to_indices([chan_id])[0]
-            amplitudes = waveforms[:, before, chan_ind]
-        else:
-            amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
-
-        # change amplitudes signs in case peak_sign is pos
-        abs_amplitudes = np.abs(amplitudes)
-        all_amplitude_medians[unit_id] = np.median(abs_amplitudes)
+    if sorting_analyzer.has_extension("spike_amplitudes") or sorting_analyzer.has_extension("waveforms"):
+        amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+        for unit_id in unit_ids:
+            all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
+    else:
+        warnings.warn("compute_amplitude_medians need 'spike_amplitudes' or 'waveforms' extension")
+        for unit_id in unit_ids:
+            all_amplitude_medians[unit_id] = np.nan
 
     return all_amplitude_medians
 
@@ -615,13 +936,14 @@ _default_params["amplitude_median"] = dict(peak_sign="neg")
 
 
 def compute_drift_metrics(
-    waveform_extractor,
+    sorting_analyzer,
     interval_s=60,
     min_spikes_per_interval=100,
     direction="y",
     min_fraction_valid_intervals=0.5,
     min_num_bins=2,
     return_positions=False,
+    unit_ids=None,
 ):
     """Compute drifts metrics using estimated spike locations.
     Over the duration of the recording, the drift signal for each unit is calculated as the median
@@ -634,27 +956,29 @@ def compute_drift_metrics(
     * drift_std: standard deviation of the drift signal
     * drift_mad: median absolute deviation of the drift signal
 
-    Requires 'spike_locations' extension. If this is not present, metrics are set to NaN.
+    Requires "spike_locations" extension. If this is not present, metrics are set to NaN.
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    interval_s : int, optional
-        Interval length is seconds for computing spike depth, by default 60
-    min_spikes_per_interval : int, optional
-        Minimum number of spikes for computing depth in an interval, by default 100
-    direction : str, optional
-        The direction along which drift metrics are estimated, by default 'y'
-    min_fraction_valid_intervals : float, optional
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    interval_s : int, default: 60
+        Interval length is seconds for computing spike depth
+    min_spikes_per_interval : int, default: 100
+        Minimum number of spikes for computing depth in an interval
+    direction : "x" | "y" | "z", default: "y"
+        The direction along which drift metrics are estimated
+    min_fraction_valid_intervals : float, default: 0.5
         The fraction of valid (not NaN) position estimates to estimate drifts.
         E.g., if 0.5 at least 50% of estimated positions in the intervals need to be valid,
-        otherwise drift metrics are set to None, by default 0.5
-    min_num_bins : int, optional
+        otherwise drift metrics are set to None
+    min_num_bins : int, default: 2
         Minimum number of bins required to return a valid metric value. In case there are
         less bins, the metric values are set to NaN.
-    return_positions : bool, optional
-        If True, median positions are returned (for debugging), by default False
+    return_positions : bool, default: False
+        If True, median positions are returned (for debugging)
+    unit_ids : list or None, default: None
+        List of unit ids to compute the drift metrics. If None, all units are used
 
     Returns
     -------
@@ -673,36 +997,44 @@ def compute_drift_metrics(
     there are large displacements in between segments, the resulting metric values will be very high.
     """
     res = namedtuple("drift_metrics", ["drift_ptp", "drift_std", "drift_mad"])
+    sorting = sorting_analyzer.sorting
+    if unit_ids is None:
+        unit_ids = sorting.unit_ids
 
-    if waveform_extractor.is_extension("spike_locations"):
-        locs_calculator = waveform_extractor.load_extension("spike_locations")
-        spike_locations = locs_calculator.get_data(outputs="concatenated")
-        spike_locations_by_unit = locs_calculator.get_data(outputs="by_unit")
+    if sorting_analyzer.has_extension("spike_locations"):
+        spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
+        spike_locations = spike_locations_ext.get_data()
+        # spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit")
+        spikes = sorting.to_spike_vector()
+        spike_locations_by_unit = {}
+        for unit_id in unit_ids:
+            unit_index = sorting.id_to_index(unit_id)
+            spike_mask = spikes["unit_index"] == unit_index
+            spike_locations_by_unit[unit_id] = spike_locations[spike_mask]
+
     else:
         warnings.warn(
             "The drift metrics require the `spike_locations` waveform extension. "
             "Use the `postprocessing.compute_spike_locations()` function. "
             "Drift metrics will be set to NaN"
         )
-        empty_dict = {unit_id: np.nan for unit_id in waveform_extractor.unit_ids}
+        empty_dict = {unit_id: np.nan for unit_id in unit_ids}
         if return_positions:
             return res(empty_dict, empty_dict, empty_dict), np.nan
         else:
             return res(empty_dict, empty_dict, empty_dict)
 
-    sorting = waveform_extractor.sorting
-    unit_ids = waveform_extractor.unit_ids
-    interval_samples = int(interval_s * waveform_extractor.sampling_frequency)
+    interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
     assert direction in spike_locations.dtype.names, (
         f"Direction {direction} is invalid. Available directions: " f"{spike_locations.dtype.names}"
     )
-    total_duration = waveform_extractor.get_total_duration()
+    total_duration = sorting_analyzer.get_total_duration()
     if total_duration < min_num_bins * interval_s:
         warnings.warn(
             "The recording is too short given the specified 'interval_s' and "
             "'min_num_bins'. Drift metrics will be set to NaN"
         )
-        empty_dict = {unit_id: np.nan for unit_id in waveform_extractor.unit_ids}
+        empty_dict = {unit_id: np.nan for unit_id in unit_ids}
         if return_positions:
             return res(empty_dict, empty_dict, empty_dict), np.nan
         else:
@@ -716,30 +1048,25 @@ def compute_drift_metrics(
     # reference positions are the medians across segments
     reference_positions = np.zeros(len(unit_ids))
     for unit_ind, unit_id in enumerate(unit_ids):
-        locs = []
-        for segment_index in range(waveform_extractor.get_num_segments()):
-            locs.append(spike_locations_by_unit[segment_index][unit_id][direction])
-        reference_positions[unit_ind] = np.median(np.concatenate(locs))
+        reference_positions[unit_ind] = np.median(spike_locations_by_unit[unit_id][direction])
 
     # now compute median positions and concatenate them over segments
     median_position_segments = None
-    for segment_index in range(waveform_extractor.get_num_segments()):
-        seg_length = waveform_extractor.get_num_samples(segment_index)
+    for segment_index in range(sorting_analyzer.get_num_segments()):
+        seg_length = sorting_analyzer.get_num_samples(segment_index)
         num_bin_edges = seg_length // interval_samples + 1
         bins = np.arange(num_bin_edges) * interval_samples
         spike_vector = sorting.to_spike_vector()
 
         # retrieve spikes in segment
-        i0 = np.searchsorted(spike_vector["segment_index"], segment_index)
-        i1 = np.searchsorted(spike_vector["segment_index"], segment_index + 1)
+        i0, i1 = np.searchsorted(spike_vector["segment_index"], [segment_index, segment_index + 1])
         spikes_in_segment = spike_vector[i0:i1]
         spike_locations_in_segment = spike_locations[i0:i1]
 
         # compute median positions (if less than min_spikes_per_interval, median position is 0)
         median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
         for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
-            i0 = np.searchsorted(spikes_in_segment["sample_index"], start_frame)
-            i1 = np.searchsorted(spikes_in_segment["sample_index"], end_frame)
+            i0, i1 = np.searchsorted(spikes_in_segment["sample_index"], [start_frame, end_frame])
             spikes_in_bin = spikes_in_segment[i0:i1]
             spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 
@@ -798,7 +1125,7 @@ def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None
     num_bin_edges : int, default: 101
         The number of bins edges to use to compute the presence ratio.
         (mutually exclusive with bin_edges).
-    bin_n_spikes_thres: int, default 0
+    bin_n_spikes_thres: int, default: 0
         Minimum number of spikes within a bin to consider the unit active
 
     Returns
@@ -832,7 +1159,7 @@ def isi_violations(spike_trains, total_duration_s, isi_threshold_s=0.0015, min_i
         The total duration of the recording (in seconds)
     isi_threshold_s : float, default: 0.0015
         Threshold for classifying adjacent spikes as an ISI violation, in seconds.
-        This is the biophysical refractory period (default=1.5).
+        This is the biophysical refractory period
     min_isi_s : float, default: 0
         Minimum possible inter-spike interval, in seconds.
         This is the artificial refractory period enforced
@@ -883,7 +1210,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     ----------
     amplitudes : ndarray_like
         The amplitudes (in uV) of the spikes for one unit.
-    peak_sign : {'neg', 'pos', 'both'}
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the template to compute best channels.
     num_histogram_bins : int, default: 500
         The number of bins to use to compute the amplitude histogram.
@@ -953,18 +1280,19 @@ def slidingRP_violations(
         The acquisition sampling rate
     bin_size_ms : float
         The size (in ms) of binning for the autocorrelogram.
-    window_size_s : float
-        Window in seconds to compute correlogram, by default 2
-    exclude_ref_period_below_ms : float
-        Refractory periods below this value are excluded, by default 0.5
-    max_ref_period_ms : float
-        Maximum refractory period to test in ms, by default 10 ms
-    contamination_values : 1d array or None
-        The contamination values to test, by default np.arange(0.5, 35, 0.5) / 100
-    return_conf_matrix : bool
-        If True, the confidence matrix (n_contaminations, n_ref_periods) is returned, by default False
+    window_size_s : float, default: 1
+        Window in seconds to compute correlogram
+    exclude_ref_period_below_ms : float, default: 0.5
+        Refractory periods below this value are excluded
+    max_ref_period_ms : float, default: 10
+        Maximum refractory period to test in ms
+    contamination_values : 1d array or None, default: None
+        The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100
+    return_conf_matrix : bool, default: False
+        If True, the confidence matrix (n_contaminations, n_ref_periods) is returned
 
-    See: https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
+    Code adapted from:
+    https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
 
     Returns
     -------
@@ -1035,7 +1363,7 @@ def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, cont
 
 if HAVE_NUMBA:
 
-    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=False)
     def _compute_nb_violations_numba(spike_train, t_r):
         n_v = 0
         N = len(spike_train)
@@ -1058,7 +1386,7 @@ if HAVE_NUMBA:
         (numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
         nopython=True,
         nogil=True,
-        cache=True,
+        cache=False,
         parallel=True,
     )
     def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
@@ -1068,3 +1396,130 @@ if HAVE_NUMBA:
             spike_train = spike_trains[spike_clusters == i]
             n_v = _compute_nb_violations_numba(spike_train, t_r)
             nb_rp_violations[i] += n_v
+
+
+def compute_sd_ratio(
+    sorting_analyzer: SortingAnalyzer,
+    censored_period_ms: float = 4.0,
+    correct_for_drift: bool = True,
+    correct_for_template_itself: bool = True,
+    unit_ids=None,
+    **kwargs,
+):
+    """
+    Computes the SD (Standard Deviation) of each unit's spike amplitudes, and compare it to the SD of noise.
+    In this case, noise refers to the global voltage trace on the same channel as the best channel of the unit.
+    (ideally (not implemented yet), the noise would be computed outside of spikes from the unit itself).
+
+    Parameters
+    ----------
+    sorting_analyzer: SortingAnalyzer
+        A SortingAnalyzer object
+    censored_period_ms : float, default: 4.0
+        The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
+    correct_for_drift: bool, default: True
+        If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
+    correct_for_template_itself: bool, default:  True
+        If true, will take into account that the template itself impacts the standard deviation of the noise,
+        and will make a rough estimation of what that impact is (and remove it).
+    unit_ids : list or None, default: None
+        The list of unit ids to compute this metric. If None, all units are used.
+    **kwargs:
+        Keyword arguments for computing spike amplitudes and extremum channel.
+    TODO: Take jitter into account.
+
+    Returns
+    -------
+    num_spikes : dict
+        The number of spikes, across all segments, for each unit ID.
+    """
+    import numba
+    from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
+
+    sorting = sorting_analyzer.sorting
+
+    censored_period = int(round(censored_period_ms * 1e-3 * sorting_analyzer.sampling_frequency))
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    if not sorting_analyzer.has_recording():
+        warnings.warn(
+            "The `sd_ratio` metric cannot work with a recordless SortingAnalyzer object"
+            "SD ratio metric will be set to NaN"
+        )
+        return {unit_id: np.nan for unit_id in unit_ids}
+
+    if sorting_analyzer.has_extension("spike_amplitudes"):
+        amplitudes_ext = sorting_analyzer.get_extension("spike_amplitudes")
+        # spike_amplitudes = amplitudes_ext.get_data(outputs="by_unit")
+        spike_amplitudes = amplitudes_ext.get_data()
+    else:
+        warnings.warn(
+            "The `sd_ratio` metric require the `spike_amplitudes` waveform extension. "
+            "Use the `postprocessing.compute_spike_amplitudes()` functions. "
+            "SD ratio metric will be set to NaN"
+        )
+        return {unit_id: np.nan for unit_id in unit_ids}
+
+    noise_levels = get_noise_levels(
+        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std"
+    )
+    best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
+    n_spikes = sorting.count_num_spikes_per_unit()
+
+    if correct_for_template_itself:
+        tamplates_array = get_dense_templates_array(sorting_analyzer, return_scaled=sorting_analyzer.return_scaled)
+
+    spikes = sorting.to_spike_vector()
+    sd_ratio = {}
+    for unit_id in unit_ids:
+        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+
+        spk_amp = []
+
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+            # spike_train = sorting_analyzer.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(
+            #     np.int64, copy=False
+            # )
+            spike_mask = (spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index)
+            spike_train = spikes[spike_mask]["sample_index"].astype(np.int64, copy=False)
+            amplitudes = spike_amplitudes[spike_mask]
+
+            censored_indices = _find_duplicated_spikes_keep_first_iterative(
+                spike_train,
+                censored_period,
+            )
+            # spk_amp.append(np.delete(spike_amplitudes[segment_index][unit_id], censored_indices))
+            spk_amp.append(np.delete(amplitudes, censored_indices))
+
+        spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
+
+        if len(spk_amp) == 0:
+            sd_ratio[unit_id] = np.nan
+        elif len(spk_amp) == 1:
+            sd_ratio[unit_id] = 0.0
+        else:
+            if correct_for_drift:
+                unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
+            else:
+                unit_std = np.std(spk_amp)
+
+            best_channel = best_channels[unit_id]
+            std_noise = noise_levels[best_channel]
+
+            if correct_for_template_itself:
+                # template = sorting_analyzer.get_template(unit_id, force_dense=True)[:, best_channel]
+
+                template = tamplates_array[unit_index, :, :][:, best_channel]
+                nsamples = template.shape[0]
+
+                # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
+                # TODO: Take into account that templates for different segments might differ.
+                p = nsamples * n_spikes[unit_id] / sorting_analyzer.get_total_samples()
+                total_variance = p * np.mean(template**2) - p**2 * np.mean(template)
+
+                std_noise = np.sqrt(std_noise**2 - total_variance)
+
+            sd_ratio[unit_id] = unit_std / std_noise
+
+    return sd_ratio

@@ -37,13 +37,20 @@
 	<td>Codecov</td>
 	<td>
 		<a href="https://codecov.io/github/spikeinterface/spikeinterface">
-		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/master/graphs/badge.svg" alt="codecov" />
+		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/main/graphs/badge.svg" alt="codecov" />
 		</a>
 	</td>
 </tr>
 </table>
 
 [![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
+
+
+> :warning::warning::warning:
+> **New features under construction!** 🚧🚧🚧: after the 0.100.0 release (and related bug fixes), the next release will contain
+> a major API improvement: the `SortingAnalyzer`. To read more about this, checkout the
+> [enhancement proposal](https://github.com/SpikeInterface/spikeinterface/issues/2282).
+> Please refer to the stable documentation [here](https://spikeinterface.readthedocs.io/en/0.100.4)
 
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
@@ -59,15 +66,17 @@ With SpikeInterface, users can:
 - post-process sorted datasets.
 - compare and benchmark spike sorting outputs.
 - compute quality metrics to validate and curate spike sorting outputs.
-- visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, in jupyter)
-- export report and export to phy
-- offer a powerful Qt-based viewer in separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui)
-- have some powerful sorting components to build your own sorter.
+- visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, jupyter, ephyviewer)
+- export a report and/or export to phy
+- offer a powerful Qt-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui)
+- have powerful sorting components to build your own sorter.
 
 
 ## Documentation
 
-Detailed documentation for spikeinterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
+Detailed documentation of the latest PyPI release of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/0.100.1).
+
+Detailed documentation of the development version of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
 
 Several tutorials to get started can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
 
@@ -77,9 +86,9 @@ and sorting components.
 You can also have a look at the [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui).
 
 
-## How to install spikeinteface
+## How to install spikeinterface
 
-You can install the new `spikeinterface` version with pip:
+You can install the latest version of `spikeinterface` version with pip:
 
 ```bash
 pip install spikeinterface[full]
@@ -94,7 +103,7 @@ To install all interactive widget backends, you can use:
 ```
 
 
-To get the latest updates, you can install `spikeinterface` from sources:
+To get the latest updates, you can install `spikeinterface` from source:
 
 ```bash
 git clone https://github.com/SpikeInterface/spikeinterface.git

@@ -8,6 +8,16 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.100.4.rst
+  releases/0.100.3.rst
+  releases/0.100.2.rst
+  releases/0.100.1.rst
+  releases/0.100.0.rst
+  releases/0.99.1.rst
+  releases/0.99.0.rst
+  releases/0.98.2.rst
+  releases/0.98.1.rst
+  releases/0.98.0.rst
   releases/0.97.1.rst
   releases/0.97.0.rst
   releases/0.96.1.rst
@@ -27,6 +37,88 @@ Release notes
   releases/0.9.9.rst
   releases/0.9.1.rst
 
+
+Version 0.100.4
+===============
+
+* Minor release with extended compression capability for Zarr
+
+
+Version 0.100.3
+===============
+
+* Minor release with bug fixes for Zarr compressor and NWB in container
+
+
+Version 0.100.2
+===============
+
+* Minor release with fix for running Kilosort4 with GPU support in container
+
+
+Version 0.100.1
+===============
+
+* Minor release with some bug fixes and Kilosort4 support
+
+
+Version 0.100.0
+===============
+
+* Several improvements and bug fixes for Windows users
+* Important refactoring of NWB extractors:
+  * implemented direct backend implementation (to avoid using `pynwb`)
+  * sped up streaming using `remfile`
+  * added support for `zarr` backend
+* Removed `joblib` dependency in favor of `ParallelProcessExecutor`
+* Improved flexibility when running sorters in containers by adding several options for installing `spikeinterface`
+* Add `Templates` class to core, which handles unit templates and sparsity (#1982)
+* Added Zarr-backend to `Sorting` objects (`sorting.save(folder="...", format="zarr")`) (#2403)
+* Added `SharedmemRecording` for shared memory recordings (#2365)
+* Added machinery for moving/interpolating templates for generating hybrid recordings with drift (#2291)
+* Added new fast method for unit/spike/peak localization: `grid_convolution` (#2172)
+
+
+Version 0.99.1
+==============
+
+* Minor release with some bug fixes
+
+
+Version 0.99.0
+==============
+
+* Refactored :code:`core.generate` module to create high-quality lazy ground-truth data
+* Added DeepInterpolation training, transfer, and inference to preprocessing
+* Added new quality_metrics (synchrony, firing_range, amplitude_cv)
+* Added new template metrics (num positive/negative peaks + multi-channel metrics: velocities, spread, exp. decay)
+* Important improvements to internal sorters (especially Spyking Circus 2)
+* Ported all widgets to "new" API and dismantled legacy widgets
+* Extensive clean-up of docstrings, code style, and documentation
+
+
+Version 0.98.2
+==============
+
+* Minor release with some bug fixes
+
+
+Version 0.98.1
+==============
+
+* Minor release with some bug fixes
+
+
+Version 0.98.0
+==============
+
+* Implemented motion correction framework in SpikeInterface
+* Added "grid convolution" as localization method
+* Added amplitude_scaling implementation in postprocessing
+* Improved container support for docker and singularity
+* Improved implementation and performance of quality metrics module
+* Extensive additions to :code:`sortingcomponents`` module (pipeline nodes, waveform denoising, sparsity)
+* :code:`_ind` to :code:`_index` in complex dtype representation for peak and spikes
 
 Version 0.97.1
 ==============

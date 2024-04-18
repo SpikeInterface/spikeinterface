@@ -32,9 +32,9 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as qm
+    import spikeinterface.qualitymetrics as sqm
 
-    d_prime = qm.lda_metrics(all_pcs, all_labels, 0)
+    d_prime = sqm.lda_metrics(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
 
 
 Reference

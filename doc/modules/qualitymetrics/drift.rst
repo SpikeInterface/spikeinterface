@@ -40,12 +40,13 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.qualitymetrics as qm
+	import spikeinterface.qualitymetrics as sqm
 
-	# It is required to run `compute_spike_locations(wvf_extractor)`
+	# Combine sorting and recording into sorting_analyzer
+	# It is required to run sorting_analyzer.compute(input="spike_locations") first
 	# (if missing, values will be NaN)
-	drift_ptps, drift_stds, drift_mads = qm.compute_drift_metrics(wvf_extractor, peak_sign="neg")
-	# drift_ptps, drift_stds, and drift_mads are dict containing the units' ID as keys,
+	drift_ptps, drift_stds, drift_mads = sqm.compute_drift_metrics(sorting_analyzer=sorting_analyzer peak_sign="neg")
+	# drift_ptps, drift_stds, and drift_mads are each a dict containing the unit IDs as keys,
 	# and their metrics as values.
 
 

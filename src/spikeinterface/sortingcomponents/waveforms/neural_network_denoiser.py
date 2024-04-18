@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import json
 from typing import List, Optional
@@ -17,7 +19,7 @@ except ImportError:
     HAVE_HUGGINFACE = False
 
 from spikeinterface.core import BaseRecording
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
+from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 

@@ -2,6 +2,9 @@
 This gather some function usefull for some clusetring algos.
 """
 
+from __future__ import annotations
+
+
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
@@ -29,8 +32,8 @@ def _split_waveforms(
     clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
     local_labels_with_noise = clustering[0]
     cluster_probability = clustering[2]
-    (persistent_clusters,) = np.nonzero(clustering[2] > probability_thr)
-    local_labels_with_noise[~np.in1d(local_labels_with_noise, persistent_clusters)] = -1
+    (persistent_clusters,) = np.nonzero(cluster_probability > probability_thr)
+    local_labels_with_noise[~np.isin(local_labels_with_noise, persistent_clusters)] = -1
 
     # remove super small cluster
     labels, count = np.unique(local_labels_with_noise[:valid_size], return_counts=True)
@@ -43,7 +46,7 @@ def _split_waveforms(
     to_remove = labels[(count / valid_size) < minimum_cluster_size_ratio]
     # ~ print('to_remove', to_remove, count / valid_size)
     if to_remove.size > 0:
-        local_labels_with_noise[np.in1d(local_labels_with_noise, to_remove)] = -1
+        local_labels_with_noise[np.isin(local_labels_with_noise, to_remove)] = -1
 
     local_labels_with_noise[valid_size:] = -2
 
@@ -123,7 +126,7 @@ def _split_waveforms_nested(
         active_labels_with_noise = clustering[0]
         cluster_probability = clustering[2]
         (persistent_clusters,) = np.nonzero(clustering[2] > probability_thr)
-        active_labels_with_noise[~np.in1d(active_labels_with_noise, persistent_clusters)] = -1
+        active_labels_with_noise[~np.isin(active_labels_with_noise, persistent_clusters)] = -1
 
         active_labels = active_labels_with_noise[active_ind < valid_size]
         active_labels_set = np.unique(active_labels)
@@ -381,9 +384,9 @@ def auto_clean_clustering(
                 continue
 
             wfs0 = wfs_arrays[label0]
-            wfs0 = wfs0[:, :, np.in1d(channel_inds0, used_chans)]
+            wfs0 = wfs0[:, :, np.isin(channel_inds0, used_chans)]
             wfs1 = wfs_arrays[label1]
-            wfs1 = wfs1[:, :, np.in1d(channel_inds1, used_chans)]
+            wfs1 = wfs1[:, :, np.isin(channel_inds1, used_chans)]
 
             # TODO : remove
             assert wfs0.shape[2] == wfs1.shape[2]
@@ -488,11 +491,10 @@ def auto_clean_clustering(
 def remove_duplicates(
     wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, cosine_threshold=0.975, sparsify_threshold=0.99
 ):
-    import sklearn
+    num_templates = len(wfs_arrays.keys())
+    templates = np.zeros((num_templates, num_samples, num_chans), dtype=np.float32)
 
-    nb_templates = len(wfs_arrays.keys())
-    templates = np.zeros((nb_templates, num_samples, num_chans), dtype=np.float32)
-
+    # All of this is to sparsity the templates
     for t, wfs in wfs_arrays.items():
         templates[t] = np.median(wfs, axis=0)
 
@@ -508,11 +510,15 @@ def remove_duplicates(
         active_channels = np.sort(idx[:channel])
         templates[t, :, idx[channel:]] = 0
 
-    similarities = sklearn.metrics.pairwise.cosine_similarity(templates.reshape(nb_templates, -1))
-    for i in range(nb_templates):
+    from sklearn.metrics.pairwise import cosine_similarity
+
+    similarities = cosine_similarity(templates.reshape(num_templates, -1))
+
+    # Set the diagonal to -1
+    for i in range(num_templates):
         similarities[i, i] = -1
 
-    similar_templates = np.where(similarities > cosine_threshold)
+    similar_templates = np.nonzero(similarities > cosine_threshold)
 
     new_labels = peak_labels.copy()
 
@@ -529,77 +535,52 @@ def remove_duplicates(
     return labels, new_labels
 
 
-def remove_duplicates_via_matching(
-    waveform_extractor,
-    noise_levels,
-    peak_labels,
-    sparsify_threshold=1,
-    method_kwargs={},
-    job_kwargs={},
-    tmp_folder=None,
-):
+def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-    from spikeinterface import get_noise_levels
-    from spikeinterface.core import BinaryRecordingExtractor
+    from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, SharedMemoryRecording
     from spikeinterface.core import NumpySorting
-    from spikeinterface.core import extract_waveforms
     from spikeinterface.core import get_global_tmp_folder
-    from spikeinterface.sortingcomponents.matching.circus import get_scipy_shape
-    import string, random, shutil, os
+    import os
     from pathlib import Path
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    templates = waveform_extractor.get_all_templates(mode="median").copy()
-    nb_templates = len(templates)
-    duration = waveform_extractor.nbefore + waveform_extractor.nafter
 
-    fs = waveform_extractor.recording.get_sampling_frequency()
-    num_chans = waveform_extractor.recording.get_num_channels()
+    templates_array = templates.get_dense_templates()
 
-    for t in range(nb_templates):
-        is_silent = templates[t].ptp(0) < sparsify_threshold
-        templates[t, :, is_silent] = 0
+    nb_templates = len(templates_array)
+    duration = templates.nbefore + templates.nafter
 
-    zdata = templates.reshape(nb_templates, -1)
+    fs = templates.sampling_frequency
+    num_chans = len(templates.channel_ids)
 
     padding = 2 * duration
-    blanck = np.zeros(padding * num_chans, dtype=np.float32)
+    tmp_filename = None
+    zdata = templates_array.reshape(nb_templates * duration, num_chans)
+    blank = np.zeros((2 * duration, num_chans), dtype=zdata.dtype)
+    zdata = np.vstack((blank, zdata, blank))
 
-    if tmp_folder is None:
-        tmp_folder = get_global_tmp_folder()
+    if tmp_folder is not None:
+        tmp_folder.mkdir(parents=True, exist_ok=True)
+        tmp_filename = tmp_folder / "tmp.raw"
+        f = open(tmp_filename, "wb")
+        f.write(zdata.flatten())
+        f.close()
+        recording = BinaryRecordingExtractor(
+            tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype=zdata.dtype
+        )
+    else:
+        recording = NumpyRecording(zdata, sampling_frequency=fs)
+        recording = SharedMemoryRecording.from_recording(recording)
 
-    tmp_filename = tmp_folder / "tmp.raw"
-
-    f = open(tmp_filename, "wb")
-    f.write(blanck)
-    f.write(zdata.flatten())
-    f.write(blanck)
-    f.close()
-
-    recording = BinaryRecordingExtractor(tmp_filename, num_chan=num_chans, sampling_frequency=fs, dtype="float32")
+    recording = recording.set_probe(templates.probe)
     recording.annotate(is_filtered=True)
 
-    margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
+    margin = 2 * max(templates.nbefore, templates.nafter)
     half_marging = margin // 2
 
-    chunk_size = duration + 3 * margin
+    local_params = method_kwargs.copy()
 
-    dummy_filter = np.empty((num_chans, duration), dtype=np.float32)
-    dummy_traces = np.empty((num_chans, chunk_size), dtype=np.float32)
-
-    fshape, axes = get_scipy_shape(dummy_filter, dummy_traces, axes=1)
-
-    method_kwargs.update(
-        {
-            "waveform_extractor": waveform_extractor,
-            "noise_levels": noise_levels,
-            "amplitudes": [0.95, 1.05],
-            "sparsify_threshold": sparsify_threshold,
-            "omp_min_sps": 0.1,
-            "templates": None,
-            "overlaps": None,
-        }
-    )
+    local_params.update({"templates": templates, "amplitudes": [0.95, 1.05]})
 
     ignore_ids = []
     similar_templates = [[], []]
@@ -609,17 +590,20 @@ def remove_duplicates_via_matching(
         t_stop = padding + (i + 1) * duration
 
         sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
-
-        method_kwargs.update({"ignored_ids": ignore_ids + [i]})
+        local_params.update({"ignored_ids": ignore_ids + [i]})
         spikes, computed = find_spikes_from_templates(
-            sub_recording, method="circus-omp", method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
+            sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
         )
-        method_kwargs.update(
+        local_params.update(
             {
                 "overlaps": computed["overlaps"],
-                "templates": computed["templates"],
+                "normed_templates": computed["normed_templates"],
                 "norms": computed["norms"],
-                "sparsities": computed["sparsities"],
+                "temporal": computed["temporal"],
+                "spatial": computed["spatial"],
+                "singular": computed["singular"],
+                "units_overlaps": computed["units_overlaps"],
+                "unit_overlaps_indices": computed["unit_overlaps_indices"],
             }
         )
         valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)
@@ -646,8 +630,9 @@ def remove_duplicates_via_matching(
     labels = np.unique(new_labels)
     labels = labels[labels >= 0]
 
-    del recording, sub_recording
-    os.remove(tmp_filename)
+    del recording, sub_recording, local_params, templates
+    if tmp_filename is not None:
+        os.remove(tmp_filename)
 
     return labels, new_labels
 

@@ -1,5 +1,8 @@
 """Lists of quality metrics."""
 
+from __future__ import annotations
+
+
 from .misc_metrics import (
     compute_num_spikes,
     compute_firing_rates,
@@ -11,6 +14,10 @@ from .misc_metrics import (
     compute_amplitude_cutoffs,
     compute_amplitude_medians,
     compute_drift_metrics,
+    compute_synchrony_metrics,
+    compute_firing_ranges,
+    compute_amplitude_cv_metrics,
+    compute_sd_ratio,
 )
 
 from .pca_metrics import (
@@ -39,5 +46,9 @@ _misc_metric_name_to_func = {
     "sliding_rp_violation": compute_sliding_rp_violations,
     "amplitude_cutoff": compute_amplitude_cutoffs,
     "amplitude_median": compute_amplitude_medians,
+    "amplitude_cv": compute_amplitude_cv_metrics,
+    "synchrony": compute_synchrony_metrics,
+    "firing_range": compute_firing_ranges,
     "drift": compute_drift_metrics,
+    "sd_ratio": compute_sd_ratio,
 }

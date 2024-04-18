@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
@@ -56,7 +58,7 @@ class YassSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.add_sorting_segment(YassSortingSegment(spiketrains))
 
-        self._kwargs = {"folder_path": str(folder_path)}
+        self._kwargs = {"folder_path": str(Path(folder_path).absolute())}
         self.extra_requirements.append("pyyaml")
 
 

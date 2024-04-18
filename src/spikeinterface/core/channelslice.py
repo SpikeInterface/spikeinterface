@@ -1,4 +1,5 @@
-from typing import List, Union
+from __future__ import annotations
+from typing import Union
 
 import numpy as np
 
@@ -19,6 +20,10 @@ class ChannelSliceRecording(BaseRecording):
             channel_ids = parent_recording.get_channel_ids()
         if renamed_channel_ids is None:
             renamed_channel_ids = channel_ids
+        else:
+            assert len(renamed_channel_ids) == len(
+                np.unique(renamed_channel_ids)
+            ), "renamed_channel_ids must be unique!"
 
         self._parent_recording = parent_recording
         self._channel_ids = np.asarray(channel_ids)
@@ -35,7 +40,7 @@ class ChannelSliceRecording(BaseRecording):
         ), "ChannelSliceRecording: renamed channel_ids must be the same size"
         assert (
             self._channel_ids.size == np.unique(self._channel_ids).size
-        ), "ChannelSliceRecording : channel_ids not unique"
+        ), "ChannelSliceRecording : channel_ids are not unique"
 
         sampling_frequency = parent_recording.get_sampling_frequency()
 
@@ -55,6 +60,7 @@ class ChannelSliceRecording(BaseRecording):
 
         # copy annotation and properties
         parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
+        self._parent = parent_recording
 
         # change the wiring of the probe
         contact_vector = self.get_property("contact_vector")
@@ -85,9 +91,9 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         parent_indices = self._parent_channel_indices[channel_indices]
         traces = self._parent_recording_segment.get_traces(start_frame, end_frame, parent_indices)
@@ -123,7 +129,7 @@ class ChannelSliceSnippets(BaseSnippets):
         ), "ChannelSliceSnippets: renamed channel_ids must be the same size"
         assert (
             self._channel_ids.size == np.unique(self._channel_ids).size
-        ), "ChannelSliceSnippets : channel_ids not unique"
+        ), "ChannelSliceSnippets : channel_ids are not unique"
 
         sampling_frequency = parent_snippets.get_sampling_frequency()
 
@@ -181,20 +187,18 @@ class ChannelSliceSnippetsSegment(BaseSnippetsSegment):
 
     def get_snippets(
         self,
-        indices,
-        channel_indices: Union[List, None] = None,
+        indices: list[int],
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        indexes: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
-        channel_indices: (Union[List, None], optional)
-            Indices of channels to return, or all channels if None. Defaults to None.
+        indices: list[int]
+            Indices of the snippets to return
+        channel_indices: list | None, default: None
+            Indices of channels to return, or all channels if None
 
         Returns
         -------

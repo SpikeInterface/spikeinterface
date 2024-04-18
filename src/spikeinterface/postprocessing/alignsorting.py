@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from typing import Optional
 
@@ -26,8 +28,6 @@ class AlignSortingExtractor(BaseSorting):
         The aligned sorting.
     """
 
-    is_dumpable = False
-
     def __init__(self, sorting, unit_peak_shifts):
         super().__init__(sorting.get_sampling_frequency(), sorting.unit_ids)
 
@@ -35,6 +35,7 @@ class AlignSortingExtractor(BaseSorting):
             self.add_sorting_segment(AlignSortingSegment(segment, unit_peak_shifts))
 
         sorting.copy_metadata(self, only_main=False)
+        self._parent = sorting
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 

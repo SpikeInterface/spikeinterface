@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
@@ -11,16 +13,27 @@ from ..core import get_random_data_chunks
 
 class ScaleRecordingSegment(BasePreprocessorSegment):
     # use by NormalizeByQuantileRecording/ScaleRecording/CenterRecording
+
     def __init__(self, parent_recording_segment, gain, offset, dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.gain = gain
         self.offset = offset
         self._dtype = dtype
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices]
-        return scaled_traces.astype(self._dtype)
+    def get_traces(self, start_frame, end_frame, channel_indices) -> np.ndarray:
+        # TODO when we are sure that BaseExtractors get_traces allocate their own buffer instead of just passing
+        # It along we should remove copies in preprocessors including the one in the next line
+
+        scaled_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices).astype(
+            "float32", copy=True
+        )
+        scaled_traces *= self.gain[:, channel_indices]  # in-place
+        scaled_traces += self.offset[:, channel_indices]  # in-place
+
+        if np.issubdtype(self._dtype, np.integer):
+            scaled_traces = np.round(scaled_traces, out=scaled_traces)
+
+        return scaled_traces.astype(self._dtype, copy=False)
 
 
 class NormalizeByQuantileRecording(BasePreprocessor):
@@ -35,18 +48,18 @@ class NormalizeByQuantileRecording(BasePreprocessor):
     ----------
     recording: RecordingExtractor
         The recording extractor to be transformed
-    scalar: float
+    scale: float, default: 1.0
         Scale for the output distribution
-    median: float
+    median: float, default: 0.0
         Median for the output distribution
-    q1: float (default 0.01)
+    q1: float, default: 0.01
         Lower quantile used for measuring the scale
-    q1: float (default 0.99)
+    q1: float, default: 0.99
         Upper quantile used for measuring the
-    seed: int
-        Random seed for reproducibility
-    dtype: str or np.dtype
-        The dtype of the output traces. Default "float32"
+    mode: "by_channel" | "pool_channel", default: "by_channel"
+        If "by_channel" each channel is rescaled independently.
+    dtype: str or np.dtype, default: "float32"
+        The dtype of the output traces
     **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
@@ -68,7 +81,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         dtype="float32",
         **random_chunk_kwargs,
     ):
-        assert mode in ("pool_channel", "by_channel")
+        assert mode in ("pool_channel", "by_channel"), "'mode' must be 'pool_channel' or 'by_channel'"
 
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
@@ -123,8 +136,8 @@ class ScaleRecording(BasePreprocessor):
         Scalar for the traces of the recording extractor or array with scalars for each channel
     offset: float or array
         Offset for the traces of the recording extractor or array with offsets for each channel
-    dtype: str or np.dtype
-        The dtype of the output traces. Default "float32"
+    dtype: str or np.dtype, default: "float32"
+        The dtype of the output traces
 
     Returns
     -------
@@ -179,10 +192,10 @@ class CenterRecording(BasePreprocessor):
     ----------
     recording: RecordingExtractor
         The recording extractor to be centered
-    mode: str
-        'median' (default) | 'mean'
-    dtype: str or np.dtype
-        The dtype of the output traces. Default "float32"
+    mode: "median" | "mean", default: "median"
+        The method used to center the traces
+    dtype: str or np.dtype, default: "float32"
+        The dtype of the output traces
     **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
@@ -227,8 +240,8 @@ class ZScoreRecording(BasePreprocessor):
     ----------
     recording: RecordingExtractor
         The recording extractor to be centered
-    mode: str
-        "median+mad" (default) or "mean+std"
+    mode: "median+mad" | "mean+std", default: "median+mad"
+        The mode to compute the zscore
     dtype: None or dtype
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
@@ -260,7 +273,7 @@ class ZScoreRecording(BasePreprocessor):
         dtype="float32",
         **random_chunk_kwargs,
     ):
-        assert mode in ("median+mad", "mean+std")
+        assert mode in ("median+mad", "mean+std"), "'mode' must be 'median+mad' or 'mean+std'"
 
         # fix dtype
         dtype_ = fix_dtype(recording, dtype)
@@ -268,33 +281,34 @@ class ZScoreRecording(BasePreprocessor):
         if dtype_.kind == "i":
             assert int_scale is not None, "For recording with dtype=int you must set dtype=float32 OR set a scale"
 
-        random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
-
+        num_chans = recording.get_num_channels()
         if gain is not None:
             assert offset is not None
             gain = np.asarray(gain)
             offset = np.asarray(offset)
-            n = recording.get_num_channels()
             if gain.ndim == 1:
                 gain = gain[None, :]
-            assert gain.shape[1] == n
+            assert gain.shape[1] == num_chans
             if offset.ndim == 1:
                 offset = offset[None, :]
-            assert offset.shape[1] == n
-        elif mode == "median+mad":
-            medians = np.median(random_data, axis=0)
-            medians = medians[None, :]
-            mads = np.median(np.abs(random_data - medians), axis=0) / 0.6744897501960817
-            mads = mads[None, :]
-            gain = 1 / mads
-            offset = -medians / mads
+            assert offset.shape[1] == num_chans
         else:
-            means = np.mean(random_data, axis=0)
-            means = means[None, :]
-            stds = np.std(random_data, axis=0)
-            stds = stds[None, :]
-            gain = 1 / stds
-            offset = -means / stds
+            random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
+
+            if mode == "median+mad":
+                medians = np.median(random_data, axis=0)
+                medians = medians[None, :]
+                mads = np.median(np.abs(random_data - medians), axis=0) / 0.6744897501960817
+                mads = mads[None, :]
+                gain = 1 / mads
+                offset = -medians / mads
+            else:
+                means = np.mean(random_data, axis=0)
+                means = means[None, :]
+                stds = np.std(random_data, axis=0)
+                stds = stds[None, :]
+                gain = 1.0 / stds
+                offset = -means / stds
 
         if int_scale is not None:
             gain *= int_scale
@@ -305,6 +319,9 @@ class ZScoreRecording(BasePreprocessor):
         self.offset = offset
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
+        # the gain/offset must be reset
+        self.set_property(key="gain_to_uV", values=np.ones(num_chans, dtype="float32"))
+        self.set_property(key="offset_to_uV", values=np.zeros(num_chans, dtype="float32"))
 
         for parent_segment in recording._recording_segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)

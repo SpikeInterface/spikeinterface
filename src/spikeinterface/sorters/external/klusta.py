@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 from pathlib import Path
 import sys
@@ -102,9 +104,7 @@ class KlustaSorter(BaseSorter):
             # save binary file (chunk by chunk) into a new file
             raw_filename = sorter_output_folder / "recording.dat"
             dtype = "int16"
-            write_binary_recording(
-                recording, file_paths=[raw_filename], verbose=False, dtype=dtype, **get_job_kwargs(params, verbose)
-            )
+            write_binary_recording(recording, file_paths=[raw_filename], dtype=dtype, **get_job_kwargs(params, verbose))
 
         if p["detect_sign"] < 0:
             detect_sign = "negative"

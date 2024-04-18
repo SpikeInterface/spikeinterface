@@ -2,15 +2,16 @@ import pytest
 
 
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
-from spikeinterface.sortingcomponents.peak_pipeline import (
+
+from spikeinterface.core.node_pipeline import (
     PeakRetriever,
     ExtractDenseWaveforms,
     run_node_pipeline,
 )
 
 
-def test_savgol_denoising(mearec_recording, detected_peaks, chunk_executor_kwargs):
-    recording = mearec_recording
+def test_savgol_denoising(generated_recording, detected_peaks, chunk_executor_kwargs):
+    recording = generated_recording
     peaks = detected_peaks
 
     # Parameters

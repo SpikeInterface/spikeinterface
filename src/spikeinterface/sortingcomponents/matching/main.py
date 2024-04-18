@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from threadpoolctl import threadpool_limits
 import numpy as np
 
@@ -12,14 +14,12 @@ def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extr
     ----------
     recording: RecordingExtractor
         The recording extractor object
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
-    method: str
-        Which method to use ('naive' | 'tridesclous' | 'circus')
+    method: "naive" | "tridesclous" | "circus" | "circus-omp" | "wobble"
+        Which method to use for template matching
     method_kwargs: dict, optional
         Keyword arguments for the chosen method
     extra_outputs: bool
-        If True then method_kwargs is also return
+        If True then method_kwargs is also returned
     job_kwargs: dict
         Parameters for ChunkRecordingExecutor
 
@@ -30,13 +30,10 @@ def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extr
     method_kwargs:
         Optionaly returns for debug purpose.
 
-    Notes
-    -----
-    Templates are represented as WaveformExtractor so statistics can be extracted.
     """
     from .method_list import matching_methods
 
-    assert method in matching_methods, "The method %s is not a valid one" % method
+    assert method in matching_methods, f"The 'method' {method} is not valid. Use a method from {matching_methods}"
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 

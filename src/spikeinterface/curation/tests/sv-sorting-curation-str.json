@@ -1,0 +1,39 @@
+{
+    "labelsByUnit": {
+        "a": [
+            "mua"
+        ],
+        "b": [
+            "mua"
+        ],
+        "c": [
+            "reject"
+        ],
+        "d": [
+            "noise"
+        ],
+        "e": [
+            "accept"
+        ],
+        "f": [
+            "accept"
+        ],
+        "g": [
+            "accept"
+        ]
+    },
+    "mergeGroups": [
+        [
+            "a",
+            "b"
+        ],
+        [
+            "c",
+            "d"
+        ],
+        [
+            "e",
+            "f"
+        ]
+    ]
+}

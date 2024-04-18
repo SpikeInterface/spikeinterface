@@ -2,7 +2,9 @@
 test for BaseRecording are done with BinaryRecordingExtractor.
 but check only for BaseRecording general methods.
 """
-import shutil
+
+import json
+import pickle
 from pathlib import Path
 import pytest
 import numpy as np
@@ -34,7 +36,9 @@ def test_BaseRecording():
     for i in range(num_seg):
         a = np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
         a[:] = np.random.randn(*a.shape).astype(dtype)
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_chan, dtype=dtype
+    )
 
     assert rec.get_num_segments() == 2
     assert rec.get_num_channels() == 3
@@ -104,14 +108,43 @@ def test_BaseRecording():
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=True)
 
     # dump/load dict - relative
-    d = rec.to_dict(relative_to=cache_folder)
+    d = rec.to_dict(relative_to=cache_folder, recursive=True)
     rec2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
     rec3 = load_extractor(d, base_folder=cache_folder)
 
-    # dump/load json
+    # dump/load json - relative to
     rec.dump_to_json(cache_folder / "test_BaseRecording_rel.json", relative_to=cache_folder)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
     rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
+
+    # dump/load relative=True
+    rec.dump_to_json(cache_folder / "test_BaseRecording_rel_true.json", relative_to=True)
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
+    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
+    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True)
+    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
+    with open(cache_folder / "test_BaseRecording_rel_true.json") as json_file:
+        data = json.load(json_file)
+        assert (
+            "/" not in data["kwargs"]["file_paths"][0]
+        )  # Relative to parent folder, so there shouldn't be any '/' in the path.
+
+    # dump/load pkl - relative to
+    rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel.pkl", relative_to=cache_folder)
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
+    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
+
+    # dump/load relative=True
+    rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel_true.pkl", relative_to=True)
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
+    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
+    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True)
+    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
+    with open(cache_folder / "test_BaseRecording_rel_true.pkl", "rb") as pkl_file:
+        data = pickle.load(pkl_file)
+        assert (
+            "/" not in data["kwargs"]["file_paths"][0]
+        )  # Relative to parent folder, so there shouldn't be any '/' in the path.
 
     # cache to binary
     folder = cache_folder / "simple_recording"
@@ -130,15 +163,20 @@ def test_BaseRecording():
     rec3 = BaseExtractor.load(cache_folder / "simple_recording")
 
     # cache to memory
-    rec4 = rec3.save(format="memory")
-
+    rec4 = rec3.save(format="memory", shared=False)
     traces4 = rec4.get_traces(segment_index=0)
     traces = rec.get_traces(segment_index=0)
     assert np.array_equal(traces4, traces)
 
+    # cache to sharedmemory
+    rec5 = rec3.save(format="memory", shared=True)
+    traces5 = rec5.get_traces(segment_index=0)
+    traces = rec.get_traces(segment_index=0)
+    assert np.array_equal(traces5, traces)
+
     # cache joblib several jobs
     folder = cache_folder / "simple_recording2"
-    rec2 = rec.save(folder=folder, chunk_size=10, n_jobs=4)
+    rec2 = rec.save(format="binary", folder=folder, chunk_size=10, n_jobs=4)
     traces2 = rec2.get_traces(segment_index=0)
 
     # set/get Probe only 2 channels
@@ -222,15 +260,31 @@ def test_BaseRecording():
     )
     assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
 
+    # test cast with dtype
+    rec_float32 = rec_int16.astype("float32")
+    assert rec_float32.get_dtype() == "float32"
+    assert np.dtype(rec_float32.get_traces().dtype) == np.float32
+
     # test with t_start
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype, t_starts=np.arange(num_seg) * 10.0)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_chan,
+        dtype=dtype,
+        t_starts=np.arange(num_seg) * 10.0,
+    )
     times1 = rec.get_times(1)
     folder = cache_folder / "recording_with_t_start"
     rec2 = rec.save(folder=folder)
     assert np.allclose(times1, rec2.get_times(1))
 
     # test with time_vector
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_chan,
+        dtype=dtype,
+    )
     rec.set_times(np.arange(num_samples) / sampling_frequency + 30.0, segment_index=0)
     rec.set_times(np.arange(num_samples) / sampling_frequency + 40.0, segment_index=1)
     times1 = rec.get_times(1)
@@ -259,7 +313,7 @@ def test_BaseRecording():
     rec_2d = rec_3d.planarize(axes="zy")
     assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
-    # Test save to zarr
+    # test save to zarr
     compressor = get_default_zarr_compressor()
     rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
     rec_zarr_loaded = load_extractor(cache_folder / "recording.zarr")
@@ -295,6 +349,13 @@ def test_BaseRecording():
         rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15), rec_i.get_traces().astype("float")
     )
     assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
+
+
+def test_rename_channels():
+    recording = generate_recording(durations=[1.0], num_channels=3)
+    renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])
+    renamed_channel_ids = renamed_recording.get_channel_ids()
+    assert np.array_equal(renamed_channel_ids, ["a", "b", "c"])
 
 
 if __name__ == "__main__":

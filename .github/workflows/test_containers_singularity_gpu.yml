@@ -1,0 +1,50 @@
+name: Test GPU sorter images in singularity on AWS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-runner:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: iterative/setup-cml@v1
+      - uses: actions/checkout@v4
+      - name: Deploy runner on EC2
+        env:
+          REPO_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          cml runner \
+            --cloud=aws \
+            --cloud-region=us-east-2 \
+            --cloud-type=g4dn.xlarge \
+            --labels=cml-gpu
+  test-gpu-sorters:
+    needs: deploy-runner
+    runs-on: [self-hosted, cml-gpu]
+    timeout-minutes: 360 # 6h
+    container:
+      image: docker://iterativeai/cml:0-dvc2-base1-gpu
+      options: --privileged --gpus all
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget squashfs-tools
+          python -m pip install -U pip  # Official recommended way
+          pip install pytest
+          pip install -e .[full]
+          pip install spython
+
+      - uses: eWaterCycle/setup-singularity@v7
+        with:
+          singularity-version: 3.8.3
+
+      - name: Run test singularity containers with GPU
+        env:
+          REPO_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          pytest -vv --capture=tee-sys -rA src/spikeinterface/sorters/external/tests/test_singularity_containers_gpu.py

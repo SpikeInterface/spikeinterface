@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 
@@ -111,7 +113,7 @@ def synchronize_neuropixel_streams(recording_ref, recording_other):
 
     Method used :
       1. detect pulse times on both streams.
-      2. make a linear regression from 'other' to 'ref'.
+      2. make a linear regression from "other" to "ref".
           The slope is nclose to 1 and corresponds to the sample rate correction
           The intercept is close to 0 and corresponds to the delta time start
 

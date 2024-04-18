@@ -37,16 +37,20 @@ def test_global_tmp_folder():
 
 
 def test_global_job_kwargs():
-    job_kwargs = dict(n_jobs=4, chunk_duration="1s", progress_bar=True)
+    job_kwargs = dict(n_jobs=4, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_process=1)
     global_job_kwargs = get_global_job_kwargs()
-    assert global_job_kwargs == dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
+    assert global_job_kwargs == dict(
+        n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_process=1
+    )
     set_global_job_kwargs(**job_kwargs)
     assert get_global_job_kwargs() == job_kwargs
     # test updating only one field
     partial_job_kwargs = dict(n_jobs=2)
     set_global_job_kwargs(**partial_job_kwargs)
     global_job_kwargs = get_global_job_kwargs()
-    assert global_job_kwargs == dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
+    assert global_job_kwargs == dict(
+        n_jobs=2, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_process=1
+    )
     # test that fix_job_kwargs grabs global kwargs
     new_job_kwargs = dict(n_jobs=10)
     job_kwargs_split = fix_job_kwargs(new_job_kwargs)

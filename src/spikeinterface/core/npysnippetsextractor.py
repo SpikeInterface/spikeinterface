@@ -1,9 +1,10 @@
-from spikeinterface.core.basesnippets import BaseSnippets, BaseSnippetsSegment
-from .core_tools import define_function_from_class
+from __future__ import annotations
 from pathlib import Path
+
 import numpy as np
 
-from typing import List, Union
+from spikeinterface.core.basesnippets import BaseSnippets, BaseSnippetsSegment
+from .core_tools import define_function_from_class
 
 
 class NpySnippetsExtractor(BaseSnippets):
@@ -15,7 +16,6 @@ class NpySnippetsExtractor(BaseSnippets):
     """
 
     extractor_name = "NpySnippets"
-    is_writable = True
     mode = "file"
     name = "npy"
 
@@ -27,6 +27,9 @@ class NpySnippetsExtractor(BaseSnippets):
 
         num_segments = len(file_paths)
         data = np.load(file_paths[0], mmap_mode="r")
+
+        if channel_ids is None:
+            channel_ids = np.arange(data["snippet"].shape[2])
 
         BaseSnippets.__init__(
             self,
@@ -48,7 +51,7 @@ class NpySnippetsExtractor(BaseSnippets):
             self.set_channel_offsets(offset_to_uV)
 
         self._kwargs = {
-            "file_paths": [str(f) for f in file_paths],
+            "file_paths": [str(Path(f).absolute()) for f in file_paths],
             "sampling_frequency": sampling_frequency,
             "channel_ids": channel_ids,
             "nbefore": nbefore,
@@ -85,7 +88,7 @@ class NpySnippetsExtractor(BaseSnippets):
             arr = np.empty(n, dtype=snippets_t, order="F")
             arr["frame"] = snippets.get_frames(segment_index=i)
             arr["snippet"] = snippets.get_snippets(segment_index=i).astype(dtype, copy=False)
-
+            file_paths[i].parent.mkdir(parents=True, exist_ok=True)
             np.save(file_paths[i], arr)
 
 
@@ -99,20 +102,18 @@ class NpySnippetsSegment(BaseSnippetsSegment):
 
     def get_snippets(
         self,
-        indices,
-        channel_indices: Union[List, None] = None,
+        indices: list[int],
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        indexes: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
-        channel_indices: (Union[List, None], optional)
-            Indices of channels to return, or all channels if None. Defaults to None.
+        indices: list[int]
+            Indices of the snippets to return, or all if None
+        channel_indices: list | None, default: None
+            Indices of channels to return, or all channels if None
 
         Returns
         -------
@@ -126,16 +127,16 @@ class NpySnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         """
         Return the slice of snippets
 
         Parameters
         ----------
-        start_frame: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
+        start_frame: int | None, default: None
+            start sample index, or zero if None
+        end_frame: int | None, default: None
+            end_sample, or number of samples if None
 
         Returns
         -------

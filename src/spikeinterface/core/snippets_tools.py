@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 from .job_tools import fix_job_kwargs
 from .waveform_tools import extract_waveforms_to_buffers
@@ -26,7 +27,7 @@ def snippets_from_sorting(recording, sorting, nbefore=20, nafter=44, wf_folder=N
         Snippets extractor created
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
-    strains = sorting.get_all_spike_trains()
+    spikes = sorting.to_spike_vector(concatenated=False)
 
     peaks2 = sorting.to_spike_vector()
     peaks2["unit_index"] = 0
@@ -58,7 +59,7 @@ def snippets_from_sorting(recording, sorting, nbefore=20, nafter=44, wf_folder=N
 
     nse = NumpySnippets(
         snippets_list=wfs,
-        spikesframes_list=[np.sort(s[0]) for s in strains],
+        spikesframes_list=[s["sample_index"] for s in spikes],
         sampling_frequency=recording.get_sampling_frequency(),
         nbefore=nbefore,
         channel_ids=recording.get_channel_ids(),
