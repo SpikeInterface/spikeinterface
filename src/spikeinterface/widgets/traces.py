@@ -344,12 +344,7 @@ class TracesWidget(BaseWidget):
         import ipywidgets.widgets as widgets
         from IPython.display import display
         import ipywidgets.widgets as W
-        from .utils_ipywidgets import (
-            check_ipywidget_backend,
-            TimeSlider,
-            ChannelSelector,
-            ScaleWidget,
-        )
+        from .utils_ipywidgets import check_ipywidget_backend, TimeSlider, ChannelSelector, ScaleWidget, EventSelector
 
         check_ipywidget_backend()
 
@@ -379,10 +374,14 @@ class TracesWidget(BaseWidget):
             time_range=data_plot["time_range"],
             times=self.times,
         )
+        self.event_selector = EventSelector(events=data_plot["events"], time_slider=self.time_slider)
+        if data_plot["events"] is None:
+            # set not visible
+            self.event_selector.layout.visibility = "hidden"
 
         self.colorbar = W.Checkbox(
             value=data_plot["with_colorbar"],
-            description="Colorbar:",
+            description="Colorbar",
             indent=False,
             layout=W.Layout(width="90%"),
             align_items="center",
@@ -405,15 +404,18 @@ class TracesWidget(BaseWidget):
         self.channel_selector = ChannelSelector(self.rec0.channel_ids)
         self.channel_selector.value = list(data_plot["channel_ids"])
 
+        left_sidebar_elements = [
+            W.Label(value="layer"),
+            self.layer_selector,
+            W.Label(value="mode"),
+            self.mode_selector,
+            self.scaler,
+            self.colorbar,
+            self.event_selector,
+        ]
+
         left_sidebar = W.VBox(
-            children=[
-                W.Label(value="layer"),
-                self.layer_selector,
-                W.Label(value="mode"),
-                self.mode_selector,
-                self.scaler,
-                self.colorbar,
-            ],
+            children=left_sidebar_elements,
             layout=W.Layout(width="3.5cm"),
             align_items="center",
         )
@@ -443,6 +445,8 @@ class TracesWidget(BaseWidget):
         self.colorbar.observe(self._update_plot, names="value", type="change")
         # map is a special case because needs to check layer also
         self.mode_selector.observe(self._mode_changed, names="value", type="change")
+        # events
+        self.event_selector.observe(self._event_changed, names="value", type="change")
 
         if backend_kwargs["display"]:
             # self.check_backend()
@@ -463,6 +467,14 @@ class TracesWidget(BaseWidget):
             self.layer_selector.value = self.data_plot["layer_keys"][0]
         else:
             self._update_plot()
+
+    def _event_changed(self, change=None):
+        window_size = self._time_range[1] - self._time_range[0]
+        events = self.event_selector.events
+        event_time = events["time"][self.event_selector.value]
+        t_start = event_time - window_size / 2
+        self.time_slider.time_label.value = f"{t_start}"
+        self._retrieve_traces()
 
     def _retrieve_traces(self, change=None):
         channel_ids = np.array(self.channel_selector.value)

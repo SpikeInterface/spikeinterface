@@ -1,5 +1,4 @@
 from __future__ import annotations
-from tracemalloc import start
 
 import ipywidgets.widgets as W
 import traitlets
@@ -371,3 +370,51 @@ class UnitSelector(W.VBox):
         self.selector.unobserve(self.on_selector_changed, names=["value"], type="change")
         self.selector.value = change["new"]
         self.selector.observe(self.on_selector_changed, names=["value"], type="change")
+
+
+class EventSelector(W.VBox):
+    value = traitlets.Int()
+
+    def __init__(self, events, **kwargs):
+        layout = W.Layout(align_items="center", width="2.5cm", height="1.cm")
+        self.previous_evt = W.Button(description="", disabled=False, button_style="", icon="arrow-left", layout=layout)
+        self.next_evt = W.Button(description="", disabled=False, button_style="", icon="arrow-right", layout=layout)
+
+        self.previous_evt.on_click(self.move_left)
+        self.next_evt.on_click(self.move_right)
+
+        self.events_label = W.Label("Events", layout=W.Layout(width="95%"))
+        self.events_idx_label = W.Label("Ev. idx:", layout=W.Layout(width="1.5cm"))
+        self.events_index = W.IntText(value=0, disable=True, layout=W.Layout(width="1.5cm"))
+
+        self.events = events
+
+        self.skip_events = W.IntText(
+            value=1,
+            description="",
+            layout=W.Layout(width="1.5cm"),
+        )
+
+        super(W.VBox, self).__init__(
+            children=[
+                self.events_label,
+                W.HBox([self.events_idx_label, self.events_index]),
+                W.HBox([self.previous_evt, self.skip_events, self.next_evt]),
+            ],
+            **kwargs,
+        )
+
+        self.observe(self.value_changed, names=["value"], type="change")
+
+    def value_changed(self, change=None):
+        self.events_index.value = change["new"]
+
+    def move_left(self, change=None):
+        events_index = self.events_index.value - self.skip_events.value
+        events_index = events_index if events_index >= 0 else 0
+        self.value = events_index
+
+    def move_right(self, change=None):
+        events_index = self.events_index.value + self.skip_events.value
+        events_index = events_index if events_index < len(self.events) else len(self.events["time"]) - 1
+        self.value = events_index
