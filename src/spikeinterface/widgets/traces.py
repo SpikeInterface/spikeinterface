@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import time
 import warnings
 
+from numba.core.dispatcher import ev
 import numpy as np
 
 from ..core import BaseRecording, order_channels_by_depth
@@ -33,6 +35,9 @@ class TracesWidget(BaseWidget):
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
     return_scaled: bool, default: False
         If True and the recording has scaled traces, it plots the scaled traces
+    events: np.array or None, default: None
+        Events to display as vertical lines. The numpy array needs to be a structured array with the "time" field,
+        and optional "duration" and "label" fields
     cmap: matplotlib colormap, default: "RdBu_r"
         matplotlib colormap used in mode "map"
     show_channel_ids: bool, default: False
@@ -67,6 +72,9 @@ class TracesWidget(BaseWidget):
         return_scaled=False,
         cmap="RdBu_r",
         show_channel_ids=False,
+        events=None,
+        events_color="gray",
+        events_alpha=0.5,
         color_groups=False,
         color=None,
         clim=None,
@@ -114,6 +122,15 @@ class TracesWidget(BaseWidget):
         else:
             channel_locations = None
 
+        if not rec0.has_time_vector():
+            self.times = None
+            t_start = 0
+            t_end = rec0.get_duration(segment_index=segment_index)
+        else:
+            self.times = rec0.get_times(segment_index=segment_index)
+            t_start = self.times[0]
+            t_end = self.times[-1]
+
         layer_keys = list(recordings.keys())
 
         if segment_index is None:
@@ -123,14 +140,13 @@ class TracesWidget(BaseWidget):
 
         fs = rec0.get_sampling_frequency()
         if time_range is None:
-            time_range = (0, 1.0)
+            time_range = (t_start, t_start + 1.0)
         time_range = np.array(time_range)
-        if time_range[1] > rec0.get_duration(segment_index=segment_index):
+        if time_range[1] > t_end:
             warnings.warn(
-                "You have selected a time after the end of the segment. The range will be clipped to "
-                f"{rec0.get_duration(segment_index=segment_index)}"
+                "You have selected a time after the end of the segment. The range will be clipped to " f"{t_end}"
             )
-            time_range[1] = rec0.get_duration(segment_index=segment_index)
+            time_range[1] = t_end
 
         assert mode in ("auto", "line", "map"), 'Mode must be one of "auto","line", "map"'
         if mode == "auto":
@@ -142,7 +158,7 @@ class TracesWidget(BaseWidget):
         cmap = cmap
 
         times, list_traces, frame_range, channel_ids = _get_trace_list(
-            recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled
+            recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled, times=self.times
         )
 
         list_traces = [traces * scale for traces in list_traces]
@@ -203,6 +219,8 @@ class TracesWidget(BaseWidget):
             else:
                 raise TypeError(f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}")
 
+        self.cb = None
+
         plot_data = dict(
             recordings=recordings,
             segment_index=segment_index,
@@ -213,6 +231,9 @@ class TracesWidget(BaseWidget):
             times=times,
             layer_keys=layer_keys,
             list_traces=list_traces,
+            events=events,
+            events_color=events_color,
+            events_alpha=events_alpha,
             mode=mode,
             cmap=cmap,
             clims=clims,
@@ -239,6 +260,12 @@ class TracesWidget(BaseWidget):
         dp = to_attr(data_plot)
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+        if self.cb is not None:
+            try:
+                self.cb.remove()
+            except:
+                pass
 
         ax = self.ax
         n = len(dp.channel_ids)
@@ -288,7 +315,7 @@ class TracesWidget(BaseWidget):
             im.set_clim(*clim)
 
             if dp.with_colorbar:
-                self.figure.colorbar(im, ax=ax)
+                self.cb = self.figure.colorbar(im, ax=ax)
 
             if dp.show_channel_ids:
                 ax.set_yticks(np.linspace(min_y, max_y, n) + (max_y - min_y) / n * 0.5)
@@ -298,6 +325,21 @@ class TracesWidget(BaseWidget):
                 ax.set_yticks([min_y, max_y])
                 ax.set_yticklabels([min_y, max_y])
 
+        if dp.events is not None:
+            # find events in the time range
+            evt_mask = np.logical_and(dp.events["time"] >= dp.time_range[0], dp.events["time"] < dp.time_range[1])
+            events_in_range = dp.events[evt_mask]
+            t0 = t1 = 0
+            for evt in events_in_range:
+                if evt["duration"] is not None:
+                    t0 = evt["time"]
+                    t1 = evt["time"] + evt["duration"]
+                    ax.axvspan(t0, t1, alpha=dp.events_alpha, color=dp.events_color)
+                else:
+                    t0 = evt["time"]
+                    t1 = evt["time"]
+                    ax.axvline(evt["time"], alpha=dp.events_alpha, color=dp.events_color)
+
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
@@ -305,9 +347,6 @@ class TracesWidget(BaseWidget):
         import ipywidgets.widgets as W
         from .utils_ipywidgets import (
             check_ipywidget_backend,
-            # make_timeseries_controller,
-            # make_channel_controller,
-            # make_scale_controller,
             TimeSlider,
             ChannelSelector,
             ScaleWidget,
@@ -318,9 +357,6 @@ class TracesWidget(BaseWidget):
         self.next_data_plot = data_plot.copy()
 
         self.recordings = data_plot["recordings"]
-
-        # first layer
-        # rec0 = recordings[data_plot["layer_keys"][0]]
         rec0 = self.rec0 = self.recordings[self.data_plot["layer_keys"][0]]
 
         cm = 1 / 2.54
@@ -332,20 +368,26 @@ class TracesWidget(BaseWidget):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                self.figure, self.ax = plt.subplots(figsize=(0.9 * ratios[1] * width_cm * cm, height_cm * cm))
+                self.figure, self.ax = plt.subplots(
+                    figsize=(0.9 * ratios[1] * width_cm * cm, height_cm * cm), layout="constrained"
+                )
                 plt.show()
 
         # some widgets
         self.time_slider = TimeSlider(
             durations=[rec0.get_duration(s) for s in range(rec0.get_num_segments())],
             sampling_frequency=rec0.sampling_frequency,
-            # layout=W.Layout(height="2cm"),
+            time_range=data_plot["time_range"],
+            times=self.times,
         )
 
-        start_frame = int(data_plot["time_range"][0] * rec0.sampling_frequency)
-        end_frame = int(data_plot["time_range"][1] * rec0.sampling_frequency)
-
-        self.time_slider.value = start_frame, end_frame, data_plot["segment_index"]
+        self.colorbar = W.Checkbox(
+            value=data_plot["with_colorbar"],
+            description="Colorbar:",
+            indent=False,
+            layout=W.Layout(width="90%"),
+            align_items="center",
+        )
 
         _layer_keys = data_plot["layer_keys"]
         if len(_layer_keys) > 1:
@@ -371,7 +413,7 @@ class TracesWidget(BaseWidget):
                 W.Label(value="mode"),
                 self.mode_selector,
                 self.scaler,
-                # self.channel_selector,
+                self.colorbar,
             ],
             layout=W.Layout(width="3.5cm"),
             align_items="center",
@@ -399,6 +441,7 @@ class TracesWidget(BaseWidget):
         self.channel_selector.observe(self._retrieve_traces, names="value", type="change")
         # other widgets only refresh
         self.scaler.observe(self._update_plot, names="value", type="change")
+        self.colorbar.observe(self._update_plot, names="value", type="change")
         # map is a special case because needs to check layer also
         self.mode_selector.observe(self._mode_changed, names="value", type="change")
 
@@ -425,17 +468,20 @@ class TracesWidget(BaseWidget):
     def _retrieve_traces(self, change=None):
         channel_ids = np.array(self.channel_selector.value)
 
-        # if self.data_plot["order_channel_by_depth"]:
-        #     order, _ = order_channels_by_depth(self.rec0, channel_ids)
-        # else:
-        #     order = None
-
         start_frame, end_frame, segment_index = self.time_slider.value
-        time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency
+        if self.times is not None:
+            time_range = np.array([self.times[start_frame], self.times[end_frame]])
+        else:
+            time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency
 
         self._selected_recordings = {k: self.recordings[k] for k in self._get_layers()}
         times, list_traces, frame_range, channel_ids = _get_trace_list(
-            self._selected_recordings, channel_ids, time_range, segment_index, return_scaled=self.return_scaled
+            self._selected_recordings,
+            channel_ids,
+            time_range,
+            segment_index,
+            return_scaled=self.return_scaled,
+            times=self.times,
         )
 
         self._channel_ids = channel_ids
@@ -457,7 +503,10 @@ class TracesWidget(BaseWidget):
         data_plot["mode"] = mode
         data_plot["frame_range"] = self._frame_range
         data_plot["time_range"] = self._time_range
-        data_plot["with_colorbar"] = False
+        if self.colorbar.value:
+            data_plot["with_colorbar"] = True
+        else:
+            data_plot["with_colorbar"] = False
         data_plot["recordings"] = self._selected_recordings
         data_plot["add_legend"] = False
 
@@ -481,7 +530,7 @@ class TracesWidget(BaseWidget):
 
         self.ax.clear()
         self.plot_matplotlib(data_plot, **backend_kwargs)
-        self.ax.set_title("")
+        self.ax.set_title(layer_keys[0] if len(layer_keys) == 1 else "ALL")
 
         fig = self.ax.figure
         fig.canvas.draw()
@@ -551,7 +600,7 @@ class TracesWidget(BaseWidget):
         app.exec()
 
 
-def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_scaled=False):
+def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_scaled=False, times=None):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]
     rec0 = recordings[k0]
@@ -562,11 +611,15 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
         assert all(
             rec.has_scaled() for rec in recordings.values()
         ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
-    frame_range = (time_range * fs).astype("int64", copy=False)
-    a_max = rec0.get_num_frames(segment_index=segment_index)
-    frame_range = np.clip(frame_range, 0, a_max)
-    time_range = frame_range / fs
-    times = np.arange(frame_range[0], frame_range[1]) / fs
+    if times is not None:
+        frame_range = np.searchsorted(times, time_range)
+        times = times[frame_range[0] : frame_range[1]]
+    else:
+        frame_range = (time_range * fs).astype("int64", copy=False)
+        a_max = rec0.get_num_frames(segment_index=segment_index)
+        frame_range = np.clip(frame_range, 0, a_max)
+        time_range = frame_range / fs
+        times = np.arange(frame_range[0], frame_range[1]) / fs
 
     list_traces = []
     for rec_name, rec in recordings.items():

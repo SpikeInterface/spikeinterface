@@ -11,7 +11,7 @@ def make_mpl_figure(figure=None, ax=None, axes=None, ncols=None, num_axes=None, 
     if figure is not None:
         assert ax is None and axes is None, "figure/ax/axes : only one of then can be not None"
         if num_axes is None:
-            ax = figure.add_subplot(111)
+            ax = figure.add_subplot(111, layout="constrained")
             axes = np.array([[ax]])
         else:
             assert ncols is not None

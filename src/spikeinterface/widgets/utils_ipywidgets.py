@@ -1,4 +1,5 @@
 from __future__ import annotations
+from tracemalloc import start
 
 import ipywidgets.widgets as W
 import traitlets
@@ -16,17 +17,22 @@ def check_ipywidget_backend():
 class TimeSlider(W.HBox):
     value = traitlets.Tuple(traitlets.Int(), traitlets.Int(), traitlets.Int())
 
-    def __init__(self, durations, sampling_frequency, time_range=(0, 1.0), **kwargs):
+    def __init__(self, durations, sampling_frequency, time_range, times=None, **kwargs):
         self.num_segments = len(durations)
         self.frame_limits = [int(sampling_frequency * d) for d in durations]
         self.sampling_frequency = sampling_frequency
-        start_frame = int(time_range[0] * sampling_frequency)
-        end_frame = int(time_range[1] * sampling_frequency)
+        if times is not None:
+            start_frame, end_frame = np.searchsorted(times, time_range)
+            self.times = times
+        else:
+            start_frame = int(time_range[0] * sampling_frequency)
+            end_frame = int(time_range[1] * sampling_frequency)
+            self.times = None
 
         self.frame_range = (start_frame, end_frame)
 
         self.segment_index = 0
-        self.value = (start_frame, end_frame, self.segment_index)
+        self.value = (int(start_frame), int(end_frame), self.segment_index)
 
         layout = W.Layout(align_items="center", width="2.5cm", height="1.cm")
         but_left = W.Button(description="", disabled=False, button_style="", icon="arrow-left", layout=layout)
@@ -126,7 +132,10 @@ class TimeSlider(W.HBox):
         if new_frame is None and new_time is None:
             start_frame = self.slider.value
         elif new_frame is None:
-            start_frame = int(new_time * self.sampling_frequency)
+            if self.times is not None:
+                start_frame = int(np.searchsorted(self.times, [new_time])[0])
+            else:
+                start_frame = int(new_time * self.sampling_frequency)
         else:
             start_frame = new_frame
         delta_s = self.window_sizer.value
@@ -139,7 +148,10 @@ class TimeSlider(W.HBox):
 
         end_frame = min(self.frame_limits[self.segment_index], end_frame)
 
-        start_time = start_frame / self.sampling_frequency
+        if self.times is not None:
+            start_time = self.times[start_frame]
+        else:
+            start_time = start_frame / self.sampling_frequency
 
         if update_label:
             self.time_label.unobserve(self.time_label_changed, names="value", type="change")
