@@ -3,10 +3,9 @@ from __future__ import annotations
 import time
 import warnings
 
-from numba.core.dispatcher import ev
 import numpy as np
 
-from ..core import BaseRecording, order_channels_by_depth
+from ..core import BaseRecording
 from .base import BaseWidget, to_attr
 from .utils import get_some_colors, array_to_image
 
