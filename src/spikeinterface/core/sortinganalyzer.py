@@ -802,8 +802,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
-
-    def compute(self, input, save=True, **kwargs):
+    def compute(self, input, save=True, extension_params=None, **kwargs):
         """
         Compute one extension or several extensiosn.
         Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
@@ -811,8 +810,44 @@ class SortingAnalyzer:
         Parameters
         ----------
         input: str or dict or list
-            If the input is a string then computes one extension with compute_one_extension(extension_name=input, ...)
-            If the input is a dict then compute several extensions with compute_several_extensions(extensions=input)
+            The extensions to compute, which can be passed as:
+
+            * a string: compute one extension. Additional parameters can be passed as key word arguments.
+            * a dict: compute several extensions. The keys are the extension names and the values are dictiopnaries with the extension parameters.
+            * a list: compute several extensions. The list contains the extension names. Additional parameters can be passed with the extension_params
+              argument.
+        save: bool, default: True
+            If True the extension is saved to disk (only if sorting analyzer format is not "memory")
+        extension_params: dict or None, default: None
+            If input is a list, this parameter can be used to specify parameters for each extension.
+            The extension_params keys must be included in the input list.
+        **kwargs:
+            All other kwargs are transmitted to extension.set_params() (if input is a string) or job_kwargs
+
+        Returns
+        -------
+        extension: SortingAnalyzerExtension | None
+            The extension instance if input is a string, None otherwise.
+
+        Examples
+        --------
+        This function accepts the following possible signatures for flexibility:
+
+        Compute one extension, with parameters:
+        >>> analyzer.compute("waveforms", ms_before=1.5, ms_after=2.5)
+
+        Compute two extensions with a list as input and with default parameters:
+        >>> analyzer.compute(["random_spikes", "waveforms"])
+
+        Compute two extensions with dict as input, one dict per extension
+        >>> analyzer.compute({"random_spikes":{}, "waveforms":{"ms_before":1.5, "ms_after", "2.5"}})
+
+        Compute two extensions with an input list specifying custom parameters for one
+        (the other will use default parameters):
+        >>> analyzer.compute(
+            ["random_spikes", "waveforms"],
+            extension_params={"waveforms":{"ms_before":1.5, "ms_after", "2.5"}}
+        )
         """
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, **kwargs)
@@ -824,6 +859,12 @@ class SortingAnalyzer:
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
             extensions = {k: {} for k in input}
+            if extension_params is not None:
+                for ext_name, ext_params in extension_params.items():
+                    assert (
+                        ext_name in input
+                    ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
+                    extensions[ext_name] = ext_params
             self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
@@ -840,7 +881,7 @@ class SortingAnalyzer:
         extension_name: str
             The name of the extension.
             For instance "waveforms", "templates", ...
-        save: bool, default True
+        save: bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
@@ -905,7 +946,7 @@ class SortingAnalyzer:
         ----------
         extensions: dict
             Keys are extension_names and values are params.
-        save: bool, default True
+        save: bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
@@ -925,27 +966,28 @@ class SortingAnalyzer:
             for child in _get_children_dependencies(extension_name):
                 self.delete_extension(child)
 
-        pipeline_mode = True
+        extensions_with_pipeline = {}
+        extensions_without_pipeline = {}
         for extension_name, extension_params in extensions.items():
             extension_class = get_extension_class(extension_name)
-            if not extension_class.use_nodepipeline:
-                pipeline_mode = False
-                break
+            if extension_class.use_nodepipeline:
+                extensions_with_pipeline[extension_name] = extension_params
+            else:
+                extensions_without_pipeline[extension_name] = extension_params
 
-        if not pipeline_mode:
-            # simple loop
-            for extension_name, extension_params in extensions.items():
-                extension_class = get_extension_class(extension_name)
-                if extension_class.need_job_kwargs:
-                    self.compute_one_extension(extension_name, save=save, **extension_params)
-                else:
-                    self.compute_one_extension(extension_name, save=save, **extension_params)
-        else:
-
+        # First extensions without pipeline
+        for extension_name, extension_params in extensions_without_pipeline.items():
+            extension_class = get_extension_class(extension_name)
+            if extension_class.need_job_kwargs:
+                self.compute_one_extension(extension_name, save=save, **extension_params, **job_kwargs)
+            else:
+                self.compute_one_extension(extension_name, save=save, **extension_params)
+        # then extensions with pipeline
+        if len(extensions_with_pipeline) > 0:
             all_nodes = []
             result_routage = []
             extension_instances = {}
-            for extension_name, extension_params in extensions.items():
+            for extension_name, extension_params in extensions_with_pipeline.items():
                 extension_class = get_extension_class(extension_name)
                 assert self.has_recording(), f"Extension {extension_name} need the recording"
 
@@ -959,9 +1001,14 @@ class SortingAnalyzer:
                 nodes = extension_instance.get_pipeline_nodes()
                 all_nodes.extend(nodes)
 
-            job_name = "Compute : " + " + ".join(extensions.keys())
+            job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
             results = run_node_pipeline(
-                self.recording, all_nodes, job_kwargs=job_kwargs, job_name=job_name, gather_mode="memory"
+                self.recording,
+                all_nodes,
+                job_kwargs=job_kwargs,
+                job_name=job_name,
+                gather_mode="memory",
+                squeeze_output=False,
             )
 
             for r, result in enumerate(results):
@@ -1185,7 +1232,7 @@ def get_extension_class(extension_name: str, auto_import=True):
     ----------
     extension_name: str
         The extension name.
-    auto_import: bool, default True
+    auto_import: bool, default: True
         Auto import the module if the extension class is not registered yet.
 
     Returns

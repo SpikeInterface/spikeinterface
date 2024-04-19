@@ -72,7 +72,12 @@ print(analyzer)
 # when using format="binary_folder" or format="zarr"
 
 folder = "analyzer_folder"
-analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="binary_folder", folder=folder)
+analyzer = create_sorting_analyzer(sorting=sorting,
+                                   recording=recording,
+                                   format="binary_folder",
+                                   return_scaled=True, # this is the default to attempt to return scaled
+                                   folder=folder
+                                   )
 print(analyzer)
 
 # then it can be loaded back
@@ -90,7 +95,7 @@ analyzer.compute(
     method="uniform",
     max_spikes_per_unit=500,
 )
-analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True)
+analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0)
 analyzer.compute("templates", operators=["average", "median", "std"])
 print(analyzer)
 
@@ -100,12 +105,12 @@ print(analyzer)
 # using parallel processing (recommended!). Like this
 
 analyzer.compute(
-    "waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True, n_jobs=8, chunk_duration="1s", progress_bar=True
+    "waveforms", ms_before=1.0, ms_after=2.0, n_jobs=8, chunk_duration="1s", progress_bar=True
 )
 
 # which is equivalent to this:
 job_kwargs = dict(n_jobs=8, chunk_duration="1s", progress_bar=True)
-analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, return_scaled=True, **job_kwargs)
+analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, **job_kwargs)
 
 #################################################################################
 # Because certain extensions rely on others (e.g. we need waveforms to calculate
