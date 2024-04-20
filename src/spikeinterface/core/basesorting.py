@@ -39,6 +39,16 @@ class BaseSorting(BaseExtractor):
             txt += "\n  file_path: {}".format(self._kwargs["file_path"])
         return txt
 
+    def _repr_html_(self):
+        html_content = f"<div style='border:1px solid #ddd; padding:10px;'><strong>{self.__repr__()}</strong></div>"
+        html_content += "<details style='margin-left: 10px;'><summary><strong>Properties</strong></summary><ul>"
+        for key, value in self._properties.items():
+            # Add a further indent for each property
+            value_formated = np.asarray(value)
+            html_content += f"<details><summary>{key}</summary>{value_formated}</details>"
+        html_content += "</ul></details>"
+        return html_content
+
     @property
     def unit_ids(self):
         return self._main_ids
