@@ -73,7 +73,7 @@ class ProbeMapWidget(BaseWidget):
             if dp.color_channels is not None:
                 if isinstance(dp.color_channels, (list, np.ndarray)) and len(dp.color_channels) == dp.recording.get_num_channels():
                     color = dp.color_channels[pos : pos + n]
-                elif len(dp.color_channels) == 1:
+                else:
                     color = dp.color_channels
             else:
                 color = None
