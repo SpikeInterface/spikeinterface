@@ -38,7 +38,7 @@ class ProbeMapWidget(BaseWidget):
 
         if channel_ids is not None:
             recording = recording.channel_slice(channel_ids=channel_ids)
-            
+
         plot_data = dict(
             recording=recording,
             channel_ids=channel_ids,
