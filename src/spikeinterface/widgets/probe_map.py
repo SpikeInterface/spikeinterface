@@ -71,7 +71,7 @@ class ProbeMapWidget(BaseWidget):
             if dp.with_channel_ids:
                 text_on_contact = dp.recording.channel_ids[pos : pos + n]
             if dp.color_channels is not None:
-                if len(dp.color_channels) > 1:
+                if isinstance(dp.color_channels, (list, np.ndarray)) and len(dp.color_channels) == dp.recording.get_num_channels():
                     color = dp.color_channels[pos : pos + n]
                 elif len(dp.color_channels) == 1:
                     color = dp.color_channels
