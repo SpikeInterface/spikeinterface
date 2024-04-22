@@ -24,7 +24,7 @@ class ProbeMapWidget(BaseWidget):
     """
 
     def __init__(
-        self, recording, channel_ids=None, with_channel_ids=False, backend=None, **backend_or_plot_probe_kwargs
+        self, recording, channels_colors=None, with_channel_ids=False, backend=None, **backend_or_plot_probe_kwargs
     ):
         # split backend_or_plot_probe_kwargs
         backend_kwargs = dict()
@@ -36,12 +36,9 @@ class ProbeMapWidget(BaseWidget):
             else:
                 plot_probe_kwargs[k] = v
 
-        if channel_ids is not None:
-            recording = recording.channel_slice(channel_ids=channel_ids)
-
         plot_data = dict(
             recording=recording,
-            channel_ids=channel_ids,
+            channels_colors=channels_colors,
             with_channel_ids=with_channel_ids,
             plot_probe_kwargs=plot_probe_kwargs,
         )
@@ -73,8 +70,12 @@ class ProbeMapWidget(BaseWidget):
             n = probe.get_contact_count()
             if dp.with_channel_ids:
                 text_on_contact = dp.recording.channel_ids[pos : pos + n]
+            if dp.channels_colors is not None:
+                color = dp.channels_colors[pos : pos + n]
+            else:
+                color=None
             pos += n
-            plot_probe(probe, ax=self.ax, text_on_contact=text_on_contact, **plot_probe_kwargs)
+            plot_probe(probe, ax=self.ax, text_on_contact=text_on_contact, contacts_colors=color, **plot_probe_kwargs)
 
         self.ax.set_xlim(*xlims)
         self.ax.set_ylim(*ylims)
