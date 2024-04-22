@@ -2,6 +2,7 @@
 test for BaseRecording are done with BinaryRecordingExtractor.
 but check only for BaseRecording general methods.
 """
+
 import json
 import pickle
 from pathlib import Path

@@ -48,17 +48,21 @@ This code snippet shows how to compute quality metrics (with or without principa
 
 .. code-block:: python
 
-    we = si.load_waveforms(folder='waveforms') # start from a waveform extractor
+    sorting_analyzer = si.load_sorting_analyzer(folder='waveforms') # start from a sorting_analyzer
 
-    # without PC
-    metrics = compute_quality_metrics(waveform_extractor=we, metric_names=['snr'])
+    # without PC (depends on "waveforms", "templates", and "noise_levels")
+    qm_ext = sorting_analyzer.compute(input="quality_metrics", metric_names=['snr'], skip_pc_metrics=True)
+    metrics = qm_ext.get_data()
     assert 'snr' in metrics.columns
 
-    # with PCs
-    from spikeinterface.postprocessing import compute_principal_components
-    pca = compute_principal_components(waveform_extractor=we, n_components=5, mode='by_channel_local')
-    metrics = compute_quality_metrics(waveform_extractor=we)
-    assert 'isolation_distance' in metrics.columns
+    # with PCs (depends on "pca" in addition to the above metrics)
+
+    qm_ext = sorting_analyzer.compute(input={"pca": dict(n_components=5, mode="by_channel_local"),
+                                    "quality_metrics": dict(skip_pc_metrics=False)})
+     metrics = qm_ext.get_data()
+     assert 'isolation_distance' in metrics.columns
+
+
 
 For more information about quality metrics, check out this excellent
 `documentation <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html>`_

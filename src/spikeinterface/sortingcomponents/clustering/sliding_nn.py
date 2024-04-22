@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 try:
     import numba
 
@@ -313,13 +315,13 @@ class SlidingNNClustering:
                         peaks_in_chunk_idx <= end_last
                     ]
                     # repeat for cluster probabilities
-                    cluster_probabilities[
-                        peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], 0
-                    ] = clusterer.probabilities_[peaks_in_chunk_idx > end_last]
+                    cluster_probabilities[peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], 0] = (
+                        clusterer.probabilities_[peaks_in_chunk_idx > end_last]
+                    )
                     # put overlapping neighbors from previous in second row
-                    cluster_probabilities[
-                        peaks_in_chunk_idx[peaks_in_chunk_idx <= end_last], 1
-                    ] = clusterer.probabilities_[peaks_in_chunk_idx <= end_last]
+                    cluster_probabilities[peaks_in_chunk_idx[peaks_in_chunk_idx <= end_last], 1] = (
+                        clusterer.probabilities_[peaks_in_chunk_idx <= end_last]
+                    )
 
                     # TODO retrieve templates for each cluster
 
@@ -345,7 +347,7 @@ class SlidingNNClustering:
 
 if HAVE_NUMBA:
 
-    @numba.jit(nopython=True, fastmath=True, cache=True)
+    @numba.jit(nopython=True, fastmath=True, cache=False)
     def sparse_euclidean(x, y, n_samples, n_dense):
         """Euclidean distance metric over sparse vectors, where first n_dense
         elements are indices, and n_samples is the length of the second dimension

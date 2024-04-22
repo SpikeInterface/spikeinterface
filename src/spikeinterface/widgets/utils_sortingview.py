@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from ..core.core_tools import check_json

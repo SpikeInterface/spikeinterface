@@ -12,6 +12,7 @@ def test_basic_functions():
 
     sorting2 = UnitsSelectionSorting(sorting, unit_ids=[0, 2])
     assert np.array_equal(sorting2.unit_ids, [0, 2])
+    assert sorting2.get_parent() == sorting
 
     sorting3 = UnitsSelectionSorting(sorting, unit_ids=[0, 2], renamed_unit_ids=["a", "b"])
     assert np.array_equal(sorting3.unit_ids, ["a", "b"])
@@ -41,12 +42,10 @@ def test_failure_with_non_unique_unit_ids():
 def test_custom_cache_spike_vector():
     sorting = generate_sorting(num_units=3, durations=[0.100, 0.100], sampling_frequency=30000.0)
 
-    sub_sorting = UnitsSelectionSorting(sorting, unit_ids=[0, 2], renamed_unit_ids=["b", "a"])
-    spike_vector = sub_sorting.to_spike_vector(use_cache=False)
-
-    sorting.to_spike_vector(use_cache=True)
-    sub_sorting._custom_cache_spike_vector()
-    assert np.all(spike_vector == sub_sorting._cached_spike_vector)
+    sub_sorting = UnitsSelectionSorting(sorting, unit_ids=[2, 0], renamed_unit_ids=["b", "a"])
+    cached_spike_vector = sub_sorting.to_spike_vector(use_cache=True)
+    computed_spike_vector = sub_sorting.to_spike_vector(use_cache=False)
+    assert np.all(cached_spike_vector == computed_spike_vector)
 
 
 if __name__ == "__main__":

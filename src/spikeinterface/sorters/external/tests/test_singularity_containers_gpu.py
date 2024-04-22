@@ -57,6 +57,12 @@ def test_kilosort3(run_kwargs):
     print(sorting)
 
 
+def test_kilosort4(run_kwargs):
+    clean_singularity_cache()
+    sorting = ss.run_sorter(sorter_name="kilosort4", output_folder="kilosort4", **run_kwargs)
+    print(sorting)
+
+
 def test_pykilosort(run_kwargs):
     clean_singularity_cache()
     sorting = ss.run_sorter(sorter_name="pykilosort", output_folder="pykilosort", **run_kwargs)
@@ -72,4 +78,4 @@ def test_yass(run_kwargs):
 
 if __name__ == "__main__":
     kwargs = generate_run_kwargs()
-    test_pykilosort(kwargs)
+    test_kilosort4(kwargs)

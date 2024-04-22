@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .external.combinato import CombinatoSorter
 from .external.hdsort import HDSortSorter
 from .external.herdingspikes import HerdingspikesSorter
@@ -6,6 +8,7 @@ from .external.kilosort import KilosortSorter
 from .external.kilosort2 import Kilosort2Sorter
 from .external.kilosort2_5 import Kilosort2_5Sorter
 from .external.kilosort3 import Kilosort3Sorter
+from .external.kilosort4 import Kilosort4Sorter
 from .external.pykilosort import PyKilosortSorter
 from .external.klusta import KlustaSorter
 from .external.mountainsort4 import Mountainsort4Sorter
@@ -19,6 +22,7 @@ from .external.yass import YassSorter
 # based on spikeinertface.sortingcomponents
 from .internal.spyking_circus2 import Spykingcircus2Sorter
 from .internal.tridesclous2 import Tridesclous2Sorter
+from .internal.simplesorter import SimpleSorter
 
 sorter_full_list = [
     # external
@@ -30,6 +34,7 @@ sorter_full_list = [
     Kilosort2Sorter,
     Kilosort2_5Sorter,
     Kilosort3Sorter,
+    Kilosort4Sorter,
     PyKilosortSorter,
     KlustaSorter,
     Mountainsort4Sorter,
@@ -42,6 +47,7 @@ sorter_full_list = [
     # internal
     Spykingcircus2Sorter,
     Tridesclous2Sorter,
+    SimpleSorter,
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}

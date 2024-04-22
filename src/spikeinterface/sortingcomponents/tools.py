@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 try:
@@ -6,6 +8,9 @@ try:
     HAVE_PSUTIL = True
 except:
     HAVE_PSUTIL = False
+
+from spikeinterface.core.sparsity import ChannelSparsity
+from spikeinterface.core.template import Templates
 
 from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
@@ -63,7 +68,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
     return all_wfs
 
 
-def get_prototype_spike(recording, peaks, job_kwargs, nb_peaks=1000, ms_before=0.5, ms_after=0.5):
+def get_prototype_spike(recording, peaks, ms_before=0.5, ms_after=0.5, nb_peaks=1000, **job_kwargs):
     if peaks.size > nb_peaks:
         idx = np.sort(np.random.choice(len(peaks), nb_peaks, replace=False))
         some_peaks = peaks[idx]
@@ -75,7 +80,7 @@ def get_prototype_spike(recording, peaks, job_kwargs, nb_peaks=1000, ms_before=0
     waveforms = extract_waveform_at_max_channel(
         recording, some_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
     )
-    prototype = np.median(waveforms[:, :, 0] / (waveforms[:, nbefore, 0][:, np.newaxis]), axis=0)
+    prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
     return prototype
 
 
@@ -98,3 +103,21 @@ def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache
         recording = recording.save_to_zarr(**extra_kwargs)
 
     return recording
+
+
+def remove_empty_templates(templates):
+    """
+    Clean A Template with sparse representtaion by removing units that have no channel
+    on the sparsity mask
+    """
+    assert templates.sparsity_mask is not None, "Need sparse Templates object"
+    not_empty = templates.sparsity_mask.sum(axis=1) > 0
+    return Templates(
+        templates_array=templates.templates_array[not_empty, :, :],
+        sampling_frequency=templates.sampling_frequency,
+        nbefore=templates.nbefore,
+        sparsity_mask=templates.sparsity_mask[not_empty, :],
+        channel_ids=templates.channel_ids,
+        unit_ids=templates.unit_ids[not_empty],
+        probe=templates.probe,
+    )

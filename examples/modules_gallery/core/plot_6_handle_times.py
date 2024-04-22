@@ -7,6 +7,7 @@ However, in some cases there could be a different start time or even some missin
 
 This notebook shows how to handle time information in SpikeInterface recording and sorting objects.
 """
+
 from spikeinterface.extractors import toy_example
 
 ##############################################################################

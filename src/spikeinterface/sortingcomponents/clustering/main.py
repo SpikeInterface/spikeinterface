@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .method_list import *
 
 from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
@@ -12,8 +14,8 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
     ----------
     recording: RecordingExtractor
         The recording extractor object
-    peaks: WaveformExtractor
-        The waveform extractor
+    peaks: numpy.array
+        The peak vector
     method: str
         Which method to use ("stupid" | "XXXX")
     method_kwargs: dict, default: dict()

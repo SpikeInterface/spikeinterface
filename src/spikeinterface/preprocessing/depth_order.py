@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from ..core import order_channels_by_depth, ChannelSliceRecording
 from ..core.core_tools import define_function_from_class
 

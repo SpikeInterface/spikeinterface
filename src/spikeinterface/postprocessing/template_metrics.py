@@ -3,6 +3,7 @@ Functions based on
 https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/mean_waveforms/waveform_metrics.py
 22/04/2020
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -10,10 +11,10 @@ import warnings
 from typing import Optional
 from copy import deepcopy
 
-from ..core import WaveformExtractor, ChannelSparsity
+from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from ..core import ChannelSparsity
 from ..core.template_tools import get_template_extremum_channel
-from ..core.waveform_extractor import BaseWaveformExtractorExtension
-
+from ..core.template_tools import get_dense_templates_array
 
 # DEBUG = False
 
@@ -30,199 +31,7 @@ def get_template_metric_names():
     return get_single_channel_template_metric_names() + get_multi_channel_template_metric_names()
 
 
-class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
-    """Class to compute template metrics of waveform shapes.
-
-    Parameters
-    ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor object
-    """
-
-    extension_name = "template_metrics"
-    min_channels_for_multi_channel_warning = 10
-
-    def __init__(self, waveform_extractor: WaveformExtractor):
-        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
-
-    def _set_params(
-        self,
-        metric_names=None,
-        peak_sign="neg",
-        upsampling_factor=10,
-        sparsity=None,
-        metrics_kwargs=None,
-        include_multi_channel_metrics=False,
-    ):
-        if metric_names is None:
-            metric_names = get_single_channel_template_metric_names()
-        if include_multi_channel_metrics:
-            metric_names += get_multi_channel_template_metric_names()
-        metrics_kwargs = metrics_kwargs or dict()
-        params = dict(
-            metric_names=[str(name) for name in np.unique(metric_names)],
-            sparsity=sparsity,
-            peak_sign=peak_sign,
-            upsampling_factor=int(upsampling_factor),
-            metrics_kwargs=metrics_kwargs,
-        )
-
-        return params
-
-    def _select_extension_data(self, unit_ids):
-        # filter metrics dataframe
-        new_metrics = self._extension_data["metrics"].loc[np.array(unit_ids)]
-        return dict(metrics=new_metrics)
-
-    def _run(self):
-        import pandas as pd
-        from scipy.signal import resample_poly
-
-        metric_names = self._params["metric_names"]
-        sparsity = self._params["sparsity"]
-        peak_sign = self._params["peak_sign"]
-        upsampling_factor = self._params["upsampling_factor"]
-        unit_ids = self.waveform_extractor.sorting.unit_ids
-        sampling_frequency = self.waveform_extractor.sampling_frequency
-
-        metrics_single_channel = [m for m in metric_names if m in get_single_channel_template_metric_names()]
-        metrics_multi_channel = [m for m in metric_names if m in get_multi_channel_template_metric_names()]
-
-        if sparsity is None:
-            extremum_channels_ids = get_template_extremum_channel(
-                self.waveform_extractor, peak_sign=peak_sign, outputs="id"
-            )
-
-            template_metrics = pd.DataFrame(index=unit_ids, columns=metric_names)
-        else:
-            extremum_channels_ids = sparsity.unit_id_to_channel_ids
-            index_unit_ids = []
-            index_channel_ids = []
-            for unit_id, sparse_channels in extremum_channels_ids.items():
-                index_unit_ids += [unit_id] * len(sparse_channels)
-                index_channel_ids += list(sparse_channels)
-            multi_index = pd.MultiIndex.from_tuples(
-                list(zip(index_unit_ids, index_channel_ids)), names=["unit_id", "channel_id"]
-            )
-            template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
-
-        all_templates = self.waveform_extractor.get_all_templates()
-        channel_locations = self.waveform_extractor.get_channel_locations()
-
-        for unit_index, unit_id in enumerate(unit_ids):
-            template_all_chans = all_templates[unit_index]
-            chan_ids = np.array(extremum_channels_ids[unit_id])
-            if chan_ids.ndim == 0:
-                chan_ids = [chan_ids]
-            chan_ind = self.waveform_extractor.channel_ids_to_indices(chan_ids)
-            template = template_all_chans[:, chan_ind]
-
-            # compute single_channel metrics
-            for i, template_single in enumerate(template.T):
-                if sparsity is None:
-                    index = unit_id
-                else:
-                    index = (unit_id, chan_ids[i])
-                if upsampling_factor > 1:
-                    assert isinstance(upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
-                    template_upsampled = resample_poly(template_single, up=upsampling_factor, down=1)
-                    sampling_frequency_up = upsampling_factor * sampling_frequency
-                else:
-                    template_upsampled = template_single
-                    sampling_frequency_up = sampling_frequency
-
-                trough_idx, peak_idx = get_trough_and_peak_idx(template_upsampled)
-
-                for metric_name in metrics_single_channel:
-                    func = _metric_name_to_func[metric_name]
-                    value = func(
-                        template_upsampled,
-                        sampling_frequency=sampling_frequency_up,
-                        trough_idx=trough_idx,
-                        peak_idx=peak_idx,
-                        **self._params["metrics_kwargs"],
-                    )
-                    template_metrics.at[index, metric_name] = value
-
-            # compute metrics multi_channel
-            for metric_name in metrics_multi_channel:
-                # retrieve template (with sparsity if waveform extractor is sparse)
-                template = self.waveform_extractor.get_template(unit_id=unit_id)
-
-                if template.shape[1] < self.min_channels_for_multi_channel_warning:
-                    warnings.warn(
-                        f"With less than {self.min_channels_for_multi_channel_warning} channels, "
-                        "multi-channel metrics might not be reliable."
-                    )
-                if self.waveform_extractor.is_sparse():
-                    channel_locations_sparse = channel_locations[self.waveform_extractor.sparsity.mask[unit_index]]
-                else:
-                    channel_locations_sparse = channel_locations
-
-                if upsampling_factor > 1:
-                    assert isinstance(upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
-                    template_upsampled = resample_poly(template, up=upsampling_factor, down=1, axis=0)
-                    sampling_frequency_up = upsampling_factor * sampling_frequency
-                else:
-                    template_upsampled = template
-                    sampling_frequency_up = sampling_frequency
-
-                func = _metric_name_to_func[metric_name]
-                value = func(
-                    template_upsampled,
-                    channel_locations=channel_locations_sparse,
-                    sampling_frequency=sampling_frequency_up,
-                    **self._params["metrics_kwargs"],
-                )
-                template_metrics.at[index, metric_name] = value
-        self._extension_data["metrics"] = template_metrics
-
-    def get_data(self):
-        """
-        Get the computed metrics.
-
-        Returns
-        -------
-        metrics : pd.DataFrame
-            Dataframe with template metrics
-        """
-        msg = "Template metrics are not computed. Use the 'run()' function."
-        assert self._extension_data["metrics"] is not None, msg
-        return self._extension_data["metrics"]
-
-    @staticmethod
-    def get_extension_function():
-        return compute_template_metrics
-
-
-WaveformExtractor.register_extension(TemplateMetricsCalculator)
-
-
-_default_function_kwargs = dict(
-    recovery_window_ms=0.7,
-    peak_relative_threshold=0.2,
-    peak_width_ms=0.1,
-    depth_direction="y",
-    min_channels_for_velocity=5,
-    min_r2_velocity=0.5,
-    exp_peak_function="ptp",
-    min_r2_exp_decay=0.5,
-    spread_threshold=0.2,
-    spread_smooth_um=20,
-    column_range=None,
-)
-
-
-def compute_template_metrics(
-    waveform_extractor,
-    load_if_exists: bool = False,
-    metric_names: Optional[list[str]] = None,
-    peak_sign: Optional[str] = "neg",
-    upsampling_factor: int = 10,
-    sparsity: Optional[ChannelSparsity] = None,
-    include_multi_channel_metrics: bool = False,
-    metrics_kwargs: dict = None,
-):
+class ComputeTemplateMetrics(AnalyzerExtension):
     """
     Compute template metrics including:
         * peak_to_valley
@@ -241,10 +50,8 @@ def compute_template_metrics(
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor used to compute template metrics
-    load_if_exists : bool, default: False
-        Whether to load precomputed template metrics, if they already exist.
+    sorting_analyzer: SortingAnalyzer
+        The SortingAnalyzer object
     metric_names : list or None, default: None
         List of metrics to compute (see si.postprocessing.get_template_metric_names())
     peak_sign : {"neg", "pos"}, default: "neg"
@@ -287,11 +94,26 @@ def compute_template_metrics(
     so that one metric value will be computed per unit.
     For multi-channel metrics, 3D channel locations are not supported. By default, the depth direction is "y".
     """
-    if load_if_exists and waveform_extractor.is_extension(TemplateMetricsCalculator.extension_name):
-        tmc = waveform_extractor.load_extension(TemplateMetricsCalculator.extension_name)
-    else:
-        tmc = TemplateMetricsCalculator(waveform_extractor)
-        # For 2D metrics, external sparsity must be None, so that one metric value will be computed per unit.
+
+    extension_name = "template_metrics"
+    depend_on = ["templates"]
+    need_recording = True
+    use_nodepipeline = False
+    need_job_kwargs = False
+
+    min_channels_for_multi_channel_warning = 10
+
+    def _set_params(
+        self,
+        metric_names=None,
+        peak_sign="neg",
+        upsampling_factor=10,
+        sparsity=None,
+        metrics_kwargs=None,
+        include_multi_channel_metrics=False,
+    ):
+
+        # TODO alessio can you check this : this used to be in the function but now we have ComputeTemplateMetrics.function_factory()
         if include_multi_channel_metrics or (
             metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
         ):
@@ -300,27 +122,162 @@ def compute_template_metrics(
                 "so that each unit will correspond to 1 row of the output dataframe."
             )
             assert (
-                waveform_extractor.get_channel_locations().shape[1] == 2
+                self.sorting_analyzer.get_channel_locations().shape[1] == 2
             ), "If multi-channel metrics are computed, channel locations must be 2D."
-        default_kwargs = _default_function_kwargs.copy()
+
+        if metric_names is None:
+            metric_names = get_single_channel_template_metric_names()
+        if include_multi_channel_metrics:
+            metric_names += get_multi_channel_template_metric_names()
+
         if metrics_kwargs is None:
-            metrics_kwargs = default_kwargs
+            metrics_kwargs_ = _default_function_kwargs.copy()
         else:
-            default_kwargs.update(metrics_kwargs)
-            metrics_kwargs = default_kwargs
-        tmc.set_params(
-            metric_names=metric_names,
-            peak_sign=peak_sign,
-            upsampling_factor=upsampling_factor,
+            metrics_kwargs_ = _default_function_kwargs.copy()
+            metrics_kwargs_.update(metrics_kwargs)
+
+        params = dict(
+            metric_names=[str(name) for name in np.unique(metric_names)],
             sparsity=sparsity,
-            include_multi_channel_metrics=include_multi_channel_metrics,
-            metrics_kwargs=metrics_kwargs,
+            peak_sign=peak_sign,
+            upsampling_factor=int(upsampling_factor),
+            metrics_kwargs=metrics_kwargs_,
         )
-        tmc.run()
 
-    metrics = tmc.get_data()
+        return params
 
-    return metrics
+    def _select_extension_data(self, unit_ids):
+        new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
+        return dict(metrics=new_metrics)
+
+    def _run(self):
+        import pandas as pd
+        from scipy.signal import resample_poly
+
+        metric_names = self.params["metric_names"]
+        sparsity = self.params["sparsity"]
+        peak_sign = self.params["peak_sign"]
+        upsampling_factor = self.params["upsampling_factor"]
+        unit_ids = self.sorting_analyzer.unit_ids
+        sampling_frequency = self.sorting_analyzer.sampling_frequency
+
+        metrics_single_channel = [m for m in metric_names if m in get_single_channel_template_metric_names()]
+        metrics_multi_channel = [m for m in metric_names if m in get_multi_channel_template_metric_names()]
+
+        if sparsity is None:
+            extremum_channels_ids = get_template_extremum_channel(
+                self.sorting_analyzer, peak_sign=peak_sign, outputs="id"
+            )
+
+            template_metrics = pd.DataFrame(index=unit_ids, columns=metric_names)
+        else:
+            extremum_channels_ids = sparsity.unit_id_to_channel_ids
+            index_unit_ids = []
+            index_channel_ids = []
+            for unit_id, sparse_channels in extremum_channels_ids.items():
+                index_unit_ids += [unit_id] * len(sparse_channels)
+                index_channel_ids += list(sparse_channels)
+            multi_index = pd.MultiIndex.from_tuples(
+                list(zip(index_unit_ids, index_channel_ids)), names=["unit_id", "channel_id"]
+            )
+            template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
+
+        all_templates = get_dense_templates_array(self.sorting_analyzer, return_scaled=True)
+
+        channel_locations = self.sorting_analyzer.get_channel_locations()
+
+        for unit_index, unit_id in enumerate(unit_ids):
+            template_all_chans = all_templates[unit_index]
+            chan_ids = np.array(extremum_channels_ids[unit_id])
+            if chan_ids.ndim == 0:
+                chan_ids = [chan_ids]
+            chan_ind = self.sorting_analyzer.channel_ids_to_indices(chan_ids)
+            template = template_all_chans[:, chan_ind]
+
+            # compute single_channel metrics
+            for i, template_single in enumerate(template.T):
+                if sparsity is None:
+                    index = unit_id
+                else:
+                    index = (unit_id, chan_ids[i])
+                if upsampling_factor > 1:
+                    assert isinstance(upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
+                    template_upsampled = resample_poly(template_single, up=upsampling_factor, down=1)
+                    sampling_frequency_up = upsampling_factor * sampling_frequency
+                else:
+                    template_upsampled = template_single
+                    sampling_frequency_up = sampling_frequency
+
+                trough_idx, peak_idx = get_trough_and_peak_idx(template_upsampled)
+
+                for metric_name in metrics_single_channel:
+                    func = _metric_name_to_func[metric_name]
+                    value = func(
+                        template_upsampled,
+                        sampling_frequency=sampling_frequency_up,
+                        trough_idx=trough_idx,
+                        peak_idx=peak_idx,
+                        **self.params["metrics_kwargs"],
+                    )
+                    template_metrics.at[index, metric_name] = value
+
+            # compute metrics multi_channel
+            for metric_name in metrics_multi_channel:
+                # retrieve template (with sparsity if waveform extractor is sparse)
+                template = all_templates[unit_index, :, :]
+                if self.sorting_analyzer.is_sparse():
+                    mask = self.sorting_analyzer.sparsity.mask[unit_index, :]
+                    template = template[:, mask]
+
+                if template.shape[1] < self.min_channels_for_multi_channel_warning:
+                    warnings.warn(
+                        f"With less than {self.min_channels_for_multi_channel_warning} channels, "
+                        "multi-channel metrics might not be reliable."
+                    )
+                if self.sorting_analyzer.is_sparse():
+                    channel_locations_sparse = channel_locations[self.sorting_analyzer.sparsity.mask[unit_index]]
+                else:
+                    channel_locations_sparse = channel_locations
+
+                if upsampling_factor > 1:
+                    assert isinstance(upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
+                    template_upsampled = resample_poly(template, up=upsampling_factor, down=1, axis=0)
+                    sampling_frequency_up = upsampling_factor * sampling_frequency
+                else:
+                    template_upsampled = template
+                    sampling_frequency_up = sampling_frequency
+
+                func = _metric_name_to_func[metric_name]
+                value = func(
+                    template_upsampled,
+                    channel_locations=channel_locations_sparse,
+                    sampling_frequency=sampling_frequency_up,
+                    **self.params["metrics_kwargs"],
+                )
+                template_metrics.at[index, metric_name] = value
+        self.data["metrics"] = template_metrics
+
+    def _get_data(self):
+        return self.data["metrics"]
+
+
+register_result_extension(ComputeTemplateMetrics)
+compute_template_metrics = ComputeTemplateMetrics.function_factory()
+
+
+_default_function_kwargs = dict(
+    recovery_window_ms=0.7,
+    peak_relative_threshold=0.2,
+    peak_width_ms=0.1,
+    depth_direction="y",
+    min_channels_for_velocity=5,
+    min_r2_velocity=0.5,
+    exp_peak_function="ptp",
+    min_r2_exp_decay=0.5,
+    spread_threshold=0.2,
+    spread_smooth_um=20,
+    column_range=None,
+)
 
 
 def get_trough_and_peak_idx(template):
@@ -428,7 +385,7 @@ def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_id
         return np.nan
 
     trough_val = template_single[trough_idx]
-    # threshold is half of peak heigth (assuming baseline is 0)
+    # threshold is half of peak height (assuming baseline is 0)
     threshold = 0.5 * trough_val
 
     (cpre_idx,) = np.where(template_single[:trough_idx] < threshold)
@@ -451,12 +408,9 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     """
     Return slope of repolarization period between trough and baseline
 
-    After reaching it's maxumum polarization, the neuron potential will
+    After reaching it's maximum polarization, the neuron potential will
     recover. The repolarization slope is defined as the dV/dT of the action potential
     between trough and baseline.
-
-    Optionally the function returns also the indices per waveform where the
-    potential crosses baseline.
 
     Parameters
     ----------
@@ -466,9 +420,14 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
         The sampling frequency of the template
     trough_idx: int, default: None
         The index of the trough
+
+    Returns
+    -------
+    slope: float
+        The repolarization slope
     """
     if trough_idx is None:
-        trough_idx = get_trough_and_peak_idx(template_single)
+        trough_idx, _ = get_trough_and_peak_idx(template_single)
 
     times = np.arange(template_single.shape[0]) / sampling_frequency
 
@@ -478,7 +437,7 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     (rtrn_idx,) = np.nonzero(template_single[trough_idx:] >= 0)
     if len(rtrn_idx) == 0:
         return np.nan
-    # first time after  trough, where template is at baseline
+    # first time after trough, where template is at baseline
     return_to_base_idx = rtrn_idx[0] + trough_idx
 
     if return_to_base_idx - trough_idx < 3:
@@ -493,8 +452,8 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
 def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwargs):
     """
     Return the recovery slope of input waveforms. After repolarization,
-    the neuron hyperpolarizes untill it peaks. The recovery slope is the
-    slope of the actiopotential after the peak, returning to the baseline
+    the neuron hyperpolarizes until it peaks. The recovery slope is the
+    slope of the action potential after the peak, returning to the baseline
     in dV/dT. The slope is computed within a user-defined window after
     the peak.
 
@@ -511,6 +470,11 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
         The index of the peak
     **kwargs: Required kwargs:
         - recovery_window_ms: the window in ms after the peak to compute the recovery_slope
+
+    Returns
+    -------
+    res.slope: float
+        The recovery slope
     """
     import scipy.stats
 
@@ -543,6 +507,11 @@ def get_num_positive_peaks(template_single, sampling_frequency, **kwargs):
     **kwargs: Required kwargs:
         - peak_relative_threshold: the relative threshold to detect positive and negative peaks
         - peak_width_ms: the width in samples to detect peaks
+
+    Returns
+    -------
+    number_positive_peaks: int
+        the number of positive peaks
     """
     from scipy.signal import find_peaks
 
@@ -571,6 +540,11 @@ def get_num_negative_peaks(template_single, sampling_frequency, **kwargs):
     **kwargs: Required kwargs:
         - peak_relative_threshold: the relative threshold to detect positive and negative peaks
         - peak_width_ms: the width in samples to detect peaks
+
+    Returns
+    -------
+    num_negative_peaks: int
+        the number of negative peaks
     """
     from scipy.signal import find_peaks
 
@@ -628,7 +602,7 @@ def sort_template_and_locations(template, channel_locations, depth_direction="y"
 
 def fit_velocity(peak_times, channel_dist):
     """
-    Fit velocity from peak times and channel distances using ribust Theilsen estimator.
+    Fit velocity from peak times and channel distances using robust Theilsen estimator.
     """
     # from scipy.stats import linregress
     # slope, intercept, _, _, _ = linregress(peak_times, channel_dist)

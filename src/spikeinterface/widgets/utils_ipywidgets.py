@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ipywidgets.widgets as W
 import traitlets
 
@@ -75,7 +77,7 @@ class TimeSlider(W.HBox):
             min=0.01,
             max=30.0,
             description="win (s)",
-            layout=W.Layout(width="auto")
+            layout=W.Layout(width="auto"),
             # layout=W.Layout(width=f'10%')
         )
         self.window_sizer.observe(self.win_size_changed, names="value", type="change")
@@ -279,7 +281,7 @@ class ScaleWidget(W.VBox):
         assert factor > 1.0
         self.factor = factor
 
-        self.scale_label = W.Label("Scale", layout=W.Layout(layout=W.Layout(width="95%"), justify_content="center"))
+        self.scale_label = W.Label("Scale", layout=W.Layout(width="95%", justify_content="center"))
 
         self.plus_selector = W.Button(
             description="",

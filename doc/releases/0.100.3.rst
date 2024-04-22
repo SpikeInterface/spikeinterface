@@ -1,0 +1,12 @@
+.. _release0.100.3:
+
+SpikeInterface 0.100.3 release notes
+------------------------------------
+
+28th March 2024
+
+Minor release with bug fixes for Zarr compressor and NWB in container
+
+* Remove lazy typing in nwb (#2635)
+* Add extra_requirements for nwb extractors (#2637)
+* Fix compressor propagation to Zarr save function (#2639)

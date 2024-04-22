@@ -1,0 +1,35 @@
+name: si_env_rolling
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - scipy
+  - joblib
+  - tqdm
+  - matplotlib
+  - h5py
+  - pandas
+  - xarray
+  - hdbscan
+  - scikit-learn
+  - networkx
+  - pybind11
+  - loky
+  - numba
+  - jupyter
+  - pyqt=5
+  - pyqtgraph
+  - ipywidgets
+  - ipympl
+  - pip:
+    - ephyviewer
+    - docker
+    - https://github.com/SpikeInterface/MEArec/archive/main.zip
+    - https://github.com/NeuralEnsemble/python-neo/archive/master.zip
+    - https://github.com/SpikeInterface/probeinterface/archive/main.zip
+    - https://github.com/SpikeInterface/spikeinterface/archive/main.zip
+    - https://github.com/SpikeInterface/spikeinterface-gui/archive/main.zip
+    - https://github.com/magland/sortingview/archive/main.zip

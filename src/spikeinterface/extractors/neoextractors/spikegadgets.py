@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 from pathlib import Path
+
+import probeinterface
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -33,6 +37,11 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
+
+        probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
+
+        if probegroup is not None:
+            self.set_probes(probegroup, in_place=True)
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

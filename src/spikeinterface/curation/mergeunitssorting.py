@@ -1,6 +1,8 @@
-from typing import List, Union
+from __future__ import annotations
+from typing import Union
 import numpy as np
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
 from copy import deepcopy
 
 
@@ -114,9 +116,9 @@ class MergeUnitsSorting(BaseSorting):
 
                     same_property_values = np.all([np.array_equal(m, merge_values[0]) for m in merge_values[1:]])
 
+                    ind = self.id_to_index(new_id)
                     if same_property_values:
                         # and new values only if they are all similar
-                        ind = self.id_to_index(new_id)
                         new_values[ind] = merge_values[0]
                     else:
                         if parent_values.dtype.kind == "f":
@@ -143,6 +145,9 @@ class MergeUnitsSorting(BaseSorting):
             properties_policy=properties_policy,
             delta_time_ms=delta_time_ms,
         )
+
+
+merge_units_sorting = define_function_from_class(source_class=MergeUnitsSorting, name="merge_units_sorting")
 
 
 class MergeUnitsSortingSegment(BaseSortingSegment):

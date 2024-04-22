@@ -29,25 +29,28 @@ KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.geten
 set_global_tmp_folder(cache_folder)
 
 
-# this needs to be run only once
-def generate_sortingview_curation_dataset():
-    import spikeinterface.widgets as sw
+# this needs to be run only once: if we want to regenerate we need to start with sorting result
+# TODO : regenerate the
+# def generate_sortingview_curation_dataset():
+#     import spikeinterface.widgets as sw
 
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    recording, sorting = read_mearec(local_path)
+#     local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
+#     recording, sorting = read_mearec(local_path)
 
-    we = si.extract_waveforms(recording, sorting, folder=None, mode="memory")
+#     sorting_analyzer = si.create_sorting_analyzer(sorting, recording, format="memory")
+#     sorting_analyzer.compute("random_spikes")
+#     sorting_analyzer.compute("waveforms")
+#     sorting_analyzer.compute("templates")
+#     sorting_analyzer.compute("noise_levels")
+#     sorting_analyzer.compute("spike_amplitudes")
+#     sorting_analyzer.compute("template_similarity")
+#     sorting_analyzer.compute("unit_locations")
 
-    _ = compute_spike_amplitudes(we)
-    _ = compute_correlograms(we)
-    _ = compute_template_similarity(we)
-    _ = compute_unit_locations(we)
+#     # plot_sorting_summary with curation
+#     w = sw.plot_sorting_summary(sorting_analyzer, curation=True, backend="sortingview")
 
-    # plot_sorting_summary with curation
-    w = sw.plot_sorting_summary(we, curation=True, backend="sortingview")
-
-    # curation_link:
-    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary
+#     # curation_link:
+#     # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary
 
 
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")

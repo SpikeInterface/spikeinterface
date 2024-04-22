@@ -310,6 +310,24 @@ required.
 * :py:func:`~spikeinterface.preprocessing.zero_channel_pad()`
 
 
+gaussian_filter()
+^^^^^^^^^^^^^^^^^
+
+Implementation of a gaussian filter for high/low/bandpass filters. Note that the the gaussian filter
+response is not very steep.
+
+.. code-block:: python
+
+    # highpass
+    rec_hp = gaussian_filter(recording=rec, freq_min=300, freq_max=None)
+    # lowpass
+    rec_lp = gaussian_filter(recording=rec, freq_min=None, freq_max=500)
+    # bandpass
+    rec_bp = gaussian_filter(recording=rec, freq_min=300, freq_max=2000)
+
+* :py:func:`~spikeinterface.preprocessing.gaussian_filter()`
+
+
 Motion/drift correction
 ^^^^^^^^^^^^^^^^^^^^^^^
 

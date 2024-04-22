@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from tqdm.auto import tqdm, trange
 import scipy.interpolate
@@ -320,7 +322,7 @@ class DecentralizedRegistration:
 
         if histogram_depth_smooth_um is not None:
             bins = np.arange(motion_histogram.shape[1]) * bin_um
-            bins -= np.mean(bins)
+            bins = bins - np.mean(bins)
             smooth_kernel = np.exp(-(bins**2) / (2 * histogram_depth_smooth_um**2))
             smooth_kernel /= np.sum(smooth_kernel)
             motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[None, :], mode="same", axes=1)

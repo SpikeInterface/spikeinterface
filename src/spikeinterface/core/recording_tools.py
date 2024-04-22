@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Literal
 import warnings
 from pathlib import Path
+import os
 import gc
 import mmap
 import tqdm
@@ -334,6 +335,9 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
         init_args = (recording, None, shm_names, shapes, dtype, cast_unsigned)
     else:
         init_args = (recording, arrays, None, None, dtype, cast_unsigned)
+
+    if "verbose" in job_kwargs:
+        del job_kwargs["verbose"]
 
     executor = ChunkRecordingExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
@@ -898,5 +902,6 @@ def get_rec_attributes(recording):
         num_samples=[recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())],
         is_filtered=recording.is_filtered(),
         properties=properties_to_attrs,
+        dtype=recording.get_dtype(),
     )
     return rec_attributes
