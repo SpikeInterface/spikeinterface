@@ -15,7 +15,7 @@ class ProbeMapWidget(BaseWidget):
     ----------
     recording: RecordingExtractor
         The recording extractor object
-    color_channels: list
+    color_channels: list or matplotlib color
         List of colors to be associated with each channel_id, if only one color is present all channels will take the specified color
     with_channel_ids: bool False default
         Add channel ids text on the probe
