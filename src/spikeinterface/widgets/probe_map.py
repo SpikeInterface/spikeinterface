@@ -73,7 +73,7 @@ class ProbeMapWidget(BaseWidget):
             if dp.channels_colors is not None:
                 color = dp.channels_colors[pos : pos + n]
             else:
-                color=None
+                color = None
             pos += n
             plot_probe(probe, ax=self.ax, text_on_contact=text_on_contact, contacts_colors=color, **plot_probe_kwargs)
 
