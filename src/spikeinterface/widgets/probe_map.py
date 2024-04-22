@@ -15,8 +15,8 @@ class ProbeMapWidget(BaseWidget):
     ----------
     recording: RecordingExtractor
         The recording extractor object
-    channel_ids: list
-        The channel ids to display
+    color_channels: list
+        List of colors to be associated with each channel_id, if only one color is present all channels will take the specified color
     with_channel_ids: bool False default
         Add channel ids text on the probe
     **plot_probe_kwargs: keyword arguments for probeinterface.plotting.plot_probe_group() function
@@ -24,7 +24,7 @@ class ProbeMapWidget(BaseWidget):
     """
 
     def __init__(
-        self, recording, channels_colors=None, with_channel_ids=False, backend=None, **backend_or_plot_probe_kwargs
+        self, recording, color_channels=None, with_channel_ids=False, backend=None, **backend_or_plot_probe_kwargs
     ):
         # split backend_or_plot_probe_kwargs
         backend_kwargs = dict()
@@ -38,7 +38,7 @@ class ProbeMapWidget(BaseWidget):
 
         plot_data = dict(
             recording=recording,
-            channels_colors=channels_colors,
+            color_channels=color_channels,
             with_channel_ids=with_channel_ids,
             plot_probe_kwargs=plot_probe_kwargs,
         )
@@ -70,8 +70,11 @@ class ProbeMapWidget(BaseWidget):
             n = probe.get_contact_count()
             if dp.with_channel_ids:
                 text_on_contact = dp.recording.channel_ids[pos : pos + n]
-            if dp.channels_colors is not None:
-                color = dp.channels_colors[pos : pos + n]
+            if dp.color_channels is not None:
+                if len(dp.color_channels)>1:
+                    color = dp.color_channels[pos : pos + n]
+                elif len(dp.color_channels)==1:
+                    color = dp.color_channels
             else:
                 color = None
             pos += n
