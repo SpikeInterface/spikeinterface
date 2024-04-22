@@ -4,13 +4,6 @@ import numpy as np
 from ..core.core_tools import define_function_from_class
 from ..core import BaseRecording, BaseRecordingSegment
 
-try:
-    import h5py
-
-    HAVE_MCSH5 = True
-except ImportError:
-    HAVE_MCSH5 = False
-
 class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
     extractor_name = "SinapsResearchPlatformH5"
     mode = "file"
@@ -18,29 +11,35 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
 
     def __init__(self, file_path):
 
+        try:
+            import h5py
+            self.installed = True
+        except ImportError:
+            self.installed = False
+
         assert self.installed, self.installation_mesg
         self._file_path = file_path
 
-        mcs_info = openSiNAPSFile(self._file_path)
-        self._rf = mcs_info["filehandle"]
+        sinaps_info = openSiNAPSFile(self._file_path)
+        self._rf = sinaps_info["filehandle"]
 
         BaseRecording.__init__(
             self,
-            sampling_frequency=mcs_info["sampling_frequency"],
-            channel_ids=mcs_info["channel_ids"],
-            dtype=mcs_info["dtype"],
+            sampling_frequency=sinaps_info["sampling_frequency"],
+            channel_ids=sinaps_info["channel_ids"],
+            dtype=sinaps_info["dtype"],
         )
 
         self.extra_requirements.append("h5py")
 
         recording_segment = SiNAPSRecordingSegment(
-            self._rf, mcs_info["num_frames"], sampling_frequency=mcs_info["sampling_frequency"]
+            self._rf, sinaps_info["num_frames"], sampling_frequency=sinaps_info["sampling_frequency"]
         )
         self.add_recording_segment(recording_segment)
 
         # set gain
-        self.set_channel_gains(mcs_info["gain"])
-        self.set_channel_offsets(mcs_info["offset"])
+        self.set_channel_gains(sinaps_info["gain"])
+        self.set_channel_offsets(sinaps_info["offset"])
 
         # set other properties
 
@@ -82,6 +81,9 @@ read_sinaps_research_platform_h5 = define_function_from_class(
 
 def openSiNAPSFile(filename):
     """Open an SiNAPS hdf5 file, read and return the recording info."""
+    
+    import h5py
+
     rf = h5py.File(filename, "r")
 
     stream = rf.require_group('RealTimeProcessedData')
@@ -90,15 +92,13 @@ def openSiNAPSFile(filename):
 
     parameters = rf.require_group('Parameters')
     gain = parameters.get('VoltageConverter')[0]
-    offset = -2047 # the input data is in ADC levels, represented with 12 bits (values from 0 to 4095).
-    # To convert the data to uV, you need to first subtract the OFFSET=2047 (half of the represented range)
-    # and multiply by the VoltageConverter
+    offset = -2048 * gain
 
     nRecCh, nFrames = data.shape
 
     samplingRate = parameters.get('SamplingFrequency')[0]
 
-    mcs_info = {
+    sinaps_info = {
         "filehandle": rf,
         "num_frames": nFrames,
         "sampling_frequency": samplingRate,
@@ -109,4 +109,4 @@ def openSiNAPSFile(filename):
         "dtype": dtype,
     }
 
-    return mcs_info
+    return sinaps_info
