@@ -208,16 +208,14 @@ Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in memory*, but it can be saved at any time
 (or upon instantiation) to one of the following backends:
 
-* | :code:`zarr`: the sorting analyzer is saved to a [Zarr]() folder, and each extension is a Zarr group. This is the
-  | recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
-* | :code:`binary_folder`: the sorting analyzer is saved to a folder, and each extension creates a sub-folder. The extension
-  | data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
+* | :code:`zarr`: the sorting analyzer is saved to a `Zarr <https://zarr.dev/>`_  folder, and each extension is a Zarr group. This is the recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
+* | :code:`binary_folder`: the sorting analyzer is saved to a folder, and each extension creates a sub-folder. The extension data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
 
-
-The :code:`SortingAnalyzer.save_as` function will save the object **and all its extensions** to disk if in memory. It can
-also be used to switch a :code:`zarr` or :code:`binary_folder` into an in-memory object. This can be useful if you want to
-keep your original analysis, but want to test changing parameters. Once a :code:`SortingAnalyzer` has been moved into
-memory it will only write to disk by running :code:`SortingAnalyzer.save_as` again and supplying one of the backends.
+If the sorting analyzer is in memory, the :code:`SortingAnalyzer.save_as` function can be used to save it 
+**and all its extensions** to disk. The function can also be used to switch a :code:`zarr` or :code:`binary_folder` into an 
+in-memory object. This can be useful if you want to keep your original analysis, but want to test changing parameters. 
+Once a :code:`SortingAnalyzer` has been moved into memory it will only write to disk if :code:`SortingAnalyzer.save_as` 
+is run again with one of the backends supplied.
 
 .. code-block:: python
 
@@ -254,7 +252,7 @@ Once a :code:`SortingAnalyzer` object is saved to disk, it can be easily reloade
 
 .. note::
 
-    When saved to disk, the :code:`SortingAnalyzer` will store a copy of the :code:`Sorting`` object,
+    When saved to disk, the :code:`SortingAnalyzer` will store a copy of the :code:`Sorting` object,
     because it is relatively small and needed for most (if not all!) operations. The same is not
     true for the :code:`Recording` object, for which only the main properties will be stored (e.g,
     :code:`sampling_frequency`, :code:`channel_ids`, :code:`channel_locations`, etc.) and
@@ -304,21 +302,24 @@ is calculated using :code:`waveforms`.
     To avoid this inconsistency, spike interface deletes children if the parent is recalculated. E.g. if :code:`random_spikes`
     is recalculated, :code:`waveforms` is deleted. This keeps consistency between your extensions, and is better for provenance.
 
-Since these core extensions are important for all other extensions it is important to understand how they work and what they are.
-:code:`random_spikes` allows the user fine control in how they wish to sample their raw data. For example for neuron with 10,000 spikes
-it may be too computationally expensive (& memory expensive) to load all spikes so in this case :code:`random_spikes` allows you to
-chose the number of spikes you wish to subsample for downstream analyses. :code:`waveforms` is the extension that goes through your
-raw data and creates a waveform for each spike within the :code:`random_spikes`. You can control the time before (:code:`ms_before`)
-and the time after (:code:`ms_after`) to ensure that you have a full waveform. Because waveforms occur on multiple channels with multiple
-samples this can be a big data structure. :code:`templates` are calculated from the raw waveform data and are used for downstream analyses
-(e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question of if the :code:`templates` are what are used
-then why save the :code:`waveforms`? Thus there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
-:code:`random_spikes`) or 2) from the :code:`waveforms`. If getting :code:`templates` from the raw data we are limited to obtaining averages
-and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the templates as medians or percentiles
-in addition to the average or standard deviations of the :code:`waveforms`. So it important to think about the type of downstream analyses that
-you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or after :code:`waveforms`. Finally the
-:code:`noise_levels` compute noise-levels in a channel-wise fashion. This provides important information about the specific recording session
-and is important for some downstream quality analyses.
+Since these core extensions are important for all other extensions it is important to understand how they work and what they are:
+
+* :code:`random_spikes` allows the user fine control in how they wish to sample their raw data. For example, for a neuron with 10,000 spikes
+  it may be too computationally expensive (& memory expensive) to load all spikes. So in this case :code:`random_spikes` allows you to
+  chose the number of spikes you wish to subsample for downstream analyses. 
+* :code:`waveforms` is the extension that goes through your
+  raw data and creates a waveform for each spike within the :code:`random_spikes`. You can control the time before (:code:`ms_before`)
+  and the time after (:code:`ms_after`) to ensure that you have a full waveform. Because waveforms occur on multiple channels with multiple
+  samples this can be a big data structure. 
+* :code:`templates` are calculated from the raw waveform data and are used for downstream analyses
+  (e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question: if the :code:`templates` are what are used,
+  then why save the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
+  :code:`random_spikes`) or 2) from the :code:`waveforms`. When getting :code:`templates` from the raw data we are limited to obtaining averages
+  and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the templates as medians or percentiles
+  in addition to the average or standard deviations of the :code:`waveforms`. So it is important to think about the type of downstream analyses that
+  you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or after :code:`waveforms`.
+* :code:`noise_levels` compute noise-levels in a channel-wise fashion. This provides important information about the specific recording session
+  and is important for some downstream quality analyses.
 
 
 .. note::
