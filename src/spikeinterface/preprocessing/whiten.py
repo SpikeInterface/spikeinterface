@@ -131,7 +131,9 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
 whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
 
 
-def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None, regularize=False):
+def compute_whitening_matrix(
+    recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None, regularize=False
+):
     """
     Compute whitening matrix
 
@@ -164,7 +166,7 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
 
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
-    random_data = random_data   
+    random_data = random_data
 
     if apply_mean:
         M = np.mean(random_data, axis=0)
@@ -179,6 +181,7 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
         cov = cov / data.shape[0]
     else:
         import sklearn.covariance
+
         estimator = sklearn.covariance.GraphicalLassoCV()
         estimator.fit(data)
         cov = estimator.covariance_
