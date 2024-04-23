@@ -140,11 +140,11 @@ There are also hybrid options, which can be helpful if you're mostly using defau
 
 Extensions are generally saved in two ways, suitable for two workflows:
 
-1. When the sorting analyzer is stored in memory, the extensions are only saved when the :code:`.save_as` method is called. 
+1. When the sorting analyzer is stored in memory, the extensions are only saved when the :code:`.save_as` method is called.
   This saves the sorting analyzer and all it's extensions in their current state. This is useful when trying out different
   parameters and initially setting up your pipeline.
 2. When the sorting analyzer is stored on disk the extensions are, by default, saved when they are calculated. You calculate
-  extensions without saving them by specifying :code:`save=False` as a :code:`compute` argument. (e.g. 
+  extensions without saving them by specifying :code:`save=False` as a :code:`compute` argument. (e.g.
   :code:`sorting_analyzer.compute('waveforms', save=False)`).
 
 
@@ -163,7 +163,7 @@ you'd like to save. A mixture can lead to unexpected behavior. For example, cons
     sorting_analyzer.save_as(folder="my_sorting_analyzer")
     sorting_analyzer.compute("random_spikes", save=True)
 
-The :code:`sorting_analyzer` is **still** saved in memory. The :code:`save_as` method only made a snapshot 
+The :code:`sorting_analyzer` is **still** saved in memory. The :code:`save_as` method only made a snapshot
 of the sorting analyzer which is saved in a folder. Hence :code:`compute` doesn't know about the folder
 and doesn't save anything. If we wanted to save the extension we should have started with a non-memory sorting analyzer:
 

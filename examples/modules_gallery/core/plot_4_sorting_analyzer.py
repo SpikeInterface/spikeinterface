@@ -117,7 +117,7 @@ analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, **job_kwargs)
 # Because certain extensions rely on others (e.g. we need waveforms to calculate
 # the templates) if we recompute an extension it will delete any children extensions.
 # Since we just recalculated "waveforms" when we print our analyzer we will see
-# that it no longer has templates: (Read more about parent/child dependency in the 
+# that it no longer has templates: (Read more about parent/child dependency in the
 # `core <https://spikeinterface.readthedocs.io/en/latest/modules/core.html#sortinganalyzer>`_
 # and `postprocessing <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_ documentation.)
 
