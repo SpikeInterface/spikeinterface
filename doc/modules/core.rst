@@ -211,10 +211,10 @@ The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in m
 * | :code:`zarr`: the sorting analyzer is saved to a `Zarr <https://zarr.dev/>`_  folder, and each extension is a Zarr group. This is the recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
 * | :code:`binary_folder`: the sorting analyzer is saved to a folder, and each extension creates a sub-folder. The extension data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
 
-If the sorting analyzer is in memory, the :code:`SortingAnalyzer.save_as` function can be used to save it 
-**and all its extensions** to disk. The function can also be used to switch a :code:`zarr` or :code:`binary_folder` into an 
-in-memory object. This can be useful if you want to keep your original analysis, but want to test changing parameters. 
-Once a :code:`SortingAnalyzer` has been moved into memory it will only write to disk if :code:`SortingAnalyzer.save_as` 
+If the sorting analyzer is in memory, the :code:`SortingAnalyzer.save_as` function can be used to save it
+**and all its extensions** to disk. The function can also be used to switch a :code:`zarr` or :code:`binary_folder` into an
+in-memory object. This can be useful if you want to keep your original analysis, but want to test changing parameters.
+Once a :code:`SortingAnalyzer` has been moved into memory it will only write to disk if :code:`SortingAnalyzer.save_as`
 is run again with one of the backends supplied.
 
 .. code-block:: python
@@ -306,11 +306,11 @@ Since these core extensions are important for all other extensions it is importa
 
 * :code:`random_spikes` allows the user fine control in how they wish to sample their raw data. For example, for a neuron with 10,000 spikes
   it may be too computationally expensive (& memory expensive) to load all spikes. So in this case :code:`random_spikes` allows you to
-  chose the number of spikes you wish to subsample for downstream analyses. 
+  chose the number of spikes you wish to subsample for downstream analyses.
 * :code:`waveforms` is the extension that goes through your
   raw data and creates a waveform for each spike within the :code:`random_spikes`. You can control the time before (:code:`ms_before`)
   and the time after (:code:`ms_after`) to ensure that you have a full waveform. Because waveforms occur on multiple channels with multiple
-  samples this can be a big data structure. 
+  samples this can be a big data structure.
 * :code:`templates` are calculated from the raw waveform data and are used for downstream analyses
   (e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question: if the :code:`templates` are what are used,
   then why save the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
