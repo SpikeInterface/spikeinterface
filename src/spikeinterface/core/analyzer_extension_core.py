@@ -474,7 +474,8 @@ class ComputeTemplates(AnalyzerExtension):
             templates_array = self.data[key]
 
         if save:
-            self.save()
+            if not self.sorting_analyzer.is_read_only():
+                self.save()
 
         if unit_ids is not None:
             unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
