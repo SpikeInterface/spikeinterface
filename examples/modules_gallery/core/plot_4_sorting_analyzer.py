@@ -69,7 +69,8 @@ print(analyzer)
 
 ###############################################################################
 # A :py:class:`~spikeinterface.core.SortingAnalyzer` object can be persistant to disk
-# when using format="binary_folder" or format="zarr"
+# when using format="binary_folder" or format="zarr". Read more about saving
+# sorting analyzers in the `core documentation <https://spikeinterface.readthedocs.io/en/latest/modules/core.html#sortinganalyzer>`_.
 
 folder = "analyzer_folder"
 analyzer = create_sorting_analyzer(sorting=sorting,
@@ -114,14 +115,29 @@ analyzer.compute("waveforms", ms_before=1.0, ms_after=2.0, **job_kwargs)
 
 #################################################################################
 # Because certain extensions rely on others (e.g. we need waveforms to calculate
-# the templates) if we recompute an extension it will delete any children extensions
+# the templates) if we recompute an extension it will delete any children extensions.
 # Since we just recalculated "waveforms" when we print our analyzer we will see
-# that it no longer has templates
+# that it no longer has templates: (Read more about parent/child dependency in the 
+# `core <https://spikeinterface.readthedocs.io/en/latest/modules/core.html#sortinganalyzer>`_
+# and `postprocessing <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_ documentation.)
 
 print(analyzer)
 
 # so let's get our templates back.
 analyzer.compute("templates", operators=["average", "median", "std"])
+
+
+###############################################################################
+# Note that there are a few different ways to calculate extensions. You might find it easier
+# to keep the calculation parameters in a dictionary. Let's recalculate everything using this notation:
+
+job_kwargs = dict(n_jobs=8, chunk_duration="1s", progress_bar=True)
+compute_dict = {
+    'random_spikes': {'method': 'uniform', 'max_spikes_per_unit': 500},
+    'waveforms': {'ms_before': 1.0, 'ms_after': 2.0},
+    'templates': {'operators': ["average", "median", "std"]}
+}
+analyzer.compute(compute_dict, **job_kwargs)
 
 ###############################################################################
 # Each extension can retrieve some data
@@ -161,7 +177,8 @@ for unit_index, unit_id in enumerate(analyzer.unit_ids[:3]):
 ###############################################################################
 # The SortingAnalyzer can be saved to another format using save_as()
 # So the computation can be done with format="memory" and then saved to disk
-# in the zarr format by using save_as()
+# in the zarr format by using save_as(). This will also save all the extensions
+# in their current state.
 
 analyzer.save_as(folder="analyzer.zarr", format="zarr")
 
