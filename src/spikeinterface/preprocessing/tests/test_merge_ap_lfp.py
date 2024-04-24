@@ -29,9 +29,9 @@ def test_MergeApLfpRecording():
     T = 10
 
     # Generate a 10-seconds 2-channels white noise recording.
-    original_traces = np.random.normal(loc=0.0, scale=1.0, size=(T*sf, 2))
+    original_traces = np.random.normal(loc=0.0, scale=1.0, size=(T * sf, 2))
     original_fourier = np.fft.rfft(original_traces, axis=0)
-    freq = np.fft.rfftfreq(original_traces.shape[0], d=1/sf)
+    freq = np.fft.rfftfreq(original_traces.shape[0], d=1 / sf)
 
     # Remove 0Hz (can't be reconstructed) and Nyquist frequency (behaves weirdly).
     original_fourier[0] = 0.0
@@ -48,7 +48,7 @@ def test_MergeApLfpRecording():
     trace_lfp = np.fft.irfft(fourier_lfp, axis=0)[::12]
 
     ap_recording = NumpyRecording(trace_ap, sf)
-    lfp_recording = NumpyRecording(trace_lfp, sf/12)
+    lfp_recording = NumpyRecording(trace_lfp, sf / 12)
 
     merged_recording = MergeNeuropixels1Recording(ap_recording, lfp_recording)
     merged_traces = merged_recording.get_traces()

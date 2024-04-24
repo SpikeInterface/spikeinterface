@@ -129,10 +129,17 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         errors = [_time_shift_error(t, ap_fft, lfp_fft, ap_freq[freq_slice]) for t in t_axis]
         shift_estimate = t_axis[np.argmin(errors)]
 
-        minimization = minimize(_time_shift_error, method="Powell", x0=[shift_estimate], args=(ap_fft, lfp_fft, ap_freq[freq_slice]), bounds=[(shift_estimate-1e-4, shift_estimate+1e-4)], tol=1e-10)
+        minimization = minimize(
+            _time_shift_error,
+            method="Powell",
+            x0=[shift_estimate],
+            args=(ap_fft, lfp_fft, ap_freq[freq_slice]),
+            bounds=[(shift_estimate - 1e-4, shift_estimate + 1e-4)],
+            tol=1e-10,
+        )
         shift_estimate = minimization.x[0]
 
-        reshifted_lfp_fourier = reconstructed_lfp_fourier / np.exp(-2j*math.pi * lfp_freq[:, None] * shift_estimate)
+        reshifted_lfp_fourier = reconstructed_lfp_fourier / np.exp(-2j * math.pi * lfp_freq[:, None] * shift_estimate)
 
         # Compute aliasing of high frequencies on LFP channels
         lfp_nyquist = self.lfp_recording.sampling_frequency / 2
