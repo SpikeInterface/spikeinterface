@@ -1,7 +1,6 @@
 import math
 from typing import Callable, ClassVar, List, Union
 import numpy as np
-from scipy.optimize import minimize
 
 from ..core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin
 
@@ -85,6 +84,8 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
+        from scipy.optimize import minimize
+
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
