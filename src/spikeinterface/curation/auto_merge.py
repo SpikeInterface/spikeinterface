@@ -461,7 +461,7 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
                 elif template_metric == 'l2':
                     d = np.linalg.norm(temp1 - temp2) / norm
                 elif template_metric == 'cosine':
-                    d = min(1, 1 - np.sum(temp1 * temp2) / norm)
+                    d = 1 - np.sum(temp1 * temp2) / norm
                 all_shift_diff.append(d)
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
     
