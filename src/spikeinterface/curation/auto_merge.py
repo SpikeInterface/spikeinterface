@@ -423,7 +423,7 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     """
     unit_ids = sorting.unit_ids
     n = len(unit_ids)
-    assert template_metric in ['l1', 'l2', 'cosine'], "Not a valid metric!"
+    assert template_metric in ["l1", "l2", "cosine"], "Not a valid metric!"
 
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
