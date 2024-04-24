@@ -12,9 +12,9 @@ the spike sorting output. Most of the post-processing functions require a
 Extensions as AnalyzerExtensions
 --------------------------------
 
-There are several postprocessing tools available, and all
-of them are implemented as a :py:class:`~spikeinterface.core.ResultExtension`. All computations on top
-of a :code:`SortingAnalyzer` will be saved along side the :code:`SortingAnalyzer` itself (sub folder, zarr path or sub dict).
+There are several postprocessing tools available, and all of them are implemented as a 
+:py:class:`~spikeinterface.core.ResultExtension`. If the :code:`SortingAnalyzer` is saved to disk, all computations on 
+top of it will be saved alongside the :code:`SortingAnalyzer` itself (sub folder, zarr path or sub dict).
 This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a
 :code:`SortingAnalyzer`.
 
@@ -59,7 +59,7 @@ To check what extensions spikeinterface can calculate, you can use the :code:`ge
 
     >>> ['random_spikes', 'waveforms', 'templates', 'noise_levels', 'amplitude_scalings', 'correlograms', 'isi_histograms', 'principal_components', 'spike_amplitudes', 'spike_locations', 'template_metrics', 'template_similarity', 'unit_locations', 'quality_metrics']
 
-There is detailed documentation about each extension :ref:`below`<Available postprocessing extensions>.
+There is detailed documentation about each extension :ref:`below<Available postprocessing extensions>`.
 Each extension comes from a different module. To use the :code:`postprocessing` extensions, you'll need to have the `postprocessing`
 module loaded.
 
@@ -108,13 +108,13 @@ You can also compute several extensions at the same time by passing a list:
     sorting_analyzer.compute(["principal_components", "templates"])
 
 You might want to change the parameters. Two parameters of principal_components are :code:`n_components` and :code:`mode`.
-We can choose these are follows:
+We can choose these as follows:
 
 .. code-block:: python
 
     sorting_analyzer.compute("principal_components", n_components=3, mode="by_channel_local")
 
-As your code gets more complicated it might be easier to store your calculation in a dict, especially if you're calculating more
+As your code gets more complicated it might be easier to store your calculation in a dictionary, especially if you're calculating more
 than one thing:
 
 .. code-block:: python
@@ -141,11 +141,11 @@ There are also hybrid options, which can be helpful if you're mostly using defau
 Extensions are generally saved in two ways, suitable for two workflows:
 
 1. When the sorting analyzer is stored in memory, the extensions are only saved when the :code:`.save_as` method is called.
-  This saves the sorting analyzer and all it's extensions in their current state. This is useful when trying out different
-  parameters and initially setting up your pipeline.
+   This saves the sorting analyzer and all it's extensions in their current state. This is useful when trying out different
+   parameters and initially setting up your pipeline.
 2. When the sorting analyzer is stored on disk the extensions are, by default, saved when they are calculated. You calculate
-  extensions without saving them by specifying :code:`save=False` as a :code:`compute` argument. (e.g.
-  :code:`sorting_analyzer.compute('waveforms', save=False)`).
+   extensions without saving them by specifying :code:`save=False` as a :code:`compute` argument. (e.g.
+   :code:`sorting_analyzer.compute('waveforms', save=False)`).
 
 
 
@@ -163,7 +163,7 @@ you'd like to save. A mixture can lead to unexpected behavior. For example, cons
     sorting_analyzer.save_as(folder="my_sorting_analyzer")
     sorting_analyzer.compute("random_spikes", save=True)
 
-The :code:`sorting_analyzer` is **still** saved in memory. The :code:`save_as` method only made a snapshot
+Here the random_spikes extension is **not** saved. The :code:`sorting_analyzer` is **still** saved in memory. The :code:`save_as` method only made a snapshot
 of the sorting analyzer which is saved in a folder. Hence :code:`compute` doesn't know about the folder
 and doesn't save anything. If we wanted to save the extension we should have started with a non-memory sorting analyzer:
 

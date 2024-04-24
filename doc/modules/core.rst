@@ -177,7 +177,7 @@ and it supports several **extensions** (derived from the :py:class:`~spikeinterf
 to perform further analysis, such as calculating :code:`waveforms` and :code:`templates`.
 
 Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* and the physical *scaling*.
-Sparsity defines the channels on which waveforms and templates are calculating using, for example, based on a
+Sparsity defines the channels on which waveforms and templates are calculated using, for example, based on a
 physical distance from the channel with the largest peak amplitude (see the :ref:`Sparsity` section). Scaling, set by
 the :code:`return_scaled` argument, says whether the data has been converted from integer values to physical units such as
 Voltage (see the end of the :ref:`Recording` section).
@@ -299,7 +299,7 @@ is calculated using :code:`waveforms`.
 
     Consider the case when an extension (e.g. :code:`waveforms`) depends on another extension (the spikes which were randomly selected
     by :code:`random_spikes`). If we were to recalculate :code:`random_spikes`, the :code:`waveforms` will change (a little).
-    To avoid this inconsistency, spike interface deletes children if the parent is recalculated. E.g. if :code:`random_spikes`
+    To avoid this inconsistency, spikeinterface deletes children if the parent is recalculated. E.g. if :code:`random_spikes`
     is recalculated, :code:`waveforms` is deleted. This keeps consistency between your extensions, and is better for provenance.
 
 Since these core extensions are important for all other extensions it is important to understand how they work and what they are:
@@ -317,7 +317,7 @@ Since these core extensions are important for all other extensions it is importa
   :code:`random_spikes`) or 2) from the :code:`waveforms`. When getting :code:`templates` from the raw data we are limited to obtaining averages
   and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the templates as medians or percentiles
   in addition to the average or standard deviations of the :code:`waveforms`. So it is important to think about the type of downstream analyses that
-  you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or after :code:`waveforms`.
+  you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or using :code:`waveforms`.
 * :code:`noise_levels` compute noise-levels in a channel-wise fashion. This provides important information about the specific recording session
   and is important for some downstream quality analyses.
 
@@ -362,22 +362,13 @@ examples is seen below:
     )
 
 It is important when calculating extensions to remember which backend you are using. :code:`compute` accepts an argument
-:code:`save` which will write results to disk if using the :code:`zarr` or :code:`binary_folder` backends. Although you
-can enter :code:`save=True` this does nothing if your :code:`SortingAnalyzer` is *in-memory*.
+:code:`save` which will write results to disk if using the :code:`zarr` or :code:`binary_folder` backends. If your :code:`SortingAnalyzer`
+is in memory using :code:`save=True` **will not** write to disk since spikeinterface does not know where to save it.
 
 The reason to use :code:`save=False` is it allows you to test parameters with the :code:`zarr` or :code:`binary_folder`
 backends without writing to disk. So, you can compute an extension *in-memory* with different parameters and then when
 you have decided on your desired parameters you can either use :code:`compute` with :code:`save=True` or use :code:`save_as`
 to write everything out to disk.
-
-.. note::
-
-    When using :code:`SortingAnalyzer.compute` the default is :code:`save=True`. This does nothing for *in-memory*, but
-    means that the default is to write every computation to disk. This is to allow end-users to save their work as they
-    perform an analysis if they use a disk based backend. So if you wish to save your results at each step (and overwrite)
-    you need to initialize or :code:`save_as` to a :code:`zarr` or :code:`binary_folder`. If your :code:`SortingAnalyzer`
-    is in memory using :code:`save` **will not** write to disk.
-
 
 Event
 -----
