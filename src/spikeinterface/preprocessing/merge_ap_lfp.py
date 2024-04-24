@@ -1,5 +1,7 @@
+import math
 from typing import Callable, ClassVar, List, Union
 import numpy as np
+from scipy.optimize import minimize
 
 from ..core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin
 
@@ -19,9 +21,9 @@ class MergeApLfpRecording(BaseRecording):
         Takes the frequencies as parameter, and outputs the transfer function.
     lfp_filter: Callable
         Transfer function of the filter used in the lfp_recording.
+        Takes the frequencies as parameter, and outputs the transfer function.
     margin: int
         The margin (in samples) to use when extracting the trace.
-        Takes the frequencies as parameter, and outputs the transfer function.
 
     Returns
     --------
@@ -35,7 +37,7 @@ class MergeApLfpRecording(BaseRecording):
         lfp_recording: BaseRecording,
         ap_filter: Callable[[np.ndarray], np.ndarray],
         lfp_filter: Callable[[np.ndarray], np.ndarray],
-        margin: int = 60_000,
+        margin: int = 15_000,
     ) -> None:
         BaseRecording.__init__(self, ap_recording.sampling_frequency, ap_recording.channel_ids, ap_recording.dtype)
         ap_recording.copy_metadata(self)
@@ -47,7 +49,7 @@ class MergeApLfpRecording(BaseRecording):
                 MergeApLfpRecordingSegment(ap_recording_segment, lfp_recording_segment, ap_filter, lfp_filter, margin)
             )
 
-        self._kwargs = {  # TODO: Is callable serializable?
+        self._kwargs = {  # TODO: Is callable serializable? (missing ap_filter & lfp_filter at the moment)
             "ap_recording": ap_recording.to_dict(),
             "lfp_recording": lfp_recording.to_dict(),
             "margin": margin,
@@ -118,6 +120,20 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         reconstructed_ap_fourier = ap_fourier / ap_filter[:, None]
         reconstructed_lfp_fourier = lfp_fourier / lfp_filter[:, None]
 
+        # Compute time shift between AP and LFP (this varies in time!!!)
+        freq_slice = slice(np.searchsorted(ap_freq, 100), np.searchsorted(ap_freq, 600))
+        ap_fft = reconstructed_ap_fourier[freq_slice, :]
+        lfp_fft = reconstructed_lfp_fourier[freq_slice, :]
+
+        t_axis = np.arange(-2000, 2000, 40) * 1e-6
+        errors = [_time_shift_error(t, ap_fft, lfp_fft, ap_freq[freq_slice]) for t in t_axis]
+        shift_estimate = t_axis[np.argmin(errors)]
+
+        minimization = minimize(_time_shift_error, method="Powell", x0=[shift_estimate], args=(ap_fft, lfp_fft, ap_freq[freq_slice]), bounds=[(shift_estimate-1e-4, shift_estimate+1e-4)], tol=1e-10)
+        shift_estimate = minimization.x[0]
+
+        reshifted_lfp_fourier = reconstructed_lfp_fourier / np.exp(-2j*math.pi * lfp_freq[:, None] * shift_estimate)
+
         # Compute aliasing of high frequencies on LFP channels
         lfp_nyquist = self.lfp_recording.sampling_frequency / 2
         fourier_aliased = reconstructed_ap_fourier.copy()
@@ -126,13 +142,13 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         traces_aliased = np.fft.irfft(fourier_aliased, axis=0)[:: self.AP_TO_LFP]
         fourier_aliased = np.fft.rfft(traces_aliased, axis=0) / lfp_filter[:, None]
         fourier_aliased = fourier_aliased[: np.searchsorted(ap_freq, lfp_nyquist, side="right")]
-        lfp_aa_fourier = reconstructed_lfp_fourier - fourier_aliased
+        lfp_aa_fourier = reshifted_lfp_fourier - fourier_aliased
 
         # Reconstruct using both AP and LFP channels
         # TODO: Have some flexibility on the ratio
         lfp_filt = self.lfp_filter(ap_freq)
         ratio = np.abs(lfp_filt[1:]) / (np.abs(lfp_filt[1:]) + np.abs(ap_filter[1:]))
-        ratio = 1 / (1 + np.exp(-6 * np.tan(np.pi * (ratio - 0.5))))
+        ratio = 1 / (1 + np.exp(-6 * np.tan(math.pi * (ratio - 0.5))))
         ratio = ratio[:, None]
 
         fourier_reconstructed = np.empty(reconstructed_ap_fourier.shape, dtype=np.complex128)
@@ -199,3 +215,31 @@ def generate_RC_filter(frequencies: np.ndarray, cut: Union[float, List[float]], 
         raise AttributeError(f"btype '{btype}' is invalid for generate_RC_filter.")
 
     return lowpass * highpass
+
+
+def _time_shift_error(delay: float, ap_fft: np.ndarray, lfp_fft: np.ndarray, freq: np.ndarray) -> float:
+    """
+    Computes the error for a given delay between ap and lfp traces.
+
+    Parameters
+    ----------
+    delay: float
+        The delay (in s) between AP and LFP.
+        Positive values indicate that lfp comes after ap.
+    ap_fft: np.ndarray (n_freq, n_channels)
+        The AP trace in the Fourier domain after unfiltering.
+    lfp_fft: np.ndarray (n_freq, n_channels)
+        The LFP trace in the Fourier domain after unfiltering.
+    freq: np.ndarray (n_freq)
+        The frequencies (in Hz).
+
+    Returns
+    -------
+    error: float
+        The error computed for the given delay.
+    """
+
+    expected_phase = -2 * math.pi * freq[:, None] * delay
+    errors = np.angle(lfp_fft / ap_fft / np.exp(1j * expected_phase))
+
+    return np.sum(np.abs(errors))
