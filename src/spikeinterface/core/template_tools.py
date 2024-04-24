@@ -140,14 +140,23 @@ def get_template_extremum_channel(
         Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
-    assert peak_sign in ("both", "neg", "pos")
-    assert mode in ("extremum", "at_index")
-    assert outputs in ("id", "index")
+    assert peak_sign in ("both", "neg", "pos"), "`peak_sign` must be one of `both`, `neg`, or `pos`"
+    assert mode in ("extremum", "at_index"), "`mode` must be either `extremum` or `at_index`"
+    assert outputs in ("id", "index"), "`outputs` must be either `id` or `index`"
 
     unit_ids = templates_or_sorting_analyzer.unit_ids
     channel_ids = templates_or_sorting_analyzer.channel_ids
 
-    peak_values = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
+    # if SortingAnalyzer need to use global SortingAnalyzer return_scaled otherwise
+    # we just use the previous default of return_scaled=True (for templates)
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        return_scaled = templates_or_sorting_analyzer.return_scaled
+    else:
+        return_scaled = True
+
+    peak_values = get_template_amplitudes(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled
+    )
     extremum_channels_id = {}
     extremum_channels_index = {}
     for unit_id in unit_ids:
