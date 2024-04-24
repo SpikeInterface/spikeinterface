@@ -12,8 +12,8 @@ the spike sorting output. Most of the post-processing functions require a
 Extensions as AnalyzerExtensions
 --------------------------------
 
-There are several postprocessing tools available, and all of them are implemented as a 
-:py:class:`~spikeinterface.core.ResultExtension`. If the :code:`SortingAnalyzer` is saved to disk, all computations on 
+There are several postprocessing tools available, and all of them are implemented as a
+:py:class:`~spikeinterface.core.ResultExtension`. If the :code:`SortingAnalyzer` is saved to disk, all computations on
 top of it will be saved alongside the :code:`SortingAnalyzer` itself (sub folder, zarr path or sub dict).
 This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a
 :code:`SortingAnalyzer`.
