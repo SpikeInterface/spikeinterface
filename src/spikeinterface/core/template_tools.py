@@ -96,14 +96,14 @@ def get_template_amplitudes(
             if peak_sign == "both":
                 values = np.max(np.abs(template), axis=0)
             elif peak_sign == "neg":
-                values = -np.min(template, axis=0)
+                values = np.min(template, axis=0)
             elif peak_sign == "pos":
                 values = np.max(template, axis=0)
         elif mode == "at_index":
             if peak_sign == "both":
                 values = np.abs(template[before, :])
             elif peak_sign == "neg":
-                values = -template[before, :]
+                values = template[before, :]
             elif peak_sign == "pos":
                 values = template[before, :]
 
@@ -151,7 +151,7 @@ def get_template_extremum_channel(
     extremum_channels_id = {}
     extremum_channels_index = {}
     for unit_id in unit_ids:
-        max_ind = np.argmax(peak_values[unit_id])
+        max_ind = np.argmax(np.abs(peak_values[unit_id]))
         extremum_channels_id[unit_id] = channel_ids[max_ind]
         extremum_channels_index[unit_id] = max_ind
 
