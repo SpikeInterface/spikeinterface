@@ -196,7 +196,14 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
 
     shifts = {}
 
-    templates_array = get_dense_templates_array(templates_or_sorting_analyzer)
+    # We need to use the SortingAnalyzer return_scaled if possible
+    # otherwise for Templates default to True
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        return_scaled = templates_or_sorting_analyzer.return_scaled
+    else:
+        return_scaled = True
+
+    templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
 
     for unit_ind, unit_id in enumerate(unit_ids):
         template = templates_array[unit_ind, :, :]
@@ -247,7 +254,14 @@ def get_template_extremum_amplitude(
 
     extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
 
-    extremum_amplitudes = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        return_scaled = templates_or_sorting_analyzer.return_scaled
+    else:
+        return_scaled = True
+
+    extremum_amplitudes = get_template_amplitudes(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled
+    )
 
     unit_amplitudes = {}
     for unit_id in unit_ids:
