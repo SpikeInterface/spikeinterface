@@ -54,7 +54,15 @@ class MergeApLfpRecording(BaseRecording):
             ap_recording_segment = ap_recording._recording_segments[segment_index]
             lfp_recording_segment = lfp_recording._recording_segments[segment_index]
             self.add_recording_segment(
-                MergeApLfpRecordingSegment(ap_recording_segment, lfp_recording_segment, ap_filter, lfp_filter, margin, lfp_gain/ap_gain, ap_recording.get_dtype())
+                MergeApLfpRecordingSegment(
+                    ap_recording_segment,
+                    lfp_recording_segment,
+                    ap_filter,
+                    lfp_filter,
+                    margin,
+                    lfp_gain / ap_gain,
+                    ap_recording.get_dtype(),
+                )
             )
 
         self._kwargs = {  # TODO: Is callable serializable? (missing ap_filter & lfp_filter at the moment)
@@ -73,7 +81,7 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         lfp_filter: Callable[[np.ndarray], np.ndarray],
         margin: int,
         lfp_to_ap_gain: np.ndarray,
-        dtype
+        dtype,
     ) -> None:
         BaseRecordingSegment.__init__(self, ap_recording_segment.sampling_frequency, ap_recording_segment.t_start)
 
@@ -119,9 +127,14 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
             ap_traces = ap_traces[:-right_leftover]
         ap_traces = ap_traces[left_leftover:]
 
-        lfp_traces = self.lfp_recording.get_traces(
-            (start_frame - left_margin) // self.AP_TO_LFP, (end_frame + right_margin) // self.AP_TO_LFP, channel_indices
-        ) * self.lfp_to_ap_gain
+        lfp_traces = (
+            self.lfp_recording.get_traces(
+                (start_frame - left_margin) // self.AP_TO_LFP,
+                (end_frame + right_margin) // self.AP_TO_LFP,
+                channel_indices,
+            )
+            * self.lfp_to_ap_gain
+        )
 
         ap_fourier = np.fft.rfft(ap_traces, axis=0)
         lfp_fourier = np.fft.rfft(lfp_traces, axis=0)
@@ -164,7 +177,7 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         fourier_aliased *= self.lfp_filter(ap_freq)[:, None]
         traces_aliased = np.fft.irfft(fourier_aliased, axis=0)[:: self.AP_TO_LFP]
         fourier_aliased = np.fft.rfft(traces_aliased, axis=0) / lfp_filter[:, None]
-        fourier_aliased = fourier_aliased[: np.searchsorted(ap_freq, lfp_nyquist+1e-6, side="right")]
+        fourier_aliased = fourier_aliased[: np.searchsorted(ap_freq, lfp_nyquist + 1e-6, side="right")]
         lfp_aa_fourier = reshifted_lfp_fourier - fourier_aliased
 
         # Reconstruct using both AP and LFP channels
@@ -175,7 +188,7 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         ratio = ratio[:, None]
 
         fourier_reconstructed = np.empty(reconstructed_ap_fourier.shape, dtype=np.complex128)
-        idx = np.searchsorted(ap_freq, lfp_nyquist+1e-6, side="right")
+        idx = np.searchsorted(ap_freq, lfp_nyquist + 1e-6, side="right")
         fourier_reconstructed[idx:] = reconstructed_ap_fourier[idx:]
         fourier_reconstructed[:idx] = self.AP_TO_LFP * lfp_aa_fourier * ratio[:idx] + reconstructed_ap_fourier[:idx] * (
             1 - ratio[:idx]
