@@ -143,42 +143,38 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
 
         ap_filter = self.ap_filter(ap_freq)
         lfp_filter = self.lfp_filter(lfp_freq)
-        ap_filter = np.where(ap_filter == 0, 1.0, ap_filter)
-        lfp_filter = np.where(lfp_filter == 0, 1.0, lfp_filter)
+        ap_filter[0] = lfp_filter[0] = 1.0  # Don't reconstruct 0 Hz.
 
-        reconstructed_ap_fourier = ap_fourier / ap_filter[:, None]
-        reconstructed_lfp_fourier = lfp_fourier / lfp_filter[:, None]
+        ap_fourier /= ap_filter[:, None]
+        lfp_fourier /= lfp_filter[:, None]
 
         # Compute time shift between AP and LFP (this varies in time!!!)
         freq_slice = slice(np.searchsorted(ap_freq, 100), np.searchsorted(ap_freq, 600))
-        ap_fft = reconstructed_ap_fourier[freq_slice, :]
-        lfp_fft = reconstructed_lfp_fourier[freq_slice, :]
 
         t_axis = np.arange(-2000, 2000, 60) * 1e-6
-        errors = [_time_shift_error(t, ap_fft, lfp_fft, ap_freq[freq_slice]) for t in t_axis]
+        errors = [_time_shift_error(t, ap_fourier[freq_slice, :], lfp_fourier[freq_slice, :], ap_freq[freq_slice]) for t in t_axis]
         shift_estimate = t_axis[np.argmin(errors)]
 
         minimization = minimize(
             _time_shift_error,
             method="Powell",
             x0=[shift_estimate],
-            args=(ap_fft, lfp_fft, ap_freq[freq_slice]),
+            args=(ap_fourier[freq_slice, :], lfp_fourier[freq_slice, :], ap_freq[freq_slice]),
             bounds=[(shift_estimate - 1e-4, shift_estimate + 1e-4)],
             tol=1e-6,
         )
         shift_estimate = minimization.x[0]
-
-        reshifted_lfp_fourier = reconstructed_lfp_fourier / np.exp(-2j * math.pi * lfp_freq[:, None] * shift_estimate)
+        lfp_fourier /= np.exp(-2j * math.pi * lfp_freq[:, None] * shift_estimate)
 
         # Compute aliasing of high frequencies on LFP channels
         lfp_nyquist = self.lfp_recording.sampling_frequency / 2
-        fourier_aliased = reconstructed_ap_fourier.copy()
-        fourier_aliased[ap_freq <= lfp_nyquist] = 0.0
+        nyquist_index = np.searchsorted(ap_freq, lfp_nyquist + 1e-6, side="right")
+        fourier_aliased = ap_fourier.copy()
+        fourier_aliased[:nyquist_index] = 0.0
         fourier_aliased *= self.lfp_filter(ap_freq)[:, None]
         traces_aliased = np.fft.irfft(fourier_aliased, axis=0)[:: self.AP_TO_LFP]
         fourier_aliased = np.fft.rfft(traces_aliased, axis=0) / lfp_filter[:, None]
-        fourier_aliased = fourier_aliased[: np.searchsorted(ap_freq, lfp_nyquist + 1e-6, side="right")]
-        lfp_aa_fourier = reshifted_lfp_fourier - fourier_aliased
+        lfp_fourier -= fourier_aliased[:nyquist_index]
 
         # Reconstruct using both AP and LFP channels
         # TODO: Have some flexibility on the ratio
@@ -187,11 +183,10 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         ratio = 1 / (1 + np.exp(-6 * np.tan(math.pi * (ratio - 0.5))))
         ratio = ratio[:, None]
 
-        fourier_reconstructed = np.empty(reconstructed_ap_fourier.shape, dtype=np.complex128)
-        idx = np.searchsorted(ap_freq, lfp_nyquist + 1e-6, side="right")
-        fourier_reconstructed[idx:] = reconstructed_ap_fourier[idx:]
-        fourier_reconstructed[:idx] = self.AP_TO_LFP * lfp_aa_fourier * ratio[:idx] + reconstructed_ap_fourier[:idx] * (
-            1 - ratio[:idx]
+        fourier_reconstructed = np.empty(ap_fourier.shape, dtype=np.complex128)
+        fourier_reconstructed[nyquist_index:] = ap_fourier[nyquist_index:]
+        fourier_reconstructed[:nyquist_index] = self.AP_TO_LFP * lfp_fourier * ratio[:nyquist_index] + ap_fourier[:nyquist_index] * (
+            1 - ratio[:nyquist_index]
         )
 
         # To get back to the 0.5 - 10,000 Hz original filter
