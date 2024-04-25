@@ -58,7 +58,7 @@ def get_template_amplitudes(
     peak_sign: "neg" | "pos" | "both" = "neg",
     mode: "extremum" | "at_index" = "extremum",
     return_scaled: bool = True,
-    abs_value: bool = True
+    abs_value: bool = True,
 ):
     """
     Get amplitude per channel for each unit.
@@ -215,7 +215,7 @@ def get_template_extremum_amplitude(
     templates_or_sorting_analyzer,
     peak_sign: "neg" | "pos" | "both" = "neg",
     mode: "extremum" | "at_index" = "at_index",
-    abs_value: bool = True
+    abs_value: bool = True,
 ):
     """
     Computes amplitudes on the best channel.
@@ -246,7 +246,9 @@ def get_template_extremum_amplitude(
 
     extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
 
-    extremum_amplitudes = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, abs_value=abs_value)
+    extremum_amplitudes = get_template_amplitudes(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, abs_value=abs_value
+    )
 
     unit_amplitudes = {}
     for unit_id in unit_ids:
