@@ -152,7 +152,10 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         freq_slice = slice(np.searchsorted(ap_freq, 100), np.searchsorted(ap_freq, 600))
 
         t_axis = np.arange(-2000, 2000, 60) * 1e-6
-        errors = [_time_shift_error(t, ap_fourier[freq_slice, :], lfp_fourier[freq_slice, :], ap_freq[freq_slice]) for t in t_axis]
+        errors = [
+            _time_shift_error(t, ap_fourier[freq_slice, :], lfp_fourier[freq_slice, :], ap_freq[freq_slice])
+            for t in t_axis
+        ]
         shift_estimate = t_axis[np.argmin(errors)]
 
         minimization = minimize(
@@ -185,9 +188,9 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
 
         fourier_reconstructed = np.empty(ap_fourier.shape, dtype=np.complex128)
         fourier_reconstructed[nyquist_index:] = ap_fourier[nyquist_index:]
-        fourier_reconstructed[:nyquist_index] = self.AP_TO_LFP * lfp_fourier * ratio[:nyquist_index] + ap_fourier[:nyquist_index] * (
-            1 - ratio[:nyquist_index]
-        )
+        fourier_reconstructed[:nyquist_index] = self.AP_TO_LFP * lfp_fourier * ratio[:nyquist_index] + ap_fourier[
+            :nyquist_index
+        ] * (1 - ratio[:nyquist_index])
 
         # To get back to the 0.5 - 10,000 Hz original filter
         # filter_reconstructed = generate_RC_filter(ap_freq, [0.5, 10000])[:, None]
