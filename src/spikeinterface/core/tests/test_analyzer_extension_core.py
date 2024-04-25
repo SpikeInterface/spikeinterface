@@ -205,9 +205,13 @@ def test_ComputeNoiseLevels(format, sparse):
 def test_get_children_dependencies():
     assert "waveforms" in _extension_children["random_spikes"]
 
-    children = _get_children_dependencies("random_spikes")
-    assert "waveforms" in children
-    assert "templates" in children
+    rs_children = _get_children_dependencies("random_spikes")
+    assert "waveforms" in rs_children
+    assert "templates" in rs_children
+
+    assert rs_children.index('waveforms') < rs_children.index('templates')
+
+
 
 
 def test_delete_on_recompute():
