@@ -64,7 +64,7 @@ def test_MergeApLfpRecording():
     chunked_recording = merged_recording.save(folder=cache_folder / "chunked", n_jobs=2, chunk_duration="1s")
     chunked_traces = chunked_recording.get_traces()
 
-    assert np.allclose(merged_traces[1000:-1000], chunked_traces[1000:-1000], rtol=1, atol=0.04)
+    assert np.allclose(merged_traces[5000:-5000], chunked_traces[5000:-5000], rtol=1, atol=2e-2)
 
     # import plotly.graph_objects as go
     # fig = go.Figure()
@@ -91,7 +91,6 @@ def test_MergeApLfpRecording():
     # for i in range(1, T):
     #     fig.add_vline(x=i*sf, line_dash="dash", line_color="rgba(0, 0, 0, 0.3)")
 
-    # fig.update_xaxes(type="log")
     # fig.show()
 
 
