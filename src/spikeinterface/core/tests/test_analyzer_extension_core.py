@@ -209,9 +209,7 @@ def test_get_children_dependencies():
     assert "waveforms" in rs_children
     assert "templates" in rs_children
 
-    assert rs_children.index('waveforms') < rs_children.index('templates')
-
-
+    assert rs_children.index("waveforms") < rs_children.index("templates")
 
 
 def test_delete_on_recompute():
