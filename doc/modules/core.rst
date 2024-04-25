@@ -177,7 +177,7 @@ and it supports several **extensions** (derived from the :py:class:`~spikeinterf
 to perform further analysis, such as calculating :code:`waveforms` and :code:`templates`.
 
 Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* and the physical *scaling*.
-Sparsity defines the channels on which waveforms and templates are calculated using, for example, based on a
+Sparsity defines the channels on which waveforms and templates are calculated using, for example,  a
 physical distance from the channel with the largest peak amplitude (see the :ref:`Sparsity` section). Scaling, set by
 the :code:`return_scaled` argument, says whether the data has been converted from integer values to physical units such as
 Voltage (see the end of the :ref:`Recording` section).
