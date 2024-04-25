@@ -58,6 +58,7 @@ def get_template_amplitudes(
     peak_sign: "neg" | "pos" | "both" = "neg",
     mode: "extremum" | "at_index" = "extremum",
     return_scaled: bool = True,
+    abs_value: bool = True
 ):
     """
     Get amplitude per channel for each unit.
@@ -73,6 +74,8 @@ def get_template_amplitudes(
         "at_index": take value at spike index
     return_scaled: bool, default True
         The amplitude is scaled or not.
+    abs_value: bool = True
+        Whether the extremum amplitude should be returned as an absolute value or not
 
     Returns
     -------
@@ -102,10 +105,11 @@ def get_template_amplitudes(
         elif mode == "at_index":
             if peak_sign == "both":
                 values = np.abs(template[before, :])
-            elif peak_sign == "neg":
+            elif peak_sign in ["neg", "pos"]:
                 values = template[before, :]
-            elif peak_sign == "pos":
-                values = template[before, :]
+
+        if abs_value:
+            values = np.abs(values)
 
         peak_values[unit_id] = values
 
@@ -211,6 +215,7 @@ def get_template_extremum_amplitude(
     templates_or_sorting_analyzer,
     peak_sign: "neg" | "pos" | "both" = "neg",
     mode: "extremum" | "at_index" = "at_index",
+    abs_value: bool = True
 ):
     """
     Computes amplitudes on the best channel.
@@ -225,6 +230,9 @@ def get_template_extremum_amplitude(
         Where the amplitude is computed
         "extremum":  max or min
         "at_index": take value at spike index
+    abs_value: bool = True
+        Whether the extremum amplitude should be returned as an absolute value or not
+
 
     Returns
     -------
@@ -238,7 +246,7 @@ def get_template_extremum_amplitude(
 
     extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
 
-    extremum_amplitudes = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
+    extremum_amplitudes = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, abs_value=abs_value)
 
     unit_amplitudes = {}
     for unit_id in unit_ids:
