@@ -106,7 +106,7 @@ def get_potential_auto_merge(
         Pontential steps: "min_spikes", "remove_contaminated", "unit_positions", "correlogram", "template_similarity",
         "check_increase_score". Please check steps explanations above!
     template_metric: 'l1', 'l2' or 'cosine'
-        The metric to consider when measuring the distances between templates
+        The metric to consider when measuring the distances between templates. Default is l1
 
     Returns
     -------
@@ -207,7 +207,8 @@ def get_potential_auto_merge(
         ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
 
         templates = templates_ext.get_data(outputs="Templates")
-        templates = templates.to_sparse(sorting_analyzer.sparsity)
+        if sorting_analyzer.sparsity is not None:
+            templates = templates.to_sparse(sorting_analyzer.sparsity)
 
         templates_diff = compute_templates_diff(
             sorting,
@@ -415,6 +416,8 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     pair_mask: None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
+    template_metric: 'l1', 'l2' or 'cosine'
+        The metric to consider when measuring the distances between templates. Default is l1
 
     Returns
     -------
@@ -423,6 +426,7 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     """
     unit_ids = sorting.unit_ids
     n = len(unit_ids)
+    assert template_metric in ["l1", "l2", "cosine"], "Not a valid metric!"
 
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
@@ -430,10 +434,12 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     if isinstance(templates, Templates):
         adaptative_masks = (num_channels == None) and (templates.sparsity is not None)
         if templates.sparsity is not None:
-            sparsity = templates.sparsity.mask
+            sparsity_mask = templates.sparsity.mask
         templates_array = templates.get_dense_templates()
     else:
         templates_array = templates
+        adaptative_masks = False
+        sparsity_mask = None
 
     templates_diff = np.full((n, n), np.nan, dtype="float64")
     for unit_ind1 in range(n):
@@ -447,7 +453,9 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
             if not adaptative_masks:
                 chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
             else:
-                chan_inds = np.intersect1d(np.where(sparsity[unit_ind1])[0], np.where(sparsity[unit_ind2])[0])
+                chan_inds = np.intersect1d(
+                    np.flatnonzero(sparsity_mask[unit_ind1]), np.flatnonzero(sparsity_mask[unit_ind2])
+                )
 
             template1 = template1[:, chan_inds]
             template2 = template2[:, chan_inds]
@@ -468,7 +476,7 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
                 elif template_metric == "l2":
                     d = np.linalg.norm(temp1 - temp2) / norm
                 elif template_metric == "cosine":
-                    d = min(1, 1 - np.sum(temp1 * temp2) / norm)
+                    d = 1 - np.sum(temp1 * temp2) / norm
                 all_shift_diff.append(d)
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
 
