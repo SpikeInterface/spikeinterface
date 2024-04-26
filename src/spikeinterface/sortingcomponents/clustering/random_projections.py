@@ -87,9 +87,7 @@ class RandomProjectionClustering:
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
 
         num_projections = min(num_chans, d["nb_projections"])
-        projections = rng.normal(
-            loc=0.0, scale=1.0 / np.sqrt(num_chans), size=(num_chans, num_projections)
-        )
+        projections = rng.normal(loc=0.0, scale=1.0 / np.sqrt(num_chans), size=(num_chans, num_projections))
 
         nbefore = int(params["ms_before"] * fs / 1000)
         nafter = int(params["ms_after"] * fs / 1000)

@@ -10,6 +10,7 @@ from ..qualitymetrics import compute_refrac_period_violations, compute_firing_ra
 
 from .mergeunitssorting import MergeUnitsSorting
 
+
 def get_potential_auto_merge(
     sorting_analyzer,
     minimum_spikes=1000,
@@ -30,7 +31,7 @@ def get_potential_auto_merge(
     firing_contamination_balance=1.5,
     extra_outputs=False,
     steps=None,
-    template_metric='l1'
+    template_metric="l1",
 ):
     """
     Algorithm to find and check potential merges between units.
@@ -146,7 +147,7 @@ def get_potential_auto_merge(
         to_remove = num_spikes < minimum_spikes
         pair_mask[to_remove, :] = False
         pair_mask[:, to_remove] = False
-        
+
     # STEP 2 : remove contaminated auto corr
     if "remove_contaminated" in steps:
         contaminations, nb_violations = compute_refrac_period_violations(
@@ -170,10 +171,10 @@ def get_potential_auto_merge(
             )
             unit_max_chan = list(unit_max_chan.values())
             unit_locations = chan_loc[unit_max_chan, :]
-        
+
         unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
         pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
-        
+
     # STEP 4 : potential auto merge by correlogram
     if "correlogram" in steps:
         correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
@@ -205,14 +206,18 @@ def get_potential_auto_merge(
             templates_ext is not None
         ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
 
-        templates = templates_ext.get_data(outputs='Templates')
+        templates = templates_ext.get_data(outputs="Templates")
         templates = templates.to_sparse(sorting_analyzer.sparsity)
-            
+
         templates_diff = compute_templates_diff(
-            sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask, 
-            template_metric=template_metric
+            sorting,
+            templates,
+            num_channels=num_channels,
+            num_shift=num_shift,
+            pair_mask=pair_mask,
+            template_metric=template_metric,
         )
-        
+
         pair_mask = pair_mask & (templates_diff < template_diff_thresh)
 
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
@@ -393,7 +398,7 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
-def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair_mask=None, template_metric='l1'):
+def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1"):
     """
     Computes normalized template differences.
 
@@ -448,25 +453,25 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
             template2 = template2[:, chan_inds]
 
             num_samples = template1.shape[0]
-            if template_metric == 'l1':
+            if template_metric == "l1":
                 norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
-            elif template_metric == 'l2':
+            elif template_metric == "l2":
                 norm = np.sum(template1**2) + np.sum(template2**2)
-            elif template_metric == 'cosine':
+            elif template_metric == "cosine":
                 norm = np.linalg.norm(template1) * np.linalg.norm(template2)
             all_shift_diff = []
             for shift in range(-num_shift, num_shift + 1):
                 temp1 = template1[num_shift : num_samples - num_shift, :]
                 temp2 = template2[num_shift + shift : num_samples - num_shift + shift, :]
-                if template_metric == 'l1':
+                if template_metric == "l1":
                     d = np.sum(np.abs(temp1 - temp2)) / norm
-                elif template_metric == 'l2':
+                elif template_metric == "l2":
                     d = np.linalg.norm(temp1 - temp2) / norm
-                elif template_metric == 'cosine':
+                elif template_metric == "cosine":
                     d = min(1, 1 - np.sum(temp1 * temp2) / norm)
                 all_shift_diff.append(d)
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
-    
+
     return templates_diff
 
 

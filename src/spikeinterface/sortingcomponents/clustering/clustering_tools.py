@@ -536,9 +536,7 @@ def remove_duplicates(
     return labels, new_labels
 
 
-
-def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, 
-                                tmp_folder=None, rank=5, multiple_passes=False):
+def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None, rank=5, multiple_passes=False):
 
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, SharedMemoryRecording
@@ -565,7 +563,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={},
         spatial = spatial[:, :rank, :]
 
         templates_array = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
-    
+
     norms = np.linalg.norm(templates_array, axis=(1, 2))
     margin = max(templates.nbefore, templates.nafter)
     tmp_filename = None
@@ -593,10 +591,9 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={},
     local_params = method_kwargs.copy()
     amplitudes = [0.95, 1.05]
 
-    local_params.update({"templates": templates, 
-                         "amplitudes": amplitudes, 
-                         "stop_criteria": "omp_min_sps", 
-                         "omp_min_sps" : 0.5})
+    local_params.update(
+        {"templates": templates, "amplitudes": amplitudes, "stop_criteria": "omp_min_sps", "omp_min_sps": 0.5}
+    )
 
     ignore_ids = []
     similar_templates = [[], []]
@@ -609,11 +606,11 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={},
         keep_searching = False
 
         for i in list(set(range(nb_templates)).difference(ignore_ids)):
-            
+
             ## Could be speed up by only computing the values for templates that are
             ## nearby
 
-            t_start = i*(duration + margin)
+            t_start = i * (duration + margin)
             t_stop = margin + (i + 1) * (duration + margin)
 
             sub_recording = recording.frame_slice(t_start, t_stop)
@@ -633,7 +630,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={},
                     "unit_overlaps_indices": computed["unit_overlaps_indices"],
                 }
             )
-            valid = (spikes["sample_index"] >= 0) * (spikes["sample_index"] < duration + 2*margin)
+            valid = (spikes["sample_index"] >= 0) * (spikes["sample_index"] < duration + 2 * margin)
 
             if np.sum(valid) > 0:
                 ref_norm = norms[i]
@@ -643,10 +640,10 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={},
                 for k in range(1, np.sum(valid)):
                     j = spikes[valid]["cluster_index"][k]
                     a = spikes[valid]["amplitude"][k]
-                    sum += a*templates_array[j]
-                
+                    sum += a * templates_array[j]
+
                 tgt_norm = np.linalg.norm(sum)
-                ratio = tgt_norm / ref_norm 
+                ratio = tgt_norm / ref_norm
 
                 if (amplitudes[0] < ratio) and (ratio < amplitudes[1]):
                     if multiple_passes:
@@ -659,32 +656,35 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={},
                         similar_templates[0] += [-1]
                         ignore_ids += [i]
                         similar_templates[1] += [i]
-                    
+
                     if DEBUG:
                         import pylab as plt
+
                         fig, axes = plt.subplots(1, 2)
                         from spikeinterface.widgets import plot_traces
+
                         plot_traces(sub_recording, ax=axes[0])
-                        axes[1].plot(templates_array[i].flatten(), label=f'{ref_norm}')
-                        axes[1].plot(sum.flatten(), label=f'{tgt_norm}')
+                        axes[1].plot(templates_array[i].flatten(), label=f"{ref_norm}")
+                        axes[1].plot(sum.flatten(), label=f"{tgt_norm}")
                         axes[1].legend()
                         plt.show()
                         print(i, spikes[valid]["cluster_index"], spikes[valid]["amplitude"])
-    
+
     del recording, sub_recording, local_params, templates
     if tmp_filename is not None:
         os.remove(tmp_filename)
-    
+
     return similar_templates
 
 
-def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job_kwargs={}, 
-                                   tmp_folder=None, rank=5, multiple_passes=False):
-    
+def remove_duplicates_via_matching(
+    templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None, rank=5, multiple_passes=False
+):
 
-    similar_templates = detect_mixtures(templates, method_kwargs, job_kwargs, 
-                                        tmp_folder=tmp_folder, rank=rank, multiple_passes=multiple_passes)
-    
+    similar_templates = detect_mixtures(
+        templates, method_kwargs, job_kwargs, tmp_folder=tmp_folder, rank=rank, multiple_passes=multiple_passes
+    )
+
     new_labels = peak_labels.copy()
 
     labels = np.unique(new_labels)
@@ -707,12 +707,13 @@ def resolve_merging_graph(sorting, potential_merges):
     """
     from scipy.sparse.csgraph import connected_components
     from scipy.sparse import lil_matrix
+
     n = len(sorting.unit_ids)
     graph = lil_matrix((n, n))
     for i, j in potential_merges:
         graph[sorting.id_to_index(i), sorting.id_to_index(j)] = 1
-    
-    n_components, labels = connected_components(graph, directed=True, connection='weak', return_labels=True)
+
+    n_components, labels = connected_components(graph, directed=True, connection="weak", return_labels=True)
     final_merges = []
     for i in range(n_components):
         merges = labels == i
@@ -724,7 +725,7 @@ def resolve_merging_graph(sorting, potential_merges):
 
 def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
     """
-    Function to apply a resolved representation of the merges to a sorting object. If censor_ms is not None, 
+    Function to apply a resolved representation of the merges to a sorting object. If censor_ms is not None,
     duplicated spikes violating the censor_ms refractory period are removed
     """
     spikes = sorting.to_spike_vector().copy()
@@ -756,11 +757,11 @@ def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
     for segment_index in range(sorting.get_num_segments()):
         s0, s1 = segment_slices[segment_index]
         if censor_ms is not None:
-            times_list  += [spikes['sample_index'][s0:s1][to_keep[s0:s1]]]
-            labels_list += [spikes['unit_index'][s0:s1][to_keep[s0:s1]]]
+            times_list += [spikes["sample_index"][s0:s1][to_keep[s0:s1]]]
+            labels_list += [spikes["unit_index"][s0:s1][to_keep[s0:s1]]]
         else:
-            times_list  += [spikes['sample_index'][s0:s1]]
-            labels_list += [spikes['unit_index'][s0:s1]]
+            times_list += [spikes["sample_index"][s0:s1]]
+            labels_list += [spikes["unit_index"][s0:s1]]
 
     sorting = NumpySorting.from_times_labels(times_list, labels_list, sorting.sampling_frequency)
     return sorting

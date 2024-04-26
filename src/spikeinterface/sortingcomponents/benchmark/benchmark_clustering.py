@@ -300,8 +300,8 @@ class ClusteringStudy(BenchmarkStudy):
             result = self.get_result(key)
             scores = result["gt_comparison"].agreement_scores
 
-            positions = result["sliced_gt_sorting"].get_property('gt_unit_locations')
-            #positions = self.datasets[key[1]][1].get_property("gt_unit_locations")
+            positions = result["sliced_gt_sorting"].get_property("gt_unit_locations")
+            # positions = self.datasets[key[1]][1].get_property("gt_unit_locations")
             depth = positions[:, 1]
 
             analyzer = self.get_sorting_analyzer(key)
