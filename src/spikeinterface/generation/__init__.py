@@ -11,3 +11,8 @@ from .drifting_generator import (
     generate_displacement_vector,
     generate_drifting_recording,
 )
+
+from ._template_database import (
+    fetch_templates_from_database,
+    generate_recording_from_template_database,
+)
