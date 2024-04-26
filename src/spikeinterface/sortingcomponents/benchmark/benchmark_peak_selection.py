@@ -1,17 +1,8 @@
 from __future__ import annotations
 
-from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
 from spikeinterface.core import NumpySorting
-from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import GroundTruthComparison
-from spikeinterface.widgets import (
-    plot_probe_map,
-    plot_agreement_matrix,
-    plot_comparison_collision_by_similarity,
-    plot_unit_templates,
-    plot_unit_waveforms,
-)
 from spikeinterface.comparison.comparisontools import make_matching_events
 from spikeinterface.core import get_noise_levels
 
@@ -21,7 +12,7 @@ import pylab as plt
 import os
 import numpy as np
 
-from .benchmark_tools import BenchmarkStudy, Benchmark
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
@@ -29,70 +20,25 @@ from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 class PeakSelectionBenchmark(Benchmark):
 
     def __init__(self, recording, gt_sorting, params, indices, exhaustive_gt=True):
-        self.recording = recording
-        self.gt_sorting = gt_sorting
-        self.indices = indices
-
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        sorting_analyzer.compute(["random_spikes", "templates"])
-        extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
-        self.gt_peaks = self.gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-        self.params = params
-        self.exhaustive_gt = exhaustive_gt
-        self.method = params["method"]
-        self.method_kwargs = params["method_kwargs"]
-        self.result = {"gt_peaks": self.gt_peaks}
+        pass
 
     def run(self, **job_kwargs):
-        labels, peak_labels = find_cluster_from_peaks(
-            self.recording, self.peaks, method=self.method, method_kwargs=self.method_kwargs, **job_kwargs
-        )
-        self.result["peak_labels"] = peak_labels
+        pass
 
     def compute_result(self, **result_params):
-        self.noise = self.result["peak_labels"] < 0
+        pass
 
-        spikes = self.gt_sorting.to_spike_vector()
-        self.result["sliced_gt_sorting"] = NumpySorting(
-            spikes[self.indices], self.recording.sampling_frequency, self.gt_sorting.unit_ids
-        )
+    # _run_key_saved = [
+    #     ("peak_labels", "npy"),
+    # ]
 
-        data = spikes[self.indices][~self.noise]
-        data["unit_index"] = self.result["peak_labels"][~self.noise]
-
-        self.result["clustering"] = NumpySorting.from_times_labels(
-            data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
-        )
-
-        self.result["gt_comparison"] = GroundTruthComparison(
-            self.result["sliced_gt_sorting"], self.result["clustering"], exhaustive_gt=self.exhaustive_gt
-        )
-
-        sorting_analyzer = create_sorting_analyzer(
-            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False
-        )
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates")
-        self.result["sliced_gt_templates"] = ext.get_data(outputs="Templates")
-
-        sorting_analyzer = create_sorting_analyzer(
-            self.result["clustering"], self.recording, format="memory", sparse=False
-        )
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates")
-        self.result["clustering_templates"] = ext.get_data(outputs="Templates")
-
-    _run_key_saved = [
-        ("peak_labels", "npy"),
-    ]
-
-    _result_key_saved = [
-        ("gt_comparison", "pickle"),
-        ("sliced_gt_sorting", "sorting"),
-        ("clustering", "sorting"),
-        ("sliced_gt_templates", "zarr_templates"),
-        ("clustering_templates", "zarr_templates"),
-    ]
+    # _result_key_saved = [
+    #     ("gt_comparison", "pickle"),
+    #     ("sliced_gt_sorting", "sorting"),
+    #     ("clustering", "sorting"),
+    #     ("sliced_gt_templates", "zarr_templates"),
+    #     ("clustering_templates", "zarr_templates"),
+    # ]
 
 
 class PeakSelectionStudy(BenchmarkStudy):
