@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
-from spikeinterface.curation.mergeunitssorting import merge_units_sorting
+from spikeinterface.core import NumpySorting
 
 
 def _split_waveforms(
@@ -717,11 +717,10 @@ def resolve_merging_graph(sorting, potential_merges):
     for i in range(n_components):
         merges = labels == i
         if merges.sum() > 1:
-            src = np.where(merges)[0][0]
-            tgts = np.where(merges)[0][1:]
-            final_merges += [(sorting.unit_ids[src], sorting.unit_ids[tgts])]
+            final_merges += [list(sorting.unit_ids[np.flatnonzero(merges)]))]
 
     return final_merges
+
 
 def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
     """
@@ -739,9 +738,9 @@ def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
     if censor_ms is not None:
         rpv = int(sorting.sampling_frequency * censor_ms / 1000)
         
-    for src, targets in merges:
-        mask = np.in1d(spikes['unit_index'], sorting.ids_to_indices([src] + list(targets)))
-        spikes['unit_index'][mask] = sorting.id_to_index(src)
+    for connected in merges:
+        mask = np.in1d(spikes['unit_index'], sorting.ids_to_indices(connected))
+        spikes['unit_index'][mask] = sorting.id_to_index(connected[0])
     
         if censor_ms is not None:
             for segment_index in range(sorting.get_num_segments()):
@@ -751,7 +750,7 @@ def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
                     to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
                 )
 
-    from spikeinterface.core.numpyextractors import NumpySorting
+    
     times_list = []
     labels_list = []
     for segment_index in range(sorting.get_num_segments()):
@@ -764,30 +763,6 @@ def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
             labels_list += [spikes['unit_index'][s0:s1]]
 
     sorting = NumpySorting.from_times_labels(times_list, labels_list, sorting.sampling_frequency)
-    return sorting
-
-
-
-def final_cleaning_circus(recording, sorting, templates, 
-                          **merging_kwargs):
-
-    from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-    from spikeinterface.curation.auto_merge import get_potential_auto_merge
-
-    sparsity = templates.sparsity
-    templates_array = templates.get_dense_templates().copy()
-
-    sa = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
-    from spikeinterface.core.analyzer_extension_core import ComputeTemplates
-    sa.extensions['templates'] = ComputeTemplates(sa)
-    sa.extensions['templates'].params = {'nbefore' : templates.nbefore}
-    sa.extensions['templates'].data['average'] = templates_array
-    sa.compute('unit_locations', method='monopolar_triangulation')
-    merges = get_potential_auto_merge(sa, **merging_kwargs)
-    merges = resolve_merging_graph(sorting, merges)
-    sorting = apply_merges_to_sorting(sorting, merges)
-    #sorting = merge_units_sorting(sorting, merges)
-
     return sorting
 
 

@@ -229,9 +229,8 @@ class BenchmarkStudy:
             folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
             sorting_analyzer = create_sorting_analyzer(
-                gt_sorting, recording, format="binary_folder", folder=folder)
+                gt_sorting, recording, format="binary_folder", folder=folder, return_scaled=return_scaled)
             sorting_analyzer.compute("random_spikes", **random_params)
-            sorting_analyzer.compute("waveforms")
             sorting_analyzer.compute("templates", **job_kwargs)
             sorting_analyzer.compute("noise_levels")
             
