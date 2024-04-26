@@ -487,7 +487,7 @@ if __name__ == "__main__":
     tmp_path = Path(tempfile.mkdtemp())
 
     job_kwargs_main = job_kwargs()
-    torch_job_kwargs_main = torch_job_kwargs(job_kwargs_main)
+    # torch_job_kwargs_main = torch_job_kwargs(job_kwargs_main)
     # Create a temporary directory using the standard library
     # tmp_dir_main = tempfile.mkdtemp()
     # pca_model_folder_path_main = pca_model_folder_path(recording, job_kwargs_main, tmp_dir_main)
@@ -498,4 +498,6 @@ if __name__ == "__main__":
     # )
 
     # test_peak_sign_consistency(recording, torch_job_kwargs_main, DetectPeakLocallyExclusiveTorch)
-    test_peak_detection_with_pipeline(recording, job_kwargs_main, torch_job_kwargs_main, tmp_path)
+    # test_peak_detection_with_pipeline(recording, job_kwargs_main, torch_job_kwargs_main, tmp_path)
+
+    test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs_main,)
