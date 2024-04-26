@@ -127,11 +127,14 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
             ap_traces = ap_traces[:-right_leftover]
         ap_traces = ap_traces[left_leftover:]
 
-        lfp_traces = self.lfp_recording.get_traces(
+        lfp_traces = (
+            self.lfp_recording.get_traces(
                 (start_frame - left_margin) // self.AP_TO_LFP,
                 (end_frame + right_margin) // self.AP_TO_LFP,
                 channel_indices,
-            ) * self.lfp_to_ap_gain[channel_indices]
+            )
+            * self.lfp_to_ap_gain[channel_indices]
+        )
 
         ap_fourier = np.fft.rfft(ap_traces, axis=0)
         lfp_fourier = np.fft.rfft(lfp_traces, axis=0)
