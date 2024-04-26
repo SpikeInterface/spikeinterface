@@ -127,14 +127,11 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
             ap_traces = ap_traces[:-right_leftover]
         ap_traces = ap_traces[left_leftover:]
 
-        lfp_traces = (
-            self.lfp_recording.get_traces(
+        lfp_traces = self.lfp_recording.get_traces(
                 (start_frame - left_margin) // self.AP_TO_LFP,
                 (end_frame + right_margin) // self.AP_TO_LFP,
                 channel_indices,
-            )
-            * self.lfp_to_ap_gain
-        )
+            ) * self.lfp_to_ap_gain[channel_indices]
 
         ap_fourier = np.fft.rfft(ap_traces, axis=0)
         lfp_fourier = np.fft.rfft(lfp_traces, axis=0)
@@ -148,7 +145,7 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         ap_fourier /= ap_filter[:, None]
         lfp_fourier /= lfp_filter[:, None]
 
-        # Compute time shift between AP and LFP (this varies in time!!!)
+        # Compute time shift between AP and LFP (TODO: Compute once and store?)
         freq_slice = slice(np.searchsorted(ap_freq, 100), np.searchsorted(ap_freq, 600))
 
         t_axis = np.arange(-2000, 2000, 60) * 1e-6
@@ -171,13 +168,13 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
 
         # Compute aliasing of high frequencies on LFP channels
         lfp_nyquist = self.lfp_recording.sampling_frequency / 2
-        nyquist_index = np.searchsorted(ap_freq, lfp_nyquist + 1e-6, side="right")
-        fourier_aliased = ap_fourier.copy()
+        nyquist_index = len(lfp_freq)
+        fourier_aliased = ap_fourier * np.exp(-2j * math.pi * ap_freq[:, None] * shift_estimate)
         fourier_aliased[:nyquist_index] = 0.0
         fourier_aliased *= self.lfp_filter(ap_freq)[:, None]
         traces_aliased = np.fft.irfft(fourier_aliased, axis=0)[:: self.AP_TO_LFP]
         fourier_aliased = np.fft.rfft(traces_aliased, axis=0) / lfp_filter[:, None]
-        lfp_fourier -= fourier_aliased[:nyquist_index]
+        lfp_fourier -= fourier_aliased / np.exp(-2j * math.pi * lfp_freq[:, None] * shift_estimate)
 
         # Reconstruct using both AP and LFP channels
         # TODO: Have some flexibility on the ratio
@@ -241,7 +238,7 @@ def generate_RC_filter(frequencies: np.ndarray, cut: Union[float, List[float]], 
     if btype == "lowpass":
         lowpass = 1 / (1 + 1j * frequencies / cut)
     elif btype == "highpass":
-        highpass = (frequencies / cut) / (1 + 1j * frequencies / cut)
+        highpass = (1j * frequencies / cut) / (1 + 1j * frequencies / cut)
     elif btype == "bandpass":
         highpass = generate_RC_filter(frequencies, cut[0], btype="highpass")
         lowpass = generate_RC_filter(frequencies, cut[1], btype="lowpass")
