@@ -229,13 +229,12 @@ class Templates:
         The `templates_array` dataset is saved with a chunk size that has a single unit per chunk
         to optimize read/write operations for individual units.
         """
-        import numcodecs
 
         # Saves one chunk per unit
         arrays_chunk = (1, None, None)
         zarr_group.create_dataset("templates_array", data=self.templates_array, chunks=arrays_chunk)
-        zarr_group.create_dataset("channel_ids", data=self.channel_ids, object_codec=numcodecs.MsgPack())
-        zarr_group.create_dataset("unit_ids", data=self.unit_ids, object_codec=numcodecs.MsgPack())
+        zarr_group.create_dataset("channel_ids", data=self.channel_ids)
+        zarr_group.create_dataset("unit_ids", data=self.unit_ids)
 
         zarr_group.attrs["sampling_frequency"] = self.sampling_frequency
         zarr_group.attrs["nbefore"] = self.nbefore
