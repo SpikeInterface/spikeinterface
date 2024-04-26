@@ -180,7 +180,7 @@ class LocalFeatureClustering:
         feature_name="sparse_tsvd",
         neighbours_mask=None,
         waveforms_sparse_mask=None,
-        clusterer_kwargs={'min_cluster_size' : 25},
+        clusterer_kwargs={"min_cluster_size": 25},
         min_size_split=25,
         n_pca_features=2,
         scale_n_pca_by_depth=False,
@@ -192,7 +192,7 @@ class LocalFeatureClustering:
         sparse_features = features[feature_name]
 
         assert waveforms_sparse_mask is not None
-        
+
         # target channel subset is done intersect local channels + neighbours
         local_chans = np.unique(peaks["channel_index"][peak_indices])
 
@@ -215,27 +215,27 @@ class LocalFeatureClustering:
         aligned_wfs = aligned_wfs[kept, :, :]
 
         flatten_features = aligned_wfs.reshape(aligned_wfs.shape[0], -1)
-    
+
         if flatten_features.shape[1] > n_pca_features:
             if scale_n_pca_by_depth:
-                #tsvd = TruncatedSVD(n_pca_features * recursion_level)
+                # tsvd = TruncatedSVD(n_pca_features * recursion_level)
                 tsvd = PCA(n_pca_features * recursion_level, whiten=True)
             else:
-                #tsvd = TruncatedSVD(n_pca_features)
+                # tsvd = TruncatedSVD(n_pca_features)
                 tsvd = PCA(n_pca_features, whiten=True)
             final_features = tsvd.fit_transform(flatten_features)
         else:
             final_features = flatten_features
-        
 
         if clusterer == "hdbscan":
             from hdbscan import HDBSCAN
+
             clust = HDBSCAN(**clusterer_kwargs)
             clust.fit(final_features)
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         elif clusterer == "isocut5":
-            min_cluster_size = clusterer_kwargs['min_cluster_size']
+            min_cluster_size = clusterer_kwargs["min_cluster_size"]
             dipscore, cutpoint = isocut5(final_features[:, 0])
             possible_labels = np.zeros(final_features.shape[0])
             if dipscore > 1.5:
@@ -248,7 +248,7 @@ class LocalFeatureClustering:
         else:
             raise ValueError(f"wrong clusterer {clusterer}")
 
-        #DEBUG = True
+        # DEBUG = True
         DEBUG = False
         if DEBUG:
             import matplotlib.pyplot as plt

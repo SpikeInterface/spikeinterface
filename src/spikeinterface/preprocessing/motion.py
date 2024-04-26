@@ -134,8 +134,8 @@ motion_options_preset = {
             direction=1,
             border_mode="force_extrapolate",
             spatial_interpolation_method="kriging",
-            sigma_um=np.sqrt(2)*20.0,
-            p=2
+            sigma_um=np.sqrt(2) * 20.0,
+            p=2,
         ),
     },
     # This preset is a super fast rigid estimation with center of mass

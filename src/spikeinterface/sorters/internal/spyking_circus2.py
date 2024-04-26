@@ -34,7 +34,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "sparsity": {"method": "ptp", "threshold": 0.25},
-        "filtering": {"freq_min": 150, "freq_max": 7000, "ftype" : "bessel", "filter_order" : 2},
+        "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "uniform",
@@ -43,9 +43,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "select_per_channel": False,
             "seed": 42,
         },
-        "drift_correction" : {"preset" : "nonrigid_fast_and_accurate"},
-        "merging" : {"minimum_spikes" : 10, "corr_diff_thresh" : 0.5, "template_metric" : 'cosine', 
-                     "censor_correlograms_ms" : 0.4, "num_channels" : 5},
+        "drift_correction": {"preset": "nonrigid_fast_and_accurate"},
+        "merging": {
+            "minimum_spikes": 10,
+            "corr_diff_thresh": 0.5,
+            "template_metric": "cosine",
+            "censor_correlograms_ms": 0.4,
+            "num_channels": 5,
+        },
         "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
@@ -70,7 +75,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                             True, one other clustering called circus will be used, similar to the one used in Spyking Circus 1",
         "matching": "A dictionary to specify the matching engine used to recover spikes. The method default is circus-omp-svd, but other engines\
                                           can be used",
-        "merging" : "A dictionary to specify the final merging param to group cells after template matching (get_potential_auto_merge)",
+        "merging": "A dictionary to specify the final merging param to group cells after template matching (get_potential_auto_merge)",
         "motion_correction": "A dictionary to be provided if motion correction has to be performed (dense probe only)",
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + zscore",
@@ -121,7 +126,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         else:
             recording_f = recording
             recording_f.annotate(is_filtered=True)
-        
+
         valid_geometry = check_probe_for_drift_correction(recording_f)
         if params["drift_correction"] is not None:
             if not valid_geometry:
@@ -129,11 +134,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
-                params['drift_correction'].update({'folder' : motion_folder})
-                recording_f = correct_motion(recording_f, **params['drift_correction'])
+                params["drift_correction"].update({"folder": motion_folder})
+                recording_f = correct_motion(recording_f, **params["drift_correction"])
 
         ## We need to whiten before the template matching step, to boost the results
-        recording_w = whiten(recording_f, mode='local', radius_um=radius_um, dtype="float32", regularize=True)
+        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32", regularize=True)
 
         noise_levels = get_noise_levels(recording_w, return_scaled=False)
 
@@ -147,9 +152,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
         detection_params.update(job_kwargs)
-        
-        detection_params["radius_um"] = detection_params.get('radius_um', 50)
-        detection_params["exclude_sweep_ms"] = detection_params.get('exclude_sweep_ms', 0.5)
+
+        detection_params["radius_um"] = detection_params.get("radius_um", 50)
+        detection_params["exclude_sweep_ms"] = detection_params.get("exclude_sweep_ms", 0.5)
         detection_params["noise_levels"] = noise_levels
 
         fs = recording_w.get_sampling_frequency()
@@ -289,14 +294,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         sorting_folder = sorter_output_folder / "sorting"
         if sorting_folder.exists():
             shutil.rmtree(sorting_folder)
-        
+
         merging_params = params["merging"].copy()
 
         if len(merging_params) > 0:
-            if params['drift_correction']:
+            if params["drift_correction"]:
                 from spikeinterface.preprocessing.motion import load_motion_info
+
                 motion_info = load_motion_info(motion_folder)
-                merging_params['maximum_distance_um'] = max(50, 2*np.abs(motion_info['motion']).max())
+                merging_params["maximum_distance_um"] = max(50, 2 * np.abs(motion_info["motion"]).max())
 
             # peak_sign = params['detection'].get('peak_sign', 'neg')
             # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)
@@ -310,7 +316,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 if curation_folder.exists():
                     shutil.rmtree(curation_folder)
                 sorting.save(folder=curation_folder)
-                #np.save(fitting_folder / "amplitudes", guessed_amplitudes)
+                # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
             sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params)
 

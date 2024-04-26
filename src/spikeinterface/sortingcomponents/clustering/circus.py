@@ -46,15 +46,16 @@ class CircusClustering:
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "eom",
-            #"cluster_selection_epsilon" : 5 ## To be optimized
+            # "cluster_selection_epsilon" : 5 ## To be optimized
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "ptp", "threshold": 0.25},
-        "recursive_kwargs" : {"recursive" : True,
-                              "recursive_depth" : 3,
-                              "returns_split_count" : True,
-                              },
+        "recursive_kwargs": {
+            "recursive": True,
+            "recursive_depth": 3,
+            "returns_split_count": True,
+        },
         "radius_um": 100,
         "n_svd": [5, 2],
         "ms_before": 2,
@@ -143,14 +144,14 @@ class CircusClustering:
             nb_clusters = 0
             for c in np.unique(peaks["channel_index"]):
                 mask = peaks["channel_index"] == c
-                sub_data = all_pc_data[mask]            
+                sub_data = all_pc_data[mask]
                 sub_data = sub_data.reshape(len(sub_data), -1)
 
                 if all_pc_data.shape[1] > params["n_svd"][1]:
                     tsvd = TruncatedSVD(params["n_svd"][1])
                 else:
                     tsvd = TruncatedSVD(all_pc_data.shape[1])
-                 
+
                 hdbscan_data = tsvd.fit_transform(sub_data)
                 try:
                     clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
@@ -163,7 +164,7 @@ class CircusClustering:
                     peak_labels[mask] = local_labels
                     nb_clusters += len(np.unique(local_labels[valid_clusters]))
         else:
-            
+
             features_folder = tmp_folder / "tsvd_features"
             features_folder.mkdir(exist_ok=True)
 
@@ -181,11 +182,12 @@ class CircusClustering:
             sparse_mask = node1.neighbours_mask
             neighbours_mask = get_channel_distances(recording) < radius_um
 
-            #np.save(features_folder / "sparse_mask.npy", sparse_mask)
+            # np.save(features_folder / "sparse_mask.npy", sparse_mask)
             np.save(features_folder / "peaks.npy", peaks)
 
             original_labels = peaks["channel_index"]
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
+
             peak_labels, _ = split_clusters(
                 original_labels,
                 recording,
@@ -199,7 +201,7 @@ class CircusClustering:
                     min_size_split=50,
                     clusterer_kwargs=d["hdbscan_kwargs"],
                     n_pca_features=params["n_svd"][1],
-                    scale_n_pca_by_depth=True
+                    scale_n_pca_by_depth=True,
                 ),
                 **params["recursive_kwargs"],
                 **job_kwargs,
