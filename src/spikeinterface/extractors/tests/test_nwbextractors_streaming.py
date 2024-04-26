@@ -297,7 +297,6 @@ def test_sorting_s3_nwb_zarr(tmp_path):
     sorting_sub = sorting.select_units(unit_ids = three_unit_ids)
     sorting_loaded_sub = sorting_loaded.select_units(unit_ids = three_unit_ids)
 
-    # test to/from dict
     check_sortings_equal(sorting_sub, sorting_loaded_sub)
 
 
