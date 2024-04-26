@@ -432,10 +432,12 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     if isinstance(templates, Templates):
         adaptative_masks = (num_channels == None) and (templates.sparsity is not None)
         if templates.sparsity is not None:
-            sparsity = templates.sparsity.mask
+            sparsity_mask = templates.sparsity.mask
         templates_array = templates.get_dense_templates()
     else:
         templates_array = templates
+        adaptative_masks = False
+        sparsity_mask = None
 
     templates_diff = np.full((n, n), np.nan, dtype="float64")
     for unit_ind1 in range(n):
@@ -449,7 +451,7 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
             if not adaptative_masks:
                 chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
             else:
-                chan_inds = np.intersect1d(np.where(sparsity[unit_ind1])[0], np.where(sparsity[unit_ind2])[0])
+                chan_inds = np.intersect1d(np.flatnonzero(sparsity_mask[unit_ind1]), np.flatnonzero(sparsity_mask[unit_ind2]))
 
             template1 = template1[:, chan_inds]
             template2 = template2[:, chan_inds]
@@ -535,73 +537,3 @@ def check_improve_contaminations_score(
     return pair_mask, pairs_removed
 
 
-# def apply_potential_merges(sorting_analyzer, potential_merges,
-#                      firing_contamination_balance=1.5,
-#                      refractory_period_ms=1,
-#                      censored_period_ms=0.3):
-
-#     contaminations, nb_violations = compute_refrac_period_violations(
-#             sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
-#         )
-
-#     firing_rates = compute_firing_rates(sorting_analyzer)
-#     sorting = sorting_analyzer.sorting
-#     recording = sorting_analyzer.recording
-
-#     import networkx as nx
-#     graph = nx.Graph()
-#     for potential_merge in potential_merges:
-#         unit1, unit2 = potential_merge
-#         if unit1 not in sorting.unit_ids or unit2 not in sorting.unit_ids:
-#             continue
-
-#         for unit in [unit1, unit2]:
-#             if unit not in graph:
-#                 k = 1 + firing_contamination_balance
-#                 score = firing_rates[unit] * (1 - k * contaminations[unit])
-#                 graph.add_node(unit, score=score)
-
-#         graph.add_edge(*potential_merge)
-
-#     # For each putative neuron, merge the units.
-#     for units in nx.connected_components(graph):
-#         subgraph = graph.subgraph(units).copy()
-#         while len(subgraph) > 1:
-#             highest_score = max(dict(subgraph.nodes(data="score")).values())
-#             merge = None
-
-#             for unit1, unit2 in subgraph.edges:
-
-#                 # make a merged sorting and tale one unit (unit_id1 is used)
-#                 sorting_merged = MergeUnitsSorting(
-#                     sorting, [[unit1, unit2]], new_unit_ids=[unit1], delta_time_ms=censored_period_ms
-#                 ).select_units([unit1])
-
-#                 sorting_analyzer_new = create_sorting_analyzer(sorting_merged, recording, format="memory", sparse=False)
-
-#                 new_contaminations, _ = compute_refrac_period_violations(
-#                     sorting_analyzer_new, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
-#                 )
-#                 c_new = new_contaminations[unit1]
-#                 f_new = compute_firing_rates(sorting_analyzer_new)[unit1]
-#                 score = f_new * (1 - k * c_new)
-
-#                 if score > highest_score:
-#                     highest_score = score
-#                     merge = (unit1, unit2)
-
-#             if merge is None:
-#                 scores = dict(subgraph.nodes(data="score"))
-#                 best_unit = max(scores, key=scores.get)
-#                 to_remove = [x for x in subgraph.nodes if x != best_unit]
-#                 to_keep = sorting.unit_ids[~np.in1d(sorting.unit_ids, to_remove)]
-#                 sorting = sorting.select_units(to_keep)
-#                 break
-
-#             unit1, unit2 = merge
-#             sorting = MergeUnitsSorting(
-#                 sorting, [[unit1, unit2]], new_unit_ids=[unit1], delta_time_ms=censored_period_ms
-#             )
-#             subgraph = nx.contracted_nodes(subgraph, unit1, unit2, self_loops=False)
-#             subgraph.nodes[unit1]['score'] = highest_score
-#     return sorting
