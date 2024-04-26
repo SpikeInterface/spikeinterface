@@ -738,11 +738,11 @@ def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
 
     if censor_ms is not None:
         rpv = int(sorting.sampling_frequency * censor_ms / 1000)
-        
+
     for connected in merges:
         mask = np.in1d(spikes['unit_index'], sorting.ids_to_indices(connected))
         spikes['unit_index'][mask] = sorting.id_to_index(connected[0])
-    
+
         if censor_ms is not None:
             for segment_index in range(sorting.get_num_segments()):
                 s0, s1 = segment_slices[segment_index]
@@ -751,7 +751,7 @@ def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
                     to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
                 )
 
-    
+
     times_list = []
     labels_list = []
     for segment_index in range(sorting.get_num_segments()):

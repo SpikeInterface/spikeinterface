@@ -342,23 +342,20 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         return sorting
 
 
-def final_cleaning_circus(recording, sorting, templates, 
-                          **merging_kwargs):
-
-    
+def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
 
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
 
     sa = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
-    
-    sa.extensions['templates'] = ComputeTemplates(sa)
-    sa.extensions['templates'].params = {'nbefore' : templates.nbefore}
-    sa.extensions['templates'].data['average'] = templates_array
-    sa.compute('unit_locations', method='monopolar_triangulation')
+
+    sa.extensions["templates"] = ComputeTemplates(sa)
+    sa.extensions["templates"].params = {"nbefore": templates.nbefore}
+    sa.extensions["templates"].data["average"] = templates_array
+    sa.compute("unit_locations", method="monopolar_triangulation")
     merges = get_potential_auto_merge(sa, **merging_kwargs)
     merges = resolve_merging_graph(sorting, merges)
     sorting = apply_merges_to_sorting(sorting, merges)
-    #sorting = merge_units_sorting(sorting, merges)
+    # sorting = merge_units_sorting(sorting, merges)
 
     return sorting
