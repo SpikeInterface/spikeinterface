@@ -205,7 +205,8 @@ def get_potential_auto_merge(
         ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
 
         templates = templates_ext.get_data(outputs="Templates")
-        templates = templates.to_sparse(sorting_analyzer.sparsity)
+        if sorting_analyzer.sparsity is not None:
+            templates = templates.to_sparse(sorting_analyzer.sparsity)
 
         templates_diff = compute_templates_diff(
             sorting,
