@@ -500,4 +500,7 @@ if __name__ == "__main__":
     # test_peak_sign_consistency(recording, torch_job_kwargs_main, DetectPeakLocallyExclusiveTorch)
     # test_peak_detection_with_pipeline(recording, job_kwargs_main, torch_job_kwargs_main, tmp_path)
 
-    test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs_main,)
+    test_detect_peaks_locally_exclusive_matched_filtering(
+        recording,
+        job_kwargs_main,
+    )
