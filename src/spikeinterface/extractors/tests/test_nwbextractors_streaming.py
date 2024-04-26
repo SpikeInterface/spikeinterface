@@ -294,8 +294,8 @@ def test_sorting_s3_nwb_zarr(tmp_path):
     # just take 3 random units to test
     rng = np.random.default_rng(seed=2205)
     three_unit_ids = rng.choice(sorting.unit_ids, size=3)
-    sorting_sub = sorting.select_units(unit_ids = three_unit_ids)
-    sorting_loaded_sub = sorting_loaded.select_units(unit_ids = three_unit_ids)
+    sorting_sub = sorting.select_units(unit_ids=three_unit_ids)
+    sorting_loaded_sub = sorting_loaded.select_units(unit_ids=three_unit_ids)
 
     check_sortings_equal(sorting_sub, sorting_loaded_sub)
 
