@@ -26,7 +26,7 @@ try:
     HAVE_HDBSCAN = True
 except:
     HAVE_HDBSCAN = False
-import copy
+
 from scipy.sparse import coo_matrix
 
 try:
@@ -57,8 +57,8 @@ class SlidingNNClustering:
         "time_window_s": 5,
         "hdbscan_kwargs": {"min_cluster_size": 20, "allow_single_cluster": True},
         "margin_ms": 100,
-        "ms_before": 1,
-        "ms_after": 1,
+        "ms_before": 0.5,
+        "ms_after": 0.5,
         "n_channel_neighbors": 8,
         "n_neighbors": 5,
         "embedding_dim": None,
@@ -141,13 +141,10 @@ class SlidingNNClustering:
         # prepare neighborhood parameters
         fs = recording.get_sampling_frequency()
         n_frames = recording.get_num_frames()
-        duration = n_frames / fs
         time_window_frames = fs * d["time_window_s"]
         margin_frames = int(d["margin_ms"] / 1000 * fs)
         spike_pre_frames = int(d["ms_before"] / 1000 * fs)
         spike_post_frames = int(d["ms_after"] / 1000 * fs)
-        n_channels = recording.get_num_channels()
-        n_samples = spike_pre_frames + spike_post_frames
 
         if d["embedding_dim"] is None:
             d["embedding_dim"] = recording.get_num_channels()

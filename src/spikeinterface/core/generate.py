@@ -26,7 +26,6 @@ def _ensure_seed(seed):
         seed = np.random.default_rng(seed=None).integers(0, 2**63)
     return seed
 
-
 def generate_recording(
     num_channels: Optional[int] = 2,
     sampling_frequency: Optional[float] = 30000.0,

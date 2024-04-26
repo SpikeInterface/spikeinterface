@@ -42,13 +42,13 @@ class MatchingBenchmark(Benchmark):
         sorting = self.result["sorting"]
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
         self.result["gt_comparison"] = comp
-        self.result["gt_collision"] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
+        #self.result["gt_collision"] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
 
     _run_key_saved = [
         ("sorting", "sorting"),
         ("templates", "zarr_templates"),
     ]
-    _result_key_saved = [("gt_collision", "pickle"), ("gt_comparison", "pickle")]
+    _result_key_saved = [("gt_comparison", "pickle")]
 
 
 class MatchingStudy(BenchmarkStudy):

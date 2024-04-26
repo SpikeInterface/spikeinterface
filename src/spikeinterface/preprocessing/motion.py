@@ -132,9 +132,10 @@ motion_options_preset = {
         ),
         "interpolate_motion_kwargs": dict(
             direction=1,
-            border_mode="remove_channels",
-            spatial_interpolation_method="idw",
-            num_closest=3,
+            border_mode="force_extrapolate",
+            spatial_interpolation_method="kriging",
+            sigma_um=np.sqrt(2)*20.0,
+            p=2
         ),
     },
     # This preset is a super fast rigid estimation with center of mass
