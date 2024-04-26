@@ -451,7 +451,9 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
             if not adaptative_masks:
                 chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
             else:
-                chan_inds = np.intersect1d(np.flatnonzero(sparsity_mask[unit_ind1]), np.flatnonzero(sparsity_mask[unit_ind2]))
+                chan_inds = np.intersect1d(
+                    np.flatnonzero(sparsity_mask[unit_ind1]), np.flatnonzero(sparsity_mask[unit_ind2])
+                )
 
             template1 = template1[:, chan_inds]
             template2 = template2[:, chan_inds]
@@ -535,5 +537,3 @@ def check_improve_contaminations_score(
             pairs_removed.append((sorting.unit_ids[ind1], sorting.unit_ids[ind2]))
 
     return pair_mask, pairs_removed
-
-
