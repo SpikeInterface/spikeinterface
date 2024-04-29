@@ -50,15 +50,13 @@ SpikeInterface is made of several modules to deal with different aspects of the 
     :caption: Contents:
 
     overview
-    installation
-    import
-    modules/index
+    get_started/index
+    tutorials/index
     how_to/index
-    modules_gallery/index
-    install_sorters
+    in_depth/index
     viewers
-    development/development
     api
+    development/development
     whatisnew
     authors
 

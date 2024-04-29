@@ -63,7 +63,6 @@ author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Ma
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    'sphinx.ext.autosectionlabel',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
     'sphinx_design',
@@ -117,18 +116,19 @@ from sphinx_gallery.sorting import FileNameSortKey
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
     'only_warn_on_example_error': True,
-    'examples_dirs': ['../examples/modules_gallery'],
-    'gallery_dirs': ['modules_gallery', ],  # path where to save gallery generated examples
+    'examples_dirs': ['../examples/tutorials'],
+    'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
-                                       '../examples/modules_gallery/core',
-                                       '../examples/modules_gallery/extractors',
-                                       '../examples/modules_gallery/qualitymetrics',
-                                       '../examples/modules_gallery/comparison',
-                                       '../examples/modules_gallery/widgets',
+                                       '../examples/tutorials/core',
+                                       '../examples/tutorials/extractors',
+                                       '../examples/tutorials/qualitymetrics',
+                                       '../examples/tutorials/comparison',
+                                       '../examples/tutorials/widgets',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_',
     'nested_sections': False,
+    'copyfile_regex': r'.*\.rst|.*\.png|.*\.svg'
 }
 
 intersphinx_mapping = {

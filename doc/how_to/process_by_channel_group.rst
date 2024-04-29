@@ -1,5 +1,5 @@
-Processing a Recording by Channel Group
-=======================================
+Process a Recording by Channel Group
+====================================
 
 In this tutorial, we will walk through how to preprocess and sort a recording
 separately for *channel groups*. A channel group is a subset of channels grouped by some

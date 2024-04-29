@@ -312,9 +312,9 @@ Compute Extensions
 
 Waveforms, templates, quality metrics etc are all extensions of the ``SortingAnalyzer`` object.
 Some extensions depend on other extensions. To calculate a *child* we must first have calculated its
-**parents**. The relationship between all the currently available extensions is displayed below:
+**parents**. The relationship between some commonly used extensions are shown below:
 
-.. image:: ../images/parent_child.svg
+.. image:: waveform_extractor_to_sorting_analyzer_child_parent_plot.svg
     :alt: Child parent relationships
 
 We see that to compute ``spike_amplitudes`` we must first compute ``templates``. To compute templates
@@ -348,8 +348,7 @@ looks slightly different. Let's calculate these extensions, and also add a param
                 peak_sign="pos"
             )
 
-Note that if a parent is recomputed, all its children are deleted to maintain data consistency.
-Read more about this, the extensions and their keyword arguments in the
+Read more about extensions and their keyword arguments in the
 `postprocessing module documentation <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_
 
 In many cases, you can still use the old notation for ``SortingAnalyzer`` objects,
