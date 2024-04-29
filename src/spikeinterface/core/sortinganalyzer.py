@@ -1190,7 +1190,7 @@ def _get_children_dependencies(extension_name):
     This function is making the reverse way : get all children that depend of a
     particular extension.
 
-    This is recursive so this includes : children and so grand children and grand grand children
+    This is recursive so this includes : children and so grand children and great grand children
 
     This function is usefull for deleting on recompute.
     For instance recompute the "waveforms" need to delete "template"
