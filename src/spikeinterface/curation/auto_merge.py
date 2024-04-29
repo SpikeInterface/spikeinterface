@@ -204,17 +204,17 @@ def get_potential_auto_merge(
             templates_ext is not None
         ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
 
-        templates = templates_ext.get_data(outputs="Templates")
-        if sorting_analyzer.sparsity is not None:
-            templates = templates.to_sparse(sorting_analyzer.sparsity)
+
+        templates_array = templates_ext.get_data(outputs="numpy")
 
         templates_diff = compute_templates_diff(
             sorting,
-            templates,
+            templates_array,
             num_channels=num_channels,
             num_shift=num_shift,
             pair_mask=pair_mask,
             template_metric=template_metric,
+            sparsity=sorting_analyzer.sparsity,
         )
 
         pair_mask = pair_mask & (templates_diff < template_diff_thresh)
@@ -397,7 +397,7 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
-def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1"):
+def compute_templates_diff(sorting, templates_array, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1", sparsity=None):
     """
     Computes normalized template differences.
 
@@ -405,8 +405,8 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     ----------
     sorting : BaseSorting
         The sorting object
-    templates : np.array or Templates
-        The templates array (num_units, num_samples, num_channels) or a Templates objects
+    templates_array : np.array
+        The templates array (num_units, num_samples, num_channels).
     num_channels: int, default: 5
         Number of channel to use for template similarity computation
     num_shift: int, default: 5
@@ -416,6 +416,8 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
         which pair to compute.
     template_metric: 'l1', 'l2' or 'cosine'
         The metric to consider when measuring the distances between templates. Default is l1
+    sparsity: None or ChannelSparsity
+        Optionaly a ChannelSparsity object.
 
     Returns
     -------
@@ -429,15 +431,15 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
 
-    if isinstance(templates, Templates):
-        adaptative_masks = (num_channels == None) and (templates.sparsity is not None)
-        if templates.sparsity is not None:
-            sparsity_mask = templates.sparsity.mask
-        templates_array = templates.get_dense_templates()
-    else:
-        templates_array = templates
+    if sparsity is None:
         adaptative_masks = False
         sparsity_mask = None
+    else:
+        adaptative_masks = (num_channels == None)
+        sparsity_mask = sparsity.mask
+
+
+
 
     templates_diff = np.full((n, n), np.nan, dtype="float64")
     for unit_ind1 in range(n):
