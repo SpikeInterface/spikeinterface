@@ -81,6 +81,8 @@ def generate_recording(
         probe.set_device_channel_indices(np.arange(num_channels))
         recording.set_probe(probe, in_place=True)
 
+    recording.name = "SyntethicRecording"
+
     return recording
 
 
@@ -2129,5 +2131,8 @@ def generate_ground_truth_recording(
     recording.set_probe(probe, in_place=True)
     recording.set_channel_gains(1.0)
     recording.set_channel_offsets(0.0)
+
+    recording.name = "GroundTruthRecording"
+    sorting.name = "GroundTruthSorting"
 
     return recording, sorting
