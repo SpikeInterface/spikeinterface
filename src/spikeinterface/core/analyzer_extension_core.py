@@ -285,7 +285,9 @@ class ComputeTemplates(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
-    def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=["average", "std"]):
+    def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=None):
+        if operators is None:
+            operators = ["average", "std"]
         assert isinstance(operators, list)
         for operator in operators:
             if isinstance(operator, str):

@@ -95,7 +95,7 @@ class UnitWaveformsWidget(BaseWidget):
         set_title=True,
         same_axis=False,
         shade_templates=True,
-        templates_percentile_shading=[1, 25, 75, 98],
+        templates_percentile_shading=[1, 25, 75, 99],
         x_offset_units=False,
         alpha_waveforms=0.5,
         alpha_templates=1,
