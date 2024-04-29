@@ -72,7 +72,8 @@ motion_options_preset = {
             direction=1,
             border_mode="remove_channels",
             spatial_interpolation_method="kriging",
-            sigma_um=[20.0, 30.0],
+            sigma_um=20.0,
+            p=2
         ),
     },
     "nonrigid_fast_and_accurate": {
@@ -134,7 +135,8 @@ motion_options_preset = {
             direction=1,
             border_mode="remove_channels",
             spatial_interpolation_method="kriging",
-            sigma_um=[20.0, 30.0],
+            sigma_um=20.0,
+            p=2
         ),
     },
     # This preset is a super fast rigid estimation with center of mass
@@ -162,7 +164,8 @@ motion_options_preset = {
             direction=1,
             border_mode="remove_channels",
             spatial_interpolation_method="kriging",
-            sigma_um=[20.0, 30.0],
+            sigma_um=20.0,
+            p=2
         ),
     },
     # This preset try to mimic kilosort2.5 motion estimator
@@ -199,8 +202,8 @@ motion_options_preset = {
             direction=1,
             border_mode="force_extrapolate",
             spatial_interpolation_method="kriging",
-            sigma_um=[20.0, 30.0],
-            p=1,
+            sigma_um=20.0,
+            p=2
         ),
     },
     # empty preset
