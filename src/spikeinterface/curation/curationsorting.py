@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import namedtuple
 from collections.abc import Iterable
-from hmac import new
 
 import numpy as np
 
