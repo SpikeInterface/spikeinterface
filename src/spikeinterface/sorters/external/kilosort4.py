@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Union
-from packaging.version import parse
 
 from ..basesorter import BaseSorter
 from .kilosortbase import KilosortBase
