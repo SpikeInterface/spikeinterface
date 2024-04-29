@@ -17,16 +17,17 @@ class SplitUnitSorting(BaseSorting):
         The recording object
     parent_unit_id: int
         Unit id of the unit to split
-    indices_list: list
+    indices_list: list or np.array
         A list of index arrays selecting the spikes to split in each segment.
         Each array can contain more than 2 indices (e.g. for splitting in 3 or more units) and it should
-        be the same length as the spike train (for each segment)
+        be the same length as the spike train (for each segment).
+        If the sorting has only one segment, indices_list can be a single array
     new_unit_ids: int
-        Unit ids of the new units to be created.
+        Unit ids of the new units to be created
     properties_policy: "keep" | "remove", default: "keep"
         Policy used to propagate properties. If "keep" the properties will be passed to the new units
          (if the units_to_merge have the same value). If "remove" the new units will have an empty
-         value for all the properties of the new unit.
+         value for all the properties of the new unit
     Returns
     -------
     sorting: Sorting
@@ -48,7 +49,6 @@ class SplitUnitSorting(BaseSorting):
                 new_unit_ids = max(parents_unit_ids) + 1
             new_unit_ids = np.array([u + new_unit_ids for u in range(tot_splits)], dtype=parents_unit_ids.dtype)
         else:
-            new_unit_ids = np.array(new_unit_ids, dtype=parents_unit_ids.dtype)
             assert len(np.unique(new_unit_ids)) == len(new_unit_ids), "Each element in new_unit_ids must be unique"
             assert len(new_unit_ids) <= tot_splits, "indices_list has more id indices than the length of new_unit_ids"
 
