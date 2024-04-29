@@ -111,7 +111,7 @@ class CurationSorting:
         ----------
         units_to_merge: list
             List of unit ids to merge
-        new_unit_id: int
+        new_unit_id: int or str
             The new unit id. If None, a new unit id is automatically selected
         delta_time_ms: float
             Number of ms to consider for duplicated spikes. None won't check for duplications
