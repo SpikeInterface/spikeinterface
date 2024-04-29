@@ -204,7 +204,6 @@ def get_potential_auto_merge(
             templates_ext is not None
         ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
 
-
         templates_array = templates_ext.get_data(outputs="numpy")
 
         templates_diff = compute_templates_diff(
@@ -397,7 +396,9 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
-def compute_templates_diff(sorting, templates_array, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1", sparsity=None):
+def compute_templates_diff(
+    sorting, templates_array, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1", sparsity=None
+):
     """
     Computes normalized template differences.
 
@@ -435,11 +436,8 @@ def compute_templates_diff(sorting, templates_array, num_channels=5, num_shift=5
         adaptative_masks = False
         sparsity_mask = None
     else:
-        adaptative_masks = (num_channels == None)
+        adaptative_masks = num_channels == None
         sparsity_mask = sparsity.mask
-
-
-
 
     templates_diff = np.full((n, n), np.nan, dtype="float64")
     for unit_ind1 in range(n):
