@@ -13,6 +13,3 @@ Tutorials without notebooks
 
    analyse_neuropixels
    waveform_extractor_to_sorting_analyzer
-
-
-

@@ -10,4 +10,3 @@ Shorter guides on how to solve specific, short problems in spike interface. Lear
     load_matlab_data
     combine_recordings
     process_by_channel_group
-
