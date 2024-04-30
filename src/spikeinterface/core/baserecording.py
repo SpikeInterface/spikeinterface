@@ -549,9 +549,11 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
-    def select_channels(self, channel_ids: list | np.array | tuple):
+    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
         """
         Returns a new recording object with a subset of channels.
+
+        Note that this method does not work in place and returns a new recording object.
 
         Parameters
         ----------
@@ -562,9 +564,11 @@ class BaseRecording(BaseRecordingSnippets):
 
         return ChannelSliceRecording(self, channel_ids)
 
-    def rename_channels(self, new_channel_ids: list | np.array | tuple):
+    def rename_channels(self, new_channel_ids: list | np.array | tuple) -> "BaseRecording":
         """
         Returns a new recording object with renamed channel ids.
+
+        Note that this method does not work in place and returns a new recording object.
 
         Parameters
         ----------
