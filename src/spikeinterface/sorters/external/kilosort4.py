@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import os
 from typing import Union
 
 from ..basesorter import BaseSorter
@@ -227,39 +226,14 @@ class Kilosort4Sorter(BaseSorter):
         torch.cuda.manual_seed_all(1)
         torch.random.manual_seed(1)
         # if not params["skip_kilosort_preprocessing"]:
-        if params["do_correction"]:
-            # this function applies both preprocessing and drift correction
-            ops, bfile, st0 = compute_drift_correction(
-                ops, device, tic0=tic0, progress_bar=progress_bar, file_object=file_object
-            )
-        else:
+        if not params["do_correction"]:
             print("Skipping drift correction.")
-            hp_filter = ops["preprocessing"]["hp_filter"]
-            whiten_mat = ops["preprocessing"]["whiten_mat"]
+            ops["nblocks"] = 0
 
-            bfile = BinaryFiltered(
-                ops["filename"],
-                n_chan_bin,
-                fs,
-                NT,
-                nt,
-                twav_min,
-                chan_map,
-                hp_filter=hp_filter,
-                whiten_mat=whiten_mat,
-                device=device,
-                do_CAR=do_CAR,
-                invert_sign=invert,
-                dtype=dtype,
-                tmin=tmin,
-                tmax=tmax,
-                artifact_threshold=artifact,
-                file_object=file_object,
-            )
-
-        # TODO: don't think we need to do this actually
-        # Save intermediate `ops` for use by GUI plots
-        # io.save_ops(ops, results_dir)
+        # this function applies both preprocessing and drift correction
+        ops, bfile, st0 = compute_drift_correction(
+            ops, device, tic0=tic0, progress_bar=progress_bar, file_object=file_object
+        )
 
         # Sort spikes and save results
         st, tF, _, _ = detect_spikes(ops, device, bfile, tic0=tic0, progress_bar=progress_bar)
@@ -268,39 +242,8 @@ class Kilosort4Sorter(BaseSorter):
             ops["preprocessing"] = dict(
                 hp_filter=torch.as_tensor(np.zeros(1)), whiten_mat=torch.as_tensor(np.eye(recording.get_num_channels()))
             )
-        ops, similar_templates, is_ref, est_contam_rate = save_sorting(
-            ops, results_dir, st, clu, tF, Wall, bfile.imin, tic0, save_extra_vars=save_extra_vars
-        )
 
-        # # Clean-up temporary files
-        # if params["delete_recording_dat"] and (recording_file := sorter_output_folder / "recording.dat").exists():
-        #     recording_file.unlink()
-
-        # all_tmp_files = ("matlab_files", "temp_wh.dat")
-
-        # if isinstance(params["delete_tmp_files"], bool):
-        #     if params["delete_tmp_files"]:
-        #         tmp_files_to_remove = all_tmp_files
-        #     else:
-        #         tmp_files_to_remove = ()
-        # else:
-        #     assert isinstance(
-        #         params["delete_tmp_files"], (tuple, list)
-        #     ), "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
-
-        #     for name in params["delete_tmp_files"]:
-        #         assert name in all_tmp_files, f"{name} is not a valid option, must be one of: {all_tmp_files}"
-
-        #     tmp_files_to_remove = params["delete_tmp_files"]
-
-        # if "temp_wh.dat" in tmp_files_to_remove:
-        #     if (temp_wh_file := sorter_output_folder / "temp_wh.dat").exists():
-        #         temp_wh_file.unlink()
-
-        # if "matlab_files" in tmp_files_to_remove:
-        #     for ext in ["*.m", "*.mat"]:
-        #         for temp_file in sorter_output_folder.glob(ext):
-        #             temp_file.unlink()
+        _ = save_sorting(ops, results_dir, st, clu, tF, Wall, bfile.imin, tic0, save_extra_vars=save_extra_vars)
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
