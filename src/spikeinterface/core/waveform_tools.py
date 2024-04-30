@@ -483,7 +483,7 @@ def extract_waveforms_to_single_buffer(
     if sparsity_mask is None:
         num_chans = recording.get_num_channels()
     else:
-        num_chans = max(np.sum(sparsity_mask, axis=1))
+        num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
     shape = (num_spikes, nsamples, num_chans)
 
     if mode == "memmap":
