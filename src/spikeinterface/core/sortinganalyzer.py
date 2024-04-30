@@ -572,6 +572,11 @@ class SortingAnalyzer:
 
         return sorting_analyzer
 
+    def set_recording(self, recording):
+        if self._recording is not None:
+            raise ValueError("Recording is already set")
+        self._recording = recording
+
     def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingAnalyzer":
         """
         Internal used by both save_as(), copy() and select_units() which are more or less the same.
