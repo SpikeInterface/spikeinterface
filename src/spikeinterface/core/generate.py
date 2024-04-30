@@ -81,7 +81,7 @@ def generate_recording(
         probe.set_device_channel_indices(np.arange(num_channels))
         recording.set_probe(probe, in_place=True)
 
-    recording.name = "SyntethicRecording"
+    recording.name = "SyntheticRecording"
 
     return recording
 
