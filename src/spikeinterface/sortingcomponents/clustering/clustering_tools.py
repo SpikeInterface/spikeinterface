@@ -718,7 +718,7 @@ def resolve_merging_graph(sorting, potential_merges):
     for i in range(n_components):
         merges = labels == i
         if merges.sum() > 1:
-            final_merges += [list(sorting.unit_ids[np.flatnonzero(merges)]))]
+            final_merges += [list(sorting.unit_ids[np.flatnonzero(merges)])]
 
     return final_merges
 
