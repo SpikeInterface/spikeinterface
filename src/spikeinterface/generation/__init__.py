@@ -14,5 +14,4 @@ from .drifting_generator import (
 
 from .template_database import (
     fetch_templates_from_database,
-    generate_recording_from_template_database,
 )
