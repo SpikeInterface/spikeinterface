@@ -27,7 +27,7 @@ try:
 except:
     HAVE_HDBSCAN = False
 
-from scipy.sparse import coo_matrix
+
 
 try:
     import pymde
@@ -572,6 +572,8 @@ def merge_nn_dicts(peaks, n_neighbors, peaks_in_chunk_idx_list, knn_indices_list
 
 
 def construct_symmetric_graph_from_idx_vals(graph_idx, graph_vals):
+    from scipy.sparse import coo_matrix
+    
     rows = graph_idx.flatten()
     cols = np.repeat(np.arange(len(graph_idx)), graph_idx.shape[1])
     rows_ = np.concatenate([rows, cols])
