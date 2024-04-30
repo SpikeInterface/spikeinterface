@@ -328,6 +328,23 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
     assert len(peaks_local_mf_filtering) > len(peaks_by_channel_np)
 
 
+    DEBUG = False
+    if DEBUG:
+        import matplotlib.pyplot as plt
+
+        peaks = peaks_local_mf_filtering
+
+        sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
+        chan_offset = 500
+        traces = recording.get_traces().copy()
+        traces += np.arange(traces.shape[1])[None, :] * chan_offset
+        fig, ax = plt.subplots()
+        ax.plot(traces, color="k")
+        ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color="r")
+        plt.show()
+
+
+
 detection_classes = [
     DetectPeakByChannel,
     DetectPeakByChannelTorch,
