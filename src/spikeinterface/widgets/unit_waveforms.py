@@ -54,7 +54,7 @@ class UnitWaveformsWidget(BaseWidget):
         Alpha value for templates, (matplotlib backend)
     shade_templates : bool, default: True
         If True, templates are shaded, see templates_percentile_shading argument
-    templates_percentile_shading : float, list of floats, or None, default: [1, 25, 75, 98]
+    templates_percentile_shading : float, tuple/list of floats, or None, default: (1, 25, 75, 99)
         It controls the shading of the templates.
         If None, the shading is +/- the standard deviation of the templates.
         If float, it controls the percentile of the template values used to shade the templates.
@@ -95,7 +95,7 @@ class UnitWaveformsWidget(BaseWidget):
         set_title=True,
         same_axis=False,
         shade_templates=True,
-        templates_percentile_shading=[1, 25, 75, 98],
+        templates_percentile_shading=(1, 25, 75, 99),
         x_offset_units=False,
         alpha_waveforms=0.5,
         alpha_templates=1,
@@ -435,8 +435,8 @@ class UnitWaveformsWidget(BaseWidget):
                 templates_percentile_shading = [templates_percentile_shading, 100 - templates_percentile_shading]
             else:
                 assert isinstance(
-                    templates_percentile_shading, list
-                ), "'templates_percentile_shading' should be a float, a list of floats, or None!"
+                    templates_percentile_shading, (list, tuple)
+                ), "'templates_percentile_shading' should be a float, a list/tuple of floats, or None!"
                 assert (
                     np.mod(len(templates_percentile_shading), 2) == 0
                 ), "'templates_percentile_shading' should be a have an even number of elements."
