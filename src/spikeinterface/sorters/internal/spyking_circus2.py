@@ -105,7 +105,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-        from spikeinterface.sortingcomponents.clustering.clustering_tools import resolve_merging_graph, apply_merges_to_sorting
+        from spikeinterface.sortingcomponents.clustering.clustering_tools import (
+            resolve_merging_graph,
+            apply_merges_to_sorting,
+        )
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
         from spikeinterface.sortingcomponents.tools import get_prototype_spike
