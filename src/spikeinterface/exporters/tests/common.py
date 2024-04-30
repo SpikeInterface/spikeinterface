@@ -55,17 +55,17 @@ def make_sorting_analyzer(sparse=True, with_group=False):
     return sorting_analyzer
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def sorting_analyzer_dense_for_export():
     return make_sorting_analyzer(sparse=False)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def sorting_analyzer_with_group_for_export():
     return make_sorting_analyzer(sparse=False, with_group=True)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def sorting_analyzer_sparse_for_export():
     return make_sorting_analyzer(sparse=True)
 

@@ -23,6 +23,8 @@ from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.sortingcomponents.clustering.clustering_tools import resolve_merging_graph, apply_merges_to_sorting
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
+from spikeinterface.sortingcomponents.tools import get_prototype_spike
+
 try:
     import hdbscan
 
