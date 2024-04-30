@@ -1,7 +1,6 @@
 from __future__ import annotations
 import warnings
 from pathlib import Path
-from warnings import warn
 
 import numpy as np
 from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, write_probeinterface
@@ -48,7 +47,7 @@ class BaseRecording(BaseRecordingSnippets):
         self.annotate(is_filtered=False)
 
     def __repr__(self):
-        extractor_name = self.__class__.__name__
+        extractor_name = self.__class__.__name__ if self.name is None else self.name
         num_segments = self.get_num_segments()
         num_channels = self.get_num_channels()
         sf_khz = self.get_sampling_frequency() / 1000.0
@@ -426,7 +425,7 @@ class BaseRecording(BaseRecordingSnippets):
         rs.time_vector = times.astype("float64", copy=False)
 
         if with_warning:
-            warn(
+            warnings.warn(
                 "Setting times with Recording.set_times() is not recommended because "
                 "times are not always propagated across preprocessing"
                 "Use this carefully!"
@@ -550,6 +549,19 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
+    def select_channels(self, channel_ids: list | np.array | tuple):
+        """
+        Returns a new recording object with a subset of channels.
+
+        Parameters
+        ----------
+        channel_ids : list or np.array or tuple
+            The channel ids to select.
+        """
+        from .channelslice import ChannelSliceRecording
+
+        return ChannelSliceRecording(self, channel_ids)
+
     def rename_channels(self, new_channel_ids: list | np.array | tuple):
         """
         Returns a new recording object with renamed channel ids.
@@ -570,6 +582,10 @@ class BaseRecording(BaseRecordingSnippets):
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceRecording
 
+        warnings.warn(
+            "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            DeprecationWarning,
+        )
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
 
