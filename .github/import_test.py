@@ -9,8 +9,7 @@ import_statement_list = [
     "import spikeinterface.preprocessing",
     "import spikeinterface.comparison",
     "import spikeinterface.postprocessing",
-    # sorting components has too non core import everywhere
-    #"import spikeinterface.sortingcomponents",
+    "import spikeinterface.sortingcomponents",
     "import spikeinterface.curation",
     "import spikeinterface.exporters",
     "import spikeinterface.widgets",
