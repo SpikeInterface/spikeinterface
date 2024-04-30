@@ -31,6 +31,7 @@ from spikeinterface.core.node_pipeline import (
     ExtractSparseWaveforms,
     PeakRetriever,
 )
+
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
 
