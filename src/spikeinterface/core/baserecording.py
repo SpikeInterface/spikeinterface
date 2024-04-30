@@ -551,7 +551,7 @@ class BaseRecording(BaseRecordingSnippets):
         """
         Returns a new recording object with a subset of channels.
 
-        Note that this method does not work in place and returns a new recording object.
+        Note that this method does not modify the current recording and instead returns a new recording object.
 
         Parameters
         ----------
@@ -566,7 +566,7 @@ class BaseRecording(BaseRecordingSnippets):
         """
         Returns a new recording object with renamed channel ids.
 
-        Note that this method does not work in place and returns a new recording object.
+        Note that this method does not modify the current recording and instead returns a new recording object.
 
         Parameters
         ----------
