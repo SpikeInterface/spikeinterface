@@ -136,14 +136,18 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if params["drift_correction"] is not None:
             if not valid_geometry:
                 print("Geometry of the probe does not allow 1D drift correction")
+                motion_folder = None
             else:
                 print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
                 params["drift_correction"].update({"folder": motion_folder})
                 recording_f = correct_motion(recording_f, **params["drift_correction"])
+        else:
+            motion_folder = None
 
         ## We need to whiten before the template matching step, to boost the results
-        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32", regularize=True)
+        # TODO add , regularize=True chen ready
+        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32")
 
         noise_levels = get_noise_levels(recording_w, return_scaled=False)
 
@@ -303,7 +307,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         merging_params = params["merging"].copy()
 
         if len(merging_params) > 0:
-            if params["drift_correction"]:
+            if params["drift_correction"] and motion_folder is not None:
                 from spikeinterface.preprocessing.motion import load_motion_info
 
                 motion_info = load_motion_info(motion_folder)
