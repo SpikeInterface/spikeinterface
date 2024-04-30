@@ -11,10 +11,8 @@ from .core_tools import (
     convert_bytes_to_str,
     convert_seconds_to_str,
 )
-from .recording_tools import (
-    write_binary_recording,
-    write_memory_recording,
-)
+from .recording_tools import write_binary_recording
+
 
 from .job_tools import split_job_kwargs
 
@@ -47,7 +45,7 @@ class BaseRecording(BaseRecordingSnippets):
         self.annotate(is_filtered=False)
 
     def __repr__(self):
-        extractor_name = self.__class__.__name__ if self.name is None else self.name
+        extractor_name = self.__class__.__name__
         num_segments = self.get_num_segments()
         num_channels = self.get_num_channels()
         sf_khz = self.get_sampling_frequency() / 1000.0
