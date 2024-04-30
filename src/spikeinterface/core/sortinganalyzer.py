@@ -1187,7 +1187,7 @@ def _get_children_dependencies(extension_name):
             names.append(child)
         grand_children = _get_children_dependencies(child)
         names.extend(grand_children)
-    return list(set(names))
+    return list(names)
 
 
 def register_result_extension(extension_class):

@@ -147,7 +147,7 @@ def export_to_phy(
             rec_path = "None"
     else:  # don't save recording.dat
         if copy_binary:
-            warnings.warn("Recording will not be copied since waveform extractor is recordingless.")
+            warnings.warn("Recording will not be copied since sorting_analyzer is recordingless.")
         rec_path = "None"
 
     dtype_str = np.dtype(dtype).name
@@ -181,7 +181,7 @@ def export_to_phy(
     # export templates/templates_ind/similar_templates
     # shape (num_units, num_samples, max_num_channels)
     templates_ext = sorting_analyzer.get_extension("templates")
-    assert templates_ext is not None, "export_to_phy need SortingAnalyzer with extension 'templates'"
+    assert templates_ext is not None, "export_to_phy requires a SortingAnalyzer with the extension 'templates'"
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
     dense_templates = templates_ext.get_templates(unit_ids=unit_ids, operator=template_mode)
     num_samples = dense_templates.shape[1]
