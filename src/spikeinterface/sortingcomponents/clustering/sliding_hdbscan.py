@@ -7,7 +7,6 @@ import random
 import string
 
 
-
 import numpy as np
 
 try:
@@ -166,7 +165,7 @@ class SlidingHdbscanClustering:
     def _find_clusters(cls, recording, peaks, wfs_arrays, sparsity_mask, noise, d):
 
         import sklearn.decomposition
-        
+
         num_chans = recording.get_num_channels()
         fs = recording.get_sampling_frequency()
         nbefore = int(d["ms_before"] * fs / 1000.0)
