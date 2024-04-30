@@ -83,7 +83,7 @@ def split_clusters(
         for label in labels_set:
             peak_indices = np.flatnonzero(peak_labels == label)
             if peak_indices.size > 0:
-                jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level=1))
+                jobs.append(pool.submit(split_function_wrapper, peak_indices, 1))
 
         if progress_bar:
             iterator = tqdm(jobs, desc=f"split_clusters with {method}", total=len(labels_set))
