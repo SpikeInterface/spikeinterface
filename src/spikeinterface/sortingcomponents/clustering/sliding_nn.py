@@ -470,7 +470,7 @@ def get_spike_nearest_neighbors(
     """
 
     from sklearn.utils import check_random_state
-    
+
     # helper functions for nearest-neighbors search tree
     def get_n_trees_iters(X):
         n_trees = min(64, 5 + int(round((X.shape[0]) ** 0.5 / 20.0)))
