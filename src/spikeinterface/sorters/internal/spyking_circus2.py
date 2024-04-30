@@ -16,14 +16,10 @@ from spikeinterface.preprocessing import common_reference, whiten, bandpass_filt
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.sortingcomponents.tools import remove_empty_templates
-from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
-from spikeinterface.sortingcomponents.clustering.clustering_tools import resolve_merging_graph, apply_merges_to_sorting
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
-from spikeinterface.sortingcomponents.tools import get_prototype_spike
 
 try:
     import hdbscan
@@ -109,6 +105,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+        from spikeinterface.sortingcomponents.clustering.clustering_tools import resolve_merging_graph, apply_merges_to_sorting
+        from spikeinterface.sortingcomponents.tools import remove_empty_templates
+        from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
+        from spikeinterface.sortingcomponents.tools import get_prototype_spike
 
         job_kwargs = params["job_kwargs"]
         job_kwargs = fix_job_kwargs(job_kwargs)
