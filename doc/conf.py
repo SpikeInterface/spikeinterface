@@ -63,6 +63,7 @@ author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Ma
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
+    'sphinx.ext.autosectionlabel',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
     'sphinx_design',
