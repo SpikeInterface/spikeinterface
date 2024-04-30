@@ -40,10 +40,17 @@ Release notes
   releases/0.9.1.rst
 
 
+Version 0.100.6
+===============
+
+* Minor release with bug fixes
+
+
 Version 0.100.5
 ===============
 
 * Minor release with bug fixes
+
 
 Version 0.100.4
 ===============
