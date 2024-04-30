@@ -694,7 +694,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         assert HAVE_NUMBA, "You need to install numba"
         conv_traces = self.get_convolved_traces(traces, self.temporal, self.spatial, self.singular)
         conv_traces /= self.abs_thresholds[:, None]
-        conv_traces = conv_traces[:, self.conv_margin:-self.conv_margin]
+        conv_traces = conv_traces[:, self.conv_margin : -self.conv_margin]
         traces_center = conv_traces[:, self.exclude_sweep_size : -self.exclude_sweep_size]
         num_z_factors = len(self.z_factors)
         num_channels = conv_traces.shape[0] // num_z_factors
@@ -714,8 +714,6 @@ class DetectPeakMatchedFiltering(PeakDetector):
         # Find peaks and correct for time shift
         peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
 
-        
-
         # If we do not want to estimate the z accurately
         z = self.z_factors[peak_chan_ind // num_channels]
         peak_chan_ind = peak_chan_ind % num_channels
@@ -729,11 +727,10 @@ class DetectPeakMatchedFiltering(PeakDetector):
         #     data = traces[channel::num_channels, peak]
         #     z[count] = np.dot(data, z_factors)/data.sum()
 
-        
         if peak_sample_ind.size == 0 or peak_chan_ind.size == 0:
             return (np.zeros(0, dtype=self._dtype),)
-        
-        peak_sample_ind += (self.exclude_sweep_size + self.conv_margin)
+
+        peak_sample_ind += self.exclude_sweep_size + self.conv_margin
 
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
         local_peaks = np.zeros(peak_sample_ind.size, dtype=self._dtype)

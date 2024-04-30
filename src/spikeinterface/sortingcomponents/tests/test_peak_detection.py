@@ -327,7 +327,6 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
     )
     assert len(peaks_local_mf_filtering) > len(peaks_by_channel_np)
 
-
     DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
@@ -342,7 +341,6 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
         ax.plot(traces, color="k")
         ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color="r")
         plt.show()
-
 
 
 detection_classes = [
