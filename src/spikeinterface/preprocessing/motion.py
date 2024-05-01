@@ -69,10 +69,7 @@ motion_options_preset = {
             weight_with_amplitude=False,
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1,
-            border_mode="remove_channels",
-            spatial_interpolation_method="idw",
-            num_closest=3,
+            direction=1, border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     "nonrigid_fast_and_accurate": {
@@ -131,10 +128,7 @@ motion_options_preset = {
             weight_with_amplitude=False,
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1,
-            border_mode="remove_channels",
-            spatial_interpolation_method="idw",
-            num_closest=3,
+            direction=1, border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     # This preset is a super fast rigid estimation with center of mass
@@ -159,10 +153,7 @@ motion_options_preset = {
             rigid=True,
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1,
-            border_mode="remove_channels",
-            spatial_interpolation_method="idw",
-            num_closest=3,
+            direction=1, border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     # This preset try to mimic kilosort2.5 motion estimator
@@ -196,11 +187,7 @@ motion_options_preset = {
             win_shape="rect",
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1,
-            border_mode="force_extrapolate",
-            spatial_interpolation_method="kriging",
-            sigma_um=[20.0, 30],
-            p=1,
+            direction=1, border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     # empty preset
