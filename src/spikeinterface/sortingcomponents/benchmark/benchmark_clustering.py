@@ -49,7 +49,6 @@ class ClusteringBenchmark(Benchmark):
 
     def compute_result(self, **result_params):
         self.noise = self.result["peak_labels"] < 0
-
         spikes = self.gt_sorting.to_spike_vector()
         self.result["sliced_gt_sorting"] = NumpySorting(
             spikes[self.indices], self.recording.sampling_frequency, self.gt_sorting.unit_ids
@@ -301,8 +300,8 @@ class ClusteringStudy(BenchmarkStudy):
             result = self.get_result(key)
             scores = result["gt_comparison"].agreement_scores
 
-            # positions = result["gt_comparison"].sorting1.get_property('gt_unit_locations')
-            positions = self.datasets[key[1]][1].get_property("gt_unit_locations")
+            positions = result["sliced_gt_sorting"].get_property("gt_unit_locations")
+            # positions = self.datasets[key[1]][1].get_property("gt_unit_locations")
             depth = positions[:, 1]
 
             analyzer = self.get_sorting_analyzer(key)

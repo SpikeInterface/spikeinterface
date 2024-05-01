@@ -8,6 +8,7 @@ from __future__ import annotations
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
+from spikeinterface.core import NumpySorting
 
 
 def _split_waveforms(
@@ -535,13 +536,11 @@ def remove_duplicates(
     return labels, new_labels
 
 
-def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None):
+def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None, rank=5, multiple_passes=False):
+
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, SharedMemoryRecording
-    from spikeinterface.core import NumpySorting
-    from spikeinterface.core import get_global_tmp_folder
     import os
-    from pathlib import Path
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -553,10 +552,24 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
     fs = templates.sampling_frequency
     num_chans = len(templates.channel_ids)
 
-    padding = 2 * duration
+    if rank is not None:
+        templates_array = templates.get_dense_templates().copy()
+        templates_array -= templates_array.mean(axis=(1, 2))[:, None, None]
+
+        # Then we keep only the strongest components
+        temporal, singular, spatial = np.linalg.svd(templates_array, full_matrices=False)
+        temporal = temporal[:, :, :rank]
+        singular = singular[:, :rank]
+        spatial = spatial[:, :rank, :]
+
+        templates_array = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
+
+    norms = np.linalg.norm(templates_array, axis=(1, 2))
+    margin = max(templates.nbefore, templates.nafter)
     tmp_filename = None
-    zdata = templates_array.reshape(nb_templates * duration, num_chans)
-    blank = np.zeros((2 * duration, num_chans), dtype=zdata.dtype)
+    zdata = np.hstack(((templates_array, np.zeros((nb_templates, margin, num_chans)))))
+    zdata = zdata.reshape(nb_templates * (duration + margin), num_chans)
+    blank = np.zeros((margin, num_chans), dtype=zdata.dtype)
     zdata = np.vstack((blank, zdata, blank))
 
     if tmp_folder is not None:
@@ -575,48 +588,102 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
     recording = recording.set_probe(templates.probe)
     recording.annotate(is_filtered=True)
 
-    margin = 2 * max(templates.nbefore, templates.nafter)
-    half_marging = margin // 2
-
     local_params = method_kwargs.copy()
+    amplitudes = [0.95, 1.05]
 
-    local_params.update({"templates": templates, "amplitudes": [0.95, 1.05]})
+    local_params.update(
+        {"templates": templates, "amplitudes": amplitudes, "stop_criteria": "omp_min_sps", "omp_min_sps": 0.5}
+    )
 
     ignore_ids = []
     similar_templates = [[], []]
 
-    for i in range(nb_templates):
-        t_start = padding + i * duration
-        t_stop = padding + (i + 1) * duration
+    keep_searching = True
 
-        sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
-        local_params.update({"ignored_ids": ignore_ids + [i]})
-        spikes, computed = find_spikes_from_templates(
-            sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
-        )
-        local_params.update(
-            {
-                "overlaps": computed["overlaps"],
-                "normed_templates": computed["normed_templates"],
-                "norms": computed["norms"],
-                "temporal": computed["temporal"],
-                "spatial": computed["spatial"],
-                "singular": computed["singular"],
-                "units_overlaps": computed["units_overlaps"],
-                "unit_overlaps_indices": computed["unit_overlaps_indices"],
-            }
-        )
-        valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)
-        if np.sum(valid) > 0:
-            if np.sum(valid) == 1:
+    DEBUG = False
+    while keep_searching:
+
+        keep_searching = False
+
+        for i in list(set(range(nb_templates)).difference(ignore_ids)):
+
+            ## Could be speed up by only computing the values for templates that are
+            ## nearby
+
+            t_start = i * (duration + margin)
+            t_stop = margin + (i + 1) * (duration + margin)
+
+            sub_recording = recording.frame_slice(t_start, t_stop)
+            local_params.update({"ignored_ids": ignore_ids + [i]})
+            spikes, computed = find_spikes_from_templates(
+                sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
+            )
+            local_params.update(
+                {
+                    "overlaps": computed["overlaps"],
+                    "normed_templates": computed["normed_templates"],
+                    "norms": computed["norms"],
+                    "temporal": computed["temporal"],
+                    "spatial": computed["spatial"],
+                    "singular": computed["singular"],
+                    "units_overlaps": computed["units_overlaps"],
+                    "unit_overlaps_indices": computed["unit_overlaps_indices"],
+                }
+            )
+            valid = (spikes["sample_index"] >= 0) * (spikes["sample_index"] < duration + 2 * margin)
+
+            if np.sum(valid) > 0:
+                ref_norm = norms[i]
+
                 j = spikes[valid]["cluster_index"][0]
-                ignore_ids += [i]
-                similar_templates[1] += [i]
-                similar_templates[0] += [j]
-            elif np.sum(valid) > 1:
-                similar_templates[0] += [-1]
-                ignore_ids += [i]
-                similar_templates[1] += [i]
+                sum = templates_array[j]
+                for k in range(1, np.sum(valid)):
+                    j = spikes[valid]["cluster_index"][k]
+                    a = spikes[valid]["amplitude"][k]
+                    sum += a * templates_array[j]
+
+                tgt_norm = np.linalg.norm(sum)
+                ratio = tgt_norm / ref_norm
+
+                if (amplitudes[0] < ratio) and (ratio < amplitudes[1]):
+                    if multiple_passes:
+                        keep_searching = True
+                    if np.sum(valid) == 1:
+                        ignore_ids += [i]
+                        similar_templates[1] += [i]
+                        similar_templates[0] += [j]
+                    elif np.sum(valid) > 1:
+                        similar_templates[0] += [-1]
+                        ignore_ids += [i]
+                        similar_templates[1] += [i]
+
+                    if DEBUG:
+                        import pylab as plt
+
+                        fig, axes = plt.subplots(1, 2)
+                        from spikeinterface.widgets import plot_traces
+
+                        plot_traces(sub_recording, ax=axes[0])
+                        axes[1].plot(templates_array[i].flatten(), label=f"{ref_norm}")
+                        axes[1].plot(sum.flatten(), label=f"{tgt_norm}")
+                        axes[1].legend()
+                        plt.show()
+                        print(i, spikes[valid]["cluster_index"], spikes[valid]["amplitude"])
+
+    del recording, sub_recording, local_params, templates
+    if tmp_filename is not None:
+        os.remove(tmp_filename)
+
+    return similar_templates
+
+
+def remove_duplicates_via_matching(
+    templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None, rank=5, multiple_passes=False
+):
+
+    similar_templates = detect_mixtures(
+        templates, method_kwargs, job_kwargs, tmp_folder=tmp_folder, rank=rank, multiple_passes=multiple_passes
+    )
 
     new_labels = peak_labels.copy()
 
@@ -630,11 +697,73 @@ def remove_duplicates_via_matching(templates, peak_labels, method_kwargs={}, job
     labels = np.unique(new_labels)
     labels = labels[labels >= 0]
 
-    del recording, sub_recording, local_params, templates
-    if tmp_filename is not None:
-        os.remove(tmp_filename)
-
     return labels, new_labels
+
+
+def resolve_merging_graph(sorting, potential_merges):
+    """
+    Function to provide, given a list of potential_merges, a resolved merging
+    graph based on the connected components.
+    """
+    from scipy.sparse.csgraph import connected_components
+    from scipy.sparse import lil_matrix
+
+    n = len(sorting.unit_ids)
+    graph = lil_matrix((n, n))
+    for i, j in potential_merges:
+        graph[sorting.id_to_index(i), sorting.id_to_index(j)] = 1
+
+    n_components, labels = connected_components(graph, directed=True, connection="weak", return_labels=True)
+    final_merges = []
+    for i in range(n_components):
+        merges = labels == i
+        if merges.sum() > 1:
+            final_merges += [list(sorting.unit_ids[np.flatnonzero(merges)])]
+
+    return final_merges
+
+
+def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
+    """
+    Function to apply a resolved representation of the merges to a sorting object. If censor_ms is not None,
+    duplicated spikes violating the censor_ms refractory period are removed
+    """
+    spikes = sorting.to_spike_vector().copy()
+    to_keep = np.ones(len(spikes), dtype=bool)
+
+    segment_slices = {}
+    for segment_index in range(sorting.get_num_segments()):
+        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
+        segment_slices[segment_index] = (s0, s1)
+
+    if censor_ms is not None:
+        rpv = int(sorting.sampling_frequency * censor_ms / 1000)
+
+    for connected in merges:
+        mask = np.in1d(spikes["unit_index"], sorting.ids_to_indices(connected))
+        spikes["unit_index"][mask] = sorting.id_to_index(connected[0])
+
+        if censor_ms is not None:
+            for segment_index in range(sorting.get_num_segments()):
+                s0, s1 = segment_slices[segment_index]
+                (indices,) = s0 + np.nonzero(mask[s0:s1])
+                to_keep[indices[1:]] = np.logical_or(
+                    to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
+                )
+
+    times_list = []
+    labels_list = []
+    for segment_index in range(sorting.get_num_segments()):
+        s0, s1 = segment_slices[segment_index]
+        if censor_ms is not None:
+            times_list += [spikes["sample_index"][s0:s1][to_keep[s0:s1]]]
+            labels_list += [spikes["unit_index"][s0:s1][to_keep[s0:s1]]]
+        else:
+            times_list += [spikes["sample_index"][s0:s1]]
+            labels_list += [spikes["unit_index"][s0:s1]]
+
+    sorting = NumpySorting.from_times_labels(times_list, labels_list, sorting.sampling_frequency)
+    return sorting
 
 
 def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_threshold=None):
