@@ -88,7 +88,7 @@ compute_unit_locations = ComputeUnitLocations.function_factory()
 
 
 def compute_monopolar_triangulation(
-    sorting_analyzer,
+    sorting_analyzer_or_templates,
     optimizer="minimize_with_log_penality",
     radius_um=75,
     max_distance_um=1000,
@@ -115,8 +115,8 @@ def compute_monopolar_triangulation(
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer_or_templates: SortingAnalyzer | Templates
+        A SortingAnalyzer or Templates object
     method: "least_square" | "minimize_with_log_penality", default: "least_square"
        The optimizer to use
     radius_um: float, default: 75
@@ -142,13 +142,13 @@ def compute_monopolar_triangulation(
     assert optimizer in ("least_square", "minimize_with_log_penality")
 
     assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
-    unit_ids = sorting_analyzer.unit_ids
+    unit_ids = sorting_analyzer_or_templates.unit_ids
 
-    contact_locations = sorting_analyzer.get_channel_locations()
+    contact_locations = sorting_analyzer_or_templates.get_channel_locations()
 
-    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=radius_um)
-    templates = get_dense_templates_array(sorting_analyzer)
-    nbefore = _get_nbefore(sorting_analyzer)
+    sparsity = compute_sparsity(sorting_analyzer_or_templates, method="radius", radius_um=radius_um)
+    templates = get_dense_templates_array(sorting_analyzer_or_templates)
+    nbefore = _get_nbefore(sorting_analyzer_or_templates)
 
     if enforce_decrease:
         neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
@@ -156,7 +156,7 @@ def compute_monopolar_triangulation(
             chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
             neighbours_mask[i, chan_inds] = True
         enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
-        best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index")
+        best_channels = get_template_extremum_channel(sorting_analyzer_or_templates, outputs="index")
 
     unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
@@ -185,13 +185,13 @@ def compute_monopolar_triangulation(
     return unit_location
 
 
-def compute_center_of_mass(sorting_analyzer, peak_sign="neg", radius_um=75, feature="ptp"):
+def compute_center_of_mass(sorting_analyzer_or_templates, peak_sign="neg", radius_um=75, feature="ptp"):
     """
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer_or_templates: SortingAnalyzer | Templates
         A SortingAnalyzer object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
@@ -204,15 +204,17 @@ def compute_center_of_mass(sorting_analyzer, peak_sign="neg", radius_um=75, feat
     -------
     unit_location: np.array
     """
-    unit_ids = sorting_analyzer.unit_ids
+    unit_ids = sorting_analyzer_or_templates.unit_ids
 
-    contact_locations = sorting_analyzer.get_channel_locations()
+    contact_locations = sorting_analyzer_or_templates.get_channel_locations()
 
     assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
 
-    sparsity = compute_sparsity(sorting_analyzer, peak_sign=peak_sign, method="radius", radius_um=radius_um)
-    templates = get_dense_templates_array(sorting_analyzer)
-    nbefore = _get_nbefore(sorting_analyzer)
+    sparsity = compute_sparsity(
+        sorting_analyzer_or_templates, peak_sign=peak_sign, method="radius", radius_um=radius_um
+    )
+    templates = get_dense_templates_array(sorting_analyzer_or_templates)
+    nbefore = _get_nbefore(sorting_analyzer_or_templates)
 
     unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
@@ -238,7 +240,7 @@ def compute_center_of_mass(sorting_analyzer, peak_sign="neg", radius_um=75, feat
 
 
 def compute_grid_convolution(
-    sorting_analyzer,
+    sorting_analyzer_or_templates,
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
@@ -253,7 +255,7 @@ def compute_grid_convolution(
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer_or_templates: SortingAnalyzer | Templates
         A SortingAnalyzer object
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
@@ -279,14 +281,14 @@ def compute_grid_convolution(
     unit_location: np.array
     """
 
-    contact_locations = sorting_analyzer.get_channel_locations()
-    unit_ids = sorting_analyzer.unit_ids
+    contact_locations = sorting_analyzer_or_templates.get_channel_locations()
+    unit_ids = sorting_analyzer_or_templates.unit_ids
 
-    templates = get_dense_templates_array(sorting_analyzer)
-    nbefore = _get_nbefore(sorting_analyzer)
+    templates = get_dense_templates_array(sorting_analyzer_or_templates)
+    nbefore = _get_nbefore(sorting_analyzer_or_templates)
     nafter = templates.shape[1] - nbefore
 
-    fs = sorting_analyzer.sampling_frequency
+    fs = sorting_analyzer_or_templates.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
 
@@ -302,7 +304,7 @@ def compute_grid_convolution(
         contact_locations, radius_um, upsampling_um, margin_um, weight_method
     )
 
-    peak_channels = get_template_extremum_channel(sorting_analyzer, peak_sign, outputs="index")
+    peak_channels = get_template_extremum_channel(sorting_analyzer_or_templates, peak_sign, outputs="index")
 
     weights_sparsity_mask = weights > 0
 

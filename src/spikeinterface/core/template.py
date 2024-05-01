@@ -342,6 +342,55 @@ class Templates:
     def from_json(cls, json_str):
         return cls.from_dict(json.loads(json_str))
 
+    def select_units(self, unit_ids):
+        """
+        Return a new Templates object with only the selected units.
+
+        Parameters
+        ----------
+        unit_ids : list
+            List of unit IDs to select.
+        """
+        unit_ids_list = list(self.unit_ids)
+        unit_indices = np.array([unit_ids_list.index(unit_id) for unit_id in unit_ids])
+        sliced_sparsity_mask = None if self.sparsity_mask is None else self.sparsity_mask[unit_indices]
+        return Templates(
+            templates_array=self.templates_array[unit_indices],
+            sampling_frequency=self.sampling_frequency,
+            nbefore=self.nbefore,
+            sparsity_mask=sliced_sparsity_mask,
+            channel_ids=self.channel_ids,
+            unit_ids=unit_ids,
+            probe=self.probe,
+            check_for_consistent_sparsity=False,
+        )
+
+    def select_channels(self, channel_ids):
+        """
+        Return a new Templates object with only the selected channels.
+        This operation can be useful to remove bad channels for hybrid recording
+        generation.
+
+        Parameters
+        ----------
+        channel_ids : list
+            List of channel IDs to select.
+        """
+        assert not self.are_templates_sparse(), "Cannot select channels on sparse templates"
+        channel_ids_list = list(self.channel_ids)
+        channel_indices = np.array([channel_ids_list.index(channel_id) for channel_id in channel_ids])
+        sliced_sparsity_mask = None if self.sparsity_mask is None else self.sparsity_mask[:, channel_indices]
+        return Templates(
+            templates_array=self.templates_array[:, :, channel_indices],
+            sampling_frequency=self.sampling_frequency,
+            nbefore=self.nbefore,
+            sparsity_mask=sliced_sparsity_mask,
+            channel_ids=channel_ids,
+            unit_ids=self.unit_ids,
+            probe=self.probe,
+            check_for_consistent_sparsity=False,
+        )
+
     def __eq__(self, other):
         """
         Necessary to compare templates because they naturally compare objects by equality of their fields

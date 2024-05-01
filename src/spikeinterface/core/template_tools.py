@@ -50,7 +50,7 @@ def _get_nbefore(one_object):
             raise ValueError("SortingAnalyzer need extension 'templates' to be computed")
         return ext.nbefore
     else:
-        raise ValueError("Input should be Templates or SortingAnalyzer or SortingAnalyzer")
+        raise ValueError("Input should be Templates or SortingAnalyzer")
 
 
 def get_template_amplitudes(
