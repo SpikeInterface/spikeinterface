@@ -109,17 +109,17 @@ class BaseWidget:
 
     @classmethod
     def ensure_sorting_analyzer(cls, input):
-        # internal help to accept both SortingAnalyzer or MockWaveformExtractor for a ploter
+        # internal help to accept both SortingAnalyzer or MockWaveformExtractor for a plotter
         if isinstance(input, SortingAnalyzer):
             return input
         elif isinstance(input, MockWaveformExtractor):
             return input.sorting_analyzer
         else:
-            return input
+            raise TypeError("input must be a SortingAnalyzer or MockWaveformExtractor")
 
     @classmethod
     def ensure_sorting(cls, input):
-        # internal help to accept both Sorting or SortingAnalyzer or MockWaveformExtractor for a ploter
+        # internal help to accept both Sorting or SortingAnalyzer or MockWaveformExtractor for a plotter
         if isinstance(input, BaseSorting):
             return input
         elif isinstance(input, SortingAnalyzer):
@@ -127,7 +127,7 @@ class BaseWidget:
         elif isinstance(input, MockWaveformExtractor):
             return input.sorting_analyzer.sorting
         else:
-            return input
+            raise TypeError("input must be a SortingAnalyzer, MockWaveformExtractor, or of type BaseSorting")
 
     @staticmethod
     def check_extensions(sorting_analyzer, extensions):
