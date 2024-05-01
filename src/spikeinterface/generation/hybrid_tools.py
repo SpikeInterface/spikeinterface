@@ -91,6 +91,7 @@ def generate_hybrid_recording(
     unit_locations=None,
     upsample_factor=None,
     upsample_vector=None,
+    amplitude_std=0.05,
     generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0, seed=2205),
     generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
     generate_templates_kwargs=dict(),
@@ -126,6 +127,9 @@ def generate_hybrid_recording(
         A upsampling factor used only when templates are not provided.
     upsample_vector: np.array or None
         Optional the upsample_vector can given. This has the same shape as spike_vector
+    amplitude_std: float, default: 0.05
+        The standard deviation of the modulation to apply to the spikes when injecting them
+        into the recording.
     generate_sorting_kwargs: dict
         When sorting is not provide, this dict is used to generated a Sorting.
     generate_unit_locations_kwargs: dict
@@ -229,6 +233,12 @@ def generate_hybrid_recording(
             a = 1 / np.abs((unit_locations[count, 1] - motion_info["spatial_bins"]))
             displacement_unit_factor[count] = a / a.sum()
 
+        if amplitude_std is not None:
+            spike_vector = sorting.to_spike_vector()
+            amplitude_factor = 1 + rng.randn(spike_vector.size) * amplitude_std
+        else:
+            amplitude_factor = None
+
         hybrid_recording = InjectDriftingTemplatesRecording(
             sorting=sorting,
             parent_recording=recording,
@@ -237,7 +247,7 @@ def generate_hybrid_recording(
             displacement_sampling_frequency=displacement_sampling_frequency,
             displacement_unit_factor=displacement_unit_factor,
             num_samples=durations * sampling_frequency,
-            amplitude_factor=None,
+            amplitude_factor=amplitude_factor,
         )
 
     else:
