@@ -181,11 +181,13 @@ def generate_hybrid_recording(
         nafter = int(ms_after * sampling_frequency / 1000.0)
         templates = Templates(templates_array, sampling_frequency, nbefore, None, None, None, probe)
     else:
-        num_units = templates.num_units
         assert isinstance(templates, Templates), "templates should be a Templates object"
         assert (
             templates.num_channels == recording.get_num_channels()
         ), "templates and recording should have the same number of channels"
+        num_units = templates.num_units
+        nbefore = templates.nbefore
+        nafter = templates.nafter
         unit_locations = compute_monopolar_triangulation(templates)
 
         channel_locations_rel = channel_locations - channel_locations[0]
@@ -202,11 +204,13 @@ def generate_hybrid_recording(
             templates_array = templates.templates_array
 
         # manage scaling of templates
+        templates_ = templates
         if recording.has_scaled():
             if templates_in_uV:
                 templates_array = (templates_array - recording.get_channel_offsets()) / recording.get_channel_gains()
-        nbefore = templates.nbefore
-        nafter = templates.nafter
+                # make a copy of the templates and reset templates_array (might have scaled templates)
+                templates_ = templates.select_units(templates.unit_ids)
+                templates_.templates_array = templates_array
 
     if sorting is None:
         generate_sorting_kwargs = generate_sorting_kwargs.copy()
@@ -242,7 +246,9 @@ def generate_hybrid_recording(
         start = np.array([0, np.min(motion_info["motion"])])
         stop = np.array([0, np.max(motion_info["motion"])])
         displacements = make_linear_displacement(start, stop, num_step=int((stop - start)[1]))
-        drifting_templates = DriftingTemplates.from_static(templates)
+
+        # use templates_, because templates_array might have been scaled
+        drifting_templates = DriftingTemplates.from_static(templates_)
         drifting_templates.precompute_displacements(displacements)
 
         displacement_sampling_frequency = 1.0 / np.diff(motion_info["temporal_bins"])[0]
