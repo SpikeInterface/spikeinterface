@@ -141,7 +141,10 @@ class GroundTruthStudy:
             comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
             if comparison_file.exists():
                 with open(comparison_file, mode="rb") as f:
-                    self.comparisons[key] = pickle.load(f)
+                    try:
+                        self.comparisons[key] = pickle.load(f)
+                    except Exception:
+                        pass
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"

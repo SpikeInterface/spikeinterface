@@ -254,7 +254,7 @@ analyzer_TDC.compute("correlograms", bin_ms=0.1)
 analyzer_TDC.compute("template_similarity", method="cosine_similarity")
 # -
 
-# Find out more about the available parameters and extensions [here](https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html#available-postprocessing-extensions).
+# Find out more about the available parameters and extensions [here](https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html).
 
 # The calculations are saved in the `extensions` subfolder of the `SortingAnalyzer` folder.
 # Similar to the waveforms we can access them using `get_extension` and `get_data`. For example,
