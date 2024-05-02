@@ -179,7 +179,7 @@ def generate_hybrid_recording(
         )
         nbefore = int(ms_before * sampling_frequency / 1000.0)
         nafter = int(ms_after * sampling_frequency / 1000.0)
-        templates = Templates(templates_array, sampling_frequency, nbefore, None, None, None, probe)
+        templates_ = Templates(templates_array, sampling_frequency, nbefore, None, None, None, probe)
     else:
         assert isinstance(templates, Templates), "templates should be a Templates object"
         assert (
