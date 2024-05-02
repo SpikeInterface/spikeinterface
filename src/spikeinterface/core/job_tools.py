@@ -245,7 +245,7 @@ def ensure_chunk_size(
             chunk_size = None
         else:
             raise ValueError("For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory")
-    
+
     return chunk_size
 
 
@@ -364,6 +364,7 @@ class ChunkRecordingExecutor:
                 total_memory = chunk_memory * self.n_jobs
                 chunk_duration = self.chunk_size / recording.get_sampling_frequency()
                 from spikeinterface.core.core_tools import convert_bytes_to_str, convert_seconds_to_str
+
                 chunk_memory_str = convert_bytes_to_str(chunk_memory)
                 total_memory_str = convert_bytes_to_str(total_memory)
                 chunk_duration_str = convert_seconds_to_str(chunk_duration)
@@ -374,9 +375,9 @@ class ChunkRecordingExecutor:
                     f"samples_per_chunk={self.chunk_size:,} - "
                     f"chunk_memory={chunk_memory_str} - "
                     f"total_memory={total_memory_str} - "
-                    f"chunk_duration={chunk_duration_str}"
+                    f"chunk_duration={chunk_duration_str}",
                 )
-                
+
             else:
                 print(self.job_name, "with n_jobs =", self.n_jobs, "and chunk_size =", self.chunk_size)
 
