@@ -68,12 +68,12 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
 
 
 def write_binary_recording(
-    recording,
-    file_paths,
-    dtype=None,
-    add_file_extension=True,
-    byte_offset=0,
-    auto_cast_uint=True,
+    recording: "BaseRecording",
+    file_paths: list[Path | str] | Path | str,
+    dtype: np.ndtype = None,
+    add_file_extension: bool = True,
+    byte_offset: int = 0,
+    auto_cast_uint: bool = True,
     **job_kwargs,
 ):
     """
@@ -94,7 +94,7 @@ def write_binary_recording(
         If True, file the ".raw" file extension is added if the file name is not a "raw", "bin", or "dat"
     byte_offset: int, default: 0
         Offset in bytes for the binary file (e.g. to write a header)
-    auto_cast_uint: bool, default: True
+    auto_cast_uint: bool, default: True  
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """
@@ -110,8 +110,7 @@ def write_binary_recording(
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
     dtype = dtype if dtype is not None else recording.get_dtype()
-    cast_unsigned = False
-    if auto_cast_uint:
+    if auto_cast_uint:  #TODO should we deprecate this given that we have `unsigned_to_signed`?
         cast_unsigned = determine_cast_unsigned(recording, dtype)
 
     dtype_size_bytes = np.dtype(dtype).itemsize
