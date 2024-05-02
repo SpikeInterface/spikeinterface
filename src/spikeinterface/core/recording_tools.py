@@ -181,6 +181,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     memmap_obj.close()
 
+
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
