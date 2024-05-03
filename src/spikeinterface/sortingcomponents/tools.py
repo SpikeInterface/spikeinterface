@@ -84,6 +84,19 @@ def get_prototype_spike(recording, peaks, ms_before=0.5, ms_after=0.5, nb_peaks=
     return prototype
 
 
+def check_probe_for_drift_correction(recording, dist_x_max=60):
+    num_channels = recording.get_num_channels()
+    if num_channels < 32:
+        return False
+    else:
+        locations = recording.get_channel_locations()
+        x_min = locations[:, 0].min()
+        x_max = locations[:, 0].max()
+        if np.abs(x_max - x_min) > dist_x_max:
+            return False
+        return True
+
+
 def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache=True, **extra_kwargs):
     save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
 
