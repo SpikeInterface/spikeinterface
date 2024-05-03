@@ -23,7 +23,7 @@ from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
 from .core_tools import check_json, retrieve_importing_provenance
 from .job_tools import split_job_kwargs
-from .numpyextractors import SharedMemorySorting
+from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
@@ -296,8 +296,9 @@ class SortingAnalyzer:
             # a copy is done to avoid shared dict between instances (which can block garbage collector)
             rec_attributes = rec_attributes.copy()
 
-        # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
-        sorting_copy = SharedMemorySorting.from_sorting(sorting, with_metadata=True)
+        # a copy of sorting is copied in memory for fast access
+        sorting_copy = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting_copy,
             recording=recording,
@@ -375,8 +376,10 @@ class SortingAnalyzer:
         folder = Path(folder)
         assert folder.is_dir(), f"This folder does not exists {folder}"
 
-        # load internal sorting copy and make it sharedmem
-        sorting = SharedMemorySorting.from_sorting(NumpyFolderSorting(folder / "sorting"), with_metadata=True)
+        # load internal sorting copy in memory
+        sorting = NumpySorting.from_sorting(
+            NumpyFolderSorting(folder / "sorting"), with_metadata=True, copy_spike_vector=True
+        )
 
         # load recording if possible
         if recording is None:
@@ -537,10 +540,10 @@ class SortingAnalyzer:
 
         zarr_root = zarr.open(folder, mode="r")
 
-        # load internal sorting and make it sharedmem
+        # load internal sorting in memory
         # TODO propagate storage_options
-        sorting = SharedMemorySorting.from_sorting(
-            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True
+        sorting = NumpySorting.from_sorting(
+            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True, copy_spike_vector=True
         )
 
         # load recording if possible
