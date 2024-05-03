@@ -7,6 +7,6 @@ How to get started using spikeinterface. Also check out spike tutorials!
     :maxdepth: 1
 
     installation
+    quickstart
     import
-    get_started
     install_sorters

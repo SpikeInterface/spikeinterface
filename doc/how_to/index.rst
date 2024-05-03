@@ -1,11 +1,12 @@
-How to...
+How to Guides
 =========
 
-Shorter guides on how to solve specific, short problems in spike interface. Learn how to...
+Guides on how to solve specific, short problems in spike interface. Learn how to...
 
 .. toctree::
     :maxdepth: 1
 
+    viewers
     handle_drift
     load_matlab_data
     combine_recordings

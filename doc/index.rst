@@ -19,7 +19,7 @@ state-of-the-art spike sorters, post-process and curate the output, compute qual
     a major API improvement: the :code:`SortingAnalyzer`. To read more about this, checkout the
     `enhancement proposal <https://github.com/SpikeInterface/spikeinterface/issues/2282>`_.
     Please refer to the stable documentation `here <https://spikeinterface.readthedocs.io/en/0.100.4>`_.
-    Learn how to update your code `here <how_to/waveform_extractor_to_sorting_analyzer.html>`_ and read more about the
+    Learn how to update your code `here <tutorials/waveform_extractor_to_sorting_analyzer.html>`_ and read more about the
     :code:`SortingAnalyzer` `here <modules/postprocessing.html>`_.
 
 
@@ -53,8 +53,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
     get_started/index
     tutorials/index
     how_to/index
-    in_depth/index
-    viewers
+    modules/index
     api
     development/development
     whatisnew

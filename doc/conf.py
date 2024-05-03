@@ -29,17 +29,17 @@ if not os.path.isdir('sources'):
 
 # clean some folder
 folders =  [
-    '../examples/modules_gallery/core/my_recording',
-    '../examples/modules_gallery/core/my_sorting',
-    '../examples/modules_gallery/core/waveform_folder',
-    '../examples/modules_gallery/core/waveform_folder_parallel',
-    '../examples/modules_gallery/core/waveform_folder_sparse',
-    '../examples/modules_gallery/core/waveform_folder_sparse_direct',
-    '../examples/modules_gallery/core/waveform_folder2',
-    '../examples/modules_gallery/core/waveform_folder',
-    '../examples/modules_gallery/qualitymetrics/waveforms_mearec',
-    '../examples/modules_gallery/qualitymetrics/wfs_mearec',
-    '../examples/modules_gallery/widgets/waveforms_mearec',
+    '../examples/tutorials/core/my_recording',
+    '../examples/tutorials/core/my_sorting',
+    '../examples/tutorials/core/waveform_folder',
+    '../examples/tutorials/core/waveform_folder_parallel',
+    '../examples/tutorials/core/waveform_folder_sparse',
+    '../examples/tutorials/core/waveform_folder_sparse_direct',
+    '../examples/tutorials/core/waveform_folder2',
+    '../examples/tutorials/core/waveform_folder',
+    '../examples/tutorials/qualitymetrics/waveforms_mearec',
+    '../examples/tutorials/qualitymetrics/wfs_mearec',
+    '../examples/tutorials/widgets/waveforms_mearec',
 
 ]
 
@@ -65,6 +65,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinx.ext.autosectionlabel',
     'sphinx_design',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",

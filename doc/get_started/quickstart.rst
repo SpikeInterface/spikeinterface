@@ -2,8 +2,8 @@
 
     %matplotlib inline
 
-How to “get started”
-====================
+Quickstart tutorial
+===================
 
 In this introductory example, you will see how to use SpikeInterface to
 perform a full electrophysiology analysis. We will download a simulated
@@ -201,7 +201,7 @@ If your recording does not have a ``Probe``, you can set it using
 ``set_probe``. Note: ``set_probe`` creates a copy of the recording with
 the new probe, rather than modifying the existing recording in place.
 There is more information
-`here <https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html>`__.
+`here <https://spikeinterface.readthedocs.io/en/latest/tutorials/core/plot_3_handle_probe_info.html>`__.
 
 Using the ``spikeinterface.preprocessing`` module, you can perform
 preprocessing on the recordings. Each pre-processing function also
