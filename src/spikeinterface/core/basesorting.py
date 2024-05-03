@@ -49,7 +49,9 @@ class BaseSorting(BaseExtractor):
         html_unit_ids += f"{self.unit_ids} </details>"
 
         html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
-        html_annotations += f"{self._annotations} </details>"
+        for key, value in self._annotations.items():
+            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
+        html_annotations += f"</details>"
 
         html_unit_properties = (
             f"<details style='{common_style}'><summary><strong>Unit Properties</strong></summary><ul>"
@@ -57,7 +59,7 @@ class BaseSorting(BaseExtractor):
         for key, value in self._properties.items():
             # Add a further indent for each property
             value_formatted = np.asarray(value)
-            html_unit_properties += f"<details><summary>{key}</summary>{value_formatted}</details>"
+            html_unit_properties += f"<details><summary><strong>{key}</strong></summary>{value_formatted}</details>"
         html_unit_properties += "</ul></details>"
 
         html_repr = html_header + html_unit_ids + html_annotations + html_unit_properties
