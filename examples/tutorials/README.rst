@@ -3,13 +3,12 @@ Tutorials
 
 Longer form tutorials about using spikeinterface. Many of these are downloadable as notebooks or python scripts so that you can "code along" to the tutorials.
 
-If you're new, we recommend trying out the getting started tutorial first.
+If you're new, we recommend trying out the :ref:`Quickstart tutorials` first.
 
-Tutorials without notebooks
----------------------------
+Updating from legacy
+--------------------
 
 .. toctree::
    :maxdepth: 1
 
-   analyse_neuropixels
    waveform_extractor_to_sorting_analyzer
