@@ -56,8 +56,17 @@ class ClusteringBenchmark(Benchmark):
 
         data = spikes[self.indices][~self.noise]
         # data["unit_index"] = self.result["peak_labels"][~self.noise]
-        positions = self.gt_sorting.get_property("gt_unit_locations")
-        self.result["sliced_gt_sorting"].set_property("gt_unit_locations", positions)
+        gt_unit_locations = self.gt_sorting.get_property("gt_unit_locations")
+        if gt_unit_locations is None:
+            print("'gt_unit_locations' is not a property of the sorting so compute it")
+            gt_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=True)
+            gt_analyzer.compute(["random_spikes", "templates"])
+            ext = gt_analyzer.compute("unit_locations", method="monopolar_triangulation")
+            gt_unit_locations = ext.get_data()
+            self.gt_sorting.set_property("gt_unit_locations", gt_unit_locations)
+
+        self.result["sliced_gt_sorting"].set_property("gt_unit_locations", gt_unit_locations)
+        
 
         self.result["clustering"] = NumpySorting.from_times_labels(
             data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency

@@ -400,6 +400,8 @@ def generate_drifting_recording(
         seed=seed,
     )
 
+    sorting.set_property("gt_unit_locations", unit_locations)
+
     ## Important precompute displacement do not work on border and so do not work for tetrode
     # here we bypass the interpolation and regenrate templates at severals positions.
     ## drifting_templates.precompute_displacements(displacements_steps)

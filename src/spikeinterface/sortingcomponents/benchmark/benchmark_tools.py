@@ -101,7 +101,7 @@ class BenchmarkStudy:
 
     def scan_folder(self):
         if not (self.folder / "datasets").exists():
-            raise ValueError(f"This is folder is not a GroundTruthStudy : {self.folder.absolute()}")
+            raise ValueError(f"This is folder is not a BenchmarkStudy : {self.folder.absolute()}")
 
         with open(self.folder / "info.json", "r") as f:
             self.info = json.load(f)
