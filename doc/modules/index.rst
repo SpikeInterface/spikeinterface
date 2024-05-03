@@ -1,5 +1,5 @@
-Modules documentation
-=====================
+Spikesinterface Fundamentals
+============================
 
 .. toctree::
     :maxdepth: 1
