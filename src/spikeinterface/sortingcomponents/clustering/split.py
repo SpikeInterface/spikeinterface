@@ -4,7 +4,7 @@ from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
-from sklearn.decomposition import TruncatedSVD
+from sklearn.decomposition import TruncatedSVD, PCA
 
 import numpy as np
 
@@ -83,7 +83,7 @@ def split_clusters(
         for label in labels_set:
             peak_indices = np.flatnonzero(peak_labels == label)
             if peak_indices.size > 0:
-                jobs.append(pool.submit(split_function_wrapper, peak_indices))
+                jobs.append(pool.submit(split_function_wrapper, peak_indices, 1))
 
         if progress_bar:
             iterator = tqdm(jobs, desc=f"split_clusters with {method}", total=len(labels_set))
@@ -104,9 +104,10 @@ def split_clusters(
             current_max_label += np.max(local_labels[mask]) + 1
 
             if recursive:
+                recursion_level = np.max(split_count[peak_indices])
                 if recursive_depth is not None:
                     # stop reccursivity when recursive_depth is reach
-                    extra_ball = np.max(split_count[peak_indices]) < recursive_depth
+                    extra_ball = recursion_level < recursive_depth
                 else:
                     # reccurssive always
                     extra_ball = True
@@ -116,7 +117,7 @@ def split_clusters(
                     for label in new_labels_set:
                         peak_indices = np.flatnonzero(peak_labels == label)
                         if peak_indices.size > 0:
-                            jobs.append(pool.submit(split_function_wrapper, peak_indices))
+                            jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level))
                             if progress_bar:
                                 iterator.total += 1
 
@@ -146,11 +147,11 @@ def split_worker_init(
     _ctx["peaks"] = _ctx["features"]["peaks"]
 
 
-def split_function_wrapper(peak_indices):
+def split_function_wrapper(peak_indices, recursion_level):
     global _ctx
     with threadpool_limits(limits=_ctx["max_threads_per_process"]):
         is_split, local_labels = _ctx["method_class"].split(
-            peak_indices, _ctx["peaks"], _ctx["features"], **_ctx["method_kwargs"]
+            peak_indices, _ctx["peaks"], _ctx["features"], recursion_level, **_ctx["method_kwargs"]
         )
     return is_split, local_labels, peak_indices
 
@@ -163,7 +164,7 @@ class LocalFeatureClustering:
 
     The idea simple :
      * agregate features (svd or even waveforms) with sparse channel.
-     * run a local feature reduction (pca or  svd)
+     * run a local feature reduction (pca or svd)
      * try a new split (hdscan or isocut5)
     """
 
@@ -174,14 +175,15 @@ class LocalFeatureClustering:
         peak_indices,
         peaks,
         features,
+        recursion_level=1,
         clusterer="hdbscan",
         feature_name="sparse_tsvd",
         neighbours_mask=None,
         waveforms_sparse_mask=None,
+        clusterer_kwargs={"min_cluster_size": 25},
         min_size_split=25,
-        min_cluster_size=25,
-        min_samples=25,
         n_pca_features=2,
+        scale_n_pca_by_depth=False,
         minimum_common_channels=2,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
@@ -214,23 +216,26 @@ class LocalFeatureClustering:
 
         flatten_features = aligned_wfs.reshape(aligned_wfs.shape[0], -1)
 
-        # final_features = PCA(n_pca_features, whiten=True).fit_transform(flatten_features)
-        # final_features = PCA(n_pca_features, whiten=False).fit_transform(flatten_features)
-        final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
+        if flatten_features.shape[1] > n_pca_features:
+            if scale_n_pca_by_depth:
+                # tsvd = TruncatedSVD(n_pca_features * recursion_level)
+                tsvd = PCA(n_pca_features * recursion_level, whiten=True)
+            else:
+                # tsvd = TruncatedSVD(n_pca_features)
+                tsvd = PCA(n_pca_features, whiten=True)
+            final_features = tsvd.fit_transform(flatten_features)
+        else:
+            final_features = flatten_features
 
         if clusterer == "hdbscan":
             from hdbscan import HDBSCAN
 
-            clust = HDBSCAN(
-                min_cluster_size=min_cluster_size,
-                min_samples=min_samples,
-                allow_single_cluster=True,
-                cluster_selection_method="leaf",
-            )
+            clust = HDBSCAN(**clusterer_kwargs)
             clust.fit(final_features)
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         elif clusterer == "isocut5":
+            min_cluster_size = clusterer_kwargs["min_cluster_size"]
             dipscore, cutpoint = isocut5(final_features[:, 0])
             possible_labels = np.zeros(final_features.shape[0])
             if dipscore > 1.5:
@@ -265,8 +270,7 @@ class LocalFeatureClustering:
                 ax = axs[1]
                 ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
 
-            axs[0].set_title(f"{clusterer} {is_split}")
-
+            axs[0].set_title(f"{clusterer} {is_split} {peak_indices[0]} {np.unique(possible_labels)}")
             plt.show()
 
         if not is_split:
