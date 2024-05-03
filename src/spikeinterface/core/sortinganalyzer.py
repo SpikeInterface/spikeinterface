@@ -377,7 +377,9 @@ class SortingAnalyzer:
         assert folder.is_dir(), f"This folder does not exists {folder}"
 
         # load internal sorting copy in memory
-        sorting = NumpySorting.from_sorting(NumpyFolderSorting(folder / "sorting"), with_metadata=True, copy_spike_vector=True)
+        sorting = NumpySorting.from_sorting(
+            NumpyFolderSorting(folder / "sorting"), with_metadata=True, copy_spike_vector=True
+        )
 
         # load recording if possible
         if recording is None:
@@ -540,7 +542,9 @@ class SortingAnalyzer:
 
         # load internal sorting in memory
         # TODO propagate storage_options
-        sorting = NumpySorting.from_sorting(ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True, copy_spike_vector=True)
+        sorting = NumpySorting.from_sorting(
+            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True, copy_spike_vector=True
+        )
 
         # load recording if possible
         if recording is None:
