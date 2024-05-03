@@ -365,13 +365,6 @@ Let’s run ``spykingcircus2`` as well, with default parameters:
     NumpyFolderSorting: 8 units - 1 segments - 32.0kHz
 
 
-.. parsed-literal::
-
-    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/sorters/basesorter.py:258: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/spikeinterface_cache/tmpru22r5_r/GW132ZJO/traces_cached_seg0.raw' mode='r' encoding='UTF-8'>
-      SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose)
-    ResourceWarning: Enable tracemalloc to get the object allocation traceback
-
-
 The ``sorting_TDC`` and ``sorting_SC2`` are ``BaseSorting`` objects. We
 can print the units found using:
 
@@ -587,13 +580,6 @@ and which have been loaded (in your enviroment)…
 .. code:: ipython3
 
     analyzer_TDC.delete_extension("spike_amplitudes")
-
-
-.. parsed-literal::
-
-    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/core/sortinganalyzer.py:1475: ResourceWarning: unclosed file <_io.TextIOWrapper name='analyzer_TDC_binary/extensions/spike_amplitudes/info.json' mode='r' encoding='UTF-8'>
-      ext_data = json.load(ext_data_file.open("r"))
-    ResourceWarning: Enable tracemalloc to get the object allocation traceback
 
 
 This deletes the extension’s data in the ``SortingAnalyzer`` folder.
@@ -1027,12 +1013,6 @@ web-based visualization. For this to work you need to install
 .. code:: ipython3
 
     w1 = sw.plot_quality_metrics(analyzer_TDC, display=False, backend="sortingview")
-
-
-.. parsed-literal::
-
-    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/widgets/metrics.py:65: UserWarning: Skipping ['amplitude_cutoff', 'amplitude_cv_median', 'amplitude_cv_range', 'drift_ptp', 'drift_std', 'drift_mad', 'presence_ratio'] because they contain all NaNs
-      warnings.warn(f"Skipping {nan_metrics} because they contain all NaNs")
 
 https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://dee4b56654e411ddd15e7cc8af763d5796c5140a
 
