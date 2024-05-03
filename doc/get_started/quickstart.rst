@@ -518,7 +518,35 @@ Many of the extensions have parameters you can tune
 
     <spikeinterface.postprocessing.template_similarity.ComputeTemplateSimilarity at 0x7fb4f546d640>
 
+As you can see, it becomes a bit overwhelming if you’re computing lots of extensions. 
+Luckily, there’s some nice syntax for this very situation. We can redo the last
+nine compute statements in one command as follows
 
+.. code:: ipython3
+
+    extensions_to_compute = [
+        "random_spikes",
+        "waveforms",
+        "noise_levels",
+        "templates",
+        "spike_amplitudes",
+        "unit_locations",
+        "spike_locations",
+        "correlograms",
+        "template_similarity"
+    ]
+
+    extension_params = {
+        "unit_locations": {"method": "center_of_mass"},
+        "spike_locations": {"ms_before": 0.1},
+        "correlograms": {"bin_ms": 0.1},
+        "template_similarity": {"method": "cosine_similarity"}
+    }
+
+    analyzer_TDC.compute(extensions_to_compute, extension_params=extension_params)
+
+Which you might find easier. Note that if we pass no extension parameters, the 
+computation simply uses the default parameters.
 
 Find out more about the available parameters and extensions
 `here <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`__.
