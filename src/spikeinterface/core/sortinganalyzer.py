@@ -416,9 +416,21 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
+        # PATCH: Because SortingAnalyzer added this json during the development of 0.101.0 we need to save
+        # this as a bridge for early adopters. The else branch can be removed in version 0.102.0/0.103.0
+        # so that this can be simplified in the future
+        # See https://github.com/SpikeInterface/spikeinterface/issues/2788
+
         settings_file = folder / f"settings.json"
-        with open(settings_file, "r") as f:
-            settings = json.load(f)
+        if settings_file.exists():
+            with open(settings_file, "r") as f:
+                settings = json.load(f)
+        else:
+            warnings.warn("settings.json not found for this folder writing one with return_scaled=True")
+            settings = dict(return_scaled=True)
+            with open(settings_file, "w") as f:
+                json.dump(check_json(settings), f, indent=4)
+
         return_scaled = settings["return_scaled"]
 
         sorting_analyzer = SortingAnalyzer(
