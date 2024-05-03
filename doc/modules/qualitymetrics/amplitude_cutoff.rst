@@ -6,8 +6,7 @@ Amplitude cutoff (:code:`amplitude_cutoff`)
 Calculation
 -----------
 
-A histogram of spike amplitudes is created and deviations from the expected symmetrical distribution are identified.
-
+First, all spike amplitudes for one unit are collapsed across time to create a histogram, then the histogram is smoothed using a 1D Gaussian filter. For some units, the amplitude histogram will not fall off gracefully to zero at the lower end, indicating that some spikes were likely missed by the sorter. To calculate the approximate fraction of missing spikes, we look at the height of the lowest amplitude bin, and count the number of spikes at the upper end of the distribution with amplitudes above a bin of similar height. The ratio of this count to the total number of spikes yields the amplitude cutoff.
 Expectation and use
 -------------------
 
