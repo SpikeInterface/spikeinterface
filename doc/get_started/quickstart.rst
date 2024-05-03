@@ -518,7 +518,7 @@ Many of the extensions have parameters you can tune
 
     <spikeinterface.postprocessing.template_similarity.ComputeTemplateSimilarity at 0x7fb4f546d640>
 
-As you can see, it becomes a bit overwhelming if you’re computing lots of extensions. 
+As you can see, it becomes a bit overwhelming if you’re computing lots of extensions.
 Luckily, there’s some nice syntax for this very situation. We can redo the last
 nine compute statements in one command as follows
 
@@ -545,7 +545,7 @@ nine compute statements in one command as follows
 
     analyzer_TDC.compute(extensions_to_compute, extension_params=extension_params)
 
-Which you might find easier. Note that if we pass no extension parameters, the 
+Which you might find easier. Note that if we pass no extension parameters, the
 computation simply uses the default parameters.
 
 Find out more about the available parameters and extensions
