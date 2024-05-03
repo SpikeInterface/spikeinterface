@@ -289,7 +289,7 @@ class NumpySorting(BaseSorting):
             spike_vector = spike_vector.copy()
         sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
         if with_metadata:
-            sorting.copy_metadata(source_sorting)
+            source_sorting.copy_metadata(sorting)
         return sorting
 
     @staticmethod
