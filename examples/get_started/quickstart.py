@@ -18,8 +18,8 @@
 
 # + [markdown]
 """
-How to "get started"
-====================
+Quickstart tutorial
+===================
 
 In this introductory example, you will see how to use SpikeInterface to perform a full electrophysiology analysis.
 We will download a simulated dataset, and we will then perform some pre-processing, run a spike sorting

@@ -88,7 +88,7 @@ both a “recording” and a “sorting” object.
 
 .. parsed-literal::
 
-    MEArecRecordingExtractor: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
+    MEArecRecordingExtractor: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s 
                               float32 dtype - 39.06 MiB
       file_path: /home/nolanlab/spikeinterface_datasets/ephy_testing_data/mearec/mearec_test_10s.h5
     MEArecSortingExtractor: 10 units - 1 segments - 32.0kHz
@@ -113,11 +113,11 @@ and the raster plots.
 
 
 
-.. image:: get_started_files/get_started_16_0.png
+.. image:: quickstart_files/quickstart_16_0.png
 
 
 
-.. image:: get_started_files/get_started_16_1.png
+.. image:: quickstart_files/quickstart_16_1.png
 
 
 This is how you retrieve info from a ``BaseRecording``\ …
@@ -128,7 +128,7 @@ This is how you retrieve info from a ``BaseRecording``\ …
     fs = recording.get_sampling_frequency()
     num_chan = recording.get_num_channels()
     num_seg = recording.get_num_segments()
-
+    
     print("Channel ids:", channel_ids)
     print("Sampling frequency:", fs)
     print("Number of channels:", num_chan)
@@ -152,7 +152,7 @@ This is how you retrieve info from a ``BaseRecording``\ …
     num_seg = recording.get_num_segments()
     unit_ids = sorting_true.get_unit_ids()
     spike_train = sorting_true.get_unit_spike_train(unit_id=unit_ids[0])
-
+    
     print("Number of segments:", num_seg)
     print("Unit ids:", unit_ids)
     print("Spike train of first unit:", spike_train)
@@ -182,9 +182,9 @@ to set it *manually*.
 
     probe = recording.get_probe()
     print(probe)
-
+    
     from probeinterface.plotting import plot_probe
-
+    
     _ = plot_probe(probe)
 
 
@@ -194,14 +194,14 @@ to set it *manually*.
 
 
 
-.. image:: get_started_files/get_started_22_1.png
+.. image:: quickstart_files/quickstart_22_1.png
 
 
 If your recording does not have a ``Probe``, you can set it using
 ``set_probe``. Note: ``set_probe`` creates a copy of the recording with
 the new probe, rather than modifying the existing recording in place.
 There is more information
-`here <https://spikeinterface.readthedocs.io/en/latest/tutorials/core/plot_3_handle_probe_info.html>`__.
+`here <https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html>`__.
 
 Using the ``spikeinterface.preprocessing`` module, you can perform
 preprocessing on the recordings. Each pre-processing function also
@@ -218,7 +218,7 @@ object to disk.
     print(recording_f)
     recording_cmr = si.common_reference(recording_f, reference="global", operator="median")
     print(recording_cmr)
-
+    
     # this computes and saves the recording after applying the preprocessing chain
     recording_preprocessed = recording_cmr.save(format="binary")
     print(recording_preprocessed)
@@ -226,11 +226,11 @@ object to disk.
 
 .. parsed-literal::
 
-    BandpassFilterRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
+    BandpassFilterRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s 
                              float32 dtype - 39.06 MiB
-    CommonReferenceRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
+    CommonReferenceRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s 
                               float32 dtype - 39.06 MiB
-    Use cache_folder=/tmp/spikeinterface_cache/tmpsgoh2z3y/DLGW1J8V
+    Use cache_folder=/tmp/spikeinterface_cache/tmpru22r5_r/GW132ZJO
     write_binary_recording with n_jobs = 4 and chunk_size = 32000
 
 
@@ -242,10 +242,12 @@ object to disk.
 
 .. parsed-literal::
 
-    BinaryFolderRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s
+    BinaryFolderRecording: 32 channels - 32.0kHz - 1 segments - 320,000 samples - 10.00s 
                            float32 dtype - 39.06 MiB
 
-To reload a preprocessed recording that was saved to disk, you can use ``load_extractor()`` function from the ``core`` module.
+
+To reload a preprocessed recording that was saved to disk, you can use
+``load_extractor()`` function from the ``core`` module.
 
 Now you are ready to spike sort using the ``spikeinterface.sorters``
 module! Let’s first check which sorters are implemented and which are
@@ -260,7 +262,7 @@ installed
 .. parsed-literal::
 
     Available sorters ['combinato', 'hdsort', 'herdingspikes', 'ironclust', 'kilosort', 'kilosort2', 'kilosort2_5', 'kilosort3', 'kilosort4', 'klusta', 'mountainsort4', 'mountainsort5', 'pykilosort', 'simple', 'spykingcircus', 'spykingcircus2', 'tridesclous', 'tridesclous2', 'waveclus', 'waveclus_snippets', 'yass']
-    Installed sorters ['herdingspikes', 'simple', 'spykingcircus2', 'tridesclous', 'tridesclous2']
+    Installed sorters ['mountainsort4', 'simple', 'spykingcircus2', 'tridesclous', 'tridesclous2']
 
 
 The ``ss.installed_sorters()`` will list the sorters installed on the
@@ -294,7 +296,7 @@ available parameters are dictionaries and can be accessed with:
     {'apply_preprocessing': True,
      'cache_preprocessing': {'delete_cache': True,
                              'memory_limit': 0.5,
-                             'mode': None},
+                             'mode': 'memory'},
      'clustering': {'legacy': False},
      'debug': False,
      'detection': {'detect_threshold': 4, 'peak_sign': 'neg'},
@@ -306,6 +308,7 @@ available parameters are dictionaries and can be accessed with:
      'selection': {'method': 'smart_sampling_amplitudes',
                    'min_n_peaks': 100000,
                    'n_peaks_per_channel': 5000,
+                   'seed': 42,
                    'select_per_channel': False},
      'sparsity': {'method': 'ptp', 'threshold': 0.25}}
 
@@ -330,7 +333,7 @@ Alternatively we can pass a full dictionary containing the parameters:
 
     other_params = ss.get_default_sorter_params("tridesclous")
     other_params["detect_threshold"] = 6
-
+    
     # parameters set by params dictionary
     sorting_TDC_2 = ss.run_sorter(
         sorter_name="tridesclous", recording=recording_preprocessed, output_folder="tdc_output2", **other_params
@@ -351,9 +354,22 @@ Let’s run ``spykingcircus2`` as well, with default parameters:
     print(sorting_SC2)
 
 
+
 .. parsed-literal::
 
-    NumpyFolderSorting: 10 units - 1 segments - 32.0kHz
+    write_memory_recording:   0%|          | 0/1 [00:00<?, ?it/s]
+
+
+.. parsed-literal::
+
+    NumpyFolderSorting: 8 units - 1 segments - 32.0kHz
+
+
+.. parsed-literal::
+
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/sorters/basesorter.py:258: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/spikeinterface_cache/tmpru22r5_r/GW132ZJO/traces_cached_seg0.raw' mode='r' encoding='UTF-8'>
+      SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose)
+    ResourceWarning: Enable tracemalloc to get the object allocation traceback
 
 
 The ``sorting_TDC`` and ``sorting_SC2`` are ``BaseSorting`` objects. We
@@ -368,7 +384,7 @@ can print the units found using:
 .. parsed-literal::
 
     Units found by tridesclous: [0 1 2 3 4 5 6 7 8 9]
-    Units found by spyking-circus2: [0 1 2 3 4 5 6 7 8 9]
+    Units found by spyking-circus2: [0 1 2 3 4 5 6 7]
 
 
 If a sorter is not installed locally, we can also avoid installing it
@@ -436,7 +452,7 @@ and then to compute, for example, quality metrics. Computations with the
 
 .. parsed-literal::
 
-    <spikeinterface.core.analyzer_extension_core.ComputeWaveforms at 0x7f49d5ddabb0>
+    <spikeinterface.core.analyzer_extension_core.ComputeWaveforms at 0x7fb4f53b5370>
 
 
 
@@ -476,7 +492,7 @@ There are many more properties we can calculate
 
 .. parsed-literal::
 
-    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7f49d5e36340>
+    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7fb50b4c0700>
 
 
 
@@ -500,12 +516,12 @@ Many of the extensions have parameters you can tune
 
 .. parsed-literal::
 
-    <spikeinterface.postprocessing.template_similarity.ComputeTemplateSimilarity at 0x7f49d5e0ed90>
+    <spikeinterface.postprocessing.template_similarity.ComputeTemplateSimilarity at 0x7fb4f546d640>
 
 
 
 Find out more about the available parameters and extensions
-`here <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html#available-postprocessing-extensions>`__.
+`here <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`__.
 
 The calculations are saved in the ``extensions`` subfolder of the
 ``SortingAnalyzer`` folder. Similar to the waveforms we can access them
@@ -520,7 +536,7 @@ a historgram of spike amplitudes
 
 
 
-.. image:: get_started_files/get_started_52_0.png
+.. image:: quickstart_files/quickstart_52_0.png
 
 
 You can check which extensions have been saved (in your local folder)
@@ -534,7 +550,7 @@ and which have been loaded (in your enviroment)…
 
 .. parsed-literal::
 
-    ['random_spikes', 'waveforms', 'templates', 'noise_levels', 'template_similarity', 'spike_amplitudes', 'correlograms', 'spike_locations', 'unit_locations']
+    ['noise_levels', 'spike_locations', 'template_similarity', 'waveforms', 'spike_amplitudes', 'templates', 'correlograms', 'unit_locations', 'random_spikes']
     ['random_spikes', 'waveforms', 'noise_levels', 'templates', 'spike_amplitudes', 'unit_locations', 'spike_locations', 'correlograms', 'template_similarity']
 
 
@@ -543,6 +559,14 @@ and which have been loaded (in your enviroment)…
 .. code:: ipython3
 
     analyzer_TDC.delete_extension("spike_amplitudes")
+
+
+.. parsed-literal::
+
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/core/sortinganalyzer.py:1475: ResourceWarning: unclosed file <_io.TextIOWrapper name='analyzer_TDC_binary/extensions/spike_amplitudes/info.json' mode='r' encoding='UTF-8'>
+      ext_data = json.load(ext_data_file.open("r"))
+    ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
 
 This deletes the extension’s data in the ``SortingAnalyzer`` folder.
 
@@ -559,7 +583,7 @@ since we just deleted it)
 
 .. parsed-literal::
 
-    ['random_spikes', 'waveforms', 'templates', 'noise_levels', 'template_similarity', 'correlograms', 'spike_locations', 'unit_locations']
+    ['noise_levels', 'templates', 'spike_locations', 'template_similarity', 'waveforms', 'correlograms', 'unit_locations', 'random_spikes']
 
 
 And any deleted extensions are easily recomputed
@@ -579,7 +603,7 @@ And any deleted extensions are easily recomputed
 
 .. parsed-literal::
 
-    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7f49b80eadc0>
+    <spikeinterface.postprocessing.spike_amplitudes.ComputeSpikeAmplitudes at 0x7fb4f457f520>
 
 
 
@@ -656,6 +680,19 @@ in the same way as earlier
     analyzer_TDC.compute("quality_metrics", qm_params)
     analyzer_TDC.get_extension("quality_metrics").get_data()
 
+
+.. parsed-literal::
+
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:880: UserWarning: Some units have too few spikes : amplitude_cutoff is set to NaN
+      warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:1033: UserWarning: The recording is too short given the specified 'interval_s' and 'min_num_bins'. Drift metrics will be set to NaN
+      warnings.warn(
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:147: UserWarning: Bin duration of 60s is larger than recording duration. Presence ratios are set to NaN.
+      warnings.warn(
+
+
+
+
 .. raw:: html
 
     <div>
@@ -663,11 +700,11 @@ in the same way as earlier
         .dataframe tbody tr th:only-of-type {
             vertical-align: middle;
         }
-
+    
         .dataframe tbody tr th {
             vertical-align: top;
         }
-
+    
         .dataframe thead th {
             text-align: right;
         }
@@ -719,7 +756,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>1.536918</td>
           <td>NaN</td>
-          <td>27.140698</td>
+          <td>26.995409</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -743,7 +780,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>1.311148</td>
           <td>NaN</td>
-          <td>24.059540</td>
+          <td>24.007496</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -767,7 +804,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>2.016703</td>
           <td>NaN</td>
-          <td>24.387525</td>
+          <td>24.002202</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -791,7 +828,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>2.011083</td>
           <td>NaN</td>
-          <td>26.948630</td>
+          <td>26.794354</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -815,7 +852,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>0.680199</td>
           <td>NaN</td>
-          <td>9.585650</td>
+          <td>9.588057</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -839,7 +876,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>0.965515</td>
           <td>NaN</td>
-          <td>13.196613</td>
+          <td>13.057643</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -863,7 +900,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>1.177009</td>
           <td>NaN</td>
-          <td>8.193233</td>
+          <td>8.210516</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -885,9 +922,9 @@ in the same way as earlier
           <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
-          <td>0.973417</td>
+          <td>0.974259</td>
           <td>0.155</td>
-          <td>8.808388</td>
+          <td>8.785389</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -911,7 +948,7 @@ in the same way as earlier
           <td>0.0</td>
           <td>0.949695</td>
           <td>0.310</td>
-          <td>11.125336</td>
+          <td>11.064464</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -933,9 +970,9 @@ in the same way as earlier
           <td>NaN</td>
           <td>0.0</td>
           <td>0.0</td>
-          <td>1.021080</td>
+          <td>1.027925</td>
           <td>0.270</td>
-          <td>8.281832</td>
+          <td>8.229249</td>
           <td>0.0</td>
           <td>0.0</td>
           <td>0.0</td>
@@ -963,15 +1000,20 @@ web-based visualization. For this to work you need to install
 
     w1 = sw.plot_quality_metrics(analyzer_TDC, display=False, backend="sortingview")
 
-https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://c0312bc14387471531af9913147098b94cc640cf
+
+.. parsed-literal::
+
+    /home/nolanlab/Chris/Developing/spikeinterface/src/spikeinterface/widgets/metrics.py:65: UserWarning: Skipping ['amplitude_cutoff', 'amplitude_cv_median', 'amplitude_cv_range', 'drift_ptp', 'drift_std', 'drift_mad', 'presence_ratio'] because they contain all NaNs
+      warnings.warn(f"Skipping {nan_metrics} because they contain all NaNs")
+
+https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://dee4b56654e411ddd15e7cc8af763d5796c5140a
 
 
 .. code:: ipython3
 
     w2 = sw.plot_sorting_summary(analyzer_TDC, display=False, curation=True, backend="sortingview")
 
-
-https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://688cd7a233857847b5663e565dbf3f2807887013
+https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://588f5c77f7f1f445addcc219c648213d5324b123
 
 
 The sorting summary plot can also be used for manual labeling and
@@ -982,7 +1024,7 @@ on the “Save as snapshot (sha://)” and copy the URI:
 .. code:: ipython3
 
     uri = "sha1://68cb54a9aaed2303fb82dedbc302c853e818f1b6"
-
+    
     sorting_curated_sv = scur.apply_sortingview_curation(sorting_TDC, uri_or_json=uri)
     print(sorting_curated_sv)
     print(sorting_curated_sv.get_property("accept"))
@@ -1030,7 +1072,7 @@ of the spike sorting output. To export to phy you can run:
 .. parsed-literal::
 
     Run:
-    phy template-gui  /home/nolanlab/Chris/Developing/TestingDoc/phy_folder_for_TDC/params.py
+    phy template-gui  /home/nolanlab/Dropbox/Spike/testing_docs/phy_folder_for_TDC/params.py
 
 
 Then you can run the template-gui with:
@@ -1054,7 +1096,7 @@ above a certain threshold:
     qm_data = analyzer_TDC.get_extension("quality_metrics").get_data()
     keep_mask = (qm_data["snr"] > 10) & (qm_data["isi_violations_ratio"] < 0.01)
     print("Mask:", keep_mask.values)
-
+    
     sorting_curated_auto = sorting_TDC.select_units(sorting_TDC.unit_ids[keep_mask])
     print(sorting_curated_auto)
 
@@ -1098,7 +1140,7 @@ performance and plot a confusion matrix
 .. parsed-literal::
 
                 accuracy    recall precision false_discovery_rate miss_rate
-    gt_unit_id
+    gt_unit_id                                                             
     #0               1.0       1.0       1.0                  0.0       0.0
     #1               1.0       1.0       1.0                  0.0       0.0
     #2          0.976744  0.976744       1.0                  0.0  0.023256
@@ -1112,11 +1154,11 @@ performance and plot a confusion matrix
 
 
 
-.. image:: get_started_files/get_started_84_1.png
+.. image:: quickstart_files/quickstart_84_1.png
 
 
 
-.. image:: get_started_files/get_started_84_2.png
+.. image:: quickstart_files/quickstart_84_2.png
 
 
 When comparing two sorters (2.), we can see the matching of units
@@ -1133,14 +1175,14 @@ between sorters. Units which are not matched have -1 as their unit id:
 
     0    0.0
     1    1.0
-    2    8.0
-    3    2.0
-    4    5.0
-    5    4.0
-    6    7.0
+    2    2.0
+    3    3.0
+    4   -1.0
+    5   -1.0
+    6    4.0
     7    6.0
-    8    9.0
-    9    3.0
+    8    7.0
+    9    5.0
     dtype: float64
 
 
@@ -1158,14 +1200,12 @@ or the reverse:
 
     0    0.0
     1    1.0
-    2    3.0
-    3    9.0
-    4    5.0
-    5    4.0
+    2    2.0
+    3    3.0
+    4    6.0
+    5    9.0
     6    7.0
-    7    6.0
-    8    2.0
-    9    8.0
+    7    8.0
     dtype: float64
 
 
@@ -1177,9 +1217,9 @@ graph showing how the units are matched between the sorters.
 .. code:: ipython3
 
     sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
-
+    
     print("Units in agreement between TDC, SC2, and KS2:", sorting_agreement.get_unit_ids())
-
+    
     w_multi = sw.plot_multicomparison_agreement(comp_multi)
     w_multi = sw.plot_multicomparison_agreement_by_sorter(comp_multi)
 
@@ -1190,11 +1230,11 @@ graph showing how the units are matched between the sorters.
 
 
 
-.. image:: get_started_files/get_started_90_1.png
+.. image:: quickstart_files/quickstart_90_1.png
 
 
 
-.. image:: get_started_files/get_started_90_2.png
+.. image:: quickstart_files/quickstart_90_2.png
 
 
 We see that 10 unit were found by all sorters (note that this simulated
