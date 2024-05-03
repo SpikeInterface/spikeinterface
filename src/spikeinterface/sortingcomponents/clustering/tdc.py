@@ -71,9 +71,6 @@ class TdcClustering:
             clustering_folder = Path(params["folder"])
 
     
-
-
-
         sampling_frequency = recording.sampling_frequency
 
         ms_before = params["waveforms"]["ms_before"]
@@ -148,6 +145,7 @@ class TdcClustering:
         original_labels = peaks["channel_index"]
 
         min_cluster_size = 50
+        # min_cluster_size = 10
 
         post_split_label, split_count = split_clusters(
             original_labels,
@@ -164,6 +162,7 @@ class TdcClustering:
                 min_size_split=min_cluster_size,
                 clusterer_kwargs={"min_cluster_size": min_cluster_size},
                 n_pca_features=3,
+                scale_n_pca_by_depth=True,
             ),
             recursive=True,
             recursive_depth=3,
@@ -202,8 +201,8 @@ class TdcClustering:
 
         # sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
 
-        new_peaks = peaks.copy()
-        new_peaks["sample_index"] -= peak_shifts
+        # new_peaks = peaks.copy()
+        # new_peaks["sample_index"] -= peak_shifts
 
         # clean very small cluster before peeler
         post_clean_label = post_merge_label.copy()
@@ -217,5 +216,6 @@ class TdcClustering:
         labels_set = np.unique(post_clean_label)
         labels_set = labels_set[labels_set >= 0]
 
-        return labels_set, post_clean_label
+        extra_out = {'peak_shifts': peak_shifts}
+        return labels_set, post_clean_label, extra_out
 
