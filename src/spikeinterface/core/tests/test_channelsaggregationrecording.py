@@ -36,21 +36,21 @@ def test_channelsaggregationrecording():
         traces2_0 = recording2.get_traces(channel_ids=[channel_ids[0]], segment_index=seg)
         traces3_2 = recording3.get_traces(channel_ids=[channel_ids[2]], segment_index=seg)
 
-        assert np.allclose(traces1_1, recording_agg.get_traces(channel_ids=[channel_ids[1]], segment_index=seg))
+        assert np.allclose(traces1_1, recording_agg.get_traces(channel_ids=[str(channel_ids[1])], segment_index=seg))
         assert np.allclose(
-            traces2_0, recording_agg.get_traces(channel_ids=[num_channels + channel_ids[0]], segment_index=seg)
+            traces2_0, recording_agg.get_traces(channel_ids=[str(num_channels + channel_ids[0])], segment_index=seg)
         )
         assert np.allclose(
-            traces3_2, recording_agg.get_traces(channel_ids=[2 * num_channels + channel_ids[2]], segment_index=seg)
+            traces3_2, recording_agg.get_traces(channel_ids=[str(2 * num_channels + channel_ids[2])], segment_index=seg)
         )
         # all traces
         traces1 = recording1.get_traces(segment_index=seg)
         traces2 = recording2.get_traces(segment_index=seg)
         traces3 = recording3.get_traces(segment_index=seg)
 
-        assert np.allclose(traces1, recording_agg.get_traces(channel_ids=[0, 1, 2], segment_index=seg))
-        assert np.allclose(traces2, recording_agg.get_traces(channel_ids=[3, 4, 5], segment_index=seg))
-        assert np.allclose(traces3, recording_agg.get_traces(channel_ids=[6, 7, 8], segment_index=seg))
+        assert np.allclose(traces1, recording_agg.get_traces(channel_ids=["0", "1", "2"], segment_index=seg))
+        assert np.allclose(traces2, recording_agg.get_traces(channel_ids=["3", "4", "5"], segment_index=seg))
+        assert np.allclose(traces3, recording_agg.get_traces(channel_ids=["6", "7", "8"], segment_index=seg))
 
     # test rename channels
     renamed_channel_ids = [f"#Channel {i}" for i in range(3 * num_channels)]
@@ -81,40 +81,40 @@ def test_channelsaggregationrecording():
 
 
 def test_channel_agregation_preserve_ids():
-    
+
     recording1 = generate_recording(num_channels=3, durations=[10], set_probe=False)  # To avoid location check
     recording1 = recording1.rename_channels(new_channel_ids=["a", "b", "c"])
-    recording2 = generate_recording(num_channels=2, durations=[10], set_probe=False)  
+    recording2 = generate_recording(num_channels=2, durations=[10], set_probe=False)
     recording2 = recording2.rename_channels(new_channel_ids=["d", "e"])
 
-    aggregated_recording = aggregate_channels([recording1, recording2])  
+    aggregated_recording = aggregate_channels([recording1, recording2])
     assert aggregated_recording.get_num_channels() == 5
-    assert list(aggregated_recording.get_channel_ids()) == ['a', 'b', 'c', 'd', 'e']
-    
-    
+    assert list(aggregated_recording.get_channel_ids()) == ["a", "b", "c", "d", "e"]
+
+
 def test_channel_agregation_does_not_preserve_ids_if_not_unique():
-    
+
     recording1 = generate_recording(num_channels=3, durations=[10], set_probe=False)  # To avoid location check
     recording1 = recording1.rename_channels(new_channel_ids=["a", "b", "c"])
-    recording2 = generate_recording(num_channels=2, durations=[10], set_probe=False)  
+    recording2 = generate_recording(num_channels=2, durations=[10], set_probe=False)
     recording2 = recording2.rename_channels(new_channel_ids=["a", "b"])
 
-    aggregated_recording = aggregate_channels([recording1, recording2])  
+    aggregated_recording = aggregate_channels([recording1, recording2])
     assert aggregated_recording.get_num_channels() == 5
     assert list(aggregated_recording.get_channel_ids()) == ["0", "1", "2", "3", "4"]
-    
-    
+
+
 def test_channel_agregation_does_not_preserve_ids_not_the_same_type():
-    
+
     recording1 = generate_recording(num_channels=3, durations=[10], set_probe=False)  # To avoid location check
     recording1 = recording1.rename_channels(new_channel_ids=["a", "b", "c"])
-    recording2 = generate_recording(num_channels=2, durations=[10], set_probe=False)  
+    recording2 = generate_recording(num_channels=2, durations=[10], set_probe=False)
     recording2 = recording2.rename_channels(new_channel_ids=[1, 2])
 
-    aggregated_recording = aggregate_channels([recording1, recording2])  
+    aggregated_recording = aggregate_channels([recording1, recording2])
     assert aggregated_recording.get_num_channels() == 5
     assert list(aggregated_recording.get_channel_ids()) == ["0", "1", "2", "3", "4"]
-    
-    
+
+
 if __name__ == "__main__":
     test_channelsaggregationrecording()
