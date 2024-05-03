@@ -2,11 +2,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import warnings
 
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 from .base import BaseExtractor
-from .core_tools import check_json
 from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn
@@ -178,7 +178,7 @@ class BaseRecordingSnippets(BaseExtractor):
             "in_place will change its default to True in version 0.103 and stop returning a recording"
             " use recording.create_with_probes(probe_or_probegroup) instead to replicate the old functionality"
         )
-        warn.warn(
+        warnings.warn(
             deprecation_msg,
             DeprecationWarning,
             stacklevel=2,
