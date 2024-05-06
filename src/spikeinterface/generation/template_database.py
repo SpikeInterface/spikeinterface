@@ -1,6 +1,5 @@
 import zarr
 import numpy as np
-import pandas as pd
 
 from spikeinterface.core.template import Templates
 
@@ -21,7 +20,6 @@ def fetch_template_dataset(dataset="test_templates") -> Templates:
     Templates
         _description_
     """
-
     s3_path = f"s3://spikeinterface-template-database/{dataset}/"
     zarr_group = zarr.open_consolidated(s3_path, storage_options={"anon": True})
 
@@ -30,7 +28,7 @@ def fetch_template_dataset(dataset="test_templates") -> Templates:
     return templates_object
 
 
-def fetch_templates_info() -> pd.DataFrame:
+def fetch_templates_info() -> "pandas.DataFrame":
     """
     Fetch the information about the templates in the spikeinterface template database.
 
@@ -39,6 +37,8 @@ def fetch_templates_info() -> pd.DataFrame:
     pd.DataFrame
         Dataframe containing the template information.
     """
+    import pandas as pd
+
     s3_path = "s3://spikeinterface-template-database/templates.csv"
     df = pd.read_csv(s3_path, storage_options={"anon": True})
 
@@ -60,7 +60,7 @@ def list_avaliabe_datasets() -> list:
     return datasets
 
 
-def get_templates_from_database(template_df_or_indices: pd.DataFrame | list[int] | np.ndarray) -> Templates:
+def get_templates_from_database(template_df_or_indices: "pandas.DataFrame" | list[int] | np.ndarray) -> Templates:
     """
     Retrieve templates from the spikeinterface template database.
 
@@ -74,6 +74,8 @@ def get_templates_from_database(template_df_or_indices: pd.DataFrame | list[int]
     Templates
         The templates object.
     """
+    import pandas as pd
+
     templates_array = []
     if isinstance(template_df_or_indices, pd.DataFrame):
         template_info = template_df_or_indices
