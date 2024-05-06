@@ -219,6 +219,10 @@ class MotionEstimationStudy(BenchmarkStudy):
         return benchmark
 
     def plot_true_drift(self, case_keys=None, scaling_probe=1.5, figsize=(8, 6)):
+        self.plot_drift(case_keys=case_keys, tested_drift=False, scaling_probe=scaling_probe, figsize=figsize)
+
+    def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True,
+                   scaling_probe=1.5, figsize=(8, 6)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -247,13 +251,18 @@ class MotionEstimationStudy(BenchmarkStudy):
             temporal_bins = bench.result["temporal_bins"]
             spatial_bins = bench.result["spatial_bins"]
             gt_motion = bench.result["gt_motion"]
+            motion = bench.result["motion"]
 
             # for i in range(self.gt_unit_positions.shape[1]):
             #     ax.plot(temporal_bins, self.gt_unit_positions[:, i], alpha=0.5, ls="--", c="0.5")
 
             for i in range(gt_motion.shape[1]):
                 depth = spatial_bins[i]
-                ax.plot(temporal_bins, gt_motion[:, i] + depth, color="green", lw=4)
+                if gt_drift:
+                    ax.plot(temporal_bins, gt_motion[:, i] + depth, color="green", lw=4)
+                if tested_drift:
+                    ax.plot(temporal_bins, motion[:, i] + depth, color="cyan", lw=2)
+
             ax.set_xlabel("time (s)")
             _simpleaxis(ax)
             ax.set_yticks([])
