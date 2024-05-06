@@ -5,7 +5,7 @@ from spikeinterface.core.template import Templates
 
 def test_basic_call():
 
-    templates = fetch_templates_from_database()
+    templates = fetch_templates_from_database("test_templates")
 
     assert isinstance(templates, Templates)
 

@@ -697,7 +697,7 @@ def get_chunk_with_margin(
     case zero padding is used, in the second case np.pad is called
     with mod="reflect".
     """
-    length = rec_segment.get_num_samples()
+    length = int(rec_segment.get_num_samples())
 
     if channel_indices is None:
         channel_indices = slice(None)

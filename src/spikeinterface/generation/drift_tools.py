@@ -442,7 +442,8 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         # TODO: self.upsample_vector = upsample_vector
         self.upsample_vector = None
         self.parent_recording = parent_recording_segment
-        self.num_samples = parent_recording_segment.get_num_frames() if num_samples is None else num_samples
+        self.num_samples = parent_recording_segment.get_num_samples() if num_samples is None else num_samples
+        self.num_samples = int(num_samples)
 
         self.displacement_indices = displacement_indices
         self.templates_array_moved = templates_array_moved
