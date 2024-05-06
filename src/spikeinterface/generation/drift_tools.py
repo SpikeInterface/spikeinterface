@@ -468,7 +468,7 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
             n_channels = len(channel_indices)
 
         if self.parent_recording is not None:
-            traces = self.parent_recording.get_traces(int(start_frame), int(end_frame), channel_indices).copy()
+            traces = self.parent_recording.get_traces(start_frame, end_frame, channel_indices).copy()
         else:
             traces = np.zeros([end_frame - start_frame, n_channels], dtype=self.dtype)
 

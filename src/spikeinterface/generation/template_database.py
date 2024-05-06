@@ -60,13 +60,13 @@ def list_avaliabe_datasets() -> list:
     return datasets
 
 
-def get_templates_from_database(template_df_or_indices: "pandas.DataFrame" | list[int] | np.ndarray) -> Templates:
+def get_templates_from_database(template_df_or_indices: "pandas.DataFrame | list[int] | np.ndarray") -> Templates:
     """
     Retrieve templates from the spikeinterface template database.
 
     Parameters
     ----------
-    template_info : pd.DataFrame or array-like
+    template_df_or_indices : pd.DataFrame or array-like
         Dataframe containing the template information, obtained by slicing/querying the output of fetch_templates_info.
 
     Returns
