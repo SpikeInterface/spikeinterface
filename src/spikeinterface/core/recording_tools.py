@@ -179,7 +179,7 @@ write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_j
 
 
 def write_binary_recording_file_handle(
-    recording, file_handle=None, time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs
+    recording, file_handle=None, time_axis=0, dtype=None, byte_offset=0, **job_kwargs
 ):
     """
     Old variant version of write_binary_recording with one file handle.
@@ -194,11 +194,15 @@ def write_binary_recording_file_handle(
     if dtype is None:
         dtype = recording.get_dtype()
 
+    from .globals import get_global_logger
+
+    logger = get_global_logger()
+
     job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
 
     if chunk_size is not None and time_axis == 1:
-        print("Chunking disabled due to 'time_axis' == 1")
+        logger.info("Chunking disabled due to 'time_axis' == 1")
         chunk_size = None
 
     if chunk_size is None:
@@ -270,7 +274,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     arr[start_frame:end_frame, :] = traces
 
 
-def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=True, buffer_type="auto", **job_kwargs):
+def write_memory_recording(recording, dtype=None, auto_cast_uint=True, buffer_type="auto", **job_kwargs):
     """
     Save the traces into numpy arrays (memory).
     try to use the SharedMemory introduce in py3.8 if n_jobs > 1
@@ -281,8 +285,6 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
         The recording extractor object to be saved in .dat format
     dtype: dtype, default: None
         Type of the saved data
-    verbose: bool, default: False
-        If True, output is verbose (when chunks are used)
     auto_cast_uint: bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
     buffer_type: "auto" | "numpy" | "sharedmem"
@@ -340,7 +342,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
         del job_kwargs["verbose"]
 
     executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
+        recording, func, init_func, init_args, job_name="write_memory_recording", **job_kwargs
     )
     executor.run()
 
