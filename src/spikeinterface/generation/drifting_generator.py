@@ -97,7 +97,7 @@ def make_one_displacement_vector(
     start_drift_index = int(t_start_drift * displacement_sampling_frequency)
     end_drift_index = int(t_end_drift * displacement_sampling_frequency)
 
-    num_samples = int(displacement_sampling_frequency * duration)
+    num_samples = int(np.ceil(displacement_sampling_frequency * duration))
     displacement_vector = np.zeros(num_samples, dtype="float32")
 
     if drift_mode == "zigzag":
@@ -286,6 +286,7 @@ def generate_drifting_recording(
     ),
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
     generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
+    more_outputs=False,
     seed=None,
 ):
     """
@@ -314,6 +315,8 @@ def generate_drifting_recording(
         Parameters given to generate_sorting().
     generate_noise_kwargs: dict
         Parameters given to generate_noise().
+    more_outputs: bool, default False
+        Return optionaly a dict with more variables.
     seed: None ot int
         A unique seed for all steps.
 
@@ -326,7 +329,14 @@ def generate_drifting_recording(
     sorting: Sorting
         The ground trith soring object.
         Same for both recordings.
-
+    more_infos:
+        If more_outputs=True, then return also a dict that contain various information like:
+            * displacement_vectors
+            * displacement_sampling_frequency
+            * unit_locations
+            * displacement_unit_factor
+            * unit_displacements
+        This can be helpfull for motion benchmark.
     """
 
     rng = np.random.default_rng(seed=seed)
@@ -355,6 +365,15 @@ def generate_drifting_recording(
     displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
         generate_displacement_vector(duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs)
     )
+    
+    # unit_displacements is the sum of all discplacements (times, units, direction_x_y)
+    unit_displacements = np.zeros((displacement_vectors.shape[0], num_units, 2))
+    for direction in (0, 1):
+        # x and y
+        for i in range(displacement_vectors.shape[2]):
+            m = displacement_vectors[:, direction, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
+            unit_displacements[:, :, direction] += m
+
 
     # unit_params need to be fixed before the displacement steps
     generate_templates_kwargs = generate_templates_kwargs.copy()
@@ -439,4 +458,15 @@ def generate_drifting_recording(
         amplitude_factor=None,
     )
 
-    return static_recording, drifting_recording, sorting
+    if more_outputs:
+        more_infos = dict(
+            displacement_vectors=displacement_vectors,
+            displacement_sampling_frequency=displacement_sampling_frequency,
+            unit_locations=unit_locations,
+            displacement_unit_factor=displacement_unit_factor,
+            unit_displacements=unit_displacements,
+
+        )
+        return static_recording, drifting_recording, sorting, more_infos
+    else:
+        return static_recording, drifting_recording, sorting

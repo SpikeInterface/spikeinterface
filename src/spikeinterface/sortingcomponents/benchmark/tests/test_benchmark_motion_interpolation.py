@@ -43,7 +43,7 @@ def test_benchmark_motion_interpolation():
     bin_s = 1
     temporal_bins = np.arange(0, duration, bin_s)
     spatial_bins = np.linspace(np.min(channel_locations[:, 1]), np.max(channel_locations[:, 1]), 10)
-    print(spatial_bins)
+    # print(spatial_bins)
     gt_motion = get_gt_motion_from_unit_discplacement(
         unit_displacements,
         data["displacement_sampling_frequency"],
