@@ -17,6 +17,6 @@ from .drifting_generator import (
 from .template_database import (
     fetch_template_dataset,
     fetch_templates_info,
-    list_avaliabe_datasets,
+    list_available_datasets,
     get_templates_from_database,
 )

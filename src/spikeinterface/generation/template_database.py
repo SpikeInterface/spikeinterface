@@ -45,7 +45,7 @@ def fetch_templates_info() -> "pandas.DataFrame":
     return df
 
 
-def list_avaliabe_datasets() -> list:
+def list_available_datasets() -> list:
     """
     List all available datasets in the spikeinterface template database.
 

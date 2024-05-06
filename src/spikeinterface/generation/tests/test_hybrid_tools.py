@@ -3,7 +3,6 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.core.generate import generate_ground_truth_recording, generate_sorting
-from spikeinterface.core import Templates, BaseRecording
 from spikeinterface.preprocessing.motion import correct_motion, load_motion_info
 from spikeinterface.generation.hybrid_tools import estimate_templates_from_recording, generate_hybrid_recording
 
@@ -30,6 +29,8 @@ def test_estimate_templates(tmp_path):
     rec, sorting = generate_ground_truth_recording(num_units=10, sampling_frequency=20000)
     templates = estimate_templates_from_recording(rec, output_folder=tmp_path / "sc", remove_existing_folder=True)
     assert len(templates.templates_array) > 0
+    hybrid, _ = generate_hybrid_recording(rec, templates=templates)
+    assert np.array_equal(hybrid.templates, templates.templates_array)
 
 
 if __name__ == "__main__":
