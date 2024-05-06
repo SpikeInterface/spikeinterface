@@ -85,7 +85,7 @@ class Kilosort4Sorter(BaseSorter):
         "cluster_downsampling": "Inverse fraction of nodes used as landmarks during clustering (can be 1, but that slows down the optimization). Default value: 20.",
         "cluster_pcs": "Maximum number of spatiotemporal PC features used for clustering. Default value: 64.",
         "x_centers": "Number of x-positions to use when determining center points for template groupings. If None, this will be determined automatically by finding peaks in channel density. For 2D array type probes, we recommend specifying this so that centers are placed every few hundred microns.",
-        "duplicate_spike_bins": "Number of bins for which subsequent spikes from the same cluster are assumed to be artifacts. A value of 0 disables this step. Default value: 15.",
+        "duplicate_spike_bins": "Number of bins for which subsequent spikes from the same cluster are assumed to be artifacts. A value of 0 disables this step. Default value: 7.",
         "keep_good_only": "If True only 'good' units are returned",
         "do_correction": "If True, drift correction is performed",
         "save_extra_kwargs": "If True, additional kwargs are saved to the output",
