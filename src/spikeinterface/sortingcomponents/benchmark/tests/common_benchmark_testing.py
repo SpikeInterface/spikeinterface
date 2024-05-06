@@ -142,11 +142,6 @@ def make_drifting_dataset():
         seed=None,
     )
 
-    # take only mottion on Y
-    direction = 1
-    unit_displacements=more_infos["unit_displacements"][:, :, direction]
-
-
     return dict(
         drifting_rec=drifting_recording,
         static_rec=static_recording,
@@ -155,5 +150,5 @@ def make_drifting_dataset():
         displacement_sampling_frequency=more_infos["displacement_sampling_frequency"],
         unit_locations=more_infos["unit_locations"],
         displacement_unit_factor=more_infos["displacement_unit_factor"],
-        unit_displacements=unit_displacements,
+        unit_displacements=more_infos["unit_displacements"],
     )

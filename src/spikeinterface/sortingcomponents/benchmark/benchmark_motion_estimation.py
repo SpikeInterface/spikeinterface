@@ -28,40 +28,40 @@ from spikeinterface.widgets import plot_probe_map
 # TODO : read from mearec
 
 
-def get_unit_disclacement(displacement_vectors, displacement_unit_factor, direction_dim=1):
-    """
-    Get final displacement vector unit per units.
+# def get_unit_displacement(displacement_vectors, displacement_unit_factor, direction_dim=1):
+#     """
+#     Get final displacement vector unit per units.
 
-    See drifting_tools for shapes.
-
-
-    Parameters
-    ----------
-
-    displacement_vectors: list of numpy array
-        The lenght of the list is the number of segment.
-        Per segment, the drift vector is a numpy array with shape (num_times, 2, num_motions)
-        num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
-    displacement_unit_factor: numpy array or None, default: None
-        A array containing the factor per unit of the drift.
-        This is used to create non rigid with a factor gradient of depending on units position.
-        shape (num_units, num_motions)
-        If None then all unit have the same factor (1) and the drift is rigid.
-
-    Returns
-    -------
-    unit_displacements:  numpy array
-        shape (num_times, num_units)
+#     See drifting_tools for shapes.
 
 
-    """
-    num_units = displacement_unit_factor.shape[0]
-    unit_displacements = np.zeros((displacement_vectors.shape[0], num_units))
-    for i in range(displacement_vectors.shape[2]):
-        m = displacement_vectors[:, direction_dim, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
-        unit_displacements[:, :] += m
+#     Parameters
+#     ----------
 
-    return unit_displacements
+#     displacement_vectors: list of numpy array
+#         The lenght of the list is the number of segment.
+#         Per segment, the drift vector is a numpy array with shape (num_times, 2, num_motions)
+#         num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
+#     displacement_unit_factor: numpy array or None, default: None
+#         A array containing the factor per unit of the drift.
+#         This is used to create non rigid with a factor gradient of depending on units position.
+#         shape (num_units, num_motions)
+#         If None then all unit have the same factor (1) and the drift is rigid.
+
+#     Returns
+#     -------
+#     unit_displacements:  numpy array
+#         shape (num_times, num_units)
+
+
+#     """
+#     num_units = displacement_unit_factor.shape[0]
+#     unit_displacements = np.zeros((displacement_vectors.shape[0], num_units))
+#     for i in range(displacement_vectors.shape[2]):
+#         m = displacement_vectors[:, direction_dim, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
+#         unit_displacements[:, :] += m
+
+#     return unit_displacements
 
 
 def get_gt_motion_from_unit_discplacement(
@@ -73,6 +73,7 @@ def get_gt_motion_from_unit_discplacement(
     direction_dim=1,
 ):
 
+    unit_displacements = unit_displacements[:, :, direction_dim]
     times = np.arange(unit_displacements.shape[0]) / displacement_sampling_frequency
     f = scipy.interpolate.interp1d(times, unit_displacements, axis=0)
     unit_displacements = f(temporal_bins)
@@ -152,23 +153,34 @@ class MotionEstimationBenchmark(Benchmark):
         temporal_bins = self.result["temporal_bins"]
         spatial_bins = self.result["spatial_bins"]
 
-        # time interpolatation of unit displacements
-        times = np.arange(self.unit_displacements.shape[0]) / self.displacement_sampling_frequency
-        f = scipy.interpolate.interp1d(times, self.unit_displacements, axis=0)
-        unit_displacements = f(temporal_bins)
+        # # time interpolatation of unit displacements
+        # times = np.arange(self.unit_displacements.shape[0]) / self.displacement_sampling_frequency
+        # f = scipy.interpolate.interp1d(times, self.unit_displacements[:, :, self.direction_dim], axis=0)
+        # unit_displacements = f(temporal_bins)
 
-        # spatial interpolataion of units discplacement
-        if spatial_bins.shape[0] == 1:
-            # rigid
-            gt_motion = np.mean(unit_displacements, axis=1)[:, None]
-        else:
-            # non rigid
-            gt_motion = np.zeros_like(raw_motion)
-            for t in range(temporal_bins.shape[0]):
-                f = scipy.interpolate.interp1d(
-                    self.unit_locations[:, self.direction_dim], unit_displacements[t, :], fill_value="extrapolate"
-                )
-                gt_motion[t, :] = f(spatial_bins)
+        # # spatial interpolataion of units discplacement
+        # if spatial_bins.shape[0] == 1:
+        #     # rigid
+        #     gt_motion = np.mean(unit_displacements, axis=1)[:, None]
+        # else:
+        #     # non rigid
+        #     gt_motion = np.zeros_like(raw_motion)
+        #     for t in range(temporal_bins.shape[0]):
+        #         f = scipy.interpolate.interp1d(
+        #             self.unit_locations[:, self.direction_dim], unit_displacements[t, :], fill_value="extrapolate"
+        #         )
+        #         gt_motion[t, :] = f(spatial_bins)
+
+
+        gt_motion = get_gt_motion_from_unit_discplacement(
+            self.unit_displacements,
+            self.displacement_sampling_frequency,
+            self.unit_locations,
+            temporal_bins,
+            spatial_bins,
+            direction_dim=self.direction_dim,
+        )
+
 
         # align globally gt_motion and motion to avoid offsets
         motion = raw_motion.copy()
