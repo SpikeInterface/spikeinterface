@@ -80,10 +80,13 @@ def get_templates_from_database(template_df_or_indices: pd.DataFrame | list[int]
     else:
         template_info = fetch_templates_info().iloc[template_df_or_indices]
     requested_datasets = np.unique(template_info["dataset"]).tolist()
+    print(f"Fetching templates from {len(requested_datasets)} datasets")
 
     nbefore = None
     sampling_frequency = None
     channel_locations = None
+    probe = None
+    channel_ids = None
 
     for dataset in requested_datasets:
         templates = fetch_template_dataset(dataset)
@@ -95,6 +98,10 @@ def get_templates_from_database(template_df_or_indices: pd.DataFrame | list[int]
             channel_locations = templates.get_channel_locations()
         if sampling_frequency is None:
             sampling_frequency = templates.sampling_frequency
+        if probe is None:
+            probe = templates.probe
+        if channel_ids is None:
+            channel_ids = templates.channel_ids
         current_nbefore = templates.nbefore
         current_channel_locations = templates.get_channel_locations()
         current_sampling_frequency = templates.sampling_frequency
@@ -115,10 +122,10 @@ def get_templates_from_database(template_df_or_indices: pd.DataFrame | list[int]
     templates_array = np.concatenate(templates_array, axis=0)
     templates = Templates(
         templates_array,
-        sampling_frequency=templates.sampling_frequency,
-        channel_ids=templates.channel_ids,
-        nbefore=templates.nbefore,
-        probe=templates.probe,
+        sampling_frequency=sampling_frequency,
+        channel_ids=channel_ids,
+        nbefore=nbefore,
+        probe=probe,
     )
 
     return templates
