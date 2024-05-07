@@ -147,7 +147,9 @@ class BenchmarkStudy:
         for key, folder in self.analyzers_path.items():
             analyzer = load_sorting_analyzer(folder)
             self.analyzers[key] = analyzer
-            self.datasets[key] = analyzer.recording, analyzer.sorting
+            # the sorting is in memory here we take the saved one because comparisons need to pickle it later
+            sorting = load_extractor(analyzer.folder / "sorting")
+            self.datasets[key] = analyzer.recording, sorting
 
         # for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
         #     key = rec_file.stem
