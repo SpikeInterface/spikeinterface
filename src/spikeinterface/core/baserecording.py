@@ -1,7 +1,6 @@
 from __future__ import annotations
 import warnings
 from pathlib import Path
-from warnings import warn
 
 import numpy as np
 from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, write_probeinterface
@@ -12,10 +11,8 @@ from .core_tools import (
     convert_bytes_to_str,
     convert_seconds_to_str,
 )
-from .recording_tools import (
-    write_binary_recording,
-    write_memory_recording,
-)
+from .recording_tools import write_binary_recording
+
 
 from .job_tools import split_job_kwargs
 
@@ -426,7 +423,7 @@ class BaseRecording(BaseRecordingSnippets):
         rs.time_vector = times.astype("float64", copy=False)
 
         if with_warning:
-            warn(
+            warnings.warn(
                 "Setting times with Recording.set_times() is not recommended because "
                 "times are not always propagated across preprocessing"
                 "Use this carefully!"
@@ -550,9 +547,26 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
-    def rename_channels(self, new_channel_ids: list | np.array | tuple):
+    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
+        """
+        Returns a new recording object with a subset of channels.
+
+        Note that this method does not modify the current recording and instead returns a new recording object.
+
+        Parameters
+        ----------
+        channel_ids : list or np.array or tuple
+            The channel ids to select.
+        """
+        from .channelslice import ChannelSliceRecording
+
+        return ChannelSliceRecording(self, channel_ids)
+
+    def rename_channels(self, new_channel_ids: list | np.array | tuple) -> "BaseRecording":
         """
         Returns a new recording object with renamed channel ids.
+
+        Note that this method does not modify the current recording and instead returns a new recording object.
 
         Parameters
         ----------
@@ -570,6 +584,10 @@ class BaseRecording(BaseRecordingSnippets):
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceRecording
 
+        warnings.warn(
+            "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            DeprecationWarning,
+        )
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
 
