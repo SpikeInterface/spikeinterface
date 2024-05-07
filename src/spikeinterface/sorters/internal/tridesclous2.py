@@ -53,6 +53,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "ms_before": 2.0,
             "ms_after": 3.0,
             "max_spikes_per_unit": 400,
+            "sparsity_threshold": 2.0,
             # "peak_shift_ms": 0.2,
         },
         # "matching": {"method": "tridesclous", "method_kwargs": {"peak_shift_ms": 0.2, "radius_um": 100.0}},
@@ -105,6 +106,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
         from spikeinterface.sortingcomponents.clustering.tools import compute_template_from_sparse
         from spikeinterface.sortingcomponents.clustering.main import find_cluster_from_peaks
+        from spikeinterface.sortingcomponents.tools import remove_empty_templates
         
 
         from sklearn.decomposition import TruncatedSVD
@@ -179,6 +181,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
         nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
+        sparsity_threshold = params["templates"]["sparsity_threshold"]
         templates_array = estimate_templates_with_accumulator(
             recording_w,
             sorting_pre_peeler.to_spike_vector(),
@@ -196,8 +199,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
         # TODO : try other methods for sparsity
         # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=120.)
-        sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=2.0)
+        sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=sparsity_threshold)
         templates = templates_dense.to_sparse(sparsity)
+        templates = remove_empty_templates(templates)
 
         # snrs = compute_snrs(we, peak_sign=params["detection"]["peak_sign"], peak_mode="extremum")
         # print(snrs)

@@ -12,18 +12,11 @@ import numpy as np
 
 from spikeinterface.core import (
     generate_ground_truth_recording,
-    generate_templates,
     estimate_templates,
     Templates,
-    generate_sorting,
-    NoiseGeneratorRecording,
+    create_sorting_analyzer,
 )
-from spikeinterface.core.generate import generate_unit_locations
-from spikeinterface.generation import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording, generate_drifting_recording
-
-
-from probeinterface import generate_multi_columns_probe
-
+from spikeinterface.generation import  generate_drifting_recording
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
@@ -51,7 +44,16 @@ def make_dataset():
         noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
         seed=2205,
     )
-    return recording, gt_sorting
+
+    gt_analyzer = create_sorting_analyzer(gt_sorting, recording, sparse=True, format="memory")
+    gt_analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500)
+    # analyzer.compute("waveforms")
+    gt_analyzer.compute("templates")
+    gt_analyzer.compute("noise_levels")
+
+
+
+    return recording, gt_sorting, gt_analyzer
 
 
 def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_scaled=False, **job_kwargs):
@@ -81,15 +83,8 @@ def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, ret
     return gt_templates
 
 
-def make_drifting_dataset():
 
-    num_units = 15
-    duration = 125.5
-    sampling_frequency = 30000.0
-    ms_before = 1.0
-    ms_after = 3.0
-    displacement_sampling_frequency = 5.0
-    # 36 channels
+def make_drifting_dataset():
 
     static_recording, drifting_recording, sorting, more_infos = generate_drifting_recording(
         num_units=15,

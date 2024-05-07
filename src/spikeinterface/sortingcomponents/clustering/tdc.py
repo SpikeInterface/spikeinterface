@@ -153,8 +153,8 @@ class TdcClustering:
             features_folder,
             method="local_feature_clustering",
             method_kwargs=dict(
-                # clusterer="hdbscan",
-                clusterer="isocut5",
+                clusterer="hdbscan",
+                # clusterer="isocut5",
                 feature_name="sparse_tsvd",
                 # feature_name="sparse_wfs",
                 neighbours_mask=neighbours_mask,
