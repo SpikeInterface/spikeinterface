@@ -1,7 +1,7 @@
 How to Guides
 =========
 
-Guides on how to solve specific, short problems in spike interface. Learn how to...
+Guides on how to solve specific, short problems in SpikeInterface. Learn how to...
 
 .. toctree::
     :maxdepth: 1
