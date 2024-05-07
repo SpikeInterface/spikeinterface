@@ -222,8 +222,8 @@ class TdcClustering:
         labels_set = np.unique(post_clean_label)
         labels_set = labels_set[labels_set >= 0]
 
-        # if need_folder_rm:
-        #     shutil.rmtree(clustering_folder)
+        if need_folder_rm:
+            shutil.rmtree(clustering_folder)
             
 
         extra_out = {'peak_shifts': peak_shifts}
