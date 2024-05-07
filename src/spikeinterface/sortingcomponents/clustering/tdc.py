@@ -127,7 +127,7 @@ class TdcClustering:
 
         pipeline_nodes = [node0, node1, node2]
 
-        output = run_node_pipeline(
+        run_node_pipeline(
             recording,
             pipeline_nodes,
             job_kwargs,
