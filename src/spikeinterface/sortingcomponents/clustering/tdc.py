@@ -5,6 +5,7 @@ import json
 import pickle
 import random
 import string
+import shutil
 
 from spikeinterface.core import (
     get_noise_levels,
@@ -65,10 +66,13 @@ class TdcClustering:
         job_kwargs = params["job_kwargs"]
 
         if params["folder"] is None:
-            clustering_folder = get_global_tmp_folder() / "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            randname = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            clustering_folder = get_global_tmp_folder() / f"tdcclustering_{randname}"
             clustering_folder.mkdir(parents=True, exist_ok=True)
+            need_folder_rm = True
         else:
             clustering_folder = Path(params["folder"])
+            need_folder_rm = False
 
     
         sampling_frequency = recording.sampling_frequency
@@ -132,11 +136,13 @@ class TdcClustering:
             folder=features_folder,
             names=["sparse_wfs", "sparse_tsvd"],
         )
-
         # TODO make this generic in GatherNPY ???
         sparse_mask = node1.neighbours_mask
         np.save(features_folder / "sparse_mask.npy", sparse_mask)
         np.save(features_folder / "peaks.npy", peaks)
+
+        # to be able to delete feature folder
+        del pipeline_nodes, node0, node1, node2
 
         # Clustering: channel index > split > merge
         split_radius_um = params["clustering"]["split_radius_um"]
@@ -215,6 +221,10 @@ class TdcClustering:
 
         labels_set = np.unique(post_clean_label)
         labels_set = labels_set[labels_set >= 0]
+
+        # if need_folder_rm:
+        #     shutil.rmtree(clustering_folder)
+            
 
         extra_out = {'peak_shifts': peak_shifts}
         return labels_set, post_clean_label, extra_out
