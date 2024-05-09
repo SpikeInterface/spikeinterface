@@ -38,15 +38,6 @@ spikeinterface/sorters/tests/*/*
 
 spikeinterface/widgets/tests/mearec_test/*
 
-
-examples/modules_gallery/**/*.raw
-examples/modules_gallery/**/*.npy
-examples/modules_gallery/**/*.json
-examples/modules_gallery/**/*.pkl
-examples/modules_gallery/**/*.npz
-examples/modules_gallery/**/*.csv
-
-
 .vscode/*
 
 # MauroToro: My absolute mess of envs
@@ -166,8 +157,19 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# documentation files
+
+examples/tutorials/**/*.raw
+examples/tutorials/**/*.npy
+examples/tutorials/**/*.json
+examples/tutorials/**/*.pkl
+examples/tutorials/**/*.npz
+examples/tutorials/**/*.csv
+examples/tutorials/*.png
+examples/tutorials/*.svg
+
 doc/_build/*
-doc/modules_gallery/*
+doc/tutorials/*
 doc/sources/*
 
 examples/getting_started/tmp_*
