@@ -67,7 +67,7 @@ class CurationSorting:
 
         Parameters
         ----------
-        split_unit_id: int
+        split_unit_id: int or str
             The unit to split
         indices_list: list or np.array
             A list of index arrays selecting the spikes to split in each segment.
