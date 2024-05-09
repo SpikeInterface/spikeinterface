@@ -45,6 +45,7 @@ examples/modules_gallery/**/*.json
 examples/modules_gallery/**/*.pkl
 examples/modules_gallery/**/*.npz
 examples/modules_gallery/**/*.csv
+examples/modules_gallery/**/*.zarr
 
 
 .vscode/*
