@@ -687,10 +687,10 @@ def synthesize_poisson_spike_vector(
 
     # Calculate the number of frames in the refractory period
     refractory_period_seconds = refractory_period_ms / 1000.0
-    refactory_period_frames = int(refractory_period_seconds * sampling_frequency)
+    refractory_period_frames = int(refractory_period_seconds * sampling_frequency)
 
-    is_refactory_period_too_long = np.any(refractory_period_seconds >= 1.0 / firing_rates)
-    if is_refactory_period_too_long:
+    is_refractory_period_too_long = np.any(refractory_period_seconds >= 1.0 / firing_rates)
+    if is_refractory_period_too_long:
         raise ValueError(
             f"The given refractory period {refractory_period_ms} is too long for the firing rates {firing_rates}"
         )
@@ -709,9 +709,9 @@ def synthesize_poisson_spike_vector(
     binomial_p_modified = modified_firing_rate / sampling_frequency
     binomial_p_modified = np.minimum(binomial_p_modified, 1.0)
 
-    # Generate inter spike frames, add the refactory samples and accumulate for sorted spike frames
+    # Generate inter spike frames, add the refractory samples and accumulate for sorted spike frames
     inter_spike_frames = rng.geometric(p=binomial_p_modified[:, np.newaxis], size=(num_units, num_spikes_max))
-    inter_spike_frames[:, 1:] += refactory_period_frames
+    inter_spike_frames[:, 1:] += refractory_period_frames
     spike_frames = np.cumsum(inter_spike_frames, axis=1, out=inter_spike_frames)
     spike_frames = spike_frames.ravel()
 
@@ -982,13 +982,57 @@ from spikeinterface.core.basesorting import BaseSortingSegment, BaseSorting
 class SortingGenerator(BaseSorting):
     def __init__(
         self,
-        num_units: int = 5,
-        sampling_frequency: float = 30000.0,  # in Hz
+        num_units: int = 20,
+        sampling_frequency: float = 30_000.0,  # in Hz
         durations: List[float] = [10.325, 3.5],  #  in s for 2 segments
         firing_rates: float | np.ndarray = 3.0,
         refractory_period_ms: float | np.ndarray = 4.0,  # in ms
-        seed: Optional[int] = None,
+        seed: int = 0,
     ):
+        """
+        A class for lazily generate synthetic sorting objects with Poisson spike trains.
+
+        We have two ways of representing spike trains in SpikeInterface:
+
+        - Spike vector (sample_index, unit_index)
+        - Dictionary of unit_id to spike times
+
+        This class simulates a sorting object that uses a representation based on unit IDs to lists of spike times,
+        rather than pre-computed spike vectors. It is intended for testing performance differences and functionalities
+        in data handling and analysis frameworks. For the normal use case of sorting objects with spike_vectors use the
+        `generate_sorting` function.
+
+        Parameters
+        ----------
+        num_units : int, optional
+            The number of distinct units (neurons) to simulate. Default is 20.
+        sampling_frequency : float, optional
+            The sampling frequency of the spike data in Hz. Default is 30_000.0.
+        durations : list of float, optional
+            A list containing the duration in seconds for each segment of the sorting data. Default is [10.325, 3.5],
+            corresponding to 2 segments.
+        firing_rates : float or np.ndarray, optional
+            The firing rate(s) in Hz, which can be specified as a single value applicable to all units or as an array
+            with individual firing rates for each unit. Default is 3.0.
+        refractory_period_ms : float or np.ndarray, optional
+            The refractory period in milliseconds. Can be specified either as a single value for all units or as an
+            array with different values for each unit. Default is 4.0.
+        seed : int, default: 0
+            The seed for the random number generator to ensure reproducibility.
+
+        Raises
+        ------
+        ValueError
+            If the refractory period is too long for the given firing rates, which could result in unrealistic
+            physiological conditions.
+
+        Notes
+        -----
+        This generator simulates the spike trains using a Poisson process. It takes into account the refractory periods
+        by adjusting the firing rates accordingly. See the notes on `synthesize_poisson_spike_vector` for more details.
+
+        """
+
         unit_ids = np.arange(num_units)
         super().__init__(sampling_frequency, unit_ids)
 
@@ -996,7 +1040,13 @@ class SortingGenerator(BaseSorting):
         self.num_segments = len(durations)
         self.firing_rates = firing_rates
         self.durations = durations
-        self.refactory_period_ms = refractory_period_ms
+        self.refractory_period_seconds = refractory_period_ms / 1000.0
+
+        is_refractory_period_too_long = np.any(self.refractory_period_seconds >= 1.0 / firing_rates)
+        if is_refractory_period_too_long:
+            raise ValueError(
+                f"The given refractory period {refractory_period_ms} is too long for the firing rates {firing_rates}"
+            )
 
         seed = _ensure_seed(seed)
         self.seed = seed
@@ -1008,7 +1058,7 @@ class SortingGenerator(BaseSorting):
                 sampling_frequency=sampling_frequency,
                 duration=durations[segment_index],
                 firing_rates=firing_rates,
-                refractory_period_ms=refractory_period_ms,
+                refractory_period_seconds=self.refractory_period_seconds,
                 seed=segment_seed,
                 t_start=None,
             )
@@ -1019,7 +1069,7 @@ class SortingGenerator(BaseSorting):
             "sampling_frequency": sampling_frequency,
             "durations": durations,
             "firing_rates": firing_rates,
-            "refactory_period_ms": refractory_period_ms,
+            "refractory_period_ms": refractory_period_ms,
             "seed": seed,
         }
 
@@ -1031,23 +1081,23 @@ class SortingGeneratorSegment(BaseSortingSegment):
         sampling_frequency: float,
         duration: float,
         firing_rates: float | np.ndarray,
-        refractory_period_ms: float | np.ndarray,
+        refractory_period_seconds: float | np.ndarray,
         seed: int,
         t_start: Optional[float] = None,
     ):
         self.num_units = num_units
         self.duration = duration
         self.sampling_frequency = sampling_frequency
+        self.refractory_period_seconds = refractory_period_seconds
 
         if np.isscalar(firing_rates):
             firing_rates = np.full(num_units, firing_rates, dtype="float64")
 
         self.firing_rates = firing_rates
 
-        if np.isscalar(refractory_period_ms):
-            refractory_period_ms = np.full(num_units, refractory_period_ms, dtype="float64")
+        if np.isscalar(self.refractory_period_seconds):
+            self.refractory_period_seconds = np.full(num_units, self.refractory_period_seconds, dtype="float64")
 
-        self.refractory_period_seconds = refractory_period_ms / 1000.0
         self.segment_seed = seed
         self.units_seed = {unit_id: self.segment_seed + hash(unit_id) for unit_id in range(num_units)}
         self.num_samples = math.ceil(sampling_frequency * duration)
@@ -1059,18 +1109,28 @@ class SortingGeneratorSegment(BaseSortingSegment):
 
         rng = np.random.default_rng(seed=unit_seed)
 
-        # Poisson process statistics
-        num_spikes_expected = math.ceil(self.firing_rates[unit_id] * self.duration)
-        num_spikes_std = math.ceil(np.sqrt(num_spikes_expected))
-        num_spikes_max = num_spikes_expected + 2 * num_spikes_std
+        firing_rate = self.firing_rates[unit_index]
+        refractory_period = self.refractory_period_seconds[unit_index]
 
-        p_geometric = 1.0 - np.exp(-self.firing_rates[unit_index] / self.sampling_frequency)
+        # p is the probably of an spike per tick of the sampling frequency
+        binomial_p = firing_rate / self.sampling_frequency
+        # We estimate how many spikes we will have in the duration
+        max_frames = int(self.duration * self.sampling_frequency) - 1
+        max_binomial_p = float(np.max(binomial_p))
+        num_spikes_expected = ceil(max_frames * max_binomial_p)
+        num_spikes_std = int(np.sqrt(num_spikes_expected * (1 - max_binomial_p)))
+        num_spikes_max = num_spikes_expected + 4 * num_spikes_std
 
-        inter_spike_frames = rng.geometric(p=p_geometric, size=num_spikes_max)
-        spike_frames = np.cumsum(inter_spike_frames, out=inter_spike_frames)
+        # Increase the firing rate to take into account the refractory period
+        modified_firing_rate = firing_rate / (1 - firing_rate * refractory_period)
+        binomial_p_modified = modified_firing_rate / self.sampling_frequency
+        binomial_p_modified = np.minimum(binomial_p_modified, 1.0)
 
-        refactory_period_frames = int(self.refractory_period_seconds[unit_index] * self.sampling_frequency)
-        spike_frames[1:] += refactory_period_frames
+        inter_spike_frames = rng.geometric(p=binomial_p_modified, size=num_spikes_max)
+        spike_frames = np.cumsum(inter_spike_frames)
+
+        refractory_period_frames = int(refractory_period * self.sampling_frequency)
+        spike_frames[1:] += refractory_period_frames
 
         if start_frame is not None:
             start_index = np.searchsorted(spike_frames, start_frame, side="left")
