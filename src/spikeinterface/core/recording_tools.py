@@ -4,7 +4,6 @@ from typing import Literal
 import warnings
 from pathlib import Path
 import os
-import gc
 import mmap
 import tqdm
 
@@ -91,10 +90,12 @@ def write_binary_recording(
         The path to the file.
     dtype: dtype or None, default: None
         Type of the saved data
-        If True, file the ".raw" file extension is added if the file name is not a "raw", "bin", or "dat"
+    add_file_extension, bool, default: True
+        If True, and  the file path does not end in "raw", "bin", or "dat" then "raw" is added as an extension.
     byte_offset: int, default: 0
-        Offset in bytes for the binary file (e.g. to write a header)
-    auto_cast_uint: bool, default: True  
+        Offset in bytes for the binary file (e.g. to write a header). This is useful in case you want to append data
+        to an existing file where you wrote a header or other data before.
+    auto_cast_uint: bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """
@@ -110,8 +111,12 @@ def write_binary_recording(
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
     dtype = dtype if dtype is not None else recording.get_dtype()
-    if auto_cast_uint:  #TODO should we deprecate this given that we have `unsigned_to_signed`?
+    if auto_cast_uint:  # TODO should we deprecate this given that we have `unsigned_to_signed`?
         cast_unsigned = determine_cast_unsigned(recording, dtype)
+        warning_message = (
+            "auto_cast_uint is deprecated and will be removed in 0.103. Use the `unsigned_to_signed` function instead."
+        )
+        warnings.warn(warning_message, DeprecationWarning)
 
     dtype_size_bytes = np.dtype(dtype).itemsize
     num_channels = recording.get_num_channels()
