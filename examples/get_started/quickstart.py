@@ -18,8 +18,8 @@
 
 # + [markdown]
 """
-How to "get started"
-====================
+Quickstart tutorial
+===================
 
 In this introductory example, you will see how to use SpikeInterface to perform a full electrophysiology analysis.
 We will download a simulated dataset, and we will then perform some pre-processing, run a spike sorting
@@ -253,6 +253,36 @@ analyzer_TDC.compute("spike_locations", ms_before=0.5)
 analyzer_TDC.compute("correlograms", bin_ms=0.1)
 analyzer_TDC.compute("template_similarity", method="cosine_similarity")
 # -
+
+# As you can see, it becomes a bit overwhelming if you’re computing lots of extensions.
+# Luckily, there’s some nice syntax for this very situation. We can redo the last
+# nine compute statements in one command as follows
+
+# +
+extensions_to_compute = [
+    "random_spikes",
+    "waveforms",
+    "noise_levels",
+    "templates",
+    "spike_amplitudes",
+    "unit_locations",
+    "spike_locations",
+    "correlograms",
+    "template_similarity"
+]
+
+extension_params = {
+    "unit_locations": {"method": "center_of_mass"},
+    "spike_locations": {"ms_before": 0.1},
+    "correlograms": {"bin_ms": 0.1},
+    "template_similarity": {"method": "cosine_similarity"}
+}
+
+analyzer_TDC.compute(extensions_to_compute, extension_params=extension_params)
+# -
+
+# Which you might find easier. Note that if we pass no extension parameters, the
+# computation simply uses the default parameters.
 
 # Find out more about the available parameters and extensions [here](https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html).
 

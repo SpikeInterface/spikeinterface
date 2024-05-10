@@ -29,17 +29,17 @@ if not os.path.isdir('sources'):
 
 # clean some folder
 folders =  [
-    '../examples/modules_gallery/core/my_recording',
-    '../examples/modules_gallery/core/my_sorting',
-    '../examples/modules_gallery/core/waveform_folder',
-    '../examples/modules_gallery/core/waveform_folder_parallel',
-    '../examples/modules_gallery/core/waveform_folder_sparse',
-    '../examples/modules_gallery/core/waveform_folder_sparse_direct',
-    '../examples/modules_gallery/core/waveform_folder2',
-    '../examples/modules_gallery/core/waveform_folder',
-    '../examples/modules_gallery/qualitymetrics/waveforms_mearec',
-    '../examples/modules_gallery/qualitymetrics/wfs_mearec',
-    '../examples/modules_gallery/widgets/waveforms_mearec',
+    '../examples/tutorials/core/my_recording',
+    '../examples/tutorials/core/my_sorting',
+    '../examples/tutorials/core/waveform_folder',
+    '../examples/tutorials/core/waveform_folder_parallel',
+    '../examples/tutorials/core/waveform_folder_sparse',
+    '../examples/tutorials/core/waveform_folder_sparse_direct',
+    '../examples/tutorials/core/waveform_folder2',
+    '../examples/tutorials/core/waveform_folder',
+    '../examples/tutorials/qualitymetrics/waveforms_mearec',
+    '../examples/tutorials/qualitymetrics/wfs_mearec',
+    '../examples/tutorials/widgets/waveforms_mearec',
 
 ]
 
@@ -63,9 +63,9 @@ author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Ma
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    'sphinx.ext.autosectionlabel',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinx.ext.autosectionlabel',
     'sphinx_design',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
@@ -117,18 +117,19 @@ from sphinx_gallery.sorting import FileNameSortKey
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
     'only_warn_on_example_error': True,
-    'examples_dirs': ['../examples/modules_gallery'],
-    'gallery_dirs': ['modules_gallery', ],  # path where to save gallery generated examples
+    'examples_dirs': ['../examples/tutorials'],
+    'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
-                                       '../examples/modules_gallery/core',
-                                       '../examples/modules_gallery/extractors',
-                                       '../examples/modules_gallery/qualitymetrics',
-                                       '../examples/modules_gallery/comparison',
-                                       '../examples/modules_gallery/widgets',
+                                       '../examples/tutorials/core',
+                                       '../examples/tutorials/extractors',
+                                       '../examples/tutorials/qualitymetrics',
+                                       '../examples/tutorials/comparison',
+                                       '../examples/tutorials/widgets',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_',
     'nested_sections': False,
+    'copyfile_regex': r'.*\.rst|.*\.png|.*\.svg'
 }
 
 intersphinx_mapping = {
