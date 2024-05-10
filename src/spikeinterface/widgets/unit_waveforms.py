@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from coverage import data
 import numpy as np
 from warnings import warn
 
