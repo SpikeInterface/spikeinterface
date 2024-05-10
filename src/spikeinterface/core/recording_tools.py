@@ -117,7 +117,7 @@ def write_binary_recording(
         warning_message = (
             "auto_cast_uint is deprecated and will be removed in 0.103. Use the `unsigned_to_signed` function instead."
         )
-        warnings.warn(warning_message, DeprecationWarning)
+        warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
 
     dtype_size_bytes = np.dtype(dtype).itemsize
     num_channels = recording.get_num_channels()
