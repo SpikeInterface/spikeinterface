@@ -2,7 +2,7 @@ from spikeinterface.core.template import Templates
 import zarr
 
 
-def fetch_templates_from_database(dataset="test_templates") -> Templates:
+def fetch_templates_from_database(dataset="test_templates.zarr") -> Templates:
 
     s3_path = f"s3://spikeinterface-template-database/{dataset}/"
     zarr_group = zarr.open_consolidated(s3_path, storage_options={"anon": True})
