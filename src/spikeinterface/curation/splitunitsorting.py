@@ -48,8 +48,8 @@ class SplitUnitSorting(BaseSorting):
         # make sure indices list is between 0 and tot_splits - 1
         indices_zero_based = [np.zeros_like(indices) for indices in indices_list]
         for segment_index in range(len(indices_list)):
-            for i, split_unit_idx in enumerate(split_unit_indices):
-                indices_zero_based[segment_index][indices_list[segment_index] == split_unit_idx] = i
+            for zero_based_index, split_unit_idx in enumerate(split_unit_indices):
+                indices_zero_based[segment_index][indices_list[segment_index] == split_unit_idx] = zero_based_index
 
         if new_unit_ids is None:
             # select new_unit_ids greater that the max id, event greater than the numerical str ids
