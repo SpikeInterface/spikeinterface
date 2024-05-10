@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import json
 import pickle
@@ -189,9 +191,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             stacklevel=2,
         )
         for sorting in self.object_list:
-            assert sorting.check_serializablility(
+            assert sorting.check_serializability(
                 "json"
-            ), "MultiSortingComparison.save_to_folder() need json serializable sortings"
+            ), "MultiSortingComparison.save_to_folder() needs json serializable sortings"
 
         save_folder = Path(save_folder)
         save_folder.mkdir(parents=True, exist_ok=True)
@@ -259,8 +261,8 @@ class AgreementSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = True
+        self._serializability["json"] = False
+        self._serializability["pickle"] = True
 
         if len(unit_ids) > 0:
             for k in ("agreement_number", "avg_agreement", "unit_ids"):
@@ -354,8 +356,8 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
         comp = TemplateComparison(
             self.object_list[i],
             self.object_list[j],
-            we1_name=self.name_list[i],
-            we2_name=self.name_list[j],
+            name1=self.name_list[i],
+            name2=self.name_list[j],
             match_score=self.match_score,
             verbose=False,
         )

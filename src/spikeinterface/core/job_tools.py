@@ -1,13 +1,14 @@
 """
 Some utils to handle parallel jobs on top of job and/or loky
 """
+
+from __future__ import annotations
 from pathlib import Path
 import numpy as np
 import platform
 import os
 import warnings
 
-import joblib
 import sys
 import contextlib
 from tqdm.auto import tqdm
@@ -49,6 +50,14 @@ job_keys = (
     "max_threads_per_process",
 )
 
+# theses key are the same and should not be in th final dict
+_mutually_exclusive = (
+    "total_memory",
+    "chunk_size",
+    "chunk_memory",
+    "chunk_duration",
+)
+
 
 def fix_job_kwargs(runtime_job_kwargs):
     from .globals import get_global_job_kwargs
@@ -59,6 +68,14 @@ def fix_job_kwargs(runtime_job_kwargs):
         assert k in job_keys, (
             f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
         )
+
+    # remove mutually exclusive from global job kwargs
+    for k, v in runtime_job_kwargs.items():
+        if k in _mutually_exclusive and v is not None:
+            for key_to_remove in _mutually_exclusive:
+                if key_to_remove in job_kwargs:
+                    job_kwargs.pop(key_to_remove)
+
     # remove None
     runtime_job_kwargs_exclude_none = runtime_job_kwargs.copy()
     for job_key, job_value in runtime_job_kwargs.items():
@@ -93,25 +110,6 @@ def split_job_kwargs(mixed_kwargs):
             specific_kwargs[k] = v
     job_kwargs = fix_job_kwargs(job_kwargs)
     return specific_kwargs, job_kwargs
-
-
-# from https://stackoverflow.com/questions/24983493/tracking-progress-of-joblib-parallel-execution
-@contextlib.contextmanager
-def tqdm_joblib(tqdm_object):
-    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
-
-    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
-        def __call__(self, *args, **kwargs):
-            tqdm_object.update(n=self.batch_size)
-            return super().__call__(*args, **kwargs)
-
-    old_batch_callback = joblib.parallel.BatchCompletionCallBack
-    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
-    try:
-        yield tqdm_object
-    finally:
-        joblib.parallel.BatchCompletionCallBack = old_batch_callback
-        tqdm_object.close()
 
 
 def divide_segment_into_chunks(num_frames, chunk_size):
@@ -156,11 +154,15 @@ def _mem_to_int(mem):
 
 def ensure_n_jobs(recording, n_jobs=1):
     if n_jobs == -1:
-        n_jobs = joblib.cpu_count()
+        n_jobs = os.cpu_count()
     elif n_jobs == 0:
         n_jobs = 1
     elif n_jobs is None:
         n_jobs = 1
+
+    # ProcessPoolExecutor has a hard limit of 61 for Windows
+    if platform.system() == "Windows" and n_jobs > 61:
+        n_jobs = 61
 
     version = sys.version_info
 
@@ -257,7 +259,7 @@ class ChunkRecordingExecutor:
         * in parallel with ProcessPoolExecutor (higher speed)
 
     The initializer ("init_func") allows to set a global context to avoid heavy serialization
-    (for examples, see implementation in `core.WaveformExtractor`).
+    (for examples, see implementation in `core.waveform_tools`).
 
     Parameters
     ----------

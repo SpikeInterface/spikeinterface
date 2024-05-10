@@ -76,7 +76,7 @@ merges. Therefore, it has many parameters and options.
     clean_sorting = MergeUnitsSorting(parent_sorting=sorting, units_to_merge=merges)
 
 
-Manual curation with sorting view
+Manual curation with sortingview
 ---------------------------------
 
 Within the :code:`sortingview` widgets backend (see :ref:`sorting_view`), the
@@ -98,7 +98,7 @@ The manual curation (including merges and labels) can be applied to a SpikeInter
     from spikeinterface.widgets import plot_sorting_summary
 
     # run a sorter and export waveforms
-    sorting = run_sorter(sorter_name'kilosort2', recording=recording)
+    sorting = run_sorter(sorter_name='kilosort2', recording=recording)
     we = extract_waveforms(recording=recording, sorting=sorting, folder='wf_folder')
 
     # some postprocessing is required
@@ -108,8 +108,9 @@ The manual curation (including merges and labels) can be applied to a SpikeInter
     _ = compute_correlograms(waveform_extractor=we)
 
     # This loads the data to the cloud for web-based plotting and sharing
+    # curation=True required for allowing curation in the sortingview gui
     plot_sorting_summary(waveform_extractor=we, curation=True, backend='sortingview')
-    # we open the printed link URL in a browswe
+    # we open the printed link URL in a browser
     # - make manual merges and labeling
     # - from the curation box, click on "Save as snapshot (sha1://)"
 

@@ -14,8 +14,9 @@ Since version 0.95.0, the :py:mod:`spikeinterface.widgets` module supports multi
 * | :code:`sortingview`: web-based and interactive rendering using the `sortingview <https://github.com/magland/sortingview>`_
   | and `FIGURL <https://github.com/flatironinstitute/figurl>`_ packages.
 
-Version 0.100.0, also come with this new backend:
-* | :code:`ephyviewer`: interactive Qt based using the `ephyviewer <https://ephyviewer.readthedocs.io/en/latest/>`_ package
+Version 0.99.0 also comes with this new backend:
+
+* :code:`ephyviewer`: interactive Qt based using the `ephyviewer <https://ephyviewer.readthedocs.io/en/latest/>`_ package
 
 
 Installing backends
@@ -70,7 +71,7 @@ To install it, run:
 
 .. code-block:: bash
 
-    pip install sortingview figurl-jupyter
+    pip install sortingview
 
 Internally, the processed data to be rendered are uploaded to a public bucket in the cloud, so that they
 can be visualized via the web (if :code:`generate_url=True`).
@@ -78,7 +79,7 @@ When running in a Jupyter notebook or JupyterLab, the sortingview widget will al
 notebook!
 
 To set up the backend, you need to authenticate to `kachery-cloud` using your GitHub account by running
-the following command (you will be prompted a link):
+the following command (you will be prompted with a link):
 
 .. code-block:: bash
 
@@ -196,13 +197,13 @@ The functions have the following additional arguments:
 .. code-block:: python
 
     # sortingview backend
-    w_ts = sw.plot_traces(recording=recording, backend="ipywidgets")
-    w_ss = sw.plot_sorting_summary(recording=recording, backend="sortingview")
+    w_ts = sw.plot_traces(recording=recording, backend="sortingview")
+    w_ss = sw.plot_sorting_summary(waveform_extractor=we, curation=True, backend="sortingview")
 
 
 **Output:**
 
-* `Timeseries link <https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://6016ab466ee53facc5eb62de080c57f9b547ba92&label=SpikeInterface%20-%20Timeseries>`_
+* `plot_traces link <https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://6016ab466ee53facc5eb62de080c57f9b547ba92&label=SpikeInterface%20-%20Timeseries>`_
 
 .. image:: ../images/sv_timeseries.png
 
@@ -259,11 +260,22 @@ The :code:`ephyviewer` backend is currently only available for the :py:func:`~sp
 Available plotting functions
 ----------------------------
 
+* :py:func:`~spikeinterface.widgets.plot_agreement_matrix` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_all_amplitudes_distributions` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_amplitudes` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_autocorrelograms` (backends: :code:`matplotlib`, :code:`sortingview`)
+* :py:func:`~spikeinterface.widgets.plot_confusion_matrix` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_comparison_collision_by_similarity` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_crosscorrelograms` (backends: :code:`matplotlib`, :code:`sortingview`)
+* :py:func:`~spikeinterface.widgets.plot_isi_distribution` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_motion` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_multicomparison_agreement` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_multicomparison_agreement_by_sorter` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_multicomparison_graph` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_peak_activity` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_probe_map` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_quality_metrics` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
+* :py:func:`~spikeinterface.widgets.plot_rasters` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_sorting_summary` (backends: :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_spike_locations` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 * :py:func:`~spikeinterface.widgets.plot_spikes_on_traces` (backends: :code:`matplotlib`, :code:`ipywidgets`)
@@ -272,30 +284,14 @@ Available plotting functions
 * :py:func:`~spikeinterface.widgets.plot_traces` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`, :code:`ephyviewer`)
 * :py:func:`~spikeinterface.widgets.plot_unit_depths` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_unit_locations` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
+* :py:func:`~spikeinterface.widgets.plot_unit_presence` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_unit_probe_map` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_unit_summary` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_unit_templates` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_unit_waveforms_density_map` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_unit_waveforms` (backends: :code:`matplotlib`, :code:`ipywidgets`)
-
-
-Legacy plotting functions
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-These functions are still part of the package, but they are directly implemented in :code:`matplotlib` without the
-more recend backend mechanism:
-
-* :py:func:`~spikeinterface.widgets.plot_rasters`
-* :py:func:`~spikeinterface.widgets.plot_probe_map`
-* :py:func:`~spikeinterface.widgets.plot_isi_distribution`
-* :py:func:`~spikeinterface.widgets.plot_drift_over_time`
-* :py:func:`~spikeinterface.widgets.plot_peak_activity_map`
-* :py:func:`~spikeinterface.widgets.plot_principal_component`
-* :py:func:`~spikeinterface.widgets.plot_unit_probe_map`
-* :py:func:`~spikeinterface.widgets.plot_confusion_matrix`
-* :py:func:`~spikeinterface.widgets.plot_agreement_matrix`
-* :py:func:`~spikeinterface.widgets.plot_multicomp_graph`
-* :py:func:`~spikeinterface.widgets.plot_multicomp_agreement`
-* :py:func:`~spikeinterface.widgets.plot_multicomp_agreement_by_sorter`
-* :py:func:`~spikeinterface.widgets.plot_comparison_collision_pair_by_pair`
-* :py:func:`~spikeinterface.widgets.plot_comparison_collision_by_similarity`
-* :py:func:`~spikeinterface.widgets.plot_sorting_performance`
+* :py:func:`~spikeinterface.widgets.plot_study_run_times` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_study_unit_counts` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_study_agreement_matrix` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_study_summary` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_study_comparison_collision_by_similarity` (backends: :code:`matplotlib`)

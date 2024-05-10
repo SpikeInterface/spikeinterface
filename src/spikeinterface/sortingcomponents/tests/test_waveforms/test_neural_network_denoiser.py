@@ -8,8 +8,8 @@ from spikeinterface.core.node_pipeline import run_node_pipeline, PeakRetriever, 
 from spikeinterface.sortingcomponents.waveforms.neural_network_denoiser import SingleChannelToyDenoiser
 
 
-def test_single_channel_toy_denoiser_in_peak_pipeline(mearec_recording, detected_peaks, chunk_executor_kwargs):
-    recording = mearec_recording
+def test_single_channel_toy_denoiser_in_peak_pipeline(generated_recording, detected_peaks, chunk_executor_kwargs):
+    recording = generated_recording
     peaks = detected_peaks
 
     ms_before = 2.0

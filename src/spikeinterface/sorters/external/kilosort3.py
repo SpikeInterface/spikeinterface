@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import os
 from typing import Union
@@ -43,6 +45,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "sig": 20,
         "freq_min": 300,
         "sigmaMask": 30,
+        "lam": 20.0,
         "nPCs": 3,
         "ntbuff": 64,
         "nfilt_factor": 4,
@@ -69,11 +72,12 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "sig": "spatial smoothness constant for registration",
         "freq_min": "High-pass filter cutoff frequency",
         "sigmaMask": "Spatial constant in um for computing residual variance of spike",
+        "lam": "The importance of the amplitude penalty (like in Kilosort1: 0 means not used, 10 is average, 50 is a lot)",
         "nPCs": "Number of PCA dimensions",
         "ntbuff": "Samples of symmetrical buffer for whitening and spike detection",
         "nfilt_factor": "Max number of clusters per good channel (even temporary ones) 4",
         "do_correction": "If True drift registration is applied",
-        "NT": "Batch size (if None it is automatically computed)",
+        "NT": "Batch size (if None it is automatically computed--recommended Kilosort behavior if ntbuff also not changed)",
         "AUCsplit": "Threshold on the area under the curve (AUC) criterion for performing a split in the final step",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "keep_good_only": "If True only 'good' units are returned",
@@ -143,7 +147,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         if p["wave_length"] % 2 != 1:
             p["wave_length"] = p["wave_length"] + 1  # The wave_length must be odd
         if p["wave_length"] > 81:
-            p["wave_length"] = 81  # The wave_length must be less than 81.
+            p["wave_length"] = 81  # The wave_length must be <= 81
 
         return p
 
@@ -172,7 +176,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         ops["Th"] = projection_threshold
 
         # how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
-        ops["lam"] = 20.0
+        ops["lam"] = params["lam"]
 
         # splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
         ops["AUCsplit"] = params["AUCsplit"]

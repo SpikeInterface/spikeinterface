@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 
 import numpy as np
 
@@ -93,6 +93,10 @@ class ChannelsAggregationRecording(BaseRecording):
         self._recordings = recording_list
         self._kwargs = {"recording_list": [rec for rec in recording_list], "renamed_channel_ids": renamed_channel_ids}
 
+    @property
+    def recordings(self):
+        return self._recordings
+
 
 class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
     """
@@ -121,9 +125,9 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | slice | None = None,
     ) -> np.ndarray:
         return_all_channels = False
         if channel_indices is None:
@@ -138,11 +142,17 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
                 # in case channel_indices is slice, it has step 1
                 step = channel_indices.step if channel_indices.step is not None else 1
                 channel_indices = list(range(channel_indices.start, channel_indices.stop, step))
+            recording_id_channels_map = {}
             for channel_idx in channel_indices:
-                segment = self._parent_segments[self._channel_map[channel_idx]["recording_id"]]
+                recording_id = self._channel_map[channel_idx]["recording_id"]
                 channel_index_recording = self._channel_map[channel_idx]["channel_index"]
+                if recording_id not in recording_id_channels_map:
+                    recording_id_channels_map[recording_id] = []
+                recording_id_channels_map[recording_id].append(channel_index_recording)
+            for recording_id, channel_indices_recording in recording_id_channels_map.items():
+                segment = self._parent_segments[recording_id]
                 traces_recording = segment.get_traces(
-                    channel_indices=[channel_index_recording], start_frame=start_frame, end_frame=end_frame
+                    channel_indices=channel_indices_recording, start_frame=start_frame, end_frame=end_frame
                 )
                 traces.append(traces_recording)
         else:

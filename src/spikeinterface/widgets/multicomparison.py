@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from warnings import warn
 
@@ -206,10 +208,6 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
     show_legend: bool
         Show the legend in the last axes
 
-    Returns
-    -------
-    W: MultiCompGraphWidget
-        The output widget
     """
 
     def __init__(

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import scipy.interpolate
 from tqdm import tqdm
@@ -131,7 +133,7 @@ def interpolate_motion_on_traces(
     # inperpolation kernel will be the same per temporal bin
     for bin_ind in np.unique(bin_inds):
         # Step 1 : channel motion
-        if spatial_bins.shape[0] == 0:
+        if spatial_bins.shape[0] == 1:
             # rigid motion : same motion for all channels
             channel_motions = motion[bin_ind, 0]
         else:

@@ -16,8 +16,8 @@ jobs:
     name: Caching virtual env
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: Get current year-month
@@ -28,7 +28,7 @@ jobs:
         id: dependencies
         run: |
           echo "hash=${{hashFiles('**/pyproject.toml')}}" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: cache-venv
         with:
           path: ${{ github.workspace }}/test_env
@@ -47,7 +47,7 @@ jobs:
     name: Caching data env
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: Create the directory to store the data
@@ -60,7 +60,7 @@ jobs:
         run: |
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: cache-datasets
         with:
           path: ~/spikeinterface_datasets

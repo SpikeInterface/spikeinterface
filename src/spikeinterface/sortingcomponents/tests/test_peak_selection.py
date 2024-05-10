@@ -1,26 +1,21 @@
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset
 
 from spikeinterface.core import get_noise_levels
-from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 
+from spikeinterface.sortingcomponents.tests.common import make_dataset
+
 
 def test_select_peaks():
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    recording = MEArecRecordingExtractor(local_path)
+    recording, _ = make_dataset()
 
     # by_channel
-
     noise_levels = get_noise_levels(recording, return_scaled=False)
-
     peaks = detect_peaks(
         recording,
         method="by_channel",

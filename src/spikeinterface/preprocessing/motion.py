@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from pathlib import Path
 
@@ -20,7 +22,7 @@ motion_options_preset = {
             exclude_sweep_ms=0.1,
             radius_um=50,
         ),
-        "select_kwargs": None,
+        "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="monopolar_triangulation",
             radius_um=75.0,
@@ -67,10 +69,66 @@ motion_options_preset = {
             weight_with_amplitude=False,
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1,
-            border_mode="remove_channels",
-            spatial_interpolation_method="idw",
-            num_closest=3,
+            direction=1, border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
+        ),
+    },
+    "nonrigid_fast_and_accurate": {
+        "doc": "mixed methods by KS & Paninski lab (grid_convolution + decentralized)",
+        "detect_kwargs": dict(
+            method="locally_exclusive",
+            peak_sign="neg",
+            detect_threshold=8.0,
+            exclude_sweep_ms=0.5,
+            radius_um=50,
+        ),
+        "select_kwargs": dict(),
+        "localize_peaks_kwargs": dict(
+            method="grid_convolution",
+            radius_um=40.0,
+            upsampling_um=5.0,
+            sigma_ms=0.25,
+            margin_um=30.0,
+            prototype=None,
+            percentile=5.0,
+        ),
+        "estimate_motion_kwargs": dict(
+            method="decentralized",
+            direction="y",
+            bin_duration_s=2.0,
+            rigid=False,
+            bin_um=5.0,
+            margin_um=0.0,
+            # win_shape="gaussian",
+            # win_step_um=50.0,
+            # win_sigma_um=150.0,
+            win_shape="gaussian",
+            win_step_um=100.0,
+            win_sigma_um=200.0,
+            histogram_depth_smooth_um=5.0,
+            histogram_time_smooth_s=None,
+            pairwise_displacement_method="conv",
+            max_displacement_um=100.0,
+            weight_scale="linear",
+            error_sigma=0.2,
+            conv_engine=None,
+            torch_device=None,
+            batch_size=1,
+            corr_threshold=0.0,
+            time_horizon_s=None,
+            convergence_method="lsmr",
+            soft_weights=False,
+            normalized_xcorr=True,
+            centered_xcorr=True,
+            temporal_prior=True,
+            spatial_prior=False,
+            force_spatial_median_continuity=False,
+            reference_displacement="median",
+            reference_displacement_time_s=0,
+            robust_regression_sigma=2,
+            weight_with_amplitude=False,
+        ),
+        "interpolate_motion_kwargs": dict(
+            direction=1, border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     # This preset is a super fast rigid estimation with center of mass
@@ -83,7 +141,7 @@ motion_options_preset = {
             exclude_sweep_ms=0.1,
             radius_um=50,
         ),
-        "select_kwargs": None,
+        "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="center_of_mass",
             radius_um=75.0,
@@ -95,15 +153,12 @@ motion_options_preset = {
             rigid=True,
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1,
-            border_mode="remove_channels",
-            spatial_interpolation_method="idw",
-            num_closest=3,
+            direction=1, border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     # This preset try to mimic kilosort2.5 motion estimator
     "kilosort_like": {
-        "doc": "Mimic the drift correction of kilosrt (grid_convolution + iterative_template)",
+        "doc": "Mimic the drift correction of kilosort (grid_convolution + iterative_template)",
         "detect_kwargs": dict(
             method="locally_exclusive",
             peak_sign="neg",
@@ -111,17 +166,16 @@ motion_options_preset = {
             exclude_sweep_ms=0.1,
             radius_um=50,
         ),
-        "select_kwargs": None,
+        "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
             radius_um=40.0,
             upsampling_um=5.0,
-            sigma_um=np.linspace(5.0, 25.0, 5),
+            weight_method={"mode": "gaussian_2d", "sigma_list_um": np.linspace(5, 25, 5)},
             sigma_ms=0.25,
             margin_um=30.0,
             prototype=None,
-            percentile=10.0,
-            sparsity_threshold=0.01,
+            percentile=5.0,
         ),
         "estimate_motion_kwargs": dict(
             method="iterative_template",
@@ -133,17 +187,13 @@ motion_options_preset = {
             win_shape="rect",
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1,
-            border_mode="force_extrapolate",
-            spatial_interpolation_method="kriging",
-            sigma_um=[20.0, 30],
-            p=1,
+            direction=1, border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     # empty preset
     "": {
         "detect_kwargs": {},
-        "select_kwargs": None,
+        "select_kwargs": {},
         "localize_peaks_kwargs": {},
         "estimate_motion_kwargs": {},
         "interpolate_motion_kwargs": {},
@@ -157,7 +207,7 @@ def correct_motion(
     folder=None,
     output_motion_info=False,
     detect_kwargs={},
-    select_kwargs=None,
+    select_kwargs={},
     localize_peaks_kwargs={},
     estimate_motion_kwargs={},
     interpolate_motion_kwargs={},
@@ -241,13 +291,22 @@ def correct_motion(
     # get preset params and update if necessary
     params = motion_options_preset[preset]
     detect_kwargs = dict(params["detect_kwargs"], **detect_kwargs)
-    if params["select_kwargs"] is None:
-        select_kwargs = None
-    else:
-        select_kwargs = dict(params["select_kwargs"], **select_kwargs)
+    select_kwargs = dict(params["select_kwargs"], **select_kwargs)
     localize_peaks_kwargs = dict(params["localize_peaks_kwargs"], **localize_peaks_kwargs)
     estimate_motion_kwargs = dict(params["estimate_motion_kwargs"], **estimate_motion_kwargs)
     interpolate_motion_kwargs = dict(params["interpolate_motion_kwargs"], **interpolate_motion_kwargs)
+    do_selection = len(select_kwargs) > 0
+
+    # params
+    parameters = dict(
+        detect_kwargs=detect_kwargs,
+        select_kwargs=select_kwargs,
+        localize_peaks_kwargs=localize_peaks_kwargs,
+        estimate_motion_kwargs=estimate_motion_kwargs,
+        interpolate_motion_kwargs=interpolate_motion_kwargs,
+        job_kwargs=job_kwargs,
+        sampling_frequency=recording.sampling_frequency,
+    )
 
     if output_motion_info:
         motion_info = {}
@@ -255,13 +314,19 @@ def correct_motion(
         motion_info = None
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
-    if select_kwargs is None:
-        # maybe do this directly in the folder when not None
-        gather_mode = "memory"
+    if folder is not None:
+        folder = Path(folder)
+        folder.mkdir(exist_ok=True, parents=True)
 
+        (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
+        if recording.check_serializability("json"):
+            recording.dump_to_json(folder / "recording.json")
+
+    if not do_selection:
+        # maybe do this directly in the folder when not None, but might be slow on external storage
+        gather_mode = "memory"
         # node detect
         method = detect_kwargs.pop("method", "locally_exclusive")
         method_class = detect_peak_methods[method]
@@ -281,6 +346,7 @@ def correct_motion(
             job_kwargs,
             job_name="detect and localize",
             gather_mode=gather_mode,
+            gather_kwargs=None,
             squeeze_output=False,
             folder=None,
             names=None,
@@ -290,7 +356,7 @@ def correct_motion(
             detect_and_localize=t1 - t0,
         )
     else:
-        # lcalization is done after select_peaks()
+        # localization is done after select_peaks()
         pipeline_nodes = None
 
         t0 = time.perf_counter()
@@ -307,6 +373,9 @@ def correct_motion(
             select_peaks=t2 - t1,
             localize_peaks=t3 - t2,
         )
+    if folder is not None:
+        np.save(folder / "peaks.npy", peaks)
+        np.save(folder / "peak_locations.npy", peak_locations)
 
     t0 = time.perf_counter()
     motion, temporal_bins, spatial_bins = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
@@ -318,29 +387,10 @@ def correct_motion(
     )
 
     if folder is not None:
-        folder = Path(folder)
-        folder.mkdir(exist_ok=True, parents=True)
-
-        # params and run times
-        parameters = dict(
-            detect_kwargs=detect_kwargs,
-            select_kwargs=select_kwargs,
-            localize_peaks_kwargs=localize_peaks_kwargs,
-            estimate_motion_kwargs=estimate_motion_kwargs,
-            interpolate_motion_kwargs=interpolate_motion_kwargs,
-            job_kwargs=job_kwargs,
-            sampling_frequency=recording.sampling_frequency,
-        )
-        (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-        if recording.check_serializablility("json"):
-            recording.dump_to_json(folder / "recording.json")
 
-        np.save(folder / "peaks.npy", peaks)
-        np.save(folder / "peak_locations.npy", peak_locations)
         np.save(folder / "temporal_bins.npy", temporal_bins)
         np.save(folder / "motion.npy", motion)
-        np.save(folder / "peak_locations.npy", peak_locations)
         if spatial_bins is not None:
             np.save(folder / "spatial_bins.npy", spatial_bins)
 

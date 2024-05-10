@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 
 from spikeinterface.core.node_pipeline import PeakRetriever, run_node_pipeline

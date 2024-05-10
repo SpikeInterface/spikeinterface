@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ipywidgets.widgets as W
 import traitlets
 
@@ -75,7 +77,7 @@ class TimeSlider(W.HBox):
             min=0.01,
             max=30.0,
             description="win (s)",
-            layout=W.Layout(width="auto")
+            layout=W.Layout(width="auto"),
             # layout=W.Layout(width=f'10%')
         )
         self.window_sizer.observe(self.win_size_changed, names="value", type="change")
@@ -279,7 +281,7 @@ class ScaleWidget(W.VBox):
         assert factor > 1.0
         self.factor = factor
 
-        self.scale_label = W.Label("Scale", layout=W.Layout(layout=W.Layout(width="95%"), justify_content="center"))
+        self.scale_label = W.Label("Scale", layout=W.Layout(width="95%", justify_content="center"))
 
         self.plus_selector = W.Button(
             description="",
@@ -304,7 +306,7 @@ class ScaleWidget(W.VBox):
         self.plus_selector.on_click(self.plus_clicked)
         self.minus_selector.on_click(self.minus_clicked)
 
-        self.value = 1.0
+        self.value = value
         super(W.VBox, self).__init__(
             children=[self.plus_selector, self.scale_label, self.minus_selector],
             #  layout=W.Layout(align_items="center", width="100%", height="100%"),
@@ -340,10 +342,10 @@ class UnitSelector(W.VBox):
             options=self.unit_ids,
             value=self.unit_ids,
             disabled=False,
-            layout=W.Layout(height="100%", width="2cm"),
+            layout=W.Layout(height="100%", width="80%", align="center"),
         )
 
-        super(W.VBox, self).__init__(children=[label, self.selector], layout=W.Layout(align_items="center"), **kwargs)
+        super(W.VBox, self).__init__(children=[label, self.selector], **kwargs)
 
         self.selector.observe(self.on_selector_changed, names=["value"], type="change")
 

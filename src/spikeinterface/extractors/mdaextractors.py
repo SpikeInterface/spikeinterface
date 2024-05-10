@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import json
 import struct
@@ -10,7 +12,7 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.core_tools import write_binary_recording
+from spikeinterface.core import write_binary_recording
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 
@@ -442,17 +444,21 @@ def is_url(path):
 
 
 def _download_bytes_to_tmpfile(url, start, end):
-    try:
-        import requests
-    except:
-        raise Exception("Unable to import module: requests")
-    headers = {"Range": "bytes={}-{}".format(start, end - 1)}
-    r = requests.get(url, headers=headers, stream=True)
-    fd, tmp_fname = tempfile.mkstemp()
-    with open(tmp_fname, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:
-                f.write(chunk)
+    import requests
+
+    headers = {"Range": f"bytes={start}-{end - 1}"}
+
+    with requests.get(url, headers=headers, stream=True) as r:
+        r.raise_for_status()  # Exposes HTTPError if one occurred
+
+        with tempfile.NamedTemporaryFile(delete=False, mode="wb") as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+
+            # Store the temp file name for return
+            tmp_fname = f.name
+
     return tmp_fname
 
 

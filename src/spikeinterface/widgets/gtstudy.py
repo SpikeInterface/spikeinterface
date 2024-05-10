@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -297,11 +299,12 @@ class StudyAgreementMatrix(BaseWidget):
 class StudySummary(BaseWidget):
     """
     Plot a summary of a ground truth study.
-    Internally does:
-        plot_study_run_times
-        plot_study_unit_counts
-        plot_study_performances
-        plot_study_agreement_matrix
+    Internally this plotting function runs:
+
+      * plot_study_run_times
+      * plot_study_unit_counts
+      * plot_study_performances
+      * plot_study_agreement_matrix
 
     Parameters
     ----------

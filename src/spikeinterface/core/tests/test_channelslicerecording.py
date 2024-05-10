@@ -7,6 +7,7 @@ import numpy as np
 import probeinterface
 
 from spikeinterface.core import ChannelSliceRecording, BinaryRecordingExtractor
+from spikeinterface.core.generate import generate_recording
 
 
 def test_ChannelSliceRecording():
@@ -41,6 +42,7 @@ def test_ChannelSliceRecording():
     assert traces.shape[1] == 2
     traces = rec_sliced.get_traces(segment_index=1, channel_ids=[2, 0])
     assert traces.shape[1] == 2
+    assert rec_sliced.get_parent() == rec
 
     assert np.allclose(rec_sliced.get_times(0), rec.get_times(0))
 
@@ -71,6 +73,14 @@ def test_ChannelSliceRecording():
     traces3 = rec_saved.get_traces(segment_index=0)
     assert np.all(traces3[:, 0] == 0)
     assert np.all(traces3[:, 1] == 2)
+
+
+def test_failure_with_non_unique_channel_ids():
+    durations = [1.0]
+    seed = 10
+    rec = generate_recording(num_channels=4, durations=durations, set_probe=False, seed=seed)
+    with pytest.raises(AssertionError):
+        rec_sliced = ChannelSliceRecording(rec, channel_ids=[0, 1], renamed_channel_ids=[0, 0])
 
 
 if __name__ == "__main__":

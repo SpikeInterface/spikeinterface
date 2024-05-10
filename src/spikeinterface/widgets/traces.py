@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
@@ -42,6 +44,8 @@ class TracesWidget(BaseWidget):
     clim: None, tuple or dict, default: None
         When mode is "map", this argument controls color limits.
         If dict, keys should be the same as recording keys
+    scale: float, default: 1
+        Scale factor for the traces
     with_colorbar: bool, default: True
         When mode is "map", a colorbar is added
     tile_size: int, default: 1500
@@ -68,6 +72,7 @@ class TracesWidget(BaseWidget):
         clim=None,
         tile_size=1500,
         seconds_per_row=0.2,
+        scale=1,
         with_colorbar=True,
         add_legend=True,
         backend=None,
@@ -89,12 +94,7 @@ class TracesWidget(BaseWidget):
                 f"is currently of type {type(recording)}"
             )
 
-        if rec0.has_channel_location():
-            channel_locations = rec0.get_channel_locations()
-        else:
-            channel_locations = None
-
-        if order_channel_by_depth and channel_locations is not None:
+        if order_channel_by_depth and rec0.has_channel_location():
             from ..preprocessing import depth_order
 
             rec0 = depth_order(rec0)
@@ -109,6 +109,11 @@ class TracesWidget(BaseWidget):
         if channel_ids is None:
             channel_ids = rec0.channel_ids
 
+        if rec0.has_channel_location():
+            channel_locations = rec0.get_channel_locations()
+        else:
+            channel_locations = None
+
         layer_keys = list(recordings.keys())
 
         if segment_index is None:
@@ -120,6 +125,12 @@ class TracesWidget(BaseWidget):
         if time_range is None:
             time_range = (0, 1.0)
         time_range = np.array(time_range)
+        if time_range[1] > rec0.get_duration(segment_index=segment_index):
+            warnings.warn(
+                "You have selected a time after the end of the segment. The range will be clipped to "
+                f"{rec0.get_duration(segment_index=segment_index)}"
+            )
+            time_range[1] = rec0.get_duration(segment_index=segment_index)
 
         assert mode in ("auto", "line", "map"), 'Mode must be one of "auto","line", "map"'
         if mode == "auto":
@@ -133,6 +144,8 @@ class TracesWidget(BaseWidget):
         times, list_traces, frame_range, channel_ids = _get_trace_list(
             recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled
         )
+
+        list_traces = [traces * scale for traces in list_traces]
 
         # stat for auto scaling done on the first layer
         traces0 = list_traces[0]
@@ -229,8 +242,11 @@ class TracesWidget(BaseWidget):
 
         ax = self.ax
         n = len(dp.channel_ids)
+        rec0 = dp.recordings[list(dp.recordings.keys())[0]]
+        channel_indices = rec0.ids_to_indices(dp.channel_ids)
+
         if dp.channel_locations is not None:
-            y_locs = dp.channel_locations[:, 1]
+            y_locs = dp.channel_locations[channel_indices, 1]
         else:
             y_locs = np.arange(n)
         min_y = np.min(y_locs)
@@ -279,7 +295,8 @@ class TracesWidget(BaseWidget):
                 channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])
                 ax.set_yticklabels(channel_labels)
             else:
-                ax.get_yaxis().set_visible(False)
+                ax.set_yticks([min_y, max_y])
+                ax.set_yticklabels([min_y, max_y])
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
@@ -545,7 +562,7 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
         assert all(
             rec.has_scaled() for rec in recordings.values()
         ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
-    frame_range = (time_range * fs).astype("int64")
+    frame_range = (time_range * fs).astype("int64", copy=False)
     a_max = rec0.get_num_frames(segment_index=segment_index)
     frame_range = np.clip(frame_range, 0, a_max)
     time_range = frame_range / fs

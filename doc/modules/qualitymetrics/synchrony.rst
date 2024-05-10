@@ -28,8 +28,8 @@ Example code
 .. code-block:: python
 
     import spikeinterface.qualitymetrics as sqm
-    # Make recording, sorting and wvf_extractor object for your data.
-    synchrony = sqm.compute_synchrony_metrics(waveform_extractor=wvf_extractor, synchrony_sizes=(2, 4, 8))
+    # Combine a sorting and recording into a sorting_analyzer
+    synchrony = sqm.compute_synchrony_metrics(sorting_analyzer=sorting_analyzer synchrony_sizes=(2, 4, 8))
     # synchrony is a tuple of dicts with the synchrony metrics for each unit
 
 

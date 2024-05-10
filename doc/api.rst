@@ -14,11 +14,12 @@ spikeinterface.core
         :members:
     .. autoclass:: BaseEvent
         :members:
-    .. autoclass:: WaveformExtractor
+    .. autoclass:: SortingAnalyzer
         :members:
-    .. autofunction:: extract_waveforms
-    .. autofunction:: load_waveforms
+    .. autofunction:: create_sorting_analyzer
+    .. autofunction:: load_sorting_analyzer
     .. autofunction:: compute_sparsity
+    .. autofunction:: estimate_sparsity
     .. autoclass:: ChannelSparsity
         :members:
     .. autoclass:: BinaryRecordingExtractor
@@ -159,7 +160,7 @@ spikeinterface.preprocessing
     .. autofunction:: detect_bad_channels
     .. autofunction:: directional_derivative
     .. autofunction:: filter
-    .. autofunction:: gaussian_bandpass_filter
+    .. autofunction:: gaussian_filter
     .. autofunction:: highpass_filter
     .. autofunction:: highpass_spatial_filter
     .. autofunction:: interpolate_bad_channels
@@ -218,7 +219,6 @@ spikeinterface.sorters
     .. autofunction:: get_sorter_description
     .. autofunction:: run_sorter
     .. autofunction:: run_sorter_jobs
-    .. autofunction:: run_sorters
     .. autofunction:: run_sorter_by_property
     .. autofunction:: read_sorter_folder
 
@@ -239,7 +239,6 @@ spikeinterface.comparison
     .. autofunction:: compare_sorter_to_ground_truth
     .. autofunction:: compare_templates
     .. autofunction:: compare_multiple_templates
-    .. autofunction:: aggregate_performances_table
     .. autofunction:: create_hybrid_units_recording
     .. autofunction:: create_hybrid_spikes_recording
 
@@ -272,12 +271,22 @@ spikeinterface.widgets
     .. autofunction:: set_default_plotter_backend
     .. autofunction:: get_default_plotter_backend
 
+    .. autofunction:: plot_agreement_matrix
     .. autofunction:: plot_all_amplitudes_distributions
     .. autofunction:: plot_amplitudes
     .. autofunction:: plot_autocorrelograms
+    .. autofunction:: plot_confusion_matrix
+    .. autofunction:: plot_comparison_collision_by_similarity
     .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_isi_distribution
     .. autofunction:: plot_motion
+    .. autofunction:: plot_multicomparison_agreement
+    .. autofunction:: plot_multicomparison_agreement_by_sorter
+    .. autofunction:: plot_multicomparison_graph
+    .. autofunction:: plot_peak_activity
+    .. autofunction:: plot_probe_map
     .. autofunction:: plot_quality_metrics
+    .. autofunction:: plot_rasters
     .. autofunction:: plot_sorting_summary
     .. autofunction:: plot_spike_locations
     .. autofunction:: plot_spikes_on_traces
@@ -286,34 +295,18 @@ spikeinterface.widgets
     .. autofunction:: plot_traces
     .. autofunction:: plot_unit_depths
     .. autofunction:: plot_unit_locations
+    .. autofunction:: plot_unit_presence
+    .. autofunction:: plot_unit_probe_map
     .. autofunction:: plot_unit_summary
     .. autofunction:: plot_unit_templates
     .. autofunction:: plot_unit_waveforms_density_map
     .. autofunction:: plot_unit_waveforms
-
-
-Legacy widgets
-~~~~~~~~~~~~~~
-
-These widgets are only available with the "matplotlib" backend
-
-.. automodule:: spikeinterface.widgets
-    :noindex:
-
-    .. autofunction:: plot_rasters
-    .. autofunction:: plot_probe_map
-    .. autofunction:: plot_isi_distribution
-    .. autofunction:: plot_peak_activity_map
-    .. autofunction:: plot_principal_component
-    .. autofunction:: plot_unit_probe_map
-    .. autofunction:: plot_confusion_matrix
-    .. autofunction:: plot_agreement_matrix
-    .. autofunction:: plot_multicomp_graph
-    .. autofunction:: plot_multicomp_agreement
-    .. autofunction:: plot_multicomp_agreement_by_sorter
-    .. autofunction:: plot_comparison_collision_pair_by_pair
-    .. autofunction:: plot_comparison_collision_by_similarity
-    .. autofunction:: plot_sorting_performance
+    .. autofunction:: plot_study_run_times
+    .. autofunction:: plot_study_unit_counts
+    .. autofunction:: plot_study_performances
+    .. autofunction:: plot_study_agreement_matrix
+    .. autofunction:: plot_study_summary
+    .. autofunction:: plot_study_comparison_collision_by_similarity
 
 
 spikeinterface.exporters
@@ -337,6 +330,18 @@ spikeinterface.curation
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
     .. autofunction:: apply_sortingview_curation
+
+
+spikeinterface.generation
+-------------------------
+
+.. automodule:: spikeinterface.generation
+
+    .. autofunction:: make_linear_displacement
+    .. autofunction:: move_dense_templates
+    .. autofunction:: interpolate_templates
+    .. autoclass:: DriftingTemplates
+    .. autoclass:: InjectDriftingTemplatesRecording
 
 
 spikeinterface.sortingcomponents

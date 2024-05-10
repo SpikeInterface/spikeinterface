@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from copy import deepcopy
 from typing import OrderedDict
 import numpy as np
@@ -91,7 +93,7 @@ class BaseMultiComparison(BaseComparison):
     ):
         # do pairwise matching
         if self._verbose:
-            print("Multicomaprison step 1: pairwise comparison")
+            print("Multicomparison step 1: pairwise comparison")
 
         self.comparisons = {}
         for i in range(len(self.object_list)):
@@ -133,7 +135,7 @@ class BaseMultiComparison(BaseComparison):
 
     def _clean_graph(self):
         if self._verbose:
-            print("Multicomaprison step 3: clean graph")
+            print("Multicomparison step 3: clean graph")
         clean_graph = self.graph.copy()
         import networkx as nx
 

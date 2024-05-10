@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from tqdm.auto import tqdm, trange
 import scipy.interpolate
@@ -220,7 +222,7 @@ class DecentralizedRegistration:
     pairwise_displacement_method: "conv" or "phase_cross_correlation"
         How to estimate the displacement in the pairwise matrix.
     max_displacement_um: float
-        Maximum possible discplacement in micrometers.
+        Maximum possible displacement in micrometers.
     weight_scale: "linear" or "exp"
         For parwaise displacement, how to to rescale the associated weight matrix.
     error_sigma: float, default: 0.2
@@ -320,14 +322,14 @@ class DecentralizedRegistration:
 
         if histogram_depth_smooth_um is not None:
             bins = np.arange(motion_histogram.shape[1]) * bin_um
-            bins -= np.mean(bins)
+            bins = bins - np.mean(bins)
             smooth_kernel = np.exp(-(bins**2) / (2 * histogram_depth_smooth_um**2))
             smooth_kernel /= np.sum(smooth_kernel)
             motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[None, :], mode="same", axes=1)
 
         if histogram_time_smooth_s is not None:
             bins = np.arange(motion_histogram.shape[0]) * bin_duration_s
-            bins -= np.mean(bins)
+            bins = bins - np.mean(bins)
             smooth_kernel = np.exp(-(bins**2) / (2 * histogram_time_smooth_s**2))
             smooth_kernel /= np.sum(smooth_kernel)
             motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[:, None], mode="same", axes=0)
@@ -1039,6 +1041,7 @@ def compute_global_displacement(
         displacement = p
 
     elif convergence_method == "lsmr":
+        import gc
         from scipy import sparse
         from scipy.stats import zscore
 
@@ -1170,6 +1173,9 @@ def compute_global_displacement(
 
             # warm start next iteration
             p0 = displacement
+            # Cleanup lsmr memory (see https://stackoverflow.com/questions/56147713/memory-leak-in-scipy)
+            # TODO: check if this gets fixed in scipy
+            gc.collect()
 
         displacement = displacement.reshape(B, T).T
     else:
