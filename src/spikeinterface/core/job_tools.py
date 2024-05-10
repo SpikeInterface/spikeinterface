@@ -85,16 +85,18 @@ def fix_job_kwargs(runtime_job_kwargs):
 
     # if n_jobs is -1, set to os.cpu_count() (n_jobs is always in global job_kwargs)
     n_jobs = job_kwargs["n_jobs"]
-    assert isinstance(n_jobs, (float, np.integer, int))
-    if isinstance(n_jobs, float):
-        # if n_jobs is > 1 then it is something like 4.0 cast to int
-        if n_jobs >= 1.0:
-            n_jobs = int(n_jobs)
-        # otherwise it is a fraction so we should do the fraction of os.cpu_count()
-        else:
-            n_jobs = int(n_jobs * os.cpu_count())
+    assert isinstance(n_jobs, (float, np.integer, int)) and n_jobs != 0, "n_jobs must be a non-zero int or float"
+
+    # for a fraction we do fraction of total cores
+    if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
+        n_jobs = int(n_jobs * os.cpu_count())
+    # for negative numbers we count down from total cores (with -1 being all)
     elif n_jobs < 0:
         n_jobs = int(os.cpu_count() + 1 + n_jobs)
+    # otherwise we just take the value given
+    else:
+        n_jobs = int(n_jobs)
+
     job_kwargs["n_jobs"] = max(n_jobs, 1)
 
     return job_kwargs
