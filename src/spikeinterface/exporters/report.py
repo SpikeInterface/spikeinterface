@@ -60,7 +60,7 @@ def export_report(
     else:
         spike_amplitudes = None
         print(
-            "export_report(): spike_amplitudes will not be exported. Use compute_spike_amplitudes() if you want to include them."
+            "export_report(): spike_amplitudes will not be exported. Use sorting_analyzer.compute('spike_amplitudes') if you want to include them."
         )
 
     # load or compute quality_metrics
@@ -72,7 +72,7 @@ def export_report(
     else:
         metrics = None
         print(
-            "export_report(): quality metrics will not be exported. Use compute_quality_metrics() if you want to include them."
+            "export_report(): quality metrics will not be exported. Use sorting_analyzer.compute('quality_metrics') if you want to include them."
         )
 
     # load or compute correlograms
@@ -83,7 +83,7 @@ def export_report(
     else:
         correlograms = None
         print(
-            "export_report(): correlograms will not be exported. Use compute_correlograms() if you want to include them."
+            "export_report(): correlograms will not be exported. Use sorting_anlyzer.compute('correlograms') if you want to include them."
         )
 
     # pre-compute unit locations if not done
@@ -102,9 +102,9 @@ def export_report(
     units = pd.DataFrame(index=unit_ids)  #  , columns=['max_on_channel_id', 'amplitude'])
     units.index.name = "unit_id"
     units["max_on_channel_id"] = pd.Series(
-        get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="id")
+        get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="id")
     )
-    units["amplitude"] = pd.Series(get_template_extremum_amplitude(sorting_analyzer, peak_sign="neg"))
+    units["amplitude"] = pd.Series(get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign))
     units.to_csv(output_folder / "unit list.csv", sep="\t")
 
     unit_colors = sw.get_unit_colors(sorting)

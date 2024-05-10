@@ -7,28 +7,36 @@ from .sparsity import _sparsity_doc
 from .sortinganalyzer import SortingAnalyzer
 
 
-# TODO make this function a non private function
-def _get_dense_templates_array(one_object, return_scaled=True):
+def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_scaled: bool = True):
+    """
+    Return dense templates as numpy array from either a Templates object or a SortingAnalyzer.
+
+    Parameters
+    ----------
+    one_object: Templates | SortingAnalyzer
+        The Templates or SortingAnalyzer objects. If SortingAnalyzer, it needs the "templates" extension.
+    return_scaled: bool, default: True
+        If True, templates are scaled.
+
+    Returns
+    -------
+    dense_templates: np.ndarray
+        The dense templates (num_units, num_samples, num_channels)
+    """
     if isinstance(one_object, Templates):
         templates_array = one_object.get_dense_templates()
     elif isinstance(one_object, SortingAnalyzer):
+        if return_scaled != one_object.return_scaled:
+            raise ValueError(
+                f"get_dense_templates_array: return_scaled={return_scaled} is not possible SortingAnalyzer has the reverse"
+            )
         ext = one_object.get_extension("templates")
         if ext is not None:
             templates_array = ext.data["average"]
-            assert (
-                return_scaled == ext.params["return_scaled"]
-            ), f"templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
         else:
-            ext = one_object.get_extension("fast_templates")
-            assert (
-                return_scaled == ext.params["return_scaled"]
-            ), f"fast_templates have been extracted with return_scaled={not return_scaled} you cannot get then with return_scaled={return_scaled}"
-            if ext is not None:
-                templates_array = ext.data["average"]
-            else:
-                raise ValueError("SortingAnalyzer need extension 'templates' or 'fast_templates' to be computed")
+            raise ValueError("SortingAnalyzer need extension 'templates' to be computed to retrieve templates")
     else:
-        raise ValueError("Input should be Templates or SortingAnalyzer or SortingAnalyzer")
+        raise ValueError("Input should be Templates or SortingAnalyzer")
 
     return templates_array
 
@@ -38,12 +46,9 @@ def _get_nbefore(one_object):
         return one_object.nbefore
     elif isinstance(one_object, SortingAnalyzer):
         ext = one_object.get_extension("templates")
-        if ext is not None:
-            return ext.nbefore
-        ext = one_object.get_extension("fast_templates")
-        if ext is not None:
-            return ext.nbefore
-        raise ValueError("SortingAnalyzer need extension 'templates' or 'fast_templates' to be computed")
+        if ext is None:
+            raise ValueError("SortingAnalyzer need extension 'templates' to be computed")
+        return ext.nbefore
     else:
         raise ValueError("Input should be Templates or SortingAnalyzer or SortingAnalyzer")
 
@@ -82,7 +87,7 @@ def get_template_amplitudes(
 
     peak_values = {}
 
-    templates_array = _get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
+    templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
 
     for unit_ind, unit_id in enumerate(unit_ids):
         template = templates_array[unit_ind, :, :]
@@ -135,14 +140,23 @@ def get_template_extremum_channel(
         Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
-    assert peak_sign in ("both", "neg", "pos")
-    assert mode in ("extremum", "at_index")
-    assert outputs in ("id", "index")
+    assert peak_sign in ("both", "neg", "pos"), "`peak_sign` must be one of `both`, `neg`, or `pos`"
+    assert mode in ("extremum", "at_index"), "`mode` must be either `extremum` or `at_index`"
+    assert outputs in ("id", "index"), "`outputs` must be either `id` or `index`"
 
     unit_ids = templates_or_sorting_analyzer.unit_ids
     channel_ids = templates_or_sorting_analyzer.channel_ids
 
-    peak_values = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
+    # if SortingAnalyzer need to use global SortingAnalyzer return_scaled otherwise
+    # we just use the previous default of return_scaled=True (for templates)
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        return_scaled = templates_or_sorting_analyzer.return_scaled
+    else:
+        return_scaled = True
+
+    peak_values = get_template_amplitudes(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled
+    )
     extremum_channels_id = {}
     extremum_channels_index = {}
     for unit_id in unit_ids:
@@ -182,7 +196,14 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
 
     shifts = {}
 
-    templates_array = _get_dense_templates_array(templates_or_sorting_analyzer)
+    # We need to use the SortingAnalyzer return_scaled if possible
+    # otherwise for Templates default to True
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        return_scaled = templates_or_sorting_analyzer.return_scaled
+    else:
+        return_scaled = True
+
+    templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
 
     for unit_ind, unit_id in enumerate(unit_ids):
         template = templates_array[unit_ind, :, :]
@@ -233,7 +254,14 @@ def get_template_extremum_amplitude(
 
     extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
 
-    extremum_amplitudes = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        return_scaled = templates_or_sorting_analyzer.return_scaled
+    else:
+        return_scaled = True
+
+    extremum_amplitudes = get_template_amplitudes(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled
+    )
 
     unit_amplitudes = {}
     for unit_id in unit_ids:

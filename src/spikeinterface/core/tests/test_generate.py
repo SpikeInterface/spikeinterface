@@ -19,12 +19,13 @@ from spikeinterface.core.generate import (
     generate_unit_locations,
     generate_ground_truth_recording,
     generate_sorting_to_inject,
+    synthesize_random_firings,
 )
 
 from spikeinterface.core.numpyextractors import NumpySorting
 
 from spikeinterface.core.core_tools import convert_bytes_to_str
-
+from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.testing import check_recordings_equal
 
 strategy_list = ["tile_pregenerated", "on_the_fly"]
@@ -140,6 +141,32 @@ def test_noise_generator_memory():
     after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
     assert memory_usage_MiB < 2, f"NoiseGeneratorRecording with 'on_the_fly wrong memory  {memory_usage_MiB}MiB"
+
+
+def test_noise_generator_several_noise_levels():
+    rec1 = NoiseGeneratorRecording(
+        num_channels=4,
+        sampling_frequency=20000,
+        durations=[10],
+        dtype="float32",
+        seed=32,
+        noise_levels=1,
+        strategy="on_the_fly",
+        noise_block_size=20000,
+    )
+    assert np.all(np.abs(get_noise_levels(rec1) - 1) < 0.1)
+
+    rec2 = NoiseGeneratorRecording(
+        num_channels=4,
+        sampling_frequency=20000,
+        durations=[10],
+        dtype="float32",
+        seed=32,
+        noise_levels=[0, 1, 2, 3],
+        strategy="on_the_fly",
+        noise_block_size=20000,
+    )
+    assert np.all(np.abs(get_noise_levels(rec2) - np.arange(4)) < 0.1)
 
 
 def test_noise_generator_under_giga():
@@ -366,8 +393,7 @@ def test_generate_templates():
         upsample_factor=None,
         seed=42,
         dtype="float32",
-        unit_params=dict(alpha=np.ones(num_units) * 8000.0),
-        unit_params_range=dict(smooth_ms=(0.04, 0.05)),
+        unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
     )
 
     # upsampling case
@@ -530,6 +556,24 @@ def test_generate_sorting_to_inject():
         assert num_injected_spikes[unit_id] <= num_spikes[unit_id]
 
 
+def test_synthesize_random_firings_length():
+
+    firing_rates = [2.0, 3.0]
+    duration = 2
+    num_units = 2
+
+    spike_times, spike_units = synthesize_random_firings(
+        num_units=num_units, duration=duration, firing_rates=firing_rates
+    )
+
+    assert len(spike_times) == int(np.sum(firing_rates) * duration)
+
+    units, counts = np.unique(spike_units, return_counts=True)
+
+    assert len(units) == num_units
+    assert np.sum(counts) == int(np.sum(firing_rates) * duration)
+
+
 if __name__ == "__main__":
     strategy = "tile_pregenerated"
     # strategy = "on_the_fly"
@@ -541,8 +585,8 @@ if __name__ == "__main__":
     # test_noise_generator_consistency_after_dump(strategy, None)
     # test_generate_recording()
     # test_generate_single_fake_waveform()
-    test_transformsorting()
-    # test_generate_templates()
+    # test_transformsorting()
+    test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
     # test_generate_sorting_with_spikes_on_borders()

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import numpy as np
+from warnings import warn
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
 from ..core import ChannelSparsity, SortingAnalyzer
 from ..core.basesorting import BaseSorting
-from ..core.template_tools import _get_dense_templates_array
 
 
 class UnitWaveformsWidget(BaseWidget):
@@ -54,7 +54,7 @@ class UnitWaveformsWidget(BaseWidget):
         Alpha value for templates, (matplotlib backend)
     shade_templates : bool, default: True
         If True, templates are shaded, see templates_percentile_shading argument
-    templates_percentile_shading : float, list of floats, or None, default: [1, 25, 75, 98]
+    templates_percentile_shading : float, tuple/list of floats, or None, default: (1, 25, 75, 99)
         It controls the shading of the templates.
         If None, the shading is +/- the standard deviation of the templates.
         If float, it controls the percentile of the template values used to shade the templates.
@@ -95,7 +95,7 @@ class UnitWaveformsWidget(BaseWidget):
         set_title=True,
         same_axis=False,
         shade_templates=True,
-        templates_percentile_shading=[1, 25, 75, 98],
+        templates_percentile_shading=(1, 25, 75, 99),
         x_offset_units=False,
         alpha_waveforms=0.5,
         alpha_templates=1,
@@ -144,10 +144,16 @@ class UnitWaveformsWidget(BaseWidget):
                 assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
 
         # get templates
-        ext = sorting_analyzer.get_extension("templates")
-        assert ext is not None, "plot_waveforms() need extension 'templates'"
-        templates = ext.get_templates(unit_ids=unit_ids, operator="average")
+        self.templates_ext = sorting_analyzer.get_extension("templates")
+        assert self.templates_ext is not None, "plot_waveforms() need extension 'templates'"
+        templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
 
+        if templates_percentile_shading is not None and not sorting_analyzer.has_extension("waveforms"):
+            warn(
+                "templates_percentile_shading can only be used if the 'waveforms' extension is available. "
+                "Settimg templates_percentile_shading to None."
+            )
+            templates_percentile_shading = None
         templates_shading = self._get_template_shadings(sorting_analyzer, unit_ids, templates_percentile_shading)
 
         xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
@@ -157,7 +163,8 @@ class UnitWaveformsWidget(BaseWidget):
         wfs_by_ids = {}
         if plot_waveforms:
             wf_ext = sorting_analyzer.get_extension("waveforms")
-            assert wf_ext is not None, "plot_waveforms() need extension 'waveforms'"
+            if wf_ext is None:
+                raise ValueError("plot_waveforms() needs the extension 'waveforms'")
             for unit_id in unit_ids:
                 unit_index = list(sorting.unit_ids).index(unit_id)
                 if not extra_sparsity:
@@ -418,25 +425,26 @@ class UnitWaveformsWidget(BaseWidget):
             display(self.widget)
 
     def _get_template_shadings(self, sorting_analyzer, unit_ids, templates_percentile_shading):
-        ext = sorting_analyzer.get_extension("templates")
-        templates = ext.get_templates(unit_ids=unit_ids, operator="average")
+        templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
 
         if templates_percentile_shading is None:
-            templates_std = ext.get_templates(unit_ids=unit_ids, operator="std")
+            templates_std = self.templates_ext.get_templates(unit_ids=unit_ids, operator="std")
             templates_shading = [templates - templates_std, templates + templates_std]
         else:
             if isinstance(templates_percentile_shading, (int, float)):
                 templates_percentile_shading = [templates_percentile_shading, 100 - templates_percentile_shading]
             else:
                 assert isinstance(
-                    templates_percentile_shading, list
-                ), "'templates_percentile_shading' should be a float, a list of floats, or None!"
+                    templates_percentile_shading, (list, tuple)
+                ), "'templates_percentile_shading' should be a float, a list/tuple of floats, or None!"
                 assert (
                     np.mod(len(templates_percentile_shading), 2) == 0
                 ), "'templates_percentile_shading' should be a have an even number of elements."
             templates_shading = []
             for percentile in templates_percentile_shading:
-                template_percentile = ext.get_templates(unit_ids=unit_ids, operator="percentile", percentile=percentile)
+                template_percentile = self.templates_ext.get_templates(
+                    unit_ids=unit_ids, operator="percentile", percentile=percentile
+                )
 
                 templates_shading.append(template_percentile)
         return templates_shading
@@ -453,8 +461,7 @@ class UnitWaveformsWidget(BaseWidget):
         do_shading = self.template_shading_button.value
 
         wf_ext = self.sorting_analyzer.get_extension("waveforms")
-        templates_ext = self.sorting_analyzer.get_extension("templates")
-        templates = templates_ext.get_templates(unit_ids=unit_ids, operator="average")
+        templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
@@ -548,7 +555,7 @@ def get_waveforms_scales(sorting_analyzer, templates, channel_locations, x_offse
 
     y_offset = channel_locations[:, 1][None, :]
 
-    nbefore = sorting_analyzer.get_extension("waveforms").nbefore
+    nbefore = sorting_analyzer.get_extension("templates").nbefore
     nsamples = templates.shape[1]
 
     xvect = delta_x * (np.arange(nsamples) - nbefore) / nsamples * 0.7

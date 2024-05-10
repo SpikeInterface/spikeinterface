@@ -42,12 +42,12 @@ def test_spike_vector_to_indices():
 
 def test_random_spikes_selection():
     recording, sorting = generate_ground_truth_recording(
-        durations=[30.0],
+        durations=[20.0, 10.0],
         sampling_frequency=16000.0,
         num_channels=10,
         num_units=5,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
     max_spikes_per_unit = 12
@@ -56,6 +56,7 @@ def test_random_spikes_selection():
     random_spikes_indices = random_spikes_selection(
         sorting, num_samples, method="uniform", max_spikes_per_unit=max_spikes_per_unit, margin_size=None, seed=2205
     )
+    random_spikes_indices1 = random_spikes_indices
     spikes = sorting.to_spike_vector()
     some_spikes = spikes[random_spikes_indices]
     for unit_index, unit_id in enumerate(sorting.unit_ids):
@@ -69,8 +70,12 @@ def test_random_spikes_selection():
     # in that case the number is not garanty so it can be a bit less
     assert random_spikes_indices.size >= (0.9 * sorting.unit_ids.size * max_spikes_per_unit)
 
+    # all
+    random_spikes_indices = random_spikes_selection(sorting, num_samples, method="all")
+    assert random_spikes_indices.size == spikes.size
+
 
 if __name__ == "__main__":
     # test_spike_vector_to_spike_trains()
-    test_spike_vector_to_indices()
-    # test_random_spikes_selection()
+    # test_spike_vector_to_indices()
+    test_random_spikes_selection()

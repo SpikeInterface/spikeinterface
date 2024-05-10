@@ -11,7 +11,7 @@ from spikeinterface.core.waveform_tools import (
     extract_waveforms_to_single_buffer,
     split_waveforms_by_units,
     estimate_templates,
-    estimate_templates_average,
+    estimate_templates_with_accumulator,
 )
 
 
@@ -35,7 +35,7 @@ def get_dataset():
         num_channels=4,
         num_units=7,
         generate_sorting_kwargs=dict(firing_rates=5.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_level=1.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=1.0, strategy="tile_pregenerated"),
         seed=2205,
     )
     return recording, sorting
@@ -163,7 +163,7 @@ def test_waveform_tools():
     _check_all_wf_equal(list_wfs_sparse)
 
 
-def test_estimate_templates_average():
+def test_estimate_templates_with_accumulator():
     recording, sorting = get_dataset()
 
     ms_before = 1.0
@@ -178,7 +178,7 @@ def test_estimate_templates_average():
 
     job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
-    templates = estimate_templates_average(
+    templates = estimate_templates_with_accumulator(
         recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
     )
     print(templates.shape)
@@ -231,5 +231,5 @@ def test_estimate_templates():
 
 if __name__ == "__main__":
     test_waveform_tools()
-    test_estimate_templates_average()
+    test_estimate_templates_with_accumulator()
     test_estimate_templates()

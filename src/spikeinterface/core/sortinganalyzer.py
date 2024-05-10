@@ -23,7 +23,7 @@ from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
 from .core_tools import check_json, retrieve_importing_provenance
 from .job_tools import split_job_kwargs
-from .numpyextractors import SharedMemorySorting
+from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
@@ -32,7 +32,15 @@ from .node_pipeline import run_node_pipeline
 
 # high level function
 def create_sorting_analyzer(
-    sorting, recording, format="memory", folder=None, sparse=True, sparsity=None, **sparsity_kwargs
+    sorting,
+    recording,
+    format="memory",
+    folder=None,
+    sparse=True,
+    sparsity=None,
+    return_scaled=True,
+    overwrite=False,
+    **sparsity_kwargs,
 ):
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
@@ -62,6 +70,9 @@ def create_sorting_analyzer(
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity: ChannelSparsity or None, default: None
         The sparsity used to compute waveforms. If this is given, `sparse` is ignored.
+    return_scaled: bool, default: True
+        All extensions that play with traces will use this global return_scaled: "waveforms", "noise_levels", "templates".
+        This prevent return_scaled being differents from different extensions and having wrong snr for instance.
 
     Returns
     -------
@@ -96,6 +107,12 @@ def create_sorting_analyzer(
     In some situation, sparsity is not needed, so to make it fast creation, you need to turn
     sparsity off (or give external sparsity) like this.
     """
+    if format != "memory":
+        if Path(folder).is_dir():
+            if not overwrite:
+                raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
+            else:
+                shutil.rmtree(folder)
 
     # handle sparsity
     if sparsity is not None:
@@ -112,7 +129,13 @@ def create_sorting_analyzer(
     else:
         sparsity = None
 
-    sorting_analyzer = SortingAnalyzer.create(sorting, recording, format=format, folder=folder, sparsity=sparsity)
+    if return_scaled and not recording.has_scaled_traces() and recording.get_dtype().kind == "i":
+        print("create_sorting_analyzer: recording does not have scaling to uV, forcing return_scaled=False")
+        return_scaled = False
+
+    sorting_analyzer = SortingAnalyzer.create(
+        sorting, recording, format=format, folder=folder, sparsity=sparsity, return_scaled=return_scaled
+    )
 
     return sorting_analyzer
 
@@ -168,6 +191,7 @@ class SortingAnalyzer:
         rec_attributes=None,
         format=None,
         sparsity=None,
+        return_scaled=True,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -176,6 +200,7 @@ class SortingAnalyzer:
         self.rec_attributes = rec_attributes
         self.format = format
         self.sparsity = sparsity
+        self.return_scaled = return_scaled
 
         # extensions are not loaded at init
         self.extensions = dict()
@@ -208,6 +233,7 @@ class SortingAnalyzer:
         ] = "memory",
         folder=None,
         sparsity=None,
+        return_scaled=True,
     ):
         # some checks
         assert sorting.sampling_frequency == recording.sampling_frequency
@@ -216,13 +242,13 @@ class SortingAnalyzer:
         check_probe_do_not_overlap(all_probes)
 
         if format == "memory":
-            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, rec_attributes=None)
+            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_scaled, rec_attributes=None)
         elif format == "binary_folder":
-            cls.create_binary_folder(folder, sorting, recording, sparsity, rec_attributes=None)
+            cls.create_binary_folder(folder, sorting, recording, sparsity, return_scaled, rec_attributes=None)
             sorting_analyzer = cls.load_from_binary_folder(folder, recording=recording)
             sorting_analyzer.folder = Path(folder)
         elif format == "zarr":
-            cls.create_zarr(folder, sorting, recording, sparsity, rec_attributes=None)
+            cls.create_zarr(folder, sorting, recording, sparsity, return_scaled, rec_attributes=None)
             sorting_analyzer = cls.load_from_zarr(folder, recording=recording)
             sorting_analyzer.folder = Path(folder)
         else:
@@ -259,7 +285,7 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_memory(cls, sorting, recording, sparsity, rec_attributes):
+    def create_memory(cls, sorting, recording, sparsity, return_scaled, rec_attributes):
         # used by create and save_as
 
         if rec_attributes is None:
@@ -270,15 +296,21 @@ class SortingAnalyzer:
             # a copy is done to avoid shared dict between instances (which can block garbage collector)
             rec_attributes = rec_attributes.copy()
 
-        # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
-        sorting_copy = SharedMemorySorting.from_sorting(sorting, with_metadata=True)
+        # a copy of sorting is copied in memory for fast access
+        sorting_copy = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting_copy, recording=recording, rec_attributes=rec_attributes, format="memory", sparsity=sparsity
+            sorting=sorting_copy,
+            recording=recording,
+            rec_attributes=rec_attributes,
+            format="memory",
+            sparsity=sparsity,
+            return_scaled=return_scaled,
         )
         return sorting_analyzer
 
     @classmethod
-    def create_binary_folder(cls, folder, sorting, recording, sparsity, rec_attributes):
+    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes):
         # used by create and save_as
 
         assert recording is not None, "To create a SortingAnalyzer you need recording not None"
@@ -332,13 +364,22 @@ class SortingAnalyzer:
         if sparsity is not None:
             np.save(folder / "sparsity_mask.npy", sparsity.mask)
 
+        settings_file = folder / f"settings.json"
+        settings = dict(
+            return_scaled=return_scaled,
+        )
+        with open(settings_file, mode="w") as f:
+            json.dump(check_json(settings), f, indent=4)
+
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None):
         folder = Path(folder)
         assert folder.is_dir(), f"This folder does not exists {folder}"
 
-        # load internal sorting copy and make it sharedmem
-        sorting = SharedMemorySorting.from_sorting(NumpyFolderSorting(folder / "sorting"), with_metadata=True)
+        # load internal sorting copy in memory
+        sorting = NumpySorting.from_sorting(
+            NumpyFolderSorting(folder / "sorting"), with_metadata=True, copy_spike_vector=True
+        )
 
         # load recording if possible
         if recording is None:
@@ -378,12 +419,30 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
+        # PATCH: Because SortingAnalyzer added this json during the development of 0.101.0 we need to save
+        # this as a bridge for early adopters. The else branch can be removed in version 0.102.0/0.103.0
+        # so that this can be simplified in the future
+        # See https://github.com/SpikeInterface/spikeinterface/issues/2788
+
+        settings_file = folder / f"settings.json"
+        if settings_file.exists():
+            with open(settings_file, "r") as f:
+                settings = json.load(f)
+        else:
+            warnings.warn("settings.json not found for this folder writing one with return_scaled=True")
+            settings = dict(return_scaled=True)
+            with open(settings_file, "w") as f:
+                json.dump(check_json(settings), f, indent=4)
+
+        return_scaled = settings["return_scaled"]
+
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
             recording=recording,
             rec_attributes=rec_attributes,
             format="binary_folder",
             sparsity=sparsity,
+            return_scaled=return_scaled,
         )
 
         return sorting_analyzer
@@ -395,7 +454,7 @@ class SortingAnalyzer:
         return zarr_root
 
     @classmethod
-    def create_zarr(cls, folder, sorting, recording, sparsity, rec_attributes):
+    def create_zarr(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes):
         # used by create and save_as
         import zarr
         import numcodecs
@@ -412,6 +471,9 @@ class SortingAnalyzer:
 
         info = dict(version=spikeinterface.__version__, dev_mode=spikeinterface.DEV_MODE, object="SortingAnalyzer")
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
+
+        settings = dict(return_scaled=return_scaled)
+        zarr_root.attrs["settings"] = check_json(settings)
 
         # the recording
         rec_dict = recording.to_dict(relative_to=folder, recursive=True)
@@ -478,10 +540,10 @@ class SortingAnalyzer:
 
         zarr_root = zarr.open(folder, mode="r")
 
-        # load internal sorting and make it sharedmem
+        # load internal sorting in memory
         # TODO propagate storage_options
-        sorting = SharedMemorySorting.from_sorting(
-            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True
+        sorting = NumpySorting.from_sorting(
+            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True, copy_spike_vector=True
         )
 
         # load recording if possible
@@ -512,12 +574,15 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
+        return_scaled = zarr_root.attrs["settings"]["return_scaled"]
+
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
             recording=recording,
             rec_attributes=rec_attributes,
             format="zarr",
             sparsity=sparsity,
+            return_scaled=return_scaled,
         )
 
         return sorting_analyzer
@@ -554,14 +619,16 @@ class SortingAnalyzer:
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
             new_sorting_analyzer = SortingAnalyzer.create_memory(
-                sorting_provenance, recording, sparsity, self.rec_attributes
+                sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
             )
 
         elif format == "binary_folder":
             # create  a new folder
             assert folder is not None, "For format='binary_folder' folder must be provided"
             folder = Path(folder)
-            SortingAnalyzer.create_binary_folder(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
+            SortingAnalyzer.create_binary_folder(
+                folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
+            )
             new_sorting_analyzer = SortingAnalyzer.load_from_binary_folder(folder, recording=recording)
             new_sorting_analyzer.folder = folder
 
@@ -570,7 +637,9 @@ class SortingAnalyzer:
             folder = Path(folder)
             if folder.suffix != ".zarr":
                 folder = folder.parent / f"{folder.stem}.zarr"
-            SortingAnalyzer.create_zarr(folder, sorting_provenance, recording, sparsity, self.rec_attributes)
+            SortingAnalyzer.create_zarr(
+                folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
+            )
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
         else:
@@ -748,8 +817,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
-
-    def compute(self, input, save=True, **kwargs):
+    def compute(self, input, save=True, extension_params=None, **kwargs):
         """
         Compute one extension or several extensiosn.
         Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
@@ -757,8 +825,44 @@ class SortingAnalyzer:
         Parameters
         ----------
         input: str or dict or list
-            If the input is a string then computes one extension with compute_one_extension(extension_name=input, ...)
-            If the input is a dict then compute several extensions with compute_several_extensions(extensions=input)
+            The extensions to compute, which can be passed as:
+
+            * a string: compute one extension. Additional parameters can be passed as key word arguments.
+            * a dict: compute several extensions. The keys are the extension names and the values are dictiopnaries with the extension parameters.
+            * a list: compute several extensions. The list contains the extension names. Additional parameters can be passed with the extension_params
+              argument.
+        save: bool, default: True
+            If True the extension is saved to disk (only if sorting analyzer format is not "memory")
+        extension_params: dict or None, default: None
+            If input is a list, this parameter can be used to specify parameters for each extension.
+            The extension_params keys must be included in the input list.
+        **kwargs:
+            All other kwargs are transmitted to extension.set_params() (if input is a string) or job_kwargs
+
+        Returns
+        -------
+        extension: SortingAnalyzerExtension | None
+            The extension instance if input is a string, None otherwise.
+
+        Examples
+        --------
+        This function accepts the following possible signatures for flexibility:
+
+        Compute one extension, with parameters:
+        >>> analyzer.compute("waveforms", ms_before=1.5, ms_after=2.5)
+
+        Compute two extensions with a list as input and with default parameters:
+        >>> analyzer.compute(["random_spikes", "waveforms"])
+
+        Compute two extensions with dict as input, one dict per extension
+        >>> analyzer.compute({"random_spikes":{}, "waveforms":{"ms_before":1.5, "ms_after", "2.5"}})
+
+        Compute two extensions with an input list specifying custom parameters for one
+        (the other will use default parameters):
+        >>> analyzer.compute(
+            ["random_spikes", "waveforms"],
+            extension_params={"waveforms":{"ms_before":1.5, "ms_after", "2.5"}}
+        )
         """
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, **kwargs)
@@ -770,6 +874,12 @@ class SortingAnalyzer:
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
             extensions = {k: {} for k in input}
+            if extension_params is not None:
+                for ext_name, ext_params in extension_params.items():
+                    assert (
+                        ext_name in input
+                    ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
+                    extensions[ext_name] = ext_params
             self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
@@ -786,7 +896,7 @@ class SortingAnalyzer:
         extension_name: str
             The name of the extension.
             For instance "waveforms", "templates", ...
-        save: bool, default True
+        save: bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
@@ -826,7 +936,6 @@ class SortingAnalyzer:
             assert self.has_recording(), f"Extension {extension_name} requires the recording"
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
-                # at least one extension must be done : usefull for "templates|fast_templates" for instance
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
             else:
                 ok = self.get_extension(dependency_name) is not None
@@ -852,7 +961,7 @@ class SortingAnalyzer:
         ----------
         extensions: dict
             Keys are extension_names and values are params.
-        save: bool, default True
+        save: bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
@@ -872,27 +981,28 @@ class SortingAnalyzer:
             for child in _get_children_dependencies(extension_name):
                 self.delete_extension(child)
 
-        pipeline_mode = True
+        extensions_with_pipeline = {}
+        extensions_without_pipeline = {}
         for extension_name, extension_params in extensions.items():
             extension_class = get_extension_class(extension_name)
-            if not extension_class.use_nodepipeline:
-                pipeline_mode = False
-                break
+            if extension_class.use_nodepipeline:
+                extensions_with_pipeline[extension_name] = extension_params
+            else:
+                extensions_without_pipeline[extension_name] = extension_params
 
-        if not pipeline_mode:
-            # simple loop
-            for extension_name, extension_params in extensions.items():
-                extension_class = get_extension_class(extension_name)
-                if extension_class.need_job_kwargs:
-                    self.compute_one_extension(extension_name, save=save, **extension_params)
-                else:
-                    self.compute_one_extension(extension_name, save=save, **extension_params)
-        else:
-
+        # First extensions without pipeline
+        for extension_name, extension_params in extensions_without_pipeline.items():
+            extension_class = get_extension_class(extension_name)
+            if extension_class.need_job_kwargs:
+                self.compute_one_extension(extension_name, save=save, **extension_params, **job_kwargs)
+            else:
+                self.compute_one_extension(extension_name, save=save, **extension_params)
+        # then extensions with pipeline
+        if len(extensions_with_pipeline) > 0:
             all_nodes = []
             result_routage = []
             extension_instances = {}
-            for extension_name, extension_params in extensions.items():
+            for extension_name, extension_params in extensions_with_pipeline.items():
                 extension_class = get_extension_class(extension_name)
                 assert self.has_recording(), f"Extension {extension_name} need the recording"
 
@@ -906,9 +1016,14 @@ class SortingAnalyzer:
                 nodes = extension_instance.get_pipeline_nodes()
                 all_nodes.extend(nodes)
 
-            job_name = "Compute : " + " + ".join(extensions.keys())
+            job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
             results = run_node_pipeline(
-                self.recording, all_nodes, job_kwargs=job_kwargs, job_name=job_name, gather_mode="memory"
+                self.recording,
+                all_nodes,
+                job_kwargs=job_kwargs,
+                job_name=job_name,
+                gather_mode="memory",
+                squeeze_output=False,
             )
 
             for r, result in enumerate(results):
@@ -1087,7 +1202,7 @@ def _get_children_dependencies(extension_name):
             names.append(child)
         grand_children = _get_children_dependencies(child)
         names.extend(grand_children)
-    return list(set(names))
+    return list(names)
 
 
 def register_result_extension(extension_class):
@@ -1132,7 +1247,7 @@ def get_extension_class(extension_name: str, auto_import=True):
     ----------
     extension_name: str
         The extension name.
-    auto_import: bool, default True
+    auto_import: bool, default: True
         Auto import the module if the extension class is not registered yet.
 
     Returns
@@ -1611,7 +1726,7 @@ _builtin_extensions = {
     "random_spikes": "spikeinterface.core",
     "waveforms": "spikeinterface.core",
     "templates": "spikeinterface.core",
-    "fast_templates": "spikeinterface.core",
+    # "fast_templates": "spikeinterface.core",
     "noise_levels": "spikeinterface.core",
     # from postprocessing
     "amplitude_scalings": "spikeinterface.postprocessing",

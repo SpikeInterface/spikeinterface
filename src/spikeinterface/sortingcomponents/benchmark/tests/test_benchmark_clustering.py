@@ -1,6 +1,4 @@
 import pytest
-
-import spikeinterface.full as si
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -10,6 +8,8 @@ import shutil
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset, cache_folder
 from spikeinterface.sortingcomponents.benchmark.benchmark_clustering import ClusteringStudy
+from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
+from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
 @pytest.mark.skip()
@@ -25,12 +25,24 @@ def test_benchmark_clustering():
     # create study
     study_folder = cache_folder / "study_clustering"
     datasets = {"toy": (recording, gt_sorting)}
+
+    peaks = {}
+    for dataset in datasets.keys():
+
+        recording, gt_sorting = datasets[dataset]
+
+        sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False)
+        sorting_analyzer.compute(["random_spikes", "templates"])
+        extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
+        spikes = gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+        peaks[dataset] = spikes
+
     cases = {}
     for method in ["random_projections", "circus"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
-            "init_kwargs": {"indices": spike_indices},
+            "init_kwargs": {"indices": spike_indices, "peaks": peaks["toy"]},
             "params": {"method": method, "method_kwargs": {}},
         }
 
@@ -55,6 +67,11 @@ def test_benchmark_clustering():
 
     # plots
     study.plot_performances_vs_snr()
+    study.plot_agreements()
+    study.plot_comparison_clustering()
+    study.plot_error_metrics()
+    study.plot_metrics_vs_snr()
+    study.plot_run_times()
     # @pierre : This one has a bug
     # study.plot_metrics_vs_snr('cosine')
     study.homogeneity_score(ignore_noise=False)
