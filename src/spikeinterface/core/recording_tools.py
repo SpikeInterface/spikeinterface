@@ -97,6 +97,7 @@ def write_binary_recording(
         to an existing file where you wrote a header or other data before.
     auto_cast_uint: bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
+        .. deprecated:: 0.103, use the `unsigned_to_signed` function instead.
     {}
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
@@ -111,7 +112,7 @@ def write_binary_recording(
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
     dtype = dtype if dtype is not None else recording.get_dtype()
-    if auto_cast_uint:  # TODO should we deprecate this given that we have `unsigned_to_signed`?
+    if auto_cast_uint:
         cast_unsigned = determine_cast_unsigned(recording, dtype)
         warning_message = (
             "auto_cast_uint is deprecated and will be removed in 0.103. Use the `unsigned_to_signed` function instead."
