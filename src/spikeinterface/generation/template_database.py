@@ -4,7 +4,7 @@ import numpy as np
 from spikeinterface.core.template import Templates
 
 
-def fetch_template_dataset(dataset="test_templates") -> Templates:
+def fetch_template_dataset(dataset="test_templates.zarr") -> Templates:
     """
     Fetch a template dataset from the spikeinterface template database.
     A dataset is a collection of templates with associated metadata for one specific recording.

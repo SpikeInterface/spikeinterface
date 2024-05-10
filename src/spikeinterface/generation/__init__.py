@@ -6,7 +6,13 @@ from .drift_tools import (
     make_linear_displacement,
 )
 
-from .hybrid_tools import generate_hybrid_recording, estimate_templates_from_recording
+from .hybrid_tools import (
+    generate_hybrid_recording,
+    estimate_templates_from_recording,
+    filter_templates,
+    scale_templates,
+    shift_templates,
+)
 from .noise_tools import generate_noise
 from .drifting_generator import (
     make_one_displacement_vector,

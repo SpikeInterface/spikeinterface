@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from coverage import data
 import numpy as np
 from warnings import warn
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
-from ..core import ChannelSparsity, SortingAnalyzer
+from ..core import ChannelSparsity, SortingAnalyzer, Templates
 from ..core.basesorting import BaseSorting
 
 
@@ -16,8 +17,9 @@ class UnitWaveformsWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        The SortingAnalyzer
+    sorting_analyzer_or_templates : SortingAnalyzer | Templates
+        The SortingAnalyzer or Templates object.
+        If Templates is given, the "plot_waveforms" argument is set to False
     channel_ids: list or None, default: None
         The channel ids to display
     unit_ids : list or None, default: None
@@ -77,7 +79,7 @@ class UnitWaveformsWidget(BaseWidget):
 
     def __init__(
         self,
-        sorting_analyzer: SortingAnalyzer,
+        sorting_analyzer_or_templates: SortingAnalyzer | Templates,
         channel_ids=None,
         unit_ids=None,
         plot_waveforms=True,
@@ -104,29 +106,29 @@ class UnitWaveformsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
-        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
-        sorting: BaseSorting = sorting_analyzer.sorting
+        if not isinstance(sorting_analyzer_or_templates, Templates):
+            sorting_analyzer_or_templates = self.ensure_sorting_analyzer(sorting_analyzer)
+        else:
+            plot_waveforms = False
+            shade_templates = False
 
         if unit_ids is None:
-            unit_ids = sorting.unit_ids
+            unit_ids = sorting_analyzer_or_templates.unit_ids
         if channel_ids is None:
-            channel_ids = sorting_analyzer.channel_ids
+            channel_ids = sorting_analyzer_or_templates.channel_ids
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting)
+            unit_colors = get_unit_colors(unit_ids)
 
-        channel_locations = sorting_analyzer.get_channel_locations()[
-            sorting_analyzer.channel_ids_to_indices(channel_ids)
-        ]
-
+        channel_indices = [list(sorting_analyzer_or_templates.channel_ids).index(ch) for ch in channel_ids]
+        channel_locations = sorting_analyzer_or_templates.get_channel_locations()[channel_indices]
         extra_sparsity = False
-        if sorting_analyzer.is_sparse():
+        if sorting_analyzer_or_templates.sparsity is not None:
             if sparsity is None:
-                sparsity = sorting_analyzer.sparsity
+                sparsity = sorting_analyzer_or_templates.sparsity
             else:
                 # assert provided sparsity is a subset of waveform sparsity
-                combined_mask = np.logical_or(sorting_analyzer.sparsity.mask, sparsity.mask)
-                assert np.all(np.sum(combined_mask, 1) - np.sum(sorting_analyzer.sparsity.mask, 1) == 0), (
+                combined_mask = np.logical_or(sorting_analyzer_or_templates.sparsity.mask, sparsity.mask)
+                assert np.all(np.sum(combined_mask, 1) - np.sum(sorting_analyzer_or_templates.sparsity.mask, 1) == 0), (
                     "The provided 'sparsity' needs to include only the sparse channels "
                     "used to extract waveforms (for example, by using a smaller 'radius_um')."
                 )
@@ -134,41 +136,53 @@ class UnitWaveformsWidget(BaseWidget):
         else:
             if sparsity is None:
                 # in this case, we construct a dense sparsity
-                unit_id_to_channel_ids = {u: sorting_analyzer.channel_ids for u in sorting_analyzer.unit_ids}
+                unit_id_to_channel_ids = {
+                    u: sorting_analyzer_or_templates.channel_ids for u in sorting_analyzer_or_templates.unit_ids
+                }
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
                     unit_id_to_channel_ids=unit_id_to_channel_ids,
-                    unit_ids=sorting_analyzer.unit_ids,
-                    channel_ids=sorting_analyzer.channel_ids,
+                    unit_ids=sorting_analyzer_or_templates.unit_ids,
+                    channel_ids=sorting_analyzer_or_templates.channel_ids,
                 )
             else:
                 assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
 
         # get templates
-        self.templates_ext = sorting_analyzer.get_extension("templates")
-        assert self.templates_ext is not None, "plot_waveforms() need extension 'templates'"
-        templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
+        if isinstance(sorting_analyzer_or_templates, Templates):
+            templates = sorting_analyzer_or_templates.templates_array
+            nbefore = sorting_analyzer_or_templates.nbefore
+            self.templates_ext = None
+            templates_shading = None
+        else:
+            self.templates_ext = sorting_analyzer_or_templates.get_extension("templates")
+            assert self.templates_ext is not None, "plot_waveforms() need extension 'templates'"
+            templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
+            nbefore = self.templates_ext.nbefore
 
-        if templates_percentile_shading is not None and not sorting_analyzer.has_extension("waveforms"):
-            warn(
-                "templates_percentile_shading can only be used if the 'waveforms' extension is available. "
-                "Settimg templates_percentile_shading to None."
-            )
-            templates_percentile_shading = None
-        templates_shading = self._get_template_shadings(sorting_analyzer, unit_ids, templates_percentile_shading)
+            if templates_percentile_shading is not None and not sorting_analyzer_or_templates.has_extension(
+                "waveforms"
+            ):
+                warn(
+                    "templates_percentile_shading can only be used if the 'waveforms' extension is available. "
+                    "Settimg templates_percentile_shading to None."
+                )
+                templates_percentile_shading = None
+            templates_shading = self._get_template_shadings(unit_ids, templates_percentile_shading)
 
         xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
-            sorting_analyzer, templates, channel_locations, x_offset_units
+            templates, channel_locations, nbefore, x_offset_units
         )
 
         wfs_by_ids = {}
         if plot_waveforms:
-            wf_ext = sorting_analyzer.get_extension("waveforms")
+            # this must be a sorting_analyzer
+            wf_ext = sorting_analyzer_or_templates.get_extension("waveforms")
             if wf_ext is None:
                 raise ValueError("plot_waveforms() needs the extension 'waveforms'")
             for unit_id in unit_ids:
-                unit_index = list(sorting.unit_ids).index(unit_id)
+                unit_index = list(sorting_analyzer_or_templates.unit_ids).index(unit_id)
                 if not extra_sparsity:
-                    if sorting_analyzer.is_sparse():
+                    if sorting_analyzer_or_templates.is_sparse():
                         # wfs = we.get_waveforms(unit_id)
                         wfs = wf_ext.get_waveforms_one_unit(unit_id, force_dense=False)
                     else:
@@ -181,7 +195,7 @@ class UnitWaveformsWidget(BaseWidget):
                     # wfs = we.get_waveforms(unit_id)
                     wfs = wf_ext.get_waveforms_one_unit(unit_id, force_dense=False)
                     # find additional slice to apply to sparse waveforms
-                    (wfs_sparse_indices,) = np.nonzero(sorting_analyzer.sparsity.mask[unit_index])
+                    (wfs_sparse_indices,) = np.nonzero(sorting_analyzer_or_templates.sparsity.mask[unit_index])
                     (extra_sparse_indices,) = np.nonzero(sparsity.mask[unit_index])
                     (extra_slice,) = np.nonzero(np.isin(wfs_sparse_indices, extra_sparse_indices))
                     # apply extra sparsity
@@ -189,8 +203,8 @@ class UnitWaveformsWidget(BaseWidget):
                 wfs_by_ids[unit_id] = wfs
 
         plot_data = dict(
-            sorting_analyzer=sorting_analyzer,
-            sampling_frequency=sorting_analyzer.sampling_frequency,
+            sorting_analyzer_or_templates=sorting_analyzer_or_templates,
+            sampling_frequency=sorting_analyzer_or_templates.sampling_frequency,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             sparsity=sparsity,
@@ -355,7 +369,12 @@ class UnitWaveformsWidget(BaseWidget):
         self.next_data_plot = data_plot.copy()
 
         cm = 1 / 2.54
-        self.sorting_analyzer = data_plot["sorting_analyzer"]
+        if isinstance(data_plot["sorting_analyzer_or_templates"], SortingAnalyzer):
+            self.sorting_analyzer = data_plot["sorting_analyzer_or_templates"]
+            self.templates = None
+        else:
+            self.sorting_analyzer = None
+            self.templates = data_plot["sorting_analyzer_or_templates"]
 
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
@@ -399,10 +418,14 @@ class UnitWaveformsWidget(BaseWidget):
             description="hide axis",
             disabled=False,
         )
+        if self.sorting_analyzer is not None:
+            footer_list = [self.same_axis_button, self.template_shading_button, self.hide_axis_button]
+        else:
+            footer_list = [self.same_axis_button, self.hide_axis_button]
+        if data_plot["plot_waveforms"]:
+            footer_list.append(self.plot_templates_button)
 
-        footer = widgets.HBox(
-            [self.same_axis_button, self.plot_templates_button, self.template_shading_button, self.hide_axis_button]
-        )
+        footer = widgets.HBox(footer_list)
         left_sidebar = widgets.VBox([self.unit_selector, self.scaler])
 
         self.widget = widgets.AppLayout(
@@ -424,7 +447,7 @@ class UnitWaveformsWidget(BaseWidget):
         if backend_kwargs["display"]:
             display(self.widget)
 
-    def _get_template_shadings(self, sorting_analyzer, unit_ids, templates_percentile_shading):
+    def _get_template_shadings(self, unit_ids, templates_percentile_shading):
         templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
 
         if templates_percentile_shading is None:
@@ -460,30 +483,34 @@ class UnitWaveformsWidget(BaseWidget):
         hide_axis = self.hide_axis_button.value
         do_shading = self.template_shading_button.value
 
-        wf_ext = self.sorting_analyzer.get_extension("waveforms")
-        templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
+        if self.sorting_analyzer is not None:
+            templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
+            templates_shadings = self._get_template_shadings(unit_ids, data_plot["templates_percentile_shading"])
+            channel_locations = self.sorting_analyzer.get_channel_locations()
+
+        else:
+            unit_indices = [list(self.templates.unit_ids).index(unit_id) for unit_id in unit_ids]
+            templates = self.templates.templates_array[unit_indices]
+            templates_shadings = None
+            channel_locations = self.templates.get_channel_locations()
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = unit_ids
         data_plot["templates"] = templates
-        templates_shadings = self._get_template_shadings(
-            self.sorting_analyzer, unit_ids, data_plot["templates_percentile_shading"]
-        )
         data_plot["templates_shading"] = templates_shadings
         data_plot["same_axis"] = same_axis
         data_plot["plot_templates"] = plot_templates
         data_plot["do_shading"] = do_shading
         data_plot["scale"] = self.scaler.value
         if data_plot["plot_waveforms"]:
+            wf_ext = self.sorting_analyzer.get_extension("waveforms")
             data_plot["wfs_by_ids"] = {
                 unit_id: wf_ext.get_waveforms_one_unit(unit_id, force_dense=False) for unit_id in unit_ids
             }
 
         # TODO option for plot_legend
-
         backend_kwargs = {}
-
         if same_axis:
             backend_kwargs["ax"] = self.fig_wf.add_subplot()
             data_plot["set_title"] = False
@@ -502,7 +529,6 @@ class UnitWaveformsWidget(BaseWidget):
                     ax.axis("off")
 
         # update probe plot
-        channel_locations = self.sorting_analyzer.get_channel_locations()
         self.ax_probe.plot(
             channel_locations[:, 0], channel_locations[:, 1], ls="", marker="o", color="gray", markersize=2, alpha=0.5
         )
@@ -529,7 +555,7 @@ class UnitWaveformsWidget(BaseWidget):
         fig_probe.canvas.flush_events()
 
 
-def get_waveforms_scales(sorting_analyzer, templates, channel_locations, x_offset_units=False):
+def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=False):
     """
     Return scales and x_vector for templates plotting
     """
@@ -555,7 +581,6 @@ def get_waveforms_scales(sorting_analyzer, templates, channel_locations, x_offse
 
     y_offset = channel_locations[:, 1][None, :]
 
-    nbefore = sorting_analyzer.get_extension("templates").nbefore
     nsamples = templates.shape[1]
 
     xvect = delta_x * (np.arange(nsamples) - nbefore) / nsamples * 0.7

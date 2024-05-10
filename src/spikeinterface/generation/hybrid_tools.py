@@ -1,23 +1,29 @@
 from __future__ import annotations
-import warnings
 
+import warnings
+from typing import Literal
 import numpy as np
-from spikeinterface.core.template import Templates
-from spikeinterface.generation import (
-    make_linear_displacement,
-    InjectDriftingTemplatesRecording,
-    DriftingTemplates,
-    interpolate_templates,
-)
-from spikeinterface.core.generate import (
+
+from ..core.template import Templates
+
+from ..core.generate import (
     generate_templates,
     generate_unit_locations,
-    _ensure_seed,
     generate_sorting,
     InjectTemplatesRecording,
+    _ensure_seed,
 )
-from spikeinterface.core.job_tools import split_job_kwargs
-from spikeinterface.postprocessing.unit_localization import compute_monopolar_triangulation
+from ..core.template_tools import get_template_extremum_channel
+from ..core.job_tools import split_job_kwargs
+from ..postprocessing.unit_localization import compute_monopolar_triangulation
+
+from .drift_tools import (
+    InjectDriftingTemplatesRecording,
+    DriftingTemplates,
+    make_linear_displacement,
+    interpolate_templates,
+    move_dense_templates,
+)
 
 
 def estimate_templates_from_recording(
@@ -78,6 +84,227 @@ def estimate_templates_from_recording(
     )
 
     return templates
+
+
+def filter_templates(
+    templates: Templates,
+    min_amplitude: float | None = None,
+    max_amplitude: float | None = None,
+    min_depth: float | None = None,
+    max_depth: float | None = None,
+    amplitude_function: Literal["ptp", "min", "max"] = "ptp",
+    depth_direction: Literal["x", "y"] = "y",
+):
+    """
+    Filter templates based on amplitude and depth.
+
+    Parameters
+    ----------
+    templates : Templates
+        The input templates
+    min_amplitude : float | None, default: None
+        The minimum amplitude of the templates
+    max_amplitude : float | None, default: None
+        The maximum amplitude of the templates
+    min_depth : float | None, default: None
+        The minimum depth of the templates
+    max_depth : float | None, default: None
+        The maximum depth of the templates
+    amplitude_function : "ptp" | "min" | "max", default: "ptp"
+        The function to use to compute the amplitude of the templates. Can be "ptp", "min" or "max"
+    depth_direction : "x" | "y", default: "y"
+        The direction in which to move the templates. Can be "x" or "y"
+
+    Returns
+    -------
+    Templates
+        The filtered templates
+    """
+    assert (
+        min_amplitude is not None or max_amplitude is not None or min_depth is not None or max_depth is not None
+    ), "At least one of min_amplitude, max_amplitude, min_depth, max_depth should be provided"
+    # get template amplitudes and depth
+    extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
+    extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
+
+    mask = np.ones(templates.num_units, dtype=bool)
+    if min_amplitude is not None or max_amplitude is not None:
+        # filter amplitudes
+        if amplitude_function == "ptp":
+            amp_fun = np.ptp
+        elif amplitude_function == "min":
+            amp_fun = np.min
+        elif amplitude_function == "max":
+            amp_fun = np.max
+        amplitudes = np.zeros(templates.num_units)
+        templates_array = templates.templates_array
+        for i in range(templates.num_units):
+            amplitudes[i] = amp_fun(templates_array[i, :, extremum_channel_indices[i]])
+        if min_amplitude is not None:
+            mask &= amplitudes >= min_amplitude
+        if max_amplitude is not None:
+            mask &= amplitudes <= max_amplitude
+    if min_depth is not None or max_depth is not None:
+        assert templates.probe is not None, "Templates should have a probe to filter based on depth"
+        depth_dimension = ["x", "y"].index(depth_direction)
+        channel_depths = templates.get_channel_locations()[:, depth_dimension]
+        unit_depths = channel_depths[extremum_channel_indices]
+        if min_depth is not None:
+            mask &= unit_depths >= min_depth
+        if max_depth is not None:
+            mask &= unit_depths <= max_depth
+    if np.sum(mask) == 0:
+        warnings.warn("No templates left after filtering")
+        return None
+    filtered_unit_ids = templates.unit_ids[mask]
+    filtered_templates = templates.select_units(filtered_unit_ids)
+
+    return filtered_templates
+
+
+def scale_templates(
+    templates: Templates,
+    min_amplitude: float,
+    max_amplitude: float,
+    amplitude_function: Literal["ptp", "min", "max"] = "ptp",
+):
+    """
+    Scale templates to have a minimum and maximum amplitude.
+
+    Parameters
+    ----------
+    templates : Templates
+        The input templates
+    min_amplitude : float
+        The minimum amplitude of the output templates after scaling
+    max_amplitude : float
+        The maximum amplitude of the output templates after scaling
+
+    Returns
+    -------
+    Templates
+        The scaled templates
+    """
+    extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
+    extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
+
+    # get amplitudes
+    if amplitude_function == "ptp":
+        amp_fun = np.ptp
+    elif amplitude_function == "min":
+        amp_fun = np.min
+    elif amplitude_function == "max":
+        amp_fun = np.max
+    amplitudes = np.zeros(templates.num_units)
+    templates_array = templates.templates_array
+    for i in range(templates.num_units):
+        amplitudes[i] = amp_fun(templates_array[i, :, extremum_channel_indices[i]])
+
+    scale_values = (max_amplitude - min_amplitude) / (amplitudes.max() - amplitudes.min())
+    scaled_templates_array = templates_array * scale_values
+
+    return Templates(
+        templates_array=scaled_templates_array,
+        sampling_frequency=templates.sampling_frequency,
+        nbefore=templates.nbefore,
+        sparsity_mask=templates.sparsity_mask,
+        channel_ids=templates.channel_ids,
+        unit_ids=templates.unit_ids,
+        probe=templates.probe,
+    )
+
+
+def shift_templates(
+    templates: Templates,
+    min_displacement: float,
+    max_displacement: float,
+    margin: float = 0.0,
+    favor_borders: bool = True,
+    depth_direction: Literal["x", "y"] = "y",
+    seed: int | None = None,
+):
+    """
+    Shift templates to have a minimum and maximum displacement.
+
+    Parameters
+    ----------
+    templates : Templates
+        The input templates
+    min_displacement : float
+        The minimum displacement of the templates
+    max_displacement : float
+        The maximum displacement of the templates
+    margin : float, default: 0.0
+        The margin to keep between the templates and the borders of the probe.
+        If greater than 0, the templates are allowed to go beyond the borders of the probe.
+    favor_borders : bool, default: True
+        If True, the templates are always moved to the borders of the probe if this is
+        possoble based on the min_displacement and max_displacement constraints.
+        This avoids a bias in moving templates towards the center of the probe.
+    depth_direction : "x" | "y", default: "y"
+        The direction in which to move the templates. Can be "x" or "y"
+    seed : int or None, default: None
+        Seed for random initialization.
+
+
+    Returns
+    -------
+    Templates
+        The moved templates
+    """
+    seed = _ensure_seed(seed)
+
+    extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
+    extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
+    depth_dimension = ["x", "y"].index(depth_direction)
+    channel_depths = templates.get_channel_locations()[:, depth_dimension]
+    unit_depths = channel_depths[extremum_channel_indices]
+
+    assert margin >= 0, "margin should be positive"
+    top_margin = np.max(channel_depths) + margin
+    bottom_margin = np.min(channel_depths) - margin
+
+    templates_array_moved = np.zeros_like(templates.templates_array, dtype=templates.templates_array.dtype)
+
+    rng = np.random.default_rng(seed)
+    displacements = rng.uniform(low=min_displacement, high=max_displacement, size=templates.num_units)
+    for i in range(templates.num_units):
+        # by default, displacement is positive
+        displacement = displacements[i]
+        unit_depth = unit_depths[i]
+        if not favor_borders:
+            displacement *= rng.choice([-1.0, 1.0])
+            if unit_depth + displacement > top_margin:
+                displacement = -displacement
+            elif unit_depth - displacement < bottom_margin:
+                displacement = -displacement
+        else:
+            # check if depth is closer to top or bottom
+            if unit_depth > (top_margin - bottom_margin) / 2:
+                # if over top margin, move down
+                if unit_depth + displacement > top_margin:
+                    displacement = -displacement
+            else:
+                # if within bottom margin, move down
+                if unit_depth - displacement >= bottom_margin:
+                    displacement = -displacement
+        displacement_vector = np.zeros(2)
+        displacement_vector[depth_dimension] = displacement
+        templates_array_moved[i] = move_dense_templates(
+            templates.templates_array[i][None],
+            displacements=displacement_vector[None],
+            source_probe=templates.probe,
+        )[0]
+
+    return Templates(
+        templates_array=templates_array_moved,
+        sampling_frequency=templates.sampling_frequency,
+        nbefore=templates.nbefore,
+        sparsity_mask=templates.sparsity_mask,
+        channel_ids=templates.channel_ids,
+        unit_ids=templates.unit_ids,
+        probe=templates.probe,
+    )
 
 
 def generate_hybrid_recording(

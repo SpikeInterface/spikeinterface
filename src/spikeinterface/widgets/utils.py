@@ -95,12 +95,12 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
     return dict_colors
 
 
-def get_unit_colors(sorting, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None):
+def get_unit_colors(unit_ids, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None):
     """
     Return a dict colors per units.
     """
     colors = get_some_colors(
-        sorting.unit_ids, color_engine=color_engine, map_name=map_name, format=format, shuffle=shuffle, seed=seed
+        unit_ids, color_engine=color_engine, map_name=map_name, format=format, shuffle=shuffle, seed=seed
     )
     return colors
 

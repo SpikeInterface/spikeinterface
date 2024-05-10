@@ -125,13 +125,13 @@ class DriftingTemplates(Templates):
 
     @classmethod
     def from_static(cls, templates):
-        drifting_teplates = cls(
+        drifting_templates = cls(
             templates_array=templates.templates_array,
             sampling_frequency=templates.sampling_frequency,
             nbefore=templates.nbefore,
             probe=templates.probe,
         )
-        return drifting_teplates
+        return drifting_templates
 
     def move_one_template(self, unit_index, displacement, **interpolation_kwargs):
         """
