@@ -74,7 +74,7 @@ class CurationSorting:
             Each array can contain more than 2 indices (e.g. for splitting in 3 or more units) and it should
             be the same length as the spike train (for each segment).
             If the sorting has only one segment, indices_list can be a single array
-        new_unit_ids: list ot None
+        new_unit_ids: list[str|int] ot None
             List of new unit ids. If None, a new unit id is automatically selected
         """
         current_sorting = self._sorting_stages[self._sorting_stages_i]
@@ -108,7 +108,7 @@ class CurationSorting:
 
         Parameters
         ----------
-        units_to_merge: list
+        units_to_merge: list[str|int]
             List of unit ids to merge
         new_unit_id: int or str
             The new unit id. If None, a new unit id is automatically selected
@@ -143,7 +143,7 @@ class CurationSorting:
 
         Parameters
         ----------
-        unit_ids: list
+        unit_ids: list[str|int]
             List of unit ids to remove
         """
         current_sorting = self._sorting_stages[self._sorting_stages_i]
@@ -172,7 +172,7 @@ class CurationSorting:
 
         Parameters
         ----------
-        unit_ids : list
+        unit_ids : list[str|int]
             List of unit ids to select
         renamed_unit_ids : list or None, default: None
             List of new unit ids to rename the selected units
@@ -194,7 +194,7 @@ class CurationSorting:
 
         Parameters
         ----------
-        renamed_unit_ids : list
+        renamed_unit_ids : list[str|int]
             List of unit ids to rename exisiting units
         """
         self.select_units(self.current_sorting.unit_ids, renamed_unit_ids=renamed_unit_ids)
