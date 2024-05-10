@@ -108,9 +108,13 @@ def test_curation():
     cs.undo()
 
     # split one unit in 3
-    split_index3 = [v["b"] % 3 + 1 for v in spikestimes]  # split class in 3
+    split_index3 = [v["b"] % 3 + 100 for v in spikestimes]  # split class in 3
     cs.split("b", split_index3, new_unit_ids=["b1", "b2", "b3"])
     after_split = cs.sorting
+    for segment_index in range(len(spikestimes)):
+        _, split_counts = np.unique(split_index3[segment_index], return_counts=True)
+        for unit_id, count in zip(["b1", "b2", "b3"], split_counts):
+            assert len(after_split.get_unit_spike_train(unit_id, segment_index=segment_index)) == count
     assert after_split.get_num_units() == len(spikestimes[0]) + 2
     cs.undo()
 
