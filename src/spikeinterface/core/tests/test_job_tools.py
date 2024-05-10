@@ -180,10 +180,10 @@ def test_fix_job_kwargs():
     else:
         assert fixed_job_kwargs["n_jobs"] == 1
 
-    # test minimum n_jobs
-    job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s")
+    # test float value > 1 is cast to correct int
+    job_kwargs = dict(n_jobs=4.0, progress_bar=False, chunk_duration="1s")
     fixed_job_kwargs = fix_job_kwargs(job_kwargs)
-    assert fixed_job_kwargs["n_jobs"] == 1
+    assert fixed_job_kwargs["n_jobs"] == 4
 
     # test wrong keys
     with pytest.raises(AssertionError):
