@@ -38,7 +38,10 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         )
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
 
-        probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
+        probegroup = None
+        # If version of probeinterface is larger than 0.2.21 then try this method
+        if probeinterface.__version__ > "0.2.21":
+            probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
 
         if probegroup is not None:
             self.set_probes(probegroup, in_place=True)
