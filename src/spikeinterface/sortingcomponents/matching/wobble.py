@@ -926,7 +926,7 @@ def convolve_templates(compressed_templates, jitter_factor, approx_rank, jittere
             spatial_filters = spatial_overlapped[:approx_rank, visible_overlapped_channels].T
             spatially_filtered_template = np.matmul(visible_template, spatial_filters)
             scaled_filtered_template = spatially_filtered_template * singular_overlapped
-            for i in range(approx_rank):
+            for i in range(min(approx_rank, scaled_filtered_template.shape[1])):
                 pconv[j, :] += np.convolve(scaled_filtered_template[:, i], temporal_overlapped[:, i], "full")
         pairwise_convolution.append(pconv)
     return pairwise_convolution
