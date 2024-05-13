@@ -4,6 +4,8 @@ import warnings
 import numpy as np
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension, SortingAnalyzer
 
+from spikeinterface.core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+
 try:
     import numba
 
@@ -87,6 +89,10 @@ def compute_correlograms(
     bin_ms: float = 1.0,
     method: str = "auto",
 ):
+
+    if isinstance(sorting_analyzer_or_sorting, MockWaveformExtractor):
+        sorting_analyzer_or_sorting = sorting_analyzer_or_sorting.sorting
+
     if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
         return compute_correlograms_sorting_analyzer(
             sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method

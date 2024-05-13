@@ -72,7 +72,7 @@ class ZarrRecordingExtractor(BaseRecording):
             time_kwargs = {}
             time_vector = self._root.get(f"times_seg{segment_index}", None)
             if time_vector is not None:
-                time_kwargs["time_vector"] = time_vector
+                time_kwargs["time_vector"] = time_vector[:]
             else:
                 if t_starts is None:
                     t_start = None
