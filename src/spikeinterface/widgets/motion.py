@@ -3,11 +3,21 @@ from __future__ import annotations
 import numpy as np
 
 from .base import BaseWidget, to_attr
+from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 
 
 class MotionWidget(BaseWidget):
     """
-    Plot unit depths
+    Plot a summary of motion correction outputs. The plots shown are:
+
+    1) 'Peak depth' plot displaying the peak location for all detected spikes over time
+       before motion correction.
+    2) 'Corrected peak depth' displayed the peak location for all detected spikes
+       over time after motion correction.
+    3) 'Motion vectors' plot shows the estimated displacement per channel
+       across time. The average displacement is shown in blue.
+    4) 'Motion vectors nonrigid' plot shows a heatmap of the estimated
+       motion across the depth of the probe and time.
 
     Parameters
     ----------
@@ -31,6 +41,8 @@ class MotionWidget(BaseWidget):
         The min and max amplitude to display, if None (min and max of the amplitudes)
     amplitude_alpha : float, default: 1
         The alpha of the scatter points
+    backend : Union[None, "matplotlib"]
+        Determines the plotting backend. Only "matplotlib" currently supported.
     """
 
     def __init__(
@@ -65,16 +77,25 @@ class MotionWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
+        """
+        Plot the motion correction plot using the
+        "matplotlib" backend.
+        """
         import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
         from matplotlib.colors import Normalize
 
-        from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
-
         dp = to_attr(data_plot)
 
-        assert backend_kwargs["axes"] is None
-        assert backend_kwargs["ax"] is None
+        if not (backend_kwargs["axes"] is None and backend_kwargs["ax"] is None):
+            raise ValueError(
+                "`ax` and `axes` arguments are not permitted "
+                "for `plot_motion` as multiple axes are required. "
+                "Instead supply the `fig` parameter to plot on"
+                "a specific object."
+            )
+
+        # Setup figures and axes ----------------------------------------------
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
         fig = self.figure
@@ -91,18 +112,15 @@ class MotionWidget(BaseWidget):
         ax1.sharex(ax0)
         ax1.sharey(ax0)
 
-        if dp.motion_lim is None:
-            motion_lim = np.max(np.abs(dp.motion)) * 1.05
-        else:
-            motion_lim = dp.motion_lim
+        # Plot the peak depth and corrected peak depth ------------------------
 
         if dp.times is None:
             temporal_bins_plot = dp.temporal_bins
-            x = dp.peaks["sample_index"] / dp.sampling_frequency
+            peak_times = dp.peaks["sample_index"] / dp.sampling_frequency
         else:
             # use real times and adjust temporal bins with t_start
             temporal_bins_plot = dp.temporal_bins + dp.times[0]
-            x = dp.times[dp.peaks["sample_index"]]
+            peak_times = dp.times[dp.peaks["sample_index"]]
 
         corrected_location = correct_motion_on_peaks(
             dp.peaks,
@@ -114,12 +132,13 @@ class MotionWidget(BaseWidget):
             direction="y",
         )
 
-        y = dp.peak_locations["y"]
-        y2 = corrected_location["y"]
+        peak_locs = dp.peak_locations["y"]
+        corr_peak_locs = corrected_location["y"]
+
         if dp.scatter_decimate is not None:
-            x = x[:: dp.scatter_decimate]
-            y = y[:: dp.scatter_decimate]
-            y2 = y2[:: dp.scatter_decimate]
+            peak_times = peak_times[:: dp.scatter_decimate]
+            peak_locs = peak_locs[:: dp.scatter_decimate]
+            corr_peak_locs = corr_peak_locs[:: dp.scatter_decimate]
 
         if dp.color_amplitude:
             amps = dp.peaks["amplitude"]
@@ -144,24 +163,34 @@ class MotionWidget(BaseWidget):
         else:
             color_kwargs = dict(color="k", c=None, alpha=dp.amplitude_alpha)
 
-        ax0.scatter(x, y, s=1, **color_kwargs)
+        ax0.scatter(peak_times, peak_locs, s=1, **color_kwargs)
         if dp.depth_lim is not None:
             ax0.set_ylim(*dp.depth_lim)
         ax0.set_title("Peak depth")
-        ax0.set_xlabel("Times [s]")
-        ax0.set_ylabel("Depth [um]")
+        ax0.set_xlabel("Time [s]")
+        ax0.set_ylabel("Depth [μm]")
 
-        ax1.scatter(x, y2, s=1, **color_kwargs)
-        ax1.set_xlabel("Times [s]")
-        ax1.set_ylabel("Depth [um]")
+        ax1.scatter(peak_times, corr_peak_locs, s=1, **color_kwargs)
+        ax1.set_xlabel("Time [s]")
+        ax1.set_ylabel("Depth [μm]")
         ax1.set_title("Corrected peak depth")
+
+        # Plot the Motion Vectors ---------------------------------------------
+
+        if dp.motion_lim is None:
+            motion_lim = np.max(np.abs(dp.motion)) * 1.05
+        else:
+            motion_lim = dp.motion_lim
 
         ax2.plot(temporal_bins_plot, dp.motion, alpha=0.2, color="black")
         ax2.plot(temporal_bins_plot, np.mean(dp.motion, axis=1), color="C0")
         ax2.set_ylim(-motion_lim, motion_lim)
-        ax2.set_ylabel("Motion [um]")
+        ax2.set_xlabel("Time [s]")
+        ax2.set_ylabel("Motion [μm]")
         ax2.set_title("Motion vectors")
         axes = [ax0, ax1, ax2]
+
+        # Plot the motion-by-depth colormap (if not rigid) --------------------
 
         if not is_rigid:
             im = ax3.imshow(
@@ -177,9 +206,10 @@ class MotionWidget(BaseWidget):
             )
             im.set_clim(-motion_lim, motion_lim)
             cbar = fig.colorbar(im)
-            cbar.ax.set_xlabel("motion [um]")
-            ax3.set_xlabel("Times [s]")
-            ax3.set_ylabel("Depth [um]")
+            cbar.ax.set_xlabel("motion [μm]")
+            ax3.set_xlabel("Time [s]")
+            ax3.set_ylabel("Depth [μm]")
             ax3.set_title("Motion vectors")
             axes.append(ax3)
+
         self.axes = np.array(axes)
