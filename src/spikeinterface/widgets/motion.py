@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 
 from .base import BaseWidget, to_attr
-from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 
 
 class MotionWidget(BaseWidget):
@@ -84,6 +83,7 @@ class MotionWidget(BaseWidget):
         import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
         from matplotlib.colors import Normalize
+        from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 
         dp = to_attr(data_plot)
 
