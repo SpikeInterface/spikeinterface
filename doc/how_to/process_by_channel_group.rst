@@ -1,5 +1,5 @@
-Processing a Recording by Channel Group
-=======================================
+Process a Recording by Channel Group
+====================================
 
 In this tutorial, we will walk through how to preprocess and sort a recording
 separately for *channel groups*. A channel group is a subset of channels grouped by some
@@ -83,6 +83,7 @@ Splitting a recording by channel group returns a dictionary containing separate 
                            10.99 MiB, 3: ChannelSliceRecording: 96 channels - 30.0kHz - 1 segments - 30,000 samples - 1.00s - float32 dtype
                            10.99 MiB}
     """
+
 Preprocessing a Recording by Channel Group
 ------------------------------------------
 
