@@ -9,7 +9,7 @@ from .drift_tools import (
 from .hybrid_tools import (
     generate_hybrid_recording,
     estimate_templates_from_recording,
-    filter_templates,
+    select_templates,
     scale_templates,
     shift_templates,
 )

@@ -48,7 +48,7 @@ class UnitSummaryWidget(BaseWidget):
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
 
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting_analyzer.sorting)
+            unit_colors = get_unit_colors(sorting_analyzer.sorting.unit_ids)
 
         plot_data = dict(
             sorting_analyzer=sorting_analyzer,

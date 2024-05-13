@@ -107,7 +107,7 @@ def export_report(
     units["amplitude"] = pd.Series(get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign))
     units.to_csv(output_folder / "unit list.csv", sep="\t")
 
-    unit_colors = sw.get_unit_colors(sorting)
+    unit_colors = sw.get_unit_colors(sorting.unit_ids)
 
     # global figures
     fig = plt.figure(figsize=(20, 10))

@@ -99,7 +99,7 @@ class SpikesOnTracesWidget(BaseWidget):
         unit_ids = unit_ids
 
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting)
+            unit_colors = get_unit_colors(sorting.unit_ids)
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
         if sorting_analyzer.is_sparse():
