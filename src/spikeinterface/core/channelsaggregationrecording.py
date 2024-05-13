@@ -14,12 +14,10 @@ class ChannelsAggregationRecording(BaseRecording):
     """
 
     def __init__(self, recording_list, renamed_channel_ids=None):
-        channel_map = {}
-
-        num_all_channels = sum(rec.get_num_channels() for rec in recording_list)
 
         # Generate a default list of channel ids that are unique and consecutive numbers as strings.
-        default_channel_ids = [str(i) for i in range(num_all_channels)]
+        channel_map = {}
+        num_all_channels = sum(rec.get_num_channels() for rec in recording_list)
 
         if renamed_channel_ids is not None:
             assert (
@@ -28,15 +26,17 @@ class ChannelsAggregationRecording(BaseRecording):
             channel_ids = list(renamed_channel_ids)
         else:
             # Collect channel IDs from all recordings
-            combined_ids = sum((list(rec.get_channel_ids()) for rec in recording_list), [])
+            all_channels_are_unique = np.unique([rec.channel_ids.dtype for rec in recording_list]).size == 1
+            all_channels_have_same_type = False
+            if all_channels_are_unique:
+                combined_ids = np.concatenate([rec.channel_ids for rec in recording_list])
+                all_channels_have_same_type = np.unique(combined_ids).size == num_all_channels
 
-            # Check if all channel IDs are unique and the same type
-            are_all_channels_unique = len(set(combined_ids)) == num_all_channels
-            are_all_channels_same_type = len(set(type(id) for id in combined_ids)) == 1
-            if are_all_channels_unique and are_all_channels_same_type:
+            if all_channels_are_unique and all_channels_have_same_type:
                 channel_ids = combined_ids
             else:
-                # If IDs are not unique or not of the same type, use default numeric IDs
+                # If IDs are not unique or not of the same type, use default as stringify IDs
+                default_channel_ids = [str(i) for i in range(num_all_channels)]
                 channel_ids = default_channel_ids
 
         ch_id = 0
@@ -71,7 +71,7 @@ class ChannelsAggregationRecording(BaseRecording):
         property_keys = recording_list[0].get_property_keys()
         property_dict = {}
         for prop_name in property_keys:
-            if all(prop_name in rec.get_property_keys() for rec in recording_list):
+            if all([prop_name in rec.get_property_keys() for rec in recording_list]):
                 for i_r, rec in enumerate(recording_list):
                     prop_value = rec.get_property(prop_name)
                     if i_r == 0:
@@ -82,13 +82,24 @@ class ChannelsAggregationRecording(BaseRecording):
                                 (property_dict[prop_name], rec.get_property(prop_name))
                             )
                         except Exception as e:
-                            print(f"Skipping property '{prop_name}' due to shape inconsistency")
+                            print(f"Skipping property '{prop_name}' for shape inconsistency")
                             del property_dict[prop_name]
                             break
 
         for prop_name, prop_values in property_dict.items():
+            if prop_name == "contact_vector":
+                # remap device channel indices correctly
+                prop_values["device_channel_indices"] = np.arange(self.get_num_channels())
             self.set_property(key=prop_name, values=prop_values)
 
+        # if locations are present, check that they are all different!
+        if "location" in self.get_property_keys():
+            location_tuple = [tuple(loc) for loc in self.get_property("location")]
+            assert len(set(location_tuple)) == self.get_num_channels(), (
+                "Locations are not unique! " "Cannot aggregate recordings!"
+            )
+
+        # finally add segments
         for i_seg in range(num_segments):
             parent_segments = [rec._recording_segments[i_seg] for rec in recording_list]
             sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)

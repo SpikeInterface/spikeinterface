@@ -80,7 +80,7 @@ def test_channelsaggregationrecording():
     print(recording_agg_prop.get_property("brain_area"))
 
 
-def test_channel_agregation_preserve_ids():
+def test_channel_aggregation_preserve_ids():
 
     recording1 = generate_recording(num_channels=3, durations=[10], set_probe=False)  # To avoid location check
     recording1 = recording1.rename_channels(new_channel_ids=["a", "b", "c"])
@@ -92,7 +92,7 @@ def test_channel_agregation_preserve_ids():
     assert list(aggregated_recording.get_channel_ids()) == ["a", "b", "c", "d", "e"]
 
 
-def test_channel_agregation_does_not_preserve_ids_if_not_unique():
+def test_channel_aggregation_does_not_preserve_ids_if_not_unique():
 
     recording1 = generate_recording(num_channels=3, durations=[10], set_probe=False)  # To avoid location check
     recording1 = recording1.rename_channels(new_channel_ids=["a", "b", "c"])
@@ -104,7 +104,7 @@ def test_channel_agregation_does_not_preserve_ids_if_not_unique():
     assert list(aggregated_recording.get_channel_ids()) == ["0", "1", "2", "3", "4"]
 
 
-def test_channel_agregation_does_not_preserve_ids_not_the_same_type():
+def test_channel_aggregation_does_not_preserve_ids_not_the_same_type():
 
     recording1 = generate_recording(num_channels=3, durations=[10], set_probe=False)  # To avoid location check
     recording1 = recording1.rename_channels(new_channel_ids=["a", "b", "c"])
