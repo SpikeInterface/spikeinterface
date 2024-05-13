@@ -16,7 +16,7 @@ from spikeinterface.core import (
     Templates,
     create_sorting_analyzer,
 )
-from spikeinterface.generation import  generate_drifting_recording
+from spikeinterface.generation import generate_drifting_recording
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
@@ -51,8 +51,6 @@ def make_dataset():
     gt_analyzer.compute("templates")
     gt_analyzer.compute("noise_levels")
 
-
-
     return recording, gt_sorting, gt_analyzer
 
 
@@ -81,7 +79,6 @@ def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, ret
         probe=recording.get_probe(),
     )
     return gt_templates
-
 
 
 def make_drifting_dataset():
@@ -131,7 +128,7 @@ def make_drifting_dataset():
                 spatial_decay=(10, 45),
             ),
         ),
-        generate_sorting_kwargs=dict(firing_rates=25., refractory_period_ms=4.0),
+        generate_sorting_kwargs=dict(firing_rates=25.0, refractory_period_ms=4.0),
         generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
         more_outputs=True,
         seed=None,

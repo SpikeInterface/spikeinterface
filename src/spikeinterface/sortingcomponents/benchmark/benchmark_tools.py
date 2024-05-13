@@ -86,11 +86,13 @@ class BenchmarkStudy:
             assert "\\" not in key, "'\\' cannot be in the key name!"
 
             local_analyzer_folder = study_folder / "sorting_analyzer" / key
-            
+
             if isinstance(data, tuple):
                 # old case : rec + sorting
                 rec, gt_sorting = data
-                analyzer = create_sorting_analyzer(gt_sorting, rec, sparse=True, format="binary_folder", folder=local_analyzer_folder)
+                analyzer = create_sorting_analyzer(
+                    gt_sorting, rec, sparse=True, format="binary_folder", folder=local_analyzer_folder
+                )
                 analyzer.compute("random_spikes")
                 analyzer.compute("templates")
                 analyzer.compute("noise_levels")
@@ -105,10 +107,8 @@ class BenchmarkStudy:
                     analyzer = data
 
                 rec, gt_sorting = analyzer.recording, analyzer.sorting
-            
+
             analyzers_path[key] = str(analyzer.folder.resolve())
-
-
 
             # recordings are pickled
             # rec.dump_to_pickle(study_folder / f"datasets/recordings/{key}.pickle")
@@ -116,7 +116,7 @@ class BenchmarkStudy:
             # sortings are pickled + saved as NumpyFolderSorting
             # gt_sorting.dump_to_pickle(study_folder / f"datasets/gt_sortings/{key}.pickle")
             # gt_sorting.save(format="numpy_folder", folder=study_folder / f"datasets/gt_sortings/{key}")
-        
+
         # analyzer path (local or external)
         (study_folder / "analyzers_path.json").write_text(json.dumps(analyzers_path, indent=4), encoding="utf8")
 
@@ -332,7 +332,6 @@ class BenchmarkStudy:
 
         metrics = ext.get_data()
         return metrics
-
 
         # filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
         # if not filename.exists():
