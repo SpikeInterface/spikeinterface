@@ -230,7 +230,7 @@ class CircusClustering:
         )
         if params["noise_levels"] is None:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
-        sparsity = compute_sparsity(templates, params["noise_levels"], **params["sparsity"])
+        sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         templates = remove_empty_templates(templates)
 

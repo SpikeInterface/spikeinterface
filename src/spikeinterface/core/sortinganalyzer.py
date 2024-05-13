@@ -330,7 +330,8 @@ class SortingAnalyzer:
             json.dump(check_json(info), f, indent=4)
 
         # save a copy of the sorting
-        NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
+        # NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
+        sorting.save(folder=folder / "sorting")
 
         # save recording and sorting provenance
         if recording.check_serializability("json"):

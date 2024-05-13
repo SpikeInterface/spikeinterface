@@ -25,7 +25,7 @@ def test_benchmark_matching():
 
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
-    recording, gt_sorting = make_dataset()
+    recording, gt_sorting, gt_analyzer = make_dataset()
 
     # templates sparse
     gt_templates = compute_gt_templates(
@@ -38,6 +38,8 @@ def test_benchmark_matching():
     # create study
     study_folder = cache_folder / "study_matching"
     datasets = {"toy": (recording, gt_sorting)}
+    # datasets = {"toy": gt_analyzer}
+
     cases = {}
     for engine in [
         "wobble",
@@ -54,7 +56,7 @@ def test_benchmark_matching():
     print(study)
 
     # this study needs analyzer
-    study.create_sorting_analyzer_gt(**job_kwargs)
+    # study.create_sorting_analyzer_gt(**job_kwargs)
     study.compute_metrics()
 
     # run and result

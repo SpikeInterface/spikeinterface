@@ -114,6 +114,10 @@ def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache
         recording = recording.save_to_folder(**extra_kwargs)
     elif mode == "zarr":
         recording = recording.save_to_zarr(**extra_kwargs)
+    elif mode == "no-cache":
+        recording = recording
+    else:
+        raise ValueError(f"cache_preprocessing() wrong mode={mode}")
 
     return recording
 
