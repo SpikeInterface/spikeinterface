@@ -34,7 +34,7 @@ class Templates:
         If True, it means that the templates are in uV, otherwise they are in raw ADC values.
     check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
-        structure fo the sparsity_mask. If False, this check is skipped.
+        structure of the sparsity_mask. If False, this check is skipped.
 
     The following attributes are available after construction:
 
