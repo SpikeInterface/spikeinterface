@@ -28,7 +28,7 @@ from spikeinterface.widgets import plot_probe_map
 # TODO : read from mearec
 
 
-def get_gt_motion_from_unit_discplacement(
+def get_gt_motion_from_unit_displacement(
     unit_displacements,
     displacement_sampling_frequency,
     unit_locations,
@@ -117,7 +117,7 @@ class MotionEstimationBenchmark(Benchmark):
         temporal_bins = self.result["temporal_bins"]
         spatial_bins = self.result["spatial_bins"]
 
-        gt_motion = get_gt_motion_from_unit_discplacement(
+        gt_motion = get_gt_motion_from_unit_displacement(
             self.unit_displacements,
             self.displacement_sampling_frequency,
             self.unit_locations,

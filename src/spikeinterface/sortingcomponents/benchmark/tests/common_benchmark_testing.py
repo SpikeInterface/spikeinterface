@@ -86,7 +86,7 @@ def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, ret
 
 def make_drifting_dataset():
 
-    static_recording, drifting_recording, sorting, more_infos = generate_drifting_recording(
+    static_recording, drifting_recording, sorting, extra_infos = generate_drifting_recording(
         num_units=15,
         duration=125.5,
         sampling_frequency=30000.0,
@@ -133,7 +133,7 @@ def make_drifting_dataset():
         ),
         generate_sorting_kwargs=dict(firing_rates=25., refractory_period_ms=4.0),
         generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
-        more_outputs=True,
+        extra_outputs=True,
         seed=None,
     )
 
@@ -141,9 +141,9 @@ def make_drifting_dataset():
         drifting_rec=drifting_recording,
         static_rec=static_recording,
         sorting=sorting,
-        displacement_vectors=more_infos["displacement_vectors"],
-        displacement_sampling_frequency=more_infos["displacement_sampling_frequency"],
-        unit_locations=more_infos["unit_locations"],
-        displacement_unit_factor=more_infos["displacement_unit_factor"],
-        unit_displacements=more_infos["unit_displacements"],
+        displacement_vectors=extra_infos["displacement_vectors"],
+        displacement_sampling_frequency=extra_infos["displacement_sampling_frequency"],
+        unit_locations=extra_infos["unit_locations"],
+        displacement_unit_factor=extra_infos["displacement_unit_factor"],
+        unit_displacements=extra_infos["unit_displacements"],
     )

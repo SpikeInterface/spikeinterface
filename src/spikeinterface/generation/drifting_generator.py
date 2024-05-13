@@ -286,7 +286,7 @@ def generate_drifting_recording(
     ),
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
     generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
-    more_outputs=False,
+    extra_outputs=False,
     seed=None,
 ):
     """
@@ -315,7 +315,7 @@ def generate_drifting_recording(
         Parameters given to generate_sorting().
     generate_noise_kwargs: dict
         Parameters given to generate_noise().
-    more_outputs: bool, default False
+    extra_outputs: bool, default False
         Return optionaly a dict with more variables.
     seed: None ot int
         A unique seed for all steps.
@@ -329,8 +329,8 @@ def generate_drifting_recording(
     sorting: Sorting
         The ground trith soring object.
         Same for both recordings.
-    more_infos:
-        If more_outputs=True, then return also a dict that contain various information like:
+    extra_infos:
+        If extra_outputs=True, then return also a dict that contain various information like:
             * displacement_vectors
             * displacement_sampling_frequency
             * unit_locations
@@ -458,8 +458,8 @@ def generate_drifting_recording(
         amplitude_factor=None,
     )
 
-    if more_outputs:
-        more_infos = dict(
+    if extra_outputs:
+        extra_infos = dict(
             displacement_vectors=displacement_vectors,
             displacement_sampling_frequency=displacement_sampling_frequency,
             unit_locations=unit_locations,
@@ -467,6 +467,6 @@ def generate_drifting_recording(
             unit_displacements=unit_displacements,
 
         )
-        return static_recording, drifting_recording, sorting, more_infos
+        return static_recording, drifting_recording, sorting, extra_infos
     else:
         return static_recording, drifting_recording, sorting
