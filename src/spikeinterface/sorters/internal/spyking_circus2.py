@@ -120,6 +120,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 100)
+        exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", 0.5)
 
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
@@ -162,7 +163,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         detection_params.update(job_kwargs)
 
         detection_params["radius_um"] = detection_params.get("radius_um", 50)
-        detection_params["exclude_sweep_ms"] = detection_params.get("exclude_sweep_ms", 0.5)
+        detection_params["exclude_sweep_ms"] = exclude_sweep_ms
         detection_params["noise_levels"] = noise_levels
 
         fs = recording_w.get_sampling_frequency()
@@ -211,6 +212,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["waveforms"]["ms_after"] = ms_after
             clustering_params["job_kwargs"] = job_kwargs
             clustering_params["noise_levels"] = noise_levels
+            clustering_params["ms_before"] = exclude_sweep_ms
+            clustering_params["ms_after"] = exclude_sweep_ms
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
 
             legacy = clustering_params.get("legacy", True)
