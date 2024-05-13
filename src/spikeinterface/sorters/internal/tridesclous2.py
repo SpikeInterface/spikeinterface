@@ -107,7 +107,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.clustering.tools import compute_template_from_sparse
         from spikeinterface.sortingcomponents.clustering.main import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
-        
 
         from sklearn.decomposition import TruncatedSVD
 
@@ -152,21 +151,18 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         if verbose:
             print("We kept %d peaks for clustering" % len(peaks))
-        
-
-        
 
         clustering_kwargs = {}
         clustering_kwargs["folder"] = sorter_output_folder
         clustering_kwargs["waveforms"] = params["waveforms"].copy()
         clustering_kwargs["clustering"] = params["clustering"].copy()
 
-        labels_set, post_clean_label, extra_out = find_cluster_from_peaks(recording, peaks, method="tdc_clustering",
-                                method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs)
+        labels_set, post_clean_label, extra_out = find_cluster_from_peaks(
+            recording, peaks, method="tdc_clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
+        )
         peak_shifts = extra_out["peak_shifts"]
         new_peaks = peaks.copy()
         new_peaks["sample_index"] -= peak_shifts
-
 
         mask = post_clean_label >= 0
         sorting_pre_peeler = NumpySorting.from_times_labels(

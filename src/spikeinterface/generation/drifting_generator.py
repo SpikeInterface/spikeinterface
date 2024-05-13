@@ -365,7 +365,7 @@ def generate_drifting_recording(
     displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
         generate_displacement_vector(duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs)
     )
-    
+
     # unit_displacements is the sum of all discplacements (times, units, direction_x_y)
     unit_displacements = np.zeros((displacement_vectors.shape[0], num_units, 2))
     for direction in (0, 1):
@@ -373,7 +373,6 @@ def generate_drifting_recording(
         for i in range(displacement_vectors.shape[2]):
             m = displacement_vectors[:, direction, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
             unit_displacements[:, :, direction] += m
-
 
     # unit_params need to be fixed before the displacement steps
     generate_templates_kwargs = generate_templates_kwargs.copy()
@@ -465,7 +464,6 @@ def generate_drifting_recording(
             unit_locations=unit_locations,
             displacement_unit_factor=displacement_unit_factor,
             unit_displacements=unit_displacements,
-
         )
         return static_recording, drifting_recording, sorting, extra_infos
     else:

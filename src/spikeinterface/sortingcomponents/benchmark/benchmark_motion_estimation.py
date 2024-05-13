@@ -126,7 +126,6 @@ class MotionEstimationBenchmark(Benchmark):
             direction_dim=self.direction_dim,
         )
 
-
         # align globally gt_motion and motion to avoid offsets
         motion = raw_motion.copy()
         motion += np.median(gt_motion - motion)
@@ -166,8 +165,7 @@ class MotionEstimationStudy(BenchmarkStudy):
     def plot_true_drift(self, case_keys=None, scaling_probe=1.5, figsize=(8, 6)):
         self.plot_drift(case_keys=case_keys, tested_drift=False, scaling_probe=scaling_probe, figsize=figsize)
 
-    def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True,
-                   scaling_probe=1., figsize=(8, 6)):
+    def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True, scaling_probe=1.0, figsize=(8, 6)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())

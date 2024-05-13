@@ -66,7 +66,6 @@ class ClusteringBenchmark(Benchmark):
             self.gt_sorting.set_property("gt_unit_locations", gt_unit_locations)
 
         self.result["sliced_gt_sorting"].set_property("gt_unit_locations", gt_unit_locations)
-        
 
         self.result["clustering"] = NumpySorting.from_times_labels(
             data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
@@ -367,7 +366,7 @@ class ClusteringStudy(BenchmarkStudy):
 
             # positions = self.get_result(case_before)["gt_comparison"].sorting1.get_property("gt_unit_locations")
 
-            dataset_key = self.cases[case_before]['dataset']
+            dataset_key = self.cases[case_before]["dataset"]
             rec, gt_sorting1 = self.datasets[dataset_key]
             positions = gt_sorting1.get_property("gt_unit_locations")
 
@@ -444,18 +443,18 @@ class ClusteringStudy(BenchmarkStudy):
                     ax.set_yticks([])
 
         plt.tight_layout(h_pad=0, w_pad=0)
-    
+
     def plot_some_over_merged(self, case_keys=None, overmerged_score=0.05, max_units=5, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        
+
         for count, key in enumerate(case_keys):
             label = self.cases[key]["label"]
             comp = self.get_result(key)["gt_comparison"]
-            
+
             unit_index = np.flatnonzero(np.sum(comp.agreement_scores.values > overmerged_score, axis=0) > 1)
             overmerged_ids = comp.sorting2.unit_ids[unit_index]
-            
+
             n = min(len(overmerged_ids), max_units)
             if n > 0:
                 fig, axs = plt.subplots(nrows=n, figsize=figsize)
@@ -477,23 +476,19 @@ class ClusteringStudy(BenchmarkStudy):
 
                 fig.suptitle(label)
             else:
-                print(key, 'no overmerged')
-
-
-                
-
+                print(key, "no overmerged")
 
     def plot_some_over_splited(self, case_keys=None, oversplit_score=0.05, max_units=5, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        
+
         for count, key in enumerate(case_keys):
             label = self.cases[key]["label"]
             comp = self.get_result(key)["gt_comparison"]
-            
+
             gt_unit_indices = np.flatnonzero(np.sum(comp.agreement_scores.values > oversplit_score, axis=1) > 1)
             oversplit_ids = comp.sorting1.unit_ids[gt_unit_indices]
-            
+
             n = min(len(oversplit_ids), max_units)
             if n > 0:
                 fig, axs = plt.subplots(nrows=n, figsize=figsize)
@@ -504,7 +499,7 @@ class ClusteringStudy(BenchmarkStudy):
                     ax.set_title(f"Gt unit {unit_id} - unit_ids: {unit_ids}")
 
                     templates = self.get_result(key)["clustering_templates"]
-                    
+
                     template_arrays = templates.get_dense_templates()[unit_indices, :, :]
                     if templates.sparsity is not None:
                         chan_mask = np.any(templates.sparsity.mask[gt_unit_indices, :], axis=0)
@@ -515,5 +510,4 @@ class ClusteringStudy(BenchmarkStudy):
 
                 fig.suptitle(label)
             else:
-                print(key, 'no over splited')
-
+                print(key, "no over splited")

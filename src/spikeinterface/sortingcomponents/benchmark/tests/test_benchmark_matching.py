@@ -39,7 +39,6 @@ def test_benchmark_matching():
     study_folder = cache_folder / "study_matching"
     datasets = {"toy": (recording, gt_sorting)}
     # datasets = {"toy": gt_analyzer}
-    
 
     cases = {}
     for engine in [

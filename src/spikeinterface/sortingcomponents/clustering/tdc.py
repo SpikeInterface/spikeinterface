@@ -14,7 +14,7 @@ from spikeinterface.core import (
     estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
-    get_global_tmp_folder
+    get_global_tmp_folder,
 )
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
@@ -40,11 +40,11 @@ from sklearn.decomposition import TruncatedSVD
 import hdbscan
 
 
-
 class TdcClustering:
     """
     Here the implementation of clustering used by tridesclous2
     """
+
     _default_params = {
         "folder": None,
         "waveforms": {
@@ -74,7 +74,6 @@ class TdcClustering:
             clustering_folder = Path(params["folder"])
             need_folder_rm = False
 
-    
         sampling_frequency = recording.sampling_frequency
 
         ms_before = params["waveforms"]["ms_before"]
@@ -224,8 +223,6 @@ class TdcClustering:
 
         if need_folder_rm:
             shutil.rmtree(clustering_folder)
-            
 
-        extra_out = {'peak_shifts': peak_shifts}
+        extra_out = {"peak_shifts": peak_shifts}
         return labels_set, post_clean_label, extra_out
-

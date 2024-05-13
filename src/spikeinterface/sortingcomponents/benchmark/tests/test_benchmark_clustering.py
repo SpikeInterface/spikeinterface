@@ -73,7 +73,7 @@ def test_benchmark_clustering():
     study.plot_error_metrics()
     study.plot_metrics_vs_snr()
     study.plot_run_times()
-    study.plot_metrics_vs_snr('cosine')
+    study.plot_metrics_vs_snr("cosine")
     study.homogeneity_score(ignore_noise=False)
     plt.show()
 
