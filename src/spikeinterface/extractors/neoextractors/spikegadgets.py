@@ -1,9 +1,10 @@
 from __future__ import annotations
-
 from pathlib import Path
 
-import probeinterface
+import packaging
 
+import packaging.version
+import probeinterface
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
@@ -38,9 +39,8 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         )
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
 
-        probegroup = None
-        # If version of probeinterface is larger than 0.2.21 then try this method
-        if probeinterface.__version__ > "0.2.21":
+        probegroup = None  # TODO remove once probeinterface is updated to 0.2.22 in the pyproject.toml
+        if packaging.version.parse(probeinterface.__version__) > packaging.version.parse("0.2.21"):
             probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
 
         if probegroup is not None:
