@@ -26,13 +26,13 @@ class ChannelsAggregationRecording(BaseRecording):
             channel_ids = list(renamed_channel_ids)
         else:
             # Collect channel IDs from all recordings
-            all_channels_are_unique = np.unique([rec.channel_ids.dtype for rec in recording_list]).size == 1
-            all_channels_have_same_type = False
-            if all_channels_are_unique:
+            all_channels_have_same_type = np.unique([rec.channel_ids.dtype for rec in recording_list]).size == 1
+            all_channel_ids_are_unique = False
+            if all_channels_have_same_type:
                 combined_ids = np.concatenate([rec.channel_ids for rec in recording_list])
-                all_channels_have_same_type = np.unique(combined_ids).size == num_all_channels
+                all_channel_ids_are_unique = np.unique(combined_ids).size == num_all_channels
 
-            if all_channels_are_unique and all_channels_have_same_type:
+            if all_channels_have_same_type and all_channel_ids_are_unique:
                 channel_ids = combined_ids
             else:
                 # If IDs are not unique or not of the same type, use default as stringify IDs
