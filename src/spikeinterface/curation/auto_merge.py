@@ -78,6 +78,8 @@ def get_potential_auto_merge(
     template_diff_thresh: float, default: 0.25
         The threshold on the "template distance metric" for considering a merge.
         It needs to be between 0 and 1
+    template_metric: 'l1'
+        The metric to be used when comparing templates. Default is l1 norm
     censored_period_ms: float, default: 0.3
         Used to compute the refractory period violations aka "contamination"
     refractory_period_ms: float, default: 1

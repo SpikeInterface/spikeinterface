@@ -16,7 +16,7 @@ except:
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates
 from .clustering_tools import remove_duplicates_via_matching
-from spikeinterface.core.recording_tools import get_noise_levels
+from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
@@ -37,16 +37,16 @@ class RandomProjectionClustering:
 
     _default_params = {
         "hdbscan_kwargs": {
-            "min_cluster_size": 20,
+            "min_cluster_size": 10,
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "leaf",
-            "cluster_selection_epsilon": 2,
+            "cluster_selection_epsilon": 1,
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "ptp", "threshold": 0.25},
-        "radius_um": 100,
+        "radius_um": 30,
         "nb_projections": 10,
         "feature": "energy",
         "ms_before": 0.5,
@@ -65,7 +65,7 @@ class RandomProjectionClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        verbose = job_kwargs.get("verbose", False)
+        verbose = job_kwargs.get("verbose", True)
 
         fs = recording.get_sampling_frequency()
         radius_um = params["radius_um"]
@@ -87,10 +87,7 @@ class RandomProjectionClustering:
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
 
         num_projections = min(num_chans, d["nb_projections"])
-        projections = rng.randn(num_chans, num_projections)
-        if num_chans > 1:
-            projections -= projections.mean()
-            projections /= projections.std()
+        projections = rng.normal(loc=0.0, scale=1.0 / np.sqrt(num_chans), size=(num_chans, num_projections))
 
         nbefore = int(params["ms_before"] * fs / 1000)
         nafter = int(params["ms_after"] * fs / 1000)

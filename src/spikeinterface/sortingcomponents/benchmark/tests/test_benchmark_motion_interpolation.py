@@ -17,8 +17,8 @@ from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing i
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_motion_interpolation import MotionInterpolationStudy
 from spikeinterface.sortingcomponents.benchmark.benchmark_motion_estimation import (
-    get_unit_disclacement,
-    get_gt_motion_from_unit_discplacement,
+    # get_unit_displacement,
+    get_gt_motion_from_unit_displacement,
 )
 
 
@@ -36,15 +36,16 @@ def test_benchmark_motion_interpolation():
     duration = data["drifting_rec"].get_duration()
     channel_locations = data["drifting_rec"].get_channel_locations()
 
-    unit_displacements = get_unit_disclacement(
-        data["displacement_vectors"], data["displacement_unit_factor"], direction_dim=1
-    )
+    # unit_displacements = get_unit_displacement(
+    #     data["displacement_vectors"], data["displacement_unit_factor"], direction_dim=1
+    # )
+    unit_displacements = data["unit_displacements"]
 
     bin_s = 1
     temporal_bins = np.arange(0, duration, bin_s)
     spatial_bins = np.linspace(np.min(channel_locations[:, 1]), np.max(channel_locations[:, 1]), 10)
-    print(spatial_bins)
-    gt_motion = get_gt_motion_from_unit_discplacement(
+    # print(spatial_bins)
+    gt_motion = get_gt_motion_from_unit_displacement(
         unit_displacements,
         data["displacement_sampling_frequency"],
         data["unit_locations"],
