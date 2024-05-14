@@ -55,7 +55,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
-        "matched_filtering": False,
+        "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
@@ -120,7 +120,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 100)
-        exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", 0.5)
+        exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after)/2)
 
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
