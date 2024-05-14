@@ -364,24 +364,14 @@ class WidenNarrowWidget(W.VBox):
         self.value = value
         super(W.VBox, self).__init__(
             children=[self.scale_label, W.HBox([self.left_selector, self.right_selector])],
-            #  layout=W.Layout(align_items="center", width="100%", height="100%"),
             **kwargs,
         )
-
-        # self.update_label()
-        # self.observe(self.value_changed, names=["value"], type="change")
-
-    def update_label(self):
-        self.scale_label.value = f"Scale: {self.value:0.2f}"
 
     def left_clicked(self, change=None):
         self.value = self.value / self.factor
 
     def right_clicked(self, change=None):
         self.value = self.value * self.factor
-
-    def value_changed(self, change=None):
-        self.update_label()
 
 
 class UnitSelector(W.VBox):
