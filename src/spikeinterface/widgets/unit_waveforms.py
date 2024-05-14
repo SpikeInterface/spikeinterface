@@ -40,6 +40,8 @@ class UnitWaveformsWidget(BaseWidget):
         displayed per waveform, (matplotlib backend)
     scale : float, default: 1
         Scale factor for the waveforms/templates (matplotlib backend)
+    widen_narrow_scale : float, default: 1
+        Scale factor for the x-axis of the waveforms/templates (matplotlib backend)
     axis_equal : bool, default: False
         Equal aspect ratio for x and y axis, to visualize the array geometry to scale
     lw_waveforms : float, default: 1
@@ -65,6 +67,8 @@ class UnitWaveformsWidget(BaseWidget):
         are used for the lower bounds, and the second half for the upper bounds.
         Inner elements produce darker shadings. For sortingview backend only 2 or 4 elements are
         supported.
+    scalebar : bool, default: False
+        Display a scale bar on the waveforms plot (matplotlib backend)
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
     same_axis : bool, default: False
@@ -88,6 +92,7 @@ class UnitWaveformsWidget(BaseWidget):
         sparsity=None,
         ncols=5,
         scale=1,
+        widen_narrow_scale=1,
         lw_waveforms=1,
         lw_templates=2,
         axis_equal=False,
@@ -97,6 +102,7 @@ class UnitWaveformsWidget(BaseWidget):
         same_axis=False,
         shade_templates=True,
         templates_percentile_shading=(1, 25, 75, 99),
+        scalebar=False,
         x_offset_units=False,
         alpha_waveforms=0.5,
         alpha_templates=1,
@@ -168,10 +174,6 @@ class UnitWaveformsWidget(BaseWidget):
                 templates_percentile_shading = None
             templates_shading = self._get_template_shadings(unit_ids, templates_percentile_shading)
 
-        xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
-            templates, channel_locations, nbefore, x_offset_units
-        )
-
         wfs_by_ids = {}
         if plot_waveforms:
             # this must be a sorting_analyzer
@@ -204,12 +206,14 @@ class UnitWaveformsWidget(BaseWidget):
         plot_data = dict(
             sorting_analyzer_or_templates=sorting_analyzer_or_templates,
             sampling_frequency=sorting_analyzer_or_templates.sampling_frequency,
+            nbefore=nbefore,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             sparsity=sparsity,
             unit_colors=unit_colors,
             channel_locations=channel_locations,
             scale=scale,
+            widen_narrow_scale=widen_narrow_scale,
             templates=templates,
             templates_shading=templates_shading,
             do_shading=shade_templates,
@@ -220,19 +224,16 @@ class UnitWaveformsWidget(BaseWidget):
             unit_selected_waveforms=unit_selected_waveforms,
             axis_equal=axis_equal,
             max_spikes_per_unit=max_spikes_per_unit,
-            xvectors=xvectors,
-            y_scale=y_scale,
-            y_offset=y_offset,
             wfs_by_ids=wfs_by_ids,
             set_title=set_title,
             same_axis=same_axis,
+            scalebar=scalebar,
             templates_percentile_shading=templates_percentile_shading,
             x_offset_units=x_offset_units,
             lw_waveforms=lw_waveforms,
             lw_templates=lw_templates,
             alpha_waveforms=alpha_waveforms,
             alpha_templates=alpha_templates,
-            delta_x=delta_x,
             hide_unit_selector=hide_unit_selector,
             plot_legend=plot_legend,
         )
@@ -258,6 +259,10 @@ class UnitWaveformsWidget(BaseWidget):
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
+        xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
+            dp.templates, dp.channel_locations, dp.nbefore, dp.x_offset_units, dp.widen_narrow_scale
+        )
+
         for i, unit_id in enumerate(dp.unit_ids):
             if dp.same_axis:
                 ax = self.ax
@@ -266,7 +271,7 @@ class UnitWaveformsWidget(BaseWidget):
             color = dp.unit_colors[unit_id]
 
             chan_inds = dp.sparsity.unit_id_to_channel_indices[unit_id]
-            xvectors_flat = dp.xvectors[:, chan_inds].T.flatten()
+            xvectors_flat = xvectors[:, chan_inds].T.flatten()
 
             # plot waveforms
             if dp.plot_waveforms:
@@ -278,12 +283,12 @@ class UnitWaveformsWidget(BaseWidget):
                         random_idxs = np.random.permutation(len(wfs))[: dp.max_spikes_per_unit]
                         wfs = wfs[random_idxs]
 
-                wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
+                wfs = wfs * y_scale + y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
 
                 if dp.x_offset_units:
                     # 0.7 is to match spacing in xvect
-                    xvec = xvectors_flat + i * 0.7 * dp.delta_x
+                    xvec = xvectors_flat + i * 0.7 * delta_x
                 else:
                     xvec = xvectors_flat
 
@@ -291,14 +296,33 @@ class UnitWaveformsWidget(BaseWidget):
 
                 if not dp.plot_templates:
                     ax.get_lines()[-1].set_label(f"{unit_id}")
+                if not dp.plot_templates and dp.scalebar and not dp.same_axis:
+                    # xscale
+                    min_wfs = np.min(wfs_flat)
+                    wfs_for_scale = dp.wfs_by_ids[unit_id] * y_scale
+                    offset = 0.1 * (np.max(wfs_flat) - np.min(wfs_flat))
+                    xargmin = np.nanargmin(xvec)
+                    xscale_bar = [xvec[xargmin], xvec[xargmin + dp.nbefore]]
+                    ax.plot(xscale_bar, [min_wfs - offset, min_wfs - offset], color="k")
+                    nbefore_time = int(dp.nbefore / dp.sampling_frequency * 1000)
+                    ax.text(
+                        xscale_bar[0] + xscale_bar[1] // 3, min_wfs - 1.5 * offset, f"{nbefore_time} ms", fontsize=8
+                    )
+
+                    # yscale
+                    length = int(np.ptp(wfs_flat) // 5)
+                    length_uv = int(np.ptp(wfs_for_scale) // 5)
+                    x_offset = xscale_bar[0] - np.ptp(xscale_bar) // 2
+                    ax.plot([xscale_bar[0], xscale_bar[0]], [min_wfs - offset, min_wfs - offset + length], color="k")
+                    ax.text(x_offset, min_wfs - offset + length // 3, f"{length_uv} $\mu$V", fontsize=8, rotation=90)
 
             # plot template
             if dp.plot_templates:
-                template = dp.templates[i, :, :][:, chan_inds] * dp.scale * dp.y_scale + dp.y_offset[:, chan_inds]
+                template = dp.templates[i, :, :][:, chan_inds] * dp.scale * y_scale + y_offset[:, chan_inds]
 
                 if dp.x_offset_units:
                     # 0.7 is to match spacing in xvect
-                    xvec = xvectors_flat + i * 0.7 * dp.delta_x
+                    xvec = xvectors_flat + i * 0.7 * delta_x
                 else:
                     xvec = xvectors_flat
                 # plot template shading if waveforms are not plotted
@@ -310,12 +334,11 @@ class UnitWaveformsWidget(BaseWidget):
                     shading_alphas = np.linspace(lightest_gray_alpha, darkest_gray_alpha, n_shadings)
                     for s in range(n_shadings):
                         lower_bound = (
-                            dp.templates_shading[s][i, :, :][:, chan_inds] * dp.scale * dp.y_scale
-                            + dp.y_offset[:, chan_inds]
+                            dp.templates_shading[s][i, :, :][:, chan_inds] * dp.scale * y_scale + y_offset[:, chan_inds]
                         )
                         upper_bound = (
-                            dp.templates_shading[n_percentiles - 1 - s][i, :, :][:, chan_inds] * dp.scale * dp.y_scale
-                            + dp.y_offset[:, chan_inds]
+                            dp.templates_shading[n_percentiles - 1 - s][i, :, :][:, chan_inds] * dp.scale * y_scale
+                            + y_offset[:, chan_inds]
                         )
                         ax.fill_between(
                             xvec,
@@ -345,6 +368,26 @@ class UnitWaveformsWidget(BaseWidget):
                 if dp.set_title:
                     ax.set_title(f"template {template_label}")
 
+                if not dp.plot_waveforms and dp.scalebar and not dp.same_axis:
+                    # xscale
+                    template_for_scale = dp.templates[i, :, :][:, chan_inds] * dp.scale
+                    min_wfs = np.min(template)
+                    offset = 0.1 * (np.max(template) - np.min(template))
+                    xargmin = np.nanargmin(xvec)
+                    xscale_bar = [xvec[xargmin], xvec[xargmin + dp.nbefore]]
+                    ax.plot(xscale_bar, [min_wfs - offset, min_wfs - offset], color="k")
+                    nbefore_time = int(dp.nbefore / dp.sampling_frequency * 1000)
+                    ax.text(
+                        xscale_bar[0] + xscale_bar[1] // 3, min_wfs - 1.5 * offset, f"{nbefore_time} ms", fontsize=8
+                    )
+
+                    # yscale
+                    length = int(np.ptp(template) // 5)
+                    length_uv = int(np.ptp(template_for_scale) // 5)
+                    x_offset = xscale_bar[0] - np.ptp(xscale_bar) // 2
+                    ax.plot([xscale_bar[0], xscale_bar[0]], [min_wfs - offset, min_wfs - offset + length], color="k")
+                    ax.text(x_offset, min_wfs - offset + length // 3, f"{length_uv} $\mu$V", fontsize=8, rotation=90)
+
             # plot channels
             if dp.plot_channels:
                 # TODO enhance this
@@ -361,7 +404,7 @@ class UnitWaveformsWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector, ScaleWidget
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector, ScaleWidget, WidenNarrowWidget
 
         check_ipywidget_backend()
 
@@ -393,6 +436,7 @@ class UnitWaveformsWidget(BaseWidget):
         self.unit_selector = UnitSelector(data_plot["unit_ids"], layout=widgets.Layout(height="80%"))
         self.unit_selector.value = list(data_plot["unit_ids"])[:1]
         self.scaler = ScaleWidget(value=data_plot["scale"], layout=widgets.Layout(height="20%"))
+        self.widen_narrow = WidenNarrowWidget(value=1.0, layout=widgets.Layout(height="20%"))
 
         self.same_axis_button = widgets.Checkbox(
             value=False,
@@ -417,15 +461,21 @@ class UnitWaveformsWidget(BaseWidget):
             description="hide axis",
             disabled=False,
         )
+
+        self.scalebar = widgets.Checkbox(
+            value=False,
+            description="scalebar",
+            disabled=False,
+        )
         if self.sorting_analyzer is not None:
-            footer_list = [self.same_axis_button, self.template_shading_button, self.hide_axis_button]
+            footer_list = [self.same_axis_button, self.template_shading_button, self.hide_axis_button, self.scalebar]
         else:
-            footer_list = [self.same_axis_button, self.hide_axis_button]
+            footer_list = [self.same_axis_button, self.hide_axis_button, self.scalebar]
         if data_plot["plot_waveforms"]:
             footer_list.append(self.plot_templates_button)
 
         footer = widgets.HBox(footer_list)
-        left_sidebar = widgets.VBox([self.unit_selector, self.scaler])
+        left_sidebar = widgets.VBox([self.unit_selector, self.scaler, self.widen_narrow])
 
         self.widget = widgets.AppLayout(
             center=self.fig_wf.canvas,
@@ -440,7 +490,14 @@ class UnitWaveformsWidget(BaseWidget):
 
         self.unit_selector.observe(self._update_plot, names="value", type="change")
         self.scaler.observe(self._update_plot, names="value", type="change")
-        for w in self.same_axis_button, self.plot_templates_button, self.template_shading_button, self.hide_axis_button:
+        self.widen_narrow.observe(self._update_plot, names="value", type="change")
+        for w in (
+            self.same_axis_button,
+            self.plot_templates_button,
+            self.template_shading_button,
+            self.hide_axis_button,
+            self.scalebar,
+        ):
             w.observe(self._update_plot, names="value", type="change")
 
         if backend_kwargs["display"]:
@@ -502,6 +559,12 @@ class UnitWaveformsWidget(BaseWidget):
         data_plot["plot_templates"] = plot_templates
         data_plot["do_shading"] = do_shading
         data_plot["scale"] = self.scaler.value
+        data_plot["widen_narrow_scale"] = self.widen_narrow.value
+
+        if same_axis:
+            self.scalebar.value = False
+        data_plot["scalebar"] = self.scalebar.value
+
         if data_plot["plot_waveforms"]:
             wf_ext = self.sorting_analyzer.get_extension("waveforms")
             data_plot["wfs_by_ids"] = {
@@ -554,7 +617,7 @@ class UnitWaveformsWidget(BaseWidget):
         fig_probe.canvas.flush_events()
 
 
-def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=False):
+def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=False, widen_narrow_scale=1.0):
     """
     Return scales and x_vector for templates plotting
     """
@@ -582,7 +645,7 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
 
     nsamples = templates.shape[1]
 
-    xvect = delta_x * (np.arange(nsamples) - nbefore) / nsamples * 0.7
+    xvect = (delta_x * widen_narrow_scale) * (np.arange(nsamples) - nbefore) / nsamples * 0.7
 
     if x_offset_units:
         ch_locs = channel_locations
