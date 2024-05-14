@@ -195,7 +195,7 @@ class SortingAnalyzer:
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
-        # self.recorsding will be a property
+        # self.recording will be a property
         self._recording = recording
         self.rec_attributes = rec_attributes
         self.format = format
@@ -330,7 +330,8 @@ class SortingAnalyzer:
             json.dump(check_json(info), f, indent=4)
 
         # save a copy of the sorting
-        NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
+        # NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
+        sorting.save(folder=folder / "sorting")
 
         # save recording and sorting provenance
         if recording.check_serializability("json"):
@@ -983,7 +984,13 @@ class SortingAnalyzer:
 
         extensions_with_pipeline = {}
         extensions_without_pipeline = {}
+        extensions_post_pipeline = {}
         for extension_name, extension_params in extensions.items():
+            if extension_name == "quality_metrics":
+                # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
+                # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
+                extensions_post_pipeline[extension_name] = extension_params
+                continue
             extension_class = get_extension_class(extension_name)
             if extension_class.use_nodepipeline:
                 extensions_with_pipeline[extension_name] = extension_params
@@ -1034,6 +1041,17 @@ class SortingAnalyzer:
                 self.extensions[extension_name] = extension_instance
                 if save:
                     extension_instance.save()
+
+        # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
+        # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
+        # An alternative could be to extend the "depend_on" attribute to use optional and to check if an extension
+        # depends on the output of the pipeline nodes (e.g. depend_on=["spike_amplitudes[optional]"])
+        for extension_name, extension_params in extensions_post_pipeline.items():
+            extension_class = get_extension_class(extension_name)
+            if extension_class.need_job_kwargs:
+                self.compute_one_extension(extension_name, save=save, **extension_params, **job_kwargs)
+            else:
+                self.compute_one_extension(extension_name, save=save, **extension_params)
 
     def get_saved_extension_names(self):
         """
@@ -1188,7 +1206,7 @@ def _get_children_dependencies(extension_name):
     This function is making the reverse way : get all children that depend of a
     particular extension.
 
-    This is recurssive so this includes : children and so grand children and grand grand children
+    This is recursive so this includes : children and so grand children and great grand children
 
     This function is usefull for deleting on recompute.
     For instance recompute the "waveforms" need to delete "template"
