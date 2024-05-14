@@ -15,7 +15,7 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 import numpy as np
 
 
-def get_dataset():
+def _get_dataset():
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
         sampling_frequency=16000.0,
@@ -28,8 +28,13 @@ def get_dataset():
     return recording, sorting
 
 
-def test_SortingAnalyzer_memory(tmp_path):
-    recording, sorting = get_dataset()
+@pytest.fixture(scope="module")
+def get_dataset():
+    return _get_dataset()
+
+
+def test_SortingAnalyzer_memory(tmp_path, get_dataset):
+    recording, sorting = get_dataset
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
@@ -48,8 +53,8 @@ def test_SortingAnalyzer_memory(tmp_path):
     assert not sorting_analyzer.return_scaled
 
 
-def test_SortingAnalyzer_binary_folder(tmp_path):
-    recording, sorting = get_dataset()
+def test_SortingAnalyzer_binary_folder(tmp_path, get_dataset):
+    recording, sorting = get_dataset
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
@@ -78,8 +83,8 @@ def test_SortingAnalyzer_binary_folder(tmp_path):
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
 
-def test_SortingAnalyzer_zarr(tmp_path):
-    recording, sorting = get_dataset()
+def test_SortingAnalyzer_zarr(tmp_path, get_dataset):
+    recording, sorting = get_dataset
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
@@ -99,10 +104,21 @@ def test_SortingAnalyzer_zarr(tmp_path):
     )
 
 
-def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
+def test_SortingAnalyzer_tmp_recording(get_dataset):
+    recording, sorting = get_dataset
+    recording_cached = recording.save(mode="memory")
 
-    print()
-    print(sorting_analyzer)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    sorting_analyzer.set_temporary_recording(recording_cached)
+
+    recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
+
+    # wrong channels
+    with pytest.raises(AssertionError):
+        sorting_analyzer.set_temporary_recording(recording_sliced)
+
+
+def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     register_result_extension(DummyAnalyzerExtension)
 
@@ -257,8 +273,10 @@ def test_extension():
 
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
-    test_SortingAnalyzer_memory(tmp_path)
-    test_SortingAnalyzer_binary_folder(tmp_path)
-    test_SortingAnalyzer_zarr(tmp_path)
+    dataset = _get_dataset()
+    test_SortingAnalyzer_memory(tmp_path, dataset)
+    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    test_SortingAnalyzer_zarr(tmp_path, dataset)
+    test_SortingAnalyzer_tmp_recording(dataset)
     test_extension()
     test_extension_params()
