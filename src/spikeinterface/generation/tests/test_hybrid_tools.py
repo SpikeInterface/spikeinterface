@@ -4,7 +4,10 @@ from pathlib import Path
 
 from spikeinterface.core.generate import generate_ground_truth_recording, generate_sorting
 from spikeinterface.preprocessing.motion import correct_motion, load_motion_info
-from spikeinterface.generation.hybrid_tools import estimate_templates_from_recording, generate_hybrid_recording
+from spikeinterface.generation.hybrid_tools import (
+    estimate_templates_from_recording,
+    generate_hybrid_recording,
+)
 
 
 def test_generate_hybrid_with_sorting():

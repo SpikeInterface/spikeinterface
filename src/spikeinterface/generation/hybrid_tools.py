@@ -200,8 +200,13 @@ def scale_templates(
     for i in range(templates.num_units):
         amplitudes[i] = amp_fun(templates_array[i, :, extremum_channel_indices[i]])
 
-    scale_values = (max_amplitude - min_amplitude) / (amplitudes.max() - amplitudes.min())
-    scaled_templates_array = templates_array * scale_values
+    # scale templates to meet min_amplitude and max_amplitude range
+    min_scale = np.min(amplitudes) / min_amplitude
+    max_scale = np.max(amplitudes) / max_amplitude
+    m = (max_scale - min_scale) / (np.max(amplitudes) - np.min(amplitudes))
+    scales = m * (amplitudes - np.min(amplitudes)) + min_scale
+
+    scaled_templates_array = templates.templates_array / scales[:, None, None]
 
     return Templates(
         templates_array=scaled_templates_array,
