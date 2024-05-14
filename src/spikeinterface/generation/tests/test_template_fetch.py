@@ -15,7 +15,7 @@ def test_fetch_datasets():
     available_datasets = list_available_datasets()
     assert len(available_datasets) > 0
 
-    templates = fetch_template_dataset("test_templates")
+    templates = fetch_template_dataset("test_templates.zarr")
     assert isinstance(templates, Templates)
 
     assert templates.num_units == 100
