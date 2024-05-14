@@ -61,7 +61,7 @@ class UnitLocationsWidget(BaseWidget):
         probegroup = sorting_analyzer.get_probegroup()
 
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting)
+            unit_colors = get_unit_colors(sorting.unit_ids)
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids

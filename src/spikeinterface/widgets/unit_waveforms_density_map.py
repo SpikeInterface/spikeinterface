@@ -57,7 +57,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             unit_ids = sorting_analyzer.unit_ids
 
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting_analyzer.sorting)
+            unit_colors = get_unit_colors(sorting_analyzer.sorting.unit_ids)
 
         if use_max_channel:
             assert len(unit_ids) == 1, " UnitWaveformDensity : use_max_channel=True works only with one unit"

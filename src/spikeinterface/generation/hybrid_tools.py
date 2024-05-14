@@ -86,7 +86,7 @@ def estimate_templates_from_recording(
     return templates
 
 
-def filter_templates(
+def select_templates(
     templates: Templates,
     min_amplitude: float | None = None,
     max_amplitude: float | None = None,
@@ -96,7 +96,7 @@ def filter_templates(
     depth_direction: Literal["x", "y"] = "y",
 ):
     """
-    Filter templates based on amplitude and depth.
+    Select templates from an existing Templates object based on amplitude and depth.
 
     Parameters
     ----------
@@ -118,7 +118,7 @@ def filter_templates(
     Returns
     -------
     Templates
-        The filtered templates
+        The selected templates
     """
     assert (
         min_amplitude is not None or max_amplitude is not None or min_depth is not None or max_depth is not None

@@ -106,7 +106,7 @@ class UnitWaveformsWidget(BaseWidget):
         **backend_kwargs,
     ):
         if not isinstance(sorting_analyzer_or_templates, Templates):
-            sorting_analyzer_or_templates = self.ensure_sorting_analyzer(sorting_analyzer)
+            sorting_analyzer_or_templates = self.ensure_sorting_analyzer(sorting_analyzer_or_templates)
         else:
             plot_waveforms = False
             shade_templates = False

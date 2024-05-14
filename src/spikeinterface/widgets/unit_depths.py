@@ -35,7 +35,7 @@ class UnitDepthsWidget(BaseWidget):
         unit_ids = sorting_analyzer.sorting.unit_ids
 
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting_analyzer.sorting)
+            unit_colors = get_unit_colors(sorting_analyzer.sorting.unit_ids)
 
         colors = [unit_colors[unit_id] for unit_id in unit_ids]
 
