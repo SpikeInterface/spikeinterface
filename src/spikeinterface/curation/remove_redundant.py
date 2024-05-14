@@ -70,6 +70,8 @@ def remove_redundant_units(
         sorting_analyzer = sorting_or_sorting_analyzer
     else:
         assert not align, "The 'align' option is only available when a SortingAnalyzer is used as input"
+        # other remove strategies rely on sorting analyzer looking at templates
+        assert remove_strategy == "max_spikes", "For a Sorting input the remove_strategy must be 'max_spikes'"
         sorting = sorting_or_sorting_analyzer
         sorting_analyzer = None
 

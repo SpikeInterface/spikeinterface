@@ -116,7 +116,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
     # compute
     sorting_analyzer.compute("dummy", param1=5.5)
     # equivalent
-    compute_dummy(sorting_analyzer, param1=5.5)
+    compute_dummy(sorting_analyzer=sorting_analyzer, param1=5.5)
     ext = sorting_analyzer.get_extension("dummy")
     assert ext is not None
     assert ext.params["param1"] == 5.5

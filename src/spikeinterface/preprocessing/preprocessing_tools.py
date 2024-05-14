@@ -9,7 +9,7 @@ def get_spatial_interpolation_kernel(
     method="kriging",
     sigma_um=20.0,
     p=1,
-    num_closest=3,
+    num_closest=4,
     sparse_thresh=None,
     dtype="float32",
     force_extrapolate=False,
@@ -40,7 +40,7 @@ def get_spatial_interpolation_kernel(
         Used in the "kriging" formula
     sparse_thresh: None or float, default: None
         If not None for "kriging" force small value to be zeros to get a sparse matrix.
-    num_closest: int, default: 3
+    num_closest: int, default: 4
         Used for "idw"
     force_extrapolate: bool, default: False
         How to handle when target location are outside source location.

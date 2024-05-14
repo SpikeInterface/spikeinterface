@@ -1,6 +1,4 @@
 import pytest
-
-import spikeinterface.full as si
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -10,6 +8,8 @@ import shutil
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset, cache_folder
 from spikeinterface.sortingcomponents.benchmark.benchmark_clustering import ClusteringStudy
+from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
+from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
 @pytest.mark.skip()
@@ -17,20 +17,33 @@ def test_benchmark_clustering():
 
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
-    recording, gt_sorting = make_dataset()
+    recording, gt_sorting, gt_analyzer = make_dataset()
 
     num_spikes = gt_sorting.to_spike_vector().size
     spike_indices = np.arange(0, num_spikes, 5)
 
     # create study
     study_folder = cache_folder / "study_clustering"
-    datasets = {"toy": (recording, gt_sorting)}
+    # datasets = {"toy": (recording, gt_sorting)}
+    datasets = {"toy": gt_analyzer}
+
+    peaks = {}
+    for dataset, gt_analyzer in datasets.items():
+
+        # recording, gt_sorting = datasets[dataset]
+
+        # sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False)
+        # sorting_analyzer.compute(["random_spikes", "templates"])
+        extremum_channel_inds = get_template_extremum_channel(gt_analyzer, outputs="index")
+        spikes = gt_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+        peaks[dataset] = spikes
+
     cases = {}
-    for method in ["random_projections", "circus"]:
+    for method in ["random_projections", "circus", "tdc_clustering"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
-            "init_kwargs": {"indices": spike_indices},
+            "init_kwargs": {"indices": spike_indices, "peaks": peaks["toy"]},
             "params": {"method": method, "method_kwargs": {}},
         }
 
@@ -40,7 +53,7 @@ def test_benchmark_clustering():
     print(study)
 
     # this study needs analyzer
-    study.create_sorting_analyzer_gt(**job_kwargs)
+    # study.create_sorting_analyzer_gt(**job_kwargs)
     study.compute_metrics()
 
     study = ClusteringStudy(study_folder)
@@ -55,8 +68,12 @@ def test_benchmark_clustering():
 
     # plots
     study.plot_performances_vs_snr()
-    # @pierre : This one has a bug
-    # study.plot_metrics_vs_snr('cosine')
+    study.plot_agreements()
+    study.plot_comparison_clustering()
+    study.plot_error_metrics()
+    study.plot_metrics_vs_snr()
+    study.plot_run_times()
+    study.plot_metrics_vs_snr("cosine")
     study.homogeneity_score(ignore_noise=False)
     plt.show()
 
