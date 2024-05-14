@@ -190,13 +190,12 @@ class StudyPerformances(BaseWidget):
                 ax = self.axes.flatten()[count]
                 for key in dp.case_keys:
                     label = study.cases[key]["label"]
-
                     val = perfs.xs(key).loc[:, performance_name].values
                     val = np.sort(val)[::-1]
                     ax.plot(val, label=label)
                 ax.set_title(performance_name)
-                if count == 0:
-                    ax.legend(loc="upper right")
+                if count == len(dp.performance_names) - 1:
+                    ax.legend(bbox_to_anchor=(0.05, 0.05), loc="lower left", framealpha=0.8)
 
         elif dp.mode == "snr":
             metric_name = dp.mode

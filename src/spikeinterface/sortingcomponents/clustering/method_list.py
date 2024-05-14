@@ -9,6 +9,7 @@ from .position_ptp_scaled import PositionPTPScaledClustering
 from .position_and_features import PositionAndFeaturesClustering
 from .random_projections import RandomProjectionClustering
 from .circus import CircusClustering
+from .tdc import TdcClustering
 
 clustering_methods = {
     "dummy": DummyClustering,
@@ -20,4 +21,5 @@ clustering_methods = {
     "position_and_features": PositionAndFeaturesClustering,
     "random_projections": RandomProjectionClustering,
     "circus": CircusClustering,
+    "tdc_clustering": TdcClustering,
 }
