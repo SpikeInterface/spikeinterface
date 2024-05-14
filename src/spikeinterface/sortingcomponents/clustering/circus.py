@@ -226,7 +226,14 @@ class CircusClustering:
         )
 
         templates = Templates(
-            templates_array, fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe()
+            templates_array=templates_array,
+            sampling_frequency=fs,
+            nbefore=nbefore,
+            sparsity_mask=None,
+            channel_ids=recording.channel_ids,
+            unit_ids=unit_ids,
+            probe=recording.get_probe(),
+            is_scaled=False,
         )
         if params["noise_levels"] is None:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
