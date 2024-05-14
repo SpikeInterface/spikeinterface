@@ -17,11 +17,10 @@ import warnings
 
 from spikeinterface.core import load_extractor, BaseRecordingSnippets
 from spikeinterface.core.core_tools import check_json
+from spikeinterface.core.globals import get_global_job_kwargs
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
 
-
-default_job_kwargs = {}
 
 default_job_kwargs_description = {
     "n_jobs": "Number of jobs (when saving to binary) - default global",
@@ -156,7 +155,7 @@ class BaseSorter:
     def default_params(cls):
         p = copy.deepcopy(cls._default_params)
         if cls.requires_binary_data:
-            job_kwargs = fix_job_kwargs(default_job_kwargs)
+            job_kwargs = get_global_job_kwargs()
             p.update(job_kwargs)
         return p
 
