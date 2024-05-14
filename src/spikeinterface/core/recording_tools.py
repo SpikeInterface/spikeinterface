@@ -912,7 +912,7 @@ def get_rec_attributes(recording):
     return rec_attributes
 
 
-def check_recording_attributes_match(recording1, recording2_attributes, skip_properties=True):
+def check_recording_attributes_match(recording1, recording2_attributes, skip_properties=True) -> bool:
     """
     Check if two recordings have the same attributes
 
@@ -920,8 +920,8 @@ def check_recording_attributes_match(recording1, recording2_attributes, skip_pro
     ----------
     recording1 : BaseRecording
         The first recording object
-    recording2 : BaseRecording
-        The second recording object
+    recording2_attributes : dict
+        The recording attributes to test against
 
     Returns
     -------
@@ -929,7 +929,6 @@ def check_recording_attributes_match(recording1, recording2_attributes, skip_pro
         True if the recordings have the same attributes
     """
     recording1_attributes = get_rec_attributes(recording1)
-    recording1_attributes["probegroup"] = recording1.get_probegroup()
     recording2_attributes = deepcopy(recording2_attributes)
     if skip_properties:
         recording1_attributes.pop("properties")

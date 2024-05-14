@@ -600,11 +600,6 @@ class SortingAnalyzer:
         ----------
         recording : BaseRecording
             The recording object to set as temporary recording.
-
-        Raises
-        ------
-        ValueError
-            _description_
         """
         # check that recording is compatible
         assert check_recording_attributes_match(
@@ -614,7 +609,7 @@ class SortingAnalyzer:
             recording.get_channel_locations(), self.get_channel_locations()
         ), "Recording channel locations do not match."
         if self._recording is not None:
-            warnings.warn("SortingAnalyzer recording is already set. This will overwrite the current recording.")
+            warnings.warn("SortingAnalyzer recording is already set. " "The current recording is temporarily replaced.")
         self._recording = recording
 
     def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingAnalyzer":
