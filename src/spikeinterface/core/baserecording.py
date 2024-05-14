@@ -1,7 +1,6 @@
 from __future__ import annotations
 import warnings
 from pathlib import Path
-from warnings import warn
 
 import numpy as np
 from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, write_probeinterface
@@ -12,10 +11,8 @@ from .core_tools import (
     convert_bytes_to_str,
     convert_seconds_to_str,
 )
-from .recording_tools import (
-    write_binary_recording,
-    write_memory_recording,
-)
+from .recording_tools import write_binary_recording
+
 
 from .job_tools import split_job_kwargs
 
@@ -48,26 +45,11 @@ class BaseRecording(BaseRecordingSnippets):
         self.annotate(is_filtered=False)
 
     def __repr__(self):
+
         extractor_name = self.__class__.__name__
         num_segments = self.get_num_segments()
-        num_channels = self.get_num_channels()
-        sf_khz = self.get_sampling_frequency() / 1000.0
-        dtype = self.get_dtype()
 
-        total_samples = self.get_total_samples()
-        total_duration = self.get_total_duration()
-        total_memory_size = self.get_total_memory_size()
-
-        txt = (
-            f"{extractor_name}: "
-            f"{num_channels} channels - "
-            f"{sf_khz:0.1f}kHz - "
-            f"{num_segments} segments - "
-            f"{total_samples:,} samples - "
-            f"{convert_seconds_to_str(total_duration)} - "
-            f"{dtype} dtype - "
-            f"{convert_bytes_to_str(total_memory_size)}"
-        )
+        txt = self._repr_header()
 
         # Split if too long
         if len(txt) > 100:
@@ -112,6 +94,70 @@ class BaseRecording(BaseRecordingSnippets):
             txt += f"\n  file_path: {self._kwargs['file_path']}"
 
         return txt
+
+    def _repr_header(self):
+        extractor_name = self.__class__.__name__
+        num_segments = self.get_num_segments()
+        num_channels = self.get_num_channels()
+        sf_khz = self.get_sampling_frequency() / 1000.0
+        dtype = self.get_dtype()
+
+        total_samples = self.get_total_samples()
+        total_duration = self.get_total_duration()
+        total_memory_size = self.get_total_memory_size()
+
+        txt = (
+            f"{extractor_name}: "
+            f"{num_channels} channels - "
+            f"{sf_khz:0.1f}kHz - "
+            f"{num_segments} segments - "
+            f"{total_samples:,} samples - "
+            f"{convert_seconds_to_str(total_duration)} - "
+            f"{dtype} dtype - "
+            f"{convert_bytes_to_str(total_memory_size)}"
+        )
+
+        return txt
+
+    def _repr_html_(self):
+        common_style = "margin-left: 10px;"
+        border_style = "border:1px solid #ddd; padding:10px;"
+
+        html_header = f"<div style='{border_style}'><strong>{self._repr_header()}</strong></div>"
+
+        html_segments = ""
+        if self.get_num_segments() > 1:
+            html_segments += f"<details style='{common_style}'>  <summary><strong>Segments</strong></summary><ol>"
+            for segment_index in range(self.get_num_segments()):
+                samples = self.get_num_samples(segment_index)
+                duration = self.get_duration(segment_index)
+                memory_size = self.get_memory_size(segment_index)
+                samples_str = f"{samples:,}"
+                duration_str = convert_seconds_to_str(duration)
+                memory_size_str = convert_bytes_to_str(memory_size)
+                html_segments += (
+                    f"<li> Samples: {samples_str}, Duration: {duration_str}, Memory: {memory_size_str}</li>"
+                )
+
+            html_segments += "</ol></details>"
+
+        html_channel_ids = f"<details style='{common_style}'>  <summary><strong>Channel IDs</strong></summary><ul>"
+        html_channel_ids += f"{self.channel_ids} </details>"
+
+        html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
+        for key, value in self._annotations.items():
+            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
+        html_annotations += "</ul> </details>"
+
+        html_properties = f"<details style='{common_style}'><summary><strong>Channel Properties</strong></summary><ul>"
+        for key, value in self._properties.items():
+            # Add a further indent for each property
+            value_formatted = np.asarray(value)
+            html_properties += f"<details><summary> <strong> {key} </strong> </summary>{value_formatted}</details>"
+        html_properties += "</ul></details>"
+
+        html_repr = html_header + html_segments + html_channel_ids + html_annotations + html_properties
+        return html_repr
 
     def get_num_segments(self) -> int:
         """
@@ -426,7 +472,7 @@ class BaseRecording(BaseRecordingSnippets):
         rs.time_vector = times.astype("float64", copy=False)
 
         if with_warning:
-            warn(
+            warnings.warn(
                 "Setting times with Recording.set_times() is not recommended because "
                 "times are not always propagated across preprocessing"
                 "Use this carefully!"
@@ -550,9 +596,26 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
-    def rename_channels(self, new_channel_ids: list | np.array | tuple):
+    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
+        """
+        Returns a new recording object with a subset of channels.
+
+        Note that this method does not modify the current recording and instead returns a new recording object.
+
+        Parameters
+        ----------
+        channel_ids : list or np.array or tuple
+            The channel ids to select.
+        """
+        from .channelslice import ChannelSliceRecording
+
+        return ChannelSliceRecording(self, channel_ids)
+
+    def rename_channels(self, new_channel_ids: list | np.array | tuple) -> "BaseRecording":
         """
         Returns a new recording object with renamed channel ids.
+
+        Note that this method does not modify the current recording and instead returns a new recording object.
 
         Parameters
         ----------
@@ -570,6 +633,10 @@ class BaseRecording(BaseRecordingSnippets):
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceRecording
 
+        warnings.warn(
+            "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            DeprecationWarning,
+        )
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
 
