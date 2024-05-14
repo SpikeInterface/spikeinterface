@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from turtle import right
 import warnings
 
 import numpy as np
@@ -411,12 +412,17 @@ class TracesWidget(BaseWidget):
             self.mode_selector,
             self.scaler,
             self.colorbar,
-            self.event_selector,
         ]
-
         left_sidebar = W.VBox(
             children=left_sidebar_elements,
-            layout=W.Layout(width="3.5cm"),
+            align_items="center",
+        )
+        right_bar_elements = [
+            self.channel_selector,
+            self.event_selector,
+        ]
+        right_sidebar = W.VBox(
+            children=right_bar_elements,
             align_items="center",
         )
 
@@ -426,7 +432,7 @@ class TracesWidget(BaseWidget):
             center=self.figure.canvas,
             footer=self.time_slider,
             left_sidebar=left_sidebar,
-            right_sidebar=self.channel_selector,
+            right_sidebar=right_sidebar,
             pane_heights=[0, 6, 1],
             pane_widths=ratios,
         )

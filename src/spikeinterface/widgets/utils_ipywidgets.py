@@ -383,9 +383,13 @@ class EventSelector(W.VBox):
         self.previous_evt.on_click(self.move_left)
         self.next_evt.on_click(self.move_right)
 
-        self.events_label = W.Label("Events", layout=W.Layout(width="95%"))
-        self.events_idx_label = W.Label("Ev. idx:", layout=W.Layout(width="1.5cm"))
-        self.events_index = W.IntText(value=0, disable=True, layout=W.Layout(width="1.5cm"))
+        self.events_title = W.Label("Events", layout=W.Layout(justify_content="center"))
+        self.events_label = W.Label("Evt. index (label)", layout=W.Layout(width="95%"))
+        self.event_options = [f"{i} ({events['label'][i]})" for i in range(len(events))]
+        self.events_list = W.Dropdown(
+            options=self.event_options, value=self.event_options[0], disable=False, layout=W.Layout(width="90%")
+        )
+        self.value = 0
 
         self.events = events
 
@@ -397,24 +401,32 @@ class EventSelector(W.VBox):
 
         super(W.VBox, self).__init__(
             children=[
+                self.events_title,
                 self.events_label,
-                W.HBox([self.events_idx_label, self.events_index]),
+                self.events_list,
                 W.HBox([self.previous_evt, self.skip_events, self.next_evt]),
             ],
             **kwargs,
         )
 
         self.observe(self.value_changed, names=["value"], type="change")
+        self.events_list.observe(self.on_selector_changed)
 
     def value_changed(self, change=None):
-        self.events_index.value = change["new"]
+        pass
+
+    def on_selector_changed(self, change=None):
+        events_index = self.event_options.index(self.events_list.value)
+        self.value = events_index
 
     def move_left(self, change=None):
-        events_index = self.events_index.value - self.skip_events.value
+        events_index = self.value - self.skip_events.value
         events_index = events_index if events_index >= 0 else 0
         self.value = events_index
+        self.events_list.value = self.event_options[events_index]
 
     def move_right(self, change=None):
-        events_index = self.events_index.value + self.skip_events.value
+        events_index = self.value + self.skip_events.value
         events_index = events_index if events_index < len(self.events) else len(self.events["time"]) - 1
         self.value = events_index
+        self.events_list.value = self.event_options[events_index]
