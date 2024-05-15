@@ -6,3 +6,4 @@ from .quality_metric_calculator import (
     get_default_qm_params,
 )
 from .pca_metrics import get_quality_pca_metric_list
+from .misc_metrics import get_synchrony_counts

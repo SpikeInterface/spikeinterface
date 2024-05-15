@@ -19,6 +19,7 @@ from spikeinterface.core.generate import (
     generate_unit_locations,
     generate_ground_truth_recording,
     generate_sorting_to_inject,
+    synthesize_random_firings,
 )
 
 from spikeinterface.core.numpyextractors import NumpySorting
@@ -553,6 +554,24 @@ def test_generate_sorting_to_inject():
     # injected spikes should be less than original spikes
     for unit_id in num_spikes:
         assert num_injected_spikes[unit_id] <= num_spikes[unit_id]
+
+
+def test_synthesize_random_firings_length():
+
+    firing_rates = [2.0, 3.0]
+    duration = 2
+    num_units = 2
+
+    spike_times, spike_units = synthesize_random_firings(
+        num_units=num_units, duration=duration, firing_rates=firing_rates
+    )
+
+    assert len(spike_times) == int(np.sum(firing_rates) * duration)
+
+    units, counts = np.unique(spike_units, return_counts=True)
+
+    assert len(units) == num_units
+    assert np.sum(counts) == int(np.sum(firing_rates) * duration)
 
 
 if __name__ == "__main__":

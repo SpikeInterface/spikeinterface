@@ -85,11 +85,18 @@ def fix_job_kwargs(runtime_job_kwargs):
 
     # if n_jobs is -1, set to os.cpu_count() (n_jobs is always in global job_kwargs)
     n_jobs = job_kwargs["n_jobs"]
-    assert isinstance(n_jobs, (float, np.integer, int))
-    if isinstance(n_jobs, float):
+    assert isinstance(n_jobs, (float, np.integer, int)) and n_jobs != 0, "n_jobs must be a non-zero int or float"
+
+    # for a fraction we do fraction of total cores
+    if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
         n_jobs = int(n_jobs * os.cpu_count())
+    # for negative numbers we count down from total cores (with -1 being all)
     elif n_jobs < 0:
-        n_jobs = os.cpu_count() + 1 + n_jobs
+        n_jobs = int(os.cpu_count() + 1 + n_jobs)
+    # otherwise we just take the value given
+    else:
+        n_jobs = int(n_jobs)
+
     job_kwargs["n_jobs"] = max(n_jobs, 1)
 
     return job_kwargs
@@ -359,7 +366,27 @@ class ChunkRecordingExecutor:
         self.max_threads_per_process = max_threads_per_process
 
         if verbose:
-            print(self.job_name, "with n_jobs =", self.n_jobs, "and chunk_size =", self.chunk_size)
+            if self.n_jobs > 1:
+                chunk_memory = self.chunk_size * recording.get_num_channels() * np.dtype(recording.get_dtype()).itemsize
+                total_memory = chunk_memory * self.n_jobs
+                chunk_duration = self.chunk_size / recording.get_sampling_frequency()
+                from spikeinterface.core.core_tools import convert_bytes_to_str, convert_seconds_to_str
+
+                chunk_memory_str = convert_bytes_to_str(chunk_memory)
+                total_memory_str = convert_bytes_to_str(total_memory)
+                chunk_duration_str = convert_seconds_to_str(chunk_duration)
+                print(
+                    self.job_name,
+                    "\n"
+                    f"n_jobs={self.n_jobs} - "
+                    f"samples_per_chunk={self.chunk_size:,} - "
+                    f"chunk_memory={chunk_memory_str} - "
+                    f"total_memory={total_memory_str} - "
+                    f"chunk_duration={chunk_duration_str}",
+                )
+
+            else:
+                print(self.job_name, "with n_jobs =", self.n_jobs, "and chunk_size =", self.chunk_size)
 
     def run(self):
         """
