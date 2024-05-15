@@ -122,7 +122,7 @@ class UnitWaveformsWidget(BaseWidget):
         if channel_ids is None:
             channel_ids = sorting_analyzer_or_templates.channel_ids
         if unit_colors is None:
-            unit_colors = get_unit_colors(unit_ids)
+            unit_colors = get_unit_colors(sorting_analyzer_or_templates)
 
         channel_indices = [list(sorting_analyzer_or_templates.channel_ids).index(ch) for ch in channel_ids]
         channel_locations = sorting_analyzer_or_templates.get_channel_locations()[channel_indices]
