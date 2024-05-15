@@ -115,9 +115,8 @@ class UnitWaveformsWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
-        channel_locations = sorting_analyzer.get_channel_locations()[
-            sorting_analyzer.channel_ids_to_indices(channel_ids)
-        ]
+        channel_indices = sorting_analyzer.channel_ids_to_indices(channel_ids)
+        channel_locations = sorting_analyzer.get_channel_locations()[channel_indices]
 
         extra_sparsity = False
         if sorting_analyzer.is_sparse():
@@ -146,7 +145,7 @@ class UnitWaveformsWidget(BaseWidget):
         # get templates
         self.templates_ext = sorting_analyzer.get_extension("templates")
         assert self.templates_ext is not None, "plot_waveforms() need extension 'templates'"
-        templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
+        templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")[:, :, channel_indices]
 
         if templates_percentile_shading is not None and not sorting_analyzer.has_extension("waveforms"):
             warn(
