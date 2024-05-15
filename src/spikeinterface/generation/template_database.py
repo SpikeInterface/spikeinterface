@@ -1,9 +1,11 @@
 import zarr
+import functools
 import numpy as np
 
 from spikeinterface.core.template import Templates
 
 
+@functools.cache
 def fetch_template_dataset(dataset="test_templates.zarr") -> Templates:
     """
     Fetch a template dataset from the spikeinterface template database.
@@ -28,6 +30,7 @@ def fetch_template_dataset(dataset="test_templates.zarr") -> Templates:
     return templates_object
 
 
+@functools.cache
 def fetch_templates_info() -> "pandas.DataFrame":
     """
     Fetch the information about the templates in the spikeinterface template database.
@@ -60,7 +63,9 @@ def list_available_datasets() -> list:
     return datasets
 
 
-def get_templates_from_database(template_df_or_indices: "pandas.DataFrame | list[int] | np.ndarray") -> Templates:
+def get_templates_from_database(
+    template_df_or_indices: "pandas.DataFrame | list[int] | np.ndarray", verbose: bool = False
+) -> Templates:
     """
     Retrieve templates from the spikeinterface template database.
 
@@ -82,7 +87,8 @@ def get_templates_from_database(template_df_or_indices: "pandas.DataFrame | list
     else:
         template_info = fetch_templates_info().iloc[template_df_or_indices]
     requested_datasets = np.unique(template_info["dataset"]).tolist()
-    print(f"Fetching templates from {len(requested_datasets)} datasets")
+    if verbose:
+        print(f"Fetching templates from {len(requested_datasets)} datasets")
 
     nbefore = None
     sampling_frequency = None
