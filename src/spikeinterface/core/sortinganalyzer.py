@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Literal, Optional
 
 from pathlib import Path
+from itertools import chain
 import os
 import json
 import pickle
@@ -1220,6 +1221,9 @@ def _sort_extensions_by_dependency(extensions):
 
         extension = extensions_list[i]
         dependencies = get_extension_class(extension).depend_on
+        
+        # Split cases with an "or" in them, and flatten into a list
+        dependencies = list(chain.from_iterable([ dependency.split('|') for dependency in dependencies ]))
 
         # Should only iterate if nothing has happened.
         # Otherwise, should check the dependency which has just been moved => at position i

@@ -16,6 +16,8 @@ from spikeinterface.core.sortinganalyzer import (
     _sort_extensions_by_dependency,
 )
 
+from collections import OrderedDict
+
 import numpy as np
 
 
@@ -264,21 +266,21 @@ def test_extensions_sorting():
     # nothing happens if all parents are on the left of the children
     extensions_in_order = {"random_spikes": {"rs": 1}, "waveforms": {"wv": 2}}
     sorted_extensions_1 = _sort_extensions_by_dependency(extensions_in_order)
-    assert sorted_extensions_1 == extensions_in_order
+    assert OrderedDict(sorted_extensions_1) == OrderedDict(extensions_in_order)
 
     extensions_out_of_order = {"waveforms": {"wv": 2}, "random_spikes": {"rs": 1}}
     sorted_extensions_2 = _sort_extensions_by_dependency(extensions_out_of_order)
-    assert sorted_extensions_2 == extensions_in_order
+    assert OrderedDict(sorted_extensions_2) == OrderedDict(extensions_in_order)
 
     # doing two movements
     extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}}
     sorted_extensions_3 = _sort_extensions_by_dependency(extensions_qm_left)
-    assert sorted_extensions_3 == {"templates": {}, "waveforms": {}, "quality_metrics": {}}
+    assert OrderedDict(sorted_extensions_3) == OrderedDict({"waveforms": {}, "templates": {}, "quality_metrics": {}})
 
     # should move parent (waveforms) left of child (quality_metrics), and move grandparent (random_spikes) left of parent
     extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}, "random_spikes": {}}
     sorted_extensions_4 = _sort_extensions_by_dependency(extensions_qm_left)
-    assert sorted_extensions_4 == {"templates": {}, "random_spikes": {}, "waveforms": {}, "quality_metrics": {}}
+    assert OrderedDict(sorted_extensions_4) == OrderedDict({'random_spikes': {}, 'waveforms': {}, 'templates': {}, 'quality_metrics': {}})
 
 
 if __name__ == "__main__":
