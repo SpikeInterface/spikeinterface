@@ -60,7 +60,7 @@ _mutually_exclusive = (
 
 
 def fix_job_kwargs(runtime_job_kwargs):
-    from .globals import get_global_job_kwargs, global_job_kwargs_set
+    from .globals import get_global_job_kwargs, is_global_job_kwargs_set
 
     job_kwargs = get_global_job_kwargs()
 
@@ -99,7 +99,7 @@ def fix_job_kwargs(runtime_job_kwargs):
 
     job_kwargs["n_jobs"] = max(n_jobs, 1)
 
-    if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not global_job_kwargs_set:
+    if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_global_job_kwargs_set():
         warnings.warn(
             "`n_jobs` is not set so parallel processing is disabled! "
             "To speed up computations, it is recommended to set n_jobs either "

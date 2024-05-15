@@ -130,6 +130,14 @@ def set_global_job_kwargs(**job_kwargs):
     global_job_kwargs_set = True
 
 
+def is_global_job_kwargs_set() -> bool:
+    """
+    Check is the global job kwargs have been manually set.
+    """
+    global global_job_kwargs_set
+    return global_job_kwargs_set
+
+
 def reset_global_job_kwargs():
     """
     Reset the global job kwargs.
