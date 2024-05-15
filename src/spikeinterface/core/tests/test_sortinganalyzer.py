@@ -280,7 +280,9 @@ def test_extensions_sorting():
     # should move parent (waveforms) left of child (quality_metrics), and move grandparent (random_spikes) left of parent
     extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}, "random_spikes": {}}
     sorted_extensions_4 = _sort_extensions_by_dependency(extensions_qm_left)
-    assert OrderedDict(sorted_extensions_4) == OrderedDict({'random_spikes': {}, 'waveforms': {}, 'templates': {}, 'quality_metrics': {}})
+    assert OrderedDict(sorted_extensions_4) == OrderedDict(
+        {"random_spikes": {}, "waveforms": {}, "templates": {}, "quality_metrics": {}}
+    )
 
 
 if __name__ == "__main__":
