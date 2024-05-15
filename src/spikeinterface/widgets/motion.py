@@ -97,7 +97,8 @@ class MotionWidget(BaseWidget):
 
         # Setup figures and axes ----------------------------------------------
 
-        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+        self.ax = None
+        self.figure, self.axes, _ = make_mpl_figure(**backend_kwargs)
         fig = self.figure
         fig.clear()
 
