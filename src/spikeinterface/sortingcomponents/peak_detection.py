@@ -26,7 +26,6 @@ from spikeinterface.core.node_pipeline import (
 )
 
 from spikeinterface.postprocessing.unit_localization import get_convolution_weights
-from ..core import get_chunk_with_margin
 
 from .tools import make_multi_method_doc
 
