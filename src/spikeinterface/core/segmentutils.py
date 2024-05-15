@@ -181,8 +181,8 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
 
         if i0 == i1:
             #  one segment
-            rec_seg = self.parent_segments[i0]
-            seg_start = self.cumsum_length[i0]
+            rec_seg = int(self.parent_segments[i0])
+            seg_start = int(self.cumsum_length[i0])  # Cum sum length is a numpy array
             traces = rec_seg.get_traces(start_frame - seg_start, end_frame - seg_start, channel_indices)
         else:
             #  several segments
@@ -192,8 +192,8 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
                     # limit case
                     continue
 
-                rec_seg = self.parent_segments[i]
-                seg_start = self.cumsum_length[i]
+                rec_seg = int(self.parent_segments[i])
+                seg_start = int(self.cumsum_length[i])
                 if i == i0:
                     # first
                     traces_chunk = rec_seg.get_traces(start_frame - seg_start, None, channel_indices)
