@@ -301,10 +301,7 @@ class Templates:
         nbefore = zarr_group.attrs["nbefore"]
 
         # TODO: Consider eliminating this and make it required
-        if "is_scaled" not in zarr_group.attrs:
-            is_scaled = True
-        else:
-            is_scaled = zarr_group.attrs["is_scaled"]
+         is_scaled = zarr_group.attrs.get("is_scaled", True)
 
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
