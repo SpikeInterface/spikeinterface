@@ -20,8 +20,12 @@ class TimeSlider(W.HBox):
         self.num_segments = len(durations)
         self.frame_limits = [int(sampling_frequency * d) for d in durations]
         self.sampling_frequency = sampling_frequency
+        self.segment_index = 0
+
         if times is not None:
-            start_frame, end_frame = np.searchsorted(times, time_range)
+            assert len(times) == len(durations)
+            times_segment = times[self.segment_index]
+            start_frame, end_frame = np.searchsorted(times_segment, time_range)
             self.times = times
         else:
             start_frame = int(time_range[0] * sampling_frequency)
@@ -30,7 +34,6 @@ class TimeSlider(W.HBox):
 
         self.frame_range = (start_frame, end_frame)
 
-        self.segment_index = 0
         self.value = (int(start_frame), int(end_frame), self.segment_index)
 
         layout = W.Layout(align_items="center", width="2.5cm", height="1.cm")
@@ -132,7 +135,7 @@ class TimeSlider(W.HBox):
             start_frame = self.slider.value
         elif new_frame is None:
             if self.times is not None:
-                start_frame = int(np.searchsorted(self.times, [new_time])[0])
+                start_frame = int(np.searchsorted(self.times[self.segment_index], [new_time])[0])
             else:
                 start_frame = int(new_time * self.sampling_frequency)
         else:
@@ -148,7 +151,7 @@ class TimeSlider(W.HBox):
         end_frame = min(self.frame_limits[self.segment_index], end_frame)
 
         if self.times is not None:
-            start_time = self.times[start_frame]
+            start_time = self.times[self.segment_index][start_frame]
         else:
             start_time = start_frame / self.sampling_frequency
 
@@ -389,9 +392,8 @@ class EventSelector(W.VBox):
         self.events_list = W.Dropdown(
             options=self.event_options, value=self.event_options[0], disable=False, layout=W.Layout(width="90%")
         )
-        self.value = 0
-
         self.events = events
+        self.value = 0
 
         self.skip_events = W.IntText(
             value=1,
@@ -410,7 +412,15 @@ class EventSelector(W.VBox):
         )
 
         self.observe(self.value_changed, names=["value"], type="change")
-        self.events_list.observe(self.on_selector_changed)
+        self.events_list.observe(self.on_selector_changed, names=["value"], type="change")
+
+    def set_events(self, events):
+        self.events_list.unobserve(self.on_selector_changed, names=["value"], type="change")
+        self.event_options = [f"{i} ({events['label'][i]})" for i in range(len(events))]
+        self.events_list.options = self.event_options
+        self.events = events
+        self.value = 0
+        self.events_list.observe(self.on_selector_changed, names=["value"], type="change")
 
     def value_changed(self, change=None):
         pass

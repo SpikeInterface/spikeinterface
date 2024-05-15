@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import e
 import warnings
 
 import numpy as np
@@ -33,9 +34,10 @@ class TracesWidget(BaseWidget):
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
     return_scaled: bool, default: False
         If True and the recording has scaled traces, it plots the scaled traces
-    events: np.array or None, default: None
+    events: np.array | list[np.narray] or None, default: None
         Events to display as vertical lines. The numpy array needs to be a structured array with the "time" field,
-        and optional "duration" and "label" fields
+        and optional "duration" and "label" fields.
+        For multi-segment recordings, provide a list of numpy array events, one for each segment.
     cmap: matplotlib colormap, default: "RdBu_r"
         matplotlib colormap used in mode "map"
     show_channel_ids: bool, default: False
@@ -120,14 +122,14 @@ class TracesWidget(BaseWidget):
         else:
             channel_locations = None
 
-        if not rec0.has_time_vector():
-            self.times = None
+        if not rec0.has_time_vector(segment_index=segment_index):
+            times = None
             t_start = 0
             t_end = rec0.get_duration(segment_index=segment_index)
         else:
-            self.times = rec0.get_times(segment_index=segment_index)
-            t_start = self.times[0]
-            t_end = self.times[-1]
+            times = rec0.get_times(segment_index=segment_index)
+            t_start = times[0]
+            t_end = times[-1]
 
         layer_keys = list(recordings.keys())
 
@@ -155,8 +157,8 @@ class TracesWidget(BaseWidget):
         mode = mode
         cmap = cmap
 
-        times, list_traces, frame_range, channel_ids = _get_trace_list(
-            recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled, times=self.times
+        times_in_range, list_traces, frame_range, channel_ids = _get_trace_list(
+            recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled, times=times
         )
 
         list_traces = [traces * scale for traces in list_traces]
@@ -217,6 +219,20 @@ class TracesWidget(BaseWidget):
             else:
                 raise TypeError(f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}")
 
+        # check events
+        if events is not None:
+            num_segments = rec0.get_num_segments()
+            if num_segments > 1:
+                assert (
+                    len(events) == num_segments
+                ), f"events must be a list with the events for each of the {num_segments} segments"
+            else:
+                if isinstance(events, np.ndarray):
+                    events = [events]
+            for ev in events:
+                assert "time" in ev.dtype.names, "Events must have a 'time' field"
+
+        # keep aglobal ref of colorbar
         self.cb = None
 
         plot_data = dict(
@@ -226,7 +242,7 @@ class TracesWidget(BaseWidget):
             channel_locations=channel_locations,
             time_range=time_range,
             frame_range=frame_range,
-            times=times,
+            times_in_range=times_in_range,
             layer_keys=layer_keys,
             list_traces=list_traces,
             events=events,
@@ -284,7 +300,7 @@ class TracesWidget(BaseWidget):
                 for i, chan_id in enumerate(dp.channel_ids):
                     offset = dp.vspacing * i
                     color = dp.colors[layer_key][chan_id]
-                    ax.plot(dp.times, offset + traces[:, i], color=color)
+                    ax.plot(dp.times_in_range, offset + traces[:, i], color=color)
                 ax.get_lines()[-1].set_label(layer_key)
 
             if dp.show_channel_ids:
@@ -324,18 +340,19 @@ class TracesWidget(BaseWidget):
                 ax.set_yticklabels([min_y, max_y])
 
         if dp.events is not None:
+            events_segment = dp.events[dp.segment_index]
             # find events in the time range
-            evt_mask = np.logical_and(dp.events["time"] >= dp.time_range[0], dp.events["time"] < dp.time_range[1])
-            events_in_range = dp.events[evt_mask]
+            evt_mask = np.logical_and(
+                events_segment["time"] >= dp.time_range[0], events_segment["time"] < dp.time_range[1]
+            )
+            events_in_range = events_segment[evt_mask]
             t0 = t1 = 0
             for evt in events_in_range:
-                if evt["duration"] is not None:
+                if "duration" in events_in_range.dtype.names and evt["duration"] is not None:
                     t0 = evt["time"]
                     t1 = evt["time"] + evt["duration"]
                     ax.axvspan(t0, t1, alpha=dp.events_alpha, color=dp.events_color)
                 else:
-                    t0 = evt["time"]
-                    t1 = evt["time"]
                     ax.axvline(evt["time"], alpha=dp.events_alpha, color=dp.events_color)
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
@@ -348,7 +365,6 @@ class TracesWidget(BaseWidget):
         check_ipywidget_backend()
 
         self.next_data_plot = data_plot.copy()
-
         self.recordings = data_plot["recordings"]
         rec0 = self.rec0 = self.recordings[self.data_plot["layer_keys"][0]]
 
@@ -366,17 +382,27 @@ class TracesWidget(BaseWidget):
                 )
                 plt.show()
 
+        if not self.rec0.has_time_vector(segment_index=data_plot["segment_index"]):
+            times = None
+        else:
+            times = [
+                np.array(self.rec0.get_times(segment_index=segment_index))
+                for segment_index in range(self.rec0.get_num_segments())
+            ]
+
         # some widgets
         self.time_slider = TimeSlider(
             durations=[rec0.get_duration(s) for s in range(rec0.get_num_segments())],
             sampling_frequency=rec0.sampling_frequency,
             time_range=data_plot["time_range"],
-            times=self.times,
+            times=times,
         )
-        self.event_selector = EventSelector(events=data_plot["events"], time_slider=self.time_slider)
-        if data_plot["events"] is None:
-            # set not visible
-            self.event_selector.layout.visibility = "hidden"
+        # handle times
+        if data_plot["events"] is not None:
+            events_segment = data_plot["events"][data_plot["segment_index"]]
+            self.event_selector = EventSelector(events=events_segment, time_slider=self.time_slider)
+        else:
+            self.event_selector = None
 
         self.colorbar = W.Checkbox(
             value=data_plot["with_colorbar"],
@@ -415,14 +441,13 @@ class TracesWidget(BaseWidget):
             children=left_sidebar_elements,
             align_items="center",
         )
-        right_bar_elements = [
-            self.channel_selector,
-            self.event_selector,
-        ]
-        right_sidebar = W.VBox(
-            children=right_bar_elements,
-            align_items="center",
-        )
+        if self.event_selector is None:
+            right_sidebar = self.channel_selector
+        else:
+            right_sidebar = W.VBox(
+                children=[self.channel_selector, self.event_selector],
+                align_items="center",
+            )
 
         self.return_scaled = data_plot["return_scaled"]
 
@@ -451,6 +476,7 @@ class TracesWidget(BaseWidget):
         self.mode_selector.observe(self._mode_changed, names="value", type="change")
         # events
         self.event_selector.observe(self._event_changed, names="value", type="change")
+        self.time_slider.segment_selector.observe(self._segment_changed, names="value", type="change")
 
         if backend_kwargs["display"]:
             # self.check_backend()
@@ -480,28 +506,38 @@ class TracesWidget(BaseWidget):
         self.time_slider.time_label.value = f"{t_start}"
         self._retrieve_traces()
 
+    def _segment_changed(self, change=None):
+        # when switching segments, update events if present
+        segment_index = self.time_slider.segment_selector.value
+        if self.event_selector is not None:
+            event_segment = self.data_plot["events"][segment_index]
+            self.event_selector.set_events(event_segment)
+
     def _retrieve_traces(self, change=None):
         channel_ids = np.array(self.channel_selector.value)
 
         start_frame, end_frame, segment_index = self.time_slider.value
-        if self.times is not None:
-            time_range = np.array([self.times[start_frame], self.times[end_frame]])
-        else:
+
+        if not self.rec0.has_time_vector(segment_index=segment_index):
+            times = None
             time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency
+        else:
+            times = self.rec0.get_times(segment_index=segment_index)
+            time_range = np.array([times[start_frame], times[end_frame]])
 
         self._selected_recordings = {k: self.recordings[k] for k in self._get_layers()}
-        times, list_traces, frame_range, channel_ids = _get_trace_list(
+        times_in_range, list_traces, frame_range, channel_ids = _get_trace_list(
             self._selected_recordings,
             channel_ids,
             time_range,
             segment_index,
             return_scaled=self.return_scaled,
-            times=self.times,
+            times=times,
         )
 
         self._channel_ids = channel_ids
         self._list_traces = list_traces
-        self._times = times
+        self._times_in_range = times_in_range
         self._time_range = time_range
         self._frame_range = (start_frame, end_frame)
         self._segment_index = segment_index
@@ -538,7 +574,8 @@ class TracesWidget(BaseWidget):
 
         list_traces = [traces * self.scaler.value for traces in self._list_traces]
         data_plot["list_traces"] = list_traces
-        data_plot["times"] = self._times
+        data_plot["times_in_range"] = self._times_in_range
+        data_plot["segment_index"] = self._segment_index
 
         backend_kwargs = {}
         backend_kwargs["ax"] = self.ax
