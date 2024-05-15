@@ -134,11 +134,11 @@ class UnitWaveformsWidget(BaseWidget):
         else:
             if sparsity is None:
                 # in this case, we construct a dense sparsity
-                unit_id_to_channel_ids = {u: sorting_analyzer.channel_ids for u in sorting_analyzer.unit_ids}
+                unit_id_to_channel_ids = {u: channel_ids for u in sorting_analyzer.unit_ids}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
                     unit_id_to_channel_ids=unit_id_to_channel_ids,
                     unit_ids=sorting_analyzer.unit_ids,
-                    channel_ids=sorting_analyzer.channel_ids,
+                    channel_ids=channel_ids,
                 )
             else:
                 assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
