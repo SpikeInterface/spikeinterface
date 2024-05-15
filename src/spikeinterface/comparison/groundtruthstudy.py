@@ -167,6 +167,8 @@ class GroundTruthStudy:
         sorting_folder = self.folder / "sortings" / self.key_to_str(key)
         log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
         comparison_file = self.folder / "comparisons" / self.key_to_str(key)
+        self.sortings[key] = None
+        self.comparisons[key] = None
         if sorting_folder.exists():
             shutil.rmtree(sorting_folder)
         for f in (log_file, comparison_file):
@@ -381,6 +383,7 @@ class GroundTruthStudy:
 
         perf_by_unit = pd.concat(perf_by_unit)
         perf_by_unit = perf_by_unit.set_index(self.levels)
+        perf_by_unit = perf_by_unit.sort_index()
         return perf_by_unit
 
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):

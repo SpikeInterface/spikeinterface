@@ -255,7 +255,7 @@ class SpikeRetriever(PeakSource):
         return (local_peaks,)
 
 
-def sorting_to_peaks(sorting, extremum_channel_inds, dtype):
+def sorting_to_peaks(sorting, extremum_channel_inds, dtype=spike_peak_dtype):
     spikes = sorting.to_spike_vector()
     peaks = np.zeros(spikes.size, dtype=dtype)
     peaks["sample_index"] = spikes["sample_index"]

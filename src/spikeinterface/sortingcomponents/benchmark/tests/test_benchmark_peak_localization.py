@@ -15,7 +15,8 @@ from spikeinterface.sortingcomponents.benchmark.benchmark_peak_localization impo
 def test_benchmark_peak_localization():
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
-    recording, gt_sorting = make_dataset()
+    # recording, gt_sorting = make_dataset()
+    recording, gt_sorting, gt_analyzer = make_dataset()
 
     # create study
     study_folder = cache_folder / "study_peak_localization"
