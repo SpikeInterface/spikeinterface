@@ -46,7 +46,7 @@ class MetricsBaseWidget(BaseWidget):
         **backend_kwargs,
     ):
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting.unit_ids)
+            unit_colors = get_unit_colors(sorting)
 
         if include_metrics is not None:
             selected_metrics = [m for m in metrics.columns if m in include_metrics]
