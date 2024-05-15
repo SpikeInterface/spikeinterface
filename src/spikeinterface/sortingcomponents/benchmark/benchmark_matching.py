@@ -38,11 +38,12 @@ class MatchingBenchmark(Benchmark):
         self.result = {"sorting": sorting}
         self.result["templates"] = self.templates
 
-    def compute_result(self, **result_params):
+    def compute_result(self, with_collision=False, **result_params):
         sorting = self.result["sorting"]
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
         self.result["gt_comparison"] = comp
-        self.result["gt_collision"] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
+        if with_collision:
+            self.result["gt_collision"] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
 
     _run_key_saved = [
         ("sorting", "sorting"),
@@ -72,6 +73,8 @@ class MatchingStudy(BenchmarkStudy):
             ax = axs[0, count]
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
+        
+        return fig
 
     def plot_performances_vs_snr(self, case_keys=None, figsize=None):
         if case_keys is None:
@@ -94,6 +97,8 @@ class MatchingStudy(BenchmarkStudy):
 
             if count == 2:
                 ax.legend()
+        
+        return fig
 
     def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
@@ -111,6 +116,8 @@ class MatchingStudy(BenchmarkStudy):
                 mode="lines",
                 good_only=False,
             )
+        
+        return fig
 
     def plot_comparison_matching(
         self,
@@ -169,6 +176,8 @@ class MatchingStudy(BenchmarkStudy):
                     ax.set_xticks([])
                     ax.set_yticks([])
         plt.tight_layout(h_pad=0, w_pad=0)
+
+        return fig
 
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
         import pandas as pd
@@ -240,3 +249,4 @@ class MatchingStudy(BenchmarkStudy):
 
         # if count == 2:
         #    ax.legend()
+        return fig

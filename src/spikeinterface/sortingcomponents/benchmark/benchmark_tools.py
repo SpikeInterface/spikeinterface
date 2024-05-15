@@ -245,7 +245,8 @@ class BenchmarkStudy:
             case_keys = list(self.cases.keys())
         run_times = self.get_run_times(case_keys=case_keys)
 
-        run_times.plot(kind="bar")
+        ax = run_times.plot(kind="bar")
+        return ax.figure
 
     def compute_results(self, case_keys=None, verbose=False, **result_params):
         if case_keys is None:
@@ -368,6 +369,8 @@ class Benchmark:
 
     def _save_keys(self, saved_keys, folder):
         for k, format in saved_keys:
+            if k not in self.result or self.result[k] is None:
+                continue
             if format == "npy":
                 np.save(folder / f"{k}.npy", self.result[k])
             elif format == "pickle":
