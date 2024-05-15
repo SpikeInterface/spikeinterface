@@ -157,7 +157,7 @@ class TestMotionWidgets:
             motion_data["motion_info"],
             motion_data["rec_corrected"],
             depth_lim=(-200, 200),
-            motion_lim=1.5,
+            motion_lim=(-1.5, 1.5),
         )
         for i in range(2):
             assert widget.axes[i].get_ylim() == (-200.0, 200.0), f"Plot {i} failed depth lim."

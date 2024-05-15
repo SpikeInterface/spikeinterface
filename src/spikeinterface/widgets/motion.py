@@ -178,13 +178,14 @@ class MotionWidget(BaseWidget):
         # Plot the Motion Vectors ---------------------------------------------
 
         if dp.motion_lim is None:
-            motion_lim = np.max(np.abs(dp.motion)) * 1.05
+            max_motion_lim = np.max(np.abs(dp.motion)) * 1.05
+            motion_lim = (-max_motion_lim, max_motion_lim)
         else:
             motion_lim = dp.motion_lim
 
         ax2.plot(temporal_bins_plot, dp.motion, alpha=0.2, color="black")
         ax2.plot(temporal_bins_plot, np.mean(dp.motion, axis=1), color="C0")
-        ax2.set_ylim(-motion_lim, motion_lim)
+        ax2.set_ylim(motion_lim)
         ax2.set_xlabel("Time [s]")
         ax2.set_ylabel("Motion [μm]")
         ax2.set_title("Motion vectors")
@@ -204,7 +205,7 @@ class MotionWidget(BaseWidget):
                     dp.spatial_bins[-1],
                 ),
             )
-            im.set_clim(-motion_lim, motion_lim)
+            im.set_clim(motion_lim)
             cbar = fig.colorbar(im)
             cbar.ax.set_xlabel("motion [μm]")
             ax3.set_xlabel("Time [s]")
