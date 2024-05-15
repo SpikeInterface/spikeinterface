@@ -156,7 +156,8 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(self, **time_kwargs)
         self.parent_segments = parent_segments
         self.all_length = [rec_seg.get_num_samples() for rec_seg in self.parent_segments]
-        self.cumsum_length = np.cumsum([0] + self.all_length)
+        cumulative_sum_numpy = np.cumsum([0] + self.all_length)  # We need to cast to int for overflow concerns
+        self.cumsum_length = [int(samples_till_segment for samples_till_segment in cumulative_sum_numpy)]
         self.total_length = int(np.sum(self.all_length))
 
     def get_num_samples(self):
@@ -181,8 +182,8 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
 
         if i0 == i1:
             #  one segment
-            rec_seg = int(self.parent_segments[i0])
-            seg_start = int(self.cumsum_length[i0])  # Cum sum length is a numpy array
+            rec_seg = self.parent_segments[i0]
+            seg_start = self.cumsum_length[i0]
             traces = rec_seg.get_traces(start_frame - seg_start, end_frame - seg_start, channel_indices)
         else:
             #  several segments
@@ -192,8 +193,8 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
                     # limit case
                     continue
 
-                rec_seg = int(self.parent_segments[i])
-                seg_start = int(self.cumsum_length[i])
+                rec_seg = self.parent_segments[i]
+                seg_start = self.cumsum_length[i]
                 if i == i0:
                     # first
                     traces_chunk = rec_seg.get_traces(start_frame - seg_start, None, channel_indices)
