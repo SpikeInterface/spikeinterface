@@ -252,3 +252,30 @@ class TestMotionWidgets:
 
             assert np.isclose(test_orig_start, orig_start, rtol=0, atol=1)
             assert np.isclose(test_orig_end, orig_end, rtol=0, atol=1)
+
+    def test_axes_ax_asserts(self, motion_data):
+        """
+        Check that expected error message raised when
+        `ax` or `axes` passed, which is not supported.
+        """
+        _, ax = plt.subplots()
+
+        error_message = "`ax` and `axes` arguments are not permitted"
+
+        with pytest.raises(ValueError) as e:
+            si_widgets.plot_motion(
+                motion_data["motion_info"],
+                motion_data["rec_corrected"],
+                ax=ax,
+            )
+
+        assert error_message in str(e.value)
+
+        with pytest.raises(ValueError) as e:
+            si_widgets.plot_motion(
+                motion_data["motion_info"],
+                motion_data["rec_corrected"],
+                axes=[ax],
+            )
+
+        assert error_message in str(e.value)
