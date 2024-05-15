@@ -404,6 +404,7 @@ def generate_drifting_recording(
         sampling_frequency=sampling_frequency,
         nbefore=nbefore,
         probe=probe,
+        is_scaled=True,
     )
 
     drifting_templates = DriftingTemplates.from_static(templates)
