@@ -188,6 +188,19 @@ class Templates:
 
         return are_templates_sparse
 
+    def get_channel_locations(self) -> np.ndarray:
+        assert self.probe is not None, "Templates.get_channel_locations() needs a set probe to be defined."
+        channel_locations = self.probe.contact_positions
+        return channel_locations
+
+    def load_all_arrays_into_memory(self):
+        "This is useful to avoid making requests to the disk when the templates are stored in disk"
+        self.templates_array = np.asarray(self.templates_array)
+        if self.sparsity_mask is not None:
+            self.sparsity_mask = np.asarray(self.sparsity_mask)
+        self.channel_ids = np.asarray(self.channel_ids)
+        self.unit_ids = np.asarray(self.unit_ids.copy())
+
     def to_dict(self):
         return {
             "templates_array": self.templates_array,
@@ -385,8 +398,3 @@ class Templates:
                     return False
 
         return True
-
-    def get_channel_locations(self):
-        assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
-        channel_locations = self.probe.contact_positions
-        return channel_locations
