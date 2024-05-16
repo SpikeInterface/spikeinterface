@@ -51,6 +51,7 @@ class MultiCompGraphWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.colors as mpl_colors
         import matplotlib.pyplot as plt
+        import matplotlib.cm
         import networkx as nx
         from .utils_matplotlib import make_mpl_figure
 
