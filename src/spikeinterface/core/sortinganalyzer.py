@@ -195,7 +195,7 @@ class SortingAnalyzer:
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
-        # self.recorsding will be a property
+        # self.recording will be a property
         self._recording = recording
         self.rec_attributes = rec_attributes
         self.format = format
