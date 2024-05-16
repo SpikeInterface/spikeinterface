@@ -144,7 +144,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 if verbose:
                     print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
-                params["drift_correction"].update({"folder": motion_folder})
+                params["motion_correction"].update({"folder": motion_folder})
                 recording_f = correct_motion(recording_f, **params["motion_correction"])
         else:
             motion_folder = None
