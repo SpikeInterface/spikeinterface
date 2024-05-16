@@ -52,7 +52,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "corr_diff_thresh": 0.5,
             "template_metric": "cosine",
             "censor_correlograms_ms": 0.4,
-            "num_channels": 5,
+            "num_channels": None,
         },
         "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
@@ -314,7 +314,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         merging_params = params["merging"].copy()
 
         if len(merging_params) > 0:
-            if params["drift_correction"] and motion_folder is not None:
+            if params["motion_correction"] and motion_folder is not None:
                 from spikeinterface.preprocessing.motion import load_motion_info
 
                 motion_info = load_motion_info(motion_folder)
