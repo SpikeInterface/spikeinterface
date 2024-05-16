@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from .filter import fix_dtype
 from ..core import order_channels_by_depth, get_chunk_with_margin
 from ..core.core_tools import define_function_from_class
 
@@ -118,7 +117,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         butter_kwargs = dict(btype="highpass", N=highpass_butter_order, Wn=highpass_butter_wn)
         sos_filter = scipy.signal.butter(**butter_kwargs, output="sos")
 
-        dtype = fix_dtype(recording, dtype)
+        dtype = recording.get_dtype()
 
         for parent_segment in recording._recording_segments:
             rec_segment = HighPassSpatialFilterSegment(
