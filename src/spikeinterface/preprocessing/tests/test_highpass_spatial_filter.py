@@ -125,7 +125,7 @@ def get_ibl_si_data():
     ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[:, :-1].T  # cut sync channel
 
     si_recording = se.read_spikeglx(local_path, stream_id="imec0.ap")
-    si_recording = spre.scale(si_recording, dtype="float32")
+    si_recording = spre.astype(si_recording, dtype="float32")
 
     return ibl_data, si_recording
 
