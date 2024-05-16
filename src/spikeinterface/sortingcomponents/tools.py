@@ -137,4 +137,5 @@ def remove_empty_templates(templates):
         channel_ids=templates.channel_ids,
         unit_ids=templates.unit_ids[not_empty],
         probe=templates.probe,
+        is_scaled=templates.is_scaled,
     )

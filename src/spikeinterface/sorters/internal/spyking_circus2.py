@@ -1,4 +1,5 @@
 from __future__ import annotations
+from operator import is_
 
 from .si_based import ComponentsBasedSorter
 
@@ -256,13 +257,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             )
 
             templates = Templates(
-                templates_array,
-                sampling_frequency,
-                nbefore,
-                None,
-                recording_w.channel_ids,
-                unit_ids,
-                recording_w.get_probe(),
+                templates_array=templates_array,
+                sampling_frequency=sampling_frequency,
+                nbefore=nbefore,
+                sparsity_mask=None,
+                channel_ids=recording_w.channel_ids,
+                unit_ids=unit_ids,
+                probe=recording_w.get_probe(),
+                is_scaled=False,
             )
 
             sparsity = compute_sparsity(templates, noise_levels, **params["sparsity"])
