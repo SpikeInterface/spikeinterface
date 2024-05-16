@@ -134,15 +134,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_f.annotate(is_filtered=True)
 
         valid_geometry = check_probe_for_drift_correction(recording_f)
-        if params["drift_correction"] is not None:
+        if params["apply_motion_correction"]:
             if not valid_geometry:
-                print("Geometry of the probe does not allow 1D drift correction")
+                if verbose:
+                    print("Geometry of the probe does not allow 1D drift correction")
                 motion_folder = None
             else:
-                print("Motion correction activated (probe geometry compatible)")
+                if verbose:
+                    print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
                 params["drift_correction"].update({"folder": motion_folder})
-                recording_f = correct_motion(recording_f, **params["drift_correction"])
+                recording_f = correct_motion(recording_f, **params["motion_correction"])
         else:
             motion_folder = None
 
