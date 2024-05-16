@@ -35,7 +35,9 @@ class TracesWidget(BaseWidget):
     return_scaled: bool, default: False
         If True and the recording has scaled traces, it plots the scaled traces
     events: np.array | list[np.narray] or None, default: None
-        Events to display as vertical lines. The numpy array needs to be a structured array with the "time" field,
+        Events to display as vertical lines.
+        The numpy arrays cen either be of dtype float, with event times in seconds,
+        or a structured array with the "time" field,
         and optional "duration" and "label" fields.
         For multi-segment recordings, provide a list of numpy array events, one for each segment.
     cmap: matplotlib colormap, default: "RdBu_r"
@@ -226,11 +228,19 @@ class TracesWidget(BaseWidget):
                 assert (
                     len(events) == num_segments
                 ), f"events must be a list with the events for each of the {num_segments} segments"
+                evensts_w_dtype = events
             else:
                 if isinstance(events, np.ndarray):
                     events = [events]
-            for ev in events:
-                assert "time" in ev.dtype.names, "Events must have a 'time' field"
+                evensts_w_dtype = []
+                for evt in events:
+                    if evt.dtype.names is None:
+                        evt_ = np.array(np.array(evt).astype("float64"), dtype=[("time", "float64")])
+                        evensts_w_dtype.append(evt_)
+                    else:
+                        evensts_w_dtype.append(evt)
+        else:
+            evensts_w_dtype = None
 
         # keep aglobal ref of colorbar
         self.cb = None
@@ -245,7 +255,7 @@ class TracesWidget(BaseWidget):
             times_in_range=times_in_range,
             layer_keys=layer_keys,
             list_traces=list_traces,
-            events=events,
+            events=evensts_w_dtype,
             events_color=events_color,
             events_alpha=events_alpha,
             mode=mode,
@@ -475,7 +485,8 @@ class TracesWidget(BaseWidget):
         # map is a special case because needs to check layer also
         self.mode_selector.observe(self._mode_changed, names="value", type="change")
         # events
-        self.event_selector.observe(self._event_changed, names="value", type="change")
+        if self.event_selector is not None:
+            self.event_selector.observe(self._event_changed, names="value", type="change")
         self.time_slider.segment_selector.observe(self._segment_changed, names="value", type="change")
 
         if backend_kwargs["display"]:

@@ -387,13 +387,17 @@ class EventSelector(W.VBox):
         self.next_evt.on_click(self.move_right)
 
         self.events_title = W.Label("Events", layout=W.Layout(justify_content="center"))
-        self.events_label = W.Label("Evt. index (label)", layout=W.Layout(width="95%"))
-        self.event_options = [f"{i} ({events['label'][i]})" for i in range(len(events))]
+        self.event_options = [f"{i}" for i in range(len(events))]
         self.events_list = W.Dropdown(
             options=self.event_options, value=self.event_options[0], disable=False, layout=W.Layout(width="90%")
         )
-        self.events = events
-        self.value = 0
+        self.events_list.observe(self.on_selector_changed, names=["value"], type="change")
+        self.set_events(events)
+
+        if "label" in events.dtype.names:
+            self.events_label = W.Label("Evt. index (label)", layout=W.Layout(width="95%"))
+        else:
+            self.events_label = W.Label("Evt. index", layout=W.Layout(width="95%"))
 
         self.skip_events = W.IntText(
             value=1,
@@ -412,13 +416,15 @@ class EventSelector(W.VBox):
         )
 
         self.observe(self.value_changed, names=["value"], type="change")
-        self.events_list.observe(self.on_selector_changed, names=["value"], type="change")
 
     def set_events(self, events):
         self.events_list.unobserve(self.on_selector_changed, names=["value"], type="change")
-        self.event_options = [f"{i} ({events['label'][i]})" for i in range(len(events))]
-        self.events_list.options = self.event_options
         self.events = events
+        if "label" in self.events.dtype.names:
+            self.event_options = [f"{i} ({self.events['label'][i]})" for i in range(len(self.events))]
+        else:
+            self.event_options = [f"{i}" for i in range(len(self.events))]
+        self.events_list.options = self.event_options
         self.value = 0
         self.events_list.observe(self.on_selector_changed, names=["value"], type="change")
 
