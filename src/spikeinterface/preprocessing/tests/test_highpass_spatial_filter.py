@@ -109,6 +109,34 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
             assert raw_traces.shape == si_filtered.shape
 
 
+@pytest.mark.parametrize("dtype", [np.int16, np.float32, np.float64])
+def test_dtype_stability(dtype):
+    """
+    Check that the dtype of the recording and
+    output data is as expected, as data is cast to float32
+    during filtering.
+    """
+    num_chan = 32
+    si_recording = generate_recording(num_channels=num_chan, durations=[2])
+    si_recording.set_property("gain_to_uV", np.ones(num_chan))
+    si_recording.set_property("offset_to_uV", np.ones(num_chan))
+    si_recording = spre.astype(si_recording, dtype)
+
+    assert si_recording.dtype == dtype
+
+    highpass_spatial_filter = spre.highpass_spatial_filter(si_recording, n_channel_pad=2)
+
+    assert highpass_spatial_filter.dtype == dtype
+
+    filtered_data_unscaled = highpass_spatial_filter.get_traces(return_scaled=False)
+
+    assert filtered_data_unscaled.dtype == dtype
+
+    filtered_data_scaled = highpass_spatial_filter.get_traces(return_scaled=True)
+
+    assert filtered_data_scaled.dtype == np.float32
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Test Utils
 # ----------------------------------------------------------------------------------------------------------------------
