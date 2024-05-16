@@ -44,7 +44,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "select_per_channel": False,
             "seed": 42,
         },
-        "drift_correction": {"preset": "nonrigid_fast_and_accurate"},
+        "apply_motion_correction": True,
+        "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
         "merging": {
             "minimum_spikes": 10,
             "corr_diff_thresh": 0.5,
