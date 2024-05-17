@@ -299,9 +299,14 @@ class ComputeTemplates(AnalyzerExtension):
         waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
         if waveforms_extension is not None:
 
-            if ms_before != waveforms_extension.ms_before or ms_after != waveforms_extension.ms_after:
+            ms_before_waveforms = waveforms_extension.n_before / self.sorting_analyzer.sampling_frequency * 1000
+            ms_after_waveforms = waveforms_extension.n_after / self.sorting_analyzer.sampling_frequency * 1000
+
+            if ms_before != ms_before_waveforms or ms_after != ms_after_waveforms:
                 raise ValueError(
-                    "ComputeTemplates: ms_before and ms_after must be the same as the ones used for the 'waveforms' extension"
+                    "templates extension parameters are inconsistent with the waveforms extension. \n"
+                    f"waveform extension ms_before={ms_before_waveforms}  ms_after={ms_after_waveforms} \n"
+                    f"templates extension ms_before={ms_before}  ms_after={ms_after}."
                 )
 
             nbefore = waveforms_extension.nbefore
