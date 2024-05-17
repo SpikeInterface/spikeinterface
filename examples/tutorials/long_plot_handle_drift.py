@@ -6,7 +6,7 @@ Spikeinterface offers a very flexible framework to handle drift as a preprocessi
 If you want to know more, please read the
 :ref:`motion_correction` section of the documentation.
 
-Here is a short demo on how to handle drift using the high-level function 
+Here is a short demo on how to handle drift using the high-level function
 :py:func:`~spikeinterface.preprocessing.correct_motion()`.
 
 This function takes a preprocessed recording as input and then internally runs
