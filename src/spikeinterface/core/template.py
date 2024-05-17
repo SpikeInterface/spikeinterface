@@ -300,6 +300,9 @@ class Templates:
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
+        # TODO: Consider eliminating the True and make it required
+        is_scaled = zarr_group.attrs.get("is_scaled", True)
+
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
             sparsity_mask = zarr_group["sparsity_mask"]
@@ -316,6 +319,7 @@ class Templates:
             channel_ids=channel_ids,
             unit_ids=unit_ids,
             probe=probe,
+            is_scaled=is_scaled,
         )
 
     @staticmethod
