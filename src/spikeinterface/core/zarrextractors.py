@@ -30,7 +30,6 @@ class ZarrRecordingExtractor(BaseRecording):
         The recording Extractor
     """
 
-    extractor_name = "ZarrRecording"
     installed = True
     mode = "folder"
     installation_mesg = ""
@@ -167,7 +166,6 @@ class ZarrSortingExtractor(BaseSorting):
         The sorting Extractor
     """
 
-    extractor_name = "ZarrSorting"
     installed = True
     mode = "folder"
     installation_mesg = ""

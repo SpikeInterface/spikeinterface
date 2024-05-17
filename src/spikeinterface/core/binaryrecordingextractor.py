@@ -52,7 +52,6 @@ class BinaryRecordingExtractor(BaseRecording):
         The recording Extractor
     """
 
-    extractor_name = "BinaryRecording"
     mode = "file"
     name = "binary"
 

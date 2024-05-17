@@ -7,7 +7,6 @@ import numpy as np
 
 
 class MatlabHelper:
-    extractor_name = "MATSortingExtractor"
     mode = "file"
     installation_mesg = (
         "To use the MATSortingExtractor install h5py and scipy: " "\n\n pip install h5py scipy\n\n"

@@ -31,7 +31,6 @@ class MCSH5RecordingExtractor(BaseRecording):
         The loaded data.
     """
 
-    extractor_name = "MCSH5Recording"
     installed = HAVE_MCSH5  # check at class level if installed or not
     mode = "file"
     installation_mesg = (

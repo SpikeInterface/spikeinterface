@@ -46,7 +46,8 @@ class BaseRecording(BaseRecordingSnippets):
 
     def __repr__(self):
 
-        extractor_name = self.__class__.__name__
+        class_name = self.__class__.__name__
+        name_to_display = class_name
         num_segments = self.get_num_segments()
 
         txt = self._repr_header()
@@ -56,7 +57,7 @@ class BaseRecording(BaseRecordingSnippets):
             split_index = txt.rfind("-", 0, 100)  # Find the last "-" before character 100
             if split_index != -1:
                 first_line = txt[:split_index]
-                recording_string_space = len(extractor_name) + 2  # Length of extractor_name plus ": "
+                recording_string_space = len(name_to_display) + 2  # Length of name_to_display plus ": "
                 white_space_to_align_with_first_line = " " * recording_string_space
                 second_line = white_space_to_align_with_first_line + txt[split_index + 1 :].lstrip()
                 txt = first_line + "\n" + second_line
@@ -96,7 +97,8 @@ class BaseRecording(BaseRecordingSnippets):
         return txt
 
     def _repr_header(self):
-        extractor_name = self.__class__.__name__
+        class_name = self.__class__.__name__
+        name_to_display = class_name
         num_segments = self.get_num_segments()
         num_channels = self.get_num_channels()
         sf_khz = self.get_sampling_frequency() / 1000.0
@@ -107,7 +109,7 @@ class BaseRecording(BaseRecordingSnippets):
         total_memory_size = self.get_total_memory_size()
 
         txt = (
-            f"{extractor_name}: "
+            f"{name_to_display}: "
             f"{num_channels} channels - "
             f"{sf_khz:0.1f}kHz - "
             f"{num_segments} segments - "

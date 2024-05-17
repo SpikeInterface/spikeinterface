@@ -26,7 +26,6 @@ class NpyFolderSnippets(NpySnippetsExtractor):
         The snippets
     """
 
-    extractor_name = "NpyFolderSnippets"
     mode = "folder"
     name = "npyfolder"
 
