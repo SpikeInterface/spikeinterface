@@ -848,8 +848,8 @@ class BaseExtractor:
     # TODO rename to saveto_binary_folder
     def save_to_folder(
         self,
-        name: str = None,
-        folder: str | Path = None,
+        name: str | None = None,
+        folder: str | Path | None = None,
         overwrite: str = False,
         verbose: bool = True,
         **save_kwargs,
@@ -861,7 +861,7 @@ class BaseExtractor:
         with BinaryRecordingExtractor), and stores both the original extractor's provenance
         and the cached extractor's metadata in JSON format.
 
-        The folder final location and name can be specified in a couple of ways ways:
+        The folder's final location and name can be specified in a couple of ways ways:
 
         1. Explicitly providing the full path:
         ```
@@ -881,7 +881,7 @@ class BaseExtractor:
 
         Parameters
         ----------
-        name : str or Path, optional
+        name : str , optional
             The name of the subfolder within the global temporary folder. If `folder`
             is provided, this argument must be None.
         folder : str or Path, optional
