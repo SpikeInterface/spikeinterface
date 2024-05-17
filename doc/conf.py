@@ -121,6 +121,7 @@ sphinx_gallery_conf = {
     'examples_dirs': ['../examples/tutorials'],
     'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
+                                       '../examples/tutorials/new',
                                        '../examples/tutorials/core',
                                        '../examples/tutorials/extractors',
                                        '../examples/tutorials/qualitymetrics',
