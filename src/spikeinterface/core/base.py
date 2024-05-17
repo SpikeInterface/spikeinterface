@@ -846,43 +846,63 @@ class BaseExtractor:
         return cached
 
     # TODO rename to saveto_binary_folder
-    def save_to_folder(self, name=None, folder=None, overwrite=False, verbose=True, **save_kwargs):
+    def save_to_folder(
+        self,
+        name: str = None,
+        folder: str | Path = None,
+        overwrite: str = False,
+        verbose: bool = True,
+        **save_kwargs,
+    ):
         """
-        Save extractor to folder.
+        Save the extractor and its data to a folder.
 
-        The save consist of:
-          * extracting traces by calling get_trace() method in chunks
-          * saving data into file (memmap with BinaryRecordingExtractor)
-          * dumping to json/pickle the original extractor for provenance
-          * dumping to json/pickle the cached extractor (memmap with BinaryRecordingExtractor)
+        This method extracts trace data, saves it to a file (using a memory-mapped format
+        with BinaryRecordingExtractor), and stores both the original extractor's provenance
+        and the cached extractor's metadata in JSON format.
 
-        This replaces the use of the old CacheRecordingExtractor and CacheSortingExtractor.
+        The folder final location and name can be specified in a couple of ways ways:
 
-        There are 2 option for the "folder" argument:
-          * explicit folder: `extractor.save(folder="/path-for-saving/")`
-          * explicit sub-folder, implicit base-folder : `extractor.save(name="extarctor_name")`
-          * generated: `extractor.save()`
+        1. Explicitly providing the full path:
+        ```
+        extractor.save_to_folder(folder="/path/to/save/")
+        ```
 
-        The second option saves to subfolder "extractor_name" in
-        "get_global_tmp_folder()". You can set the global tmp folder with:
-        "set_global_tmp_folder("path-to-global-folder")"
+        2. Providing a subfolder name, with the base folder being determined automatically:
+        ```
+        extractor.save_to_folder(name="my_extractor_data")
+        ```
+        In this case, the data is saved in a subfolder named "my_extractor_data"
+        within the global temporary folder (set using `set_global_tmp_folder`). If no
+        global temporary folder is set, one will be generated automatically.
 
-        The folder must not exist. If it exists, remove it before.
+        3. If neither `name` nor `folder` is provided, a random name will be generated
+        for the subfolder within the global temporary folder.
 
         Parameters
         ----------
-        name: None str or Path
-            Name of the subfolder in get_global_tmp_folder()
-            If "name" is given, "folder" must be None.
-        folder: None str or Path
-            Name of the folder.
-            If "folder" is given, "name" must be None.
-        overwrite: bool, default: False
-            If True, the folder is removed if it already exists
+        name : str or Path, optional
+            The name of the subfolder within the global temporary folder. If `folder`
+            is provided, this argument must be None.
+        folder : str or Path, optional
+            The full path of the folder where the data should be saved. If `name` is
+            provided, this argument must be None.
+        overwrite : bool, default: False
+            If True, an existing folder at the specified path will be deleted before saving.
+        verbose : bool, default: True
+            If True, print information about the cache folder being used.
+        **save_kwargs
+            Additional keyword arguments to be passed to the underlying save method.
 
         Returns
         -------
-        cached: saved copy of the extractor.
+        cached_extractor
+            A saved copy of the extractor in the specified format (e.g., BinaryRecordingExtractor).
+
+        Raises
+        ------
+        AssertionError
+            If the folder already exists and `overwrite` is False.
         """
 
         if folder is None:
@@ -925,7 +945,6 @@ class BaseExtractor:
         self.copy_metadata(cached)
 
         # dump
-        # cached.dump(folder / f'cached.json', relative_to=folder, folder_metadata=folder)
         cached.dump(folder / f"si_folder.json", relative_to=folder)
 
         return cached
