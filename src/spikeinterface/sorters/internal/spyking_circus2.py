@@ -122,7 +122,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 100)
-        exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after)/2)
+        exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after) / 2)
 
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
