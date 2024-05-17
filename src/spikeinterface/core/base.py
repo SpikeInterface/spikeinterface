@@ -857,8 +857,8 @@ class BaseExtractor:
         """
         Save the extractor and its data to a folder.
 
-        This method extracts trace data, saves it to a file (using a memory-mapped format
-        with BinaryRecordingExtractor), and stores both the original extractor's provenance
+        This method extracts trace data, saves it to a file (using the memory-mapped
+        BinaryRecordingExtractor format), and stores both the original extractor's provenance
         and the cached extractor's metadata in JSON format.
 
         The folder's final location and name can be specified in a couple of ways ways:
