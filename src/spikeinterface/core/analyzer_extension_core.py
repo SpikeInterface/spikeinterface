@@ -299,8 +299,8 @@ class ComputeTemplates(AnalyzerExtension):
         waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
         if waveforms_extension is not None:
 
-            ms_before_waveforms = waveforms_extension.n_before / self.sorting_analyzer.sampling_frequency * 1000
-            ms_after_waveforms = waveforms_extension.n_after / self.sorting_analyzer.sampling_frequency * 1000
+            ms_before_waveforms = waveforms_extension.nbefore / self.sorting_analyzer.sampling_frequency * 1000
+            ms_after_waveforms = waveforms_extension.nafter / self.sorting_analyzer.sampling_frequency * 1000
 
             if ms_before != ms_before_waveforms or ms_after != ms_after_waveforms:
                 raise ValueError(
