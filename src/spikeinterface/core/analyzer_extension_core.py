@@ -298,6 +298,12 @@ class ComputeTemplates(AnalyzerExtension):
 
         waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
         if waveforms_extension is not None:
+
+            if ms_before != waveforms_extension.ms_before or ms_after != waveforms_extension.ms_after:
+                raise ValueError(
+                    "ComputeTemplates: ms_before and ms_after must be the same as the ones used for the 'waveforms' extension"
+                )
+
             nbefore = waveforms_extension.nbefore
             nafter = waveforms_extension.nafter
         else:
