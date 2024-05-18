@@ -134,9 +134,6 @@ sphinx_gallery_conf = {
     'filename_pattern': '/plot_',
 }
 
-# -D long_builds=handle_drift,two
-# -t handle_drift -t something_else
-
 #if "-D" in sys.argv:
 #    key_value = sys.argv.index("-D") + 1
 #    name_and_value=sys.argv.pop(key_value)
