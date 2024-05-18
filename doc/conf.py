@@ -119,7 +119,7 @@ from sphinx_gallery.sorting import FileNameSortKey
 sphinx_gallery_conf = {
     'only_warn_on_example_error': True,
     'examples_dirs': ['../examples/tutorials'],
-    'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
+    'gallery_dirs': ['tutorials'],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
                                        '../examples/tutorials/new',
                                        '../examples/tutorials/core',
@@ -131,8 +131,23 @@ sphinx_gallery_conf = {
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_',
     'nested_sections': False,
-    'copyfile_regex': r'.*\.rst|.*\.png|.*\.svg'
+    'copyfile_regex': r'.*\.rst|.*\.png|.*\.svg',
+    'filename_pattern': '/plot_',
 }
+
+# -D long_builds=handle_drift,two
+# -t handle_drift -t something_else
+
+#if "-D" in sys.argv:
+#    key_value = sys.argv.index("-D") + 1
+#    name_and_value=sys.argv.pop(key_value)
+#    sys.argv.pop(sys.argv.index("-D"))
+#    param_name, param_values = name_and_value.split("=")
+#    assert param_name == "long_builds"
+#    long_buildnames = param_values.split(",")
+#    if "handle_drift" in long_buildnames:
+if tags.has("handle_drift") or tags.has("all_long_plot"):
+    sphinx_gallery_conf["filename_pattern"] += '|/long_plot_handle_drift'
 
 intersphinx_mapping = {
     "neo": ("https://neo.readthedocs.io/en/latest/", None),

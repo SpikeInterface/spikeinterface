@@ -42,7 +42,19 @@ from spikeinterface.generation.drifting_generator import generate_drifting_recor
 # drift-corrected vs. original static recording?
 
 _, raw_rec, _ = generate_drifting_recording(
-    generate_sorting_kwargs=dict(firing_rates=(25, 30), refractory_period_ms=2.0),
+    num_units=25,
+    duration=10,
+    generate_sorting_kwargs=dict(firing_rates=(5, 10), refractory_period_ms=2.0),
+    generate_displacement_vector_kwargs=dict(motion_list=[
+        dict(
+            drift_mode="zigzag",
+            amplitude_factor=1.0,
+            non_rigid_gradient=None,
+            t_start_drift=1,
+            t_end_drift=None,
+            period_s=1,
+        ),
+    ]),
     seed=42,
 )
 print(raw_rec)
