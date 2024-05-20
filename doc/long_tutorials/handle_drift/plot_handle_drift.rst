@@ -91,7 +91,7 @@ FIRST WE IMPORT AND # We will use GENERATE RECORDINGS
 
  .. code-block:: none
 
-    InjectDriftingTemplatesRecording: 128 channels - 30.0kHz - 1 segments - 30,000,000 samples 
+    InjectDriftingTemplatesRecording: 128 channels - 30.0kHz - 1 segments - 30,000,000 samples
                                       1,000.00s (16.67 minutes) - float32 dtype - 14.31 GiB
 
 
