@@ -2,6 +2,25 @@ import numpy as np
 
 
 
+
+# @charlie @sam
+# here TODO list for motion object
+#  * simple test for Motion: DONE
+#  * save/load Motion
+#  * make better test for Motion object with save/load
+#  * propagate to estimate_motion : DONE
+#  * handle multi segment in estimate_motion(): maybe in another PR
+#  * propagate to motion_interpolation.py:
+#  * propagate to preprocessing/correct_motion()
+#  * generate drifting signals for test estimate_motion and interpolate_motion
+#  * uncomment assert in test_estimate_motion (aka debug torch vs numpy diff)
+#  * delegate times to recording object in
+#       * estimate motion
+#       * correct_motion_on_peaks()
+#       * interpolate_motion_on_traces()
+
+
+
 class Motion:
     """
     Motion of the tissue relative the probe.
@@ -42,6 +61,18 @@ class Motion:
         
         self.direction = direction
         self.dim = ["x", "y", "z"].index(direction)
+    
+    def __repr__(self):
+        nbins = self.spatial_bins_um.shape[0]
+        if nbins == 1:
+            rigid_txt = "rigid"
+        else:
+            rigid_txt = f"non-rigid - {nbins} spatial bins"
+        
+        interval_s = self.temporal_bins_s[0][1] - self.temporal_bins_s[0][0]
+        txt = f"Motion {rigid_txt} - interval {interval_s}s -{self.num_segments} segments"
+        return txt
+
 
     def make_interpolators(self):
         from scipy.interpolate import RegularGridInterpolator

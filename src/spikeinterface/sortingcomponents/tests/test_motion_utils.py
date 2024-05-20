@@ -21,6 +21,7 @@ def test_Motion():
     motion = Motion(
         displacement, temporal_bins_s, spatial_bins_um, direction="y"
     )
+    print(motion)
 
     motion2 = Motion(**motion.to_dict())
     assert motion == motion2

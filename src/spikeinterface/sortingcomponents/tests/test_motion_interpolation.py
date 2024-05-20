@@ -4,6 +4,7 @@ import numpy as np
 
 from spikeinterface import download_dataset
 
+from spikeinterface.sortingcomponents.motion_utils import Motion
 from spikeinterface.sortingcomponents.motion_interpolation import (
     correct_motion_on_peaks,
     interpolate_motion_on_traces,
@@ -20,21 +21,25 @@ else:
 
 
 def make_fake_motion(rec):
-    # make a fake motion vector
+    # make a fake motion object
     duration = rec.get_total_duration()
     locs = rec.get_channel_locations()
     temporal_bins = np.arange(0.5, duration - 0.49, 0.5)
     spatial_bins = np.arange(locs[:, 1].min(), locs[:, 1].max(), 100)
-    motion = np.zeros((temporal_bins.size, spatial_bins.size))
-    motion[:, :] = np.linspace(-30, 30, temporal_bins.size)[:, None]
+    displacament = np.zeros((temporal_bins.size, spatial_bins.size))
+    displacament[:, :] = np.linspace(-30, 30, temporal_bins.size)[:, None]
 
-    return motion, temporal_bins, spatial_bins
+    motion = Motion([displacament], [temporal_bins], spatial_bins, direction="y")
+
+    return motion
 
 
 def test_correct_motion_on_peaks():
     rec, sorting = make_dataset()
     peaks = sorting.to_spike_vector()
-    motion, temporal_bins, spatial_bins = make_fake_motion(rec)
+    print(peaks.dtype)
+    motion = make_fake_motion(rec)
+    # print(motion)
 
     # fake locations
     peak_locations = np.zeros((peaks.size), dtype=[("x", "float32"), ("y", "float")])
@@ -44,24 +49,24 @@ def test_correct_motion_on_peaks():
         peak_locations,
         rec.sampling_frequency,
         motion,
-        temporal_bins,
-        spatial_bins,
-        direction="y",
     )
     # print(corrected_peak_locations)
     assert np.any(corrected_peak_locations["y"] != 0)
 
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
-    # ax.plot(times[peaks['sample_index']], corrected_peak_locations['y'])
-    # ax.plot(temporal_bins, motion[:, 1])
+    # segment_index = 0
+    # times = rec.get_times(segment_index=segment_index)
+    # ax.scatter(times[peaks['sample_index']], corrected_peak_locations['y'])
+    # ax.plot(motion.temporal_bins_s[segment_index],  motion.displacement[segment_index][:, 1])
     # plt.show()
+
 
 
 def test_interpolate_motion_on_traces():
     rec, sorting = make_dataset()
 
-    motion, temporal_bins, spatial_bins = make_fake_motion(rec)
+    motion = make_fake_motion(rec)
 
     channel_locations = rec.get_channel_locations()
 
@@ -74,12 +79,10 @@ def test_interpolate_motion_on_traces():
             times,
             channel_locations,
             motion,
-            temporal_bins,
-            spatial_bins,
-            direction=1,
             channel_inds=None,
             spatial_interpolation_method=method,
-            spatial_interpolation_kwargs={},
+            # spatial_interpolation_kwargs={},
+            spatial_interpolation_kwargs={"force_extrapolate": True},
         )
         assert traces.shape == traces_corrected.shape
         assert traces.dtype == traces_corrected.dtype
@@ -87,15 +90,15 @@ def test_interpolate_motion_on_traces():
 
 def test_InterpolateMotionRecording():
     rec, sorting = make_dataset()
-    motion, temporal_bins, spatial_bins = make_fake_motion(rec)
+    motion = make_fake_motion(rec)
 
-    rec2 = InterpolateMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate")
+    rec2 = InterpolateMotionRecording(rec, motion, border_mode="force_extrapolate")
     assert rec2.channel_ids.size == 32
 
-    rec2 = InterpolateMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_zeros")
+    rec2 = InterpolateMotionRecording(rec, motion, border_mode="force_zeros")
     assert rec2.channel_ids.size == 32
 
-    rec2 = InterpolateMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="remove_channels")
+    rec2 = InterpolateMotionRecording(rec, motion, border_mode="remove_channels")
     assert rec2.channel_ids.size == 24
     for ch_id in (0, 1, 14, 15, 16, 17, 30, 31):
         assert ch_id not in rec2.channel_ids
@@ -116,6 +119,6 @@ def test_InterpolateMotionRecording():
 
 
 if __name__ == "__main__":
-    test_correct_motion_on_peaks()
-    test_interpolate_motion_on_traces()
+    # test_correct_motion_on_peaks()
+    # test_interpolate_motion_on_traces()
     test_InterpolateMotionRecording()
