@@ -3,6 +3,7 @@ from __future__ import annotations
 from spikeinterface.core import generate_ground_truth_recording
 
 
+
 def make_dataset():
     # this replace the MEArec 10s file for testing
     recording, sorting = generate_ground_truth_recording(
@@ -22,3 +23,4 @@ def make_dataset():
         seed=2205,
     )
     return recording, sorting
+

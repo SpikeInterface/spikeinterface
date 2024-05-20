@@ -13,7 +13,7 @@ except ImportError:
     HAVE_TORCH = False
 
 from .tools import make_multi_method_doc
-
+from .motion_utils import Motion
 
 
 
@@ -109,19 +109,8 @@ def estimate_motion(
 
     Returns
     -------
-    motion: numpy array 2d
-        Motion estimate in um.
-        Shape (temporal bins, spatial bins)
-        motion.shape[0] = temporal_bins.shape[0]
-        motion.shape[1] = 1 (rigid) or spatial_bins.shape[1] (non rigid)
-        If upsample_to_histogram_bin, motion.shape[1] corresponds to spatial
-        bins given by bin_um.
-    temporal_bins: numpy.array 1d
-        temporal bins (bin center)
-    spatial_bins: numpy.array 1d
-        Windows center.
-        spatial_bins.shape[0] == motion.shape[1]
-        If rigid then spatial_bins.shape[0] == 1
+    motion: Motion object
+        The motion object.
     extra_check: dict
         Optional output if `output_extra_check=True`
         This dict contain histogram, pairwise_displacement usefull for ploting.
@@ -152,7 +141,7 @@ def estimate_motion(
 
     # run method
     method_class = estimate_motion_methods[method]
-    motion, temporal_bins = method_class.run(
+    motion_array, temporal_bins = method_class.run(
         recording,
         peaks,
         peak_locations,
@@ -168,29 +157,31 @@ def estimate_motion(
     )
 
     # replace nan by zeros
-    motion[np.isnan(motion)] = 0
+    motion_array[np.isnan(motion_array)] = 0
 
     if post_clean:
-        motion = clean_motion_vector(
-            motion, temporal_bins, bin_duration_s, speed_threshold=speed_threshold, sigma_smooth_s=sigma_smooth_s
+        motion_array = clean_motion_vector(
+            motion_array, temporal_bins, bin_duration_s, speed_threshold=speed_threshold, sigma_smooth_s=sigma_smooth_s
         )
 
     if upsample_to_histogram_bin is None:
         upsample_to_histogram_bin = not rigid
     if upsample_to_histogram_bin:
-        extra_check["motion"] = motion
+        extra_check["motion_array"] = motion_array
         extra_check["non_rigid_window_centers"] = non_rigid_window_centers
         non_rigid_windows = np.array(non_rigid_windows)
         non_rigid_windows /= non_rigid_windows.sum(axis=0, keepdims=True)
         non_rigid_window_centers = spatial_bin_edges[:-1] + bin_um / 2
-        motion = motion @ non_rigid_windows
+        motion_array = motion_array @ non_rigid_windows
+
+    # TODO handle multi segment
+    motion = Motion([motion_array], [temporal_bins], non_rigid_window_centers, direction=direction)
 
 
-    # TODO : add Motion object here
     if output_extra_check:
-        return motion, temporal_bins, non_rigid_window_centers, extra_check
+        return motion, extra_check
     else:
-        return motion, temporal_bins, non_rigid_window_centers
+        return motion
 
 
 

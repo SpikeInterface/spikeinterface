@@ -11,9 +11,11 @@ class Motion:
 
     displacement: numpy array 2d or list of
         Motion estimate in um.
-        Shape (temporal bins, spatial bins)
-        motion.shape[0] = temporal_bins.shape[0]
-        motion.shape[1] = 1 (rigid) or spatial_bins.shape[1] (non rigid)
+        List is the number of segment.
+        For each semgent : 
+            * shape (temporal bins, spatial bins)
+            * motion.shape[0] = temporal_bins.shape[0]
+            * motion.shape[1] = 1 (rigid) or spatial_bins.shape[1] (non rigid)
     temporal_bins_s: numpy.array 1d or list of
         temporal bins (bin center)
     spatial_bins_um: numpy.array 1d
@@ -42,9 +44,9 @@ class Motion:
         self.dim = ["x", "y", "z"].index(direction)
 
     def make_interpolators(self):
-        from scipy.interpolate import RegularGridInterpolator2D
+        from scipy.interpolate import RegularGridInterpolator
         self.interpolator = [
-            RegularGridInterpolator2D((self.spatial_bins_um, self.temporal_bins_s[j]), self.displacement[j])
+            RegularGridInterpolator((self.temporal_bins_s[j], self.spatial_bins_um), self.displacement[j])
             for j in range(self.num_segments)
         ]
         self.temporal_bounds = [(t[0], t[-1]) for t in self.temporal_bins_s]
@@ -72,14 +74,17 @@ class Motion:
                 segment_index = 0
             else:
                 raise ValueError("Several segment need segment_index=")
+        
+        times_s = np.asarray(times_s)
+        locations_um = np.asarray(times_s)
 
         if locations_um.ndim == 1:
             locations_um = locations_um
         else:
             locations_um = locations_um[:, self.dim]
         times_s = np.clip(times_s, *self.temporal_bounds[segment_index])
-        positions = np.clip(positions, *self.spatial_bounds)
-        points = np.stack([positions, times_s], axis=1)
+        locations_um = np.clip(locations_um, *self.spatial_bounds)
+        points = np.stack([times_s, locations_um,], axis=1)
 
         return self.interpolator[segment_index](points)
 
@@ -91,8 +96,23 @@ class Motion:
         )
     
     def save(self):
+        # TODO
         pass
 
     @classmethod
     def load(cls):
+        # TODO
         pass
+
+    def __eq__(self, other):
+
+        for segment_index in range(self.num_segments):
+            if not np.allclose(self.displacement[segment_index], other.displacement[segment_index]):
+                return False
+            if not np.allclose(self.temporal_bins_s[segment_index], other.temporal_bins_s[segment_index]):
+                return False
+        
+        if not np.allclose(self.spatial_bins_um, other.spatial_bins_um):
+            return False
+        
+        return True
