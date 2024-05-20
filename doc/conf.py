@@ -134,16 +134,14 @@ sphinx_gallery_conf = {
     'filename_pattern': '/plot_',
 }
 
-#if "-D" in sys.argv:
-#    key_value = sys.argv.index("-D") + 1
-#    name_and_value=sys.argv.pop(key_value)
-#    sys.argv.pop(sys.argv.index("-D"))
-#    param_name, param_values = name_and_value.split("=")
-#    assert param_name == "long_builds"
-#    long_buildnames = param_values.split(",")
-#    if "handle_drift" in long_buildnames:
 if tags.has("handle_drift") or tags.has("all_long_plot"):
-    sphinx_gallery_conf["filename_pattern"] += '|/long_plot_handle_drift'
+
+    if (handle_drift_path := (Path('long_tutorials/handle_drift'))).is_dir():
+        shutil.rmtree(handle_drift_path)
+
+    sphinx_gallery_conf['examples_dirs'].append('../examples/long_tutorials/handle_drift')
+    sphinx_gallery_conf["gallery_dirs"].append(handle_drift_path.as_posix())
+
 
 intersphinx_mapping = {
     "neo": ("https://neo.readthedocs.io/en/latest/", None),
