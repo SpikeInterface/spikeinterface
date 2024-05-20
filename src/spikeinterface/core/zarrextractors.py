@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 import numpy as np
 import zarr
@@ -315,6 +316,12 @@ def add_properties_and_annotations(
     prop_group = zarr_group.create_group("properties")
     for key in recording_or_sorting.get_property_keys():
         values = recording_or_sorting.get_property(key)
+        if values.dtype.kind == "O":
+            try:
+                values = values.astype("str")
+            except Exception as e:
+                warnings.warn(f"Property {key} not saved because it is a python Object type")
+                continue
         prop_group.create_dataset(name=key, data=values, compressor=None)
 
     # save annotations
