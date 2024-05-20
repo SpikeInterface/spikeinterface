@@ -12,14 +12,14 @@ import scipy
 
 try:
     import sklearn
-    from sklearn.feature_extraction.image import extract_patches_2d, reconstruct_from_patches_2d
+    from sklearn.feature_extraction.image import extract_patches_2d
 
     HAVE_SKLEARN = True
 except ImportError:
     HAVE_SKLEARN = False
 
 
-from spikeinterface.core import get_noise_levels, get_random_data_chunks, compute_sparsity
+from spikeinterface.core import get_noise_levels
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel
 from spikeinterface.core.template import Templates
 
@@ -111,7 +111,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "templates": None,
         "rank": 5,
         "ignored_ids": [],
-        "vicinity": 0,
+        "vicinity": 3,
     }
 
     @classmethod
@@ -130,6 +130,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             (d["unit_overlaps_indices"][i],) = np.nonzero(d["units_overlaps"][i])
 
         templates_array = templates.get_dense_templates().copy()
+        templates_array -= templates_array.mean(axis=(1, 2))[:, None, None]
 
         # Then we keep only the strongest components
         rank = d["rank"]
@@ -233,7 +234,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        margin = 2 * max(kwargs["nbefore"], kwargs["nafter"])
+        if kwargs["vicinity"] > 0:
+            margin = kwargs["vicinity"]
+        else:
+            margin = 2 * kwargs["num_samples"]
         return margin
 
     @classmethod
@@ -243,15 +247,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         num_samples = d["num_samples"]
         overlaps_array = d["overlaps"]
         norms = d["norms"]
-        nbefore = d["nbefore"]
-        nafter = d["nafter"]
         omp_tol = np.finfo(np.float32).eps
         num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d["amplitudes"]
         ignored_ids = d["ignored_ids"]
         vicinity = d["vicinity"]
-        rank = d["rank"]
 
         num_timesteps = len(traces)
 
@@ -288,7 +289,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         full_sps = scalar_products.copy()
 
         neighbors = {}
-        cached_overlaps = {}
 
         all_amplitudes = np.zeros(0, dtype=np.float32)
         is_in_vicinity = np.zeros(0, dtype=np.int32)
@@ -371,11 +371,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             selection = all_selections[:, :num_selection]
             res_sps = full_sps[selection[0], selection[1]]
 
-            if True:  # vicinity == 0:
+            if vicinity == 0:
                 all_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps, lower=True, overwrite_b=False)
                 all_amplitudes /= norms[selection[0]]
             else:
-                # This is not working, need to figure out why
                 is_in_vicinity = np.append(is_in_vicinity, num_selection - 1)
                 all_amplitudes = np.append(all_amplitudes, np.float32(1))
                 L = M[is_in_vicinity, :][:, is_in_vicinity]
@@ -676,7 +675,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         exclude_sweep_size = d["exclude_sweep_size"]
         templates = d["circus_templates"]
         num_templates = d["num_templates"]
-        num_channels = d["num_channels"]
         overlaps = d["overlaps"]
         margin = d["margin"]
         norms = d["norms"]

@@ -188,6 +188,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
 
         # only copy relevant metadata and properties
         parent_recording.copy_metadata(self, only_main=True)
+        self._parent = parent_recording
         prop_keys = parent_recording.get_property_keys()
 
         for k in prop_keys:

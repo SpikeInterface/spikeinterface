@@ -51,7 +51,7 @@ class SavGolDenoiser(WaveformsNode):
         self.order = order
         waveforms_sampling_frequency = self.recording.get_sampling_frequency()
         self.window_length = int(window_length_ms * waveforms_sampling_frequency / 1000)
-
+        self.order = min(self.order, self.window_length - 1)
         self._kwargs.update(dict(order=order, window_length_ms=window_length_ms))
 
     def compute(self, traces, peaks, waveforms):

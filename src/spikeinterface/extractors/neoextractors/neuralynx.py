@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Optional
 from pathlib import Path
 
+from importlib.metadata import version
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
@@ -27,22 +29,44 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     exlude_filename: list[str], default: None
         List of filename to exclude from the loading.
         For example, use `exclude_filename=["events.nev"]` to skip loading the event file.
+    strict_gap_mode: bool, default: False
+        See neo documentation.
+        Detect gaps using strict mode or not.
+          * strict_gap_mode = True then a gap is consider when timstamp difference between two
+            consecutive data packets is more than one sample interval.
+          * strict_gap_mode = False then a gap has an increased tolerance. Some new systems with different clocks need this option
+            otherwise, too many gaps are detected
+        Note that here the default is False contrary to neo.
     """
 
     mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
     name = "neuralynx"
 
-    def __init__(self, folder_path, stream_id=None, stream_name=None, all_annotations=False, exclude_filename=None):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path, exclude_filename)
+    def __init__(
+        self,
+        folder_path,
+        stream_id=None,
+        stream_name=None,
+        all_annotations=False,
+        exclude_filename=None,
+        strict_gap_mode=False,
+    ):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, exclude_filename, strict_gap_mode)
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), exclude_filename=exclude_filename))
+        self._kwargs.update(
+            dict(folder_path=str(Path(folder_path).absolute()), exclude_filename=exclude_filename),
+            strict_gap_mode=strict_gap_mode,
+        )
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path, exclude_filename):
+    def map_to_neo_kwargs(cls, folder_path, exclude_filename, strict_gap_mode):
         neo_kwargs = {"dirname": str(folder_path), "exclude_filename": exclude_filename}
+        if version("neo") >= "0.13.1":
+            neo_kwargs["strict_gap_mode"] = strict_gap_mode
+
         return neo_kwargs
 
 

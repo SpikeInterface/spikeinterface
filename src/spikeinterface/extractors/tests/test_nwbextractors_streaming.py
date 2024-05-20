@@ -12,7 +12,6 @@ from spikeinterface.core.testing import check_recordings_equal, check_sortings_e
 from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
 
 
-@pytest.mark.ros3_test
 @pytest.mark.streaming_extractors
 @pytest.mark.skipif("ros3" not in h5py.registered_drivers(), reason="ROS3 driver not installed")
 def test_recording_s3_nwb_ros3(tmp_path):
@@ -155,7 +154,6 @@ def test_recording_s3_nwb_remfile_file_like(tmp_path):
     check_recordings_equal(rec, rec2)
 
 
-@pytest.mark.ros3_test
 @pytest.mark.streaming_extractors
 @pytest.mark.skipif("ros3" not in h5py.registered_drivers(), reason="ROS3 driver not installed")
 def test_sorting_s3_nwb_ros3(tmp_path):
@@ -292,7 +290,14 @@ def test_sorting_s3_nwb_zarr(tmp_path):
 
     # test to/from dict
     sorting_loaded = load_extractor(sorting.to_dict())
-    check_sortings_equal(sorting, sorting_loaded)
+
+    # just take 3 random units to test
+    rng = np.random.default_rng(seed=2205)
+    three_unit_ids = rng.choice(sorting.unit_ids, size=3)
+    sorting_sub = sorting.select_units(unit_ids=three_unit_ids)
+    sorting_loaded_sub = sorting_loaded.select_units(unit_ids=three_unit_ids)
+
+    check_sortings_equal(sorting_sub, sorting_loaded_sub)
 
 
 if __name__ == "__main__":

@@ -50,7 +50,7 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         v_average_waveforms = vv.AverageWaveforms(average_waveforms=aw_items, channel_locations=locations)
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(dp.waveform_extractor.sorting)
+            v_units_table = generate_unit_table_view(dp.sorting_analyzer.sorting)
 
             self.view = vv.Box(
                 direction="horizontal",

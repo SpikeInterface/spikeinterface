@@ -14,7 +14,7 @@ except ImportError:
 
 from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core import compute_sparsity
-from ..core.template_tools import get_template_extremum_channel, _get_nbefore, _get_dense_templates_array
+from ..core.template_tools import get_template_extremum_channel, _get_nbefore, get_dense_templates_array
 
 
 dtype_localize_by_method = {
@@ -37,9 +37,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         A SortingAnalyzer object
     method: "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The method to use for localization
-    outputs: "numpy" | "by_unit", default: "numpy"
-        The output format
-    method_kwargs:
+    method_kwargs: dict, default: {}
         Other kwargs depending on the method
 
     Returns
@@ -49,9 +47,7 @@ class ComputeUnitLocations(AnalyzerExtension):
     """
 
     extension_name = "unit_locations"
-    depend_on = [
-        "fast_templates|templates",
-    ]
+    depend_on = ["templates"]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
@@ -243,7 +239,7 @@ def compute_monopolar_triangulation(
     contact_locations = sorting_analyzer.get_channel_locations()
 
     sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=radius_um)
-    templates = _get_dense_templates_array(sorting_analyzer)
+    templates = get_dense_templates_array(sorting_analyzer)
     nbefore = _get_nbefore(sorting_analyzer)
 
     if enforce_decrease:
@@ -307,7 +303,7 @@ def compute_center_of_mass(sorting_analyzer, peak_sign="neg", radius_um=75, feat
     assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
 
     sparsity = compute_sparsity(sorting_analyzer, peak_sign=peak_sign, method="radius", radius_um=radius_um)
-    templates = _get_dense_templates_array(sorting_analyzer)
+    templates = get_dense_templates_array(sorting_analyzer)
     nbefore = _get_nbefore(sorting_analyzer)
 
     unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
@@ -378,7 +374,7 @@ def compute_grid_convolution(
     contact_locations = sorting_analyzer.get_channel_locations()
     unit_ids = sorting_analyzer.unit_ids
 
-    templates = _get_dense_templates_array(sorting_analyzer)
+    templates = get_dense_templates_array(sorting_analyzer)
     nbefore = _get_nbefore(sorting_analyzer)
     nafter = templates.shape[1] - nbefore
 

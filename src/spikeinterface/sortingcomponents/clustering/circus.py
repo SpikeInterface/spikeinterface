@@ -3,7 +3,6 @@ from __future__ import annotations
 # """Sorting components: clustering"""
 from pathlib import Path
 
-import shutil
 import numpy as np
 
 try:
@@ -13,29 +12,26 @@ try:
 except:
     HAVE_HDBSCAN = False
 
-import random, string, os
-from spikeinterface.core import get_global_tmp_folder, get_channel_distances
+import random, string
+from spikeinterface.core import get_global_tmp_folder
 from spikeinterface.core.basesorting import minimum_spike_dtype
-from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
-from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers, estimate_templates
-from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
-from spikeinterface.core import NumpySorting
-from spikeinterface.core.recording_tools import get_noise_levels
+from spikeinterface.core.waveform_tools import estimate_templates
+from .clustering_tools import remove_duplicates_via_matching
+from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.core import extract_waveforms
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
-from sklearn.decomposition import TruncatedSVD
+from sklearn.decomposition import TruncatedSVD, PCA
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
 import pickle, json
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
-    ExtractDenseWaveforms,
     ExtractSparseWaveforms,
     PeakRetriever,
 )
+
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
 
@@ -46,53 +42,43 @@ class CircusClustering:
 
     _default_params = {
         "hdbscan_kwargs": {
-            "min_cluster_size": 20,
+            "min_cluster_size": 25,
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "eom",
+            # "cluster_selection_epsilon" : 5 ## To be optimized
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
-        "sparsity": {"method": "ptp", "threshold": 1},
+        "sparsity": {"method": "ptp", "threshold": 0.25},
+        "recursive_kwargs": {
+            "recursive": True,
+            "recursive_depth": 3,
+            "returns_split_count": True,
+        },
         "radius_um": 100,
-        "n_svd": [5, 10],
-        "ms_before": 0.5,
-        "ms_after": 0.5,
-        "random_seed": 42,
+        "n_svd": [5, 2],
+        "ms_before": 2,
+        "ms_after": 2,
         "noise_levels": None,
-        "debug": False,
         "tmp_folder": None,
-        "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {},
     }
 
     @classmethod
     def main_function(cls, recording, peaks, params):
         assert HAVE_HDBSCAN, "random projections clustering needs hdbscan to be installed"
 
-        if "n_jobs" in params["job_kwargs"]:
-            if params["job_kwargs"]["n_jobs"] == -1:
-                params["job_kwargs"]["n_jobs"] = os.cpu_count()
-
-        if "core_dist_n_jobs" in params["hdbscan_kwargs"]:
-            if params["hdbscan_kwargs"]["core_dist_n_jobs"] == -1:
-                params["hdbscan_kwargs"]["core_dist_n_jobs"] = os.cpu_count()
-
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        verbose = d["job_kwargs"]["verbose"]
-
-        peak_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+        verbose = job_kwargs.get("verbose", True)
 
         fs = recording.get_sampling_frequency()
         ms_before = params["ms_before"]
         ms_after = params["ms_after"]
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
-        num_samples = nbefore + nafter
-        num_chans = recording.get_num_channels()
-        np.random.seed(d["random_seed"])
-
         if params["tmp_folder"] is None:
             name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = get_global_tmp_folder() / name
@@ -102,7 +88,7 @@ class CircusClustering:
         tmp_folder.mkdir(parents=True, exist_ok=True)
 
         # SVD for time compression
-        few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
+        few_peaks = select_peaks(peaks, method="uniform", n_peaks=10000)
         few_wfs = extract_waveform_at_max_channel(
             recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **params["job_kwargs"]
         )
@@ -127,7 +113,6 @@ class CircusClustering:
             json.dump(model_params, f)
 
         # features
-        features_folder = model_folder / "features"
         node0 = PeakRetriever(recording, peaks)
 
         radius_um = params["radius_um"]
@@ -146,39 +131,90 @@ class CircusClustering:
 
         pipeline_nodes = [node0, node1, node2]
 
-        all_pc_data = run_node_pipeline(
-            recording,
-            pipeline_nodes,
-            params["job_kwargs"],
-            job_name="extracting features",
-        )
+        if len(params["recursive_kwargs"]) == 0:
 
-        peak_labels = -1 * np.ones(len(peaks), dtype=int)
-        nb_clusters = 0
-        for c in np.unique(peaks["channel_index"]):
-            mask = peaks["channel_index"] == c
-            tsvd = TruncatedSVD(params["n_svd"][1])
-            sub_data = all_pc_data[mask]
-            hdbscan_data = tsvd.fit_transform(sub_data.reshape(len(sub_data), -1))
-            try:
-                clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
-                local_labels = clustering[0]
-            except Exception:
-                local_labels = -1 * np.ones(len(hdbscan_data))
-            valid_clusters = local_labels > -1
-            if np.sum(valid_clusters) > 0:
-                local_labels[valid_clusters] += nb_clusters
-                peak_labels[mask] = local_labels
-                nb_clusters += len(np.unique(local_labels[valid_clusters]))
+            all_pc_data = run_node_pipeline(
+                recording,
+                pipeline_nodes,
+                params["job_kwargs"],
+                job_name="extracting features",
+            )
 
-        labels = np.unique(peak_labels)
-        labels = labels[labels >= 0]
+            peak_labels = -1 * np.ones(len(peaks), dtype=int)
+            nb_clusters = 0
+            for c in np.unique(peaks["channel_index"]):
+                mask = peaks["channel_index"] == c
+                sub_data = all_pc_data[mask]
+                sub_data = sub_data.reshape(len(sub_data), -1)
+
+                if all_pc_data.shape[1] > params["n_svd"][1]:
+                    tsvd = TruncatedSVD(params["n_svd"][1])
+                else:
+                    tsvd = TruncatedSVD(all_pc_data.shape[1])
+
+                hdbscan_data = tsvd.fit_transform(sub_data)
+                try:
+                    clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
+                    local_labels = clustering[0]
+                except Exception:
+                    local_labels = np.zeros(len(hdbscan_data))
+                valid_clusters = local_labels > -1
+                if np.sum(valid_clusters) > 0:
+                    local_labels[valid_clusters] += nb_clusters
+                    peak_labels[mask] = local_labels
+                    nb_clusters += len(np.unique(local_labels[valid_clusters]))
+        else:
+
+            features_folder = tmp_folder / "tsvd_features"
+            features_folder.mkdir(exist_ok=True)
+
+            _ = run_node_pipeline(
+                recording,
+                pipeline_nodes,
+                params["job_kwargs"],
+                job_name="extracting features",
+                gather_mode="npy",
+                gather_kwargs=dict(exist_ok=True),
+                folder=features_folder,
+                names=["sparse_tsvd"],
+            )
+
+            sparse_mask = node1.neighbours_mask
+            neighbours_mask = get_channel_distances(recording) < radius_um
+
+            # np.save(features_folder / "sparse_mask.npy", sparse_mask)
+            np.save(features_folder / "peaks.npy", peaks)
+
+            original_labels = peaks["channel_index"]
+            from spikeinterface.sortingcomponents.clustering.split import split_clusters
+
+            peak_labels, _ = split_clusters(
+                original_labels,
+                recording,
+                features_folder,
+                method="local_feature_clustering",
+                method_kwargs=dict(
+                    clusterer="hdbscan",
+                    feature_name="sparse_tsvd",
+                    neighbours_mask=neighbours_mask,
+                    waveforms_sparse_mask=sparse_mask,
+                    min_size_split=50,
+                    clusterer_kwargs=d["hdbscan_kwargs"],
+                    n_pca_features=params["n_svd"][1],
+                    scale_n_pca_by_depth=True,
+                ),
+                **params["recursive_kwargs"],
+                **job_kwargs,
+            )
+
+        labels, inverse = np.unique(peak_labels[peak_labels > -1], return_inverse=True)
+        labels = np.arange(len(labels))
 
         spikes = np.zeros(np.sum(peak_labels > -1), dtype=minimum_spike_dtype)
         mask = peak_labels > -1
         spikes["sample_index"] = peaks[mask]["sample_index"]
         spikes["segment_index"] = peaks[mask]["segment_index"]
-        spikes["unit_index"] = peak_labels[mask]
+        spikes["unit_index"] = inverse
 
         unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
 
@@ -190,11 +226,18 @@ class CircusClustering:
         )
 
         templates = Templates(
-            templates_array, fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe()
+            templates_array=templates_array,
+            sampling_frequency=fs,
+            nbefore=nbefore,
+            sparsity_mask=None,
+            channel_ids=recording.channel_ids,
+            unit_ids=unit_ids,
+            probe=recording.get_probe(),
+            is_scaled=False,
         )
         if params["noise_levels"] is None:
-            params["noise_levels"] = get_noise_levels(recording)
-        sparsity = compute_sparsity(templates, params["noise_levels"], **params["sparsity"])
+            params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
+        sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         templates = remove_empty_templates(templates)
 
@@ -211,7 +254,6 @@ class CircusClustering:
         cleaning_matching_params["progress_bar"] = False
 
         cleaning_params = params["cleaning_kwargs"].copy()
-        cleaning_params["tmp_folder"] = tmp_folder
 
         labels, peak_labels = remove_duplicates_via_matching(
             templates, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params

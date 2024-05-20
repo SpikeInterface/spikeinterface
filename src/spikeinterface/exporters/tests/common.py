@@ -25,7 +25,7 @@ def make_sorting_analyzer(sparse=True, with_group=False):
             contact_shape_params={"radius": 6},
         ),
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
         seed=2205,
     )
 
@@ -55,17 +55,17 @@ def make_sorting_analyzer(sparse=True, with_group=False):
     return sorting_analyzer
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def sorting_analyzer_dense_for_export():
     return make_sorting_analyzer(sparse=False)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def sorting_analyzer_with_group_for_export():
     return make_sorting_analyzer(sparse=False, with_group=True)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def sorting_analyzer_sparse_for_export():
     return make_sorting_analyzer(sparse=True)
 

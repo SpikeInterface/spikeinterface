@@ -14,18 +14,31 @@ class ChannelsAggregationRecording(BaseRecording):
     """
 
     def __init__(self, recording_list, renamed_channel_ids=None):
-        channel_map = {}
 
-        num_all_channels = sum([rec.get_num_channels() for rec in recording_list])
+        # Generate a default list of channel ids that are unique and consecutive numbers as strings.
+        channel_map = {}
+        num_all_channels = sum(rec.get_num_channels() for rec in recording_list)
+
         if renamed_channel_ids is not None:
-            assert len(np.unique(renamed_channel_ids)) == num_all_channels, (
-                "'renamed_channel_ids' doesn't have the " "right size or has duplicates!"
-            )
+            assert (
+                len(np.unique(renamed_channel_ids)) == num_all_channels
+            ), "'renamed_channel_ids' doesn't have the right size or has duplicates!"
             channel_ids = list(renamed_channel_ids)
         else:
-            channel_ids = list(np.arange(num_all_channels))
+            # Collect channel IDs from all recordings
+            all_channels_have_same_type = np.unique([rec.channel_ids.dtype for rec in recording_list]).size == 1
+            all_channel_ids_are_unique = False
+            if all_channels_have_same_type:
+                combined_ids = np.concatenate([rec.channel_ids for rec in recording_list])
+                all_channel_ids_are_unique = np.unique(combined_ids).size == num_all_channels
 
-        # channel map maps channel indices that are used to get traces
+            if all_channels_have_same_type and all_channel_ids_are_unique:
+                channel_ids = combined_ids
+            else:
+                # If IDs are not unique or not of the same type, use default as stringify IDs
+                default_channel_ids = [str(i) for i in range(num_all_channels)]
+                channel_ids = default_channel_ids
+
         ch_id = 0
         for r_i, recording in enumerate(recording_list):
             single_channel_ids = recording.get_channel_ids()
@@ -49,7 +62,9 @@ class ChannelsAggregationRecording(BaseRecording):
                 break
 
         if not (ok1 and ok2 and ok3 and ok4):
-            raise ValueError("Sortings don't have the same sampling_frequency/num_segments/dtype/num samples")
+            raise ValueError(
+                "Recordings do not have consistent sampling frequency, number of segments, data type, or number of samples."
+            )
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -91,7 +106,11 @@ class ChannelsAggregationRecording(BaseRecording):
             self.add_recording_segment(sub_segment)
 
         self._recordings = recording_list
-        self._kwargs = {"recording_list": [rec for rec in recording_list], "renamed_channel_ids": renamed_channel_ids}
+        self._kwargs = {"recording_list": recording_list, "renamed_channel_ids": renamed_channel_ids}
+
+    @property
+    def recordings(self):
+        return self._recordings
 
 
 class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
@@ -123,7 +142,7 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         self,
         start_frame: int | None = None,
         end_frame: int | None = None,
-        channel_indices: list | None = None,
+        channel_indices: list | slice | None = None,
     ) -> np.ndarray:
         return_all_channels = False
         if channel_indices is None:
@@ -138,11 +157,17 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
                 # in case channel_indices is slice, it has step 1
                 step = channel_indices.step if channel_indices.step is not None else 1
                 channel_indices = list(range(channel_indices.start, channel_indices.stop, step))
+            recording_id_channels_map = {}
             for channel_idx in channel_indices:
-                segment = self._parent_segments[self._channel_map[channel_idx]["recording_id"]]
+                recording_id = self._channel_map[channel_idx]["recording_id"]
                 channel_index_recording = self._channel_map[channel_idx]["channel_index"]
+                if recording_id not in recording_id_channels_map:
+                    recording_id_channels_map[recording_id] = []
+                recording_id_channels_map[recording_id].append(channel_index_recording)
+            for recording_id, channel_indices_recording in recording_id_channels_map.items():
+                segment = self._parent_segments[recording_id]
                 traces_recording = segment.get_traces(
-                    channel_indices=[channel_index_recording], start_frame=start_frame, end_frame=end_frame
+                    channel_indices=channel_indices_recording, start_frame=start_frame, end_frame=end_frame
                 )
                 traces.append(traces_recording)
         else:
@@ -163,11 +188,11 @@ def aggregate_channels(recording_list, renamed_channel_ids=None):
     recording_list: list
         List of BaseRecording objects to aggregate
     renamed_channel_ids: array-like
-        If given, channel ids are renamed as provided. If None, unit ids are sequential integers.
+        If given, channel ids are renamed as provided.
 
     Returns
     -------
-    aggregate_recording: UnitsAggregationSorting
-        The aggregated sorting object
+    aggregate_recording: ChannelsAggregationRecording
+        The aggregated recording object
     """
     return ChannelsAggregationRecording(recording_list, renamed_channel_ids)

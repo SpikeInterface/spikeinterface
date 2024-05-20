@@ -287,9 +287,9 @@ class NumpySorting(BaseSorting):
         spike_vector = source_sorting.to_spike_vector()
         if copy_spike_vector:
             spike_vector = spike_vector.copy()
-        sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids)
+        sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
         if with_metadata:
-            sorting.copy_metadata(source_sorting)
+            source_sorting.copy_metadata(sorting)
         return sorting
 
     @staticmethod
@@ -457,7 +457,8 @@ class NumpySorting(BaseSorting):
         spikes["sample_index"] = peaks["sample_index"]
         spikes["unit_index"] = peaks["channel_index"]
         spikes["segment_index"] = peaks["segment_index"]
-
+        order = np.lexsort((spikes["sample_index"], spikes["segment_index"]))
+        spikes = spikes[order]
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
         return sorting

@@ -21,7 +21,7 @@ from ..core import SortingAnalyzer, get_noise_levels
 from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
-    _get_dense_templates_array,
+    get_dense_templates_array,
 )
 
 
@@ -496,7 +496,51 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
-def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None, **kwargs):
+def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
+    """Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`
+
+    Parameters
+    ----------
+    spikes : np.array
+        Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
+    synchrony_sizes : numpy array
+        The synchrony sizes to compute. Should be pre-sorted.
+    unit_ids : list or None, default: None
+        List of unit ids to compute the synchrony metrics. Expecting all units.
+
+    Returns
+    -------
+    synchrony_counts : dict
+        The synchrony counts for the synchrony sizes.
+
+    References
+    ----------
+    Based on concepts described in [Gruen]_
+    This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
+    """
+
+    synchrony_counts = np.zeros((np.size(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
+
+    # compute the occurrence of each sample_index. Count >2 means there's synchrony
+    _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
+
+    sync_indices = unique_spike_index[counts >= 2]
+    sync_counts = counts[counts >= 2]
+
+    for i, sync_index in enumerate(sync_indices):
+
+        num_of_syncs = sync_counts[i]
+        units_with_sync = [spikes[sync_index + a][1] for a in range(0, num_of_syncs)]
+
+        # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
+        # to the 2 simultaneous spike bins.
+        how_many_bins_to_add_to = np.size(synchrony_sizes[synchrony_sizes <= num_of_syncs])
+        synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
+
+    return synchrony_counts
+
+
+def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None):
     """Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
     "synchrony_size" spikes at the exact same sample index.
 
@@ -521,49 +565,39 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
     assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
-    spike_counts = sorting_analyzer.sorting.count_num_spikes_per_unit(outputs="dict")
+    # Sort the synchrony times so we can slice numpy arrays, instead of using dicts
+    synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int16)
+    synchrony_sizes_np.sort()
+
+    res = namedtuple("synchrony_metrics", [f"sync_spike_{size}" for size in synchrony_sizes_np])
+
     sorting = sorting_analyzer.sorting
-    spikes = sorting.to_spike_vector(concatenated=False)
 
-    if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
+    spike_counts = sorting.count_num_spikes_per_unit(outputs="dict")
 
-    # Pre-allocate synchrony counts
-    synchrony_counts = {}
-    for synchrony_size in synchrony_sizes:
-        synchrony_counts[synchrony_size] = np.zeros(len(sorting_analyzer.unit_ids), dtype=np.int64)
+    spikes = sorting.to_spike_vector()
+    all_unit_ids = sorting.unit_ids
+    synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes_np, all_unit_ids)
 
-    all_unit_ids = list(sorting.unit_ids)
-    for segment_index in range(sorting.get_num_segments()):
-        spikes_in_segment = spikes[segment_index]
+    synchrony_metrics_dict = {}
+    for sync_idx, synchrony_size in enumerate(synchrony_sizes_np):
+        sync_id_metrics_dict = {}
+        for i, unit_id in enumerate(all_unit_ids):
+            if spike_counts[unit_id] != 0:
+                sync_id_metrics_dict[unit_id] = synchrony_counts[sync_idx][i] / spike_counts[unit_id]
+            else:
+                sync_id_metrics_dict[unit_id] = 0
+        synchrony_metrics_dict[f"sync_spike_{synchrony_size}"] = sync_id_metrics_dict
 
-        # we compute just by counting the occurrence of each sample_index
-        unique_spike_index, complexity = np.unique(spikes_in_segment["sample_index"], return_counts=True)
-
-        # add counts for this segment
-        for unit_id in unit_ids:
-            unit_index = all_unit_ids.index(unit_id)
-            spikes_per_unit = spikes_in_segment[spikes_in_segment["unit_index"] == unit_index]
-            # some segments/units might have no spikes
-            if len(spikes_per_unit) == 0:
-                continue
-            spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
-            for synchrony_size in synchrony_sizes:
-                synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
-
-    # add counts for this segment
-    synchrony_metrics_dict = {
-        f"sync_spike_{synchrony_size}": {
-            unit_id: synchrony_counts[synchrony_size][all_unit_ids.index(unit_id)] / spike_counts[unit_id]
-            for unit_id in unit_ids
-        }
-        for synchrony_size in synchrony_sizes
-    }
-
-    # Convert dict to named tuple
-    synchrony_metrics_tuple = namedtuple("synchrony_metrics", synchrony_metrics_dict.keys())
-    synchrony_metrics = synchrony_metrics_tuple(**synchrony_metrics_dict)
-    return synchrony_metrics
+    if np.all(unit_ids == None) or (len(unit_ids) == len(all_unit_ids)):
+        return res(**synchrony_metrics_dict)
+    else:
+        reduced_synchrony_metrics_dict = {}
+        for key in synchrony_metrics_dict:
+            reduced_synchrony_metrics_dict[key] = {
+                unit_id: synchrony_metrics_dict[key][unit_id] for unit_id in unit_ids
+            }
+        return res(**reduced_synchrony_metrics_dict)
 
 
 _default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))
@@ -1329,7 +1363,7 @@ def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, cont
 
 if HAVE_NUMBA:
 
-    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=False)
     def _compute_nb_violations_numba(spike_train, t_r):
         n_v = 0
         N = len(spike_train)
@@ -1352,7 +1386,7 @@ if HAVE_NUMBA:
         (numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
         nopython=True,
         nogil=True,
-        cache=True,
+        cache=False,
         parallel=True,
     )
     def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
@@ -1428,13 +1462,13 @@ def compute_sd_ratio(
         return {unit_id: np.nan for unit_id in unit_ids}
 
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_scaled=amplitudes_ext.params["return_scaled"], method="std"
+        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std"
     )
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
     n_spikes = sorting.count_num_spikes_per_unit()
 
     if correct_for_template_itself:
-        tamplates_array = _get_dense_templates_array(sorting_analyzer, return_scaled=True)
+        tamplates_array = get_dense_templates_array(sorting_analyzer, return_scaled=sorting_analyzer.return_scaled)
 
     spikes = sorting.to_spike_vector()
     sd_ratio = {}

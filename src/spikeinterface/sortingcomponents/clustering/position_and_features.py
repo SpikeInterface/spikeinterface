@@ -18,7 +18,7 @@ from spikeinterface.core import get_global_tmp_folder, get_noise_levels
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
 from spikeinterface.core import NumpySorting
-from spikeinterface.core import estimate_templates_average, Templates
+from spikeinterface.core import estimate_templates_with_accumulator, Templates
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
 
 
@@ -47,6 +47,8 @@ class PositionAndFeaturesClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
+        from sklearn.preprocessing import QuantileTransformer
+
         assert HAVE_HDBSCAN, "twisted clustering needs hdbscan to be installed"
 
         if "n_jobs" in params["job_kwargs"]:
@@ -68,22 +70,23 @@ class PositionAndFeaturesClustering:
 
         position_method = d["peak_localization_kwargs"]["method"]
 
-        features_list = [position_method, "ptp", "energy"]
+        features_list = [
+            position_method,
+            "ptp",
+        ]
         features_params = {
             position_method: {"radius_um": params["radius_um"]},
             "ptp": {"all_channels": False, "radius_um": params["radius_um"]},
-            "energy": {"radius_um": params["radius_um"]},
         }
 
         features_data = compute_features_from_peaks(
             recording, peaks, features_list, features_params, ms_before=1, ms_after=1, **params["job_kwargs"]
         )
 
-        hdbscan_data = np.zeros((len(peaks), 4), dtype=np.float32)
+        hdbscan_data = np.zeros((len(peaks), 3), dtype=np.float32)
         hdbscan_data[:, 0] = features_data[0]["x"]
         hdbscan_data[:, 1] = features_data[0]["y"]
         hdbscan_data[:, 2] = features_data[1]
-        hdbscan_data[:, 3] = features_data[2]
 
         preprocessing = QuantileTransformer(output_distribution="uniform")
         hdbscan_data = preprocessing.fit_transform(hdbscan_data)
@@ -171,7 +174,7 @@ class PositionAndFeaturesClustering:
 
             nbefore = int(params["ms_before"] * fs / 1000.0)
             nafter = int(params["ms_after"] * fs / 1000.0)
-            templates_array = estimate_templates_average(
+            templates_array = estimate_templates_with_accumulator(
                 recording,
                 sorting.to_spike_vector(),
                 sorting.unit_ids,
@@ -181,7 +184,12 @@ class PositionAndFeaturesClustering:
                 **params["job_kwargs"],
             )
             templates = Templates(
-                templates_array=templates_array, sampling_frequency=fs, nbefore=nbefore, probe=recording.get_probe()
+                templates_array=templates_array,
+                sampling_frequency=fs,
+                nbefore=nbefore,
+                sparsity_mask=None,
+                probe=recording.get_probe(),
+                is_scaled=False,
             )
 
             labels, peak_labels = remove_duplicates_via_matching(

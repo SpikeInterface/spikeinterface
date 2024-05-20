@@ -12,18 +12,11 @@ import numpy as np
 
 from spikeinterface.core import (
     generate_ground_truth_recording,
-    generate_templates,
     estimate_templates,
     Templates,
-    generate_sorting,
-    NoiseGeneratorRecording,
+    create_sorting_analyzer,
 )
-from spikeinterface.core.generate import generate_unit_locations
-from spikeinterface.generation import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
-
-
-from probeinterface import generate_multi_columns_probe
-
+from spikeinterface.generation import generate_drifting_recording
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
@@ -48,10 +41,17 @@ def make_dataset():
             contact_shape_params={"radius": 6},
         ),
         generate_sorting_kwargs=dict(firing_rates=6.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
         seed=2205,
     )
-    return recording, gt_sorting
+
+    gt_analyzer = create_sorting_analyzer(gt_sorting, recording, sparse=True, format="memory")
+    gt_analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500)
+    # analyzer.compute("waveforms")
+    gt_analyzer.compute("templates")
+    gt_analyzer.compute("noise_levels")
+
+    return recording, gt_sorting, gt_analyzer
 
 
 def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_scaled=False, **job_kwargs):
@@ -77,162 +77,71 @@ def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, ret
         channel_ids=recording.channel_ids,
         unit_ids=gt_sorting.unit_ids,
         probe=recording.get_probe(),
+        is_scaled=return_scaled,
     )
     return gt_templates
 
 
 def make_drifting_dataset():
 
-    num_units = 15
-    duration = 125.5
-    sampling_frequency = 30000.0
-    ms_before = 1.0
-    ms_after = 3.0
-    displacement_sampling_frequency = 5.0
-
-    probe = generate_multi_columns_probe(
-        num_columns=3,
-        num_contact_per_column=12,
-        xpitch=15,
-        ypitch=15,
-        contact_shapes="square",
-        contact_shape_params={"width": 10},
-    )
-    probe.set_device_channel_indices(np.arange(probe.contact_ids.size))
-
-    channel_locations = probe.contact_positions
-
-    unit_locations = generate_unit_locations(
-        num_units,
-        channel_locations,
-        margin_um=20.0,
-        minimum_z=5.0,
-        maximum_z=40.0,
-        minimum_distance=20.0,
-        max_iteration=100,
-        distance_strict=False,
+    static_recording, drifting_recording, sorting, extra_infos = generate_drifting_recording(
+        num_units=15,
+        duration=125.5,
+        sampling_frequency=30000.0,
+        probe_name=None,
+        generate_probe_kwargs=dict(
+            num_columns=3,
+            num_contact_per_column=12,
+            xpitch=15,
+            ypitch=15,
+            contact_shapes="square",
+            contact_shape_params={"width": 10},
+        ),
+        generate_unit_locations_kwargs=dict(
+            margin_um=20.0,
+            minimum_z=5.0,
+            maximum_z=40.0,
+            minimum_distance=18.0,
+            max_iteration=100,
+            distance_strict=False,
+        ),
+        generate_displacement_vector_kwargs=dict(
+            displacement_sampling_frequency=5.0,
+            drift_start_um=[0, 15],
+            drift_stop_um=[0, -15],
+            drift_step_um=1,
+            motion_list=[
+                dict(
+                    drift_mode="zigzag",
+                    non_rigid_gradient=None,
+                    t_start_drift=20.0,
+                    t_end_drift=None,
+                    period_s=50,
+                ),
+            ],
+        ),
+        generate_templates_kwargs=dict(
+            ms_before=1.5,
+            ms_after=3.0,
+            mode="ellipsoid",
+            unit_params=dict(
+                alpha=(150.0, 500.0),
+                spatial_decay=(10, 45),
+            ),
+        ),
+        generate_sorting_kwargs=dict(firing_rates=25.0, refractory_period_ms=4.0),
+        generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
+        extra_outputs=True,
         seed=None,
     )
 
-    nbefore = int(sampling_frequency * ms_before / 1000.0)
-
-    generate_kwargs = dict(
-        sampling_frequency=sampling_frequency,
-        ms_before=ms_before,
-        ms_after=ms_after,
-        seed=2205,
-        unit_params=dict(
-            decay_power=np.ones(num_units) * 2,
-            repolarization_ms=np.ones(num_units) * 0.8,
-        ),
-        unit_params_range=dict(
-            alpha=(4_000.0, 8_000.0),
-            depolarization_ms=(0.09, 0.16),
-        ),
-    )
-    templates_array = generate_templates(channel_locations, unit_locations, **generate_kwargs)
-
-    templates = Templates(
-        templates_array=templates_array,
-        sampling_frequency=sampling_frequency,
-        nbefore=nbefore,
-        probe=probe,
-    )
-
-    drifting_templates = DriftingTemplates.from_static(templates)
-    channel_locations = probe.contact_positions
-
-    start = np.array([0, -15.0])
-    stop = np.array([0, 12])
-    displacements = make_linear_displacement(start, stop, num_step=29)
-
-    sorting = generate_sorting(
-        num_units=num_units,
-        sampling_frequency=sampling_frequency,
-        durations=[
-            duration,
-        ],
-        firing_rates=25.0,
-    )
-    sorting
-
-    times = np.arange(0, duration, 1 / displacement_sampling_frequency)
-    times
-
-    # 2 rythm
-    mid = (start + stop) / 2
-    freq0 = 0.1
-    displacement_vector0 = np.sin(2 * np.pi * freq0 * times)[:, np.newaxis] * (start - stop) + mid
-    # freq1 = 0.01
-    # displacement_vector1 = 0.2 * np.sin(2 * np.pi * freq1 *times)[:, np.newaxis] * (start - stop) + mid
-
-    # print()
-
-    displacement_vectors = displacement_vector0[:, :, np.newaxis]
-
-    # TODO gradient
-    num_motion = displacement_vectors.shape[2]
-    displacement_unit_factor = np.zeros((num_units, num_motion))
-    displacement_unit_factor[:, 0] = 1
-
-    drifting_templates.precompute_displacements(displacements)
-
-    direction = 1
-    unit_displacements = np.zeros((displacement_vectors.shape[0], num_units))
-    for i in range(displacement_vectors.shape[2]):
-        m = displacement_vectors[:, direction, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
-        unit_displacements[:, :] += m
-
-    noise = NoiseGeneratorRecording(
-        num_channels=probe.contact_ids.size,
-        sampling_frequency=sampling_frequency,
-        durations=[duration],
-        noise_level=1.0,
-        dtype="float32",
-    )
-
-    drifting_rec = InjectDriftingTemplatesRecording(
+    return dict(
+        drifting_rec=drifting_recording,
+        static_rec=static_recording,
         sorting=sorting,
-        parent_recording=noise,
-        drifting_templates=drifting_templates,
-        displacement_vectors=[displacement_vectors],
-        displacement_sampling_frequency=displacement_sampling_frequency,
-        displacement_unit_factor=displacement_unit_factor,
-        num_samples=[int(duration * sampling_frequency)],
-        amplitude_factor=None,
+        displacement_vectors=extra_infos["displacement_vectors"],
+        displacement_sampling_frequency=extra_infos["displacement_sampling_frequency"],
+        unit_locations=extra_infos["unit_locations"],
+        displacement_unit_factor=extra_infos["displacement_unit_factor"],
+        unit_displacements=extra_infos["unit_displacements"],
     )
-
-    static_rec = InjectDriftingTemplatesRecording(
-        sorting=sorting,
-        parent_recording=noise,
-        drifting_templates=drifting_templates,
-        displacement_vectors=[displacement_vectors],
-        displacement_sampling_frequency=displacement_sampling_frequency,
-        displacement_unit_factor=np.zeros_like(displacement_unit_factor),
-        num_samples=[int(duration * sampling_frequency)],
-        amplitude_factor=None,
-    )
-
-    my_dict = _variable_from_namespace(
-        [
-            drifting_rec,
-            static_rec,
-            sorting,
-            displacement_vectors,
-            displacement_sampling_frequency,
-            unit_locations,
-            displacement_unit_factor,
-            unit_displacements,
-        ],
-        locals(),
-    )
-    return my_dict
-
-
-def _variable_from_namespace(objs, namespace):
-    d = dict()
-    for obj in objs:
-        for name in namespace:
-            if namespace[name] is obj:
-                d[name] = obj
-    return d

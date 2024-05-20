@@ -1,7 +1,7 @@
 import pytest
 import os
 
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, set_global_job_kwargs, get_global_job_kwargs
 
 from spikeinterface.core.job_tools import (
     divide_segment_into_chunks,
@@ -180,15 +180,28 @@ def test_fix_job_kwargs():
     else:
         assert fixed_job_kwargs["n_jobs"] == 1
 
-    # test minimum n_jobs
-    job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s")
+    # test float value > 1 is cast to correct int
+    job_kwargs = dict(n_jobs=4.0, progress_bar=False, chunk_duration="1s")
     fixed_job_kwargs = fix_job_kwargs(job_kwargs)
-    assert fixed_job_kwargs["n_jobs"] == 1
+    assert fixed_job_kwargs["n_jobs"] == 4
 
     # test wrong keys
     with pytest.raises(AssertionError):
         job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s", other_param="other")
         fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+
+    # test mutually exclusive
+    _old_global = get_global_job_kwargs().copy()
+    set_global_job_kwargs(chunk_memory="50M")
+    job_kwargs = dict()
+    fixed_job_kwargs = fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    assert "chunk_memory" in fixed_job_kwargs
+
+    job_kwargs = dict(chunk_duration="300ms")
+    fixed_job_kwargs = fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    assert "chunk_memory" not in fixed_job_kwargs
+    assert fixed_job_kwargs["chunk_duration"] == "300ms"
+    set_global_job_kwargs(**_old_global)
 
 
 def test_split_job_kwargs():
@@ -204,6 +217,6 @@ if __name__ == "__main__":
     # test_divide_segment_into_chunks()
     # test_ensure_n_jobs()
     # test_ensure_chunk_size()
-    test_ChunkRecordingExecutor()
-    # test_fix_job_kwargs()
+    # test_ChunkRecordingExecutor()
+    test_fix_job_kwargs()
     # test_split_job_kwargs()

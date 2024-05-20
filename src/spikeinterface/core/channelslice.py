@@ -11,7 +11,7 @@ class ChannelSliceRecording(BaseRecording):
     """
     Class to slice a Recording object based on channel_ids.
 
-    Do not use this class directly but use `recording.channel_slice(...)`
+    Not intending to be used directly, use methods of `BaseRecording` such as `recording.select_channels`.
 
     """
 
@@ -60,6 +60,7 @@ class ChannelSliceRecording(BaseRecording):
 
         # copy annotation and properties
         parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
+        self._parent = parent_recording
 
         # change the wiring of the probe
         contact_vector = self.get_property("contact_vector")

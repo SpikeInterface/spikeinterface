@@ -18,7 +18,7 @@ def get_sorting_analyzer():
         sampling_frequency=10_000.0,
         num_channels=4,
         num_units=10,
-        noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
     recording.annotate(is_filtered=True)
@@ -27,7 +27,7 @@ def get_sorting_analyzer():
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
     sorting_analyzer.compute("random_spikes")
-    sorting_analyzer.compute("fast_templates")
+    sorting_analyzer.compute("templates")
 
     return sorting_analyzer
 
@@ -38,7 +38,7 @@ def sorting_analyzer():
 
 
 def _get_templates_object_from_sorting_analyzer(sorting_analyzer):
-    ext = sorting_analyzer.get_extension("fast_templates")
+    ext = sorting_analyzer.get_extension("templates")
     templates = Templates(
         templates_array=ext.data["average"],
         sampling_frequency=sorting_analyzer.sampling_frequency,
@@ -47,6 +47,7 @@ def _get_templates_object_from_sorting_analyzer(sorting_analyzer):
         sparsity_mask=None,
         channel_ids=sorting_analyzer.channel_ids,
         unit_ids=sorting_analyzer.unit_ids,
+        is_scaled=sorting_analyzer.return_scaled,
     )
     return templates
 
