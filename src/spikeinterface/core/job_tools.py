@@ -28,8 +28,9 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
                     Total memory usage (e.g. "500M", "2G")
                 - chunk_duration : str or float or None
                     Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
-            * n_jobs: int
-                Number of jobs to use. With -1 the number of jobs is the same as number of cores
+            * n_jobs: int | float
+                Number of jobs to use. With -1 the number of jobs is the same as number of cores.
+                Using a float between 0 and 1 will use that fraction of the total cores.
             * progress_bar: bool
                 If True, a progress bar is printed
             * mp_context: "fork" | "spawn" | None, default: None
@@ -60,7 +61,7 @@ _mutually_exclusive = (
 
 
 def fix_job_kwargs(runtime_job_kwargs):
-    from .globals import get_global_job_kwargs
+    from .globals import get_global_job_kwargs, is_set_global_job_kwargs_set
 
     job_kwargs = get_global_job_kwargs()
 
@@ -98,6 +99,15 @@ def fix_job_kwargs(runtime_job_kwargs):
         n_jobs = int(n_jobs)
 
     job_kwargs["n_jobs"] = max(n_jobs, 1)
+
+    if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_set_global_job_kwargs_set():
+        warnings.warn(
+            "`n_jobs` is not set so parallel processing is disabled! "
+            "To speed up computations, it is recommended to set n_jobs either "
+            "globally (with the `spikeinterface.set_global_job_kwargs()` function) or "
+            "locally (with the `n_jobs` argument). Use `spikeinterface.set_global_job_kwargs?` "
+            "for more information about job_kwargs."
+        )
 
     return job_kwargs
 
