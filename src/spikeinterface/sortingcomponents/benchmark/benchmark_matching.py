@@ -13,7 +13,9 @@ import matplotlib.patches as mpatches
 import numpy as np
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
-
+from spikeinterface.sortingcomponents.tools import remove_empty_templates
+from spikeinterface.core.recording_tools import get_noise_levels
+from spikeinterface.core.sparsity import compute_sparsity
 
 class MatchingBenchmark(Benchmark):
 
@@ -22,6 +24,12 @@ class MatchingBenchmark(Benchmark):
         self.gt_sorting = gt_sorting
         self.method = params["method"]
         self.templates = params["method_kwargs"]["templates"]
+
+        noise_levels = get_noise_levels(recording)
+        sparsity = compute_sparsity(self.templates, noise_levels, method='ptp', threshold=0.25)
+        self.templates = self.templates.to_sparse(sparsity)
+        self.templates = remove_empty_templates(self.templates)
+
         self.method_kwargs = params["method_kwargs"]
         self.result = {}
 
