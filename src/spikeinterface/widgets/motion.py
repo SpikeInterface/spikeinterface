@@ -11,10 +11,10 @@ class MotionWidget(BaseWidget):
 
     1) 'Peak depth' plot displaying the peak location for all detected spikes over time
        before motion correction.
-    2) 'Corrected peak depth' displayed the peak location for all detected spikes
+    2) 'Corrected peak depth' displays the peak location for all detected spikes
        over time after motion correction.
-    3) 'Motion vectors' plot shows the estimated displacement per channel
-       across time. The average displacement is shown in blue.
+    3) 'Motion vectors' plot shows the estimated displacement per spatial
+        bin across time. The average displacement is shown in blue.
     4) 'Motion vectors nonrigid' plot shows a heatmap of the estimated
        motion across the depth of the probe and time.
 
