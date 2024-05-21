@@ -184,7 +184,12 @@ class PositionAndFeaturesClustering:
                 **params["job_kwargs"],
             )
             templates = Templates(
-                templates_array=templates_array, sampling_frequency=fs, nbefore=nbefore, probe=recording.get_probe()
+                templates_array=templates_array,
+                sampling_frequency=fs,
+                nbefore=nbefore,
+                sparsity_mask=None,
+                probe=recording.get_probe(),
+                is_scaled=False,
             )
 
             labels, peak_labels = remove_duplicates_via_matching(

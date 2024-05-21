@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Literal, Optional
 
 from pathlib import Path
+from itertools import chain
 import os
 import json
 import pickle
@@ -23,7 +24,7 @@ from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
 from .core_tools import check_json, retrieve_importing_provenance
 from .job_tools import split_job_kwargs
-from .numpyextractors import SharedMemorySorting
+from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
@@ -195,7 +196,7 @@ class SortingAnalyzer:
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
-        # self.recorsding will be a property
+        # self.recording will be a property
         self._recording = recording
         self.rec_attributes = rec_attributes
         self.format = format
@@ -296,8 +297,9 @@ class SortingAnalyzer:
             # a copy is done to avoid shared dict between instances (which can block garbage collector)
             rec_attributes = rec_attributes.copy()
 
-        # a copy of sorting is created directly in shared memory format to avoid further duplication of spikes.
-        sorting_copy = SharedMemorySorting.from_sorting(sorting, with_metadata=True)
+        # a copy of sorting is copied in memory for fast access
+        sorting_copy = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting_copy,
             recording=recording,
@@ -329,7 +331,8 @@ class SortingAnalyzer:
             json.dump(check_json(info), f, indent=4)
 
         # save a copy of the sorting
-        NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
+        # NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
+        sorting.save(folder=folder / "sorting")
 
         # save recording and sorting provenance
         if recording.check_serializability("json"):
@@ -375,8 +378,10 @@ class SortingAnalyzer:
         folder = Path(folder)
         assert folder.is_dir(), f"This folder does not exists {folder}"
 
-        # load internal sorting copy and make it sharedmem
-        sorting = SharedMemorySorting.from_sorting(NumpyFolderSorting(folder / "sorting"), with_metadata=True)
+        # load internal sorting copy in memory
+        sorting = NumpySorting.from_sorting(
+            NumpyFolderSorting(folder / "sorting"), with_metadata=True, copy_spike_vector=True
+        )
 
         # load recording if possible
         if recording is None:
@@ -416,9 +421,21 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
+        # PATCH: Because SortingAnalyzer added this json during the development of 0.101.0 we need to save
+        # this as a bridge for early adopters. The else branch can be removed in version 0.102.0/0.103.0
+        # so that this can be simplified in the future
+        # See https://github.com/SpikeInterface/spikeinterface/issues/2788
+
         settings_file = folder / f"settings.json"
-        with open(settings_file, "r") as f:
-            settings = json.load(f)
+        if settings_file.exists():
+            with open(settings_file, "r") as f:
+                settings = json.load(f)
+        else:
+            warnings.warn("settings.json not found for this folder writing one with return_scaled=True")
+            settings = dict(return_scaled=True)
+            with open(settings_file, "w") as f:
+                json.dump(check_json(settings), f, indent=4)
+
         return_scaled = settings["return_scaled"]
 
         sorting_analyzer = SortingAnalyzer(
@@ -525,10 +542,10 @@ class SortingAnalyzer:
 
         zarr_root = zarr.open(folder, mode="r")
 
-        # load internal sorting and make it sharedmem
+        # load internal sorting in memory
         # TODO propagate storage_options
-        sorting = SharedMemorySorting.from_sorting(
-            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True
+        sorting = NumpySorting.from_sorting(
+            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True, copy_spike_vector=True
         )
 
         # load recording if possible
@@ -905,10 +922,10 @@ class SortingAnalyzer:
         >>> wfs = compute_waveforms(sorting_analyzer, **some_params)
 
         """
+        extension_class = get_extension_class(extension_name)
+
         for child in _get_children_dependencies(extension_name):
             self.delete_extension(child)
-
-        extension_class = get_extension_class(extension_name)
 
         if extension_class.need_job_kwargs:
             params, job_kwargs = split_job_kwargs(kwargs)
@@ -962,13 +979,22 @@ class SortingAnalyzer:
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
-        for extension_name in extensions.keys():
+
+        sorted_extensions = _sort_extensions_by_dependency(extensions)
+
+        for extension_name in sorted_extensions.keys():
             for child in _get_children_dependencies(extension_name):
                 self.delete_extension(child)
 
         extensions_with_pipeline = {}
         extensions_without_pipeline = {}
-        for extension_name, extension_params in extensions.items():
+        extensions_post_pipeline = {}
+        for extension_name, extension_params in sorted_extensions.items():
+            if extension_name == "quality_metrics":
+                # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
+                # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
+                extensions_post_pipeline[extension_name] = extension_params
+                continue
             extension_class = get_extension_class(extension_name)
             if extension_class.use_nodepipeline:
                 extensions_with_pipeline[extension_name] = extension_params
@@ -987,6 +1013,7 @@ class SortingAnalyzer:
             all_nodes = []
             result_routage = []
             extension_instances = {}
+
             for extension_name, extension_params in extensions_with_pipeline.items():
                 extension_class = get_extension_class(extension_name)
                 assert self.has_recording(), f"Extension {extension_name} need the recording"
@@ -1002,6 +1029,7 @@ class SortingAnalyzer:
                 all_nodes.extend(nodes)
 
             job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
+
             results = run_node_pipeline(
                 self.recording,
                 all_nodes,
@@ -1019,6 +1047,17 @@ class SortingAnalyzer:
                 self.extensions[extension_name] = extension_instance
                 if save:
                     extension_instance.save()
+
+        # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
+        # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
+        # An alternative could be to extend the "depend_on" attribute to use optional and to check if an extension
+        # depends on the output of the pipeline nodes (e.g. depend_on=["spike_amplitudes[optional]"])
+        for extension_name, extension_params in extensions_post_pipeline.items():
+            extension_class = get_extension_class(extension_name)
+            if extension_class.need_job_kwargs:
+                self.compute_one_extension(extension_name, save=save, **extension_params, **job_kwargs)
+            else:
+                self.compute_one_extension(extension_name, save=save, **extension_params)
 
     def get_saved_extension_names(self):
         """
@@ -1158,6 +1197,58 @@ class SortingAnalyzer:
         return get_default_analyzer_extension_params(extension_name)
 
 
+def _sort_extensions_by_dependency(extensions):
+    """
+    Sorts a dictionary of extensions so that the parents of each extension are on the "left" of their children.
+    Assumes there is a valid ordering of the included extensions.
+
+    Parameters
+    ----------
+    extensions: dict
+        A dict of extensions.
+
+    Returns
+    -------
+    sorted_extensions: dict
+        A dict of extensions, with the parents on the left of their children.
+    """
+
+    extensions_list = list(extensions.keys())
+    extension_params = list(extensions.values())
+
+    i = 0
+    while i < len(extensions_list):
+
+        extension = extensions_list[i]
+        dependencies = get_extension_class(extension).depend_on
+
+        # Split cases with an "or" in them, and flatten into a list
+        dependencies = list(chain.from_iterable([dependency.split("|") for dependency in dependencies]))
+
+        # Should only iterate if nothing has happened.
+        # Otherwise, should check the dependency which has just been moved => at position i
+        did_nothing = True
+        for dependency in dependencies:
+
+            # if dependency is on the right, move it left of the current dependency
+            if dependency in extensions_list[i:]:
+
+                dependency_arg = extensions_list.index(dependency)
+
+                extension_params.pop(dependency_arg)
+                extension_params.insert(i, extensions[dependency])
+
+                extensions_list.pop(dependency_arg)
+                extensions_list.insert(i, dependency)
+
+                did_nothing = False
+
+        if did_nothing:
+            i += 1
+
+    return dict(zip(extensions_list, extension_params))
+
+
 global _possible_extensions
 _possible_extensions = []
 
@@ -1173,7 +1264,7 @@ def _get_children_dependencies(extension_name):
     This function is making the reverse way : get all children that depend of a
     particular extension.
 
-    This is recurssive so this includes : children and so grand children and grand grand children
+    This is recursive so this includes : children and so grand children and great grand children
 
     This function is usefull for deleting on recompute.
     For instance recompute the "waveforms" need to delete "template"
@@ -1187,7 +1278,7 @@ def _get_children_dependencies(extension_name):
             names.append(child)
         grand_children = _get_children_dependencies(child)
         names.extend(grand_children)
-    return list(set(names))
+    return list(names)
 
 
 def register_result_extension(extension_class):

@@ -3,14 +3,18 @@ from pathlib import Path
 
 import shutil
 
-from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import (
+    generate_ground_truth_recording,
     create_sorting_analyzer,
     load_sorting_analyzer,
     get_available_analyzer_extensions,
     get_default_analyzer_extension_params,
 )
-from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.sortinganalyzer import (
+    register_result_extension,
+    AnalyzerExtension,
+    _sort_extensions_by_dependency,
+)
 
 import numpy as np
 
@@ -116,7 +120,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
     # compute
     sorting_analyzer.compute("dummy", param1=5.5)
     # equivalent
-    compute_dummy(sorting_analyzer, param1=5.5)
+    compute_dummy(sorting_analyzer=sorting_analyzer, param1=5.5)
     ext = sorting_analyzer.get_extension("dummy")
     assert ext is not None
     assert ext.params["param1"] == 5.5
@@ -253,6 +257,30 @@ def test_extension():
     # other extension with same name should trigger an error
     with pytest.raises(AssertionError):
         register_result_extension(DummyAnalyzerExtension2)
+
+
+def test_extensions_sorting():
+
+    # nothing happens if all parents are on the left of the children
+    extensions_in_order = {"random_spikes": {"rs": 1}, "waveforms": {"wv": 2}}
+    sorted_extensions_1 = _sort_extensions_by_dependency(extensions_in_order)
+    assert list(sorted_extensions_1.keys()) == list(extensions_in_order.keys())
+
+    extensions_out_of_order = {"waveforms": {"wv": 2}, "random_spikes": {"rs": 1}}
+    sorted_extensions_2 = _sort_extensions_by_dependency(extensions_out_of_order)
+    assert list(sorted_extensions_2.keys()) == list(extensions_in_order.keys())
+
+    # doing two movements
+    extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}}
+    extensions_qm_correct = {"waveforms": {}, "templates": {}, "quality_metrics": {}}
+    sorted_extensions_3 = _sort_extensions_by_dependency(extensions_qm_left)
+    assert list(sorted_extensions_3.keys()) == list(extensions_qm_correct.keys())
+
+    # should move parent (waveforms) left of child (quality_metrics), and move grandparent (random_spikes) left of parent
+    extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}, "random_spikes": {}}
+    extensions_qm_correct = {"random_spikes": {}, "waveforms": {}, "templates": {}, "quality_metrics": {}}
+    sorted_extensions_4 = _sort_extensions_by_dependency(extensions_qm_left)
+    assert list(sorted_extensions_4.keys()) == list(extensions_qm_correct.keys())
 
 
 if __name__ == "__main__":

@@ -1,5 +1,3 @@
-.. _installsorters:
-
 Installing Spike Sorters
 ========================
 
@@ -29,7 +27,7 @@ sorters to retrieve installation instructions for other operating systems.
 We use **pip** to install packages, but **conda** should also work in many cases.
 
 Some novel spike sorting algorithms are implemented directly in SpikeInterface using the
-:py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`si_based` section of this page
+:py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`SpikeInterface-based spike sorters` section of this page
 for more information!
 
 If you experience installation problems please directly contact the authors of these tools or write on the
@@ -261,11 +259,6 @@ Combinato
       python setup_options.py
       # provide installation path by setting the COMBINATO_PATH environment variable
       # or using CombinatoSorter.set_combinato_path()
-
-
-
-
-.. _si_based:
 
 SpikeInterface-based spike sorters
 ----------------------------------

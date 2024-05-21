@@ -8,7 +8,7 @@ except ImportError:
     HAVE_NUMBA = False
 
 import numpy as np
-from sklearn.utils import check_random_state
+
 
 try:
     from pynndescent import NNDescent
@@ -26,8 +26,7 @@ try:
     HAVE_HDBSCAN = True
 except:
     HAVE_HDBSCAN = False
-import copy
-from scipy.sparse import coo_matrix
+
 
 try:
     import pymde
@@ -57,8 +56,8 @@ class SlidingNNClustering:
         "time_window_s": 5,
         "hdbscan_kwargs": {"min_cluster_size": 20, "allow_single_cluster": True},
         "margin_ms": 100,
-        "ms_before": 1,
-        "ms_after": 1,
+        "ms_before": 0.5,
+        "ms_after": 0.5,
         "n_channel_neighbors": 8,
         "n_neighbors": 5,
         "embedding_dim": None,
@@ -141,13 +140,10 @@ class SlidingNNClustering:
         # prepare neighborhood parameters
         fs = recording.get_sampling_frequency()
         n_frames = recording.get_num_frames()
-        duration = n_frames / fs
         time_window_frames = fs * d["time_window_s"]
         margin_frames = int(d["margin_ms"] / 1000 * fs)
         spike_pre_frames = int(d["ms_before"] / 1000 * fs)
         spike_post_frames = int(d["ms_after"] / 1000 * fs)
-        n_channels = recording.get_num_channels()
-        n_samples = spike_pre_frames + spike_post_frames
 
         if d["embedding_dim"] is None:
             d["embedding_dim"] = recording.get_num_channels()
@@ -472,6 +468,8 @@ def get_spike_nearest_neighbors(
         https://github.com/facebookresearch/pysparnn
     """
 
+    from sklearn.utils import check_random_state
+
     # helper functions for nearest-neighbors search tree
     def get_n_trees_iters(X):
         n_trees = min(64, 5 + int(round((X.shape[0]) ** 0.5 / 20.0)))
@@ -573,6 +571,8 @@ def merge_nn_dicts(peaks, n_neighbors, peaks_in_chunk_idx_list, knn_indices_list
 
 
 def construct_symmetric_graph_from_idx_vals(graph_idx, graph_vals):
+    from scipy.sparse import coo_matrix
+
     rows = graph_idx.flatten()
     cols = np.repeat(np.arange(len(graph_idx)), graph_idx.shape[1])
     rows_ = np.concatenate([rows, cols])

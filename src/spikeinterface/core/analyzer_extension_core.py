@@ -285,7 +285,8 @@ class ComputeTemplates(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
-    def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=["average", "std"]):
+    def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=None):
+        operators = operators or ["average", "std"]
         assert isinstance(operators, list)
         for operator in operators:
             if isinstance(operator, str):
@@ -364,7 +365,12 @@ class ComputeTemplates(AnalyzerExtension):
 
         # spikes = self.sorting_analyzer.sorting.to_spike_vector()
         # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+
+        assert self.sorting_analyzer.has_extension(
+            "random_spikes"
+        ), "compute templates requires the random_spikes extension. You can run sorting_analyzer.get_random_spikes()"
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
             wfs = waveforms[spike_mask, :, :]
@@ -493,6 +499,7 @@ class ComputeTemplates(AnalyzerExtension):
                 channel_ids=self.sorting_analyzer.channel_ids,
                 unit_ids=unit_ids,
                 probe=self.sorting_analyzer.get_probe(),
+                is_scaled=self.sorting_analyzer.return_scaled,
             )
         else:
             raise ValueError("outputs must be numpy or Templates")

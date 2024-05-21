@@ -58,6 +58,7 @@ def get_template_amplitudes(
     peak_sign: "neg" | "pos" | "both" = "neg",
     mode: "extremum" | "at_index" = "extremum",
     return_scaled: bool = True,
+    abs_value: bool = True,
 ):
     """
     Get amplitude per channel for each unit.
@@ -73,6 +74,8 @@ def get_template_amplitudes(
         "at_index": take value at spike index
     return_scaled: bool, default True
         The amplitude is scaled or not.
+    abs_value: bool = True
+        Whether the extremum amplitude should be returned as an absolute value or not
 
     Returns
     -------
@@ -96,16 +99,17 @@ def get_template_amplitudes(
             if peak_sign == "both":
                 values = np.max(np.abs(template), axis=0)
             elif peak_sign == "neg":
-                values = -np.min(template, axis=0)
+                values = np.min(template, axis=0)
             elif peak_sign == "pos":
                 values = np.max(template, axis=0)
         elif mode == "at_index":
             if peak_sign == "both":
                 values = np.abs(template[before, :])
-            elif peak_sign == "neg":
-                values = -template[before, :]
-            elif peak_sign == "pos":
+            elif peak_sign in ["neg", "pos"]:
                 values = template[before, :]
+
+        if abs_value:
+            values = np.abs(values)
 
         peak_values[unit_id] = values
 
@@ -140,18 +144,27 @@ def get_template_extremum_channel(
         Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
-    assert peak_sign in ("both", "neg", "pos")
-    assert mode in ("extremum", "at_index")
-    assert outputs in ("id", "index")
+    assert peak_sign in ("both", "neg", "pos"), "`peak_sign` must be one of `both`, `neg`, or `pos`"
+    assert mode in ("extremum", "at_index"), "`mode` must be either `extremum` or `at_index`"
+    assert outputs in ("id", "index"), "`outputs` must be either `id` or `index`"
 
     unit_ids = templates_or_sorting_analyzer.unit_ids
     channel_ids = templates_or_sorting_analyzer.channel_ids
 
-    peak_values = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
+    # if SortingAnalyzer need to use global SortingAnalyzer return_scaled otherwise
+    # we just use the previous default of return_scaled=True (for templates)
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        return_scaled = templates_or_sorting_analyzer.return_scaled
+    else:
+        return_scaled = True
+
+    peak_values = get_template_amplitudes(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled
+    )
     extremum_channels_id = {}
     extremum_channels_index = {}
     for unit_id in unit_ids:
-        max_ind = np.argmax(peak_values[unit_id])
+        max_ind = np.argmax(np.abs(peak_values[unit_id]))
         extremum_channels_id[unit_id] = channel_ids[max_ind]
         extremum_channels_index[unit_id] = max_ind
 
@@ -187,7 +200,14 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
 
     shifts = {}
 
-    templates_array = get_dense_templates_array(templates_or_sorting_analyzer)
+    # We need to use the SortingAnalyzer return_scaled if possible
+    # otherwise for Templates default to True
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        return_scaled = templates_or_sorting_analyzer.return_scaled
+    else:
+        return_scaled = True
+
+    templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
 
     for unit_ind, unit_id in enumerate(unit_ids):
         template = templates_array[unit_ind, :, :]
@@ -211,6 +231,7 @@ def get_template_extremum_amplitude(
     templates_or_sorting_analyzer,
     peak_sign: "neg" | "pos" | "both" = "neg",
     mode: "extremum" | "at_index" = "at_index",
+    abs_value: bool = True,
 ):
     """
     Computes amplitudes on the best channel.
@@ -225,6 +246,9 @@ def get_template_extremum_amplitude(
         Where the amplitude is computed
         "extremum":  max or min
         "at_index": take value at spike index
+    abs_value: bool = True
+        Whether the extremum amplitude should be returned as an absolute value or not
+
 
     Returns
     -------
@@ -238,7 +262,14 @@ def get_template_extremum_amplitude(
 
     extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
 
-    extremum_amplitudes = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        return_scaled = templates_or_sorting_analyzer.return_scaled
+    else:
+        return_scaled = True
+
+    extremum_amplitudes = get_template_amplitudes(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled, abs_value=abs_value
+    )
 
     unit_amplitudes = {}
     for unit_id in unit_ids:
