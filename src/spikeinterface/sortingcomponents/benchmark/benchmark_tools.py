@@ -10,6 +10,7 @@ import time
 
 import os
 
+from spikeinterface.core import SortingAnalyzer
 from spikeinterface.core.core_tools import check_json
 from spikeinterface import load_extractor, split_job_kwargs, create_sorting_analyzer, load_sorting_analyzer
 
@@ -38,6 +39,7 @@ class BenchmarkStudy:
     def __init__(self, study_folder):
         self.folder = Path(study_folder)
         self.datasets = {}
+        self.analyzers = {}
         self.cases = {}
         self.benchmarks = {}
         self.scan_folder()
@@ -69,23 +71,54 @@ class BenchmarkStudy:
         study_folder = Path(study_folder)
         study_folder.mkdir(exist_ok=False, parents=True)
 
-        (study_folder / "datasets").mkdir()
-        (study_folder / "datasets" / "recordings").mkdir()
-        (study_folder / "datasets" / "gt_sortings").mkdir()
+        # (study_folder / "datasets").mkdir()
+        # (study_folder / "datasets" / "recordings").mkdir()
+        # (study_folder / "datasets" / "gt_sortings").mkdir()
         (study_folder / "run_logs").mkdir()
-        (study_folder / "metrics").mkdir()
+        # (study_folder / "metrics").mkdir()
         (study_folder / "results").mkdir()
+        (study_folder / "sorting_analyzer").mkdir()
 
-        for key, (rec, gt_sorting) in datasets.items():
+        analyzers_path = {}
+        # for key, (rec, gt_sorting) in datasets.items():
+        for key, data in datasets.items():
             assert "/" not in key, "'/' cannot be in the key name!"
             assert "\\" not in key, "'\\' cannot be in the key name!"
 
+            local_analyzer_folder = study_folder / "sorting_analyzer" / key
+
+            if isinstance(data, tuple):
+                # old case : rec + sorting
+                rec, gt_sorting = data
+                analyzer = create_sorting_analyzer(
+                    gt_sorting, rec, sparse=True, format="binary_folder", folder=local_analyzer_folder
+                )
+                analyzer.compute("random_spikes")
+                analyzer.compute("templates")
+                analyzer.compute("noise_levels")
+            else:
+                # new case : analzyer
+                assert isinstance(data, SortingAnalyzer)
+                analyzer = data
+                if data.format == "memory":
+                    # then copy a local copy in the folder
+                    analyzer = data.save_as(format="binary_folder", folder=local_analyzer_folder)
+                else:
+                    analyzer = data
+
+                rec, gt_sorting = analyzer.recording, analyzer.sorting
+
+            analyzers_path[key] = str(analyzer.folder.resolve())
+
             # recordings are pickled
-            rec.dump_to_pickle(study_folder / f"datasets/recordings/{key}.pickle")
+            # rec.dump_to_pickle(study_folder / f"datasets/recordings/{key}.pickle")
 
             # sortings are pickled + saved as NumpyFolderSorting
-            gt_sorting.dump_to_pickle(study_folder / f"datasets/gt_sortings/{key}.pickle")
-            gt_sorting.save(format="numpy_folder", folder=study_folder / f"datasets/gt_sortings/{key}")
+            # gt_sorting.dump_to_pickle(study_folder / f"datasets/gt_sortings/{key}.pickle")
+            # gt_sorting.save(format="numpy_folder", folder=study_folder / f"datasets/gt_sortings/{key}")
+
+        # analyzer path (local or external)
+        (study_folder / "analyzers_path.json").write_text(json.dumps(analyzers_path, indent=4), encoding="utf8")
 
         info = {}
         info["levels"] = levels
@@ -100,19 +133,29 @@ class BenchmarkStudy:
         raise NotImplementedError
 
     def scan_folder(self):
-        if not (self.folder / "datasets").exists():
-            raise ValueError(f"This is folder is not a GroundTruthStudy : {self.folder.absolute()}")
+        if not (self.folder / "sorting_analyzer").exists():
+            raise ValueError(f"This is folder is not a BenchmarkStudy : {self.folder.absolute()}")
 
         with open(self.folder / "info.json", "r") as f:
             self.info = json.load(f)
 
+        with open(self.folder / "analyzers_path.json", "r") as f:
+            self.analyzers_path = json.load(f)
+
         self.levels = self.info["levels"]
 
-        for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
-            key = rec_file.stem
-            rec = load_extractor(rec_file)
-            gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / key)
-            self.datasets[key] = (rec, gt_sorting)
+        for key, folder in self.analyzers_path.items():
+            analyzer = load_sorting_analyzer(folder)
+            self.analyzers[key] = analyzer
+            # the sorting is in memory here we take the saved one because comparisons need to pickle it later
+            sorting = load_extractor(analyzer.folder / "sorting")
+            self.datasets[key] = analyzer.recording, sorting
+
+        # for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
+        #     key = rec_file.stem
+        #     rec = load_extractor(rec_file)
+        #     gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / key)
+        #     self.datasets[key] = (rec, gt_sorting)
 
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
@@ -216,31 +259,34 @@ class BenchmarkStudy:
             benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
     def create_sorting_analyzer_gt(self, case_keys=None, return_scaled=True, random_params={}, **job_kwargs):
-        if case_keys is None:
-            case_keys = self.cases.keys()
+        print("###### Study.create_sorting_analyzer_gt() is not used anymore!!!!!!")
+        # if case_keys is None:
+        #     case_keys = self.cases.keys()
 
-        base_folder = self.folder / "sorting_analyzer"
-        base_folder.mkdir(exist_ok=True)
+        # base_folder = self.folder / "sorting_analyzer"
+        # base_folder.mkdir(exist_ok=True)
 
-        dataset_keys = [self.cases[key]["dataset"] for key in case_keys]
-        dataset_keys = set(dataset_keys)
-        for dataset_key in dataset_keys:
-            # the waveforms depend on the dataset key
-            folder = base_folder / self.key_to_str(dataset_key)
-            recording, gt_sorting = self.datasets[dataset_key]
-            sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
-            sorting_analyzer.compute("random_spikes", **random_params)
-            sorting_analyzer.compute("waveforms", return_scaled=return_scaled, **job_kwargs)
-            sorting_analyzer.compute("templates")
-            sorting_analyzer.compute("noise_levels", return_scaled=return_scaled)
+        # dataset_keys = [self.cases[key]["dataset"] for key in case_keys]
+        # dataset_keys = set(dataset_keys)
+        # for dataset_key in dataset_keys:
+        #     # the waveforms depend on the dataset key
+        #     folder = base_folder / self.key_to_str(dataset_key)
+        #     recording, gt_sorting = self.datasets[dataset_key]
+        #     sorting_analyzer = create_sorting_analyzer(
+        #         gt_sorting, recording, format="binary_folder", folder=folder, return_scaled=return_scaled
+        #     )
+        #     sorting_analyzer.compute("random_spikes", **random_params)
+        #     sorting_analyzer.compute("templates", **job_kwargs)
+        #     sorting_analyzer.compute("noise_levels")
 
     def get_sorting_analyzer(self, case_key=None, dataset_key=None):
         if case_key is not None:
             dataset_key = self.cases[case_key]["dataset"]
+        return self.analyzers[dataset_key]
 
-        folder = self.folder / "sorting_analyzer" / self.key_to_str(dataset_key)
-        sorting_analyzer = load_sorting_analyzer(folder)
-        return sorting_analyzer
+        # folder = self.folder / "sorting_analyzer" / self.key_to_str(dataset_key)
+        # sorting_analyzer = load_sorting_analyzer(folder)
+        # return sorting_analyzer
 
     def get_templates(self, key, operator="average"):
         sorting_analyzer = self.get_sorting_analyzer(case_key=key)
@@ -255,33 +301,46 @@ class BenchmarkStudy:
         for key in case_keys:
             dataset_key = self.cases[key]["dataset"]
             if dataset_key in done:
-                # some case can share the same waveform extractor
+                # some case can share the same analyzer
                 continue
             done.append(dataset_key)
-            filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
-            if filename.exists():
-                if force:
-                    os.remove(filename)
-                else:
-                    continue
+            # filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
+            # if filename.exists():
+            #     if force:
+            #         os.remove(filename)
+            #     else:
+            #         continue
             sorting_analyzer = self.get_sorting_analyzer(key)
-            qm_ext = sorting_analyzer.compute("quality_metrics", metric_names=metric_names)
+            qm_ext = sorting_analyzer.get_extension("quality_metrics")
+            if qm_ext is None or force:
+                qm_ext = sorting_analyzer.compute("quality_metrics", metric_names=metric_names)
+
+            # TODO remove this metics CSV file!!!!
             metrics = qm_ext.get_data()
-            metrics.to_csv(filename, sep="\t", index=True)
+            # metrics.to_csv(filename, sep="\t", index=True)
 
     def get_metrics(self, key):
         import pandas as pd
 
         dataset_key = self.cases[key]["dataset"]
 
-        filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
-        if not filename.exists():
-            return
-        metrics = pd.read_csv(filename, sep="\t", index_col=0)
-        dataset_key = self.cases[key]["dataset"]
-        recording, gt_sorting = self.datasets[dataset_key]
-        metrics.index = gt_sorting.unit_ids
+        analyzer = self.get_sorting_analyzer(key)
+        ext = analyzer.get_extension("quality_metrics")
+        if ext is None:
+            # TODO au to compute ????
+            return None
+
+        metrics = ext.get_data()
         return metrics
+
+        # filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
+        # if not filename.exists():
+        #     return
+        # metrics = pd.read_csv(filename, sep="\t", index_col=0)
+        # dataset_key = self.cases[key]["dataset"]
+        # recording, gt_sorting = self.datasets[dataset_key]
+        # metrics.index = gt_sorting.unit_ids
+        # return metrics
 
     def get_units_snr(self, key):
         """ """

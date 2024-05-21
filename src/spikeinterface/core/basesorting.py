@@ -39,6 +39,32 @@ class BaseSorting(BaseExtractor):
             txt += "\n  file_path: {}".format(self._kwargs["file_path"])
         return txt
 
+    def _repr_html_(self):
+        common_style = "margin-left: 10px;"
+        border_style = "border:1px solid #ddd; padding:10px;"
+
+        html_header = f"<div style='{border_style}'><strong>{self.__repr__()}</strong></div>"
+
+        html_unit_ids = f"<details style='{common_style}'>  <summary><strong>Unit IDs</strong></summary><ul>"
+        html_unit_ids += f"{self.unit_ids} </details>"
+
+        html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
+        for key, value in self._annotations.items():
+            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
+        html_annotations += f"</details>"
+
+        html_unit_properties = (
+            f"<details style='{common_style}'><summary><strong>Unit Properties</strong></summary><ul>"
+        )
+        for key, value in self._properties.items():
+            # Add a further indent for each property
+            value_formatted = np.asarray(value)
+            html_unit_properties += f"<details><summary><strong>{key}</strong></summary>{value_formatted}</details>"
+        html_unit_properties += "</ul></details>"
+
+        html_repr = html_header + html_unit_ids + html_annotations + html_unit_properties
+        return html_repr
+
     @property
     def unit_ids(self):
         return self._main_ids

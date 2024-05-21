@@ -4,7 +4,6 @@ from typing import Literal
 import warnings
 from pathlib import Path
 import os
-import gc
 import mmap
 import tqdm
 
@@ -68,12 +67,12 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
 
 
 def write_binary_recording(
-    recording,
-    file_paths,
-    dtype=None,
-    add_file_extension=True,
-    byte_offset=0,
-    auto_cast_uint=True,
+    recording: "BaseRecording",
+    file_paths: list[Path | str] | Path | str,
+    dtype: np.ndtype = None,
+    add_file_extension: bool = True,
+    byte_offset: int = 0,
+    auto_cast_uint: bool = True,
     **job_kwargs,
 ):
     """
@@ -91,11 +90,14 @@ def write_binary_recording(
         The path to the file.
     dtype: dtype or None, default: None
         Type of the saved data
-        If True, file the ".raw" file extension is added if the file name is not a "raw", "bin", or "dat"
+    add_file_extension, bool, default: True
+        If True, and  the file path does not end in "raw", "bin", or "dat" then "raw" is added as an extension.
     byte_offset: int, default: 0
-        Offset in bytes for the binary file (e.g. to write a header)
+        Offset in bytes for the binary file (e.g. to write a header). This is useful in case you want to append data
+        to an existing file where you wrote a header or other data before.
     auto_cast_uint: bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
+        .. deprecated:: 0.103, use the `unsigned_to_signed` function instead.
     {}
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
@@ -110,9 +112,12 @@ def write_binary_recording(
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
     dtype = dtype if dtype is not None else recording.get_dtype()
-    cast_unsigned = False
     if auto_cast_uint:
         cast_unsigned = determine_cast_unsigned(recording, dtype)
+        warning_message = (
+            "auto_cast_uint is deprecated and will be removed in 0.103. Use the `unsigned_to_signed` function instead."
+        )
+        warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
 
     dtype_size_bytes = np.dtype(dtype).itemsize
     num_channels = recording.get_num_channels()
@@ -335,6 +340,9 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
         init_args = (recording, None, shm_names, shapes, dtype, cast_unsigned)
     else:
         init_args = (recording, arrays, None, None, dtype, cast_unsigned)
+
+    if "verbose" in job_kwargs:
+        del job_kwargs["verbose"]
 
     executor = ChunkRecordingExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs

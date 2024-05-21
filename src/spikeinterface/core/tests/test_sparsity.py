@@ -152,7 +152,7 @@ def get_dataset():
         num_channels=10,
         num_units=5,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_level=1.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=1.0, strategy="tile_pregenerated"),
         seed=2205,
     )
     recording.set_property("group", ["a"] * 5 + ["b"] * 5)
@@ -199,11 +199,13 @@ def test_estimate_sparsity():
 def test_compute_sparsity():
     recording, sorting = get_dataset()
 
-    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False)
+    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False, return_scaled=True)
     sorting_analyzer.compute("random_spikes")
-    sorting_analyzer.compute("waveforms", return_scaled=True)
-    sorting_analyzer.compute("templates", return_scaled=True)
-    sorting_analyzer.compute("noise_levels", return_scaled=True)
+    sorting_analyzer.compute(
+        "waveforms",
+    )
+    sorting_analyzer.compute("templates")
+    sorting_analyzer.compute("noise_levels")
     # this is needed for method="energy"
 
     # using object SortingAnalyzer

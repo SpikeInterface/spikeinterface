@@ -30,11 +30,11 @@ def get_sorting_analyzer(format="memory", sparse=True):
             maximum_z=20.0,
         ),
         generate_templates_kwargs=dict(
-            unit_params_range=dict(
-                alpha=(9_000.0, 12_000.0),
+            unit_params=dict(
+                alpha=(200.0, 500.0),
             )
         ),
-        noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2406,
     )
     if format == "memory":
@@ -89,7 +89,13 @@ def test_ComputeRandomSpikes(format, sparse):
     ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
     indices = ext.data["random_spikes_indices"]
     assert indices.size == 10 * sorting_analyzer.sorting.unit_ids.size
-    # print(indices)
+
+    _check_result_extension(sorting_analyzer, "random_spikes")
+    sorting_analyzer.delete_extension("random_spikes")
+
+    ext = sorting_analyzer.compute("random_spikes", method="all")
+    indices = ext.data["random_spikes_indices"]
+    assert indices.size == len(sorting_analyzer.sorting.to_spike_vector())
 
     _check_result_extension(sorting_analyzer, "random_spikes")
 
@@ -189,7 +195,7 @@ def test_ComputeTemplates(format, sparse):
 def test_ComputeNoiseLevels(format, sparse):
     sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
 
-    sorting_analyzer.compute("noise_levels", return_scaled=True)
+    sorting_analyzer.compute("noise_levels")
     print(sorting_analyzer)
 
     noise_levels = sorting_analyzer.get_extension("noise_levels").data["noise_levels"]
@@ -199,9 +205,11 @@ def test_ComputeNoiseLevels(format, sparse):
 def test_get_children_dependencies():
     assert "waveforms" in _extension_children["random_spikes"]
 
-    children = _get_children_dependencies("random_spikes")
-    assert "waveforms" in children
-    assert "templates" in children
+    rs_children = _get_children_dependencies("random_spikes")
+    assert "waveforms" in rs_children
+    assert "templates" in rs_children
+
+    assert rs_children.index("waveforms") < rs_children.index("templates")
 
 
 def test_delete_on_recompute():
@@ -216,17 +224,37 @@ def test_delete_on_recompute():
     assert sorting_analyzer.get_extension("waveforms") is None
 
 
+def test_compute_several():
+    sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
+
+    # should raise an error since waveforms depends on random_spikes, which isn't calculated
+    with pytest.raises(AssertionError):
+        sorting_analyzer.compute(["waveforms"])
+
+    # check that waveforms are calculated
+    sorting_analyzer.compute(["random_spikes", "waveforms"])
+    waveform_data = sorting_analyzer.get_extension("waveforms").get_data()
+    assert waveform_data is not None
+
+    sorting_analyzer.delete_extension("waveforms")
+    sorting_analyzer.delete_extension("random_spikes")
+
+    # check that waveforms are calculated as before, even when parent is after child
+    sorting_analyzer.compute(["waveforms", "random_spikes"])
+    assert np.all(waveform_data == sorting_analyzer.get_extension("waveforms").get_data())
+
+
 if __name__ == "__main__":
 
-    # test_ComputeWaveforms(format="memory", sparse=True)
-    # test_ComputeWaveforms(format="memory", sparse=False)
-    # test_ComputeWaveforms(format="binary_folder", sparse=True)
-    # test_ComputeWaveforms(format="binary_folder", sparse=False)
-    # test_ComputeWaveforms(format="zarr", sparse=True)
-    # test_ComputeWaveforms(format="zarr", sparse=False)
-    # test_ComputeRandomSpikes(format="memory", sparse=True)
+    test_ComputeWaveforms(format="memory", sparse=True)
+    test_ComputeWaveforms(format="memory", sparse=False)
+    test_ComputeWaveforms(format="binary_folder", sparse=True)
+    test_ComputeWaveforms(format="binary_folder", sparse=False)
+    test_ComputeWaveforms(format="zarr", sparse=True)
+    test_ComputeWaveforms(format="zarr", sparse=False)
+    test_ComputeRandomSpikes(format="memory", sparse=True)
     test_ComputeTemplates(format="memory", sparse=True)
-    # test_ComputeNoiseLevels(format="memory", sparse=False)
+    test_ComputeNoiseLevels(format="memory", sparse=False)
 
     test_get_children_dependencies()
     test_delete_on_recompute()
