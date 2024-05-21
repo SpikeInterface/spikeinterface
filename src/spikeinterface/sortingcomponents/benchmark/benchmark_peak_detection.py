@@ -201,6 +201,8 @@ class PeakDetectionStudy(BenchmarkStudy):
                 ymin, ymax = ax.get_ylim()
                 abs_threshold = -detect_threshold * noise_levels
                 ax.plot([abs_threshold, abs_threshold], [ymin, ymax], "k--")
+        
+        return fig
 
     def plot_deltas_per_cells(self, case_keys=None, figsize=(15, 5)):
 
