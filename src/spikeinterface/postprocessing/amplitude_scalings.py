@@ -400,10 +400,12 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
 
     Given an array of information on spikes extracted from all units, 
     find the 'spike collisions' - incidents where two spikes from different
-    units overlap temporally. Here we work with 1d representation
-    of spikes (i.e. the signal from the channel the unit loads
-    most strongly only (TODO: is this true?)). 
+    units overlap temporally.
 
+    First for each spike, find all other spikes that overlap the spike. Overlap
+    is defined as another spike peak occurring within a temporal window around
+    the spike peak. Then, only the temporally overlapping spikes that also
+    spatially overlap the spike are included in the output collision_spikes_dict.
 
     Parameters
     ----------
@@ -426,7 +428,7 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     collision_spikes_dict = {}
     for spike_index, spike in enumerate(spikes):
 
-        # find the index of the spike within the spikes_within_margin
+        # find the index of the spike within spikes_within_margin
         spike_index_within_margin = np.where(spikes_within_margin == spike)[0][0]
 
         # find the spikes that fall within a temporal window around the spike peak 
@@ -437,8 +439,9 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
             spike_collision_window,
         )
 
-        # Make an array of the indices of all spikes that collide with the spike,
+        # Make an array of indices of all spikes that collide with the spike,
         # making sure to exlude the spike itself (it is included in the collision_spikes by construction)
+        # The indices here are indices of the spike position in `spikes_within_margin`.
         pre_possible_consecutive_spike_indices = np.arange(consecutive_window_pre, spike_index_within_margin)
         post_possible_consecutive_spike_indices = np.arange(spike_index_within_margin + 1, consecutive_window_post)
         possible_overlapping_spike_indices = np.concatenate(
