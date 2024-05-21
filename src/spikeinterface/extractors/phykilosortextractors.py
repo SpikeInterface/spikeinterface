@@ -171,7 +171,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             else:
                 if load_all_cluster_properties:
                     # pandas loads strings as objects
-                    if isinstance(cluster_info[prop_name].values, object):
+                    if cluster_info[prop_name].values.dtype.kind == "O":
                         prop_dtype = type(cluster_info[prop_name].values[0])
                         values_ = cluster_info[prop_name].values.astype(prop_dtype)
                     else:
