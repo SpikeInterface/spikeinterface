@@ -500,14 +500,6 @@ def fit_collision(
             (sample_index, channel_index, amplitude, segment_index, unit_index, in_margin)  TODO: or, point to where information can be found.
     traces_with_margin: np.ndarray
         A numpy array of shape (n_samples, n_channels) containing the traces with a margin. TODO: what is the margin? spatial? temporal? why?
-    start_frame: int
-        The start frame of the chunk for traces_with_margin.
-    end_frame: int
-        The end frame of the chunk for traces_with_margin.
-    left: int
-        The left margin of the chunk for traces_with_margin.
-    right: int
-        The right margin of the chunk for traces_with_margin.
     nbefore: int
         The number of samples before the spike to consider for the fit.
     all_templates: np.ndarray
