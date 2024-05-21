@@ -911,9 +911,11 @@ class WaveformExtractor:
             )
             if self.recording.get_probegroup() is not None:
                 probegroup = self.recording.get_probegroup()
+            with_recording = True
         else:
             rec_attributes = deepcopy(self._rec_attributes)
             probegroup = rec_attributes.pop("probegroup")
+            with_recording = False
 
         if self.is_sparse():
             assert sparsity is None, "WaveformExtractor is already sparse!"
@@ -1026,7 +1028,7 @@ class WaveformExtractor:
                         name=f"sampled_index_{unit_id}", data=sampled_indices, compressor=compressor
                     )
 
-        new_we = WaveformExtractor.load(folder)
+        new_we = WaveformExtractor.load(folder, with_recording=)
 
         # save waveform extensions
         for ext_name in self.get_available_extension_names():
