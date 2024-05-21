@@ -386,8 +386,7 @@ def _units_are_spatially_overlapping(sparsity_mask, i, j):
     ----------
     sparsity_mask: boolean mask
         A num_units x num_channels  boolean array indicating whether
-        the unit is represented on the channel e.g. sparsity_mask[0, 10]
-        is True indicates that unit 0 has signal on channel 10.
+        the unit is represented on the channel.
     i: int
         The first unit index
     j: int
@@ -426,7 +425,8 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     delta_collision_samples: int
         The maximum number of samples between two spikes to consider them as overlapping
     sparsity_mask: boolean mask
-        The sparsity mask indicating whether a spike is included for sparse computations
+        A num_units x num_channels  boolean array indicating whether
+        the unit is represented on the channel.
 
     Returns
     -------
@@ -519,8 +519,7 @@ def fit_collision(
         A numpy array of shape (n_units, n_samples, n_channels) containing the templates.
     sparsity_mask: boolean mask
         A num_units x num_channels  boolean array indicating whether
-        the unit is represented on the channel e.g. sparsity_mask[0, 10]
-        is True indicates that unit 0 has signal on channel 10.
+        the unit is represented on the channel.
     cut_out_before: int
         The number of samples to cut out before the spike.
     cut_out_after: int
