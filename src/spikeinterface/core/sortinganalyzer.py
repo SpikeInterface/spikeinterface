@@ -921,10 +921,10 @@ class SortingAnalyzer:
         >>> wfs = compute_waveforms(sorting_analyzer, **some_params)
 
         """
+        extension_class = get_extension_class(extension_name)
+
         for child in _get_children_dependencies(extension_name):
             self.delete_extension(child)
-
-        extension_class = get_extension_class(extension_name)
 
         if extension_class.need_job_kwargs:
             params, job_kwargs = split_job_kwargs(kwargs)
