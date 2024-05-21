@@ -1937,7 +1937,7 @@ class BaseWaveformExtractorExtension:
                 sparsity_params["unit_id_to_channel_ids"] = params["sparsity"]
             else:
                 sparsity_params = params["sparsity"]
-            params["sparsity"] = ChannelSparsity.from_dict(params["sparsity"])
+            params["sparsity"] = ChannelSparsity.from_dict(sparsity_params)
 
         # make instance with params
         ext = cls(waveform_extractor)
