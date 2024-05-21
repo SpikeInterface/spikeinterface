@@ -293,7 +293,7 @@ class AmplitudeScalingNode(PipelineNode):
         # local_spikes = local_spikes_within_margin[i0:i1]
 
         local_spikes_within_margin = peaks
-        local_spikes = local_spikes_within_margin[~peaks["in_margin"]]  # TODO: is this 'local spikes within margin' or 'local spikes with margin'?
+        local_spikes = local_spikes_within_margin[~peaks["in_margin"]]
 
         # set colliding spikes apart (if needed)
         if handle_collisions:
@@ -402,7 +402,7 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     spikes: np.array
         An array of spikes (sample_index, channel_index, amplitude, segment_index, unit_index, in_margin)
     spikes_within_margin: np.array
-        An array of spikes within an added margin (sample_index that indicating the last sample, is increased)
+        An array of spikes whose peaks are close to another spike, within a given margin
     delta_collision_samples: int
         The maximum number of samples between two spikes to consider them as overlapping
     sparsity_mask: boolean mask
@@ -419,7 +419,7 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     for spike_index, spike in enumerate(spikes):
         breakpoint()
         # find the index of the spike within the spikes_within_margin
-        spike_index_w_margin = np.where(spikes_within_margin == spike)[0][0]  # TODO: are spikes_within_margin not identical to spikes in shape?
+        spike_index_within_margin = np.where(spikes_within_margin == spike)[0][0]
 
         # find the possible spikes per and post within delta_collision_samples
         consecutive_window_pre, consecutive_window_post = np.searchsorted(
@@ -428,8 +428,8 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
         )
 
         # exclude the spike itself (it is included in the collision_spikes by construction)
-        pre_possible_consecutive_spike_indices = np.arange(consecutive_window_pre, spike_index_w_margin)
-        post_possible_consecutive_spike_indices = np.arange(spike_index_w_margin + 1, consecutive_window_post)
+        pre_possible_consecutive_spike_indices = np.arange(consecutive_window_pre, spike_index_within_margin)
+        post_possible_consecutive_spike_indices = np.arange(spike_index_within_margin + 1, consecutive_window_post)
         possible_overlapping_spike_indices = np.concatenate(
             (pre_possible_consecutive_spike_indices, post_possible_consecutive_spike_indices)
         )
