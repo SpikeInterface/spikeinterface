@@ -250,7 +250,8 @@ class SortingAnalyzer:
             else:
                 raise ValueError(
                     f"Sorting and Recording sampling frequencies are too different: "
-                    f"recording: {recording.sampling_frequency} - sorting: {sorting.sampling_frequency}"
+                    f"recording: {recording.sampling_frequency} - sorting: {sorting.sampling_frequency}. "
+                    "Ensure that you are associating the correct Recording and Sorting when creating a SortingAnalyzer."
                 )
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
