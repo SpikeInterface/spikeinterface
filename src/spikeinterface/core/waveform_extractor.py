@@ -1028,7 +1028,7 @@ class WaveformExtractor:
                         name=f"sampled_index_{unit_id}", data=sampled_indices, compressor=compressor
                     )
 
-        new_we = WaveformExtractor.load(folder, with_recording=)
+        new_we = WaveformExtractor.load(folder, with_recording=with_recording)
 
         # save waveform extensions
         for ext_name in self.get_available_extension_names():
