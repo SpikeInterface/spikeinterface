@@ -8,9 +8,9 @@ import numpy as np
 import platform
 import os
 import warnings
+from spikeinterface.core.core_tools import convert_string_to_bytes
 
 import sys
-import contextlib
 from tqdm.auto import tqdm
 
 from concurrent.futures import ProcessPoolExecutor
@@ -23,7 +23,7 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
                 - chunk_size: int
                     Number of samples per chunk
                 - chunk_memory: str
-                    Memory usage for each job (e.g. "100M", "1G")
+                    Memory usage for each job (e.g. "100M", "1G", "500MiB", "2GiB")
                 - total_memory: str
                     Total memory usage (e.g. "500M", "2G")
                 - chunk_duration : str or float or None
@@ -149,16 +149,6 @@ def divide_recording_into_chunks(recording, chunk_size):
     return all_chunks
 
 
-_exponents = {"k": 1e3, "M": 1e6, "G": 1e9}
-
-
-def _mem_to_int(mem):
-    suffix = mem[-1]
-    assert suffix in _exponents
-    mem = int(float(mem[:-1]) * _exponents[suffix])
-    return mem
-
-
 def ensure_n_jobs(recording, n_jobs=1):
     if n_jobs == -1:
         n_jobs = os.cpu_count()
@@ -206,9 +196,11 @@ def ensure_chunk_size(
     chunk_size: int or None
         size for one chunk per job
     chunk_memory: str or None
-        must end with "k", "M" or "G"
+        must end with "k", "M", "G", etc for decimal units and "ki", "Mi", "Gi", etc for
+        binary units. (e.g. "1k", "500M", "2G", "1ki", "500Mi", "2Gi")
     total_memory: str or None
-        must end with "k", "M" or "G"
+        must end with "k", "M", "G", etc for decimal units and "ki", "Mi", "Gi", etc for
+        binary units. (e.g. "1k", "500M", "2G", "1ki", "500Mi", "2Gi")
     chunk_duration: None or float or str
         Units are second if float.
         If str then the str must contain units(e.g. "1s", "500ms")
@@ -219,14 +211,14 @@ def ensure_chunk_size(
     elif chunk_memory is not None:
         assert total_memory is None
         # set by memory per worker size
-        chunk_memory = _mem_to_int(chunk_memory)
+        chunk_memory = convert_string_to_bytes(chunk_memory)
         n_bytes = np.dtype(recording.get_dtype()).itemsize
         num_channels = recording.get_num_channels()
         chunk_size = int(chunk_memory / (num_channels * n_bytes))
     elif total_memory is not None:
         # clip by total memory size
         n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
-        total_memory = _mem_to_int(total_memory)
+        total_memory = convert_string_to_bytes(total_memory)
         n_bytes = np.dtype(recording.get_dtype()).itemsize
         num_channels = recording.get_num_channels()
         chunk_size = int(total_memory / (num_channels * n_bytes * n_jobs))
