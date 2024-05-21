@@ -408,9 +408,8 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     """
     Finds the collisions between spikes.
 
-    Given an array of information on spikes extracted from all units,
-    find the 'spike collisions' - incidents where two spikes from different
-    units overlap temporally and spatially.
+    Given an array of spikes extracted from all units, find the 'spike collisions'
+    - incidents where two spikes from different units overlap temporally and spatially.
 
     First for each spike, find all other spikes that temporally overlap the spike.
     Temporal overlap is defined as another spike peak occurring within a time window around
@@ -420,7 +419,8 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     Parameters
     ----------
     spikes: np.array
-        An array of spikes (sample_index, channel_index, amplitude, segment_index, unit_index, in_margin)
+        An array of spikes, where spikes are represented by their:
+            (sample_index, channel_index, amplitude, segment_index, unit_index, in_margin)
     spikes_within_margin: np.array
         An array of spikes whose peaks are close to another spike, within a given margin
     delta_collision_samples: int
@@ -588,7 +588,7 @@ def fit_collision(
 ### Debugging ###
 def _plot_collisions(we, sparsity=None, num_collisions=None):
     """
-    Plot the fitting of collision spikes.
+    Plot the fitting of collision spikes for debugging.
     ----------
 
     Parameters
