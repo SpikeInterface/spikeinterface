@@ -331,7 +331,7 @@ class ChannelSparsity:
             return_scaled = templates_or_sorting_analyzer.return_scaled
         elif isinstance(templates_or_sorting_analyzer, Templates):
             assert noise_levels is not None
-            return_scaled = True
+            return_scaled = templates_or_sorting_analyzer.is_scaled
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
@@ -369,7 +369,7 @@ class ChannelSparsity:
             return_scaled = templates_or_sorting_analyzer.return_scaled
         elif isinstance(templates_or_sorting_analyzer, Templates):
             assert noise_levels is not None
-            return_scaled = True
+            return_scaled = templates_or_sorting_analyzer.is_scaled
 
         from .template_tools import get_dense_templates_array
 
