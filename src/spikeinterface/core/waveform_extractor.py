@@ -913,7 +913,7 @@ class WaveformExtractor:
                 probegroup = self.recording.get_probegroup()
         else:
             rec_attributes = deepcopy(self._rec_attributes)
-            probegroup = rec_attributes["probegroup"]
+            probegroup = rec_attributes.pop("probegroup")
 
         if self.is_sparse():
             assert sparsity is None, "WaveformExtractor is already sparse!"
