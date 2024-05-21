@@ -165,21 +165,14 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 self.set_property(key="group", values=cluster_info[prop_name])
             elif prop_name == "cluster_id":
                 self.set_property(key="original_cluster_id", values=cluster_info[prop_name])
-            elif prop_name != "group":
-                self.set_property(key=prop_name, values=cluster_info[prop_name])
             elif prop_name == "group":
                 # rename group property to 'quality'
                 self.set_property(key="quality", values=cluster_info[prop_name])
-            else:
+            elif prop_name != "group":
                 if load_all_cluster_properties:
                     # pandas loads strings as objects
-                    if isinstance(cluster_info[prop_name].values[0], object):
-                        try:
-                            values_ = cluster_info[prop_name].values.astype(str)
-                        except:
-                            continue
-                    else:
-                        values_ = cluster_info[prop_name].values
+                    prop_dtype = type(cluster_info[prop_name].values[0])
+                    values_ = cluster_info[prop_name].values.astype(prop_dtype)
                     self.set_property(key=prop_name, values=values_)
 
         self.annotate(phy_folder=str(phy_folder.resolve()))
