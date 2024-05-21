@@ -50,7 +50,7 @@ class StudyRunTimesWidget(BaseWidget):
             label = dp.study.cases[key]["label"]
             rt = dp.run_times.loc[key]
             self.ax.bar(i, rt, width=0.8, label=label, facecolor=self.colors[key])
-
+        self.ax.set_ylabel('run time (s)')
         self.ax.legend()
 
 
