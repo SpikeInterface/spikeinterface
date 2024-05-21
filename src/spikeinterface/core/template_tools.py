@@ -152,11 +152,11 @@ def get_template_extremum_channel(
     channel_ids = templates_or_sorting_analyzer.channel_ids
 
     # if SortingAnalyzer need to use global SortingAnalyzer return_scaled otherwise
-    # we just use the previous default of return_scaled=True (for templates)
+    # we use the Templates is_scaled
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
         return_scaled = templates_or_sorting_analyzer.return_scaled
     else:
-        return_scaled = True
+        return_scaled = templates_or_sorting_analyzer.is_scaled
 
     peak_values = get_template_amplitudes(
         templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled
@@ -200,12 +200,12 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
 
     shifts = {}
 
-    # We need to use the SortingAnalyzer return_scaled if possible
-    # otherwise for Templates default to True
+    # We need to use the SortingAnalyzer return_scaled
+    # We need to use the Templates is_scaled
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
         return_scaled = templates_or_sorting_analyzer.return_scaled
     else:
-        return_scaled = True
+        return_scaled = templates_or_sorting_analyzer.is_scaled
 
     templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
 
@@ -265,7 +265,7 @@ def get_template_extremum_amplitude(
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
         return_scaled = templates_or_sorting_analyzer.return_scaled
     else:
-        return_scaled = True
+        return_scaled = templates_or_sorting_analyzer.is_scaled
 
     extremum_amplitudes = get_template_amplitudes(
         templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled, abs_value=abs_value
