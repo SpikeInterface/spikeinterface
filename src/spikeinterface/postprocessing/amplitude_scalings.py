@@ -365,7 +365,7 @@ class AmplitudeScalingNode(PipelineNode):
                     cut_out_before,
                     cut_out_after,
                 )
-                # the scaling for the current spike is at index 0  TODO: a lot of these computations depend on the first idx being the current spike. Can it be given it's own dict entry without major overhead? It seems fragile, if they index is shuffled in a refactor it will cause a very hard-to-detect bug.
+                # the scaling for the current spike is at index 0
                 scalings[spike_index] = scaled_amps[0]
                 spike_collision_mask[spike_index] = True
 
@@ -510,9 +510,9 @@ def fit_collision(
         The first position is the spike of interest, other entries are spikes which
         collide with the spike in the first position.
         Each spike is an array with entries:
-            (sample_index, channel_index, amplitude, segment_index, unit_index, in_margin)  TODO: or, point to where information can be found.
+            (sample_index, channel_index, amplitude, segment_index, unit_index, in_margin)
     traces_with_margin: np.ndarray
-        A numpy array of shape (n_samples, n_channels) containing the traces with a margin. TODO: what is the margin? spatial? temporal? why?
+        A numpy array of shape (n_samples, n_channels) containing the traces with a margin.
     nbefore: int
         The number of samples before the spike to consider for the fit.
     all_templates: np.ndarray
@@ -542,9 +542,7 @@ def fit_collision(
     # colliding spikes. This is found as the union between
     # all channels with sparsity mask `True` for any
     # unit represented in the set of colliding spikes.
-    common_sparse_mask = np.zeros(
-        sparsity_mask.shape[1], dtype="int"
-    )  # TODO: this seems general-purpose and is a bit tricky to follow, requiring long comment. I would suggest refactoring to own function.
+    common_sparse_mask = np.zeros(sparsity_mask.shape[1], dtype="int")
     for spike in collision:
         mask_i = sparsity_mask[spike["unit_index"]]
         common_sparse_mask = np.logical_or(common_sparse_mask, mask_i)
