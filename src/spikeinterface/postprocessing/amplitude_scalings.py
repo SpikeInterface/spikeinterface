@@ -13,9 +13,6 @@ from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_
 
 from ..core.template_tools import get_dense_templates_array, _get_nbefore
 
-# DEBUG = True
-
-
 # TODO extra sparsity and job_kwargs handling
 
 
