@@ -172,7 +172,15 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 self.set_property(key="quality", values=cluster_info[prop_name])
             else:
                 if load_all_cluster_properties:
-                    self.set_property(key=prop_name, values=cluster_info[prop_name])
+                    # pandas loads strings as objects
+                    if isinstance(cluster_info[prop_name].values[0], object):
+                        try:
+                            values_ = cluster_info[prop_name].values.astype(str)
+                        except:
+                            continue
+                    else:
+                        values_ = cluster_info[prop_name].values
+                    self.set_property(key=prop_name, values=values_)
 
         self.annotate(phy_folder=str(phy_folder.resolve()))
 
