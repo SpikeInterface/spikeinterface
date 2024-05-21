@@ -355,7 +355,7 @@ class AmplitudeScalingNode(PipelineNode):
                     cut_out_before,
                     cut_out_after,
                 )
-                # the scaling for the current spike is at index 0
+                # the scaling for the current spike is at index 0  TODO: a lot of these computations depend on the first idx being the current spike. Can it be given it's own dict entry without major overhead? It seems fragile, if they index is shuffled in a refactor it will cause a very hard-to-detect bug.
                 scalings[spike_index] = scaled_amps[0]
                 spike_collision_mask[spike_index] = True
 
@@ -476,15 +476,30 @@ def fit_collision(
 ):
     """
     Compute the best fit for a collision between a spike and its overlapping spikes.
-    The function first cuts out the traces around the spike and its overlapping spikes, then
-    fits a multi-linear regression model to the traces using the centered templates as predictors.
+
+    The problem addressed here is to compute the scaling factor of a waveform
+    to its unit template in the presence of temporally and spatially
+    colliding spikes (i.e. spikes that occur close to a given spike). When
+    the waveform of a spike overlaps with other, colliding spikes, these
+    colliding spikes will contribute to the spike amplitude.
+
+    This is addressed by fitting a multivariate regression. `y` is
+    the observed waveform (including the spike of interest and colliding spikes).
+    `X` is the corresponding set of unit templates, with each template
+    temporally shifted to match the position of its associated spike in the 
+    original waveform. The regression coefficients represent the scaling
+    factors applied to each template to best match the waveform.
 
     Parameters
     ----------
     collision: np.ndarray
-        A numpy array of shape (n_colliding_spikes, ) containing the colliding spikes (spike_dtype).
+        A numpy array of shape (n_colliding_spikes, ) containing a set of colliding spikes.
+        The first position is the spike of interest, other entries are spikes which
+        collide with the spike in the first position.
+        Each spike is an array with entries:
+            (sample_index, channel_index, amplitude, segment_index, unit_index, in_margin)  TODO: or, point to where information can be found.
     traces_with_margin: np.ndarray
-        A numpy array of shape (n_samples, n_channels) containing the traces with a margin.
+        A numpy array of shape (n_samples, n_channels) containing the traces with a margin. TODO: what is the margin? spatial? temporal? why?
     start_frame: int
         The start frame of the chunk for traces_with_margin.
     end_frame: int
@@ -498,7 +513,9 @@ def fit_collision(
     all_templates: np.ndarray
         A numpy array of shape (n_units, n_samples, n_channels) containing the templates.
     sparsity_mask: boolean mask
-        The sparsity mask
+        A num_units x num_channels  boolean array indicating whether
+        the unit is represented on the channel e.g. sparsity_mask[0, 10]
+        is True indicates that unit 0 has signal on channel 10.
     cut_out_before: int
         The number of samples to cut out before the spike.
     cut_out_after: int
@@ -511,17 +528,23 @@ def fit_collision(
     """
     from sklearn.linear_model import LinearRegression
 
-    # make center of the spike externally
+    # Find the first and last spike peak index
+    # from the set of colliding spikes.
     sample_first_centered = np.min(collision["sample_index"])
     sample_last_centered = np.max(collision["sample_index"])
 
-    # construct sparsity as union between units' sparsity
-    common_sparse_mask = np.zeros(sparsity_mask.shape[1], dtype="int")
+    # Find channels that have signal from any of the set of
+    # colliding spikes. This is found as the union between
+    # all channels with sparsity mask `True` for any
+    # unit represented in the set of colliding spikes.
+    common_sparse_mask = np.zeros(sparsity_mask.shape[1], dtype="int")  # TODO: this seems general-purpose and is a bit tricky to follow, requiring long comment. I would suggest refactoring to own function.
     for spike in collision:
         mask_i = sparsity_mask[spike["unit_index"]]
         common_sparse_mask = np.logical_or(common_sparse_mask, mask_i)
     (sparse_indices,) = np.nonzero(common_sparse_mask)
 
+    # Index out the temporal window that includes all colliding spikes
+    # across all channels which contain signal from a colliding spike.
     local_waveform_start = max(0, sample_first_centered - cut_out_before)
     local_waveform_end = min(traces_with_margin.shape[0], sample_last_centered + cut_out_after)
     local_waveform = traces_with_margin[local_waveform_start:local_waveform_end, sparse_indices]
@@ -530,20 +553,26 @@ def fit_collision(
     y = local_waveform.T.flatten()
     X = np.zeros((len(y), len(collision)))
     for i, spike in enumerate(collision):
+
         full_template = np.zeros_like(local_waveform)
-        # center wrt cutout traces
+        
+        # For the collision spike, take its unit template and insert
+        # it into `full_template` at the time the collision spike occured.
         sample_centered = spike["sample_index"] - local_waveform_start
         template = all_templates[spike["unit_index"]][:, sparse_indices]
         template_cut = template[nbefore - cut_out_before : nbefore + cut_out_after]
-        # deal with borders
+
+        # Deal with borders - if the unit template goes off the start / end
+        # of the full template, clip it.
         if sample_centered - cut_out_before < 0:
-            full_template[: sample_centered + cut_out_after] = template_cut[cut_out_before - sample_centered :]
+            full_template[: sample_centered + cut_out_after] = template_cut[cut_out_before - sample_centered:]
         elif sample_centered + cut_out_after > num_samples_local_waveform:
             full_template[sample_centered - cut_out_before :] = template_cut[
                 : -(cut_out_after + sample_centered - num_samples_local_waveform)
             ]
         else:
             full_template[sample_centered - cut_out_before : sample_centered + cut_out_after] = template_cut
+
         X[:, i] = full_template.T.flatten()
 
     reg = LinearRegression(fit_intercept=True, positive=True).fit(X, y)
