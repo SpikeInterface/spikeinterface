@@ -37,8 +37,6 @@ from spikeinterface.sortingcomponents.clustering.tools import compute_template_f
 
 from sklearn.decomposition import TruncatedSVD
 
-import hdbscan
-
 
 class TdcClustering:
     """
@@ -63,6 +61,8 @@ class TdcClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
+        import hdbscan
+
         job_kwargs = params["job_kwargs"]
 
         if params["folder"] is None:
