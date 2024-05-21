@@ -287,18 +287,18 @@ class AmplitudeScalingNode(PipelineNode):
         handle_collisions = self._handle_collisions
         delta_collision_samples = self._delta_collision_samples
 
-        # local_spikes_w_margin = peaks
-        # i0 = np.searchsorted(local_spikes_w_margin["sample_index"], left_margin)
-        # i1 = np.searchsorted(local_spikes_w_margin["sample_index"], traces.shape[0] - right_margin)
-        # local_spikes = local_spikes_w_margin[i0:i1]
+        # local_spikes_within_margin = peaks
+        # i0 = np.searchsorted(local_spikes_within_margin["sample_index"], left_margin)
+        # i1 = np.searchsorted(local_spikes_within_margin["sample_index"], traces.shape[0] - right_margin)
+        # local_spikes = local_spikes_within_margin[i0:i1]
 
-        local_spikes_w_margin = peaks
-        local_spikes = local_spikes_w_margin[~peaks["in_margin"]]
+        local_spikes_within_margin = peaks
+        local_spikes = local_spikes_within_margin[~peaks["in_margin"]]  # TODO: is this 'local spikes within margin' or 'local spikes with margin'?
 
         # set colliding spikes apart (if needed)
         if handle_collisions:
             # local spikes with margin!
-            collisions = find_collisions(local_spikes, local_spikes_w_margin, delta_collision_samples, sparsity_mask)
+            collisions = find_collisions(local_spikes, local_spikes_within_margin, delta_collision_samples, sparsity_mask)
         else:
             collisions = {}
 
@@ -391,20 +391,22 @@ def _are_unit_indices_overlapping(sparsity_mask, i, j):
         return False
 
 
-def find_collisions(spikes, spikes_w_margin, delta_collision_samples, sparsity_mask):
+def find_collisions(spikes, spikes_within_margin, delta_collision_samples, sparsity_mask):
     """
     Finds the collisions between spikes.
+
+    Given an array of spike information,
 
     Parameters
     ----------
     spikes: np.array
-        An array of spikes
-    spikes_w_margin: np.array
-        An array of spikes within the added margin
+        An array of spikes (sample_index, channel_index, amplitude, segment_index, unit_index, in_margin)
+    spikes_within_margin: np.array
+        An array of spikes within an added margin (sample_index that indicating the last sample, is increased)
     delta_collision_samples: int
         The maximum number of samples between two spikes to consider them as overlapping
     sparsity_mask: boolean mask
-        The sparsity mask
+        The sparsity mask indicating whether a spike is included for sparse computations
 
     Returns
     -------
@@ -415,12 +417,13 @@ def find_collisions(spikes, spikes_w_margin, delta_collision_samples, sparsity_m
     # TODO: refactor to speed-up
     collision_spikes_dict = {}
     for spike_index, spike in enumerate(spikes):
-        # find the index of the spike within the spikes_w_margin
-        spike_index_w_margin = np.where(spikes_w_margin == spike)[0][0]
+        breakpoint()
+        # find the index of the spike within the spikes_within_margin
+        spike_index_w_margin = np.where(spikes_within_margin == spike)[0][0]  # TODO: are spikes_within_margin not identical to spikes in shape?
 
         # find the possible spikes per and post within delta_collision_samples
         consecutive_window_pre, consecutive_window_post = np.searchsorted(
-            spikes_w_margin["sample_index"],
+            spikes_within_margin["sample_index"],
             [spike["sample_index"] - delta_collision_samples, spike["sample_index"] + delta_collision_samples],
         )
 
@@ -436,12 +439,12 @@ def find_collisions(spikes, spikes_w_margin, delta_collision_samples, sparsity_m
             if _are_unit_indices_overlapping(
                 sparsity_mask,
                 spike["unit_index"],
-                spikes_w_margin[possible_overlapping_spike_index]["unit_index"],
+                spikes_within_margin[possible_overlapping_spike_index]["unit_index"],
             ):
                 if spike_index not in collision_spikes_dict:
                     collision_spikes_dict[spike_index] = np.array([spike])
                 collision_spikes_dict[spike_index] = np.concatenate(
-                    (collision_spikes_dict[spike_index], [spikes_w_margin[possible_overlapping_spike_index]])
+                    (collision_spikes_dict[spike_index], [spikes_within_margin[possible_overlapping_spike_index]])
                 )
     return collision_spikes_dict
 
