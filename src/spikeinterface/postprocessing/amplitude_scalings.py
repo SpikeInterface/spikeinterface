@@ -367,14 +367,17 @@ class AmplitudeScalingNode(PipelineNode):
 
 
 ### Collision handling ###
-def _are_unit_indices_overlapping(sparsity_mask, i, j):
+def _units_are_spatially_overlapping(sparsity_mask, i, j):
     """
-    Returns True if the unit indices i and j are overlapping, False otherwise
+    Returns True if the unit indices i and j are
+    spatially overlapping, False otherwise
 
     Parameters
     ----------
     sparsity_mask: boolean mask
-        The sparsity mask
+        A num_units x num_channels  boolean array indicating whether
+        the unit is represented on the channel e.g. sparsity_mask[0, 10]
+        is True indicates that unit 0 has signal on channel 10.
     i: int
         The first unit index
     j: int
@@ -383,7 +386,7 @@ def _are_unit_indices_overlapping(sparsity_mask, i, j):
     Returns
     -------
     bool
-        True if the unit indices i and j are overlapping, False otherwise
+        True if the units i and j are spatially overlapping, False otherwise
     """
     if np.any(sparsity_mask[i] & sparsity_mask[j]):
         return True
@@ -395,7 +398,12 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     """
     Finds the collisions between spikes.
 
-    Given an array of spike information,
+    Given an array of information on spikes extracted from all units, 
+    find the 'spike collisions' - incidents where two spikes from different
+    units overlap temporally. Here we work with 1d representation
+    of spikes (i.e. the signal from the channel the unit loads
+    most strongly only (TODO: is this true?)). 
+
 
     Parameters
     ----------
@@ -417,26 +425,31 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     # TODO: refactor to speed-up
     collision_spikes_dict = {}
     for spike_index, spike in enumerate(spikes):
-        breakpoint()
+
         # find the index of the spike within the spikes_within_margin
         spike_index_within_margin = np.where(spikes_within_margin == spike)[0][0]
 
-        # find the possible spikes per and post within delta_collision_samples
+        # find the spikes that fall within a temporal window around the spike peak 
+        spike_collision_window = [spike["sample_index"] - delta_collision_samples, spike["sample_index"] + delta_collision_samples]
+
         consecutive_window_pre, consecutive_window_post = np.searchsorted(
             spikes_within_margin["sample_index"],
-            [spike["sample_index"] - delta_collision_samples, spike["sample_index"] + delta_collision_samples],
+            spike_collision_window,
         )
 
-        # exclude the spike itself (it is included in the collision_spikes by construction)
+        # Make an array of the indices of all spikes that collide with the spike,
+        # making sure to exlude the spike itself (it is included in the collision_spikes by construction)
         pre_possible_consecutive_spike_indices = np.arange(consecutive_window_pre, spike_index_within_margin)
         post_possible_consecutive_spike_indices = np.arange(spike_index_within_margin + 1, consecutive_window_post)
         possible_overlapping_spike_indices = np.concatenate(
             (pre_possible_consecutive_spike_indices, post_possible_consecutive_spike_indices)
         )
 
-        # find the overlapping spikes in space as well
+        # Build the collusion_spikes_dict including only
+        # spikes that overlap spatially
         for possible_overlapping_spike_index in possible_overlapping_spike_indices:
-            if _are_unit_indices_overlapping(
+
+            if _units_are_spatially_overlapping(
                 sparsity_mask,
                 spike["unit_index"],
                 spikes_within_margin[possible_overlapping_spike_index]["unit_index"],
