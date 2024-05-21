@@ -95,7 +95,7 @@ full = [
     "scikit-learn",
     "networkx",
     "distinctipy",
-    "matplotlib<3.9",  # See https://github.com/SpikeInterface/spikeinterface/issues/2863
+    "matplotlib",
     "cuda-python; platform_system != 'Darwin'",
     "numba",
 ]
