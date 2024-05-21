@@ -1,8 +1,6 @@
 import platform
 import math
-from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
-import importlib
 import pytest
 import numpy as np
 
@@ -12,10 +10,8 @@ from spikeinterface.core.core_tools import (
     make_paths_absolute,
     check_paths_relative,
     normal_pdf,
+    convert_string_to_bytes,
 )
-from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-from spikeinterface.core.generate import NoiseGeneratorRecording
-from spikeinterface.core.numpyextractors import NumpySorting
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -87,6 +83,37 @@ def test_path_utils_functions():
 
         # UNC can be relative to the same UNC
         assert check_paths_relative(d, r"\\host\share")
+
+    def test_convert_string_to_bytes():
+        # Test SI prefixes
+        assert convert_string_to_bytes("1k") == 1000
+        assert convert_string_to_bytes("1M") == 1000000
+        assert convert_string_to_bytes("1G") == 1000000000
+        assert convert_string_to_bytes("1T") == 1000000000000
+        assert convert_string_to_bytes("1P") == 1000000000000000
+        # Test IEC prefixes
+        assert convert_string_to_bytes("1Ki") == 1024
+        assert convert_string_to_bytes("1Mi") == 1048576
+        assert convert_string_to_bytes("1Gi") == 1073741824
+        assert convert_string_to_bytes("1Ti") == 1099511627776
+        assert convert_string_to_bytes("1Pi") == 1125899906842624
+        # Test mixed values
+        assert convert_string_to_bytes("1.5k") == 1500
+        assert convert_string_to_bytes("2.5M") == 2500000
+        assert convert_string_to_bytes("0.5G") == 500000000
+        assert convert_string_to_bytes("1.2T") == 1200000000000
+        assert convert_string_to_bytes("1.5Pi") == 1688849860263936
+        # Test zero values
+        assert convert_string_to_bytes("0k") == 0
+        assert convert_string_to_bytes("0Ki") == 0
+        # Test invalid inputs (should raise assertion error)
+        with pytest.raises(AssertionError) as e:
+            convert_string_to_bytes("1Z")
+            assert str(e.value) == "Unknown suffix: Z"
+
+        with pytest.raises(AssertionError) as e:
+            convert_string_to_bytes("1Xi")
+            assert str(e.value) == "Unknown suffix: Xi"
 
 
 def test_normal_pdf() -> None:
