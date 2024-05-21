@@ -238,7 +238,19 @@ class SortingAnalyzer:
         return_scaled=True,
     ):
         # some checks
-        assert math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5)
+        if sorting.sampling_frequency != recording.sampling_frequency:
+            if math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
+                warnings.warn(
+                    "Sorting and Recording have different sampling frequency. " "Using the one from the Recording"
+                )
+                # we make a copy here to change the smapling frequency
+                sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+                sorting._sampling_frequency = recording.sampling_frequency
+            else:
+                raise ValueError(
+                    f"Sorting and Recording sampling frequencies are too different: "
+                    f"recording: {recording.sampling_frequency} - sorting: {sorting.sampling_frequency}"
+                )
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
         check_probe_do_not_overlap(all_probes)
