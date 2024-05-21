@@ -1,5 +1,4 @@
 import unittest
-from numba.cuda import Out
 import pytest
 import os
 from pathlib import Path
