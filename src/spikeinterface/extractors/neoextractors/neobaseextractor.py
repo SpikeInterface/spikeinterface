@@ -179,6 +179,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             If True, include all annotations in the extracted data.
         use_names_as_ids : Optional[bool], default: None
             If True, use channel names as IDs. Otherwise, use default IDs.
+            In NEO the ids are guaranteed to be unique. Names are user defined and can be duplicated.
         neo_kwargs : Dict[str, Any]
             Additional keyword arguments to pass to the NeoBaseExtractor for initialization.
 
@@ -275,8 +276,8 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         self.set_property("gain_to_uV", final_gains)
         self.set_property("offset_to_uV", final_offsets)
-        if not use_names_as_ids:
-            self.set_property("channel_name", signal_channels["name"])
+        if not use_names_as_ids and not all_annotations:
+            self.set_property("channel_names", signal_channels["name"])
 
         if all_annotations:
             block_ann = self.neo_reader.raw_annotations["blocks"][self.block_index]
