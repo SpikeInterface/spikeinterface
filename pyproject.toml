@@ -95,7 +95,7 @@ full = [
     "scikit-learn",
     "networkx",
     "distinctipy",
-    "matplotlib",
+    "matplotlib>=3.6", # matplotlib.colormaps
     "cuda-python; platform_system != 'Darwin'",
     "numba",
 ]
