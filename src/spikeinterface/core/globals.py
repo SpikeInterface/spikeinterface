@@ -42,9 +42,9 @@ def set_global_tmp_folder(folder):
     temp_folder_set = True
 
 
-def is_set_global_tmp_folder():
+def is_set_global_tmp_folder() -> bool:
     """
-    Check is the global path temporary folder have been manually set.
+    Check if the global path temporary folder have been manually set.
     """
     global temp_folder_set
     return temp_folder_set
@@ -88,9 +88,9 @@ def set_global_dataset_folder(folder):
     dataset_folder_set = True
 
 
-def is_set_global_dataset_folder():
+def is_set_global_dataset_folder() -> bool:
     """
-    Check is the global path dataset folder have been manually set.
+    Check if the global path dataset folder has been manually set.
     """
     global dataset_folder_set
     return dataset_folder_set
@@ -138,7 +138,10 @@ def reset_global_job_kwargs():
     global_job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
 
 
-def is_set_global_job_kwargs_set():
+def is_set_global_job_kwargs_set() -> bool:
+    """
+    Check if the global job kwargs have been manually set.
+    """
     global global_job_kwargs_set
     return global_job_kwargs_set
 
