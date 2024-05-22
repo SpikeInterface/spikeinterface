@@ -23,7 +23,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
     Amplitude scalings are the scaling factor to multipy the
     the unit template to best match the waveform. Each waveform
     has an associated amplitude scaling. This is a more robust
-    estimate of the waveform amplitude that other methods e.g. raw voltage.
+    estimate of the waveform amplitude than other methods e.g. raw voltage.
 
     When there are collisions, the scaling is the regression
     of the waveform onto the template, with intercept:
