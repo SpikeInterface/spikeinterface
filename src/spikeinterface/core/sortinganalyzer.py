@@ -586,7 +586,9 @@ class SortingAnalyzer:
 
         # sparsity
         if "sparsity_mask" in zarr_root:
-            sparsity = ChannelSparsity(np.array(zarr_root["sparsity_mask"]), sorting.unit_ids, rec_attributes["channel_ids"])
+            sparsity = ChannelSparsity(
+                np.array(zarr_root["sparsity_mask"]), sorting.unit_ids, rec_attributes["channel_ids"]
+            )
         else:
             sparsity = None
 
