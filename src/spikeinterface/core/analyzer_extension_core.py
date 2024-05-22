@@ -330,16 +330,25 @@ class ComputeTemplates(AnalyzerExtension):
 
             return_scaled = self.sorting_analyzer.return_scaled
 
-            self.data["average"], self.data["std"] = estimate_templates_with_accumulator(
+            return_std = "std" in self.params["operators"]
+            output = estimate_templates_with_accumulator(
                 recording,
                 some_spikes,
                 unit_ids,
                 self.nbefore,
                 self.nafter,
                 return_scaled=return_scaled,
-                return_std=True,
+                return_std=return_std,
                 **job_kwargs,
             )
+
+            # Output of estimate_templates_with_accumulator is either (templates,) or (templates, stds)
+            if return_std:
+                templates, stds = output
+                self.data["average"] = templates
+                self.data["std"] = stds
+            else:
+                self.data["average"] = output
 
     def _compute_and_append_from_waveforms(self, operators):
         if not self.sorting_analyzer.has_extension("waveforms"):
