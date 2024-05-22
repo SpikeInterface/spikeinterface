@@ -414,6 +414,9 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     Temporal overlap is defined as another spike peak occurring within a time window around
     the spike peak. Next, only these temporally overlapping spikes that also
     spatially overlap the spike are included in the output `collision_spikes_dict`.
+    Spatial overlap is defined as the two spikes both having signal on any shared
+    channel (i.e. the spikes are not spatially overlapping if they have signal on
+    two disjoint sets of channels).
 
     Parameters
     ----------
