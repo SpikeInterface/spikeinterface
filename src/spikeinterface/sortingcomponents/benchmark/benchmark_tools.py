@@ -11,8 +11,13 @@ import time
 import os
 
 from spikeinterface.core import SortingAnalyzer
+<<<<<<< Updated upstream
 from spikeinterface.core.core_tools import check_json
 from spikeinterface import load_extractor, split_job_kwargs, create_sorting_analyzer, load_sorting_analyzer
+=======
+from spikeinterface import load_extractor, create_sorting_analyzer, load_sorting_analyzer
+from spikeinterface.widgets import get_some_colors
+>>>>>>> Stashed changes
 
 import pickle
 

@@ -24,12 +24,6 @@ class MatchingBenchmark(Benchmark):
         self.gt_sorting = gt_sorting
         self.method = params["method"]
         self.templates = params["method_kwargs"]["templates"]
-
-        noise_levels = get_noise_levels(recording)
-        sparsity = compute_sparsity(self.templates, noise_levels, method='ptp', threshold=0.25)
-        self.templates = self.templates.to_sparse(sparsity)
-        self.templates = remove_empty_templates(self.templates)
-
         self.method_kwargs = params["method_kwargs"]
         self.result = {}
 
