@@ -20,16 +20,21 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
     """
     Computes the amplitude scalings from a SortingAnalyzer.
 
-    Amplitude scalings are the scaling factor to multipy the
-    the unit template to best match the waveform. Each waveform
+    Amplitude scalings are the scaling factor to multiply the
+    unit template to best match the waveform. Each waveform
     has an associated amplitude scaling. This is a more robust
     estimate of the waveform amplitude than other methods e.g. raw voltage.
 
-    When there are collisions, the scaling is the regression
-    of the waveform onto the template, with intercept:
+    In the case where there are not spike collisions, the scaling is
+    the regression of the waveform onto the template, with intercept:
         scaling * template + intercept = waveform
-    When there are collisions, a multiple-regression is used to fit
-    the waveform to template while taking into account colliding spikes.
+
+    When there are spike collisions, a different approach is taken.
+    Spike collisions are sets of temporally and spatially overlapping spikes.
+    Therefore, signal from other spikes can contribute to the amplitude
+    of the spike of interest. To address this, a multivariate linear
+    regression is used to regress the waveform (that contains multiple spikes,
+    the spike of interest and colliding spikes) onto a set of templates.
 
     Parameters
     ----------
