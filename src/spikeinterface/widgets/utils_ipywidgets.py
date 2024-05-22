@@ -343,6 +343,51 @@ class ScaleWidget(W.VBox):
         self.update_label()
 
 
+class WidenNarrowWidget(W.VBox):
+    value = traitlets.Float()
+
+    def __init__(self, value=1.0, factor=1.2, **kwargs):
+        assert factor > 1.0
+        self.factor = factor
+
+        self.scale_label = W.Label("Widen/Narrow", layout=W.Layout(width="95%", justify_content="center"))
+
+        self.right_selector = W.Button(
+            description="",
+            disabled=False,
+            button_style="",  # 'success', 'info', 'warning', 'danger' or ''
+            tooltip="Increase horizontal scale",
+            icon="arrow-right",
+            # layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
+            layout=W.Layout(width="60%", align_self="center"),
+        )
+
+        self.left_selector = W.Button(
+            description="",
+            disabled=False,
+            button_style="",  # 'success', 'info', 'warning', 'danger' or ''
+            tooltip="Decrease horizontal scale",
+            icon="arrow-left",
+            # layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
+            layout=W.Layout(width="60%", align_self="center"),
+        )
+
+        self.right_selector.on_click(self.left_clicked)
+        self.left_selector.on_click(self.right_clicked)
+
+        self.value = value
+        super(W.VBox, self).__init__(
+            children=[self.scale_label, W.HBox([self.left_selector, self.right_selector])],
+            **kwargs,
+        )
+
+    def left_clicked(self, change=None):
+        self.value = self.value / self.factor
+
+    def right_clicked(self, change=None):
+        self.value = self.value * self.factor
+
+
 class UnitSelector(W.VBox):
     value = traitlets.List()
 
