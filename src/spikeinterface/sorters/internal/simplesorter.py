@@ -46,7 +46,7 @@ class SimpleSorter(ComponentsBasedSorter):
         "job_kwargs": {"n_jobs": -1, "chunk_duration": "1s"},
     }
 
-    _params_descriptions = {
+    _params_description = {
         "apply_preprocessing": "whether to apply the preprocessing steps, default: False",
         "waveforms": "A dictonary containing waveforms params: ms_before (peak of spike) default: 1.0, ms_after (peak of spike) deafult: 1.5",
         "filtering": "A dictionary containing bandpass filter conditions, freq_min' default: 300 and 'freq_max' default:8000.0",
