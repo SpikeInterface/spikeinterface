@@ -15,7 +15,7 @@ def make_mpl_figure(figure=None, ax=None, axes=None, ncols=None, num_axes=None, 
             if "ipympl" not in matplotlib.get_backend():
                 ax = figure.add_subplot(111)
             else:
-                ax = figure.add_subplot(111, layout="constrained")
+                ax = figure.add_subplot(111)
             axes = np.array([[ax]])
         else:
             assert ncols is not None
