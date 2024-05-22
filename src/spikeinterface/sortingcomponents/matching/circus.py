@@ -260,7 +260,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         omp_tol = np.finfo(np.float32).eps
         num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
-        if isinstance(d['amplitudes'], tuple):
+        if isinstance(d['amplitudes'], list):
             min_amplitude, max_amplitude = d["amplitudes"]
         else:
             min_amplitude, max_amplitude = d["amplitudes"][:,0], d["amplitudes"][:, 1]
