@@ -585,21 +585,21 @@ def fit_collision(
 
 
 ### Debugging ###
-def _plot_collisions(we, sparsity=None, num_collisions=None):
+def _plot_collisions(sorting_analyzer, sparsity=None, num_collisions=None):
     """
     Plot the fitting of collision spikes for debugging.
     ----------
 
     Parameters
-    we : SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object.
     sparsity : ChannelSparsity, default=None
         The ChannelSparsity. If None, only main channels are plotted.
     num_collisions : int, default=None
         Number of collisions to plot. If None, all collisions are plotted.
     """
-    assert we.is_extension("amplitude_scalings"), "Could not find amplitude scalings extension!"
-    sac = we.load_extension("amplitude_scalings")
+    assert sorting_analyzer.is_extension("amplitude_scalings"), "Could not find amplitude scalings extension!"
+    sac = sorting_analyzer.load_extension("amplitude_scalings")
     handle_collisions = sac._params["handle_collisions"]
     assert handle_collisions, "Amplitude scalings was run without handling collisions!"
     scalings = sac.get_data()
@@ -614,11 +614,20 @@ def _plot_collisions(we, sparsity=None, num_collisions=None):
 
     for i in range(num_collisions):
         overlapping_spikes = collisions[collision_keys[i]]
-        ax = plot_one_collision(we, collision_keys[i], overlapping_spikes, spikes, scalings=scalings, sparsity=sparsity)
+        ax = _plot_one_collision(
+            sorting_analyzer, collision_keys[i], overlapping_spikes, spikes, scalings=scalings, sparsity=sparsity
+        )
 
 
 def _plot_one_collision(
-    we, spike_index, overlapping_spikes, spikes, scalings=None, sparsity=None, cut_out_samples=100, ax=None
+    sorting_analyzer,
+    spike_index,
+    overlapping_spikes,
+    spikes,
+    scalings=None,
+    sparsity=None,
+    cut_out_samples=100,
+    ax=None,
 ):
     """
     Internal method for debugging collisions.
@@ -628,15 +637,15 @@ def _plot_one_collision(
     if ax is None:
         fig, ax = plt.subplots()
 
-    recording = we.recording
-    nbefore_nafter_max = max(we.nafter, we.nbefore)
+    recording = sorting_analyzer.recording
+    nbefore_nafter_max = max(sorting_analyzer.nafter, sorting_analyzer.nbefore)
     cut_out_samples = max(cut_out_samples, nbefore_nafter_max)
 
     if sparsity is not None:
         unit_inds_to_channel_indices = sparsity.unit_id_to_channel_indices
         sparse_indices = np.array([], dtype="int")
         for spike in overlapping_spikes:
-            sparse_indices_i = unit_inds_to_channel_indices[we.unit_ids[spike["unit_index"]]]
+            sparse_indices_i = unit_inds_to_channel_indices[sorting_analyzer.unit_ids[spike["unit_index"]]]
             sparse_indices = np.union1d(sparse_indices, sparse_indices_i)
     else:
         sparse_indices = np.unique(overlapping_spikes["channel_index"])
@@ -677,13 +686,13 @@ def _plot_one_collision(
     if scalings is not None:
         fitted_traces = np.zeros_like(tr_overlap)
 
-        all_templates = we.get_all_templates()
+        all_templates = sorting_analyzer.get_all_templates()
         for i, spike in enumerate(overlapping_spikes):
             template = all_templates[spike["unit_index"]]
             overlap_index = np.where(spikes == spike)[0][0]
             template_scaled = scalings[overlap_index] * template
             template_scaled_sparse = template_scaled[:, sparse_indices]
-            sample_start = spike["sample_index"] - we.nbefore
+            sample_start = spike["sample_index"] - sorting_analyzer.nbefore
             sample_end = sample_start + template_scaled_sparse.shape[0]
 
             fitted_traces[sample_start - sf : sample_end - sf] += template_scaled_sparse
