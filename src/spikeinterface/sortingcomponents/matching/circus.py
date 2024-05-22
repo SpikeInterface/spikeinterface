@@ -103,7 +103,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     """
 
     _default_params = {
-        "amplitudes": [0.6, 2],
+        "amplitudes": [0.6, np.inf],
         "stop_criteria": "max_failures",
         "max_failures": 20,
         "omp_min_sps": 0.1,
@@ -155,6 +155,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         d["temporal"] = np.flip(d["temporal"], axis=1)
 
         d["overlaps"] = []
+        d['max_similarity'] = np.zeros((num_templates, num_templates), dtype=np.float32)
         for i in range(num_templates):
             num_overlaps = np.sum(d["units_overlaps"][i])
             overlapping_units = np.where(d["units_overlaps"][i])[0]
@@ -177,7 +178,16 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 for rank in range(visible_i.shape[1]):
                     unit_overlaps[count, :] += np.convolve(visible_i[:, rank], d["temporal"][j][:, rank], mode="full")
 
+                d["max_similarity"][i, j] = np.max(unit_overlaps[count])
+
             d["overlaps"].append(unit_overlaps)
+
+        if d["amplitudes"] is None:
+            distances = np.sort(d['max_similarity'], axis=1)[:, ::-1]
+            distances = 1 - distances[:, 1]/2
+            d["amplitudes"] = np.zeros((num_templates, 2))
+            d["amplitudes"][:, 0] = distances
+            d["amplitudes"][:, 1] = np.inf
 
         d["spatial"] = np.moveaxis(d["spatial"], [0, 1, 2], [1, 0, 2])
         d["temporal"] = np.moveaxis(d["temporal"], [0, 1, 2], [1, 2, 0])
@@ -250,7 +260,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         omp_tol = np.finfo(np.float32).eps
         num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
-        min_amplitude, max_amplitude = d["amplitudes"]
+        if isinstance(d['amplitudes'], tuple):
+            min_amplitude, max_amplitude = d["amplitudes"]
+        else:
+            min_amplitude, max_amplitude = d["amplitudes"][:,0], d["amplitudes"][:, 1]
+            min_amplitude = min_amplitude[:, np.newaxis]
+            max_amplitude = max_amplitude[:, np.newaxis]
         ignored_ids = d["ignored_ids"]
         vicinity = d["vicinity"]
 
