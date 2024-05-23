@@ -47,7 +47,6 @@ def setup_module():
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         chunk_size=10000,
-        verbose=1,
         progress_bar=True,
         pipeline_nodes=pipeline_nodes,
     )
@@ -156,12 +155,13 @@ def test_estimate_motion():
             bin_um=10.0,
             margin_um=5,
             output_extra_check=True,
-            progress_bar=False,
-            verbose=False,
+            
         )
         kwargs.update(cases_kwargs)
+        
+        job_kwargs = dict(progress_bar=False)
 
-        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations, **kwargs)
+        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations, **kwargs, **job_kwargs)
 
         motions[name] = motion
 
