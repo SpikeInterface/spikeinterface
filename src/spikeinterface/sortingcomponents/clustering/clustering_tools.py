@@ -578,10 +578,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
     local_params = method_kwargs.copy()
     amplitudes = [0.95, 1.05]
 
-    local_params.update(
-        {"templates": templates, 
-         "amplitudes": amplitudes}
-    )
+    local_params.update({"templates": templates, "amplitudes": amplitudes})
 
     unit_ids = templates.unit_ids
 
@@ -652,7 +649,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
                         fig, axes = plt.subplots(1, 2)
                         from spikeinterface.widgets import plot_traces
 
-                        #plot_traces(sub_recording, ax=axes[0])
+                        # plot_traces(sub_recording, ax=axes[0])
                         axes[1].plot(templates_array[i].flatten(), label=f"{ref_norm}")
                         axes[1].plot(sum.flatten(), label=f"{tgt_norm}")
                         axes[1].legend()

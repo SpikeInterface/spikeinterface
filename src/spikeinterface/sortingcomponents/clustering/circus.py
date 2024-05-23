@@ -60,7 +60,7 @@ class CircusClustering:
         "n_svd": [5, 2],
         "ms_before": 0.5,
         "ms_after": 0.5,
-        "rank" : 5,
+        "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
         "job_kwargs": {},
@@ -229,6 +229,7 @@ class CircusClustering:
 
         if d["rank"] is not None:
             from spikeinterface.sortingcomponents.matching.circus import compress_templates
+
             _, _, _, templates_array = compress_templates(templates_array, 5)
 
         templates = Templates(

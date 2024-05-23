@@ -63,11 +63,12 @@ def compress_templates(templates_array, approx_rank, remove_mean=True, return_ne
     spatial = spatial[:, :approx_rank, :]
 
     if return_new_templates:
-        templates_array = np.matmul(temporal* singular[:, np.newaxis, :], spatial)
+        templates_array = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
     else:
         templates_array = None
 
     return temporal, singular, spatial, templates_array
+
 
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
     num_templates = len(templates)
@@ -162,9 +163,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         templates_array = templates.get_dense_templates().copy()
         # Then we keep only the strongest components
-        d["temporal"], d["singular"], d["spatial"], templates_array = compress_templates(
-            templates_array, 
-            d["rank"])
+        d["temporal"], d["singular"], d["spatial"], templates_array = compress_templates(templates_array, d["rank"])
 
         d["normed_templates"] = np.zeros(templates_array.shape, dtype=np.float32)
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
@@ -179,7 +178,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         d["temporal"] = np.flip(d["temporal"], axis=1)
 
         d["overlaps"] = []
-        d['max_similarity'] = np.zeros((num_templates, num_templates), dtype=np.float32)
+        d["max_similarity"] = np.zeros((num_templates, num_templates), dtype=np.float32)
         for i in range(num_templates):
             num_overlaps = np.sum(d["units_overlaps"][i])
             overlapping_units = np.where(d["units_overlaps"][i])[0]
@@ -207,8 +206,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             d["overlaps"].append(unit_overlaps)
 
         if d["amplitudes"] is None:
-            distances = np.sort(d['max_similarity'], axis=1)[:, ::-1]
-            distances = 1 - distances[:, 1]/2
+            distances = np.sort(d["max_similarity"], axis=1)[:, ::-1]
+            distances = 1 - distances[:, 1] / 2
             d["amplitudes"] = np.zeros((num_templates, 2))
             d["amplitudes"][:, 0] = distances
             d["amplitudes"][:, 1] = np.inf
@@ -284,10 +283,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         omp_tol = np.finfo(np.float32).eps
         num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
-        if isinstance(d['amplitudes'], list):
+        if isinstance(d["amplitudes"], list):
             min_amplitude, max_amplitude = d["amplitudes"]
         else:
-            min_amplitude, max_amplitude = d["amplitudes"][:,0], d["amplitudes"][:, 1]
+            min_amplitude, max_amplitude = d["amplitudes"][:, 0], d["amplitudes"][:, 1]
             min_amplitude = min_amplitude[:, np.newaxis]
             max_amplitude = max_amplitude[:, np.newaxis]
         ignore_inds = d["ignore_inds"]
