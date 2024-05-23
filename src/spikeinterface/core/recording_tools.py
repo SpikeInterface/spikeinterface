@@ -351,9 +351,6 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     else:
         init_args = (recording, arrays, None, None, dtype, cast_unsigned)
 
-    if "verbose" in job_kwargs:
-        del job_kwargs["verbose"]
-
     executor = ChunkRecordingExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
     )
