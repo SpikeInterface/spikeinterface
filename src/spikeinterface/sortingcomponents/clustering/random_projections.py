@@ -56,6 +56,7 @@ class RandomProjectionClustering:
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "tmp_folder": None,
         "job_kwargs": {},
+        "verbose": True,
     }
 
     @classmethod
@@ -65,7 +66,7 @@ class RandomProjectionClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        verbose = job_kwargs.get("verbose", True)
+        verbose = d["verbose"]
 
         fs = recording.get_sampling_frequency()
         radius_um = params["radius_um"]

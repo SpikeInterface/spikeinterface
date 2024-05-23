@@ -63,6 +63,7 @@ class CircusClustering:
         "noise_levels": None,
         "tmp_folder": None,
         "job_kwargs": {},
+        "verbose": True,
     }
 
     @classmethod
@@ -72,7 +73,7 @@ class CircusClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        verbose = job_kwargs.get("verbose", True)
+        verbose = d["verbose"]
 
         fs = recording.get_sampling_frequency()
         ms_before = params["ms_before"]
