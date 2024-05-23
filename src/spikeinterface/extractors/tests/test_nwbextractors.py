@@ -319,9 +319,11 @@ def test_retrieving_from_processing(generate_nwbfile, use_pynwb):
     assert np.array_equal(electrical_series_custom.data[:], recording_extractor_custom.get_traces())
 
 
-def test_fetch_electrical_series_path(generate_nwbfile):
+def test_fetch_available_electrical_series_paths(generate_nwbfile):
     path_to_nwbfile, _ = generate_nwbfile
-    available_electrical_series = NwbRecordingExtractor.fetch_electrical_series_path(file_path=path_to_nwbfile)
+    available_electrical_series = NwbRecordingExtractor.fetch_available_electrical_series_paths(
+        file_path=path_to_nwbfile
+    )
 
     expected_paths = [
         "acquisition/ElectricalSeries1",

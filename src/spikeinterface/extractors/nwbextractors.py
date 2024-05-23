@@ -862,7 +862,7 @@ class NwbRecordingExtractor(BaseRecording):
         return gains, offsets, locations, groups
 
     @staticmethod
-    def fetch_electrical_series_path(
+    def fetch_available_electrical_series_paths(
         file_path: str | Path, stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None
     ) -> List[str]:
         """
