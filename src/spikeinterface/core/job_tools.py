@@ -47,7 +47,6 @@ job_keys = (
     "chunk_duration",
     "progress_bar",
     "mp_context",
-    "verbose",
     "max_threads_per_process",
 )
 
