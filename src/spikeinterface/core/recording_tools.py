@@ -73,6 +73,7 @@ def write_binary_recording(
     add_file_extension: bool = True,
     byte_offset: int = 0,
     auto_cast_uint: bool = True,
+    verbose : bool = True,
     **job_kwargs,
 ):
     """
@@ -98,6 +99,8 @@ def write_binary_recording(
     auto_cast_uint: bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
         .. deprecated:: 0.103, use the `unsigned_to_signed` function instead.
+    verbose: bool
+        If True, output is verbose
     {}
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
@@ -138,7 +141,7 @@ def write_binary_recording(
     init_func = _init_binary_worker
     init_args = (recording, file_path_dict, dtype, byte_offset, cast_unsigned)
     executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name="write_binary_recording", **job_kwargs
+        recording, func, init_func, init_args, job_name="write_binary_recording", verbose=verbose, **job_kwargs
     )
     executor.run()
 
