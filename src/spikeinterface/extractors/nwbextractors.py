@@ -18,7 +18,6 @@ def read_file_from_backend(
     cache: bool = False,
     stream_cache_path: str | Path | None = None,
     storage_options: dict | None = None,
-    backend: Literal["hdf5", "zarr"] | None = None,
 ):
     """
     Reads a file from a hdf5 or zarr backend.
@@ -680,7 +679,6 @@ class NwbRecordingExtractor(BaseRecording):
 
     def _fetch_recording_segment_info_backend(self, file, cache, load_time_vector, samples_for_rate_estimation):
         open_file = read_file_from_backend(
-            backend=self.backend,
             file_path=self.file_path,
             file=file,
             stream_mode=self.stream_mode,
@@ -1132,7 +1130,6 @@ class NwbSortingExtractor(BaseSorting):
         self, unit_table_path: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
     ):
         open_file = read_file_from_backend(
-            backend=self.backend,
             file_path=self.file_path,
             stream_mode=self.stream_mode,
             cache=cache,
