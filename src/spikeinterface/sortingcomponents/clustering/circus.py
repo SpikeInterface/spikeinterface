@@ -251,7 +251,6 @@ class CircusClustering:
                 cleaning_matching_params.pop(value)
         cleaning_matching_params["chunk_duration"] = "100ms"
         cleaning_matching_params["n_jobs"] = 1
-        cleaning_matching_params["verbose"] = False
         cleaning_matching_params["progress_bar"] = False
 
         cleaning_params = params["cleaning_kwargs"].copy()
