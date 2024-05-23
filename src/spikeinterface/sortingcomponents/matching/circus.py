@@ -38,6 +38,31 @@ spike_dtype = [
 from .main import BaseTemplateMatchingEngine
 
 
+def compress_templates(templates_array, approx_rank, remove_mean=True):
+    """Compress templates using singular value decomposition.
+
+    Parameters
+    ----------
+    templates : ndarray (num_templates, num_samples, num_channels)
+        Spike template waveforms.
+    approx_rank : int
+        Rank of the compressed template matrices.
+
+    Returns
+    -------
+    compressed_templates : (ndarray, ndarray, ndarray)
+        Templates compressed by singular value decomposition into temporal, singular, and spatial components.
+    """
+    if remove_mean:
+        templates_array -= templates_array.mean(axis=(1, 2))[:, None, None]
+
+    temporal, singular, spatial = np.linalg.svd(templates_array, full_matrices=False)
+    # Keep only the strongest components
+    temporal = temporal[:, :, :approx_rank]
+    singular = singular[:, :approx_rank]
+    spatial = spatial[:, :approx_rank, :]
+    return temporal, singular, spatial
+
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
     num_templates = len(templates)
 
@@ -105,7 +130,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     _default_params = {
         "amplitudes": [0.6, np.inf],
         "stop_criteria": "max_failures",
-        "max_failures": 20,
+        "max_failures": 10,
         "omp_min_sps": 0.1,
         "relative_error": 5e-5,
         "templates": None,
@@ -130,14 +155,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             (d["unit_overlaps_indices"][i],) = np.nonzero(d["units_overlaps"][i])
 
         templates_array = templates.get_dense_templates().copy()
-        templates_array -= templates_array.mean(axis=(1, 2))[:, None, None]
-
         # Then we keep only the strongest components
-        rank = d["rank"]
-        temporal, singular, spatial = np.linalg.svd(templates_array, full_matrices=False)
-        d["temporal"] = temporal[:, :, :rank]
-        d["singular"] = singular[:, :rank]
-        d["spatial"] = spatial[:, :rank, :]
+        d["temporal"], d["singular"], d["spatial"] = compress_templates(templates_array, d["rank"])
 
         # We reconstruct the approximated templates
         templates_array = np.matmul(d["temporal"] * d["singular"][:, np.newaxis, :], d["spatial"])
@@ -253,8 +272,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def main_function(cls, traces, d):
         num_templates = d["num_templates"]
-        num_channels = d["num_channels"]
         num_samples = d["num_samples"]
+        num_channels = d["num_channels"]
         overlaps_array = d["overlaps"]
         norms = d["norms"]
         omp_tol = np.finfo(np.float32).eps
@@ -311,7 +330,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         if d["stop_criteria"] == "omp_min_sps":
             stop_criteria = d["omp_min_sps"] * np.maximum(d["norms"], np.sqrt(num_channels * num_samples))
         elif d["stop_criteria"] == "max_failures":
-            nb_valids = 0
+            num_valids = 0
             nb_failures = d["max_failures"]
         elif d["stop_criteria"] == "relative_error":
             if len(ignored_ids) > 0:
@@ -424,10 +443,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 do_loop = np.any(is_valid)
             elif d["stop_criteria"] == "max_failures":
                 is_valid = (final_amplitudes > min_amplitude) * (final_amplitudes < max_amplitude)
-                new_nb_valids = np.sum(is_valid)
-                if (new_nb_valids - nb_valids) == 0:
+                new_num_valids = np.sum(is_valid)
+                if (new_num_valids - num_valids) > 0:
+                    nb_failures = d["max_failures"]
+                else:
                     nb_failures -= 1
-                nb_valids = new_nb_valids
+                num_valids = new_num_valids
                 do_loop = nb_failures > 0
             elif d["stop_criteria"] == "relative_error":
                 previous_error = new_error
