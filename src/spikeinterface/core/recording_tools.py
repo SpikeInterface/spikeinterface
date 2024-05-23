@@ -73,7 +73,7 @@ def write_binary_recording(
     add_file_extension: bool = True,
     byte_offset: int = 0,
     auto_cast_uint: bool = True,
-    verbose : bool = True,
+    verbose: bool = True,
     **job_kwargs,
 ):
     """
