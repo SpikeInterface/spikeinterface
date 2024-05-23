@@ -48,8 +48,8 @@ class SimpleSorter(ComponentsBasedSorter):
 
     _params_description = {
         "apply_preprocessing": "whether to apply the preprocessing steps, default: False",
-        "waveforms": "A dictonary containing waveforms params: ms_before (peak of spike) default: 1.0, ms_after (peak of spike) deafult: 1.5",
-        "filtering": "A dictionary containing bandpass filter conditions, freq_min' default: 300 and 'freq_max' default:8000.0",
+        "waveforms": "A dictonary containing waveforms params: 'ms_before' (peak of spike) default: 1.0, 'ms_after' (peak of spike) deafult: 1.5",
+        "filtering": "A dictionary containing bandpass filter conditions, 'freq_min' default: 300 and 'freq_max' default:8000.0",
         "detection": (
             "A dictionary for specifying the detection conditions of 'peak_sign' (pos or neg) default: 'neg', "
             "'detect_threshold' (snr) default: 5.0, 'exclude_sweep_ms' default: 1.5, 'radius_um' default: 150.0"
