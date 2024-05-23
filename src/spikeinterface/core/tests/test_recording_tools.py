@@ -66,7 +66,9 @@ def test_write_binary_recording_offset(tmp_path):
     # Write binary recording
     job_kwargs = dict(n_jobs=1)
     byte_offset = 125
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, byte_offset=byte_offset, verbose=False,  **job_kwargs)
+    write_binary_recording(
+        recording, file_paths=file_paths, dtype=dtype, byte_offset=byte_offset, verbose=False, **job_kwargs
+    )
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
