@@ -55,7 +55,7 @@ class SlidingHdbscanClustering:
         "auto_merge_quantile_limit": 0.8,
         "ratio_num_channel_intersect": 0.5,
         # ~ 'auto_trash_misalignment_shift' : 4,
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
     }
 
     @classmethod

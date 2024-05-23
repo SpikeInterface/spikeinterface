@@ -71,7 +71,7 @@ class SimpleSorter(ComponentsBasedSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         job_kwargs = params["job_kwargs"]
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs.update({"verbose": verbose, "progress_bar": verbose})
+        job_kwargs.update({"progress_bar": verbose})
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
