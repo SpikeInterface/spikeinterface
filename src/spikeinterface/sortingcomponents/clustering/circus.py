@@ -58,11 +58,12 @@ class CircusClustering:
         },
         "radius_um": 100,
         "n_svd": [5, 2],
-        "ms_before": 2,
-        "ms_after": 2,
+        "ms_before": 0.5,
+        "ms_after": 0.5,
         "noise_levels": None,
         "tmp_folder": None,
         "job_kwargs": {},
+        "verbose": True,
     }
 
     @classmethod
@@ -72,7 +73,7 @@ class CircusClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        verbose = job_kwargs.get("verbose", True)
+        verbose = d["verbose"]
 
         fs = recording.get_sampling_frequency()
         ms_before = params["ms_before"]
@@ -250,7 +251,6 @@ class CircusClustering:
                 cleaning_matching_params.pop(value)
         cleaning_matching_params["chunk_duration"] = "100ms"
         cleaning_matching_params["n_jobs"] = 1
-        cleaning_matching_params["verbose"] = False
         cleaning_matching_params["progress_bar"] = False
 
         cleaning_params = params["cleaning_kwargs"].copy()

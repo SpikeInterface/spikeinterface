@@ -11,7 +11,6 @@ from spikeinterface.core import (
     get_noise_levels,
     NumpySorting,
     get_channel_distances,
-    estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
     get_global_tmp_folder,
@@ -37,8 +36,6 @@ from spikeinterface.sortingcomponents.clustering.tools import compute_template_f
 
 from sklearn.decomposition import TruncatedSVD
 
-import hdbscan
-
 
 class TdcClustering:
     """
@@ -63,6 +60,8 @@ class TdcClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
+        import hdbscan
+
         job_kwargs = params["job_kwargs"]
 
         if params["folder"] is None:
