@@ -155,9 +155,14 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
         data = sorting_analyzer2.get_extension("dummy").data
         assert "result_one" in data
+        assert isinstance(data["result_one"], str)
+        assert isinstance(data["result_two"], np.ndarray)
         assert data["result_two"].size == original_sorting.to_spike_vector().size
+        assert np.array_equal(data["result_two"], sorting_analyzer.get_extension("dummy").data["result_two"])
 
         assert sorting_analyzer2.return_scaled == sorting_analyzer.return_scaled
+
+        assert sorting_analyzer2.sparsity == sorting_analyzer.sparsity
 
     # select unit_ids to several format
     for format in ("memory", "binary_folder", "zarr"):

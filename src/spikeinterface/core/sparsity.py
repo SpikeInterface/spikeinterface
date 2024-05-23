@@ -118,6 +118,14 @@ class ChannelSparsity:
         txt = f"ChannelSparsity - units: {self.num_units} - channels: {self.num_channels} - density, P(x=1): {density:0.2f}"
         return txt
 
+    def __eq__(self, other):
+        return (
+            isinstance(other, ChannelSparsity)
+            and np.array_equal(self.channel_ids, other.channel_ids)
+            and np.array_equal(self.unit_ids, other.unit_ids)
+            and np.array_equal(self.mask, other.mask)
+        )
+
     @property
     def unit_id_to_channel_ids(self):
         if self._unit_id_to_channel_ids is None:
