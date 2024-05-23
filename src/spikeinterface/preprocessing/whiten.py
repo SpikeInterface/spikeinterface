@@ -182,6 +182,7 @@ def compute_whitening_matrix(
     else:
         import sklearn.covariance
         from spikeinterface.core.globals import get_global_job_kwargs
+
         estimator = sklearn.covariance.GraphicalLassoCV(assume_centered=True)
         estimator.fit(data)
         cov = estimator.covariance_
