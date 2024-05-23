@@ -580,8 +580,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
     local_params.update(
         {"templates": templates, 
-         "amplitudes": amplitudes, 
-         "max_failures" : 20}
+         "amplitudes": amplitudes}
     )
 
     unit_ids = templates.unit_ids
@@ -591,7 +590,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
     keep_searching = True
 
-    DEBUG = True
+    DEBUG = False
     while keep_searching:
 
         keep_searching = False
