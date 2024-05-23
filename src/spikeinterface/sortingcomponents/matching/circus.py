@@ -38,7 +38,7 @@ spike_dtype = [
 from .main import BaseTemplateMatchingEngine
 
 
-def compress_templates(templates_array, approx_rank, remove_mean=True):
+def compress_templates(templates_array, approx_rank, remove_mean=True, return_new_templates=True):
     """Compress templates using singular value decomposition.
 
     Parameters
@@ -61,7 +61,13 @@ def compress_templates(templates_array, approx_rank, remove_mean=True):
     temporal = temporal[:, :, :approx_rank]
     singular = singular[:, :approx_rank]
     spatial = spatial[:, :approx_rank, :]
-    return temporal, singular, spatial
+
+    if return_new_templates:
+        templates_array = np.matmul(temporal* singular[:, np.newaxis, :], spatial)
+    else:
+        templates_array = None
+
+    return temporal, singular, spatial, templates_array
 
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
     num_templates = len(templates)
@@ -135,7 +141,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "relative_error": 5e-5,
         "templates": None,
         "rank": 5,
-        "ignored_ids": [],
+        "ignore_inds": [],
         "vicinity": 3,
     }
 
@@ -156,10 +162,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         templates_array = templates.get_dense_templates().copy()
         # Then we keep only the strongest components
-        d["temporal"], d["singular"], d["spatial"] = compress_templates(templates_array, d["rank"])
-
-        # We reconstruct the approximated templates
-        templates_array = np.matmul(d["temporal"] * d["singular"][:, np.newaxis, :], d["spatial"])
+        d["temporal"], d["singular"], d["spatial"], templates_array = compress_templates(
+            templates_array, 
+            d["rank"])
 
         d["normed_templates"] = np.zeros(templates_array.shape, dtype=np.float32)
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
@@ -243,7 +248,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 assert d[key] is not None, "If templates are provided, %d should also be there" % key
 
         d["num_templates"] = len(d["templates"].templates_array)
-        d["ignored_ids"] = np.array(d["ignored_ids"])
+        d["ignore_inds"] = np.array(d["ignore_inds"])
 
         d["unit_overlaps_tables"] = {}
         for i in range(d["num_templates"]):
@@ -285,7 +290,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             min_amplitude, max_amplitude = d["amplitudes"][:,0], d["amplitudes"][:, 1]
             min_amplitude = min_amplitude[:, np.newaxis]
             max_amplitude = max_amplitude[:, np.newaxis]
-        ignored_ids = d["ignored_ids"]
+        ignore_inds = d["ignore_inds"]
         vicinity = d["vicinity"]
 
         num_timesteps = len(traces)
@@ -295,15 +300,15 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         scalar_products = np.zeros(conv_shape, dtype=np.float32)
 
         # Filter using overlap-and-add convolution
-        if len(ignored_ids) > 0:
-            not_ignored = ~np.isin(np.arange(num_templates), ignored_ids)
+        if len(ignore_inds) > 0:
+            not_ignored = ~np.isin(np.arange(num_templates), ignore_inds)
             spatially_filtered_data = np.matmul(d["spatial"][:, not_ignored, :], traces.T[np.newaxis, :, :])
             scaled_filtered_data = spatially_filtered_data * d["singular"][:, not_ignored, :]
             objective_by_rank = scipy.signal.oaconvolve(
                 scaled_filtered_data, d["temporal"][:, not_ignored, :], axes=2, mode="valid"
             )
             scalar_products[not_ignored] += np.sum(objective_by_rank, axis=0)
-            scalar_products[ignored_ids] = -np.inf
+            scalar_products[ignore_inds] = -np.inf
         else:
             spatially_filtered_data = np.matmul(d["spatial"], traces.T[np.newaxis, :, :])
             scaled_filtered_data = spatially_filtered_data * d["singular"]
@@ -333,7 +338,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             num_valids = 0
             nb_failures = d["max_failures"]
         elif d["stop_criteria"] == "relative_error":
-            if len(ignored_ids) > 0:
+            if len(ignore_inds) > 0:
                 new_error = np.linalg.norm(scalar_products[not_ignored])
             else:
                 new_error = np.linalg.norm(scalar_products)
@@ -452,7 +457,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 do_loop = nb_failures > 0
             elif d["stop_criteria"] == "relative_error":
                 previous_error = new_error
-                if len(ignored_ids) > 0:
+                if len(ignore_inds) > 0:
                     new_error = np.linalg.norm(scalar_products[not_ignored])
                 else:
                     new_error = np.linalg.norm(scalar_products)
