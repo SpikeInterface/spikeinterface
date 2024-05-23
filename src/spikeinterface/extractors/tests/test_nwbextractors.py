@@ -319,6 +319,20 @@ def test_retrieving_from_processing(generate_nwbfile, use_pynwb):
     assert np.array_equal(electrical_series_custom.data[:], recording_extractor_custom.get_traces())
 
 
+def test_fetch_available_electrical_series(generate_nwbfile):
+    path_to_nwbfile, _ = generate_nwbfile
+    available_electrical_series = NwbRecordingExtractor.fetch_available_electrical_series(file_path=path_to_nwbfile)
+
+    expected_paths = [
+        "acquisition/ElectricalSeries1",
+        "acquisition/ElectricalSeries2",
+        "processing/ecephys/LFP/ElectricalSeries1",
+        "processing/my_custom_module/MyContainer/ElectricalSeries2",
+    ]
+
+    assert available_electrical_series == expected_paths
+
+
 @pytest.mark.parametrize("electrical_series_path", ["acquisition/ElectricalSeries1", "acquisition/ElectricalSeries2"])
 def test_recording_equality_with_pynwb_and_backend(generate_nwbfile, electrical_series_path):
     path_to_nwbfile, _ = generate_nwbfile
@@ -338,7 +352,7 @@ def test_recording_equality_with_pynwb_and_backend(generate_nwbfile, electrical_
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
-def test_failure_with_wrong_electrical_series_name(generate_nwbfile, use_pynwb):
+def test_failure_with_wrong_electrical_series_path(generate_nwbfile, use_pynwb):
     """Test that the extractor raises an error if the electrical series name is not found."""
     path_to_nwbfile, _ = generate_nwbfile
     with pytest.raises(ValueError):
