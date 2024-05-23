@@ -76,7 +76,8 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
     elif color_engine == "matplotlib":
         # some map have black or white at border so +10
         margin = max(4, int(N * 0.08))
-        cmap = plt.get_cmap(map_name, N + 2 * margin)
+        cmap = plt.colormaps[map_name].resampled(N + 2 * margin)
+
         colors = [cmap(i + margin) for i, key in enumerate(keys)]
 
     elif color_engine == "colorsys":
@@ -160,7 +161,7 @@ def array_to_image(
     num_channels = data.shape[1]
     spacing = int(num_channels * spatial_zoom[1] * row_spacing)
 
-    cmap = plt.get_cmap(colormap)
+    cmap = plt.colormaps[colormap]
     zoomed_data = zoom(data, spatial_zoom)
     num_timepoints_after_scaling, num_channels_after_scaling = zoomed_data.shape
     num_timepoints_per_row_after_scaling = int(np.min([num_timepoints_per_row, num_timepoints]) * spatial_zoom[0])

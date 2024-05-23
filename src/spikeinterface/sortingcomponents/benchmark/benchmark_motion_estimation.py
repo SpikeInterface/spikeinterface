@@ -728,7 +728,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
 #         n = self.motion.shape[1]
 #         step = int(np.ceil(max(1, n / show_only)))
-#         colors = plt.cm.get_cmap("jet", n)
+#         colors = plt.colormaps["jet"].resampled(n)
 #         for i in range(0, n, step):
 #             ax = axs[0]
 #             ax.plot(self.temporal_bins, self.gt_motion[:, i], lw=1.5, ls="--", color=colors(i))

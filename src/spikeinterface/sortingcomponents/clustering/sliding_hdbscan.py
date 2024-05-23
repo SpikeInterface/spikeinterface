@@ -349,7 +349,7 @@ class SlidingHdbscanClustering:
                 wfs_no_noise = wfs[: -noise.shape[0]]
 
                 fig, axs = plt.subplots(ncols=3)
-                cmap = plt.get_cmap("jet", np.unique(local_labels).size)
+                cmap = plt.colormaps["jet"].resampled(np.unique(local_labels).size)
                 cmap = {label: cmap(l) for l, label in enumerate(local_labels_set)}
                 cmap[-1] = "k"
                 for label in local_labels_set:
