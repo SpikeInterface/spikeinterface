@@ -289,12 +289,14 @@ class MotionEstimationStudy(BenchmarkStudy):
             if lim is not None:
                 ax.set_ylim(0, lim)
 
-    def plot_summary_errors(self, case_keys=None, show_legend=True, colors=None, figsize=(15, 5)):
+    def plot_summary_errors(self, case_keys=None, show_legend=True, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
         fig, axes = plt.subplots(1, 3, figsize=figsize)
+
+        colors = self.get_colors()
 
         for count, key in enumerate(case_keys):
 
@@ -306,7 +308,9 @@ class MotionEstimationStudy(BenchmarkStudy):
             temporal_bins = bench.result["temporal_bins"]
             spatial_bins = bench.result["spatial_bins"]
 
-            c = colors[count] if colors is not None else None
+            # c = colors[count] if colors is not None else None
+            c = colors[key]
+
             errors = gt_motion - motion
             mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
             depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
