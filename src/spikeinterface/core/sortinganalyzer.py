@@ -925,7 +925,7 @@ class SortingAnalyzer:
         Returns
         -------
         result_extension: AnalyzerExtension
-            Return the extension insdef computance.
+            Return the extension instance
 
         Examples
         --------
