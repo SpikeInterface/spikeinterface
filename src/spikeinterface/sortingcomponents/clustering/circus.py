@@ -60,6 +60,7 @@ class CircusClustering:
         "n_svd": [5, 2],
         "ms_before": 0.5,
         "ms_after": 0.5,
+        "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
         "job_kwargs": {},
@@ -208,16 +209,17 @@ class CircusClustering:
                 **job_kwargs,
             )
 
-        labels, inverse = np.unique(peak_labels[peak_labels > -1], return_inverse=True)
-        labels = np.arange(len(labels))
+        non_noise = peak_labels > -1
+        labels, inverse = np.unique(peak_labels[non_noise], return_inverse=True)
+        peak_labels[non_noise] = inverse
+        labels = np.unique(inverse)
 
-        spikes = np.zeros(np.sum(peak_labels > -1), dtype=minimum_spike_dtype)
-        mask = peak_labels > -1
-        spikes["sample_index"] = peaks[mask]["sample_index"]
-        spikes["segment_index"] = peaks[mask]["segment_index"]
-        spikes["unit_index"] = inverse
+        spikes = np.zeros(non_noise.sum(), dtype=minimum_spike_dtype)
+        spikes["sample_index"] = peaks[non_noise]["sample_index"]
+        spikes["segment_index"] = peaks[non_noise]["segment_index"]
+        spikes["unit_index"] = peak_labels[non_noise]
 
-        unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
+        unit_ids = labels
 
         nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
@@ -225,6 +227,11 @@ class CircusClustering:
         templates_array = estimate_templates(
             recording, spikes, unit_ids, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
         )
+
+        if d["rank"] is not None:
+            from spikeinterface.sortingcomponents.matching.circus import compress_templates
+
+            _, _, _, templates_array = compress_templates(templates_array, 5)
 
         templates = Templates(
             templates_array=templates_array,
@@ -240,7 +247,10 @@ class CircusClustering:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
         sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
+        empty_templates = templates.sparsity_mask.sum(axis=1) == 0
         templates = remove_empty_templates(templates)
+        mask = np.isin(peak_labels, np.where(empty_templates)[0])
+        peak_labels[mask] = -1
 
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
