@@ -37,8 +37,8 @@ def test_write_binary_recording(tmp_path):
     file_paths = [tmp_path / "binary01.raw"]
 
     # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=1)
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
+    job_kwargs = dict(n_jobs=1)
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=False, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
@@ -64,9 +64,11 @@ def test_write_binary_recording_offset(tmp_path):
     file_paths = [tmp_path / "binary01.raw"]
 
     # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=1)
+    job_kwargs = dict(n_jobs=1)
     byte_offset = 125
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, byte_offset=byte_offset, **job_kwargs)
+    write_binary_recording(
+        recording, file_paths=file_paths, dtype=dtype, byte_offset=byte_offset, verbose=False, **job_kwargs
+    )
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
@@ -97,8 +99,8 @@ def test_write_binary_recording_parallel(tmp_path):
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
     # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k", mp_context="spawn")
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
+    job_kwargs = dict(n_jobs=2, chunk_memory="100k", mp_context="spawn")
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=False, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
@@ -127,8 +129,8 @@ def test_write_binary_recording_multiple_segment(tmp_path):
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
     # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k", mp_context="spawn")
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
+    job_kwargs = dict(n_jobs=2, chunk_memory="100k", mp_context="spawn")
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=False, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
