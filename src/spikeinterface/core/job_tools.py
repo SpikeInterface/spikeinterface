@@ -3,12 +3,11 @@ Some utils to handle parallel jobs on top of job and/or loky
 """
 
 from __future__ import annotations
-from pathlib import Path
 import numpy as np
 import platform
 import os
 import warnings
-from spikeinterface.core.core_tools import convert_string_to_bytes
+from spikeinterface.core.core_tools import convert_string_to_bytes, convert_bytes_to_str, convert_seconds_to_str
 
 import sys
 from tqdm.auto import tqdm
@@ -369,27 +368,21 @@ class ChunkRecordingExecutor:
         self.max_threads_per_process = max_threads_per_process
 
         if verbose:
-            if self.n_jobs > 1:
-                chunk_memory = self.chunk_size * recording.get_num_channels() * np.dtype(recording.get_dtype()).itemsize
-                total_memory = chunk_memory * self.n_jobs
-                chunk_duration = self.chunk_size / recording.get_sampling_frequency()
-                from spikeinterface.core.core_tools import convert_bytes_to_str, convert_seconds_to_str
-
-                chunk_memory_str = convert_bytes_to_str(chunk_memory)
-                total_memory_str = convert_bytes_to_str(total_memory)
-                chunk_duration_str = convert_seconds_to_str(chunk_duration)
-                print(
-                    self.job_name,
-                    "\n"
-                    f"n_jobs={self.n_jobs} - "
-                    f"samples_per_chunk={self.chunk_size:,} - "
-                    f"chunk_memory={chunk_memory_str} - "
-                    f"total_memory={total_memory_str} - "
-                    f"chunk_duration={chunk_duration_str}",
-                )
-
-            else:
-                print(self.job_name, "with n_jobs =", self.n_jobs, "and chunk_size =", self.chunk_size)
+            chunk_memory = self.chunk_size * recording.get_num_channels() * np.dtype(recording.get_dtype()).itemsize
+            total_memory = chunk_memory * self.n_jobs
+            chunk_duration = self.chunk_size / recording.get_sampling_frequency()
+            chunk_memory_str = convert_bytes_to_str(chunk_memory)
+            total_memory_str = convert_bytes_to_str(total_memory)
+            chunk_duration_str = convert_seconds_to_str(chunk_duration)
+            print(
+                self.job_name,
+                "\n"
+                f"n_jobs={self.n_jobs} - "
+                f"samples_per_chunk={self.chunk_size:,} - "
+                f"chunk_memory={chunk_memory_str} - "
+                f"total_memory={total_memory_str} - "
+                f"chunk_duration={chunk_duration_str}",
+            )
 
     def run(self):
         """
