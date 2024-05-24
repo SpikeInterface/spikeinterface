@@ -613,6 +613,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         self,
         recording,
         prototype,
+        ms_before,
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
@@ -644,6 +645,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
             raise NotImplementedError("Matched filtering not working with peak_sign=both yet!")
 
         self.peak_sign = peak_sign
+        self.nbefore = int(ms_before * recording.sampling_frequency / 1000)
         contact_locations = recording.get_channel_locations()
         dist = np.linalg.norm(contact_locations[:, np.newaxis] - contact_locations[np.newaxis, :], axis=2)
         weights, self.z_factors = get_convolution_weights(dist, **weight_method)
@@ -689,8 +691,6 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
 
-        # peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular, z_factors = self.args
-
         assert HAVE_NUMBA, "You need to install numba"
         conv_traces = self.get_convolved_traces(traces, self.temporal, self.spatial, self.singular)
         conv_traces /= self.abs_thresholds[:, None]
@@ -730,7 +730,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         if peak_sample_ind.size == 0 or peak_chan_ind.size == 0:
             return (np.zeros(0, dtype=self._dtype),)
 
-        peak_sample_ind += self.exclude_sweep_size + self.conv_margin
+        peak_sample_ind += self.exclude_sweep_size + self.conv_margin + self.nbefore
 
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
         local_peaks = np.zeros(peak_sample_ind.size, dtype=self._dtype)
@@ -747,10 +747,11 @@ class DetectPeakMatchedFiltering(PeakDetector):
         import scipy.signal
 
         num_timesteps, num_templates = len(traces), temporal.shape[1]
-        scalar_products = np.zeros((num_templates, num_timesteps), dtype=np.float32)
+        num_peaks = num_timesteps - self.conv_margin + 1
+        scalar_products = np.zeros((num_templates, num_peaks), dtype=np.float32)
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
         scaled_filtered_data = spatially_filtered_data * singular
-        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="same")
+        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="valid")
         scalar_products += np.sum(objective_by_rank, axis=0)
         return scalar_products
 
