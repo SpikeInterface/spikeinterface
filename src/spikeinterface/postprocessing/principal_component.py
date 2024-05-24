@@ -256,7 +256,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         new_projections = self._transform_waveforms(new_spikes, new_waveforms, pca_model, progress_bar=progress_bar)
         return new_projections
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         """
         Compute the PCs on waveforms extacted within the by ComputeWaveforms.
         Projections are computed only on the waveforms sampled by the SortingAnalyzer.

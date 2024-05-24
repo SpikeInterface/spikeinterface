@@ -49,9 +49,8 @@ class ComputeRandomSpikes(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _run(
-        self,
-    ):
+    def _run(self, verbose=False):
+
         self.data["random_spikes_indices"] = random_spikes_selection(
             self.sorting_analyzer.sorting,
             num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
@@ -583,7 +582,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         # this do not depend on units
         return self.data
 
-    def _run(self):
+    def _run(self, verbose=False):
         self.data["noise_levels"] = get_noise_levels(
             self.sorting_analyzer.recording, return_scaled=self.sorting_analyzer.return_scaled, **self.params
         )
