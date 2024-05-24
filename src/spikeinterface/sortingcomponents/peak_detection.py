@@ -703,7 +703,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         traces_center = traces_center.reshape(num_z_factors, num_templates, traces_center.shape[1])
         conv_traces = conv_traces.reshape(num_z_factors, num_templates, conv_traces.shape[1])
         peak_mask = traces_center > 1
-    
+
         peak_mask = _numba_detect_peak_matched_filtering(
             conv_traces,
             traces_center,
@@ -890,19 +890,30 @@ if HAVE_NUMBA:
                             continue
                         for j in range(num_z):
                             for i in range(exclude_sweep_size):
-                                if (template_ind >= neighbour):
-                                    if (z >= j):
-                                        peak_mask[z, template_ind, s] &= traces_center[z, template_ind, s] >= traces_center[j, neighbour, s]
+                                if template_ind >= neighbour:
+                                    if z >= j:
+                                        peak_mask[z, template_ind, s] &= (
+                                            traces_center[z, template_ind, s] >= traces_center[j, neighbour, s]
+                                        )
                                     else:
-                                        peak_mask[z, template_ind, s] &= traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
-                                elif (template_ind < neighbour):
-                                    if (z > j):
-                                        peak_mask[z, template_ind, s] &= traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
+                                        peak_mask[z, template_ind, s] &= (
+                                            traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
+                                        )
+                                elif template_ind < neighbour:
+                                    if z > j:
+                                        peak_mask[z, template_ind, s] &= (
+                                            traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
+                                        )
                                     else:
-                                        peak_mask[z, template_ind, s] &= traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
-                                peak_mask[z, template_ind, s] &= traces_center[z, template_ind, s] > traces[j, neighbour, s + i]
+                                        peak_mask[z, template_ind, s] &= (
+                                            traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
+                                        )
                                 peak_mask[z, template_ind, s] &= (
-                                    traces_center[z, template_ind, s] >= traces[j, neighbour, exclude_sweep_size + s + i + 1]
+                                    traces_center[z, template_ind, s] > traces[j, neighbour, s + i]
+                                )
+                                peak_mask[z, template_ind, s] &= (
+                                    traces_center[z, template_ind, s]
+                                    >= traces[j, neighbour, exclude_sweep_size + s + i + 1]
                                 )
                                 if not peak_mask[z, template_ind, s]:
                                     break
@@ -910,7 +921,7 @@ if HAVE_NUMBA:
                                 break
                         if not peak_mask[z, template_ind, s]:
                             break
-                        
+
         return peak_mask
 
 
