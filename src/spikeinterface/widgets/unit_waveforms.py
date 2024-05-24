@@ -543,7 +543,6 @@ class UnitWaveformsWidget(BaseWidget):
             templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
             templates_shadings = self._get_template_shadings(unit_ids, data_plot["templates_percentile_shading"])
             channel_locations = self.sorting_analyzer.get_channel_locations()
-
         else:
             unit_indices = [list(self.templates.unit_ids).index(unit_id) for unit_id in unit_ids]
             templates = self.templates.templates_array[unit_indices]

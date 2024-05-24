@@ -1,4 +1,5 @@
 import pytest
+import warnings
 from pathlib import Path
 
 from spikeinterface import (
@@ -39,11 +40,22 @@ def test_global_tmp_folder():
 def test_global_job_kwargs():
     job_kwargs = dict(n_jobs=4, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_process=1)
     global_job_kwargs = get_global_job_kwargs()
+
+    # test warning when not setting n_jobs and calling fix_job_kwargs
+    with pytest.warns(UserWarning):
+        job_kwargs_split = fix_job_kwargs({})
+
     assert global_job_kwargs == dict(
         n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_process=1
     )
     set_global_job_kwargs(**job_kwargs)
     assert get_global_job_kwargs() == job_kwargs
+
+    # after setting global job kwargs, fix_job_kwargs should not raise a warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        job_kwargs_split = fix_job_kwargs({})
+
     # test updating only one field
     partial_job_kwargs = dict(n_jobs=2)
     set_global_job_kwargs(**partial_job_kwargs)
