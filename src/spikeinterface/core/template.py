@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 import json
 from dataclasses import dataclass, field, astuple
+from probeinterface import Probe
+from pathlib import Path
 from .sparsity import ChannelSparsity
 
 
@@ -24,9 +28,13 @@ class Templates:
         Array of channel IDs. If `None`, defaults to an array of increasing integers.
     unit_ids : np.ndarray, optional default: None
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
+    probe: Probe, default: None
+        A `probeinterface.Probe` object
+    is_scaled : bool, optional default: True
+        If True, it means that the templates are in uV, otherwise they are in raw ADC values.
     check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
-        structure fo the sparsity_masl.
+        structure of the sparsity_mask. If False, this check is skipped.
 
     The following attributes are available after construction:
 
@@ -52,10 +60,13 @@ class Templates:
     templates_array: np.ndarray
     sampling_frequency: float
     nbefore: int
+    is_scaled: bool = True
 
     sparsity_mask: np.ndarray = None
     channel_ids: np.ndarray = None
     unit_ids: np.ndarray = None
+
+    probe: Probe = None
 
     check_for_consistent_sparsity: bool = True
 
@@ -74,6 +85,9 @@ class Templates:
             self.num_channels = self.templates_array.shape[2]
         else:
             self.num_channels = self.sparsity_mask.shape[1]
+
+        if self.probe is not None:
+            assert isinstance(self.probe, Probe), "'probe' must be a probeinterface.Probe object"
 
         # Time and frames domain information
         self.nafter = self.num_samples - self.nbefore
@@ -97,6 +111,52 @@ class Templates:
                 if not self._are_passed_templates_sparse():
                     raise ValueError("Sparsity mask passed but the templates are not sparse")
 
+    def __repr__(self):
+        sampling_frequency_khz = self.sampling_frequency / 1000
+        repr_str = (
+            f"Templates: {self.num_units} units - {self.num_samples} samples - {self.num_channels} channels \n"
+            f"sampling_frequency={sampling_frequency_khz:.2f} kHz - "
+            f"ms_before={self.ms_before:.2f} ms - "
+            f"ms_after={self.ms_after:.2f} ms"
+        )
+
+        if self.probe is not None:
+            repr_str += f"\n{self.probe.__repr__()}"
+
+        if self.sparsity is not None:
+            repr_str += f"\n{self.sparsity.__repr__()}"
+
+        return repr_str
+
+    def to_sparse(self, sparsity):
+        # Turn a dense representation of templates into a sparse one, given some sparsity.
+        # Note that nothing prevent Templates tobe empty after sparsification if the sparse mask have no channels for some units
+        assert isinstance(sparsity, ChannelSparsity), "sparsity should be of type ChannelSparsity"
+        assert self.sparsity_mask is None, "Templates should be dense"
+
+        # if np.any(sparsity.mask.sum(axis=1) == 0):
+        #     print('Warning: some templates are defined on 0 channels. Consider removing them')
+
+        return Templates(
+            templates_array=sparsity.sparsify_templates(self.templates_array),
+            sampling_frequency=self.sampling_frequency,
+            nbefore=self.nbefore,
+            sparsity_mask=sparsity.mask,
+            channel_ids=self.channel_ids,
+            unit_ids=self.unit_ids,
+            probe=self.probe,
+            check_for_consistent_sparsity=self.check_for_consistent_sparsity,
+        )
+
+    def get_one_template_dense(self, unit_index):
+        if self.sparsity is None:
+            template = self.templates_array[unit_index, :, :]
+        else:
+            sparse_template = self.templates_array[unit_index, :, :]
+            template = self.sparsity.densify_waveforms(waveforms=sparse_template, unit_id=self.unit_ids[unit_index])
+            # dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+        return template
+
     def get_dense_templates(self) -> np.ndarray:
         # Assumes and object without a sparsity mask already has dense templates
         if self.sparsity is None:
@@ -106,8 +166,9 @@ class Templates:
         dense_waveforms = np.zeros(shape=densified_shape, dtype=self.templates_array.dtype)
 
         for unit_index, unit_id in enumerate(self.unit_ids):
-            waveforms = self.templates_array[unit_index, ...]
-            dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+            # waveforms = self.templates_array[unit_index, ...]
+            # dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+            dense_waveforms[unit_index, ...] = self.get_one_template_dense(unit_index)
 
         return dense_waveforms
 
@@ -135,6 +196,8 @@ class Templates:
             "unit_ids": self.unit_ids,
             "sampling_frequency": self.sampling_frequency,
             "nbefore": self.nbefore,
+            "is_scaled": self.is_scaled,
+            "probe": self.probe.to_dict() if self.probe is not None else None,
         }
 
     @classmethod
@@ -146,7 +209,139 @@ class Templates:
             unit_ids=np.asarray(data["unit_ids"]),
             sampling_frequency=data["sampling_frequency"],
             nbefore=data["nbefore"],
+            is_scaled=data["is_scaled"],
+            probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
+
+    def add_templates_to_zarr_group(self, zarr_group: "zarr.Group") -> None:
+        """
+        Adds a serialized version of the object to a given Zarr group.
+
+        It is the inverse of the `from_zarr_group` method.
+
+        Parameters
+        ----------
+        zarr_group : zarr.Group
+            The Zarr group to which the template object will be serialized.
+
+        Notes
+        -----
+        This method will create datasets within the Zarr group for `templates_array`,
+        `channel_ids`, and `unit_ids`. It will also add `sampling_frequency` and `nbefore`
+        as attributes to the group. If `sparsity_mask` and `probe` are not None, they will
+        be included as a dataset and a subgroup, respectively.
+
+        The `templates_array` dataset is saved with a chunk size that has a single unit per chunk
+        to optimize read/write operations for individual units.
+        """
+
+        # Saves one chunk per unit
+        arrays_chunk = (1, None, None)
+        zarr_group.create_dataset("templates_array", data=self.templates_array, chunks=arrays_chunk)
+        zarr_group.create_dataset("channel_ids", data=self.channel_ids)
+        zarr_group.create_dataset("unit_ids", data=self.unit_ids)
+
+        zarr_group.attrs["sampling_frequency"] = self.sampling_frequency
+        zarr_group.attrs["nbefore"] = self.nbefore
+        zarr_group.attrs["is_scaled"] = self.is_scaled
+
+        if self.sparsity_mask is not None:
+            zarr_group.create_dataset("sparsity_mask", data=self.sparsity_mask)
+
+        if self.probe is not None:
+            probe_group = zarr_group.create_group("probe")
+            self.probe.add_probe_to_zarr_group(probe_group)
+
+    def to_zarr(self, folder_path: str | Path) -> None:
+        """
+        Saves the object's data to a Zarr file in the specified folder.
+
+        Use the `add_templates_to_zarr_group` method to serialize the object to a Zarr group and then
+        save the group to a Zarr file.
+
+        Parameters
+        ----------
+        folder_path : str | Path
+            The path to the folder where the Zarr data will be saved.
+
+        """
+        import zarr
+
+        zarr_group = zarr.open_group(folder_path, mode="w")
+
+        self.add_templates_to_zarr_group(zarr_group)
+
+    @classmethod
+    def from_zarr_group(cls, zarr_group: "zarr.Group") -> "Templates":
+        """
+        Loads an instance of the class from an open Zarr group.
+
+        This is the inverse of the `add_templates_to_zarr_group` method.
+
+        Parameters
+        ----------
+        zarr_group : zarr.Group
+            The Zarr group from which to load the instance.
+
+        Returns
+        -------
+        Templates
+            An instance of Templates populated with the data from the Zarr group.
+
+        Notes
+        -----
+        This method assumes the Zarr group has the same structure as the one created by
+        the `add_templates_to_zarr_group` method.
+
+        """
+        templates_array = zarr_group["templates_array"]
+        channel_ids = zarr_group["channel_ids"]
+        unit_ids = zarr_group["unit_ids"]
+        sampling_frequency = zarr_group.attrs["sampling_frequency"]
+        nbefore = zarr_group.attrs["nbefore"]
+
+        # TODO: Consider eliminating the True and make it required
+        is_scaled = zarr_group.attrs.get("is_scaled", True)
+
+        sparsity_mask = None
+        if "sparsity_mask" in zarr_group:
+            sparsity_mask = zarr_group["sparsity_mask"]
+
+        probe = None
+        if "probe" in zarr_group:
+            probe = Probe.from_zarr_group(zarr_group["probe"])
+
+        return cls(
+            templates_array=templates_array,
+            sampling_frequency=sampling_frequency,
+            nbefore=nbefore,
+            sparsity_mask=sparsity_mask,
+            channel_ids=channel_ids,
+            unit_ids=unit_ids,
+            probe=probe,
+            is_scaled=is_scaled,
+        )
+
+    @staticmethod
+    def from_zarr(folder_path: str | Path) -> "Templates":
+        """
+        Deserialize the Templates object from a Zarr file located at the given folder path.
+
+        Parameters
+        ----------
+        folder_path : str | Path
+            The path to the folder where the Zarr file is located.
+
+        Returns
+        -------
+        Templates
+            An instance of Templates initialized with data from the Zarr file.
+        """
+        import zarr
+
+        zarr_group = zarr.open_group(folder_path, mode="r")
+
+        return Templates.from_zarr_group(zarr_group)
 
     def to_json(self):
         from spikeinterface.core.core_tools import SIJsonEncoder
@@ -194,3 +389,8 @@ class Templates:
                     return False
 
         return True
+
+    def get_channel_locations(self):
+        assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
+        channel_locations = self.probe.contact_positions
+        return channel_locations

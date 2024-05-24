@@ -21,7 +21,9 @@ class _NeoBaseExtractor:
     NeoRawIOClass = None
 
     def __init__(self, block_index, **neo_kwargs):
-        if not hasattr(self, "neo_reader"):  # Avoid double initialization
+
+        # Avoids double initiation of the neo reader if it was already done in the __init__ of the child class
+        if not hasattr(self, "neo_reader"):
             self.neo_reader = self.get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
 
         if self.neo_reader.block_count() > 1 and block_index is None:
@@ -177,6 +179,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             If True, include all annotations in the extracted data.
         use_names_as_ids : Optional[bool], default: None
             If True, use channel names as IDs. Otherwise, use default IDs.
+            In NEO the ids are guaranteed to be unique. Names are user defined and can be duplicated.
         neo_kwargs : Dict[str, Any]
             Additional keyword arguments to pass to the NeoBaseExtractor for initialization.
 
@@ -238,13 +241,21 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             chan_ids = signal_channels["id"]
 
         sampling_frequency = self.neo_reader.get_signal_sampling_rate(stream_index=self.stream_index)
-        dtype = signal_channels["dtype"][0]
+        dtype = np.dtype(signal_channels["dtype"][0])
         BaseRecording.__init__(self, sampling_frequency, chan_ids, dtype)
         self.extra_requirements.append("neo")
 
         # find the gain to uV
         gains = signal_channels["gain"]
         offsets = signal_channels["offset"]
+
+        if dtype.kind == "i" and np.all(gains < 0) and np.all(offsets == 0):
+            # special hack when all channel have negative gain: we put back the gain positive
+            # this help the end user experience
+            self.inverted_gain = True
+            gains = -gains
+        else:
+            self.inverted_gain = False
 
         units = signal_channels["units"]
 
@@ -265,8 +276,8 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         self.set_property("gain_to_uV", final_gains)
         self.set_property("offset_to_uV", final_offsets)
-        if not use_names_as_ids:
-            self.set_property("channel_name", signal_channels["name"])
+        if not use_names_as_ids and not all_annotations:
+            self.set_property("channel_names", signal_channels["name"])
 
         if all_annotations:
             block_ann = self.neo_reader.raw_annotations["blocks"][self.block_index]
@@ -286,7 +297,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         nseg = self.neo_reader.segment_count(block_index=self.block_index)
         for segment_index in range(nseg):
-            rec_segment = NeoRecordingSegment(self.neo_reader, self.block_index, segment_index, self.stream_index)
+            rec_segment = NeoRecordingSegment(
+                self.neo_reader, self.block_index, segment_index, self.stream_index, self.inverted_gain
+            )
             self.add_recording_segment(rec_segment)
 
         self._kwargs.update(kwargs)
@@ -299,7 +312,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
 
 class NeoRecordingSegment(BaseRecordingSegment):
-    def __init__(self, neo_reader, block_index, segment_index, stream_index):
+    def __init__(self, neo_reader, block_index, segment_index, stream_index, inverted_gain):
         sampling_frequency = neo_reader.get_signal_sampling_rate(stream_index=stream_index)
         t_start = neo_reader.get_signal_t_start(block_index, segment_index, stream_index=stream_index)
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
@@ -307,6 +320,7 @@ class NeoRecordingSegment(BaseRecordingSegment):
         self.segment_index = segment_index
         self.stream_index = stream_index
         self.block_index = block_index
+        self.inverted_gain = inverted_gain
 
     def get_num_samples(self):
         num_samples = self.neo_reader.get_signal_size(
@@ -329,6 +343,8 @@ class NeoRecordingSegment(BaseRecordingSegment):
             stream_index=self.stream_index,
             channel_indexes=channel_indices,
         )
+        if self.inverted_gain:
+            raw_traces = -raw_traces
         return raw_traces
 
 
@@ -462,7 +478,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 f"sampling_frequency = {sampling_frequency} \n"
                 "Corresponding to the following stream_id: \n"
                 f"stream_id = {stream_id} \n"
-                "To avoid this warning pass explicitly the sampling frequency or the stream_id"
+                "To avoid this warning pass explicitly the sampling frequency or the stream_id "
                 "when initializing the sorting extractor. \n"
                 "The following stream_ids with corresponding sampling frequencies were found: \n"
                 f"stream_id_to_sampling_frequencies = {stream_id_to_sampling_frequencies} \n"
@@ -472,8 +488,8 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
             instructions_for_user = (
                 "Multiple streams ids with different sampling frequencies found in the file: \n"
                 f"{stream_id_to_sampling_frequencies} \n"
-                f"Please specify one of the following sampling frequencies"
-                "When initializing the sorting extractor with the sampling frequency parameter."
+                f"Please specify one of the sampling frequencies above "
+                "when initializing the sorting extractor with the sampling frequency parameter."
             )
             raise ValueError(instructions_for_user)
 
@@ -546,7 +562,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 f"t_start = {t_start} \n"
                 "Corresponding to the following stream_id: \n"
                 f"stream_id = {stream_id} \n"
-                "To avoid this warning pass explicitly the stream_id"
+                "To avoid this warning pass explicitly the stream_id "
                 "when initializing the sorting extractor. \n"
                 "The following stream_ids with corresponding t_starts were found: \n"
                 f"{stream_id_to_t_start} \n"

@@ -19,7 +19,8 @@ There are two ways for using theses "plugin nodes":
   * on a sorting object
 """
 
-from typing import Optional, List, Type
+from __future__ import annotations
+from typing import Optional, Type
 
 import struct
 
@@ -41,9 +42,17 @@ base_peak_dtype = [
 ]
 
 
+spike_peak_dtype = base_peak_dtype + [
+    ("unit_index", "int64"),
+]
+
+
 class PipelineNode:
     def __init__(
-        self, recording: BaseRecording, return_output: bool = True, parents: Optional[List[Type["PipelineNode"]]] = None
+        self,
+        recording: BaseRecording,
+        return_output: bool | tuple[bool] = True,
+        parents: Optional[list[Type["PipelineNode"]]] = None,
     ):
         """
         This is a generic object that will make some computation on peaks given a buffer of traces.
@@ -55,13 +64,11 @@ class PipelineNode:
         ----------
         recording : BaseRecording
             The recording object.
-        parents : Optional[List[PipelineNode]], default: None
-            Pass parents nodes to perform a previous computation
-        return_output : bool or tuple of bool, default: True
+        return_output : bool or tuple[bool], default: True
             Whether or not the output of the node is returned by the pipeline.
-            When a Node have several toutputs then this can be a tuple of bool.
-
-
+            When a Node have several toutputs then this can be a tuple of bool
+        parents : Optional[list[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation.
         """
 
         self.recording = recording
@@ -152,18 +159,27 @@ class SpikeRetriever(PeakSource):
     channel_from_template: bool, default: True
         If True, then the channel_index is inferred from the template and `extremum_channel_inds` must be provided.
         If False, the max channel is computed for each spike given a radius around the template max channel.
-    extremum_channel_inds: dict of int
+    extremum_channel_inds: dict of int | None, default: None
         The extremum channel index dict given from template.
     radius_um: float, default: 50
         The radius to find the real max channel.
         Used only when channel_from_template=False
-    peak_sign: str, default: "neg"
+    peak_sign: "neg" | "pos", default: "neg"
         Peak sign to find the max channel.
         Used only when channel_from_template=False
+    include_spikes_in_margin: bool, default False
+        If not None then spikes in margin are added and an extra filed in dtype is added
     """
 
     def __init__(
-        self, recording, sorting, channel_from_template=True, extremum_channel_inds=None, radius_um=50, peak_sign="neg"
+        self,
+        recording,
+        sorting,
+        channel_from_template=True,
+        extremum_channel_inds=None,
+        radius_um=50,
+        peak_sign="neg",
+        include_spikes_in_margin=False,
     ):
         PipelineNode.__init__(self, recording, return_output=False)
 
@@ -171,7 +187,13 @@ class SpikeRetriever(PeakSource):
 
         assert extremum_channel_inds is not None, "SpikeRetriever needs the extremum_channel_inds dictionary"
 
-        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds)
+        self._dtype = spike_peak_dtype
+
+        self.include_spikes_in_margin = include_spikes_in_margin
+        if include_spikes_in_margin is not None:
+            self._dtype = spike_peak_dtype + [("in_margin", "bool")]
+
+        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds, self._dtype)
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
@@ -188,18 +210,31 @@ class SpikeRetriever(PeakSource):
         return 0
 
     def get_dtype(self):
-        return base_peak_dtype
+        return self._dtype
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        if self.include_spikes_in_margin:
+            i0, i1 = np.searchsorted(
+                peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
+            )
+        else:
+            i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
         local_peaks = local_peaks.copy()
         local_peaks["sample_index"] -= start_frame - max_margin
+
+        # handle flag for margin
+        if self.include_spikes_in_margin:
+            local_peaks["in_margin"][:] = False
+            mask = local_peaks["sample_index"] < max_margin
+            local_peaks["in_margin"][mask] = True
+            mask = local_peaks["sample_index"] >= traces.shape[0] - max_margin
+            local_peaks["in_margin"][mask] = True
 
         if not self.channel_from_template:
             # handle channel spike per spike
@@ -220,14 +255,15 @@ class SpikeRetriever(PeakSource):
         return (local_peaks,)
 
 
-def sorting_to_peaks(sorting, extremum_channel_inds):
+def sorting_to_peaks(sorting, extremum_channel_inds, dtype=spike_peak_dtype):
     spikes = sorting.to_spike_vector()
-    peaks = np.zeros(spikes.size, dtype=base_peak_dtype)
+    peaks = np.zeros(spikes.size, dtype=dtype)
     peaks["sample_index"] = spikes["sample_index"]
     extremum_channel_inds_ = np.array([extremum_channel_inds[unit_id] for unit_id in sorting.unit_ids])
     peaks["channel_index"] = extremum_channel_inds_[spikes["unit_index"]]
     peaks["amplitude"] = 0.0
     peaks["segment_index"] = spikes["segment_index"]
+    peaks["unit_index"] = spikes["unit_index"]
     return peaks
 
 
@@ -245,7 +281,7 @@ class WaveformsNode(PipelineNode):
         recording: BaseRecording,
         ms_before: float,
         ms_after: float,
-        parents: Optional[List[PipelineNode]] = None,
+        parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
     ):
         """
@@ -260,7 +296,7 @@ class WaveformsNode(PipelineNode):
             The number of milliseconds to include before the peak of the spike
         ms_after : float
             The number of milliseconds to include after the peak of the spike
-        parents : Optional[List[PipelineNode]], default: None
+        parents : Optional[list[PipelineNode]], default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
@@ -279,7 +315,7 @@ class ExtractDenseWaveforms(WaveformsNode):
         recording: BaseRecording,
         ms_before: float,
         ms_after: float,
-        parents: Optional[List[PipelineNode]] = None,
+        parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
     ):
         """
@@ -295,7 +331,7 @@ class ExtractDenseWaveforms(WaveformsNode):
             The number of milliseconds to include before the peak of the spike
         ms_after : float
             The number of milliseconds to include after the peak of the spike
-        parents : Optional[List[PipelineNode]], default: None
+        parents : Optional[list[PipelineNode]], default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
@@ -327,7 +363,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         recording: BaseRecording,
         ms_before: float,
         ms_after: float,
-        parents: Optional[List[PipelineNode]] = None,
+        parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
         radius_um: float = 100.0,
     ):
@@ -350,7 +386,7 @@ class ExtractSparseWaveforms(WaveformsNode):
             The number of milliseconds to include before the peak of the spike
         ms_after : float
             The number of milliseconds to include after the peak of the spike
-        parents : Optional[List[PipelineNode]], default: None
+        parents : Optional[list[PipelineNode]], default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline

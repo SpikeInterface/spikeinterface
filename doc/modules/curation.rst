@@ -98,7 +98,7 @@ The manual curation (including merges and labels) can be applied to a SpikeInter
     from spikeinterface.widgets import plot_sorting_summary
 
     # run a sorter and export waveforms
-    sorting = run_sorter(sorter_name'kilosort2', recording=recording)
+    sorting = run_sorter(sorter_name='kilosort2', recording=recording)
     we = extract_waveforms(recording=recording, sorting=sorting, folder='wf_folder')
 
     # some postprocessing is required

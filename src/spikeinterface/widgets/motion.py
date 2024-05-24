@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -126,7 +128,7 @@ class MotionWidget(BaseWidget):
             if dp.scatter_decimate is not None:
                 amps = amps[:: dp.scatter_decimate]
                 amps_abs = amps_abs[:: dp.scatter_decimate]
-            cmap = plt.get_cmap(dp.amplitude_cmap)
+            cmap = plt.colormaps[dp.amplitude_cmap]
             if dp.amplitude_clim is None:
                 amps = amps_abs
                 amps /= q_95

@@ -97,3 +97,5 @@ def test_zscore_int():
 
 if __name__ == "__main__":
     test_zscore()
+
+    # test_zscore_int()

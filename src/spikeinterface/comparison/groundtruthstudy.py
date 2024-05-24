@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import shutil
 import os
@@ -6,12 +8,12 @@ import pickle
 
 import numpy as np
 
-from spikeinterface.core import load_extractor, extract_waveforms, load_waveforms
+from spikeinterface.core import load_extractor, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.core.core_tools import SIJsonEncoder
+from spikeinterface.core.job_tools import split_job_kwargs
 
 from spikeinterface.sorters import run_sorter_jobs, read_sorter_folder
 
-from spikeinterface import WaveformExtractor
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
 from .paircomparisons import compare_sorter_to_ground_truth, GroundTruthComparison
@@ -21,7 +23,8 @@ from .paircomparisons import compare_sorter_to_ground_truth, GroundTruthComparis
 
 
 # This is to separate names when the key are tuples when saving folders
-_key_separator = "_##_"
+# _key_separator = "_##_"
+_key_separator = "_-°°-_"
 
 
 class GroundTruthStudy:
@@ -138,7 +141,10 @@ class GroundTruthStudy:
             comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
             if comparison_file.exists():
                 with open(comparison_file, mode="rb") as f:
-                    self.comparisons[key] = pickle.load(f)
+                    try:
+                        self.comparisons[key] = pickle.load(f)
+                    except Exception:
+                        pass
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
@@ -161,6 +167,8 @@ class GroundTruthStudy:
         sorting_folder = self.folder / "sortings" / self.key_to_str(key)
         log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
         comparison_file = self.folder / "comparisons" / self.key_to_str(key)
+        self.sortings[key] = None
+        self.comparisons[key] = None
         if sorting_folder.exists():
             shutil.rmtree(sorting_folder)
         for f in (log_file, comparison_file):
@@ -281,33 +289,36 @@ class GroundTruthStudy:
 
         return pd.Series(run_times, name="run_time")
 
-    def extract_waveforms_gt(self, case_keys=None, **extract_kwargs):
+    def create_sorting_analyzer_gt(self, case_keys=None, random_params={}, waveforms_params={}, **job_kwargs):
         if case_keys is None:
             case_keys = self.cases.keys()
 
-        base_folder = self.folder / "waveforms"
+        base_folder = self.folder / "sorting_analyzer"
         base_folder.mkdir(exist_ok=True)
 
         dataset_keys = [self.cases[key]["dataset"] for key in case_keys]
         dataset_keys = set(dataset_keys)
         for dataset_key in dataset_keys:
             # the waveforms depend on the dataset key
-            wf_folder = base_folder / self.key_to_str(dataset_key)
+            folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
-            we = extract_waveforms(recording, gt_sorting, folder=wf_folder, **extract_kwargs)
+            sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
+            sorting_analyzer.compute("random_spikes", **random_params)
+            sorting_analyzer.compute("templates", **job_kwargs)
+            sorting_analyzer.compute("noise_levels")
 
-    def get_waveform_extractor(self, case_key=None, dataset_key=None):
+    def get_sorting_analyzer(self, case_key=None, dataset_key=None):
         if case_key is not None:
             dataset_key = self.cases[case_key]["dataset"]
 
-        wf_folder = self.folder / "waveforms" / self.key_to_str(dataset_key)
-        we = load_waveforms(wf_folder, with_recording=True)
-        return we
+        folder = self.folder / "sorting_analyzer" / self.key_to_str(dataset_key)
+        sorting_analyzer = load_sorting_analyzer(folder)
+        return sorting_analyzer
 
-    def get_templates(self, key, mode="average"):
-        we = self.get_waveform_extractor(case_key=key)
-        templates = we.get_all_templates(mode=mode)
-        return templates
+    # def get_templates(self, key, mode="average"):
+    #     analyzer = self.get_sorting_analyzer(case_key=key)
+    #     templates = sorting_analyzer.get_all_templates(mode=mode)
+    #     return templates
 
     def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False):
         if case_keys is None:
@@ -326,8 +337,8 @@ class GroundTruthStudy:
                     os.remove(filename)
                 else:
                     continue
-            we = self.get_waveform_extractor(key)
-            metrics = compute_quality_metrics(we, metric_names=metric_names)
+            analyzer = self.get_sorting_analyzer(key)
+            metrics = compute_quality_metrics(analyzer, metric_names=metric_names)
             metrics.to_csv(filename, sep="\t", index=True)
 
     def get_metrics(self, key):
@@ -360,6 +371,7 @@ class GroundTruthStudy:
             assert comp is not None, "You need to do study.run_comparisons() first"
 
             perf = comp.get_performance(method="by_unit", output="pandas")
+
             if isinstance(key, str):
                 perf[self.levels] = key
             elif isinstance(key, tuple):
@@ -370,7 +382,8 @@ class GroundTruthStudy:
             perf_by_unit.append(perf)
 
         perf_by_unit = pd.concat(perf_by_unit)
-        perf_by_unit = perf_by_unit.set_index(self.levels).sort_index()
+        perf_by_unit = perf_by_unit.set_index(self.levels)
+        perf_by_unit = perf_by_unit.sort_index()
         return perf_by_unit
 
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):

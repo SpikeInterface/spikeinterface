@@ -1,7 +1,9 @@
-from re import template
+from __future__ import annotations
+
 import numpy as np
 
-
+from ..core import create_sorting_analyzer
+from ..core.template import Templates
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
@@ -10,7 +12,7 @@ from .mergeunitssorting import MergeUnitsSorting
 
 
 def get_potential_auto_merge(
-    waveform_extractor,
+    sorting_analyzer,
     minimum_spikes=1000,
     maximum_distance_um=150.0,
     peak_sign="neg",
@@ -29,6 +31,7 @@ def get_potential_auto_merge(
     firing_contamination_balance=1.5,
     extra_outputs=False,
     steps=None,
+    template_metric="l1",
 ):
     """
     Algorithm to find and check potential merges between units.
@@ -56,13 +59,13 @@ def get_potential_auto_merge(
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
+    sorting_analyzer: SortingAnalyzer
+        The SortingAnalyzer
     minimum_spikes: int, default: 1000
         Minimum number of spikes for each unit to consider a potential merge.
         Enough spikes are needed to estimate the correlogram
     maximum_distance_um: float, default: 150
-        Minimum distance between units for considering a merge
+        Maximum distance between units for considering a merge
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Peak sign used to estimate the maximum channel of a template
     bin_ms: float, default: 0.25
@@ -75,6 +78,8 @@ def get_potential_auto_merge(
     template_diff_thresh: float, default: 0.25
         The threshold on the "template distance metric" for considering a merge.
         It needs to be between 0 and 1
+    template_metric: 'l1'
+        The metric to be used when comparing templates. Default is l1 norm
     censored_period_ms: float, default: 0.3
         Used to compute the refractory period violations aka "contamination"
     refractory_period_ms: float, default: 1
@@ -100,6 +105,8 @@ def get_potential_auto_merge(
         If None all steps are done.
         Pontential steps: "min_spikes", "remove_contaminated", "unit_positions", "correlogram", "template_similarity",
         "check_increase_score". Please check steps explanations above!
+    template_metric: 'l1', 'l2' or 'cosine'
+        The metric to consider when measuring the distances between templates. Default is l1
 
     Returns
     -------
@@ -112,8 +119,8 @@ def get_potential_auto_merge(
     """
     import scipy
 
-    we = waveform_extractor
-    sorting = we.sorting
+    sorting = sorting_analyzer.sorting
+    recording = sorting_analyzer.recording
     unit_ids = sorting.unit_ids
 
     # to get fast computation we will not analyse pairs when:
@@ -144,7 +151,7 @@ def get_potential_auto_merge(
     # STEP 2 : remove contaminated auto corr
     if "remove_contaminated" in steps:
         contaminations, nb_violations = compute_refrac_period_violations(
-            we, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
+            sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
         )
         nb_violations = np.array(list(nb_violations.values()))
         contaminations = np.array(list(contaminations.values()))
@@ -154,10 +161,17 @@ def get_potential_auto_merge(
 
     # STEP 3 : unit positions are estimated roughly with channel
     if "unit_positions" in steps:
-        chan_loc = we.get_channel_locations()
-        unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
-        unit_max_chan = list(unit_max_chan.values())
-        unit_locations = chan_loc[unit_max_chan, :]
+        positions_ext = sorting_analyzer.get_extension("unit_locations")
+        if positions_ext is not None:
+            unit_locations = positions_ext.get_data()[:, :2]
+        else:
+            chan_loc = sorting_analyzer.get_channel_locations()
+            unit_max_chan = get_template_extremum_channel(
+                sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
+            )
+            unit_max_chan = list(unit_max_chan.values())
+            unit_locations = chan_loc[unit_max_chan, :]
+
         unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
         pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
 
@@ -187,16 +201,34 @@ def get_potential_auto_merge(
 
     # STEP 5 : check if potential merge with CC also have template similarity
     if "template_similarity" in steps:
-        templates = we.get_all_templates(mode="average")
+        templates_ext = sorting_analyzer.get_extension("templates")
+        assert (
+            templates_ext is not None
+        ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
+
+        templates_array = templates_ext.get_data(outputs="numpy")
+
         templates_diff = compute_templates_diff(
-            sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask
+            sorting,
+            templates_array,
+            num_channels=num_channels,
+            num_shift=num_shift,
+            pair_mask=pair_mask,
+            template_metric=template_metric,
+            sparsity=sorting_analyzer.sparsity,
         )
+
         pair_mask = pair_mask & (templates_diff < template_diff_thresh)
 
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     if "check_increase_score" in steps:
         pair_mask, pairs_decreased_score = check_improve_contaminations_score(
-            we, pair_mask, contaminations, firing_contamination_balance, refractory_period_ms, censored_period_ms
+            sorting_analyzer,
+            pair_mask,
+            contaminations,
+            firing_contamination_balance,
+            refractory_period_ms,
+            censored_period_ms,
         )
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
@@ -366,16 +398,18 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
-def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair_mask=None):
+def compute_templates_diff(
+    sorting, templates_array, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1", sparsity=None
+):
     """
-    Computes normalilzed template differences.
+    Computes normalized template differences.
 
     Parameters
     ----------
     sorting : BaseSorting
         The sorting object
-    templates : np.array
-        The templates array (num_units, num_samples, num_channels)
+    templates_array : np.array
+        The templates array (num_units, num_samples, num_channels).
     num_channels: int, default: 5
         Number of channel to use for template similarity computation
     num_shift: int, default: 5
@@ -383,6 +417,10 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     pair_mask: None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
+    template_metric: 'l1', 'l2' or 'cosine'
+        The metric to consider when measuring the distances between templates. Default is l1
+    sparsity: None or ChannelSparsity
+        Optionaly a ChannelSparsity object.
 
     Returns
     -------
@@ -391,9 +429,17 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     """
     unit_ids = sorting.unit_ids
     n = len(unit_ids)
+    assert template_metric in ["l1", "l2", "cosine"], "Not a valid metric!"
 
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
+
+    if sparsity is None:
+        adaptative_masks = False
+        sparsity_mask = None
+    else:
+        adaptative_masks = num_channels == None
+        sparsity_mask = sparsity.mask
 
     templates_diff = np.full((n, n), np.nan, dtype="float64")
     for unit_ind1 in range(n):
@@ -401,48 +447,47 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
             if not pair_mask[unit_ind1, unit_ind2]:
                 continue
 
-            template1 = templates[unit_ind1]
-            template2 = templates[unit_ind2]
+            template1 = templates_array[unit_ind1]
+            template2 = templates_array[unit_ind2]
             # take best channels
-            chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
+            if not adaptative_masks:
+                chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
+            else:
+                chan_inds = np.intersect1d(
+                    np.flatnonzero(sparsity_mask[unit_ind1]), np.flatnonzero(sparsity_mask[unit_ind2])
+                )
+
             template1 = template1[:, chan_inds]
             template2 = template2[:, chan_inds]
 
             num_samples = template1.shape[0]
-            norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
+            if template_metric == "l1":
+                norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
+            elif template_metric == "l2":
+                norm = np.sum(template1**2) + np.sum(template2**2)
+            elif template_metric == "cosine":
+                norm = np.linalg.norm(template1) * np.linalg.norm(template2)
             all_shift_diff = []
             for shift in range(-num_shift, num_shift + 1):
                 temp1 = template1[num_shift : num_samples - num_shift, :]
                 temp2 = template2[num_shift + shift : num_samples - num_shift + shift, :]
-                d = np.sum(np.abs(temp1 - temp2)) / (norm)
+                if template_metric == "l1":
+                    d = np.sum(np.abs(temp1 - temp2)) / norm
+                elif template_metric == "l2":
+                    d = np.linalg.norm(temp1 - temp2) / norm
+                elif template_metric == "cosine":
+                    d = 1 - np.sum(temp1 * temp2) / norm
                 all_shift_diff.append(d)
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
 
     return templates_diff
 
 
-class MockWaveformExtractor:
-    """
-    Mock WaveformExtractor to be able to run compute_refrac_period_violations()
-    needed for the auto_merge() function.
-    """
-
-    def __init__(self, recording, sorting):
-        self.recording = recording
-        self.sorting = sorting
-
-    def get_total_samples(self):
-        return self.recording.get_total_samples()
-
-    def get_total_duration(self):
-        return self.recording.get_total_duration()
-
-
 def check_improve_contaminations_score(
-    we, pair_mask, contaminations, firing_contamination_balance, refractory_period_ms, censored_period_ms
+    sorting_analyzer, pair_mask, contaminations, firing_contamination_balance, refractory_period_ms, censored_period_ms
 ):
     """
-    Check that the score is improve afeter a potential merge
+    Check that the score is improve after a potential merge
 
     The score is a balance between:
       * contamination decrease
@@ -451,12 +496,12 @@ def check_improve_contaminations_score(
     Check that the contamination score is improved (decrease)  after
     a potential merge
     """
-    recording = we.recording
-    sorting = we.sorting
+    recording = sorting_analyzer.recording
+    sorting = sorting_analyzer.sorting
     pair_mask = pair_mask.copy()
     pairs_removed = []
 
-    firing_rates = list(compute_firing_rates(we).values())
+    firing_rates = list(compute_firing_rates(sorting_analyzer).values())
 
     inds1, inds2 = np.nonzero(pair_mask)
     for i in range(inds1.size):
@@ -473,14 +518,14 @@ def check_improve_contaminations_score(
         sorting_merged = MergeUnitsSorting(
             sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1], delta_time_ms=censored_period_ms
         ).select_units([unit_id1])
-        # make a lazy fake WaveformExtractor to compute contamination and firing rate
-        we_new = MockWaveformExtractor(recording, sorting_merged)
+
+        sorting_analyzer_new = create_sorting_analyzer(sorting_merged, recording, format="memory", sparse=False)
 
         new_contaminations, _ = compute_refrac_period_violations(
-            we_new, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
+            sorting_analyzer_new, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
         )
         c_new = new_contaminations[unit_id1]
-        f_new = compute_firing_rates(we_new)[unit_id1]
+        f_new = compute_firing_rates(sorting_analyzer_new)[unit_id1]
 
         # old and new scores
         k = 1 + firing_contamination_balance

@@ -1,8 +1,9 @@
-from .basesorting import BaseSorting, BaseSortingSegment
+from __future__ import annotations
 
 from pathlib import Path
 import numpy as np
 
+from .basesorting import BaseSorting, BaseSortingSegment
 from .core_tools import define_function_from_class
 
 

@@ -1,0 +1,11 @@
+.. _release0.100.2:
+
+SpikeInterface 0.100.2 release notes
+------------------------------------
+
+19th March 2024
+
+Minor release with fix for running Kilosort4 with GPU support in container
+
+* Use GPU in Kilosort4Sorter (#2577)
+* Add batch size to KS4 wrapper (#2592)

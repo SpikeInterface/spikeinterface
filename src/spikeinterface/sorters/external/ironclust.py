@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from pathlib import Path
 from typing import Union
@@ -70,6 +72,7 @@ class IronClustSorter(BaseSorter):
         "merge_thresh_cc": 1,  # cross-correlogram merging threshold, set to 1 to disable
         "nRepeat_merge": 3,  # number of repeats for merge
         "merge_overlap_thresh": 0.95,  # knn-overlap merge threshold
+        "version": 2,
     }
 
     _params_description = {
@@ -106,6 +109,7 @@ class IronClustSorter(BaseSorter):
         "merge_thresh_cc": "Cross-correlogram merging threshold, set to 1 to disable",
         "nRepeat_merge": "Number of repeats for merge",
         "merge_overlap_thresh": "Knn-overlap merge threshold",
+        "version": "The irc command version. Can be 1 or 2 (default)",
     }
 
     sorter_descrpition = """Ironclust is a density-based spike sorter designed for high-density probes

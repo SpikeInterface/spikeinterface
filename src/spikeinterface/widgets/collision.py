@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -134,7 +136,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
             ax1.set_xlabel("lag (ms)")
         elif dp.mode == "lines":
-            my_cmap = plt.get_cmap(dp.cmap)
+            my_cmap = plt.colormaps[dp.cmap]
             cNorm = matplotlib.colors.Normalize(vmin=dp.similarity_bins.min(), vmax=dp.similarity_bins.max())
             scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 
@@ -243,7 +245,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
         study = dp.study
 
-        my_cmap = plt.get_cmap(dp.cmap)
+        my_cmap = plt.colormaps[dp.cmap]
         cNorm = matplotlib.colors.Normalize(vmin=dp.similarity_bins.min(), vmax=dp.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
         study.precompute_scores_by_similarities(

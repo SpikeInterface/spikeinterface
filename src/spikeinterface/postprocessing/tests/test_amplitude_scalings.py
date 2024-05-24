@@ -1,57 +1,42 @@
 import unittest
 import numpy as np
 
-from spikeinterface import compute_sparsity
-from spikeinterface.postprocessing import AmplitudeScalingsCalculator
 
-from spikeinterface.postprocessing.tests.common_extension_tests import (
-    WaveformExtensionCommonTestSuite,
-)
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
+
+from spikeinterface.postprocessing import ComputeAmplitudeScalings
 
 
-class AmplitudeScalingsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
-    extension_class = AmplitudeScalingsCalculator
-    extension_data_names = ["amplitude_scalings"]
-    extension_function_kwargs_list = [
-        dict(outputs="concatenated", chunk_size=10000, n_jobs=1),
-        dict(outputs="concatenated", chunk_size=10000, n_jobs=1, ms_before=0.5, ms_after=0.5),
-        dict(outputs="by_unit", chunk_size=10000, n_jobs=1),
-        dict(outputs="concatenated", chunk_size=10000, n_jobs=-1),
-        dict(outputs="concatenated", chunk_size=10000, n_jobs=2, ms_before=0.5, ms_after=0.5),
+class AmplitudeScalingsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
+    extension_class = ComputeAmplitudeScalings
+    extension_function_params_list = [
+        dict(handle_collisions=True),
+        dict(handle_collisions=False),
     ]
 
-    def test_scaling_parallel(self):
-        scalings1 = self.extension_class.get_extension_function()(
-            self.we1,
-            outputs="concatenated",
-            chunk_size=10000,
-            n_jobs=1,
-        )
-        scalings2 = self.extension_class.get_extension_function()(
-            self.we1,
-            outputs="concatenated",
-            chunk_size=10000,
-            n_jobs=2,
-        )
-        np.testing.assert_array_equal(scalings1, scalings2)
-
     def test_scaling_values(self):
-        scalings1 = self.extension_class.get_extension_function()(
-            self.we1,
-            outputs="by_unit",
-            chunk_size=10000,
-            n_jobs=1,
-        )
-        # since this is GT spikes, the rounded median must be 1
-        for u, scalings in scalings1[0].items():
+        sorting_analyzer = self._prepare_sorting_analyzer("memory", True)
+        sorting_analyzer.compute("amplitude_scalings", handle_collisions=False)
+
+        spikes = sorting_analyzer.sorting.to_spike_vector()
+
+        ext = sorting_analyzer.get_extension("amplitude_scalings")
+
+        for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
+            mask = spikes["unit_index"] == unit_index
+            scalings = ext.data["amplitude_scalings"][mask]
             median_scaling = np.median(scalings)
-            print(u, median_scaling)
+            # print(unit_index, median_scaling)
             np.testing.assert_array_equal(np.round(median_scaling), 1)
+
+        # import matplotlib.pyplot as plt
+        # fig, ax = plt.subplots()
+        # ax.hist(ext.data["amplitude_scalings"])
+        # plt.show()
 
 
 if __name__ == "__main__":
     test = AmplitudeScalingsExtensionTest()
-    test.setUp()
+    test.setUpClass()
     test.test_extension()
-    # test.test_scaling_values()
-    # test.test_scaling_parallel()
+    test.test_scaling_values()

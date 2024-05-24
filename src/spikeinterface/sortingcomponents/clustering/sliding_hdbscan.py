@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 # """Sorting components: clustering"""
 from pathlib import Path
 import time
 import random
 import string
 
-import sklearn.decomposition
 
 import numpy as np
 
@@ -54,7 +55,7 @@ class SlidingHdbscanClustering:
         "auto_merge_quantile_limit": 0.8,
         "ratio_num_channel_intersect": 0.5,
         # ~ 'auto_trash_misalignment_shift' : 4,
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
     }
 
     @classmethod
@@ -162,6 +163,9 @@ class SlidingHdbscanClustering:
 
     @classmethod
     def _find_clusters(cls, recording, peaks, wfs_arrays, sparsity_mask, noise, d):
+
+        import sklearn.decomposition
+
         num_chans = recording.get_num_channels()
         fs = recording.get_sampling_frequency()
         nbefore = int(d["ms_before"] * fs / 1000.0)
@@ -345,7 +349,7 @@ class SlidingHdbscanClustering:
                 wfs_no_noise = wfs[: -noise.shape[0]]
 
                 fig, axs = plt.subplots(ncols=3)
-                cmap = plt.get_cmap("jet", np.unique(local_labels).size)
+                cmap = plt.colormaps["jet"].resampled(np.unique(local_labels).size)
                 cmap = {label: cmap(l) for l, label in enumerate(local_labels_set)}
                 cmap[-1] = "k"
                 for label in local_labels_set:

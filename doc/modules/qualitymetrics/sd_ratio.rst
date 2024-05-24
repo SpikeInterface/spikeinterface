@@ -1,5 +1,5 @@
 Standard Deviation (SD) ratio (:code:`sd_ratio`)
-==============================================
+================================================
 
 Calculation
 -----------
@@ -28,8 +28,14 @@ Example code
 
 	import spikeinterface.qualitymetrics as sqm
 
-	sd_ratio = sqm.compute_sd_ratio(wvf_extractor, censored_period_ms=4.0)
+	# In this case we need to combine our sorting and recording into a sorting_analyzer
+	sd_ratio = sqm.compute_sd_ratio(sorting_analyzer=sorting_analyzer censored_period_ms=4.0)
 
+
+References
+----------
+
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_sd_ratio
 
 Literature
 ----------

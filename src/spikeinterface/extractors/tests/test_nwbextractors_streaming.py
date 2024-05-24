@@ -1,16 +1,17 @@
 from pathlib import Path
 import pickle
+from tabnanny import check
 
 import pytest
 import numpy as np
 import h5py
-from spikeinterface.core.testing import check_recordings_equal
 
+from spikeinterface import load_extractor
+from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
 
 
-@pytest.mark.ros3_test
 @pytest.mark.streaming_extractors
 @pytest.mark.skipif("ros3" not in h5py.registered_drivers(), reason="ROS3 driver not installed")
 def test_recording_s3_nwb_ros3(tmp_path):
@@ -153,13 +154,12 @@ def test_recording_s3_nwb_remfile_file_like(tmp_path):
     check_recordings_equal(rec, rec2)
 
 
-@pytest.mark.ros3_test
 @pytest.mark.streaming_extractors
 @pytest.mark.skipif("ros3" not in h5py.registered_drivers(), reason="ROS3 driver not installed")
 def test_sorting_s3_nwb_ros3(tmp_path):
     file_path = "https://dandiarchive.s3.amazonaws.com/blobs/84b/aa4/84baa446-cf19-43e8-bdeb-fc804852279b"
     # we provide the 'sampling_frequency' because the NWB file does not the electrical series
-    sort = NwbSortingExtractor(file_path, sampling_frequency=30000, stream_mode="ros3")
+    sort = NwbSortingExtractor(file_path, sampling_frequency=30000, stream_mode="ros3", t_start=0)
 
     start_frame = 0
     end_frame = 300
@@ -196,6 +196,7 @@ def test_sorting_s3_nwb_fsspec(tmp_path, cache):
         stream_mode="fsspec",
         cache=cache,
         stream_cache_path=tmp_path if cache else None,
+        t_start=0,
     )
 
     num_seg = sorting.get_num_segments()
@@ -228,6 +229,7 @@ def test_sorting_s3_nwb_remfile(tmp_path):
         file_path,
         sampling_frequency=30000.0,
         stream_mode="remfile",
+        t_start=0,
     )
 
     num_seg = sorting.get_num_segments()
@@ -252,8 +254,57 @@ def test_sorting_s3_nwb_remfile(tmp_path):
     check_sortings_equal(reloaded_sorting, sorting)
 
 
+@pytest.mark.streaming_extractors
+def test_sorting_s3_nwb_zarr(tmp_path):
+    file_path = (
+        "s3://aind-open-data/ecephys_625749_2022-08-03_15-15-06_nwb_2023-05-16_16-34-55/"
+        "ecephys_625749_2022-08-03_15-15-06_nwb/"
+        "ecephys_625749_2022-08-03_15-15-06_experiment1_recording1.nwb.zarr/"
+    )
+    # We provide the 'sampling_frequency' because the NWB file obly has LFP electrical series
+    sorting = NwbSortingExtractor(
+        file_path,
+        sampling_frequency=30000.0,
+        stream_mode="zarr",
+        storage_options={"anon": True},
+        t_start=0,
+        load_unit_properties=False,
+    )
+
+    num_seg = sorting.get_num_segments()
+    assert num_seg == 1
+    num_units = len(sorting.unit_ids)
+    assert num_units == 456
+
+    # This is too slow for testing
+    # for segment_index in range(num_seg):
+    #     for unit in sorting.unit_ids:
+    #         spike_train = sorting.get_unit_spike_train(unit_id=unit, segment_index=segment_index)
+    #         assert len(spike_train) > 0
+    #         assert spike_train.dtype == "int64"
+    #         assert np.all(spike_train >= 0)
+
+    # with this mode, the object is not serializable
+    assert not sorting.check_serializability("json")
+    assert not sorting.check_serializability("pickle")
+
+    # test to/from dict
+    sorting_loaded = load_extractor(sorting.to_dict())
+
+    # just take 3 random units to test
+    rng = np.random.default_rng(seed=2205)
+    three_unit_ids = rng.choice(sorting.unit_ids, size=3)
+    sorting_sub = sorting.select_units(unit_ids=three_unit_ids)
+    sorting_loaded_sub = sorting_loaded.select_units(unit_ids=three_unit_ids)
+
+    check_sortings_equal(sorting_sub, sorting_loaded_sub)
+
+
 if __name__ == "__main__":
-    test_recording_s3_nwb_ros3()
-    test_recording_s3_nwb_fsspec()
-    test_sorting_s3_nwb_ros3()
-    test_sorting_s3_nwb_fsspec()
+    tmp_path = Path("tmp")
+    if tmp_path.is_dir():
+        import shutil
+
+        shutil.rmtree(tmp_path)
+    tmp_path.mkdir()
+    test_recording_s3_nwb_fsspec(tmp_path, cache=True)

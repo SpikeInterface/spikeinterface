@@ -3,13 +3,14 @@ import psutil
 
 import numpy as np
 
-from spikeinterface.core import load_extractor, extract_waveforms
+from spikeinterface.core import load_extractor
 
 from probeinterface import generate_multi_columns_probe
 from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
     NoiseGeneratorRecording,
+    TransformSorting,
     generate_recording_by_size,
     InjectTemplatesRecording,
     generate_single_fake_waveform,
@@ -17,11 +18,14 @@ from spikeinterface.core.generate import (
     generate_channel_locations,
     generate_unit_locations,
     generate_ground_truth_recording,
+    generate_sorting_to_inject,
+    synthesize_random_firings,
 )
 
+from spikeinterface.core.numpyextractors import NumpySorting
 
 from spikeinterface.core.core_tools import convert_bytes_to_str
-
+from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.testing import check_recordings_equal
 
 strategy_list = ["tile_pregenerated", "on_the_fly"]
@@ -137,6 +141,32 @@ def test_noise_generator_memory():
     after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
     assert memory_usage_MiB < 2, f"NoiseGeneratorRecording with 'on_the_fly wrong memory  {memory_usage_MiB}MiB"
+
+
+def test_noise_generator_several_noise_levels():
+    rec1 = NoiseGeneratorRecording(
+        num_channels=4,
+        sampling_frequency=20000,
+        durations=[10],
+        dtype="float32",
+        seed=32,
+        noise_levels=1,
+        strategy="on_the_fly",
+        noise_block_size=20000,
+    )
+    assert np.all(np.abs(get_noise_levels(rec1) - 1) < 0.1)
+
+    rec2 = NoiseGeneratorRecording(
+        num_channels=4,
+        sampling_frequency=20000,
+        durations=[10],
+        dtype="float32",
+        seed=32,
+        noise_levels=[0, 1, 2, 3],
+        strategy="on_the_fly",
+        noise_block_size=20000,
+    )
+    assert np.all(np.abs(get_noise_levels(rec2) - np.arange(4)) < 0.1)
 
 
 def test_noise_generator_under_giga():
@@ -363,8 +393,7 @@ def test_generate_templates():
         upsample_factor=None,
         seed=42,
         dtype="float32",
-        unit_params=dict(alpha=np.ones(num_units) * 8000.0),
-        unit_params_range=dict(smooth_ms=(0.04, 0.05)),
+        unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
     )
 
     # upsampling case
@@ -452,12 +481,97 @@ def test_inject_templates():
         check_recordings_equal(rec, saved_loaded, return_scaled=False)
 
 
+def test_transformsorting():
+    sorting_1 = generate_sorting(seed=0)
+    sorting_2 = generate_sorting(seed=1)
+    sorting_3 = generate_sorting(num_units=50, seed=1)
+
+    transformed_1 = TransformSorting(sorting_1, sorting_2.to_spike_vector())
+    n_spikes_1 = len(sorting_1.to_spike_vector())
+    n_spikes_2 = len(sorting_2.to_spike_vector())
+    n_spikes_added_1 = len(transformed_1.to_spike_vector())
+    assert n_spikes_added_1 == n_spikes_1 + n_spikes_2
+
+    transformed = TransformSorting.add_from_sorting(sorting_1, sorting_3)
+    assert len(transformed.unit_ids) == 50
+
+    sorting_1 = NumpySorting.from_unit_dict({46: np.array([0, 150], dtype=int)}, sampling_frequency=20000.0)
+    sorting_2 = NumpySorting.from_unit_dict(
+        {0: np.array([100, 2000], dtype=int), 3: np.array([200, 4000], dtype=int)}, sampling_frequency=20000.0
+    )
+    transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
+    assert len(transformed.unit_ids) == 3
+    assert np.all(np.array([k for k in transformed.count_num_spikes_per_unit(outputs="array")]) == 2)
+
+    sorting_1 = NumpySorting.from_unit_dict({0: np.array([12], dtype=int)}, sampling_frequency=20000.0)
+    sorting_2 = NumpySorting.from_unit_dict(
+        {0: np.array([150], dtype=int), 3: np.array([12, 150], dtype=int)}, sampling_frequency=20000.0
+    )
+    transformed = TransformSorting.add_from_sorting(sorting_1, sorting_2)
+    assert len(transformed.unit_ids) == 2
+    target_array = np.array([2, 2])
+    source_array = np.array([k for k in transformed.count_num_spikes_per_unit(outputs="array")])
+    assert np.array_equal(source_array, target_array)
+
+    assert transformed.get_added_spikes_from_existing_indices().size == 1
+    assert transformed.get_added_spikes_from_new_indices().size == 2
+    assert transformed.get_added_units_inds() == [3]
+
+    transformed = TransformSorting.add_from_unit_dict(sorting_1, {46: np.array([12, 150], dtype=int)})
+
+    sorting_1 = generate_sorting(seed=0)
+    transformed = TransformSorting(sorting_1, sorting_1.to_spike_vector(), refractory_period_ms=0)
+    assert len(sorting_1.to_spike_vector()) == len(transformed.to_spike_vector())
+
+    transformed = TransformSorting(sorting_1, sorting_1.to_spike_vector(), refractory_period_ms=5)
+    assert 2 * len(sorting_1.to_spike_vector()) > len(transformed.to_spike_vector())
+
+    transformed_2 = TransformSorting(sorting_1, transformed.to_spike_vector())
+    assert len(transformed_2.to_spike_vector()) > len(transformed.to_spike_vector())
+
+    assert np.sum(transformed_2.get_added_spikes_indices()) >= np.sum(transformed_2.get_added_spikes_from_new_indices())
+    assert np.sum(transformed_2.get_added_spikes_indices()) >= np.sum(
+        transformed_2.get_added_spikes_from_existing_indices()
+    )
+
+
 def test_generate_ground_truth_recording():
     rec, sorting = generate_ground_truth_recording(upsample_factor=None)
     assert rec.templates.ndim == 3
 
     rec, sorting = generate_ground_truth_recording(upsample_factor=2)
     assert rec.templates.ndim == 4
+
+
+def test_generate_sorting_to_inject():
+    durations = [10.0, 20.0]
+    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0)
+    injected_sorting = generate_sorting_to_inject(
+        sorting, [int(duration * sorting.sampling_frequency) for duration in durations]
+    )
+    num_spikes = sorting.count_num_spikes_per_unit()
+    num_injected_spikes = injected_sorting.count_num_spikes_per_unit()
+    # injected spikes should be less than original spikes
+    for unit_id in num_spikes:
+        assert num_injected_spikes[unit_id] <= num_spikes[unit_id]
+
+
+def test_synthesize_random_firings_length():
+
+    firing_rates = [2.0, 3.0]
+    duration = 2
+    num_units = 2
+
+    spike_times, spike_units = synthesize_random_firings(
+        num_units=num_units, duration=duration, firing_rates=firing_rates
+    )
+
+    assert len(spike_times) == int(np.sum(firing_rates) * duration)
+
+    units, counts = np.unique(spike_units, return_counts=True)
+
+    assert len(units) == num_units
+    assert np.sum(counts) == int(np.sum(firing_rates) * duration)
 
 
 if __name__ == "__main__":
@@ -471,8 +585,8 @@ if __name__ == "__main__":
     # test_noise_generator_consistency_after_dump(strategy, None)
     # test_generate_recording()
     # test_generate_single_fake_waveform()
-    test_generate_unit_locations()
-    # test_generate_templates()
+    # test_transformsorting()
+    test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
     # test_generate_sorting_with_spikes_on_borders()

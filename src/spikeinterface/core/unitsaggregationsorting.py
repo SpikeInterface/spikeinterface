@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 import warnings
 import numpy as np
 
@@ -124,8 +124,8 @@ class UnitsAggregationSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         sorting_id = self._unit_map[unit_id]["sorting_id"]
         unit_id_sorting = self._unit_map[unit_id]["unit_id"]

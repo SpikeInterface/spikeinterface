@@ -1,7 +1,6 @@
+from __future__ import annotations
 import warnings
 from pathlib import Path
-from typing import Iterable, List, Union
-from warnings import warn
 
 import numpy as np
 from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, write_probeinterface
@@ -9,13 +8,12 @@ from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, 
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import (
-    check_json,
     convert_bytes_to_str,
     convert_seconds_to_str,
-    write_binary_recording,
-    write_memory_recording,
-    write_traces_to_zarr,
 )
+from .recording_tools import write_binary_recording
+
+
 from .job_tools import split_job_kwargs
 
 
@@ -36,37 +34,22 @@ class BaseRecording(BaseRecordingSnippets):
         "noise_level_mad_scaled",
     ]
 
-    def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
+    def __init__(self, sampling_frequency: float, channel_ids: list, dtype):
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
 
-        self._recording_segments: List[BaseRecordingSegment] = []
+        self._recording_segments: list[BaseRecordingSegment] = []
 
         # initialize main annotation and properties
         self.annotate(is_filtered=False)
 
     def __repr__(self):
+
         extractor_name = self.__class__.__name__
         num_segments = self.get_num_segments()
-        num_channels = self.get_num_channels()
-        sf_khz = self.get_sampling_frequency() / 1000.0
-        dtype = self.get_dtype()
 
-        total_samples = self.get_total_samples()
-        total_duration = self.get_total_duration()
-        total_memory_size = self.get_total_memory_size()
-
-        txt = (
-            f"{extractor_name}: "
-            f"{num_channels} channels - "
-            f"{sf_khz:0.1f}kHz - "
-            f"{num_segments} segments - "
-            f"{total_samples:,} samples - "
-            f"{convert_seconds_to_str(total_duration)} - "
-            f"{dtype} dtype - "
-            f"{convert_bytes_to_str(total_memory_size)}"
-        )
+        txt = self._repr_header()
 
         # Split if too long
         if len(txt) > 100:
@@ -111,6 +94,70 @@ class BaseRecording(BaseRecordingSnippets):
             txt += f"\n  file_path: {self._kwargs['file_path']}"
 
         return txt
+
+    def _repr_header(self):
+        extractor_name = self.__class__.__name__
+        num_segments = self.get_num_segments()
+        num_channels = self.get_num_channels()
+        sf_khz = self.get_sampling_frequency() / 1000.0
+        dtype = self.get_dtype()
+
+        total_samples = self.get_total_samples()
+        total_duration = self.get_total_duration()
+        total_memory_size = self.get_total_memory_size()
+
+        txt = (
+            f"{extractor_name}: "
+            f"{num_channels} channels - "
+            f"{sf_khz:0.1f}kHz - "
+            f"{num_segments} segments - "
+            f"{total_samples:,} samples - "
+            f"{convert_seconds_to_str(total_duration)} - "
+            f"{dtype} dtype - "
+            f"{convert_bytes_to_str(total_memory_size)}"
+        )
+
+        return txt
+
+    def _repr_html_(self):
+        common_style = "margin-left: 10px;"
+        border_style = "border:1px solid #ddd; padding:10px;"
+
+        html_header = f"<div style='{border_style}'><strong>{self._repr_header()}</strong></div>"
+
+        html_segments = ""
+        if self.get_num_segments() > 1:
+            html_segments += f"<details style='{common_style}'>  <summary><strong>Segments</strong></summary><ol>"
+            for segment_index in range(self.get_num_segments()):
+                samples = self.get_num_samples(segment_index)
+                duration = self.get_duration(segment_index)
+                memory_size = self.get_memory_size(segment_index)
+                samples_str = f"{samples:,}"
+                duration_str = convert_seconds_to_str(duration)
+                memory_size_str = convert_bytes_to_str(memory_size)
+                html_segments += (
+                    f"<li> Samples: {samples_str}, Duration: {duration_str}, Memory: {memory_size_str}</li>"
+                )
+
+            html_segments += "</ol></details>"
+
+        html_channel_ids = f"<details style='{common_style}'>  <summary><strong>Channel IDs</strong></summary><ul>"
+        html_channel_ids += f"{self.channel_ids} </details>"
+
+        html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
+        for key, value in self._annotations.items():
+            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
+        html_annotations += "</ul> </details>"
+
+        html_properties = f"<details style='{common_style}'><summary><strong>Channel Properties</strong></summary><ul>"
+        for key, value in self._properties.items():
+            # Add a further indent for each property
+            value_formatted = np.asarray(value)
+            html_properties += f"<details><summary> <strong> {key} </strong> </summary>{value_formatted}</details>"
+        html_properties += "</ul></details>"
+
+        html_repr = html_header + html_segments + html_channel_ids + html_annotations + html_properties
+        return html_repr
 
     def get_num_segments(self) -> int:
         """
@@ -242,34 +289,34 @@ class BaseRecording(BaseRecordingSnippets):
 
     def get_traces(
         self,
-        segment_index: Union[int, None] = None,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_ids: Union[Iterable, None] = None,
-        order: Union[str, None] = None,
-        return_scaled=False,
-        cast_unsigned=False,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_ids: list | np.array | tuple | None = None,
+        order: "C" | "F" | None = None,
+        return_scaled: bool = False,
+        cast_unsigned: bool = False,
     ):
         """Returns traces from recording.
 
         Parameters
         ----------
-        segment_index : Union[int, None], default: None
+        segment_index : int | None, default: None
             The segment index to get traces from. If recording is multi-segment, it is required, default: None
-        start_frame : Union[int, None], default: None
+        start_frame : int | None, default: None
             The start frame. If None, 0 is used, default: None
-        end_frame : Union[int, None], default: None
+        end_frame : int | None, default: None
             The end frame. If None, the number of samples in the segment is used, default: None
-        channel_ids : Union[Iterable, None], default: None
+        channel_ids : list | np.array | tuple | None, default: None
             The channel ids. If None, all channels are used, default: None
-        order : Union[str, None], default: None
-            The order of the traces ("C" | "F"). If None, traces are returned as they are, default: None
-        return_scaled : bool, default: None
+        order : "C" | "F" | None, default: None
+            The order of the traces ("C" | "F"). If None, traces are returned as they are
+        return_scaled : bool, default: False
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-            traces are scaled to uV, default: False
-        cast_unsigned : bool, default: None
+            traces are scaled to uV
+        cast_unsigned : bool, default: False
             If True and the traces are unsigned, they are cast to integer and centered
-            (an offset of (2**nbits) is subtracted), default: False
+            (an offset of (2**nbits) is subtracted)
 
         Returns
         -------
@@ -309,10 +356,15 @@ class BaseRecording(BaseRecordingSnippets):
                     warnings.warn(message)
 
             if not self.has_scaled():
-                raise ValueError(
-                    "This recording does not support return_scaled=True (need gain_to_uV and offset_"
-                    "to_uV properties)"
-                )
+                if self._dtype.kind == "f":
+                    # here we do not truely have scale but we assume this is scaled
+                    # this helps a lot for simulated data
+                    pass
+                else:
+                    raise ValueError(
+                        "This recording does not support return_scaled=True (need gain_to_uV and offset_"
+                        "to_uV properties)"
+                    )
             else:
                 gains = self.get_property("gain_to_uV")
                 offsets = self.get_property("offset_to_uV")
@@ -321,7 +373,7 @@ class BaseRecording(BaseRecordingSnippets):
                 traces = traces.astype("float32", copy=False) * gains + offsets
         return traces
 
-    def has_scaled_traces(self):
+    def has_scaled_traces(self) -> bool:
         """Checks if the recording has scaled traces
 
         Returns
@@ -420,7 +472,7 @@ class BaseRecording(BaseRecordingSnippets):
         rs.time_vector = times.astype("float64", copy=False)
 
         if with_warning:
-            warn(
+            warnings.warn(
                 "Setting times with Recording.set_times() is not recommended because "
                 "times are not always propagated across preprocessing"
                 "Use this carefully!"
@@ -439,13 +491,7 @@ class BaseRecording(BaseRecordingSnippets):
         rs = self._recording_segments[segment_index]
         return rs.time_to_sample_index(time_s)
 
-    def _save(self, format="binary", **save_kwargs):
-        """
-        This function replaces the old CacheRecordingExtractor, but enables more engines
-        for caching a results. At the moment only "binary" with memmap is supported.
-        We plan to add other engines, such as zarr and NWB.
-        """
-
+    def _save(self, format="binary", verbose: bool = False, **save_kwargs):
         # handle t_starts
         t_starts = []
         has_time_vectors = []
@@ -464,7 +510,7 @@ class BaseRecording(BaseRecordingSnippets):
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
 
-            write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
+            write_binary_recording(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
 
@@ -489,59 +535,24 @@ class BaseRecording(BaseRecordingSnippets):
             cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == "memory":
-            traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
-            from .numpyextractors import NumpyRecording
+            if kwargs.get("sharedmem", True):
+                from .numpyextractors import SharedMemoryRecording
 
-            cached = NumpyRecording(
-                traces_list, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids
-            )
+                cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
+            else:
+                from spikeinterface.core import NumpyRecording
+
+                cached = NumpyRecording.from_recording(self, **job_kwargs)
 
         elif format == "zarr":
-            from .zarrrecordingextractor import get_default_zarr_compressor, ZarrRecordingExtractor
+            from .zarrextractors import ZarrRecordingExtractor
 
-            zarr_kwargs = kwargs.copy()
-
-            zarr_root = zarr_kwargs["zarr_root"]
-            zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
-            zarr_root.attrs["num_segments"] = int(self.get_num_segments())
-            zarr_root.create_dataset(name="channel_ids", data=self.get_channel_ids(), compressor=None)
-
-            zarr_kwargs["dataset_paths"] = [f"traces_seg{i}" for i in range(self.get_num_segments())]
-            zarr_kwargs["dtype"] = kwargs.get("dtype", None) or self.get_dtype()
-
-            if "compressor" not in zarr_kwargs:
-                zarr_kwargs["compressor"] = compressor = get_default_zarr_compressor()
-                print(
-                    f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
-                    f"'compressor' argument"
-                )
-
-            write_traces_to_zarr(self, **zarr_kwargs, **job_kwargs)
-
-            # save probe
-            if self.get_property("contact_vector") is not None:
-                probegroup = self.get_probegroup()
-                zarr_root.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
-
-            # save time vector if any
-            t_starts = np.zeros(self.get_num_segments(), dtype="float64") * np.nan
-            for segment_index, rs in enumerate(self._recording_segments):
-                d = rs.get_times_kwargs()
-                time_vector = d["time_vector"]
-                if time_vector is not None:
-                    _ = zarr_root.create_dataset(
-                        name=f"times_seg{segment_index}",
-                        data=time_vector,
-                        filters=zarr_kwargs.get("filters", None),
-                        compressor=zarr_kwargs["compressor"],
-                    )
-                elif d["t_start"] is not None:
-                    t_starts[segment_index] = d["t_start"]
-
-            if np.any(~np.isnan(t_starts)):
-                zarr_root.create_dataset(name="t_starts", data=t_starts, compressor=None)
-
-            cached = ZarrRecordingExtractor(zarr_kwargs["zarr_path"], zarr_kwargs["storage_options"])
+            zarr_path = kwargs.pop("zarr_path")
+            storage_options = kwargs.pop("storage_options")
+            ZarrRecordingExtractor.write_recording(
+                self, zarr_path, storage_options, verbose=verbose, **kwargs, **job_kwargs
+            )
+            cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
         elif format == "nwb":
             # TODO implement a format based on zarr
@@ -589,9 +600,47 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
+    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
+        """
+        Returns a new recording object with a subset of channels.
+
+        Note that this method does not modify the current recording and instead returns a new recording object.
+
+        Parameters
+        ----------
+        channel_ids : list or np.array or tuple
+            The channel ids to select.
+        """
+        from .channelslice import ChannelSliceRecording
+
+        return ChannelSliceRecording(self, channel_ids)
+
+    def rename_channels(self, new_channel_ids: list | np.array | tuple) -> "BaseRecording":
+        """
+        Returns a new recording object with renamed channel ids.
+
+        Note that this method does not modify the current recording and instead returns a new recording object.
+
+        Parameters
+        ----------
+        new_channel_ids : list or np.array or tuple
+            The new channel ids. They are mapped positionally to the old channel ids.
+        """
+        from .channelslice import ChannelSliceRecording
+
+        assert len(new_channel_ids) == self.get_num_channels(), (
+            "new_channel_ids must have the same length as the " "number of channels in the recording"
+        )
+
+        return ChannelSliceRecording(self, renamed_channel_ids=new_channel_ids)
+
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceRecording
 
+        warnings.warn(
+            "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            DeprecationWarning,
+        )
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
 
@@ -613,9 +662,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         return SelectSegmentRecording(self, segment_indices=segment_indices)
 
-    def is_binary_compatible(self):
+    def is_binary_compatible(self) -> bool:
         """
-        Inform is this recording is "binary" compatible.
+        Checks if the recording is "binary" compatible.
         To be used before calling `rec.get_binary_description()`
 
         Returns
@@ -669,10 +718,10 @@ class BaseRecording(BaseRecordingSnippets):
         # good job you pass all crucible
         return True
 
-    def astype(self, dtype):
+    def astype(self, dtype, round: bool | None = None):
         from ..preprocessing.astype import astype
 
-        return astype(self, dtype=dtype)
+        return astype(self, dtype=dtype, round=round)
 
 
 class BaseRecordingSegment(BaseSegment):
@@ -766,24 +815,21 @@ class BaseRecordingSegment(BaseSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | np.array | tuple | None = None,
     ) -> np.ndarray:
         """
         Return the raw traces, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        start_frame: Union[int, None], default: None
+        start_frame: int | None, default: None
             start sample index, or zero if None
-        end_frame: Union[int, None], default: None
+        end_frame: int | None, default: None
             end_sample, or number of samples if None
-        channel_indices: Union[List, None], default: None
+        channel_indices: list | np.array | tuple | None, default: None
             Indices of channels to return, or all channels if None
-        order: list or None, default: None
-            The memory order of the returned array.
-            Use Order.C for C order, Order.F for Fortran order, or Order.K to keep the order of the underlying data
 
         Returns
         -------
