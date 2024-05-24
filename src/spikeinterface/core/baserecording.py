@@ -491,7 +491,7 @@ class BaseRecording(BaseRecordingSnippets):
         rs = self._recording_segments[segment_index]
         return rs.time_to_sample_index(time_s)
 
-    def _save(self, format="binary", **save_kwargs):
+    def _save(self, format="binary", verbose: bool = False, **save_kwargs):
         # handle t_starts
         t_starts = []
         has_time_vectors = []
@@ -510,7 +510,7 @@ class BaseRecording(BaseRecordingSnippets):
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
 
-            write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
+            write_binary_recording(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
 
@@ -540,6 +540,8 @@ class BaseRecording(BaseRecordingSnippets):
 
                 cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
             else:
+                from spikeinterface.core import NumpyRecording
+
                 cached = NumpyRecording.from_recording(self, **job_kwargs)
 
         elif format == "zarr":
@@ -547,7 +549,9 @@ class BaseRecording(BaseRecordingSnippets):
 
             zarr_path = kwargs.pop("zarr_path")
             storage_options = kwargs.pop("storage_options")
-            ZarrRecordingExtractor.write_recording(self, zarr_path, storage_options, **kwargs, **job_kwargs)
+            ZarrRecordingExtractor.write_recording(
+                self, zarr_path, storage_options, verbose=verbose, **kwargs, **job_kwargs
+            )
             cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
         elif format == "nwb":

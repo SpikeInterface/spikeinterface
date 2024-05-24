@@ -60,7 +60,7 @@ def sorting(dataset):
 
 
 def job_kwargs():
-    return dict(n_jobs=1, chunk_size=10000, progress_bar=True, verbose=True, mp_context="spawn")
+    return dict(n_jobs=1, chunk_size=10000, progress_bar=True, mp_context="spawn")
 
 
 @pytest.fixture(name="job_kwargs", scope="module")

@@ -46,7 +46,6 @@ job_keys = (
     "chunk_duration",
     "progress_bar",
     "mp_context",
-    "verbose",
     "max_threads_per_process",
 )
 
@@ -130,6 +129,8 @@ def split_job_kwargs(mixed_kwargs):
 
 def divide_segment_into_chunks(num_frames, chunk_size):
     if chunk_size is None:
+        chunks = [(0, num_frames)]
+    elif chunk_size > num_frames:
         chunks = [(0, num_frames)]
     else:
         n = num_frames // chunk_size
@@ -245,12 +246,12 @@ def ensure_chunk_size(
         else:
             raise ValueError("chunk_duration must be str or float")
     else:
+        # Edge case to define single chunk per segment for n_jobs=1.
+        # All chunking parameters equal None mean single chunk per segment
         if n_jobs == 1:
-            # not chunk computing
-            # TODO Discuss, Sam, is this something that we want to do?
-            # Even in single process mode, we should chunk the data to avoid loading the whole thing into memory I feel
-            # Am I wrong?
-            chunk_size = None
+            num_segments = recording.get_num_segments()
+            samples_in_larger_segment = max([recording.get_num_samples(segment) for segment in range(num_segments)])
+            chunk_size = samples_in_larger_segment
         else:
             raise ValueError("For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory")
 
