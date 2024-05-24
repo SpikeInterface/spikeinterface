@@ -536,7 +536,7 @@ def remove_duplicates(
     return labels, new_labels
 
 
-def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None, rank=5, multiple_passes=False):
+def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None, multiple_passes=False):
 
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, SharedMemoryRecording
@@ -551,19 +551,6 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
     fs = templates.sampling_frequency
     num_chans = len(templates.channel_ids)
-
-    if rank is not None:
-        templates_array = templates.get_dense_templates().copy()
-        templates_array -= templates_array.mean(axis=(1, 2))[:, None, None]
-
-        # Then we keep only the strongest components
-        temporal, singular, spatial = np.linalg.svd(templates_array, full_matrices=False)
-        temporal = temporal[:, :, :rank]
-        singular = singular[:, :rank]
-        spatial = spatial[:, :rank, :]
-
-        templates_array = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
-
     norms = np.linalg.norm(templates_array, axis=(1, 2))
     margin = max(templates.nbefore, templates.nafter)
     tmp_filename = None
@@ -591,11 +578,11 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
     local_params = method_kwargs.copy()
     amplitudes = [0.95, 1.05]
 
-    local_params.update(
-        {"templates": templates, "amplitudes": amplitudes, "stop_criteria": "omp_min_sps", "omp_min_sps": 0.5}
-    )
+    local_params.update({"templates": templates, "amplitudes": amplitudes})
 
-    ignore_ids = []
+    unit_ids = templates.unit_ids
+
+    ignore_inds = []
     similar_templates = [[], []]
 
     keep_searching = True
@@ -605,7 +592,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
         keep_searching = False
 
-        for i in list(set(range(nb_templates)).difference(ignore_ids)):
+        for i in list(set(range(nb_templates)).difference(ignore_inds)):
 
             ## Could be speed up by only computing the values for templates that are
             ## nearby
@@ -614,7 +601,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
             t_stop = margin + (i + 1) * (duration + margin)
 
             sub_recording = recording.frame_slice(t_start, t_stop)
-            local_params.update({"ignored_ids": ignore_ids + [i]})
+            local_params.update({"ignore_inds": ignore_inds + [i]})
             spikes, computed = find_spikes_from_templates(
                 sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
             )
@@ -644,18 +631,17 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
                 tgt_norm = np.linalg.norm(sum)
                 ratio = tgt_norm / ref_norm
-
                 if (amplitudes[0] < ratio) and (ratio < amplitudes[1]):
                     if multiple_passes:
                         keep_searching = True
                     if np.sum(valid) == 1:
-                        ignore_ids += [i]
-                        similar_templates[1] += [i]
-                        similar_templates[0] += [j]
+                        ignore_inds += [i]
+                        similar_templates[1] += [unit_ids[i]]
+                        similar_templates[0] += [unit_ids[j]]
                     elif np.sum(valid) > 1:
                         similar_templates[0] += [-1]
-                        ignore_ids += [i]
-                        similar_templates[1] += [i]
+                        ignore_inds += [i]
+                        similar_templates[1] += [unit_ids[i]]
 
                     if DEBUG:
                         import pylab as plt
@@ -663,7 +649,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
                         fig, axes = plt.subplots(1, 2)
                         from spikeinterface.widgets import plot_traces
 
-                        plot_traces(sub_recording, ax=axes[0])
+                        # plot_traces(sub_recording, ax=axes[0])
                         axes[1].plot(templates_array[i].flatten(), label=f"{ref_norm}")
                         axes[1].plot(sum.flatten(), label=f"{tgt_norm}")
                         axes[1].legend()
@@ -678,13 +664,12 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
 
 def remove_duplicates_via_matching(
-    templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None, rank=5, multiple_passes=False
+    templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None, multiple_passes=False
 ):
 
     similar_templates = detect_mixtures(
-        templates, method_kwargs, job_kwargs, tmp_folder=tmp_folder, rank=rank, multiple_passes=multiple_passes
+        templates, method_kwargs, job_kwargs, tmp_folder=tmp_folder, multiple_passes=multiple_passes
     )
-
     new_labels = peak_labels.copy()
 
     labels = np.unique(new_labels)
