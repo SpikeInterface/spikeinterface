@@ -182,6 +182,11 @@ class SimpleSorter(ComponentsBasedSorter):
 
             out = hdbscan.hdbscan(features_flat, **clust_params)
             peak_labels = out[0]
+        elif clust_method == "hdbscan-gpu":
+            from cuml.cluster import HDBSCAN as hdbscan
+
+            model = hdbscan(**clust_params).fit(features_flat)
+            peak_labels = model.labels_.copy()
         elif clust_method in ("kmeans"):
             from sklearn.cluster import MiniBatchKMeans
 
