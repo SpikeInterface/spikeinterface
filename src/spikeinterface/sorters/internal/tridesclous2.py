@@ -23,7 +23,6 @@ from spikeinterface.sortingcomponents.tools import cache_preprocessing
 import numpy as np
 
 
-
 class Tridesclous2Sorter(ComponentsBasedSorter):
     sorter_name = "tridesclous2"
 
@@ -96,7 +95,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         job_kwargs = fix_job_kwargs(job_kwargs)
         job_kwargs["progress_bar"] = verbose
 
-
         recording_raw = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
         num_chans = recording_raw.get_num_channels()
@@ -111,25 +109,37 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                     rec_for_motion = common_reference(rec_for_motion)
                     if verbose:
                         print("Start correct_motion()")
-                    _, motion_info = correct_motion(rec_for_motion, folder=sorter_output_folder / "motion", output_motion_info=True,
-                                                    **params["motion_correction"])
+                    _, motion_info = correct_motion(
+                        rec_for_motion,
+                        folder=sorter_output_folder / "motion",
+                        output_motion_info=True,
+                        **params["motion_correction"],
+                    )
                     if verbose:
                         print("Done correct_motion()")
 
-            recording = bandpass_filter(recording_raw, **params["filtering"],  dtype="float32")
+            recording = bandpass_filter(recording_raw, **params["filtering"], dtype="float32")
             recording = common_reference(recording)
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
-                    direction=1, border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
+                    direction=1,
+                    border_mode="force_extrapolate",
+                    spatial_interpolation_method="kriging",
+                    sigma_um=20.0,
+                    p=2,
                 )
 
                 recording = InterpolateMotionRecording(
-                    recording, motion_info["motion"], motion_info["temporal_bins"], motion_info["spatial_bins"], **interpolate_motion_kwargs
-                )                
+                    recording,
+                    motion_info["motion"],
+                    motion_info["temporal_bins"],
+                    motion_info["spatial_bins"],
+                    **interpolate_motion_kwargs,
+                )
 
             recording = zscore(recording, dtype="float32")
-            recording = whiten(recording, dtype="float32", mode="local", radius_um=100.)
+            recording = whiten(recording, dtype="float32", mode="local", radius_um=100.0)
 
             # used only if "folder" or "zarr"
             cache_folder = sorter_output_folder / "cache_preprocessing"
@@ -186,7 +196,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
         nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
-        
+
         templates_array = estimate_templates_with_accumulator(
             recording_for_peeler,
             sorting_pre_peeler.to_spike_vector(),
@@ -239,4 +249,3 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting
-

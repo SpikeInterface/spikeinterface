@@ -73,7 +73,7 @@ class MatchingStudy(BenchmarkStudy):
             ax = axs[0, count]
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
-        
+
         return fig
 
     def plot_performances_vs_snr(self, case_keys=None, figsize=None):
@@ -97,7 +97,7 @@ class MatchingStudy(BenchmarkStudy):
 
             if count == 2:
                 ax.legend()
-        
+
         return fig
 
     def plot_collisions(self, case_keys=None, figsize=None):
@@ -116,7 +116,7 @@ class MatchingStudy(BenchmarkStudy):
                 mode="lines",
                 good_only=False,
             )
-        
+
         return fig
 
     def plot_comparison_matching(

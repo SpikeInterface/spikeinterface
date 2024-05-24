@@ -187,7 +187,7 @@ class ClusteringStudy(BenchmarkStudy):
             ax = axs[0, count]
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
-        
+
         return fig
 
     def plot_performances_vs_snr(self, case_keys=None, figsize=(15, 15)):
@@ -247,7 +247,7 @@ class ClusteringStudy(BenchmarkStudy):
             fig.colorbar(im, ax=axs[0, count])
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
-        
+
         return fig
 
     def plot_metrics_vs_snr(self, metric="agreement", case_keys=None, figsize=(15, 5)):
@@ -301,7 +301,7 @@ class ClusteringStudy(BenchmarkStudy):
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
             axs[0, count].legend()
-        
+
         return fig
 
     def plot_metrics_vs_depth_and_snr(self, metric="agreement", case_keys=None, figsize=(15, 5)):
@@ -361,7 +361,7 @@ class ClusteringStudy(BenchmarkStudy):
             label = self.cases[key]["label"]
             axs[0, count].set_title(label)
             # axs[0, count].legend()
-        
+
         return fig
 
     def plot_unit_losses(self, case_before, case_after, metric="agreement", figsize=None):
@@ -492,7 +492,7 @@ class ClusteringStudy(BenchmarkStudy):
                 figs.append(fig)
             else:
                 print(key, "no overmerged")
-        
+
         return figs
 
     def plot_some_over_splited(self, case_keys=None, oversplit_score=0.05, max_units=5, figsize=None):

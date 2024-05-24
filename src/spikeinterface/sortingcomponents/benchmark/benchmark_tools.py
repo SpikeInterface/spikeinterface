@@ -228,12 +228,13 @@ class BenchmarkStudy:
             benchmark.save_run(bench_folder)
             benchmark.result["run_time"] = float(t1 - t0)
             benchmark.save_main(bench_folder)
-    
+
     def set_colors(self, colors=None, map_name="tab20"):
         if colors is None:
             case_keys = list(self.cases.keys())
-            self.colors = get_some_colors(case_keys, map_name=map_name, 
-                                          color_engine = "matplotlib", shuffle=False, margin=0)
+            self.colors = get_some_colors(
+                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0
+            )
         else:
             self.colors = colors
 
@@ -270,7 +271,7 @@ class BenchmarkStudy:
             rt = run_times.at[key, "run_times"]
             ax.bar(i, rt, width=0.8, color=colors[key])
         ax.set_xticks(np.arange(len(case_keys)))
-        ax.set_xticklabels(labels, rotation=45.)
+        ax.set_xticklabels(labels, rotation=45.0)
         return fig
 
         # ax = run_times.plot(kind="bar")

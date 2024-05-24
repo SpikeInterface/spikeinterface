@@ -157,19 +157,19 @@ class TdcClustering:
             features_folder,
             method="local_feature_clustering",
             method_kwargs=dict(
-
                 clusterer="hdbscan",
-                clusterer_kwargs={"min_cluster_size": min_cluster_size, "allow_single_cluster": True, "cluster_selection_method": "eom"},
-
+                clusterer_kwargs={
+                    "min_cluster_size": min_cluster_size,
+                    "allow_single_cluster": True,
+                    "cluster_selection_method": "eom",
+                },
                 # clusterer="isocut5",
                 # clusterer_kwargs={"min_cluster_size": min_cluster_size},
-
                 feature_name="sparse_tsvd",
                 # feature_name="sparse_wfs",
                 neighbours_mask=neighbours_mask,
                 waveforms_sparse_mask=sparse_mask,
                 min_size_split=min_cluster_size,
-                
                 n_pca_features=3,
                 scale_n_pca_by_depth=True,
             ),

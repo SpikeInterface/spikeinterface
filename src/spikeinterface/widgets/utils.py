@@ -20,7 +20,9 @@ except ImportError:
     HAVE_MPL = False
 
 
-def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None, margin=None):
+def get_some_colors(
+    keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None, margin=None
+):
     """
     Return a dict of colors for given keys
 
