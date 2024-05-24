@@ -239,3 +239,4 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting
+
