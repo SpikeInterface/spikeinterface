@@ -359,7 +359,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
             unit_channels,
             pca_model,
         )
-        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name="extract PCs", verbose=verbose, **job_kwargs)
+        processor = ChunkRecordingExecutor(
+            recording, func, init_func, init_args, job_name="extract PCs", verbose=verbose, **job_kwargs
+        )
         processor.run()
 
     def _fit_by_channel_local(self, n_jobs, progress_bar):

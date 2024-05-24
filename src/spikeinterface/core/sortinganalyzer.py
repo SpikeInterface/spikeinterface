@@ -902,7 +902,7 @@ class SortingAnalyzer:
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
 
-    def compute_one_extension(self, extension_name, save=True,  verbose=False,  **kwargs):
+    def compute_one_extension(self, extension_name, save=True, verbose=False, **kwargs):
         """
         Compute one extension.
 
@@ -1026,7 +1026,7 @@ class SortingAnalyzer:
             if extension_class.need_job_kwargs:
                 self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
             else:
-                self.compute_one_extension(extension_name, save=save,  verbose=verbose,  **extension_params)
+                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params)
         # then extensions with pipeline
         if len(extensions_with_pipeline) > 0:
             all_nodes = []
@@ -1056,7 +1056,7 @@ class SortingAnalyzer:
                 job_name=job_name,
                 gather_mode="memory",
                 squeeze_output=False,
-                verbose=verbose
+                verbose=verbose,
             )
 
             for r, result in enumerate(results):
@@ -1075,9 +1075,9 @@ class SortingAnalyzer:
         for extension_name, extension_params in extensions_post_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
-                self.compute_one_extension(extension_name, save=save,  verbose=verbose, **extension_params, **job_kwargs)
+                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
             else:
-                self.compute_one_extension(extension_name, save=save,  verbose=verbose, **extension_params)
+                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params)
 
     def get_saved_extension_names(self):
         """
