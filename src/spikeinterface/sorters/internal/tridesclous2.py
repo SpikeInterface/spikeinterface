@@ -7,7 +7,6 @@ from .si_based import ComponentsBasedSorter
 from spikeinterface.core import (
     get_noise_levels,
     NumpySorting,
-    get_channel_distances,
     estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
@@ -18,14 +17,11 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
-from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel, cache_preprocessing
+from spikeinterface.sortingcomponents.tools import cache_preprocessing
 
-# from spikeinterface.qualitymetrics import compute_snrs
 
 import numpy as np
 
-import pickle
-import json
 
 
 class Tridesclous2Sorter(ComponentsBasedSorter):
@@ -87,30 +83,19 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+
+        from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+        from spikeinterface.sortingcomponents.peak_selection import select_peaks
+        from spikeinterface.sortingcomponents.clustering.main import find_cluster_from_peaks
+        from spikeinterface.sortingcomponents.tools import remove_empty_templates
+        from spikeinterface.preprocessing import correct_motion
+        from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
         job_kwargs["progress_bar"] = verbose
 
-        from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-        from spikeinterface.core.node_pipeline import (
-            run_node_pipeline,
-            ExtractDenseWaveforms,
-            ExtractSparseWaveforms,
-            PeakRetriever,
-        )
-        from spikeinterface.sortingcomponents.peak_detection import detect_peaks, DetectPeakLocallyExclusive
-        from spikeinterface.sortingcomponents.peak_selection import select_peaks
-        from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeGridConvolution
-        from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
-
-        from spikeinterface.sortingcomponents.clustering.split import split_clusters
-        from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
-        from spikeinterface.sortingcomponents.clustering.tools import compute_template_from_sparse
-        from spikeinterface.sortingcomponents.clustering.main import find_cluster_from_peaks
-        from spikeinterface.sortingcomponents.tools import remove_empty_templates
-
-        from spikeinterface.preprocessing import correct_motion
-        from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 
         recording_raw = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -135,8 +120,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             recording = common_reference(recording)
 
             if params["apply_motion_correction"]:
-                # interpolate_motion_kwargs = motion_info["parameters"]["interpolate_motion_kwargs"]
-
                 interpolate_motion_kwargs = dict(
                     direction=1, border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
                 )
