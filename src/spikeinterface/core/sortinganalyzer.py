@@ -835,7 +835,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
-    def compute(self, input, save=True, extension_params=None, **kwargs):
+    def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs):
         """
         Compute one extension or several extensiosn.
         Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
@@ -883,11 +883,11 @@ class SortingAnalyzer:
         )
         """
         if isinstance(input, str):
-            return self.compute_one_extension(extension_name=input, save=save, **kwargs)
+            return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
         elif isinstance(input, dict):
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
-            self.compute_several_extensions(extensions=input, save=save, **job_kwargs)
+            self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
@@ -898,11 +898,11 @@ class SortingAnalyzer:
                         ext_name in input
                     ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
                     extensions[ext_name] = ext_params
-            self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)
+            self.compute_several_extensions(extensions=extensions, save=save, verbose=verbose, **job_kwargs)
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
 
-    def compute_one_extension(self, extension_name, save=True, **kwargs):
+    def compute_one_extension(self, extension_name, save=True,  verbose=False,  **kwargs):
         """
         Compute one extension.
 
@@ -925,7 +925,7 @@ class SortingAnalyzer:
         Returns
         -------
         result_extension: AnalyzerExtension
-            Return the extension instance.
+            Return the extension insdef computance.
 
         Examples
         --------
@@ -967,7 +967,7 @@ class SortingAnalyzer:
 
         return extension_instance
 
-    def compute_several_extensions(self, extensions, save=True, **job_kwargs):
+    def compute_several_extensions(self, extensions, save=True, verbose=False, **job_kwargs):
         """
         Compute several extensions
 
@@ -1021,9 +1021,9 @@ class SortingAnalyzer:
         for extension_name, extension_params in extensions_without_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
-                self.compute_one_extension(extension_name, save=save, **extension_params, **job_kwargs)
+                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
             else:
-                self.compute_one_extension(extension_name, save=save, **extension_params)
+                self.compute_one_extension(extension_name, save=save,  verbose=verbose,  **extension_params)
         # then extensions with pipeline
         if len(extensions_with_pipeline) > 0:
             all_nodes = []
@@ -1053,6 +1053,7 @@ class SortingAnalyzer:
                 job_name=job_name,
                 gather_mode="memory",
                 squeeze_output=False,
+                verbose=verbose
             )
 
             for r, result in enumerate(results):
@@ -1071,9 +1072,9 @@ class SortingAnalyzer:
         for extension_name, extension_params in extensions_post_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
-                self.compute_one_extension(extension_name, save=save, **extension_params, **job_kwargs)
+                self.compute_one_extension(extension_name, save=save,  verbose=verbose, **extension_params, **job_kwargs)
             else:
-                self.compute_one_extension(extension_name, save=save, **extension_params)
+                self.compute_one_extension(extension_name, save=save,  verbose=verbose, **extension_params)
 
     def get_saved_extension_names(self):
         """

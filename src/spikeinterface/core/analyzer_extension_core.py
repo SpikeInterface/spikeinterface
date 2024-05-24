@@ -145,7 +145,7 @@ class ComputeWaveforms(AnalyzerExtension):
     def nafter(self):
         return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         self.data.clear()
 
         recording = self.sorting_analyzer.recording
@@ -183,6 +183,7 @@ class ComputeWaveforms(AnalyzerExtension):
             sparsity_mask=sparsity_mask,
             copy=copy,
             job_name="compute_waveforms",
+            verbose=verbose,
             **job_kwargs,
         )
 
@@ -311,7 +312,7 @@ class ComputeTemplates(AnalyzerExtension):
         )
         return params
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         self.data.clear()
 
         if self.sorting_analyzer.has_extension("waveforms"):
@@ -339,6 +340,7 @@ class ComputeTemplates(AnalyzerExtension):
                 self.nafter,
                 return_scaled=return_scaled,
                 return_std=return_std,
+                verbose=verbose,
                 **job_kwargs,
             )
 

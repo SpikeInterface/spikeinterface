@@ -9,10 +9,8 @@ from typing import Tuple, Union, List, Dict, Any, Optional, Callable
 import numpy as np
 
 from spikeinterface.core.job_tools import (
-    ChunkRecordingExecutor,
     _shared_job_kwargs_doc,
     split_job_kwargs,
-    fix_job_kwargs,
 )
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances, get_random_data_chunks
 
