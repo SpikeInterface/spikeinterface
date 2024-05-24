@@ -961,7 +961,10 @@ class SortingAnalyzer:
 
         extension_instance = extension_class(self)
         extension_instance.set_params(save=save, **params)
-        extension_instance.run(save=save, **job_kwargs)
+        if extension_class.need_job_kwargs:
+            extension_instance.run(save=save, verbose=verbose, **job_kwargs)
+        else:
+            extension_instance.run(save=save)
 
         self.extensions[extension_name] = extension_instance
 
