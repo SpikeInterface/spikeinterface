@@ -49,9 +49,8 @@ class ComputeRandomSpikes(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _run(
-        self,
-    ):
+    def _run(self, verbose=False):
+
         self.data["random_spikes_indices"] = random_spikes_selection(
             self.sorting_analyzer.sorting,
             num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
@@ -145,7 +144,7 @@ class ComputeWaveforms(AnalyzerExtension):
     def nafter(self):
         return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         self.data.clear()
 
         recording = self.sorting_analyzer.recording
@@ -183,6 +182,7 @@ class ComputeWaveforms(AnalyzerExtension):
             sparsity_mask=sparsity_mask,
             copy=copy,
             job_name="compute_waveforms",
+            verbose=verbose,
             **job_kwargs,
         )
 
@@ -311,7 +311,7 @@ class ComputeTemplates(AnalyzerExtension):
         )
         return params
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         self.data.clear()
 
         if self.sorting_analyzer.has_extension("waveforms"):
@@ -339,6 +339,7 @@ class ComputeTemplates(AnalyzerExtension):
                 self.nafter,
                 return_scaled=return_scaled,
                 return_std=return_std,
+                verbose=verbose,
                 **job_kwargs,
             )
 
@@ -581,7 +582,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         # this do not depend on units
         return self.data
 
-    def _run(self):
+    def _run(self, verbose=False):
         self.data["noise_levels"] = get_noise_levels(
             self.sorting_analyzer.recording, return_scaled=self.sorting_analyzer.return_scaled, **self.params
         )

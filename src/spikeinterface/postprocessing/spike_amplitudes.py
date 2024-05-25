@@ -107,7 +107,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         nodes = [spike_retriever_node, spike_amplitudes_node]
         return nodes
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amps = run_node_pipeline(
@@ -116,6 +116,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name="spike_amplitudes",
             gather_mode="memory",
+            verbose=False,
         )
         self.data["amplitudes"] = amps
 
