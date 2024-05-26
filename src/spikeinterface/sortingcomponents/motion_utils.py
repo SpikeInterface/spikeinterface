@@ -1,23 +1,30 @@
+import json
+from pathlib import Path
 import numpy as np
 
+
+import spikeinterface
+from spikeinterface.core.core_tools import check_json
 
 
 
 # @charlie @sam
 # here TODO list for motion object
 #  * simple test for Motion: DONE
-#  * save/load Motion
-#  * make better test for Motion object with save/load
+#  * save/load Motion DONE
+#  * make simple test for Motion object with save/load DONE
 #  * propagate to estimate_motion : DONE
 #  * handle multi segment in estimate_motion(): maybe in another PR
-#  * propagate to motion_interpolation.py:
-#  * propagate to preprocessing/correct_motion()
+#  * propagate to motion_interpolation.py: ALMOST DONE
+#  * propagate to preprocessing/correct_motion(): 
 #  * generate drifting signals for test estimate_motion and interpolate_motion
 #  * uncomment assert in test_estimate_motion (aka debug torch vs numpy diff)
 #  * delegate times to recording object in
 #       * estimate motion
 #       * correct_motion_on_peaks()
 #       * interpolate_motion_on_traces()
+# update plot_motion() dans widget
+# 
 
 
 
@@ -126,14 +133,50 @@ class Motion:
             spatial_bins_um=self.spatial_bins_um,
         )
     
-    def save(self):
-        # TODO
-        pass
+    def save(self, folder):
+        folder = Path(folder)
+
+        folder.mkdir(exist_ok=False, parents=True)
+
+        info_file = folder / f"spikeinterface_info.json"
+        info = dict(
+            version=spikeinterface.__version__,
+            dev_mode=spikeinterface.DEV_MODE,
+            object="Motion",
+            num_segments=self.num_segments,
+            direction=self.direction,
+        )
+        with open(info_file, mode="w") as f:
+            json.dump(check_json(info), f, indent=4)
+
+        np.save(folder / "spatial_bins_um.npy", self.spatial_bins_um)
+
+        for segment_index in range(self.num_segments):
+            np.save(folder / f"displacement_seg{segment_index}.npy", self.displacement[segment_index])
+            np.save(folder / f"temporal_bins_s_seg{segment_index}.npy", self.temporal_bins_s[segment_index])
 
     @classmethod
-    def load(cls):
-        # TODO
-        pass
+    def load(cls, folder):
+        folder = Path(folder)
+
+        info_file = folder / f"spikeinterface_info.json"
+        if not info_file.exists():
+            raise IOError("Motion.load(folder) : the folder do not contain Motion")
+        
+        with open(info_file, "r") as f:
+            info = json.load(f)
+        if info["object"] != "Motion":
+            raise IOError("Motion.load(folder) : the folder do not contain Motion")
+
+        direction = info["direction"]
+        spatial_bins_um = np.load(folder / "spatial_bins_um.npy")
+        displacement = []
+        temporal_bins_s = []
+        for segment_index in range(info["num_segments"]):
+            displacement.append(np.load(folder / f"displacement_seg{segment_index}.npy"))
+            temporal_bins_s.append(np.load(folder / f"temporal_bins_s_seg{segment_index}.npy"))
+        
+        return cls(displacement, temporal_bins_s, spatial_bins_um, direction=direction)
 
     def __eq__(self, other):
 
