@@ -256,7 +256,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         new_projections = self._transform_waveforms(new_spikes, new_waveforms, pca_model, progress_bar=progress_bar)
         return new_projections
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         """
         Compute the PCs on waveforms extacted within the by ComputeWaveforms.
         Projections are computed only on the waveforms sampled by the SortingAnalyzer.
@@ -295,7 +295,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
     def _get_data(self):
         return self.data["pca_projection"]
 
-    def run_for_all_spikes(self, file_path=None, **job_kwargs):
+    def run_for_all_spikes(self, file_path=None, verbose=False, **job_kwargs):
         """
         Project all spikes from the sorting on the PCA model.
         This is a long computation because waveform need to be extracted from each spikes.
@@ -359,7 +359,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
             unit_channels,
             pca_model,
         )
-        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name="extract PCs", **job_kwargs)
+        processor = ChunkRecordingExecutor(
+            recording, func, init_func, init_args, job_name="extract PCs", verbose=verbose, **job_kwargs
+        )
         processor.run()
 
     def _fit_by_channel_local(self, n_jobs, progress_bar):

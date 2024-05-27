@@ -59,7 +59,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         new_unit_location = self.data["unit_locations"][unit_inds]
         return dict(unit_locations=new_unit_location)
 
-    def _run(self):
+    def _run(self, verbose=False):
         method = self.params["method"]
         method_kwargs = self.params["method_kwargs"]
 
