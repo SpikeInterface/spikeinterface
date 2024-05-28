@@ -16,15 +16,15 @@ from spikeinterface.core.core_tools import check_json
 #  * propagate to estimate_motion : DONE
 #  * handle multi segment in estimate_motion(): maybe in another PR
 #  * propagate to motion_interpolation.py: ALMOST DONE
-#  * propagate to preprocessing/correct_motion(): 
+#  * propagate to preprocessing/correct_motion(): ALMOST DONE
 #  * generate drifting signals for test estimate_motion and interpolate_motion
 #  * uncomment assert in test_estimate_motion (aka debug torch vs numpy diff)
 #  * delegate times to recording object in
 #       * estimate motion
 #       * correct_motion_on_peaks()
 #       * interpolate_motion_on_traces()
+# propagate to benchmark estimate motion
 # update plot_motion() dans widget
-# 
 
 
 
