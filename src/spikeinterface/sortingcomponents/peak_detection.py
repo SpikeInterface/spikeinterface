@@ -649,7 +649,9 @@ class DetectPeakMatchedFiltering(PeakDetector):
         num_channels = recording.get_num_channels()
         num_templates = num_channels * len(self.z_factors)
         weights = weights.reshape(num_templates, -1)
-        print(weights.shape)
+        if peak_sign == 'both':
+            weights = np.repeat(weights, 2, axis=0)
+            weights[1::2] *= -1
 
         templates = weights[:, None, :] * prototype[None, :, None]
         templates -= templates.mean(axis=(1, 2))[:, None, None]
