@@ -70,7 +70,7 @@ class ComputeCorrelograms(AnalyzerExtension):
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
-    def _run(self):
+    def _run(self, verbose=False):
         ccgs, bins = compute_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
         self.data["ccgs"] = ccgs
         self.data["bins"] = bins

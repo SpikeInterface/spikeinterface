@@ -440,7 +440,8 @@ class NwbRecordingExtractor(BaseRecording):
     stream_cache_path: str, Path, or None, default: None
         Specifies the local path for caching the file. Relevant only if `cache` is True.
     storage_options: dict | None = None,
-        Additional parameters for the storage backend (e.g. AWS credentials) used for "zarr" stream_mode.
+        These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+        This is only used on the "zarr" stream_mode.
     use_pynwb: bool, default: False
         Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
         to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
@@ -861,8 +862,10 @@ class NwbRecordingExtractor(BaseRecording):
 
     @staticmethod
     def fetch_available_electrical_series_paths(
-        file_path: str | Path, stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None
-    ) -> List[str]:
+        file_path: str | Path,
+        stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
+        storage_options: dict | None = None,
+    ) -> list[str]:
         """
         Retrieves the paths to all ElectricalSeries objects within a neurodata file.
 
@@ -873,7 +876,9 @@ class NwbRecordingExtractor(BaseRecording):
         stream_mode : "fsspec" | "remfile" | "zarr" | None, optional
             Determines the streaming mode for reading the file. Use this for optimized reading from
             different sources, such as local disk or remote servers.
-
+        storage_options: dict | None = None,
+            These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+            This is only used on the "zarr" stream_mode.
         Returns
         -------
         list of str
@@ -901,6 +906,7 @@ class NwbRecordingExtractor(BaseRecording):
         file_handle = read_file_from_backend(
             file_path=file_path,
             stream_mode=stream_mode,
+            storage_options=storage_options,
         )
 
         electrical_series_paths = _find_neurodata_type_from_backend(
@@ -988,7 +994,8 @@ class NwbSortingExtractor(BaseSorting):
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     storage_options: dict | None = None,
-        Additional parameters for the storage backend (e.g. AWS credentials) used for "zarr" stream_mode.
+        These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+        This is only used on the "zarr" stream_mode.
     use_pynwb: bool, default: False
         Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
         to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
