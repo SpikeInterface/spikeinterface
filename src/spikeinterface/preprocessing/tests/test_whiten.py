@@ -51,7 +51,9 @@ def test_whiten():
 
     # test regularization
     with pytest.raises(AssertionError):
-        W, M = compute_whitening_matrix(rec, "local", random_chunk_kwargs, apply_mean=False, radius_um=None, regularize=True)
+        W, M = compute_whitening_matrix(
+            rec, "local", random_chunk_kwargs, apply_mean=False, radius_um=None, regularize=True
+        )
     # W must be sparse
     np.sum(W == 0) == 6
 

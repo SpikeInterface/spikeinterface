@@ -77,15 +77,21 @@ class WhitenRecording(BasePreprocessor):
 
         if dtype_.kind == "i":
             assert int_scale is not None, "For recording with dtype=int you must set dtype=float32 OR set a int_scale"
-    
+
         if W is not None:
             W = np.asarray(W)
             if M is not None:
                 M = np.asarray(M)
         else:
             W, M = compute_whitening_matrix(
-                recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um, eps=eps, regularize=regularize,
-                regularize_kwargs=regularize_kwargs
+                recording,
+                mode,
+                random_chunk_kwargs,
+                apply_mean,
+                radius_um=radius_um,
+                eps=eps,
+                regularize=regularize,
+                regularize_kwargs=regularize_kwargs,
             )
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
@@ -142,8 +148,7 @@ whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
 
 
 def compute_whitening_matrix(
-    recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None, regularize=False,
-    regularize_kwargs=None
+    recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None, regularize=False, regularize_kwargs=None
 ):
     """
     Compute whitening matrix
@@ -197,12 +202,13 @@ def compute_whitening_matrix(
         cov = cov / data.shape[0]
     else:
         import sklearn.covariance
+
         if regularize_kwargs is None:
             regularize_kwargs = {}
-        regularize_kwargs['assume_centered'] = True
+        regularize_kwargs["assume_centered"] = True
         job_kwargs = get_global_job_kwargs()
-        if 'n_jobs' in job_kwargs and 'n_jobs' not in regularize_kwargs:
-            regularize_kwargs['n_jobs'] = job_kwargs['n_jobs'] 
+        if "n_jobs" in job_kwargs and "n_jobs" not in regularize_kwargs:
+            regularize_kwargs["n_jobs"] = job_kwargs["n_jobs"]
         estimator = sklearn.covariance.GraphicalLassoCV(**regularize_kwargs)
         estimator.fit(data)
         cov = estimator.covariance_
