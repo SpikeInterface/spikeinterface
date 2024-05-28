@@ -7,6 +7,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 from ..core import get_random_data_chunks, get_channel_distances
 from .filter import fix_dtype
+from ..core.globals import get_global_job_kwargs
 
 
 class WhitenRecording(BasePreprocessor):
@@ -40,6 +41,12 @@ class WhitenRecording(BasePreprocessor):
     M : 1d np.array or None, default: None
         Pre-computed means.
         M can be None when previously computed with apply_mean=False
+    regularize: bool, default False
+        Boolean to decide if we want to regularize the covariance matrix, using the GraphicalLassoCV() method
+        of sklearn
+    regularize_kwargs: None or dict
+        Dictionary of the parameters that could be provided to the GraphicalLassoCV() method of sklearn, if
+        the covariance matrix needs to be regularized
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
@@ -56,6 +63,7 @@ class WhitenRecording(BasePreprocessor):
         dtype=None,
         apply_mean=False,
         regularize=False,
+        regularize_kwargs={},
         mode="global",
         radius_um=100.0,
         int_scale=None,
@@ -69,14 +77,15 @@ class WhitenRecording(BasePreprocessor):
 
         if dtype_.kind == "i":
             assert int_scale is not None, "For recording with dtype=int you must set dtype=float32 OR set a int_scale"
-
+    
         if W is not None:
             W = np.asarray(W)
             if M is not None:
                 M = np.asarray(M)
         else:
             W, M = compute_whitening_matrix(
-                recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um, eps=eps, regularize=regularize
+                recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um, eps=eps, regularize=regularize,
+                regularize_kwargs=regularize_kwargs
             )
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
@@ -92,6 +101,7 @@ class WhitenRecording(BasePreprocessor):
             radius_um=radius_um,
             apply_mean=apply_mean,
             regularize=regularize,
+            regularize_kwargs=regularize_kwargs,
             int_scale=float(int_scale) if int_scale is not None else None,
             M=M.tolist() if M is not None else None,
             W=W.tolist(),
@@ -132,7 +142,8 @@ whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
 
 
 def compute_whitening_matrix(
-    recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None, regularize=False
+    recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None, regularize=False,
+    regularize_kwargs=None
 ):
     """
     Compute whitening matrix
@@ -156,7 +167,12 @@ def compute_whitening_matrix(
     eps : float or None, default: None
         Small epsilon to regularize SVD. If None, the default is set to 1e-8, but if the data is float type and scaled
         down to very small values, eps is automatically set to a small fraction (1e-3) of the median of the squared data.
-
+    regularize: bool, default False
+        Boolean to decide if we want to regularize the covariance matrix, using the GraphicalLassoCV() method
+        of sklearn
+    regularize_kwargs: None or dict
+        Dictionary of the parameters that could be provided to the GraphicalLassoCV() method of sklearn, if
+        the covariance matrix needs to be regularized
     Returns
     -------
     W : 2D array
@@ -181,8 +197,13 @@ def compute_whitening_matrix(
         cov = cov / data.shape[0]
     else:
         import sklearn.covariance
-
-        estimator = sklearn.covariance.GraphicalLassoCV(assume_centered=True)
+        if regularize_kwargs is None:
+            regularize_kwargs = {}
+        regularize_kwargs['assume_centered'] = True
+        job_kwargs = get_global_job_kwargs()
+        if 'n_jobs' in job_kwargs and 'n_jobs' not in regularize_kwargs:
+            regularize_kwargs['n_jobs'] = job_kwargs['n_jobs'] 
+        estimator = sklearn.covariance.GraphicalLassoCV(**regularize_kwargs)
         estimator.fit(data)
         cov = estimator.covariance_
 
