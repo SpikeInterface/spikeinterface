@@ -639,8 +639,6 @@ class DetectPeakMatchedFiltering(PeakDetector):
             peak_sign = "pos"
         elif peak_sign == "pos":
             assert prototype[idx] > 0, "Prototype should have a positive peak"
-        elif peak_sign == "both":
-            raise NotImplementedError("Matched filtering not working with peak_sign=both yet!")
 
         self.peak_sign = peak_sign
         self.nbefore = int(ms_before * recording.sampling_frequency / 1000)
@@ -651,6 +649,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         num_channels = recording.get_num_channels()
         num_templates = num_channels * len(self.z_factors)
         weights = weights.reshape(num_templates, -1)
+        print(weights.shape)
 
         templates = weights[:, None, :] * prototype[None, :, None]
         templates -= templates.mean(axis=(1, 2))[:, None, None]
