@@ -29,9 +29,7 @@ class TracePaddedRecording(BasePreprocessor):
         The value to pad with
     """
 
-    def __init__(
-        self, recording: BaseRecording, padding_start: int = 0, padding_end: int = 0, fill_value: float = 0.0
-    ):
+    def __init__(self, recording: BaseRecording, padding_start: int = 0, padding_end: int = 0, fill_value: float = 0.0):
         assert padding_end >= 0 and padding_start >= 0, "Paddings must be >= 0"
         super().__init__(recording=recording)
 
@@ -160,9 +158,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
             If None, sorts the channel indices in ascending y channel location and puts them at the
             beginning of the zero-channel-padded recording.
         """
-        BaseRecording.__init__(
-            self, recording.get_sampling_frequency(), np.arange(num_channels), recording.get_dtype()
-        )
+        BaseRecording.__init__(self, recording.get_sampling_frequency(), np.arange(num_channels), recording.get_dtype())
 
         if channel_mapping is not None:
             assert (
@@ -172,10 +168,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
                 "The new mapping cannot exceed total number of channels " "in the zero-chanenl-padded recording."
             )
         else:
-            if (
-                "locations" in recording.get_property_keys()
-                or "contact_vector" in recording.get_property_keys()
-            ):
+            if "locations" in recording.get_property_keys() or "contact_vector" in recording.get_property_keys():
                 self.channel_mapping = np.argsort(recording.get_channel_locations()[:, 1])
             else:
                 self.channel_mapping = np.arange(recording.get_num_channels())
@@ -196,9 +189,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
             if values is not None:
                 self.set_property(k, values, ids=self.channel_ids[self.channel_mapping])
 
-        self._kwargs = dict(
-            parent_recording=recording, num_channels=num_channels, channel_mapping=channel_mapping
-        )
+        self._kwargs = dict(parent_recording=recording, num_channels=num_channels, channel_mapping=channel_mapping)
 
 
 class ZeroChannelPaddedRecordingSegment(BasePreprocessorSegment):
