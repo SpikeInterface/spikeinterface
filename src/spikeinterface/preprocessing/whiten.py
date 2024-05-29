@@ -211,6 +211,7 @@ def compute_whitening_matrix(
             n_jobs = job_kwargs["n_jobs"]
             if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
                 import os
+
                 n_jobs = int(n_jobs * os.cpu_count())
             regularize_kwargs["n_jobs"] = n_jobs
         estimator = sklearn.covariance.GraphicalLassoCV(**regularize_kwargs)
