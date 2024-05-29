@@ -19,9 +19,7 @@ print(cache_folder.absolute())
 
 
 def test_estimate_and_correct_motion():
-    rec, sorting = generate_ground_truth_recording(
-        durations=[30.0], num_units=10, num_channels=12
-    )
+    rec, sorting = generate_ground_truth_recording(durations=[30.0], num_units=10, num_channels=12)
 
     print(rec)
 
