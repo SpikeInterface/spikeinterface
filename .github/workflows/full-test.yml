@@ -23,8 +23,10 @@ jobs:
       matrix:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", "macos-latest", "windows-latest" ]
+    defaults:
+      run:
+        shell: bash
     steps:
-      - shell: bash
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
