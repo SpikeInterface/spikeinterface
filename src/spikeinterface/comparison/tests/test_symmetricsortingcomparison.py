@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.core import generate_sorting
 from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import compare_two_sorters
 
@@ -30,7 +30,7 @@ def test_compare_two_sorters():
 
 
 def test_compare_multi_segment():
-    _, sort = generate_ground_truth_recording(durations=[10, 10])
+    sort = generate_sorting(durations=[10, 10])
 
     cmp_multi = compare_two_sorters(sort, sort)
 
