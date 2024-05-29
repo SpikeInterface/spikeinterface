@@ -650,7 +650,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         self.num_channels = recording.get_num_channels()
         self.num_templates = self.num_channels
 
-        if peak_sign == 'both':
+        if peak_sign == "both":
             weights = np.repeat(weights, 2, axis=1)
             weights[1::2] *= -1
             self.num_templates *= 2
@@ -717,7 +717,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
         # Find peaks and correct for time shift
         z_ind, peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
-        if self.peak_sign == 'both':
+        if self.peak_sign == "both":
             peak_chan_ind = peak_chan_ind % self.num_channels
 
         # If we want to estimate z
