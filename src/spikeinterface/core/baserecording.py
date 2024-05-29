@@ -382,7 +382,7 @@ class BaseRecording(BaseRecordingSnippets):
             True if the recording has scaled traces, False otherwise
         """
         warnings.warn(
-            "`has_scaled_traces` is deprecated and will be removed in 0.103.0. Use has_scaled() instead",
+            "`has_scaled_traces` is deprecated and will be removed in 0.103.0. Use has_scaleable_traces() instead",
             category=DeprecationWarning,
             stacklevel=2,
         )
