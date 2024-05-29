@@ -208,7 +208,11 @@ def compute_whitening_matrix(
         regularize_kwargs["assume_centered"] = True
         job_kwargs = get_global_job_kwargs()
         if "n_jobs" in job_kwargs and "n_jobs" not in regularize_kwargs:
-            regularize_kwargs["n_jobs"] = job_kwargs["n_jobs"]
+            n_jobs = job_kwargs["n_jobs"]
+            if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
+                import os
+                n_jobs = int(n_jobs * os.cpu_count())
+            regularize_kwargs["n_jobs"] = n_jobs
         estimator = sklearn.covariance.GraphicalLassoCV(**regularize_kwargs)
         estimator.fit(data)
         cov = estimator.covariance_
