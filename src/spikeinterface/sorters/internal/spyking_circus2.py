@@ -11,7 +11,6 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.template import Templates
-from spikeinterface.core.template_tools import get_template_extremum_amplitude
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
@@ -48,10 +47,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
         "merging": {
-            "minimum_spikes": 10,
-            "corr_diff_thresh": 0.5,
+            "minimum_spikes": 100,
+            "corr_diff_thresh": 0.25,
             "template_metric": "cosine",
-            "censor_correlograms_ms": 0.4,
             "num_channels": None,
         },
         "clustering": {"legacy": True},
