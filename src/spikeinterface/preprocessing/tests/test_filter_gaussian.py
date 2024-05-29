@@ -11,19 +11,19 @@ import matplotlib.pyplot as plt
 from spikeinterface.core import NumpyRecording
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing" / "gaussian_bandpass_filter"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing" / "gaussian_bandpass_filter"
+# if hasattr(pytest, "global_test_folder"):
+#     cache_folder = pytest.global_test_folder / "preprocessing" / "gaussian_bandpass_filter"
+# else:
+#     cache_folder = Path("cache_folder") / "preprocessing" / "gaussian_bandpass_filter"
+#
+# set_global_tmp_folder(cache_folder)
+# cache_folder.mkdir(parents=True, exist_ok=True)
 
-set_global_tmp_folder(cache_folder)
-cache_folder.mkdir(parents=True, exist_ok=True)
 
-
-def test_filter_gaussian():
+def test_filter_gaussian(tmp_path):
     recording = generate_recording(num_channels=3)
     recording.annotate(is_filtered=True)
-    recording = recording.save(folder=cache_folder / "recording")
+    recording = recording.save(folder=tmp_path / "recording")
 
     rec_filtered = gaussian_filter(recording)
 
@@ -37,8 +37,8 @@ def test_filter_gaussian():
     saved_loaded = load_extractor(rec_filtered.to_dict())
     check_recordings_equal(rec_filtered, saved_loaded, return_scaled=False)
 
-    saved_1job = rec_filtered.save(folder=cache_folder / "1job")
-    saved_2job = rec_filtered.save(folder=cache_folder / "2job", n_jobs=2, chunk_duration="1s")
+    saved_1job = rec_filtered.save(folder=tmp_path / "1job")
+    saved_2job = rec_filtered.save(folder=tmp_path / "2job", n_jobs=2, chunk_duration="1s")
 
     for seg_idx in range(rec_filtered.get_num_segments()):
         original_trace = rec_filtered.get_traces(seg_idx)
