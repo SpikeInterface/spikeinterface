@@ -333,7 +333,7 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
         method="matched_filtering",
         peak_sign="both",
         detect_threshold=5,
-        exclude_sweep_ms=0.1    ,
+        exclude_sweep_ms=0.1,
         prototype=prototype,
         ms_before=1.0,
         **job_kwargs,
@@ -347,7 +347,7 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
         peaks_local = peaks_by_channel_np
         peaks_mf_neg = peaks_local_mf_filtering
         peaks_mf_both = peaks_local_mf_filtering_both
-        labels = ['locally_exclusive', 'mf_neg', 'mf_both']
+        labels = ["locally_exclusive", "mf_neg", "mf_both"]
 
         fig, ax = plt.subplots()
         chan_offset = 500
@@ -358,7 +358,7 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
         for count, peaks in enumerate([peaks_local, peaks_mf_neg, peaks_mf_both]):
             sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
             ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count])
-        
+
         ax.legend()
         plt.show()
 
