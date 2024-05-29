@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-import numpy as np
 from tqdm.auto import tqdm, trange
+
+import numpy as np
 import scipy.interpolate
+
+from .motion_utils import Motion
+from .tools import make_multi_method_doc
 
 try:
     import torch
@@ -11,11 +15,6 @@ try:
     HAVE_TORCH = True
 except ImportError:
     HAVE_TORCH = False
-
-from .tools import make_multi_method_doc
-from .motion_utils import Motion
-
-
 
 
 def estimate_motion(
@@ -59,7 +58,7 @@ def estimate_motion(
     **histogram section**
 
     direction: "x" | "y" | "z", default: "y"
-        Dimension on which the motion is estimated
+        Dimension on which the motion is estimated. "y" is depth along the probe.
     bin_duration_s: float, default: 10
         Bin duration in second
     bin_um: float, default: 10
@@ -157,7 +156,7 @@ def estimate_motion(
     )
 
     # replace nan by zeros
-    motion_array[np.isnan(motion_array)] = 0
+    np.nan_to_num(motion_array, copy=False)
 
     if post_clean:
         motion_array = clean_motion_vector(
@@ -177,13 +176,10 @@ def estimate_motion(
     # TODO handle multi segment
     motion = Motion([motion_array], [temporal_bins], non_rigid_window_centers, direction=direction)
 
-
     if output_extra_check:
         return motion, extra_check
     else:
         return motion
-
-
 
 
 class DecentralizedRegistration:
@@ -339,7 +335,7 @@ class DecentralizedRegistration:
             extra_check["spatial_hist_bin_edges"] = spatial_hist_bin_edges
 
         # temporal bins are bin center
-        temporal_bins = temporal_hist_bin_edges[:-1] + bin_duration_s // 2.0
+        temporal_bins = 0.5 * (temporal_hist_bin_edges[1:] + temporal_hist_bin_edges[:-1])
 
         motion = np.zeros((temporal_bins.size, len(non_rigid_windows)), dtype=np.float64)
         windows_iter = non_rigid_windows
@@ -822,7 +818,6 @@ def compute_pairwise_displacement(
     """
     Compute pairwise displacement
     """
-    from scipy import sparse
     from scipy import linalg
 
     assert conv_engine in ("torch", "numpy"), f"'conv_engine' must be 'torch' or 'numpy'"
