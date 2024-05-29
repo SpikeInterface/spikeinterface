@@ -206,13 +206,14 @@ def run_sorter_by_property(
     sorter_name,
     recording,
     grouping_property,
-    working_folder,
+    folder,
     mode_if_folder_exists=None,
     engine="loop",
     engine_kwargs={},
     verbose=False,
     docker_image=None,
     singularity_image=None,
+    working_folder: None = None,
     **sorter_params,
 ):
     """
@@ -232,7 +233,7 @@ def run_sorter_by_property(
         The recording to be sorted
     grouping_property: object
         Property to split by before sorting
-    working_folder: str
+    folder: str | Path
         The working directory.
     mode_if_folder_exists: bool or None, default: None
         Must be None. This is deprecated.
@@ -263,18 +264,26 @@ def run_sorter_by_property(
     processing.
 
     >>> sorting = si.run_sorter_by_property("tridesclous", recording, grouping_property="group",
-                                            working_folder="sort_by_group", engine="joblib",
+                                            folder="sort_by_group", engine="joblib",
                                             engine_kwargs={"n_jobs": 4})
 
     """
     if mode_if_folder_exists is not None:
         warnings.warn(
-            "run_sorter_by_property(): mode_if_folder_exists is not used anymore",
+            "run_sorter_by_property(): mode_if_folder_exists is not used anymore and will be removed in 0.102.0",
             DeprecationWarning,
             stacklevel=2,
         )
 
-    working_folder = Path(working_folder).absolute()
+    if working_folder is not None:
+        warnings.warn(
+            "`working_folder` is deprecated and will be removed in 0.103. Please use folder instead",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        folder = working_folder
+
+    working_folder = Path(folder).absolute()
 
     assert grouping_property in recording.get_property_keys(), (
         f"The 'grouping_property' {grouping_property} is not " f"a recording property!"
@@ -286,7 +295,7 @@ def run_sorter_by_property(
         job = dict(
             sorter_name=sorter_name,
             recording=rec,
-            output_folder=working_folder / str(k),
+            folder=working_folder / str(k),
             verbose=verbose,
             docker_image=docker_image,
             singularity_image=singularity_image,
