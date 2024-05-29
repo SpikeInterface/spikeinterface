@@ -68,6 +68,7 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         if groups is not None:
             self.set_channel_groups(groups)
         self.set_channel_gains(gain)
+        self.set_channel_offsets(0)
 
 
 read_sinaps_research_platform = define_function_from_class(
