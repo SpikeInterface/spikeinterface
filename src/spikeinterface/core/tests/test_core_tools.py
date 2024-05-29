@@ -14,12 +14,6 @@ from spikeinterface.core.core_tools import (
 )
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-
-
 def test_path_utils_functions():
     if platform.system() != "Windows":
         # posix path
