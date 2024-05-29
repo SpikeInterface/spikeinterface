@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import namedtuple
 from collections.abc import Iterable
+from warnings import warn
 
 import numpy as np
 
@@ -18,7 +19,7 @@ class CurationSorting:
 
     Parameters
     ----------
-    parent_sorting: Recording
+    sorting: Recording
         The recording object
     properties_policy: "keep" | "remove", default: "keep"
         Policy used to propagate properties after split and merge operation. If "keep" the properties will be
@@ -32,12 +33,13 @@ class CurationSorting:
         Sorting object with the selected units merged
     """
 
-    def __init__(self, parent_sorting, make_graph=False, properties_policy="keep"):
+    def __init__(self, sorting, make_graph=False, properties_policy="keep"):
+
         # to allow undo and redo a list of sortingextractors is keep
-        self._sorting_stages = [parent_sorting]
+        self._sorting_stages = [sorting]
         self._sorting_stages_i = 0
         self._properties_policy = properties_policy
-        parent_units = parent_sorting.get_unit_ids()
+        parent_units = sorting.get_unit_ids()
         self._make_graph = make_graph
         if make_graph:
             # to easily allow undo and redo a list of graphs with the history of the curation is keep
@@ -52,7 +54,7 @@ class CurationSorting:
         else:
             self.max_used_id = max(parent_units) if len(parent_units) > 0 else 0
 
-        self._kwargs = dict(parent_sorting=parent_sorting, make_graph=make_graph, properties_policy=properties_policy)
+        self._kwargs = dict(parent_sorting=sorting, make_graph=make_graph, properties_policy=properties_policy)
 
     def _get_unused_id(self, n=1):
         # check units in the graph to the next unused unit id
