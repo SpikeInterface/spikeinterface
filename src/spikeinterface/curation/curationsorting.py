@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import namedtuple
 from collections.abc import Iterable
-from warnings import warn
 
 import numpy as np
 
@@ -123,7 +122,7 @@ class CurationSorting:
         elif new_unit_id not in units_to_merge:
             assert new_unit_id not in current_sorting.unit_ids, f"new_unit_id already exists!"
         new_sorting = MergeUnitsSorting(
-            parent_sorting=current_sorting,
+            sorting=current_sorting,
             units_to_merge=units_to_merge,
             new_unit_ids=[new_unit_id],
             delta_time_ms=delta_time_ms,
