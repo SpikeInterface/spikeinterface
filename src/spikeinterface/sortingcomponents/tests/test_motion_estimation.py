@@ -28,10 +28,10 @@ if DEBUG:
     plt.ion()
     plt.show()
 
-
-def setup_module():
+@pytest.fixture(scope="module")
+def setup_module(tmp_path_factory):
     recording, sorting = make_dataset()
-
+    cache_folder = tmp_path_factory.mktemp('cache_folder')
     cache_folder.mkdir(parents=True, exist_ok=True)
 
     # detect and localize
@@ -50,13 +50,17 @@ def setup_module():
         progress_bar=True,
         pipeline_nodes=pipeline_nodes,
     )
-    np.save(cache_folder / "dataset_peaks.npy", peaks)
-    np.save(cache_folder / "dataset_peak_locations.npy", peak_locations)
 
+    peaks_path = cache_folder / "dataset_peaks.npy"
+    np.save(peaks_path, peaks)
+    peak_location_path = cache_folder / "dataset_peak_locations.npy"
+    np.save(peak_location_path, peak_locations)
 
-def test_estimate_motion():
-    recording, sorting = make_dataset()
+    return recording, sorting, peaks_path, peak_location_path
 
+def test_estimate_motion(setup_module):
+    # recording, sorting = make_dataset()
+    recording, sorting, peaks_path, peak_location_path = setup_module
     peaks = np.load(cache_folder / "dataset_peaks.npy")
     peak_locations = np.load(cache_folder / "dataset_peak_locations.npy")
 
@@ -234,6 +238,6 @@ def test_estimate_motion():
     # assert np.testing.assert_almost_equal(motion0, motion1)
 
 
-if __name__ == "__main__":
-    setup_module()
-    test_estimate_motion()
+# if __name__ == "__main__":
+#     setup_module()
+#     test_estimate_motion()
