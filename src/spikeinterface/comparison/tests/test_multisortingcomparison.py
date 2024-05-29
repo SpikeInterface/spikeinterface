@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.core import generate_sorting
 from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComparison
 
@@ -73,7 +73,7 @@ def test_compare_multiple_sorters():
 
 def test_compare_multi_segment():
     num_segments = 3
-    _, sort = generate_ground_truth_recording(durations=[10] * num_segments)
+    sort = generate_sorting(durations=[10] * num_segments)
 
     cmp_multi = compare_multiple_sorters([sort, sort, sort])
 
