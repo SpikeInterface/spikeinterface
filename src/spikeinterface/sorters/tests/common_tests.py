@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 import shutil
 
-from spikeinterface.extractors import toy_example
+from spikeinterface import generate_ground_truth_recording
 from spikeinterface.sorters import run_sorter
 from spikeinterface.core.snippets_tools import snippets_from_sorting
 
@@ -24,7 +24,7 @@ class SorterCommonTestSuite:
     SorterClass = None
 
     def setUp(self):
-        recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
+        recording, sorting_gt = generate_ground_truth_recording(num_channels=4, durations=[60], seed=0)
         rec_folder = cache_folder / "rec"
         if rec_folder.is_dir():
             shutil.rmtree(rec_folder)
@@ -80,7 +80,7 @@ class SnippetsSorterCommonTestSuite:
     SorterClass = None
 
     def setUp(self):
-        recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
+        recording, sorting_gt = generate_ground_truth_recording(num_channels=4, durations=[60], seed=0)
         snippets_folder = cache_folder / "snippets"
         if snippets_folder.is_dir():
             shutil.rmtree(snippets_folder)
