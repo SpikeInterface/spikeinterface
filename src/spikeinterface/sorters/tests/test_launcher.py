@@ -8,7 +8,7 @@ from pathlib import Path
 
 from spikeinterface.core import load_extractor
 
-from spikeinterface import generate_ground_truth_recording
+from spikeinterface import generate_ground_truth_recording, generate_recording
 from spikeinterface.sorters import run_sorter_jobs, run_sorter_by_property
 
 
@@ -27,7 +27,7 @@ sorters = ["tridesclous2"]
 def setup_module():
     base_seed = 42
     for i in range(num_recordings):
-        rec, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=base_seed + i)
+        rec = generate_recording(num_channels=8, durations=[10.0], seed=base_seed + i)
         rec_folder = cache_folder / f"toy_rec_{i}"
         if rec_folder.is_dir():
             shutil.rmtree(rec_folder)

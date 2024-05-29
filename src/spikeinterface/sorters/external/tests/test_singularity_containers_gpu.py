@@ -3,9 +3,9 @@ import shutil
 
 import pytest
 
-from spikeinterface import generate_ground_truth_recording
+from spikeinterface import generate_ground_truth_recording, generate_recording
 from spikeinterface.core.core_tools import is_editable_mode
-import spikeinterface.extractors as se
+
 import spikeinterface.sorters as ss
 
 os.environ["SINGULARITY_DISABLE_CACHE"] = "true"
@@ -24,7 +24,7 @@ def check_gh_settings():
 
 
 def generate_run_kwargs():
-    test_recording, _ = generate_ground_truth_recording(durations=[30], seed=0, num_channels=64)
+    test_recording = generate_recording(durations=[30], seed=0, num_channels=64)
     test_recording = test_recording.save(name="toy")
     test_recording.set_channel_gains(1)
     test_recording.set_channel_offsets(0)
