@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-from pathlib import Path
 import shutil
 
 from spikeinterface.generation import (
@@ -16,10 +15,10 @@ from spikeinterface.core import Templates, BaseRecording
 from probeinterface import generate_multi_columns_probe
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "generation"
-else:
-    cache_folder = Path("cache_folder") / "generation"
+@pytest.fixture(scope="module")
+def create_cache_folder(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
+    return cache_folder
 
 
 def make_some_templates():
@@ -121,7 +120,8 @@ def test_DriftingTemplates():
     )
 
 
-def test_InjectDriftingTemplatesRecording():
+def test_InjectDriftingTemplatesRecording(create_cache_folder):
+    cache_folder = create_cache_folder
     templates = make_some_templates()
     probe = templates.probe
 
