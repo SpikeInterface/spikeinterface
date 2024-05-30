@@ -59,7 +59,7 @@ def test_gh_curation():
     sorting = generate_sorting(num_units=10)
     # curated link:
     # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
-    gh_uri = "gh://chrishalcrow/spikeinterface/remove-mearec-from-testing/src/spikeinterface/curation/tests/sv-sorting-curation.json"
+    gh_uri = "gh://SpikeInterface/spikeinterface/main/src/spikeinterface/curation/tests/sv-sorting-curation.json"
     sorting_curated_gh = apply_sortingview_curation(sorting, uri_or_json=gh_uri, verbose=True)
 
     assert len(sorting_curated_gh.unit_ids) == 9
