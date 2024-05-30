@@ -11,14 +11,6 @@ import matplotlib.pyplot as plt
 from spikeinterface.core import NumpyRecording
 
 
-# if hasattr(pytest, "global_test_folder"):
-#     cache_folder = pytest.global_test_folder / "preprocessing" / "gaussian_bandpass_filter"
-# else:
-#     cache_folder = Path("cache_folder") / "preprocessing" / "gaussian_bandpass_filter"
-#
-# set_global_tmp_folder(cache_folder)
-# cache_folder.mkdir(parents=True, exist_ok=True)
-
 
 def test_filter_gaussian(tmp_path):
     recording = generate_recording(num_channels=3)
