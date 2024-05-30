@@ -1,12 +1,11 @@
 import pytest
-from pathlib import Path
+
 import shutil
 
 import numpy as np
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-
 
 from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
@@ -15,10 +14,6 @@ from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfM
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sortingcomponents"
-else:
-    cache_folder = Path("cache_folder") / "sortingcomponents"
 
 DEBUG = False
 
@@ -56,11 +51,11 @@ def setup_module(tmp_path_factory):
     peak_location_path = cache_folder / "dataset_peak_locations.npy"
     np.save(peak_location_path, peak_locations)
 
-    return recording, sorting, peaks_path, peak_location_path
+    return recording, sorting, cache_folder
 
 def test_estimate_motion(setup_module):
     # recording, sorting = make_dataset()
-    recording, sorting, peaks_path, peak_location_path = setup_module
+    recording, sorting, cache_folder = setup_module
     peaks = np.load(cache_folder / "dataset_peaks.npy")
     peak_locations = np.load(cache_folder / "dataset_peak_locations.npy")
 
@@ -238,6 +233,6 @@ def test_estimate_motion(setup_module):
     # assert np.testing.assert_almost_equal(motion0, motion1)
 
 
-# if __name__ == "__main__":
-#     setup_module()
-#     test_estimate_motion()
+if __name__ == "__main__":
+    setup_module()
+    test_estimate_motion()
