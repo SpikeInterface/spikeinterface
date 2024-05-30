@@ -1,21 +1,16 @@
 import pytest
 import numpy as np
-from pathlib import Path
 
-from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import generate_recording
 
 from spikeinterface.preprocessing import whiten, scale, compute_whitening_matrix
+@pytest.fixture(scope='module')
+def create_cache_folder(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    return cache_folder
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
-
-
-def test_whiten():
+def test_whiten(create_cache_folder):
+    cache_folder = create_cache_folder
     rec = generate_recording(num_channels=4)
 
     print(rec.get_channel_locations())
