@@ -7,8 +7,6 @@ from spikeinterface.core import generate_recording
 
 from spikeinterface.preprocessing import correct_motion, load_motion_info
 
-from spikeinterface.extractors import toy_example
-
 import numpy as np
 
 
