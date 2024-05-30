@@ -73,15 +73,16 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         self.set_channel_gains(gain)
         self.set_channel_offsets(0)
 
-        if probe_type == 'p1024s1NHP':
-            probe = get_probe(manufacturer='sinaps',
-                            probe_name='SiNAPS-p1024s1NHP')
-            # now wire the probe
-            channel_indices = np.arange(1024)
-            probe.set_device_channel_indices(channel_indices)
-            self.set_probe(probe,in_place=True)
-        else:
-            raise ValueError(f"Unknown probe type: {probe_type}")
+        if (stream_name == 'filt') | (stream_name == 'raw'):
+            if (probe_type == 'p1024s1NHP'):
+                probe = get_probe(manufacturer='sinaps',
+                                probe_name='SiNAPS-p1024s1NHP')
+                # now wire the probe
+                channel_indices = np.arange(1024)
+                probe.set_device_channel_indices(channel_indices)
+                self.set_probe(probe,in_place=True)
+            else:
+                raise ValueError(f"Unknown probe type: {probe_type}")
 
 read_sinaps_research_platform = define_function_from_class(
     source_class=SinapsResearchPlatformRecordingExtractor, name="read_sinaps_research_platform"
