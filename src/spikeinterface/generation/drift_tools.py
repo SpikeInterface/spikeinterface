@@ -513,3 +513,47 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_num_samples(self) -> int:
         return self.num_samples
+
+
+def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5):
+    """
+    Fonction used to split a sorting based on the amplitudes of the units. This
+    might be used for benchmarking meta merging step (see components)
+    """
+
+    if sorting_analyzer.get_extension('spike_amplitudes') is None:
+        sorting_analyzer.compute("spike_amplitudes")
+
+    sa = sorting_analyzer
+
+    from spikeinterface.core.numpyextractors import NumpySorting
+    from spikeinterface.core.template_tools import get_template_extremum_channel
+    extremum_channel_inds = get_template_extremum_channel(sa, outputs="index")
+    spikes = sa.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+    new_spikes = spikes.copy()
+    amplitudes = sa.get_extension('spike_amplitudes').get_data()
+    nb_splits = int(splitting_probability*len(sa.sorting.unit_ids))
+    to_split_ids = np.random.choice(sa.sorting.unit_ids, nb_splits, replace=False)
+    max_index = np.max(spikes['unit_index'])
+    new_unit_ids = list(sa.sorting.unit_ids.copy())
+    splitted_pairs = []
+    for unit_id in to_split_ids:
+        ind_mask = spikes['unit_index'] == sa.sorting.id_to_index(unit_id)
+
+        m = amplitudes[ind_mask].mean()
+        s = amplitudes[ind_mask].std()
+        thresh = m + 0.2*s
+
+        amplitude_mask = (amplitudes > thresh)
+        mask = ind_mask & amplitude_mask
+        new_spikes['unit_index'][mask] = max_index + 1
+
+        amplitude_mask = (amplitudes > m) * (amplitudes < thresh)
+        mask = ind_mask & amplitude_mask
+        new_spikes['unit_index'][mask] = (max_index + 1)*np.random.rand(np.sum(mask)) > 0.5
+        max_index += 1
+        new_unit_ids += [max(new_unit_ids)+1]
+        splitted_pairs += [(unit_id, new_unit_ids[-1])]
+
+    new_sorting = NumpySorting(new_spikes, sampling_frequency=sa.sampling_frequency, unit_ids=new_unit_ids)
+    return new_sorting, splitted_pairs
