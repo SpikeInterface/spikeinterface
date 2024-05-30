@@ -131,7 +131,7 @@ def create_sorting_analyzer(
     else:
         sparsity = None
 
-    if return_scaled and not recording.has_scaled_traces() and recording.get_dtype().kind == "i":
+    if return_scaled and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
         print("create_sorting_analyzer: recording does not have scaling to uV, forcing return_scaled=False")
         return_scaled = False
 
