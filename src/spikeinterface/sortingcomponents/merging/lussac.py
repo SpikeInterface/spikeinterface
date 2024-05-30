@@ -86,7 +86,9 @@ def aurelien_merge(
             # Compuyting the cross-contamination difference
             spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
             spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
-            CC, p_value = utils.estimate_cross_contamination(spike_train1, spike_train2, refractory_period, limit=CC_threshold)
+            CC, p_value = utils.estimate_cross_contamination(
+                spike_train1, spike_train2, refractory_period, limit=CC_threshold
+            )
 
             if p_value < 0.05:
                 continue
