@@ -5,8 +5,10 @@ from probeinterface import get_probe
 
 from ..core.core_tools import define_function_from_class
 from ..core import BaseRecording, BaseRecordingSegment
+from ..preprocessing import UnsignedToSignedRecording
 
-class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
+
+class SinapsResearchPlatformH5RecordingExtractor_Unsigned(BaseRecording):
     extractor_name = "SinapsResearchPlatformH5"
     mode = "file"
     name = "sinaps_research_platform_h5"
@@ -42,6 +44,7 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
         # set gain
         self.set_channel_gains(sinaps_info["gain"])
         self.set_channel_offsets(sinaps_info["offset"])
+        self.num_bits = sinaps_info["num_bits"]
 
         # set other properties
 
@@ -55,6 +58,7 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
             self.set_probe(probe, in_place=True)
         else:
             raise ValueError(f"Unknown probe type: {sinaps_info['probe_type']}")
+
 
     def __del__(self):
         self._rf.close()
@@ -85,10 +89,20 @@ class SiNAPSRecordingSegment(BaseRecordingSegment):
                 traces = self._stream.get('FilteredData')[channel_indices, start_frame:end_frame].T
         return traces
 
+class SinapsResearchPlatformH5RecordingExtractor(UnsignedToSignedRecording):
+    extractor_name = "SinapsResearchPlatformH5"
+    mode = "file"
+    name = "sinaps_research_platform_h5"
+
+    def __init__(self, file_path):
+        recording = SinapsResearchPlatformH5RecordingExtractor_Unsigned(file_path)
+        UnsignedToSignedRecording.__init__(self, recording, bit_depth=recording.num_bits)
+
 
 read_sinaps_research_platform_h5 = define_function_from_class(
     source_class=SinapsResearchPlatformH5RecordingExtractor, name="read_sinaps_research_platform_h5"
 )
+
 
 def openSiNAPSFile(filename):
     """Open an SiNAPS hdf5 file, read and return the recording info."""
@@ -103,13 +117,14 @@ def openSiNAPSFile(filename):
 
     parameters = rf.require_group('Parameters')
     gain = parameters.get('VoltageConverter')[0]
-    offset = -2048 * gain
+    offset = 0
 
     nRecCh, nFrames = data.shape
 
     samplingRate = parameters.get('SamplingFrequency')[0]
 
     probe_type = str(rf.require_group('Advanced Recording Parameters').require_group('Probe').get('probeType').asstr()[...])
+    num_bits = int(np.log2(rf.require_group('Advanced Recording Parameters').require_group('DAQ').get('nbADCLevels')[0]))
 
     sinaps_info = {
         "filehandle": rf,
@@ -121,6 +136,7 @@ def openSiNAPSFile(filename):
         "offset": offset,
         "dtype": dtype,
         "probe_type": probe_type,
+        "num_bits": num_bits,
     }
 
     return sinaps_info
