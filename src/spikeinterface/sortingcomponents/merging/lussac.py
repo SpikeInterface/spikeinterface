@@ -13,7 +13,7 @@ def aurelien_merge(
     analyzer,
     refractory_period,
     template_threshold: float = 0.2,
-    CC_threshold: float = 0.15,
+    CC_threshold: float = 0.1,
     max_shift: int = 10,
     max_channels: int = 10,
     template_metric="cosine",
@@ -86,9 +86,9 @@ def aurelien_merge(
             # Compuyting the cross-contamination difference
             spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
             spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
-            CC = utils.estimate_cross_contamination(spike_train1, spike_train2, refractory_period)
+            CC, p_value = utils.estimate_cross_contamination(spike_train1, spike_train2, refractory_period, limit=CC_threshold)
 
-            if CC > CC_threshold:
+            if p_value < 0.05:
                 continue
 
             pairs.append((unit_id1, unit_id2))

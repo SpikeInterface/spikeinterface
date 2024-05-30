@@ -13,7 +13,11 @@ class CircusMerging(BaseMergingEngine):
     Meta merging inspired from the Lussac metric
     """
 
-    default_params = {"templates": None}
+    default_params = {"templates": None, 
+                      "minimum_spikes": 50,
+                      "corr_diff_thresh": 0.5,
+                      "template_metric": "cosine",
+                      "num_channels": None}
 
     def __init__(self, recording, sorting, kwargs):
         self.default_params.update(**kwargs)
