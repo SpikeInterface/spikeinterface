@@ -73,7 +73,7 @@ jobs:
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         run: |
-          pytest -m "not sorters_external" --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          pytest -m "not sorters_external" -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY
           pip install tabulate
           python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY
