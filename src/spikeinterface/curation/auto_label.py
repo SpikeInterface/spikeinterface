@@ -6,6 +6,8 @@ from sklearn.pipeline import Pipeline
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.qualitymetrics.quality_metric_calculator import get_default_qm_params
 from spikeinterface.postprocessing.template_metrics import _default_function_kwargs as default_template_metrics_params
+
+
 class ModelBasedClassification:
     """
     Class for performing model-based classification on spike sorting data.
@@ -78,7 +80,7 @@ class ModelBasedClassification:
         return classified_units
 
     def _get_metrics_for_classification(self):
-        """ Check if all required metrics are present and return a DataFrame of metrics for classification """
+        """Check if all required metrics are present and return a DataFrame of metrics for classification"""
 
         try:
             quality_metrics = self.sorting_analyzer.extensions["quality_metrics"].data["metrics"]
@@ -100,7 +102,7 @@ class ModelBasedClassification:
         return calculated_metrics
 
     def _check_params_for_classification(self):
-        """ Check that quality and template metrics parameters match those used to train the model
+        """Check that quality and template metrics parameters match those used to train the model
         NEEDS UPDATING TO PULL IN PARAMS FROM TRAINING DATA"""
 
         try:
@@ -108,7 +110,7 @@ class ModelBasedClassification:
             template_metric_params = self.sorting_analyzer.extensions["template_metrics"].params["qm_params"]
         except KeyError:
             raise ValueError("Quality and template metrics must be computed before classification")
-        
+
         # TODO: check metrics_params match those used to train the model - how?
         # TEMP - check that params match the default. Need to add ability to check against model training params
         default_quality_metrics_params = get_default_qm_params()
@@ -124,6 +126,7 @@ class ModelBasedClassification:
 
         # TODO: decide whether to also check params against parent extensions of metrics (e.g. waveforms, templates)
         # This would need to account for the fact that these extensions may no longer exist
+
 
 def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline: Pipeline, required_metrics: Sequence[str]):
     """
