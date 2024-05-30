@@ -53,6 +53,42 @@ class MergingStudy(BenchmarkStudy):
         benchmark = MergingBenchmark(recording, gt_sorting, params, **init_kwargs)
         return benchmark
 
+    def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
+        import pandas as pd
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        if isinstance(case_keys[0], str):
+            index = pd.Index(case_keys, name=self.levels)
+        else:
+            index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
+
+        columns = ["num_gt", "num_sorter", "num_well_detected"]
+        comp = self.get_result(case_keys[0])["gt_comparison"]
+        if comp.exhaustive_gt:
+            columns.extend(["num_false_positive", "num_redundant", "num_overmerged", "num_bad"])
+        count_units = pd.DataFrame(index=index, columns=columns, dtype=int)
+
+        for key in case_keys:
+            comp = self.get_result(key)["gt_comparison"]
+            assert comp is not None, "You need to do study.run_comparisons() first"
+
+            gt_sorting = comp.sorting1
+            sorting = comp.sorting2
+
+            count_units.loc[key, "num_gt"] = len(gt_sorting.get_unit_ids())
+            count_units.loc[key, "num_sorter"] = len(sorting.get_unit_ids())
+            count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(well_detected_score)
+
+            if comp.exhaustive_gt:
+                count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
+                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(overmerged_score)
+                count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(redundant_score)
+                count_units.loc[key, "num_bad"] = comp.count_bad_units()
+
+        return count_units
+
     def plot_agreements(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -65,3 +101,8 @@ class MergingStudy(BenchmarkStudy):
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
 
         return fig
+
+    def plot_unit_counts(self, case_keys=None, figsize=None, **extra_kwargs):
+        from spikeinterface.widgets.widget_list import plot_study_unit_counts
+
+        plot_study_unit_counts(self, case_keys, figsize=figsize, **extra_kwargs)
