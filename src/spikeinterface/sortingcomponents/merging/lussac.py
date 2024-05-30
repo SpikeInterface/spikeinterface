@@ -9,13 +9,15 @@ from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph, apply_merges_to_sorting
 
 
-def aurelien_merge(analyzer, 
-                   refractory_period, 
-                   template_threshold: float = 0.2, 
-                   CC_threshold: float = 0.15,
-                   max_shift: int = 10, 
-                   max_channels: int = 10,
-                   template_metric="cosine") -> list[tuple]:
+def aurelien_merge(
+    analyzer,
+    refractory_period,
+    template_threshold: float = 0.2,
+    CC_threshold: float = 0.15,
+    max_shift: int = 10,
+    max_channels: int = 10,
+    template_metric="cosine",
+) -> list[tuple]:
     """
     Looks at a sorting analyzer, and returns a list of potential pairwise merges.
 
@@ -51,16 +53,18 @@ def aurelien_merge(analyzer,
             # Computing template difference
             template1 = analyzer.get_extension("templates").get_unit_template(unit_id1)
             template2 = analyzer.get_extension("templates").get_unit_template(unit_id2)
-    
-            best_channel_indices = np.argsort(np.max(np.abs(template1) + np.abs(template2), axis=0))[::-1][:max_channels]
-            
+
+            best_channel_indices = np.argsort(np.max(np.abs(template1) + np.abs(template2), axis=0))[::-1][
+                :max_channels
+            ]
+
             if template_metric == "l1":
                 norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
             elif template_metric == "l2":
                 norm = np.sum(template1**2) + np.sum(template2**2)
             elif template_metric == "cosine":
                 norm = np.linalg.norm(template1) * np.linalg.norm(template2)
-            
+
             all_shift_diff = []
             n = len(template1)
             for shift in range(-max_shift, max_shift + 1):
