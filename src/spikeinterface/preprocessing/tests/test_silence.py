@@ -1,8 +1,5 @@
 import pytest
-from pathlib import Path
-import shutil
 
-from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import generate_recording
 
 from spikeinterface.preprocessing import silence_periods
@@ -13,15 +10,16 @@ from spikeinterface.core import get_noise_levels
 import numpy as np
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
+@pytest.fixture(scope='module')
+def create_cache_folder(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    return cache_folder
 
 
-def test_silence():
+def test_silence(create_cache_folder):
+
+    cache_folder = create_cache_folder
+
     rec = generate_recording()
 
     rec0 = silence_periods(rec, list_periods=[[[0, 1000], [5000, 6000]], []], mode="zeros")
