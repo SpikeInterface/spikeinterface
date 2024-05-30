@@ -15,6 +15,7 @@ def validate_curation_dict(curation_dict):
 
     """
 
+    supported_versions = {1}
     unit_set = set(curation_dict["unit_ids"])
     labeled_unit_set = set([lbl["unit_id"] for lbl in curation_dict["manual_labels"]])
     merged_units_set = set(sum(curation_dict["merged_unit_groups"], []))
@@ -31,4 +32,79 @@ def validate_curation_dict(curation_dict):
             raise ValueError("Some units belong to multiple merge groups")
     if len(removed_units_set.intersection(merged_units_set)) != 0:
         raise ValueError("Some units were merged and deleted")
+    if curation_dict["format_version"] not in supported_versions:
+        raise ValueError(f"Format version ({curation_dict['format_version']}) not supported. "
+                         f"Only {supported_versions} are valid")
+    # Check the labels exclusivity
+    for lbl in curation_dict["manual_labels"]:
+        lbl_key = lbl["label_category_key"]
+        is_exclusive = curation_dict["labels_definition"][lbl_key]["auto_eclusive"]
+        if is_exclusive and not isinstance(lbl["label_category_value"], str):
+            raise ValueError(f"{lbl_key} are mutually exclusive labels. {lbl['label_category_value']} is invalid")
+        elif not is_exclusive and not isinstance(lbl["label_category_value"], list):
+            raise ValueError(f"{lbl_key} are not mutually exclusive labels. "
+                             f"{lbl['label_category_value']} should be a lists")
     return True
+
+
+def convert_from_sortingview(sortingview_dict, destination_format=1):
+    """
+    Converts the sortingview curation format into a curation dictionary
+    Couple of caveats:
+        * The list of units is not available in the original sortingview dictionary. We set it to None
+        * Labels can not be mutually exclusive.
+        * Labels have no category, so we regroup them under the "all_labels" category
+
+    Parameters
+    ----------
+    sortingview_dict : dict
+        Dictionary containing the curation information from sortingview
+    destination_format : int
+        Version of the format to use.
+        Default to 1
+
+    Returns
+    -------
+    curation_dict: dict
+        A curation dictionary
+    """
+    merge_groups = sortingview_dict["mergeGroups"]
+    merged_units = sum(merge_groups, [])
+    if len(merged_units) > 0:
+        unit_id_type = int if isinstance(merged_units[0], int) else str
+    else:
+        unit_id_type = str
+    all_units = []
+    all_labels = []
+    manual_labels = []
+    general_cat = "all_labels"
+    for unit_id, l_labels in sortingview_dict["labelsByUnit"].items():
+        all_labels.extend(l_labels)
+        u_id = unit_id_type(unit_id)
+        all_units.append(u_id)
+        manual_labels.append({'unit_id': u_id, "label_category_key": general_cat,
+                              "label_category_value": l_labels})
+    labels_def = {"all_labels":
+                  {"name": "all_labels",
+                   "labels": all_labels,
+                   "auto_eclusive": False}}
+
+    curation_dict = {"unit_ids": None,
+                     "labels_definition": labels_def,
+                     "manual_labels": manual_labels,
+                     "merged_unit_groups": merge_groups,
+                     "removed_units": [],
+                     "format_version": destination_format}
+
+    return curation_dict
+
+
+if __name__ == "__main__":
+    import json
+    with open("src/spikeinterface/curation/tests/sv-sorting-curation-str.json") as jf:
+        sv_curation = json.load(jf)
+    cur_d = convert_from_sortingview(sortingview_dict=sv_curation)
+
+
+
+

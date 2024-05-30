@@ -38,6 +38,7 @@ valid_int = {
     ],
     "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
+    "format_version": 1
 }
 
 
@@ -58,6 +59,7 @@ valid_str = {
     ],
     "merged_unit_groups": [["u3", "u6"], ["u10", "u14", "u20"]],  # one cell goes into at most one list
     "removed_units": ["u31", "u42"],  # Can not be  in the merged_units
+    "format_version": 1
 }
 
 # This is a failure example
@@ -78,6 +80,7 @@ duplicate_merge = {
     ],
     "merged_unit_groups": [[3, 6, 10], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
+    "format_version": 1
 }
 
 
@@ -99,6 +102,7 @@ merged_and_removed = {
     ],
     "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [3, 31, 42],  # Can not be  in the merged_units
+    "format_version": 1
 }
 
 
@@ -119,6 +123,7 @@ unknown_merged_unit = {
     ],
     "merged_unit_groups": [[3, 6, 99], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
+    "format_version": 1
 }
 
 
@@ -139,6 +144,7 @@ unknown_removed_unit = {
     ],
     "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42, 99],  # Can not be  in the merged_units
+    "format_version": 1
 }
 
 
