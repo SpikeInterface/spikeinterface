@@ -29,8 +29,12 @@ class MergingBenchmark(Benchmark):
         self.result = {}
 
     def run(self, **job_kwargs):
-        self.result["sorting"], self.result['merges'] = merge_spikes(
-            self.recording, self.splitted_sorting, method=self.method, method_kwargs=self.method_kwargs, extra_outputs=True
+        self.result["sorting"], self.result["merges"] = merge_spikes(
+            self.recording,
+            self.splitted_sorting,
+            method=self.method,
+            method_kwargs=self.method_kwargs,
+            extra_outputs=True,
         )
 
     def compute_result(self, **result_params):
@@ -38,10 +42,7 @@ class MergingBenchmark(Benchmark):
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
         self.result["gt_comparison"] = comp
 
-    _run_key_saved = [
-        ("sorting", "sorting"),
-        ("merges", "pickle")
-    ]
+    _run_key_saved = [("sorting", "sorting"), ("merges", "pickle")]
     _result_key_saved = [("gt_comparison", "pickle")]
 
 
