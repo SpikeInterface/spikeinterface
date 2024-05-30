@@ -1,4 +1,4 @@
-name: Full spikeinterface tests codecov
+name: Complete tests
 
 on:
   workflow_dispatch:
@@ -30,9 +30,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install packages
-        uses: ./.github/actions/build-test-environment
-      - name: Shows installed packages by pip, git-annex and cached testing files
-        uses: ./.github/actions/show-test-environment
+        run: |
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
+          python -m pip install -U pip  # Official recommended way
+          pip install -e .[test,extractors,streaming_extractors,full]
+          git config --global user.email "
       - name: Installad datalad
         run: |
           pip install datalad-installer
@@ -76,6 +79,7 @@ jobs:
           source ${{ github.workspace }}/test_env/bin/activate
           pytest -m "not sorters_external" --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY
+          pip install tabulate
           python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY
           cat $GITHUB_STEP_SUMMARY
           rm report_full.txt
