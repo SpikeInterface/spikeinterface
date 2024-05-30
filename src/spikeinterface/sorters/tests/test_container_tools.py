@@ -22,10 +22,10 @@ def setup_module():
     for test_dir in test_dirs:
         if test_dir.exists():
             shutil.rmtree(test_dir)
-    rec1 = generate_recording(durations=[10])
+    rec1, _ = generate_ground_truth_recording(durations=[10])
     rec1 = rec1.save(folder=cache_folder / "mono")
 
-    rec2 = generate_recording(durations=[10, 10, 10])
+    rec2, _ = generate_ground_truth_recording(durations=[10, 10, 10])
     rec2 = rec2.save(folder=cache_folder / "multi")
 
 
