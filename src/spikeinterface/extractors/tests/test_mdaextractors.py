@@ -4,13 +4,15 @@ from spikeinterface.core.testing import check_recordings_equal, check_sortings_e
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "extractors"
-else:
-    cache_folder = Path("cache_folder") / "extractors"
+
+@pytest.fixture(scope="module")
+def create_cache_folder(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
+    return cache_folder
 
 
-def test_mda_extractors():
+def test_mda_extractors(create_cache_folder):
+    cache_folder = create_cache_folder
     rec, sort = generate_ground_truth_recording(durations=[10.0], num_units=10)
 
     MdaRecordingExtractor.write_recording(rec, cache_folder / "mdatest")
