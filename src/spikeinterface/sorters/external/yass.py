@@ -96,7 +96,7 @@ class YassSorter(BaseSorter):
 
                             1.  Retraining Neural Networks (Default)
 
-                            rec, sort = se.toy_example(duration=300)
+                            rec, sort = generate_ground_truth_recording(durations=[300])
                             sorting_yass = ss.run_yass(rec, '/home/cat/Downloads/test2')
 
 
