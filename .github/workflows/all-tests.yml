@@ -24,7 +24,6 @@ jobs:
         os: [ubuntu-latest, macos-13, windows-latest]
     steps:
       - uses: actions/checkout@v4
-      - run: git fetch --prune --unshallow --tags
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -70,8 +69,6 @@ jobs:
           datalad-installer --sudo ok git-annex --method brew
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
-      - name: Test download
-        run: pytest -rA spikeinterface/core/tests/test_datasets.py
       - name: run tests
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
