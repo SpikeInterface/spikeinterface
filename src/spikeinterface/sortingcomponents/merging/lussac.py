@@ -16,7 +16,7 @@ def aurelien_merge(
     CC_threshold: float = 0.1,
     max_shift: int = 10,
     max_channels: int = 10,
-    template_metric="cosine",
+    template_metric="l1",
 ) -> list[tuple]:
     """
     Looks at a sorting analyzer, and returns a list of potential pairwise merges.
@@ -121,8 +121,11 @@ class LussacMerging(BaseMergingEngine):
             self.analyzer.compute(["random_spikes", "templates"])
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
 
-    def run(self):
+    def run(self, extra_outputs=False):
         merges = aurelien_merge(self.analyzer, **self.default_params)
         merges = resolve_merging_graph(self.sorting, merges)
         sorting = apply_merges_to_sorting(self.sorting, merges)
-        return sorting
+        if extra_outputs:
+            return sorting, merges
+        else:
+            return sorting

@@ -42,7 +42,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
-        "merging": {"method" : "lussac"},
+        "merging": {"method" : "circus"},
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
         "apply_preprocessing": True,
@@ -164,7 +164,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
 
-        peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params)
+        peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params)  
 
         if params["matched_filtering"]:
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)

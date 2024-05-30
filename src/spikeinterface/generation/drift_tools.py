@@ -515,9 +515,8 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-def split_sorting_by_time(sorting_analyzer, splitting_probability=0.5):
+def split_sorting_by_time(sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95):
     sorting = sorting_analyzer.sorting
-    partial_split_prob = 0.95
     sorting_split = sorting.select_units(sorting.unit_ids)
     split_units = []
     original_units = []

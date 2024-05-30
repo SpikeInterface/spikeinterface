@@ -37,8 +37,11 @@ class CircusMerging(BaseMergingEngine):
             self.analyzer.compute(["random_spikes", "templates"])
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
 
-    def run(self):
+    def run(self, extra_outputs=False):
         merges = get_potential_auto_merge(self.analyzer, **self.default_params)
         merges = resolve_merging_graph(self.sorting, merges)
         sorting = apply_merges_to_sorting(self.sorting, merges)
-        return sorting
+        if extra_outputs:
+            return sorting, merges
+        else:
+            return sorting

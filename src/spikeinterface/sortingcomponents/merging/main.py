@@ -36,13 +36,7 @@ def merge_spikes(
 
     method_class = merging_methods[method]
     method_instance = method_class(recording, sorting, method_kwargs)
-    new_sorting = method_instance.run()
-
-    if extra_outputs:
-        return new_sorting, method_kwargs
-    else:
-        return new_sorting
-
+    return method_instance.run(extra_outputs=extra_outputs)
 
 # generic class for template engine
 class BaseMergingEngine:
