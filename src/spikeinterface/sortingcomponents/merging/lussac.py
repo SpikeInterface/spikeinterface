@@ -36,7 +36,7 @@ def aurelien_merge(analyzer,
     max_channels: int
         The maximum number of channels to consider when comparing the templates.
     """
-    
+
     pairs = []
     sorting = analyzer.sorting
     recording = analyzer.recording
@@ -97,16 +97,13 @@ class LussacMerging(BaseMergingEngine):
     Meta merging inspired from the Lussac metric
     """
 
-    default_params = {
-        'templates' : None,
-        'refractory_period' : (0.4, 1.9)
-    }
-    
+    default_params = {"templates": None, "refractory_period": (0.4, 1.9)}
+
     def __init__(self, recording, sorting, kwargs):
         self.default_params.update(**kwargs)
         self.sorting = sorting
         self.recording = recording
-        self.templates = self.default_params.pop('templates', None)
+        self.templates = self.default_params.pop("templates", None)
         if self.templates is not None:
             sparsity = self.templates.sparsity
             templates_array = self.templates.get_dense_templates().copy()
@@ -117,9 +114,9 @@ class LussacMerging(BaseMergingEngine):
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
         else:
             self.analyzer = create_sorting_analyzer(sorting, recording, format="memory")
-            self.analyzer.compute(['random_spikes', 'templates'])
+            self.analyzer.compute(["random_spikes", "templates"])
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
-        
+
     def run(self):
         merges = aurelien_merge(self.analyzer, **self.default_params)
         merges = resolve_merging_graph(self.sorting, merges)
