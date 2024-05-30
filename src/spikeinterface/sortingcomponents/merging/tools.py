@@ -1,6 +1,7 @@
 import numpy as np
 from spikeinterface.core import NumpySorting
 
+
 def resolve_merging_graph(sorting, potential_merges):
     """
     Function to provide, given a list of potential_merges, a resolved merging

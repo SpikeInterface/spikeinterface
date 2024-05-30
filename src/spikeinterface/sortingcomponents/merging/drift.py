@@ -12,7 +12,7 @@ def compute_presence_distance(analyzer, unit1, unit2, bin_duration_s=2, percenti
     """
     Compute the presence distance between two units.
 
-    The presence distance is defined as the sum of the absolute difference between the sum of 
+    The presence distance is defined as the sum of the absolute difference between the sum of
     the normalized firing profiles of the two units and a constant firing profile.
 
     Parameters
@@ -56,7 +56,7 @@ def compute_presence_distance(analyzer, unit1, unit2, bin_duration_s=2, percenti
         d = np.sum(np.abs(h1 + h2 - np.ones_like(h1))) / analyzer.get_total_duration()
     else:
         d = np.nan
-    
+
     return d
 
 
@@ -79,7 +79,7 @@ def get_potential_drift_merges(analyzer, similarity_threshold=0.7, presence_dist
     -------
     potential_merges: list
         The list of potential merges
-    
+
     """
     assert analyzer.get_extension("templates") is not None, "The templates extension is required"
     assert analyzer.get_extension("template_similarity") is not None, "The template_similarity extension is required"
@@ -90,7 +90,7 @@ def get_potential_drift_merges(analyzer, similarity_threshold=0.7, presence_dist
     bins = np.arange(0, analyzer.get_num_samples(), bin_size)
 
     for i, unit1 in enumerate(analyzer.unit_ids):
-        for j, unit2 in enumerate(analyzer.unit_ids):    
+        for j, unit2 in enumerate(analyzer.unit_ids):
             if i != j and similarity[i, j] > similarity_threshold:
                 d = compute_presence_distance(analyzer, unit1, unit2, bins=bins)
                 distances[i, j] = d
@@ -106,24 +106,23 @@ def get_potential_drift_merges(analyzer, similarity_threshold=0.7, presence_dist
     return potential_merges
 
 
-
 class DriftMerging(BaseMergingEngine):
     """
     Meta merging inspired from the Lussac metric
     """
 
     default_params = {
-        'templates' : None,
-        'similarity_threshold' : 0.7, 
-        'presence_distance_threshold' : 0.1, 
-        'bin_duration_s' : 2
+        "templates": None,
+        "similarity_threshold": 0.7,
+        "presence_distance_threshold": 0.1,
+        "bin_duration_s": 2,
     }
-    
+
     def __init__(self, recording, sorting, kwargs):
         self.default_params.update(**kwargs)
         self.sorting = sorting
         self.recording = recording
-        self.templates = self.default_params.pop('templates', None)
+        self.templates = self.default_params.pop("templates", None)
         if self.templates is not None:
             sparsity = self.templates.sparsity
             templates_array = self.templates.get_dense_templates().copy()
@@ -134,9 +133,9 @@ class DriftMerging(BaseMergingEngine):
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
         else:
             self.analyzer = create_sorting_analyzer(sorting, recording, format="memory")
-            self.analyzer.compute(['random_spikes', 'templates'])
+            self.analyzer.compute(["random_spikes", "templates"])
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
-        self.analyzer.compute(['template_similarity'])
+        self.analyzer.compute(["template_similarity"])
 
     def run(self):
         merges = get_potential_drift_merges(self.analyzer, **self.default_params)

@@ -9,8 +9,14 @@ from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph, apply_merges_to_sorting
 
 
-def aurelien_merge(analyzer, refractory_period, template_threshold: float = 0.12, CC_threshold: float = 0.15,
-                   max_shift: int = 10, max_channels: int = 10) -> list[tuple]:
+def aurelien_merge(
+    analyzer,
+    refractory_period,
+    template_threshold: float = 0.12,
+    CC_threshold: float = 0.15,
+    max_shift: int = 10,
+    max_channels: int = 10,
+) -> list[tuple]:
     """
     Looks at a sorting analyzer, and returns a list of potential pairwise merges.
 
@@ -31,7 +37,7 @@ def aurelien_merge(analyzer, refractory_period, template_threshold: float = 0.12
     max_channels: int
         The maximum number of channels to consider when comparing the templates.
     """
-    
+
     pairs = []
     sorting = analyzer.sorting
     recording = analyzer.recording
@@ -46,14 +52,14 @@ def aurelien_merge(analyzer, refractory_period, template_threshold: float = 0.12
             # Computing template difference
             template1 = analyzer.get_extension("templates").get_unit_template(unit_id1)
             template2 = analyzer.get_extension("templates").get_unit_template(unit_id2)
-    
+
             best_channel_indices = np.argsort(np.max(np.abs(template1) + np.abs(template2), axis=0))[::-1][:10]
-            
+
             max_diff = 1
-            for shift in range(-max_shift, max_shift+1):
+            for shift in range(-max_shift, max_shift + 1):
                 n = len(template1)
-                t1 = template1[max_shift: n-max_shift, best_channel_indices]
-                t2 = template2[max_shift+shift: n-max_shift+shift, best_channel_indices]
+                t1 = template1[max_shift : n - max_shift, best_channel_indices]
+                t2 = template2[max_shift + shift : n - max_shift + shift, best_channel_indices]
                 diff = np.sum(np.abs(t1 - t2)) / np.sum(np.abs(t1) + np.abs(t2))
                 if diff < max_diff:
                     max_diff = diff
@@ -79,16 +85,13 @@ class LussacMerging(BaseMergingEngine):
     Meta merging inspired from the Lussac metric
     """
 
-    default_params = {
-        'templates' : None,
-        'refractory_period' : (0.4, 1.9)
-    }
-    
+    default_params = {"templates": None, "refractory_period": (0.4, 1.9)}
+
     def __init__(self, recording, sorting, kwargs):
         self.default_params.update(**kwargs)
         self.sorting = sorting
         self.recording = recording
-        self.templates = self.default_params.pop('templates', None)
+        self.templates = self.default_params.pop("templates", None)
         if self.templates is not None:
             sparsity = self.templates.sparsity
             templates_array = self.templates.get_dense_templates().copy()
@@ -99,9 +102,9 @@ class LussacMerging(BaseMergingEngine):
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
         else:
             self.analyzer = create_sorting_analyzer(sorting, recording, format="memory")
-            self.analyzer.compute(['random_spikes', 'templates'])
+            self.analyzer.compute(["random_spikes", "templates"])
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
-        
+
     def run(self):
         merges = aurelien_merge(self.analyzer, **self.default_params)
         merges = resolve_merging_graph(self.sorting, merges)
