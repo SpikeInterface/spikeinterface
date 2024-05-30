@@ -63,7 +63,7 @@ def test_gh_curation():
     sorting_curated_gh = apply_sortingview_curation(sorting, uri_or_json=gh_uri, verbose=True)
 
     assert len(sorting_curated_gh.unit_ids) == 9
-    assert 1,2 in sorting_curated_gh.unit_ids
+    assert 1, 2 in sorting_curated_gh.unit_ids
     assert "accept" in sorting_curated_gh.get_property_keys()
     assert "mua" in sorting_curated_gh.get_property_keys()
     assert "artifact" in sorting_curated_gh.get_property_keys()
@@ -93,7 +93,7 @@ def test_sha1_curation():
     # print(f"From SHA: {sorting_curated_sha1}")
 
     assert len(sorting_curated_sha1.unit_ids) == 9
-    assert 1,2 in sorting_curated_sha1.unit_ids
+    assert 1, 2 in sorting_curated_sha1.unit_ids
     assert "accept" in sorting_curated_sha1.get_property_keys()
     assert "mua" in sorting_curated_sha1.get_property_keys()
     assert "artifact" in sorting_curated_sha1.get_property_keys()
@@ -117,9 +117,7 @@ def test_json_curation():
     # from curation.json
     json_file = parent_folder / "sv-sorting-curation.json"
     # print(f"Sorting: {sorting.get_unit_ids()}")
-    sorting_curated_json = apply_sortingview_curation(
-        sorting, uri_or_json=json_file, verbose=True
-    )
+    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
 
     assert len(sorting_curated_json.unit_ids) == 9
     assert 1, 2 in sorting_curated_json.unit_ids
