@@ -127,19 +127,3 @@ References
 .. [Windolf] `Robust Online Multiband Drift Estimation in Electrophysiology Data. 2022. <https://www.biorxiv.org/content/10.1101/2022.12.04.519043v2>`_
 
 .. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
