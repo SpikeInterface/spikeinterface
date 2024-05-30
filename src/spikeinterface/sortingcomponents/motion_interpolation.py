@@ -43,7 +43,9 @@ def correct_motion_on_peaks(
         spike_times = peaks["sample_index"][i0:i1] / sampling_frequency
         spike_locs = peak_locations[motion.direction][i0:i1]
 
-        spike_displacement = motion.get_displacement_at_time_and_depth(spike_times, spike_locs, segment_index=segment_index)
+        spike_displacement = motion.get_displacement_at_time_and_depth(
+            spike_times, spike_locs, segment_index=segment_index
+        )
 
         corrected_peak_locations[i0:i1][motion.direction] -= spike_displacement
 
@@ -60,6 +62,7 @@ def interpolate_motion_on_traces(
     interpolation_time_bin_centers_s=None,
     spatial_interpolation_method="kriging",
     spatial_interpolation_kwargs={},
+    dtype=None,
 ):
     """
     Apply inverse motion with spatial interpolation on traces.
@@ -97,6 +100,11 @@ def interpolate_motion_on_traces(
     """
     # assert HAVE_NUMBA
     assert times.shape[0] == traces.shape[0]
+
+    if dtype is None:
+        dtype = traces.dtype
+        if dtype.kind != "f":
+            raise ValueError(f"Can't interpolate traces of dtype {traces.dtype}.")
 
     if segment_index is None:
         if motion.num_segments == 1:
@@ -147,7 +155,7 @@ def interpolate_motion_on_traces(
         drift_kernel = get_spatial_interpolation_kernel(
             channel_locations,
             channel_locations_moved,
-            dtype=traces.dtype,
+            dtype=dtype,
             method=spatial_interpolation_method,
             **spatial_interpolation_kwargs,
         )
@@ -160,7 +168,9 @@ def interpolate_motion_on_traces(
         # plt.show()
 
         # quickly find the end of this bin, which is also the start of the next
-        next_start_index = current_start_index + np.searchsorted(bin_inds[current_start_index:], bin_ind + 1, side="left")
+        next_start_index = current_start_index + np.searchsorted(
+            bin_inds[current_start_index:], bin_ind + 1, side="left"
+        )
         in_bin = slice(current_start_index, next_start_index)
 
         # here we use a simple np.matmul even if dirft_kernel can be super sparse.
@@ -292,7 +302,8 @@ class InterpolateMotionRecording(BasePreprocessor):
 
         channel_locations = recording.get_channel_locations()
         assert channel_locations.ndim >= motion.dim, (
-            f"'direction' {motion.direction} not available. " f"Channel locations have {channel_locations.ndim} dimensions."
+            f"'direction' {motion.direction} not available. "
+            f"Channel locations have {channel_locations.ndim} dimensions."
         )
         spatial_interpolation_kwargs = dict(sigma_um=sigma_um, p=p, num_closest=num_closest)
         if border_mode == "remove_channels":
@@ -327,8 +338,13 @@ class InterpolateMotionRecording(BasePreprocessor):
         else:
             raise ValueError("Wrong border_mode")
 
-        if dtype is None and recording.dtype.kind != "f":
-            dtype = "float32"
+        if dtype is None:
+            if recording.dtype.kind == "f":
+                dtype = recording.dtype
+            else:
+                raise ValueError(
+                    f"Can't interpolate traces of recording with non-floating dtype={recording.dtype=}.")
+
         dtype_ = fix_dtype(recording, dtype)
         BasePreprocessor.__init__(self, recording, channel_ids=channel_ids, dtype=dtype_)
 
@@ -352,7 +368,7 @@ class InterpolateMotionRecording(BasePreprocessor):
                 # in this case, interpolation_time_bin_size_s is set.
                 s_end = parent_segment.get_num_samples()
                 t_start, t_end = parent_segment.sample_index_to_time(np.array([0, s_end]))
-                halfbin = interpolation_time_bin_size_s / 2.
+                halfbin = interpolation_time_bin_size_s / 2.0
                 segment_interpolation_time_bins_s = np.arange(t_start + halfbin, t_end, interpolation_time_bin_size_s)
             else:
                 segment_interpolation_time_bins_s = interpolation_time_bin_centers_s[segment_index]
@@ -407,9 +423,7 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if self.has_time_vector():
-            raise NotImplementedError(
-                "InterpolateMotionRecording does not yet support recordings with time_vectors."
-            )
+            raise NotImplementedError("InterpolateMotionRecording does not yet support recordings with time_vectors.")
 
         if start_frame is None:
             start_frame = 0
