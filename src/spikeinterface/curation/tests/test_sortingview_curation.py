@@ -16,17 +16,9 @@ from spikeinterface.postprocessing import (
 )
 from spikeinterface.curation import apply_sortingview_curation
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "curation"
-else:
-    cache_folder = Path("cache_folder") / "curation"
-
 parent_folder = Path(__file__).parent
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
-
-
-set_global_tmp_folder(cache_folder)
 
 
 # this needs to be run only once: if we want to regenerate we need to start with sorting result
