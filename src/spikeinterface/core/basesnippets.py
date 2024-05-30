@@ -81,7 +81,12 @@ class BaseSnippets(BaseRecordingSnippets):
         return len(self._snippets_segments)
 
     def has_scaled_snippets(self):
-        return self.has_scaled()
+        warn(
+            "`has_scaled_snippets` is deprecated and will be removed in version 0.103.0. Please use `has_scaleable_traces()` instead",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.has_scaleable_traces()
 
     def get_frames(self, indices=None, segment_index: Union[int, None] = None):
         segment_index = self._check_segment_index(segment_index)
@@ -101,7 +106,7 @@ class BaseSnippets(BaseRecordingSnippets):
         wfs = spts.get_snippets(indices, channel_indices=channel_indices)
 
         if return_scaled:
-            if not self.has_scaled():
+            if not self.has_scaleable_traces():
                 raise ValueError(
                     "These snippets do not support return_scaled=True (need gain_to_uV and offset_" "to_uV properties)"
                 )

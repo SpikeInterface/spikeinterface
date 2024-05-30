@@ -5,7 +5,8 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.extractors import NumpySorting, toy_example
+from spikeinterface.core import generate_sorting
+from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComparison
 
 if hasattr(pytest, "global_test_folder"):
@@ -72,7 +73,7 @@ def test_compare_multiple_sorters():
 
 def test_compare_multi_segment():
     num_segments = 3
-    _, sort = toy_example(num_segments=num_segments)
+    sort = generate_sorting(durations=[10] * num_segments)
 
     cmp_multi = compare_multiple_sorters([sort, sort, sort])
 

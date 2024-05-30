@@ -11,7 +11,23 @@ from spikeinterface.core.core_tools import (
     check_paths_relative,
     normal_pdf,
     convert_string_to_bytes,
+    add_suffix,
 )
+
+def test_add_suffix():
+    # first case - no dot provided before extension
+    file_path = "testpath"
+    possible_suffix = ["raw", "bin", "path"]
+    file_path_with_suffix = add_suffix(file_path, possible_suffix)
+    expected_path = "testpath.raw"
+    assert str(file_path_with_suffix) == expected_path
+
+    # second case - dot provided before extension
+    file_path = "testpath"
+    possible_suffix = [".raw", ".bin", ".path"]
+    file_path_with_suffix = add_suffix(file_path, possible_suffix)
+    expected_path = "testpath.raw"
+    assert str(file_path_with_suffix) == expected_path
 
 
 def test_path_utils_functions():

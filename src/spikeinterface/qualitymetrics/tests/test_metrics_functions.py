@@ -11,7 +11,6 @@ from spikeinterface.core import (
     synthesize_random_firings,
 )
 
-# from spikeinterface.extractors.toy_example import toy_example
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
 from spikeinterface.qualitymetrics import calculate_pc_metrics

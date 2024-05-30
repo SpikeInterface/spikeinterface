@@ -3,8 +3,7 @@ import pytest
 from pathlib import Path
 import numpy as np
 
-from spikeinterface.core import create_sorting_analyzer
-from spikeinterface.extractors import toy_example
+from spikeinterface.core import create_sorting_analyzer, generate_ground_truth_recording
 from spikeinterface.comparison import compare_templates, compare_multiple_templates
 
 
@@ -27,9 +26,7 @@ def test_compare_multiple_templates():
     duration = 60
     num_channels = 8
 
-    rec, sort = toy_example(duration=duration, num_segments=1, num_channels=num_channels)
-    # rec = rec.save(folder=test_dir / "rec")
-    # sort = sort.save(folder=test_dir / "sort")
+    rec, sort = generate_ground_truth_recording(durations=[duration], num_channels=num_channels)
 
     # split recording in 3 equal slices
     fs = rec.get_sampling_frequency()
