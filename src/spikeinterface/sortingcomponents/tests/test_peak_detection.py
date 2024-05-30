@@ -60,7 +60,7 @@ def sorting(dataset):
 
 
 def job_kwargs():
-    return dict(n_jobs=1, chunk_size=10000, progress_bar=True, verbose=True, mp_context="spawn")
+    return dict(n_jobs=1, chunk_size=10000, progress_bar=True, mp_context="spawn")
 
 
 @pytest.fixture(name="job_kwargs", scope="module")
@@ -323,6 +323,7 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         prototype=prototype,
+        ms_before=1.0,
         **job_kwargs,
     )
     assert len(peaks_local_mf_filtering) > len(peaks_by_channel_np)

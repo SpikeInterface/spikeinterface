@@ -13,7 +13,7 @@ import time
 
 
 def job_kwargs():
-    return dict(n_jobs=1, chunk_size=10000, progress_bar=True, verbose=True, mp_context="spawn")
+    return dict(n_jobs=1, chunk_size=10000, progress_bar=True, mp_context="spawn")
 
 
 @pytest.fixture(name="job_kwargs", scope="module")
@@ -78,6 +78,7 @@ if __name__ == "__main__":
     peak_locations = run_peak_locations(recording, peaks, job_kwargs)
     # method = "position_and_pca"
     # method = "circus"
-    method = "tdc_clustering"
+    # method = "tdc_clustering"
+    method = "random_projections"
 
     test_find_cluster_from_peaks(method, recording, peaks, peak_locations)

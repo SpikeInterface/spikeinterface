@@ -11,7 +11,6 @@ from spikeinterface.core import (
     get_noise_levels,
     NumpySorting,
     get_channel_distances,
-    estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
     get_global_tmp_folder,
@@ -37,8 +36,6 @@ from spikeinterface.sortingcomponents.clustering.tools import compute_template_f
 
 from sklearn.decomposition import TruncatedSVD
 
-import hdbscan
-
 
 class TdcClustering:
     """
@@ -63,6 +60,8 @@ class TdcClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
+        import hdbscan
+
         job_kwargs = params["job_kwargs"]
 
         if params["folder"] is None:
@@ -159,13 +158,18 @@ class TdcClustering:
             method="local_feature_clustering",
             method_kwargs=dict(
                 clusterer="hdbscan",
+                clusterer_kwargs={
+                    "min_cluster_size": min_cluster_size,
+                    "allow_single_cluster": True,
+                    "cluster_selection_method": "eom",
+                },
                 # clusterer="isocut5",
+                # clusterer_kwargs={"min_cluster_size": min_cluster_size},
                 feature_name="sparse_tsvd",
                 # feature_name="sparse_wfs",
                 neighbours_mask=neighbours_mask,
                 waveforms_sparse_mask=sparse_mask,
                 min_size_split=min_cluster_size,
-                clusterer_kwargs={"min_cluster_size": min_cluster_size},
                 n_pca_features=3,
                 scale_n_pca_by_depth=True,
             ),

@@ -120,7 +120,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
         )
         return nodes
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         spike_locations = run_node_pipeline(
@@ -129,6 +129,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name="spike_locations",
             gather_mode="memory",
+            verbose=verbose,
         )
         self.data["spike_locations"] = spike_locations
 

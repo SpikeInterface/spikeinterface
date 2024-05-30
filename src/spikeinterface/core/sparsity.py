@@ -118,6 +118,14 @@ class ChannelSparsity:
         txt = f"ChannelSparsity - units: {self.num_units} - channels: {self.num_channels} - density, P(x=1): {density:0.2f}"
         return txt
 
+    def __eq__(self, other):
+        return (
+            isinstance(other, ChannelSparsity)
+            and np.array_equal(self.channel_ids, other.channel_ids)
+            and np.array_equal(self.unit_ids, other.unit_ids)
+            and np.array_equal(self.mask, other.mask)
+        )
+
     @property
     def unit_id_to_channel_ids(self):
         if self._unit_id_to_channel_ids is None:
@@ -331,7 +339,7 @@ class ChannelSparsity:
             return_scaled = templates_or_sorting_analyzer.return_scaled
         elif isinstance(templates_or_sorting_analyzer, Templates):
             assert noise_levels is not None
-            return_scaled = True
+            return_scaled = templates_or_sorting_analyzer.is_scaled
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
@@ -369,7 +377,7 @@ class ChannelSparsity:
             return_scaled = templates_or_sorting_analyzer.return_scaled
         elif isinstance(templates_or_sorting_analyzer, Templates):
             assert noise_levels is not None
-            return_scaled = True
+            return_scaled = templates_or_sorting_analyzer.is_scaled
 
         from .template_tools import get_dense_templates_array
 

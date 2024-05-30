@@ -194,7 +194,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         nodes = [spike_retriever_node, amplitude_scalings_node]
         return nodes
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amp_scalings, collision_mask = run_node_pipeline(
@@ -203,6 +203,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name="amplitude_scalings",
             gather_mode="memory",
+            verbose=verbose,
         )
         self.data["amplitude_scalings"] = amp_scalings
         if self.params["handle_collisions"]:
@@ -240,7 +241,7 @@ class AmplitudeScalingNode(PipelineNode):
     ):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.return_scaled = return_scaled
-        if return_scaled and recording.has_scaled():
+        if return_scaled and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_gains()

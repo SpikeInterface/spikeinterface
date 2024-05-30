@@ -10,16 +10,6 @@ import importlib
 from math import prod
 
 import numpy as np
-from tqdm import tqdm
-
-from .job_tools import (
-    ensure_chunk_size,
-    ensure_n_jobs,
-    divide_segment_into_chunks,
-    fix_job_kwargs,
-    ChunkRecordingExecutor,
-    _shared_job_kwargs_doc,
-)
 
 
 def define_function_from_class(source_class, name):
@@ -156,7 +146,7 @@ def add_suffix(file_path, possible_suffix):
         possible_suffix = [possible_suffix]
     possible_suffix = [s if s.startswith(".") else "." + s for s in possible_suffix]
     if file_path.suffix not in possible_suffix:
-        file_path = file_path.parent / (file_path.name + "." + possible_suffix[0])
+        file_path = file_path.parent / (file_path.name + possible_suffix[0])
     return file_path
 
 
@@ -445,6 +435,42 @@ def convert_bytes_to_str(byte_value: int) -> str:
         byte_value /= 1024
         i += 1
     return f"{byte_value:.2f} {suffixes[i]}"
+
+
+_exponents = {
+    "k": 1e3,
+    "M": 1e6,
+    "G": 1e9,
+    "T": 1e12,
+    "P": 1e15,  # Decimal (SI) prefixes
+    "Ki": 1024**1,
+    "Mi": 1024**2,
+    "Gi": 1024**3,
+    "Ti": 1024**4,
+    "Pi": 1024**5,  # Binary (IEC) prefixes
+}
+
+
+def convert_string_to_bytes(memory_string: str) -> int:
+    """
+    Convert a memory size string to the corresponding number of bytes.
+
+    Parameters:
+    mem (str): Memory size string (e.g., "1G", "512Mi", "2T").
+
+    Returns:
+    int: Number of bytes.
+    """
+    if memory_string[-2:] in _exponents:
+        suffix = memory_string[-2:]
+        mem_value = memory_string[:-2]
+    else:
+        suffix = memory_string[-1]
+        mem_value = memory_string[:-1]
+
+    assert suffix in _exponents, f"Unknown suffix: {suffix}"
+    bytes_value = int(float(mem_value) * _exponents[suffix])
+    return bytes_value
 
 
 def is_editable_mode() -> bool:
