@@ -1,9 +1,10 @@
 from pathlib import Path
 import numpy as np
 
+from probeinterface import get_probe
+
 from ..core import BinaryRecordingExtractor, ChannelSliceRecording
 from ..core.core_tools import define_function_from_class
-
 
 class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
     extractor_name = "SinapsResearchPlatform"
@@ -22,14 +23,15 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         num_electrodes = meta["nbElectrodes"]
         sampling_frequency = meta["samplingFreq"]
 
-        channel_locations = meta["electrodePhysicalPosition"]
+        probe_type = meta['probeType']
+        # channel_locations = meta["electrodePhysicalPosition"] # will be depricated soon by Sam, switching to probeinterface
         num_shanks = meta["nbShanks"]
         num_electrodes_per_shank = meta["nbElectrodesShank"]
         num_bits = int(np.log2(meta["nbADCLevels"]))
 
-        channel_groups = []
-        for i in range(num_shanks):
-            channel_groups.extend([i] * num_electrodes_per_shank)
+        # channel_groups = []
+        # for i in range(num_shanks):
+        #     channel_groups.extend([i] * num_electrodes_per_shank)
 
         gain_ephys = meta["voltageConverter"]
         gain_aux = meta["voltageAUXConverter"]
@@ -42,34 +44,44 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         if stream_name == "raw":
             channel_slice = recording.channel_ids[:num_electrodes]
             renamed_channels = np.arange(num_electrodes)
-            locations = channel_locations
-            groups = channel_groups
+            # locations = channel_locations
+            # groups = channel_groups
             gain = gain_ephys
         elif stream_name == "filt":
             channel_slice = recording.channel_ids[num_electrodes : 2 * num_electrodes]
             renamed_channels = np.arange(num_electrodes)
-            locations = channel_locations
-            groups = channel_groups
+            # locations = channel_locations
+            # groups = channel_groups
             gain = gain_ephys
         elif stream_name == "aux":
             channel_slice = recording.channel_ids[2 * num_electrodes :]
             hw_chans = meta["hwAUXChannelName"][1:-1].split(",")
             user_chans = meta["userAuxName"][1:-1].split(",")
             renamed_channels = hw_chans + user_chans
-            locations = None
-            groups = None
+            # locations = None
+            # groups = None
             gain = gain_aux
         else:
             raise ValueError("stream_name must be 'raw', 'filt', or 'aux'")
 
         ChannelSliceRecording.__init__(self, recording, channel_ids=channel_slice, renamed_channel_ids=renamed_channels)
-        if locations is not None:
-            self.set_channel_locations(locations)
-        if groups is not None:
-            self.set_channel_groups(groups)
+        # if locations is not None:
+            # self.set_channel_locations(locations)
+        # if groups is not None:
+            # self.set_channel_groups(groups)
+        
         self.set_channel_gains(gain)
         self.set_channel_offsets(0)
 
+        if probe_type == 'p1024s1NHP':
+            probe = get_probe(manufacturer='sinaps',
+                            probe_name='SiNAPS-p1024s1NHP')
+            # now wire the probe
+            channel_indices = np.arange(1024)
+            probe.set_device_channel_indices(channel_indices)
+            self.set_probe(probe,in_place=True)
+        else:
+            raise ValueError(f"Unknown probe type: {probe_type}")
 
 read_sinaps_research_platform = define_function_from_class(
     source_class=SinapsResearchPlatformRecordingExtractor, name="read_sinaps_research_platform"

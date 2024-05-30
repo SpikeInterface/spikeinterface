@@ -1,6 +1,8 @@
 from pathlib import Path
 import numpy as np
 
+from probeinterface import get_probe
+
 from ..core.core_tools import define_function_from_class
 from ..core import BaseRecording, BaseRecordingSegment
 
@@ -44,6 +46,15 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
         # set other properties
 
         self._kwargs = {"file_path": str(Path(file_path).absolute())}
+
+        # set probe
+        if sinaps_info['probe_type'] == 'p1024s1NHP':
+            probe = get_probe(manufacturer='sinaps',
+                            probe_name='SiNAPS-p1024s1NHP')
+            probe.set_device_channel_indices(np.arange(1024))
+            self.set_probe(probe, in_place=True)
+        else:
+            raise ValueError(f"Unknown probe type: {sinaps_info['probe_type']}")
 
     def __del__(self):
         self._rf.close()
@@ -98,6 +109,8 @@ def openSiNAPSFile(filename):
 
     samplingRate = parameters.get('SamplingFrequency')[0]
 
+    probe_type = str(rf.require_group('Advanced Recording Parameters').require_group('Probe').get('probeType').asstr()[...])
+
     sinaps_info = {
         "filehandle": rf,
         "num_frames": nFrames,
@@ -107,6 +120,7 @@ def openSiNAPSFile(filename):
         "gain": gain,
         "offset": offset,
         "dtype": dtype,
+        "probe_type": probe_type,
     }
 
     return sinaps_info
