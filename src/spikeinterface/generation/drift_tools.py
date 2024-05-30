@@ -515,6 +515,26 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
+
+def split_sorting_by_time(sorting_analyzer, splitting_probability=0.5):
+    sorting = sorting_analyzer.sorting
+    partial_split_prob = 0.95
+    sorting_split = sorting.select_units(sorting.unit_ids)
+    split_units = []
+    original_units = []
+    nb_splits = int(splitting_probability*len(sorting.unit_ids))
+    to_split_ids = np.random.choice(sorting.unit_ids, nb_splits, replace=False)
+    import spikeinterface.curation as scur
+    for unit in to_split_ids:
+        num_spikes = len(sorting_split.get_unit_spike_train(unit))
+        indices = np.zeros(num_spikes, dtype=int)
+        indices[:num_spikes // 2] = (np.random.rand(num_spikes // 2) < partial_split_prob).astype(int)
+        indices[num_spikes // 2:] = (np.random.rand(num_spikes - num_spikes // 2) < 1 - partial_split_prob).astype(int)
+        sorting_split = scur.split_unit_sorting(sorting_split, split_unit_id=unit, indices_list=indices, properties_policy="remove")
+        split_units.append(sorting_split.unit_ids[-2:])
+        original_units.append(unit)
+    return sorting_split, split_units
+
 def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5):
     """
     Fonction used to split a sorting based on the amplitudes of the units. This

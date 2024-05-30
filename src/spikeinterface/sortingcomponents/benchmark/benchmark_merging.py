@@ -6,6 +6,8 @@ from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_g
 from spikeinterface.widgets import (
     plot_agreement_matrix,
     plot_comparison_collision_by_similarity,
+    plot_amplitudes, 
+    plot_crosscorrelograms
 )
 
 import pylab as plt
@@ -17,11 +19,12 @@ from spikeinterface.core.basesorting import minimum_spike_dtype
 
 class MergingBenchmark(Benchmark):
 
-    def __init__(self, recording, splitted_sorting, params, gt_sorting):
+    def __init__(self, recording, splitted_sorting, params, gt_sorting, splitted_cells=None):
         self.recording = recording
         self.splitted_sorting = splitted_sorting
         self.method = params["method"]
         self.gt_sorting = gt_sorting
+        self.splitted_cells = splitted_cells
         self.method_kwargs = params["method_kwargs"]
         self.result = {}
 
@@ -94,7 +97,6 @@ class MergingStudy(BenchmarkStudy):
             case_keys = list(self.cases.keys())
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
-
         for count, key in enumerate(case_keys):
             ax = axs[0, count]
             ax.set_title(self.cases[key]["label"])
@@ -106,3 +108,20 @@ class MergingStudy(BenchmarkStudy):
         from spikeinterface.widgets.widget_list import plot_study_unit_counts
 
         plot_study_unit_counts(self, case_keys, figsize=figsize, **extra_kwargs)
+    
+    def get_splitted_pairs(self, case_key):
+        return self.benchmarks[case_key].splitted_cells
+
+    def plot_splitted_amplitudes(self, case_key, pair_index=0):
+        analyzer = self.get_sorting_analyzer(case_key)
+        if analyzer.get_extension('spike_amplitudes') is None:
+            analyzer.compute(['spike_amplitudes'])
+        plot_amplitudes(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])
+    
+    def plot_splitted_correlograms(self, case_key, pair_index=0):
+        analyzer = self.get_sorting_analyzer(case_key)
+        if analyzer.get_extension('correlograms') is None:
+            analyzer.compute(['correlograms'])
+        if analyzer.get_extension('template_similarity') is None:
+            analyzer.compute(['template_similarity'])
+        plot_crosscorrelograms(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])
