@@ -12,7 +12,7 @@ from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph
 def aurelien_merge(
     analyzer,
     refractory_period,
-    template_threshold: float = 0.25,
+    template_threshold: float = 0.2,
     CC_threshold: float = 0.1,
     max_shift: int = 10,
     max_channels: int = 10,
@@ -90,7 +90,7 @@ def aurelien_merge(
                 spike_train1, spike_train2, refractory_period, limit=CC_threshold
             )
 
-            if p_value < 0.05:
+            if p_value < 0.2:
                 continue
 
             pairs.append((unit_id1, unit_id2))

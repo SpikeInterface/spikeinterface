@@ -19,6 +19,7 @@ class CircusMerging(BaseMergingEngine):
         "corr_diff_thresh": 0.5,
         "template_metric": "cosine",
         "num_channels": None,
+        "num_shift" : 5
     }
 
     def __init__(self, recording, sorting, kwargs):
