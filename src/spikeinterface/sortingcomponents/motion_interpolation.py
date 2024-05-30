@@ -103,8 +103,10 @@ def interpolate_motion_on_traces(
 
     if dtype is None:
         dtype = traces.dtype
-        if dtype.kind != "f":
-            raise ValueError(f"Can't interpolate traces of dtype {traces.dtype}.")
+    if dtype.kind != "f":
+        raise ValueError(f"Can't interpolate_motion with dtype {traces.dtype}.")
+    if traces.dtype != dtype:
+        traces = traces.astype(dtype)
 
     if segment_index is None:
         if motion.num_segments == 1:
