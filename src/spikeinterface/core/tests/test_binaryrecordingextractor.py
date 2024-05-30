@@ -1,17 +1,18 @@
 import pytest
 import numpy as np
-from pathlib import Path
 
 from spikeinterface.core import BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
+
+@pytest.fixture(scope='module')
+def create_cache_folder(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    return cache_folder
 
 
-def test_BinaryRecordingExtractor():
+def test_BinaryRecordingExtractor(create_cache_folder):
+    cache_folder = create_cache_folder
     num_seg = 2
     num_channels = 3
     num_samples = 30
