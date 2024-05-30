@@ -1,7 +1,8 @@
 How to Cite
 ==========
 
-If you like Spikeinterface, please star us on Github!
+If you like Spikeinterface, please star us on `Github <https://github.com/SpikeInterface/spikeinterface>`_!
+*giving us a star gives a measure of the level of use and interest, which goes a long way to getting funding*
 
 Please cite Spikeinterface in your papers with our eLife paper: [Buccino]_
 
@@ -27,8 +28,6 @@ as well as the references that correspond to the :code:`preset` you used:
 - :code:`nonrigid_fast_and_accurate` [Windolf]_ [Varol]_ [Pachitariu]_
 - :code:`rigid_fast` *no additional citation needed*
 - :code:`kilosort_like` [Pachitariu]_
-
-
 
 Sorters Module
 --------------
@@ -57,7 +56,7 @@ important for your research:
 - :code:`rp_violation` [Llobet]_
 - :code:`sd_ratio` [Pouzat]_
 - :code:`snr` [Lemon]_ [Jackson]_
-- :code:`synchrony` [Gruen]_
+- :code:`synchrony` [Grun]_
 
 If you use the :code:`qualitymetrics.pca_metrics` module, i.e. you use the
 :code:`calculate_pc_metrics()` method, please include the citations for the :code:`metric_names` that were particularly
@@ -72,70 +71,62 @@ Curation Module
 ---------------
 If you use the :code:`get_potential_auto_merge` method from the curation module, please cite [Llobet]_
 
-
-
-
-
-
-
-
-
 References
 ----------
 
-.. [Buccino] Buccino AP, Hurwitz CL, Garcia S, Magland J, Siegle JH, Hurwitz R, Hennig MH. SpikeInterface, a unified framework for spike sorting. Elife. 2020 Nov 10;9:e61834. doi: 10.7554/eLife.61834. PMID: 33170122; PMCID: PMC7704107.
+.. [Buccino] `SpikeInterface, a unified framework for spike sorting. 2020. <https://pubmed.ncbi.nlm.nih.gov/33170122/>`_
 
-.. [Buzsáki] Buzsáki, György, and Kenji Mizuseki. “The Log-Dynamic Brain: How Skewed Distributions Affect Network Operations.” Nature reviews. Neuroscience 15.4 (2014): 264–278. Web.
+.. [Buzsaki] `The Log-Dynamic Brain: How Skewed Distributions Affect Network Operations. 2014. <https://pubmed.ncbi.nlm.nih.gov/24569488/>`_
 
-.. [Chaure] Chaure FJ, Rey HG, Quian Quiroga R. A novel and fully automatic spike-sorting implementation with variable number of features. J Neurophysiol. 2018 Oct 1;120(4):1859-1871. doi: 10.1152/jn.00339.2018. Epub 2018 Jul 11. PMID: 29995603; PMCID: PMC6230803.
+.. [Chaure] `A novel and fully automatic spike-sorting implementation with variable number of features. 2018. <https://pubmed.ncbi.nlm.nih.gov/29995603/>`_
 
-.. [Chung] Chung JE, Magland JF, Barnett AH, Tolosa VM, Tooker AC, Lee KY, Shah KG, Felix SH, Frank LM, Greengard LF. A Fully Automated Approach to Spike Sorting. Neuron. 2017 Sep 13;95(6):1381-1394.e6. doi: 10.1016/j.neuron.2017.08.030. PMID: 28910621; PMCID: PMC5743236.
+.. [Chung] `A Fully Automated Approach to Spike Sorting. 2017. <https://pubmed.ncbi.nlm.nih.gov/28910621/>`_
 
-.. [Diggelmann] Diggelmann R, Fiscella M, Hierlemann A, Franke F. Automatic spike sorting for high-density microelectrode arrays. J Neurophysiol. 2018 Dec 1;120(6):3155-3171. doi: 10.1152/jn.00803.2017. Epub 2018 Sep 12. PMID: 30207864; PMCID: PMC6314465.
+.. [Diggelmann] `Automatic spike sorting for high-density microelectrode arrays. 2018. <https://pubmed.ncbi.nlm.nih.gov/30207864/>`_
 
-.. [Garcia] Garcia S, Windolf C, Boussard J, Dichter B, Buccino AP, Yger P. A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. eNeuro. 2024 Feb 26;11(2):ENEURO.0229-23.2023. doi: 10.1523/ENEURO.0229-23.2023. PMID: 38238082; PMCID: PMC10897502.
+.. [Garcia] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
 
-.. [Gruen] Sonja Grün, Moshe Abeles, and Markus Diesmann. Impact of higher-order correlations on coincidence distributions of massively parallel data. In International School on Neural Networks, Initiated by IIASS and EMFCSC, volume 5286, 96–114. Springer, 2007.
+.. [Grun] `Impact of higher-order correlations on coincidence distributions of massively parallel data. 2007. <https://www.researchgate.net/publication/225145104_Impact_of_Higher-Order_Correlations_on_Coincidence_Distributions_of_Massively_Parallel_Data>`_
 
-.. [Harris] Kenneth D Harris, Hajime Hirase, Xavier Leinekugel, Darrell A Henze, and Gy ̈orgy Buzs ́aki. Temporal interaction between single spikes and complex spike bursts in hippocampal pyramidal cells. Neuron (Cambridge, Mass.), 32(1):141–149, 2001.
+.. [Harris] `Temporal interaction between single spikes and complex spike bursts in hippocampal pyramidal cells. 2001. <https://pubmed.ncbi.nlm.nih.gov/11604145/>`_
 
-.. [Hilgen] Hilgen G, Sorbaro M, Pirmoradian S, Muthmann JO, Kepiro IE, Ullo S, Ramirez CJ, Puente Encinas A, Maccione A, Berdondini L, Murino V, Sona D, Cella Zanacchi F, Sernagor E, Hennig MH. Unsupervised Spike Sorting for Large-Scale, High-Density Multielectrode Arrays. Cell Rep. 2017 Mar 7;18(10):2521-2532. doi: 10.1016/j.celrep.2017.02.038. PMID: 28273464.
+.. [Hilgen] `Unsupervised Spike Sorting for Large-Scale, High-Density Multielectrode Arrays. 2017. <https://pubmed.ncbi.nlm.nih.gov/28273464/>`_
 
-.. [Hill] Hill, Daniel N., Samar B. Mehta, and David Kleinfeld. “Quality Metrics to Accompany Spike Sorting of Extracellular Signals.” The Journal of neuroscience 31.24 (2011): 8699–8705. Web.
+.. [Hill] `Quality Metrics to Accompany Spike Sorting of Extracellular Signals. 2011. <https://pubmed.ncbi.nlm.nih.gov/21677152/>`_
 
-.. [Hruschka] Hruschka, E.R., de Castro, L.N., Campello R.J.G.B. "Evolutionary algorithms for clustering gene-expression data." Fourth IEEE International Conference on Data Mining (ICDM'04) 2004, pp 403-406.
+.. [Hruschka] `Evolutionary algorithms for clustering gene-expression data. 2004. <https://www.researchgate.net/publication/220765683_Evolutionary_Algorithms_for_Clustering_Gene-Expression_Data>`_
 
-.. [IBL] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022.
+.. [IBL] `Spike sorting pipeline for the International Brain Laboratory. 2022. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522/3>`_
 
-.. [Jackson] Jadin Jackson, Neil Schmitzer-Torbert, K.D. Harris, and A.D. Redish. Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Soc Neurosci Abstr, 518, 01 2005.
+.. [Jackson] Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Society of Neuroscience Abstract. 2005.
 
-.. [Lee] Lee JH, Carlson D, Shokri H, Yao W, Goetz G, Hagen E, Batty E, Chichilnisky EJ, Einevoll G, Paninski L. YASS: Yet another spike sorter. bioRxiv 151928; doi: https://doi.org/10.1101/151928 . Epub 2017
+.. [Lee] `YASS: Yet another spike sorter. 2017. <https://www.biorxiv.org/content/10.1101/151928v1>`_
 
-.. [Lemon] R. Lemon. Methods for neuronal recording in conscious animals. IBRO Handbook Series, 4:56–60, 1984.
+.. [Lemon] Methods for neuronal recording in conscious animals. IBRO Handbook Series. 1984.
 
-.. [Llobet] Llobet Victor, Wyngaard Aurélien and Barbour Boris. “Automatic post-processing and merging of multiple spike-sorting analyses with Lussac“. BioRxiv (2022).
+.. [Llobet] `Automatic post-processing and merging of multiple spike-sorting analyses with Lussac. 2022. <https://www.biorxiv.org/content/10.1101/2022.02.08.479192v1>`_
 
-.. [Muthmann] Muthmann JO, Amin H, Sernagor E, Maccione A, Panas D, Berdondini L, Bhalla US, Hennig MH. Spike Detection for Large Neural Populations Using High Density Multielectrode Arrays. Front Neuroinform. 2015 Dec 18;9:28. doi: 10.3389/fninf.2015.00028. PMID: 26733859; PMCID: PMC4683190.
+.. [Muthmann] `Spike Detection for Large Neural Populations Using High Density Multielectrode Arrays. 2015. <https://pubmed.ncbi.nlm.nih.gov/26733859/>`_
 
-.. [Niediek] Niediek J, Boström J, Elger CE, Mormann F. Reliable Analysis of Single-Unit Recordings from the Human Brain under Noisy Conditions: Tracking Neurons over Hours. PLoS One. 2016 Dec 8;11(12):e0166598. doi: 10.1371/journal.pone.0166598. PMID: 27930664; PMCID: PMC5145161.
+.. [Niediek] `Reliable Analysis of Single-Unit Recordings from the Human Brain under Noisy Conditions: Tracking Neurons over Hours. 2016. <https://pubmed.ncbi.nlm.nih.gov/27930664/>`_
 
-.. [Pachitariu] Pachitariu M, Sridhar S, Pennington J, Stringer C. Spike sorting with Kilosort4. Nat Methods. 2024 May;21(5):914-921. doi: 10.1038/s41592-024-02232-7. Epub 2024 Apr 8. PMID: 38589517; PMCID: PMC11093732.
+.. [Pachitariu] `Spike sorting with Kilosort4. 2024. <https://pubmed.ncbi.nlm.nih.gov/38589517/>`_
 
-.. [Pouzat] Pouzat Christophe, Mazor Ofer and Laurent Gilles. “Using noise signature to optimize spike-sorting and to assess neuronal classification quality“. Journal of Neuroscience Methods (2002).
+.. [Pouzat] `Using noise signature to optimize spike-sorting and to assess neuronal classification quality. 2002. <https://pubmed.ncbi.nlm.nih.gov/12535763/>`_
 
-.. [Rolston] Rolston JD, Gross RE, Potter SM. Common median referencing for improved action potential detection with multielectrode arrays. Annu Int Conf IEEE Eng Med Biol Soc. 2009;2009:1604-7. doi: 10.1109/IEMBS.2009.5333230. PMID: 19964004.
+.. [Rolston] `Common median referencing for improved action potential detection with multielectrode arrays. 2009. <https://pubmed.ncbi.nlm.nih.gov/19964004/>`_
 
-.. [Rousseeuw] Peter J Rousseeuw. Silhouettes: A graphical aid to the interpretation and validation of cluster analysis. Journal of computational and applied mathematics, 20(C):53–65, 1987.
+.. [Rousseeuw] `Silhouettes: A graphical aid to the interpretation and validation of cluster analysis. 1987. <https://www.sciencedirect.com/science/article/pii/0377042787901257>`_
 
-.. [Schmitzer-Torbert] Schmitzer-Torbert, Neil, and A. David Redish. “Neuronal Activity in the Rodent Dorsal Striatum in Sequential Navigation: Separation of Spatial and Reward Responses on the Multiple T Task.” Journal of neurophysiology 91.5 (2004): 2259–2272. Web.
+.. [Schmitzer-Torbert] `Neuronal Activity in the Rodent Dorsal Striatum in Sequential Navigation: Separation of Spatial and Reward Responses on the Multiple T Task. 2004. <https://pubmed.ncbi.nlm.nih.gov/14736863/>`_
 
-.. [Siegle] Siegle, Joshua H. et al. “Survey of Spiking in the Mouse Visual System Reveals Functional Hierarchy.” Nature (London) 592.7852 (2021): 86–. Web.
+.. [Siegle] `Survey of Spiking in the Mouse Visual System Reveals Functional Hierarchy. 2021. <https://pubmed.ncbi.nlm.nih.gov/33473216/>`_
 
-.. [Varol] E. Varol et al., "Decentralized Motion Inference and Registration of Neuropixel Data," ICASSP 2021 - 2021 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), Toronto, ON, Canada, 2021, pp. 1085-1089, doi: 10.1109/ICASSP39728.2021.9414145.
+.. [Varol] `Decentralized Motion Inference and Registration of Neuropixel Data. 2021. <https://ieeexplore.ieee.org/document/9414145>`_
 
-.. [Windolf] Windolf C, Paulk AC, Kfir Y, Trautmann E, Meszéna D, Muñoz W, Caprara I, Jamali M, Boussard J, Williams ZM, Cash SS, Paninski L, Varol E. ROBUST ONLINE MULTIBAND DRIFT ESTIMATION IN ELECTROPHYSIOLOGY DATA. Proc IEEE Int Conf Acoust Speech Signal Process. 2023 Jun;2023:10.1109/icassp49357.2023.10095487. doi: 10.1109/icassp49357.2023.10095487. Epub 2023 May 5. PMID: 37388234; PMCID: PMC10308877.
+.. [Windolf] `Robust Online Multiband Drift Estimation in Electrophysiology Data. 2022. <https://www.biorxiv.org/content/10.1101/2022.12.04.519043v2>`_
 
-.. [Yger] Yger P, Spampinato GL, Esposito E, Lefebvre B, Deny S, Gardella C, Stimberg M, Jetter F, Zeck G, Picaud S, Duebel J, Marre O. A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. Elife. 2018 Mar 20;7:e34518. doi: 10.7554/eLife.34518. PMID: 29557782; PMCID: PMC5897014.
+.. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
 
 
 
