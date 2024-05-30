@@ -1,4 +1,3 @@
-from pathlib import Path
 import shutil
 
 import pytest
@@ -6,13 +5,19 @@ import pytest
 from spikeinterface.exporters import export_report
 
 from spikeinterface.exporters.tests.common import (
-    cache_folder,
     make_sorting_analyzer,
     sorting_analyzer_sparse_for_export,
 )
 
 
-def test_export_report(sorting_analyzer_sparse_for_export):
+@pytest.fixture(scope="module")
+def create_cache_folder(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
+    return cache_folder
+
+
+def test_export_report(sorting_analyzer_sparse_for_export, create_cache_folder):
+    cache_folder = create_cache_folder
     report_folder = cache_folder / "report"
     if report_folder.exists():
         shutil.rmtree(report_folder)
