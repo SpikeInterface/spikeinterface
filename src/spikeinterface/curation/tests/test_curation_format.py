@@ -4,16 +4,16 @@ import pytest
 
 """example = {
     'unit_ids': List[str, int],
-    'labels_definition': {
+    'label_definitions': {
         'category_key1':
         {'name': str,
-         'labels': List[str],
-         'auto_eclusive': bool}
+         'label_options': List[str],
+         'auto_exclusive': bool}
     },
     'manual_labels': [
         {'unit_id': str or int,
-         'label_category_key': str,
-         'label_category_value': list or str
+         'label_category': str,
+         'labels': list or str
          }
     ],
     'merged_unit_groups': List[List[unit_ids]],  # one cell goes into at most one list
@@ -23,18 +23,18 @@ import pytest
 
 valid_int = {
     "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "labels_definition": {
-        "quality": {"name": "quality", "labels": ["good", "noise", "MUA", "artifact"], "auto_eclusive": True},
+    "label_definitions": {
+        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
         "experimental": {
             "name": "experimental",
-            "labels": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_eclusive": False,
+            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
+            "auto_exclusive": False,
         },
     },
     "manual_labels": [
-        {"unit_id": 1, "label_category_key": "quality", "label_category_value": "good"},
-        {"unit_id": 2, "label_category_key": "quality", "label_category_value": "noise"},
-        {"unit_id": 2, "label_category_key": "experimental", "label_category_value": ["chronic", "headfixed"]},
+        {"unit_id": 1, "label_category": "quality", "labels": "good"},
+        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
+        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
     ],
     "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
@@ -44,18 +44,18 @@ valid_int = {
 
 valid_str = {
     "unit_ids": ["u1", "u2", "u3", "u6", "u10", "u14", "u20", "u31", "u42"],
-    "labels_definition": {
-        "quality": {"name": "quality", "labels": ["good", "noise", "MUA", "artifact"], "auto_eclusive": True},
+    "label_definitions": {
+        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
         "experimental": {
             "name": "experimental",
-            "labels": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_eclusive": False,
+            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
+            "auto_exclusive": False,
         },
     },
     "manual_labels": [
-        {"unit_id": "u1", "label_category_key": "quality", "label_category_value": "good"},
-        {"unit_id": "u2", "label_category_key": "quality", "label_category_value": "noise"},
-        {"unit_id": "u2", "label_category_key": "experimental", "label_category_value": ["chronic", "headfixed"]},
+        {"unit_id": "u1", "label_category": "quality", "labels": "good"},
+        {"unit_id": "u2", "label_category": "quality", "labels": "noise"},
+        {"unit_id": "u2", "label_category": "experimental", "labels": ["chronic", "headfixed"]},
     ],
     "merged_unit_groups": [["u3", "u6"], ["u10", "u14", "u20"]],  # one cell goes into at most one list
     "removed_units": ["u31", "u42"],  # Can not be  in the merged_units
@@ -65,18 +65,18 @@ valid_str = {
 # This is a failure example
 duplicate_merge = {
     "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "labels_definition": {
-        "quality": {"name": "quality", "labels": ["good", "noise", "MUA", "artifact"], "auto_eclusive": True},
+    "label_definitions": {
+        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
         "experimental": {
             "name": "experimental",
-            "labels": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_eclusive": False,
+            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
+            "auto_exclusive": False,
         },
     },
     "manual_labels": [
-        {"unit_id": 1, "label_category_key": "quality", "label_category_value": "good"},
-        {"unit_id": 2, "label_category_key": "quality", "label_category_value": "noise"},
-        {"unit_id": 2, "label_category_key": "experimental", "label_category_value": ["chronic", "headfixed"]},
+        {"unit_id": 1, "label_category": "quality", "labels": "good"},
+        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
+        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
     ],
     "merged_unit_groups": [[3, 6, 10], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
@@ -87,18 +87,18 @@ duplicate_merge = {
 # This is a failure example
 merged_and_removed = {
     "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "labels_definition": {
-        "quality": {"name": "quality", "labels": ["good", "noise", "MUA", "artifact"], "auto_eclusive": True},
+    "label_definitions": {
+        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
         "experimental": {
             "name": "experimental",
-            "labels": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_eclusive": False,
+            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
+            "auto_exclusive": False,
         },
     },
     "manual_labels": [
-        {"unit_id": 1, "label_category_key": "quality", "label_category_value": "good"},
-        {"unit_id": 2, "label_category_key": "quality", "label_category_value": "noise"},
-        {"unit_id": 2, "label_category_key": "experimental", "label_category_value": ["chronic", "headfixed"]},
+        {"unit_id": 1, "label_category": "quality", "labels": "good"},
+        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
+        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
     ],
     "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [3, 31, 42],  # Can not be  in the merged_units
@@ -108,18 +108,18 @@ merged_and_removed = {
 
 unknown_merged_unit = {
     "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "labels_definition": {
-        "quality": {"name": "quality", "labels": ["good", "noise", "MUA", "artifact"], "auto_eclusive": True},
+    "label_definitions": {
+        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
         "experimental": {
             "name": "experimental",
-            "labels": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_eclusive": False,
+            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
+            "auto_exclusive": False,
         },
     },
     "manual_labels": [
-        {"unit_id": 1, "label_category_key": "quality", "label_category_value": "good"},
-        {"unit_id": 2, "label_category_key": "quality", "label_category_value": "noise"},
-        {"unit_id": 2, "label_category_key": "experimental", "label_category_value": ["chronic", "headfixed"]},
+        {"unit_id": 1, "label_category": "quality", "labels": "good"},
+        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
+        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
     ],
     "merged_unit_groups": [[3, 6, 99], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
@@ -129,18 +129,18 @@ unknown_merged_unit = {
 
 unknown_removed_unit = {
     "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "labels_definition": {
-        "quality": {"name": "quality", "labels": ["good", "noise", "MUA", "artifact"], "auto_eclusive": True},
+    "label_definitions": {
+        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
         "experimental": {
             "name": "experimental",
-            "labels": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_eclusive": False,
+            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
+            "auto_exclusive": False,
         },
     },
     "manual_labels": [
-        {"unit_id": 1, "label_category_key": "quality", "label_category_value": "good"},
-        {"unit_id": 2, "label_category_key": "quality", "label_category_value": "noise"},
-        {"unit_id": 2, "label_category_key": "experimental", "label_category_value": ["chronic", "headfixed"]},
+        {"unit_id": 1, "label_category": "quality", "labels": "good"},
+        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
+        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
     ],
     "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42, 99],  # Can not be  in the merged_units
