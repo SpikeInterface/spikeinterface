@@ -11,7 +11,6 @@ from spikeinterface.core import (
     create_sorting_analyzer,
 )
 
-# from spikeinterface.extractors.toy_example import toy_example
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
 from spikeinterface.qualitymetrics import (

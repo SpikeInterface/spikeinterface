@@ -3,7 +3,7 @@ from numpy.testing import assert_array_equal
 
 import pandas as pd
 
-from spikeinterface.extractors import NumpySorting, toy_example
+from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 
 
