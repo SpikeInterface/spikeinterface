@@ -32,8 +32,8 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, method="cosine_similarity", n_shifts=0):
-        params = dict(method=method, n_shifts=n_shifts)
+    def _set_params(self, method="cosine_similarity", max_lag_ms=0):
+        params = dict(method=method, max_lag_ms=max_lag_ms)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -43,11 +43,12 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         return dict(similarity=new_similarity)
 
     def _run(self, verbose=False):
+        n_shifts = int(self.params["max_lag_ms"]*self.sorting_analyzer.sampling_frequency/1000)
         templates_array = get_dense_templates_array(
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
         )
         similarity = compute_similarity_with_templates_array(
-            templates_array, templates_array, method=self.params["method"], n_shifts=self.params["n_shifts"]
+            templates_array, templates_array, method=self.params["method"], n_shifts=n_shifts
         )
         self.data["similarity"] = similarity
 
@@ -67,6 +68,7 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
         nb_templates = templates_array.shape[0]
         assert templates_array.shape[0] == other_templates_array.shape[0]
         n = templates_array.shape[1]
+        assert n_shifts < n, "max_lag is too large"
         similarity = np.zeros((2*n_shifts+1, nb_templates, nb_templates), dtype=np.float32)
 
         for count, shift in enumerate(range(-n_shifts, n_shifts + 1)):
