@@ -12,7 +12,6 @@ import shutil
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import (
     make_drifting_dataset,
-    cache_folder,
 )
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_motion_interpolation import MotionInterpolationStudy
@@ -22,9 +21,15 @@ from spikeinterface.sortingcomponents.benchmark.benchmark_motion_estimation impo
 )
 
 
-@pytest.mark.skip()
-def test_benchmark_motion_interpolation():
+@pytest.fixture(scope="module")
+def create_cache_folder(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
+    return cache_folder
 
+
+@pytest.mark.skip()
+def test_benchmark_motion_interpolation(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
     data = make_drifting_dataset()
