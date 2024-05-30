@@ -23,8 +23,8 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     metric_names : list or None
         List of quality metrics to compute.
     qm_params : dict or None
@@ -36,7 +36,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
     Returns
     -------
     metrics: pandas.DataFrame
-        Data frame with the computed metrics
+        Data frame with the computed metrics.
 
     Notes
     -----
@@ -171,13 +171,16 @@ compute_quality_metrics = ComputeQualityMetrics.function_factory()
 
 
 def get_quality_metric_list():
-    """Get a list of the available quality metrics."""
+    """
+    Return a list of the available quality metrics.
+    """
 
     return deepcopy(list(_misc_metric_name_to_func.keys()))
 
 
 def get_default_qm_params():
-    """Return default dictionary of quality metrics parameters.
+    """
+    Return default dictionary of quality metrics parameters.
 
     Returns
     -------
