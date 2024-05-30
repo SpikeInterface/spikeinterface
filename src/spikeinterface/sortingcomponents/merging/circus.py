@@ -16,33 +16,26 @@ class CircusMerging(BaseMergingEngine):
         'templates' : None
     }
     
-
-    @classmethod
-    def initialize_and_check_kwargs(cls, recording, sorting, kwargs):
-        d = cls.default_params.copy()
-        d.update(kwargs)
-        templates = d.get('templates', None)
-        if templates is not None:
-            sparsity = templates.sparsity
-            templates_array = templates.get_dense_templates().copy()
-            sa = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
-            sa.extensions["templates"] = ComputeTemplates(sa)
-            sa.extensions["templates"].params = {"nbefore": templates.nbefore}
-            sa.extensions["templates"].data["average"] = templates_array
-            sa.compute("unit_locations", method="monopolar_triangulation")
+    def __init__(self, recording, sorting, kwargs):
+        self.default_params.update(**kwargs)
+        self.sorting = sorting
+        self.recording = recording
+        self.templates = self.default_params.pop('templates', None)
+        if self.templates is not None:
+            sparsity = self.templates.sparsity
+            templates_array = self.templates.get_dense_templates().copy()
+            self.analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
+            self.analyzer.extensions["templates"] = ComputeTemplates(self.analyzer)
+            self.analyzer.extensions["templates"].params = {"nbefore": self.templates.nbefore}
+            self.analyzer.extensions["templates"].data["average"] = templates_array
+            self.analyzer.compute("unit_locations", method="monopolar_triangulation")
         else:
-            sa = create_sorting_analyzer(sorting, recording, format="memory")
-            sa.compute(['random_spikes', 'templates'])
-            sa.compute("unit_locations", method="monopolar_triangulation")
+            self.analyzer = create_sorting_analyzer(sorting, recording, format="memory")
+            self.analyzer.compute(['random_spikes', 'templates'])
+            self.analyzer.compute("unit_locations", method="monopolar_triangulation")
         
-        d['analyzer'] = sa
-        return d
-
-    @classmethod
-    def main_function(cls, recording, sorting, method_kwargs):
-        analyzer = method_kwargs.pop('analyzer')
-        method_kwargs.pop('templates')
-        merges = get_potential_auto_merge(analyzer, **method_kwargs)
-        merges = resolve_merging_graph(sorting, merges)
-        sorting = apply_merges_to_sorting(sorting, merges)
+    def run(self):
+        merges = get_potential_auto_merge(self.analyzer, **self.default_params)
+        merges = resolve_merging_graph(self.sorting, merges)
+        sorting = apply_merges_to_sorting(self.sorting, merges)
         return sorting

@@ -34,8 +34,8 @@ def merge_spikes(
     assert method in merging_methods, f"The 'method' {method} is not valid. Use a method from {merging_methods}"
 
     method_class = merging_methods[method]
-    method_kwargs = method_class.initialize_and_check_kwargs(recording, sorting, method_kwargs)
-    new_sorting = method_class.main_function(recording, sorting, method_kwargs)
+    method_instance = method_class(recording, sorting, method_kwargs)
+    new_sorting = method_instance.run()
 
     if extra_outputs:
         return new_sorting, method_kwargs
@@ -47,13 +47,11 @@ def merge_spikes(
 class BaseMergingEngine:
     default_params = {}
 
-    @classmethod
-    def initialize_and_check_kwargs(cls, recording, sorting, kwargs):
+    def __init__(self, recording, sorting, kwargs):
         """This function runs before loops"""
         # need to be implemented in subclass
         raise NotImplementedError
 
-    @classmethod
-    def main_function(cls, recording, sorting, method_kwargs):
+    def run(self):
         # need to be implemented in subclass
         raise NotImplementedError
