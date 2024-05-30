@@ -23,10 +23,11 @@ if DEBUG:
     plt.ion()
     plt.show()
 
+
 @pytest.fixture(scope="module")
 def setup_module(tmp_path_factory):
     recording, sorting = make_dataset()
-    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     cache_folder.mkdir(parents=True, exist_ok=True)
 
     # detect and localize
@@ -52,6 +53,7 @@ def setup_module(tmp_path_factory):
     np.save(peak_location_path, peak_locations)
 
     return recording, sorting, cache_folder
+
 
 def test_estimate_motion(setup_module):
     # recording, sorting = make_dataset()

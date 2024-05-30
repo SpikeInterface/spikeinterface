@@ -62,9 +62,9 @@ class WaveformsRootMeanSquare(PipelineNode):
         return rms_by_channels
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def cache_folder_creation(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     return cache_folder
 
 

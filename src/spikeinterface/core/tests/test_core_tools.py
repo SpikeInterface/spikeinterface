@@ -14,6 +14,7 @@ from spikeinterface.core.core_tools import (
     add_suffix,
 )
 
+
 def test_add_suffix():
     # first case - no dot provided before extension
     file_path = "testpath"

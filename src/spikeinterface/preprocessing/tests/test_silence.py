@@ -10,9 +10,9 @@ from spikeinterface.core import get_noise_levels
 import numpy as np
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     return cache_folder
 
 

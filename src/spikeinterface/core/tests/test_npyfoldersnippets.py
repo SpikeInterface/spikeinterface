@@ -6,9 +6,10 @@ import shutil
 from spikeinterface.core import load_extractor
 from spikeinterface.core import generate_snippets
 
+
 @pytest.fixture(scope="module")
 def cache_folder_creation(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     return cache_folder
 
 

@@ -7,9 +7,9 @@ from spikeinterface.preprocessing import bandpass_filter
 from spikeinterface.comparison import GroundTruthStudy
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def setup_module(tmp_path_factory):
-    study_folder = tmp_path_factory.mktemp('study_folder')
+    study_folder = tmp_path_factory.mktemp("study_folder")
     if study_folder.is_dir():
         shutil.rmtree(study_folder)
     create_a_study(study_folder)

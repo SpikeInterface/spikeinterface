@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from spikeinterface.core import NumpyRecording
 
 
-
 def test_filter_gaussian(tmp_path):
     recording = generate_recording(num_channels=3)
     recording.annotate(is_filtered=True)

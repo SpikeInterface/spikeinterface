@@ -29,9 +29,10 @@ def setup_NumpyRecording(tmp_path_factory):
     # print(rec)
 
     times1 = rec.get_times(1)
-    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     rec.save(folder=cache_folder / "test_NumpyRecording")
     return cache_folder
+
 
 def test_SharedMemoryRecording():
     rec0 = generate_recording(num_channels=2, durations=[4.0, 3.0])

@@ -11,10 +11,12 @@ from spikeinterface.extractors import toy_example
 
 import numpy as np
 
-@pytest.fixture(scope='module')
+
+@pytest.fixture(scope="module")
 def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     return cache_folder
+
 
 def test_estimate_and_correct_motion(create_cache_folder):
     cache_folder = create_cache_folder
