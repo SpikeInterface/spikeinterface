@@ -1,18 +1,14 @@
-import pytest
 from pathlib import Path
+
 import numpy as np
-
+import pytest
+import spikeinterface.core as sc
 from spikeinterface import download_dataset
-
-from spikeinterface.sortingcomponents.motion_utils import Motion
 from spikeinterface.sortingcomponents.motion_interpolation import (
-    correct_motion_on_peaks,
-    interpolate_motion_on_traces,
-    InterpolateMotionRecording,
-)
-
+    InterpolateMotionRecording, correct_motion_on_peaks, interpolate_motion,
+    interpolate_motion_on_traces)
+from spikeinterface.sortingcomponents.motion_utils import Motion
 from spikeinterface.sortingcomponents.tests.common import make_dataset
-
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "sortingcomponents"
@@ -26,10 +22,10 @@ def make_fake_motion(rec):
     locs = rec.get_channel_locations()
     temporal_bins = np.arange(0.5, duration - 0.49, 0.5)
     spatial_bins = np.arange(locs[:, 1].min(), locs[:, 1].max(), 100)
-    displacament = np.zeros((temporal_bins.size, spatial_bins.size))
-    displacament[:, :] = np.linspace(-30, 30, temporal_bins.size)[:, None]
+    displacement = np.zeros((temporal_bins.size, spatial_bins.size))
+    displacement[:, :] = np.linspace(-30, 30, temporal_bins.size)[:, None]
 
-    motion = Motion([displacament], [temporal_bins], spatial_bins, direction="y")
+    motion = Motion([displacement], [temporal_bins], spatial_bins, direction="y")
 
     return motion
 
@@ -62,7 +58,6 @@ def test_correct_motion_on_peaks():
     # plt.show()
 
 
-
 def test_interpolate_motion_on_traces():
     rec, sorting = make_dataset()
 
@@ -86,6 +81,24 @@ def test_interpolate_motion_on_traces():
         )
         assert traces.shape == traces_corrected.shape
         assert traces.dtype == traces_corrected.dtype
+
+
+def test_interpolation_simple():
+    # a recording where a 1 moves at 1 chan per second. 30 chans 10 frames.
+    # there will be 9 chans of drift, so we add 9 chans of padding to the bottom
+    nt = nc0 = 10  # these need to be the same for this test
+    nc1 = nc0 + nc0 - 1
+    traces = np.zeros((nt, nc1), dtype="float32")
+    traces[:, :nc0] = np.eye(nc0)
+    rec = sc.NumpyRecording(traces, sampling_frequency=1)
+    rec.set_dummy_probe_from_locations(np.c_[np.zeros(nc1), np.arange(nc1)])
+
+    true_motion = Motion(np.arange(nt)[:, None], 0.5 + np.arange(nt), np.zeros(1))
+    rec_corrected = interpolate_motion(rec, true_motion, spatial_interpolation_method="nearest")
+    traces_corrected = rec_corrected.get_traces()
+    assert traces_corrected.shape == (nc0, nc0)
+    assert np.array_equal(traces_corrected[:, 0], np.ones(nt))
+    assert np.array_equal(traces_corrected[:, 1:], np.zeros((nt, nc0 - 1)))
 
 
 def test_InterpolateMotionRecording():
@@ -121,4 +134,5 @@ def test_InterpolateMotionRecording():
 if __name__ == "__main__":
     # test_correct_motion_on_peaks()
     # test_interpolate_motion_on_traces()
+    test_interpolation_simple()
     test_InterpolateMotionRecording()

@@ -6,7 +6,7 @@ from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 from spikeinterface.preprocessing.basepreprocessor import (
     BasePreprocessor, BasePreprocessorSegment)
 
-from .filter import fix_dtype
+from ..preprocessing.filter import fix_dtype
 
 
 def correct_motion_on_peaks(
@@ -126,10 +126,11 @@ def interpolate_motion_on_traces(
     time_bins = interpolation_time_bin_centers_s
     if time_bins is None:
         time_bins = motion.temporal_bins_s[segment_index]
-    bin_s = time_bins[1] - time_bins
+    bin_s = time_bins[1] - time_bins[0]
     bins_start = time_bins[0] - 0.5 * bin_s
     # nearest bin center for each frame?
     bin_inds = (times - bins_start) // bin_s
+    bin_inds = bin_inds.astype(int)
     # the time bins may not cover the whole set of times in the recording,
     # so we need to clip these indices to the valid range
     np.clip(bin_inds, 0, time_bins.size, out=bin_inds)
@@ -145,7 +146,7 @@ def interpolate_motion_on_traces(
         interp_times.fill(bin_time)
         channel_motions = motion.get_displacement_at_time_and_depth(
             interp_times,
-            channel_locations[motion.dim],
+            channel_locations[:, motion.dim],
             segment_index=segment_index,
         )
         channel_locations_moved = channel_locations.copy()
@@ -316,13 +317,14 @@ class InterpolateMotionRecording(BasePreprocessor):
             channel_inside = np.ones(locs.shape[0], dtype="bool")
             for segment_index in range(recording.get_num_segments()):
                 # evaluate the positions of all channels over all time bins
-                channel_locations = motion.get_displacement_at_time_and_depth(
+                channel_displacements = motion.get_displacement_at_time_and_depth(
                     times_s=motion.temporal_bins_s[segment_index],
                     locations_um=locs,
                     grid=True,
                 )
+                channel_locations_moved = locs[:, None] + channel_displacements
                 # check if these remain inside of the probe
-                seg_inside = channel_locations.clip(l0, l1) == channel_locations
+                seg_inside = channel_locations_moved.clip(l0, l1) == channel_locations_moved
                 seg_inside = seg_inside.all(axis=1)
                 channel_inside &= seg_inside
 
@@ -422,9 +424,10 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         self.segment_index = segment_index
         self.interpolation_time_bin_centers_s = interpolation_time_bin_centers_s
         self.dtype = dtype
+        self.motion = motion
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if self.has_time_vector():
+        if self.time_vector is not None:
             raise NotImplementedError("InterpolateMotionRecording does not yet support recordings with time_vectors.")
 
         if start_frame is None:
@@ -441,6 +444,7 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
             self.channel_locations,
             self.motion,
             channel_inds=self.channel_inds,
+            spatial_interpolation_method=self.spatial_interpolation_method,
             spatial_interpolation_kwargs=self.spatial_interpolation_kwargs,
             interpolation_time_bin_centers_s=self.interpolation_time_bin_centers_s,
             segment_index=self.segment_index,
