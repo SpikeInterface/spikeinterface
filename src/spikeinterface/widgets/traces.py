@@ -671,7 +671,7 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
 
     if return_scaled:
         assert all(
-            rec.has_scaled() for rec in recordings.values()
+            rec.has_scaleable_traces() for rec in recordings.values()
         ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
     if times is not None:
         frame_range = np.searchsorted(times, time_range)

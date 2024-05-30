@@ -46,7 +46,7 @@ class SorterCommonTestSuite:
         sorting = run_sorter(
             sorter_name,
             recording,
-            output_folder=output_folder,
+            folder=output_folder,
             remove_existing_folder=True,
             delete_output_folder=True,
             verbose=False,
@@ -105,7 +105,7 @@ class SnippetsSorterCommonTestSuite:
         sorting = run_sorter(
             sorter_name,
             snippets,
-            output_folder=output_folder,
+            folder=output_folder,
             remove_existing_folder=True,
             delete_output_folder=False,
             verbose=False,
