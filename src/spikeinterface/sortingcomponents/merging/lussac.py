@@ -12,7 +12,7 @@ from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph
 def aurelien_merge(
     analyzer,
     refractory_period,
-    template_threshold: float = 0.2,
+    template_threshold: float = 0.25,
     CC_threshold: float = 0.1,
     max_shift: int = 10,
     max_channels: int = 10,
