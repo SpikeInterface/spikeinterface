@@ -32,7 +32,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, method="cosine_similarity", n_shifts=5):
+    def _set_params(self, method="cosine_similarity", n_shifts=0):
         params = dict(method=method, n_shifts=n_shifts)
         return params
 
