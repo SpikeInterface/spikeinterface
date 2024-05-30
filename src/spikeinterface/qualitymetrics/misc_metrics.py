@@ -179,7 +179,8 @@ _default_params["presence_ratio"] = dict(
 )
 
 
-def compute_snrs(sorting_analyzer,
+def compute_snrs(
+    sorting_analyzer,
     peak_sign: str = "neg",
     peak_mode: str = "extremum",
     unit_ids=None,
