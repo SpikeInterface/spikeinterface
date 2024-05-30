@@ -49,7 +49,7 @@ def get_job_list():
             kwargs = dict(
                 sorter_name=sorter_name,
                 recording=recording,
-                output_folder=base_output / f"{sorter_name}_rec{i}",
+                folder=base_output / f"{sorter_name}_rec{i}",
                 verbose=True,
                 raise_error=False,
             )
