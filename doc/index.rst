@@ -58,6 +58,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
     development/development
     whatisnew
     authors
+    references
 
 
 Other resources
