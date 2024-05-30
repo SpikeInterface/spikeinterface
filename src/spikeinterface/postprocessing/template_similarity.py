@@ -43,7 +43,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         return dict(similarity=new_similarity)
 
     def _run(self, verbose=False):
-        n_shifts = int(self.params["max_lag_ms"]*self.sorting_analyzer.sampling_frequency/1000)
+        n_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
         templates_array = get_dense_templates_array(
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
         )
@@ -69,11 +69,13 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
         assert templates_array.shape[0] == other_templates_array.shape[0]
         n = templates_array.shape[1]
         assert n_shifts < n, "max_lag is too large"
-        similarity = np.zeros((2*n_shifts+1, nb_templates, nb_templates), dtype=np.float32)
+        similarity = np.zeros((2 * n_shifts + 1, nb_templates, nb_templates), dtype=np.float32)
 
         for count, shift in enumerate(range(-n_shifts, n_shifts + 1)):
-            templates_flat = templates_array[:, n_shifts:n-n_shifts].reshape(templates_array.shape[0], -1)
-            other_templates_flat = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(templates_array.shape[0], -1)
+            templates_flat = templates_array[:, n_shifts : n - n_shifts].reshape(templates_array.shape[0], -1)
+            other_templates_flat = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(
+                templates_array.shape[0], -1
+            )
             similarity[count] = sklearn.metrics.pairwise.cosine_similarity(templates_flat, other_templates_flat)
         similarity = np.max(similarity, axis=0)
     else:
