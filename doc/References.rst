@@ -1,5 +1,5 @@
 How to Cite
-==========
+===========
 
 If you like SpikeInterface, please star us on `Github <https://github.com/SpikeInterface/spikeinterface>`_!
 *giving us a star gives a measure of the level of use and interest, which goes a long way to getting funding*
