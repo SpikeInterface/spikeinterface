@@ -1,21 +1,21 @@
 How to Cite
 ==========
 
-If you like Spikeinterface, please star us on `Github <https://github.com/SpikeInterface/spikeinterface>`_!
+If you like SpikeInterface, please star us on `Github <https://github.com/SpikeInterface/spikeinterface>`_!
 *giving us a star gives a measure of the level of use and interest, which goes a long way to getting funding*
 
-Please cite Spikeinterface in your papers with our eLife paper: [Buccino]_
+Please cite SpikeInterface in your papers with our eLife paper: [Buccino]_
 
-Spikeinterface stands on the shoulders of giants!
-Each method in Spikeinterface draws on (or directly runs) independently-created methods.
+SpikeInterface stands on the shoulders of giants!
+Each method in SpikeInterface draws on (or directly runs) independently-created methods.
 Please try to reference the individual works that are important for your analysis pipeline.
 If you notice a missing reference, please let us know by submitting an issue on Github.
 
 Preprocessing Module
 --------------------
-If you use one of the following prepocessing methods, please cite the appropriate source:
+If you use one of the following preprocessing methods, please cite the appropriate source:
 
-- :code:`phase_shift` :code:`highpass_spatial_filter` [IBL]_
+- :code:`phase_shift` or :code:`highpass_spatial_filter` [IBL]_
 - :code:`detect_bad_channels(method='coherence+psd')` [IBL]_
 - :code:`common_reference` [Rolston]_
 
@@ -50,8 +50,8 @@ If you use the :code:`qualitymetrics` module, i.e. you use the :code:`analyzer.c
 or :code:`compute_quality_metrics()` methods, please include the citations for the :code:`metric_names` that were particularly
 important for your research:
 
-- :code:`amplitude_cutoff` :code:`isi_violation` [Hill]_
-- :code:`amplitude_median` :code:`sliding_rp_violation` [IBL]_
+- :code:`amplitude_cutoff` or  :code:`isi_violation` [Hill]_
+- :code:`amplitude_median` or :code:`sliding_rp_violation` [IBL]_
 - :code:`drift` [Siegle]_
 - :code:`rp_violation` [Llobet]_
 - :code:`sd_ratio` [Pouzat]_
@@ -59,12 +59,12 @@ important for your research:
 - :code:`synchrony` [Grun]_
 
 If you use the :code:`qualitymetrics.pca_metrics` module, i.e. you use the
-:code:`calculate_pc_metrics()` method, please include the citations for the :code:`metric_names` that were particularly
+:code:`compute_pc_metrics()` method, please include the citations for the :code:`metric_names` that were particularly
 important for your research:
 
 - :code:`d_prime` [Hill]_
-- :code:`isolation_distance` :code:`l_ratio` [Schmitzer-Torbert]_
-- :code:`nearest_neighbor` :code:`nn_isolation` :code:`nn_noise_overlap` [Chung]_ [Siegle]_
+- :code:`isolation_distance` or :code:`l_ratio` [Schmitzer-Torbert]_
+- :code:`nearest_neighbor` or :code:`nn_isolation` or :code:`nn_noise_overlap` [Chung]_ [Siegle]_
 - :code:`silhouette`  [Rousseeuw]_ [Hruschka]_
 
 Curation Module
