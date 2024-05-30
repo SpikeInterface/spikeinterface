@@ -1,6 +1,4 @@
 import pytest
-from pathlib import Path
-
 import shutil
 
 
@@ -10,15 +8,13 @@ from spikeinterface.extractors import toy_example
 
 import numpy as np
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
+@pytest.fixture(scope='module')
+def create_cache_folder(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp('cache_folder')
+    return cache_folder
 
-print(cache_folder.absolute())
-
-
-def test_estimate_and_correct_motion():
+def test_estimate_and_correct_motion(create_cache_folder):
+    cache_folder = create_cache_folder
     rec, sorting = toy_example(num_segments=1, duration=30.0, num_units=10, num_channels=12)
     print(rec)
 
@@ -34,4 +30,4 @@ def test_estimate_and_correct_motion():
 
 if __name__ == "__main__":
     print(correct_motion.__doc__)
-    # test_estimate_and_correct_motion()
+    #test_estimate_and_correct_motion()
