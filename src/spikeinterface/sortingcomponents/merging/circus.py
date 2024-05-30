@@ -9,7 +9,7 @@ from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph
 
 class CircusMerging(BaseMergingEngine):
     """
-    TO DO
+    Meta merging inspired from the Lussac metric
     """
 
     default_params = {
@@ -41,6 +41,7 @@ class CircusMerging(BaseMergingEngine):
     @classmethod
     def main_function(cls, recording, sorting, method_kwargs):
         analyzer = method_kwargs.pop('analyzer')
+        method_kwargs.pop('templates')
         merges = get_potential_auto_merge(analyzer, **method_kwargs)
         merges = resolve_merging_graph(sorting, merges)
         sorting = apply_merges_to_sorting(sorting, merges)

@@ -3,8 +3,6 @@ from __future__ import annotations
 from threadpoolctl import threadpool_limits
 import numpy as np
 
-
-
 def merge_spikes(
     recording, sorting, method="circus", method_kwargs={}, extra_outputs=False, verbose=False, **job_kwargs
 ):
