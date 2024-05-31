@@ -23,7 +23,7 @@ def test_benchmark_clustering():
     # datasets = {"toy": (recording, gt_sorting)}
     datasets = {"toy": gt_analyzer}
 
-    gt_analyzer.compute(['random_spikes', 'templates', 'spike_amplitudes'])
+    gt_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
     new_sorting_amp, splitted_cells_amp = split_sorting_by_amplitudes(gt_analyzer)
 
     cases = {}
@@ -32,7 +32,7 @@ def test_benchmark_clustering():
             "label": f"{method} on toy",
             "dataset": "toy",
             "init_kwargs": {"gt_sorting": gt_sorting, "splitted_cells": splitted_cells_amp},
-            "params": {"method": method, "splitted_sorting" : new_sorting_amp, "method_kwargs": {}},
+            "params": {"method": method, "splitted_sorting": new_sorting_amp, "method_kwargs": {}},
         }
 
     if study_folder.exists():
