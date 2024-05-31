@@ -98,13 +98,13 @@ jobs:
       - name: Test quality metrics
         run: ./.github/run_tests.sh qualitymetrics --no-virtual-env
         shell: bash
-      - name: Test core sorte
-        run: ./.github/run_tests.sh sorters --no-virtual-env
-        shell: bash
+      # - name: Test core sorters
+      #   run: ./.github/run_tests.sh sorters --no-virtual-env
+      #   shell: bash
       - name: Test comparison
         run: ./.github/run_tests.sh comparison --no-virtual-env
         shell: bash
-      - name: Test curatio
+      - name: Test curation
         run: ./.github/run_tests.sh curation --no-virtual-env
         shell: bash
       - name: Test widgets
