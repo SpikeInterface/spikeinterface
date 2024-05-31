@@ -25,6 +25,7 @@ def pipeline():
     # TODO: make deterministic, small pipeline which is dependent on few/zero metrics
     return pipeline
 
+
 @pytest.fixture
 def required_metrics():
 
@@ -38,7 +39,10 @@ def test_model_based_classification_init(sorting_analyzer_for_curation, pipeline
     assert model_based_classification.pipeline == pipeline
     assert model_based_classification.required_metrics == required_metrics
 
-def test_model_based_classification_get_metrics_for_classification(sorting_analyzer_for_curation, pipeline, required_metrics):
+
+def test_model_based_classification_get_metrics_for_classification(
+    sorting_analyzer_for_curation, pipeline, required_metrics
+):
     # Test the _get_metrics_for_classification() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline, required_metrics)
 
@@ -72,9 +76,10 @@ def test_model_based_classification_check_params_for_classification(
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics)
     model_based_classification._check_params_for_classification()
 
+
 def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, pipeline, required_metrics):
     # Test the predict_labels() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline, required_metrics)
     classified_units = model_based_classification.predict_labels()
     # TODO: check that classifications match some known set of outputs
-    assert classified_units == [1,0,1,0,1]
+    assert classified_units == [1, 0, 1, 0, 1]
