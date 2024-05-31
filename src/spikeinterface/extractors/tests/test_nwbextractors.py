@@ -1,17 +1,10 @@
 import unittest
-import unittest
 from pathlib import Path
-from tempfile import mkdtemp
-from datetime import datetime
+
 
 import pytest
 import numpy as np
-from pynwb import NWBHDF5IO
-from hdmf_zarr import NWBZarrIO
-from pynwb.ecephys import ElectricalSeries, LFP, FilteredEphys
-from pynwb.testing.mock.file import mock_NWBFile
-from pynwb.testing.mock.device import mock_Device
-from pynwb.testing.mock.ecephys import mock_ElectricalSeries, mock_ElectrodeGroup, mock_electrodes
+
 from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
@@ -30,10 +23,12 @@ class NwbSortingTest(SortingCommonTestSuite, unittest.TestCase):
     entities = []
 
 
-from pynwb.testing.mock.ecephys import mock_ElectrodeGroup
-
-
 def nwbfile_with_ecephys_content():
+    from pynwb.ecephys import ElectricalSeries, LFP, FilteredEphys
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.testing.mock.device import mock_Device
+    from pynwb.testing.mock.ecephys import mock_ElectricalSeries, mock_ElectrodeGroup
+
     to_micro_volts = 1e6
 
     nwbfile = mock_NWBFile()
@@ -160,6 +155,8 @@ def nwbfile_with_ecephys_content():
 
 
 def _generate_nwbfile(backend, file_path):
+    from pynwb import NWBHDF5IO
+
     nwbfile = nwbfile_with_ecephys_content()
     if backend == "hdf5":
         io_class = NWBHDF5IO
@@ -367,6 +364,9 @@ def test_failure_with_wrong_electrical_series_path(generate_nwbfile, use_pynwb):
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
 def test_sorting_extraction_of_ragged_arrays(tmp_path, use_pynwb):
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+
     nwbfile = mock_NWBFile()
 
     # Add the spikes
@@ -433,6 +433,10 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path, use_pynwb):
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
 def test_sorting_extraction_start_time(tmp_path, use_pynwb):
+
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+
     nwbfile = mock_NWBFile()
 
     # Add the spikes
@@ -477,6 +481,12 @@ def test_sorting_extraction_start_time(tmp_path, use_pynwb):
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
 def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.ecephys import ElectricalSeries, LFP, FilteredEphys
+
+    from pynwb.testing.mock.ecephys import mock_electrodes
+
     nwbfile = mock_NWBFile()
     electrical_series_name = "ElectricalSeries"
     t_start = 10.0
@@ -530,6 +540,8 @@ def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
 @pytest.mark.parametrize("use_pynwb", [True, False])
 def test_multiple_unit_tables(tmp_path, use_pynwb):
     from pynwb.misc import Units
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
 
     nwbfile = mock_NWBFile()
 
