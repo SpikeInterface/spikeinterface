@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
-
-from pathlib import Path
-import shutil
 
 
-from spikeinterface.sorters import run_sorter, read_sorter_folder
+from spikeinterface.sorters import run_sorter
 
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
