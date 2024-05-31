@@ -661,6 +661,20 @@ class TracesWidget(BaseWidget):
         win.show()
         app.exec()
 
+    def plot_viewephys(self, data_plot, **backend_kwargs):
+        from viewephys.gui import SpikeInterfaceViewer
+        import easyqc.qt
+        from ..preprocessing import depth_order
+
+        dp = to_attr(data_plot)
+        assert len(dp.recordings) == 1
+
+        recording = list(dp.recordings.values())[0]
+        recording = depth_order(recording)
+        app = easyqc.qt.create_app()
+        siv = SpikeInterfaceViewer(recording)  # TODO dict of recordings
+        self.siv = siv
+        app.exec()
 
 def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_scaled=False, times=None):
     # function also used in ipywidgets plotter
