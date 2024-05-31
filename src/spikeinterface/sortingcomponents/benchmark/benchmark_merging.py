@@ -5,7 +5,7 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
     plot_agreement_matrix,
-    plot_comparison_collision_by_similarity,
+    plot_unit_templates,
     plot_amplitudes,
     plot_crosscorrelograms,
 )
@@ -127,3 +127,9 @@ class MergingStudy(BenchmarkStudy):
         if analyzer.get_extension("template_similarity") is None:
             analyzer.compute(["template_similarity"])
         plot_crosscorrelograms(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])
+    
+    def plot_splitted_templates(self, case_key, pair_index=0):
+        analyzer = self.get_sorting_analyzer(case_key)
+        if analyzer.get_extension("spike_amplitudes") is None:
+            analyzer.compute(["spike_amplitudes"])
+        plot_unit_templates(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])

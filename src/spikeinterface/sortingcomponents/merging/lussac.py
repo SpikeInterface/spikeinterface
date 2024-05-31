@@ -1,6 +1,10 @@
 from __future__ import annotations
 import numpy as np
-import lussac.utils as utils
+try:
+    import lussac.utils as utils
+    HAVE_LUSSAC = True
+except Exception:
+    HAVE_LUSSAC = False
 
 from .main import BaseMergingEngine
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
