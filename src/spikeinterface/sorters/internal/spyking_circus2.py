@@ -99,11 +99,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.merging import merge_spikes
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
-        from spikeinterface.sortingcomponents.tools import get_prototype_spike
+        from spikeinterface.core.globals import set_global_job_kwargs, get_global_job_kwargs
 
-        job_kwargs = params["job_kwargs"]
+        job_kwargs_before = get_global_job_kwargs().copy()
+        job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs.update({"progress_bar": verbose})
+        set_global_job_kwargs(**job_kwargs)
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -342,5 +343,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(folder_to_delete)
 
         sorting = sorting.save(folder=sorting_folder)
+        set_global_job_kwargs(**job_kwargs_before)
 
         return sorting
