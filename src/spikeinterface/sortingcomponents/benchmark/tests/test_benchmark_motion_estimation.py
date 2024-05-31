@@ -1,6 +1,5 @@
 import pytest
 
-import matplotlib.pyplot as plt
 
 import shutil
 
@@ -69,6 +68,7 @@ def test_benchmark_motion_estimaton():
     study.plot_true_drift()
     study.plot_errors()
     study.plot_summary_errors()
+    import matplotlib.pyplot as plt
 
     plt.show()
 
