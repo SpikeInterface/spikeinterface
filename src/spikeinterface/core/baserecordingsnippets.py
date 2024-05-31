@@ -48,11 +48,19 @@ class BaseRecordingSnippets(BaseExtractor):
     def get_dtype(self):
         return self._dtype
 
-    def has_scaled(self):
+    def has_scaleable_traces(self):
         if self.get_property("gain_to_uV") is None or self.get_property("offset_to_uV") is None:
             return False
         else:
             return True
+
+    def has_scaled(self):
+        warn(
+            "`has_scaled` has been deprecated and will be removed in 0.103.0. Please use `has_scaleable_traces()`",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.has_scaleable_traces()
 
     def has_probe(self):
         return "contact_vector" in self.get_property_keys()
