@@ -676,6 +676,7 @@ class TracesWidget(BaseWidget):
         self.siv = siv
         app.exec()
 
+
 def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_scaled=False, times=None):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]

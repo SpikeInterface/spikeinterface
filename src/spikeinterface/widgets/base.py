@@ -47,7 +47,7 @@ backend_kwargs_desc = {
     },
     "ephyviewer": {},
     "spikeinterface_gui": {},
-    "viewephys": {}
+    "viewephys": {},
 }
 
 default_backend_kwargs = {
@@ -56,7 +56,7 @@ default_backend_kwargs = {
     "ipywidgets": {"width_cm": 25, "height_cm": 10, "display": True, "controllers": None},
     "ephyviewer": {},
     "spikeinterface_gui": {},
-    "viewephys": {}
+    "viewephys": {},
 }
 
 
