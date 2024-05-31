@@ -21,15 +21,15 @@ def test_Motion():
     displacement[:, :] = np.linspace(-20, 20, temporal_bins_s.shape[0])[:, np.newaxis]
 
     motion = Motion(displacement, temporal_bins_s, spatial_bins_um, direction="y")
-    print(motion)
+    assert motion.interpolators is None
 
     # serialize with pickle before interpolation fit
     motion2 = pickle.loads(pickle.dumps(motion))
     assert motion2.interpolators is None
     # serialize with pickle after interpolation fit
-    motion.make_interpolators()
+    motion2.make_interpolators()
     assert motion2.interpolators is not None
-    motion2 = pickle.loads(pickle.dumps(motion))
+    motion2 = pickle.loads(pickle.dumps(motion2))
     assert motion2.interpolators is not None
 
     # to/from dict
