@@ -20,7 +20,7 @@ else:
 
 @pytest.fixture
 def pipeline():
-    pipeline = joblib.load("trained_pipeline.pkl")
+    pipeline = joblib.load("src/spikeinterface/curation/tests/trained_pipeline.pkl")
     # Create a dummy Pipeline object for testing
     # TODO: make deterministic, small pipeline which is dependent on few/zero metrics
     return pipeline
