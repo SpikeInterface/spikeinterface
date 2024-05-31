@@ -1,5 +1,5 @@
-How to Make your own Sorting
-============================
+Make your own Sorting
+=====================
 
 Why make a :code:`Sorting`?
 
@@ -69,7 +69,7 @@ dict for monosegment. We still need to separately specify the sampling_frequency
     my_sorting = NumpySorting.from_unit_dict(units_dict_list={'0': [1,3],
                                                               '1': [2,4]
                                                               },
-                                            sampling_frequency=30_000.0
+                                             sampling_frequency=30_000.0
                                            )
 
 
@@ -84,4 +84,6 @@ using :code:`Neo.SpikeTrain`'s.
 
     from spikeinterface.core import NumpySorting
 
-    my_sorting = NumpySorting.from_neo_spiketrain_list(neo_spiketrain, sampling_frequency=30_000.0)
+    # neo_spiketrain is a Neo spiketrain object
+    my_sorting = NumpySorting.from_neo_spiketrain_list(neo_spiketrain,
+                                                       sampling_frequency=30_000.0)
