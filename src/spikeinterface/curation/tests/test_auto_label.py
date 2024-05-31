@@ -21,8 +21,6 @@ else:
 @pytest.fixture
 def pipeline():
     pipeline = joblib.load("trained_pipeline.pkl")
-    # Create a dummy Pipeline object for testing
-    # TODO: make deterministic, small pipeline which is dependent on few/zero metrics
     return pipeline
 
 
@@ -91,3 +89,42 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
     # TODO: check that classifications match some known set of outputs
     predictions = [classified_units[i][0] for i in classified_units]
     assert predictions == [1, 0, 1, 0, 1]
+
+
+## Code to create the trained pipeline for testing
+# import pandas as pd
+# from sklearn.preprocessing import StandardScaler
+# from sklearn.linear_model import LogisticRegression
+# from sklearn.pipeline import Pipeline
+# import numpy as np
+# import joblib
+
+# from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
+
+
+# # Set random seed for reproducibility
+# np.random.seed(42)
+
+# # Sample data
+# sorting_analyzer = make_sorting_analyzer()
+# sorting_analyzer.compute("quality_metrics", metric_names = ["num_spikes"])
+# sorting_analyzer.compute("template_metrics", metric_names = ["half_width"])
+# data = pd.concat([sorting_analyzer.extensions["quality_metrics"].data["metrics"], sorting_analyzer.extensions["template_metrics"].data["metrics"]], axis=1)
+
+# data
+
+# # Define features and target
+# X = data
+# y = [1,0,1,0,1]
+
+# # Create a simple pipeline
+# pipeline = Pipeline([
+#     ('scaler', StandardScaler()),  # Standardize the features
+#     ('classifier', LogisticRegression(random_state=42))  # Logistic Regression classifier
+# ])
+
+# # Fit the pipeline
+# pipeline.fit(X, y)
+
+# # Save the pipeline to a file
+# joblib.dump(pipeline, 'trained_pipeline.pkl')
