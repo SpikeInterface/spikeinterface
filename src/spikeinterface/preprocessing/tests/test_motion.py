@@ -18,7 +18,6 @@ print(cache_folder.absolute())
 
 
 def test_estimate_and_correct_motion():
-    import scipy
 
     rec = generate_recording(durations=[30.0], num_channels=12)
 

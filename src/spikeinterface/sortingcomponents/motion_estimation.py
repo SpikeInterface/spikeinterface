@@ -959,7 +959,6 @@ def compute_global_displacement(
         One of "gradient"
 
     """
-    import scipy.sparse
     import scipy
     from scipy.optimize import minimize
     from scipy.sparse import csr_matrix
@@ -1045,6 +1044,7 @@ def compute_global_displacement(
 
     elif convergence_method == "lsmr":
         import gc
+        from scipy import sparse
 
         D = pairwise_displacement
 
