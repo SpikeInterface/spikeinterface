@@ -40,7 +40,7 @@ class PhaseShiftRecording(BasePreprocessor):
 
     name = "phase_shift"
 
-    def __init__(self, recording, margin_ms=40.0, inter_sample_shift=None, dtype=None):
+    def __init__(self, recording, margin_ms=40.0, inter_sample_shift=None, dtype=None, use_optimzed=True):
         if inter_sample_shift is None:
             assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"
             sample_shifts = recording.get_property("inter_sample_shift")
@@ -63,7 +63,9 @@ class PhaseShiftRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording._recording_segments:
-            rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, dtype, tmp_dtype)
+            rec_segment = PhaseShiftRecordingSegment(
+                parent_segment, sample_shifts, margin, dtype, tmp_dtype, use_optimzed=use_optimzed
+            )
             self.add_recording_segment(rec_segment)
 
         # for dumpability
@@ -73,12 +75,13 @@ class PhaseShiftRecording(BasePreprocessor):
 
 
 class PhaseShiftRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, tmp_dtype):
+    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, tmp_dtype, use_optimzed):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = sample_shifts
         self.margin = margin
         self.dtype = dtype
         self.tmp_dtype = tmp_dtype
+        self.use_optimized = use_optimzed
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -99,8 +102,10 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             add_zeros=True,
             window_on_margin=True,
         )
-
-        traces_shift = apply_fshift_optimized(traces_chunk, self.sample_shifts[channel_indices], axis=0)
+        if self.use_optimized:
+            traces_shift = apply_fshift_optimized(traces_chunk, self.sample_shifts[channel_indices], axis=0)
+        else:
+            traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts[channel_indices], axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
@@ -141,8 +146,10 @@ def apply_fshift_optimized(sig, sample_shifts, axis=0):
     """
     Apply the shift on a traces buffer.
     """
+    import scipy.fft
+
     n = sig.shape[axis]
-    sig_f = np.fft.rfft(sig, axis=axis, out=sig)
+    sig_f = scipy.fft.rfft(sig, axis=axis, overwrite_x=True)
 
     # Using np.fft.rfftfreq to get the frequency bins directly
     omega = 2 * np.pi * np.fft.rfftfreq(n)
@@ -159,7 +166,7 @@ def apply_fshift_optimized(sig, sample_shifts, axis=0):
     # In-place multiplication if possible to save memory
     sig_f *= phase_shift
 
-    sig_shift = np.fft.irfft(sig_f, n=n, axis=axis, out=sig)
+    sig_shift = scipy.fft.irfft(sig_f, n=n, axis=axis, overwrite_x=True)
     return sig_shift
 
 
