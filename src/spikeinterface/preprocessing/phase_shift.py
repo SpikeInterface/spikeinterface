@@ -142,7 +142,7 @@ def apply_fshift_optimized(sig, sample_shifts, axis=0):
     Apply the shift on a traces buffer.
     """
     n = sig.shape[axis]
-    sig_f = np.fft.rfft(sig, axis=axis)
+    sig_f = np.fft.rfft(sig, axis=axis, out=sig)
 
     # Using np.fft.rfftfreq to get the frequency bins directly
     omega = 2 * np.pi * np.fft.rfftfreq(n)
@@ -159,7 +159,7 @@ def apply_fshift_optimized(sig, sample_shifts, axis=0):
     # In-place multiplication if possible to save memory
     sig_f *= phase_shift
 
-    sig_shift = np.fft.irfft(sig_f, n=n, axis=axis)
+    sig_shift = np.fft.irfft(sig_f, n=n, axis=axis, out=sig)
     return sig_shift
 
 
