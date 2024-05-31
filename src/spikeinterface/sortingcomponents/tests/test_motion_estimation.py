@@ -5,8 +5,7 @@ import pytest
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_localization import \
-    LocalizeCenterOfMass
+from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 if hasattr(pytest, "global_test_folder"):
