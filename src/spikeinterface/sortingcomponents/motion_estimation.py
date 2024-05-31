@@ -318,6 +318,7 @@ class DecentralizedRegistration:
             spatial_bin_edges=spatial_bin_edges,
             weight_with_amplitude=weight_with_amplitude,
         )
+        import scipy.signal
 
         if histogram_depth_smooth_um is not None:
             bins = np.arange(motion_histogram.shape[1]) * bin_um
