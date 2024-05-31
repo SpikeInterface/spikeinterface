@@ -73,9 +73,44 @@ jobs:
           datalad-installer --sudo ok git-annex --method brew
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
-      - name: run tests
+      - name: Test core
+        run: ./.github/run_tests.sh core
+        shell: bash
+      - name: Test extractors
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
-        run: |
-          pip install pytest-sugar
-          pytest -m "not sorters_external" -vv -ra --durations=0
+        run: ./.github/run_tests.sh "extractors and not streaming_extractors"
+        shell: bash
+      - name: Test preprocessing
+        run: ./.github/run_tests.sh "preprocessing and not deepinterpolation"
+        shell: bash
+      - name: Test postprocessing
+        run: ./.github/run_tests.sh postprocessing
+        shell: bash
+      - name: Test quality metrics
+        run: ./.github/run_tests.sh qualitymetrics
+        shell: bash
+      - name: Test core sorte
+        run: ./.github/run_tests.sh sorters
+        shell: bash
+      - name: Test comparison
+        run: ./.github/run_tests.sh comparison
+        shell: bash
+      - name: Test curatio
+        run: ./.github/run_tests.sh curation
+        shell: bash
+      - name: Test widgets
+        run: ./.github/run_tests.sh widgets
+        shell: bash
+      - name: Test exporters
+        run: ./.github/run_tests.sh exporters
+        shell: bash
+      - name: Test sortingcomponents
+        run: ./.github/run_tests.sh sortingcomponents
+        shell: bash
+      - name: Test internal sorters
+        run: ./.github/run_tests.sh sorters_internal
+        shell: bash
+      - name: Test generation
+        run: ./.github/run_tests.sh generation
+        shell: bash
