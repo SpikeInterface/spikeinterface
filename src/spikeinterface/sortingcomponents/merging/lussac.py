@@ -1,7 +1,9 @@
 from __future__ import annotations
 import numpy as np
+
 try:
     import lussac.utils as utils
+
     HAVE_LUSSAC = True
 except Exception:
     HAVE_LUSSAC = False

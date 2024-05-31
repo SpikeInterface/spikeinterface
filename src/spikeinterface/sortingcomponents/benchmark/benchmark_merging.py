@@ -127,7 +127,7 @@ class MergingStudy(BenchmarkStudy):
         if analyzer.get_extension("template_similarity") is None:
             analyzer.compute(["template_similarity"])
         plot_crosscorrelograms(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])
-    
+
     def plot_splitted_templates(self, case_key, pair_index=0):
         analyzer = self.get_sorting_analyzer(case_key)
         if analyzer.get_extension("spike_amplitudes") is None:
