@@ -16,16 +16,19 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "curation"
 
+
 @pytest.fixture
 def pipeline():
     # Create a dummy Pipeline object for testing
     # TODO: make deterministic, small pipeline which is dependent on few/zero metrics
     return Pipeline()
 
+
 @pytest.fixture
 def required_metrics():
-    
-    return ['num_spikes', 'firing_rate']
+
+    return ["num_spikes", "firing_rate"]
+
 
 def test_model_based_classification_init(sorting_analyzer_for_curation, pipeline, required_metrics):
     # Test the initialization of ModelBasedClassification
@@ -34,13 +37,17 @@ def test_model_based_classification_init(sorting_analyzer_for_curation, pipeline
     assert model_based_classification.pipeline == pipeline
     assert model_based_classification.required_metrics == required_metrics
 
+
 def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, pipeline, required_metrics):
     # Test the predict_labels() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline, required_metrics)
     classified_units = model_based_classification.predict_labels()
     # TODO: check that classifications match some known set of outputs
 
-def test_model_based_classification_get_metrics_for_classification(sorting_analyzer_for_curation, pipeline, required_metrics):
+
+def test_model_based_classification_get_metrics_for_classification(
+    sorting_analyzer_for_curation, pipeline, required_metrics
+):
     # Test the _get_metrics_for_classification() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline, required_metrics)
 
@@ -49,18 +56,21 @@ def test_model_based_classification_get_metrics_for_classification(sorting_analy
         model_based_classification._get_metrics_for_classification()
 
     # Compute some (but not all) of the required metrics in sorting_analyzer
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names = required_metrics[0])
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics[0])
     with pytest.raises(ValueError):
         model_based_classification._get_metrics_for_classification()
-    
+
     # Compute all of the required metrics in sorting_analyzer
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names = required_metrics)
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics)
     # Check that the metrics data is returned as a pandas DataFrame
     metrics_data = model_based_classification._get_metrics_for_classification()
     assert metrics_data.shape[0] == len(sorting_analyzer_for_curation.get_unit_ids())
     assert metrics_data.columns == required_metrics
 
-def test_model_based_classification_check_params_for_classification(sorting_analyzer_for_curation, pipeline, required_metrics):
+
+def test_model_based_classification_check_params_for_classification(
+    sorting_analyzer_for_curation, pipeline, required_metrics
+):
     # Test the _check_params_for_classification() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline, required_metrics)
     # Check that ValueError is raised when required_metrics are not computed
@@ -68,5 +78,5 @@ def test_model_based_classification_check_params_for_classification(sorting_anal
         model_based_classification._check_params_for_classification()
 
     # Check that function runs without error when required_metrics are computed
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names = required_metrics)
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics)
     model_based_classification._check_params_for_classification()
