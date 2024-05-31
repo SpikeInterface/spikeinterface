@@ -1,18 +1,15 @@
-import pytest
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 import numpy as np
-
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-
-
-from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+import pytest
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
-
-from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
-
+from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
+from spikeinterface.sortingcomponents.motion_interpolation import \
+    InterpolateMotionRecording
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.peak_localization import \
+    LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 if hasattr(pytest, "global_test_folder"):
@@ -199,33 +196,25 @@ def test_estimate_motion():
             plt.show()
 
     # same params with differents engine should be the same
-    motion0, motion1 = motions["rigid / decentralized / torch"], motions["rigid / decentralized / numpy"]
+    motion0 = motions["rigid / decentralized / torch"]
+    motion1 = motions["rigid / decentralized / numpy"]
     assert motion0 == motion1
 
-    motion0, motion1 = (
-        motions["rigid / decentralized / torch / time_horizon_s"],
-        motions["rigid / decentralized / numpy / time_horizon_s"],
-    )
-    # TODO : later torch and numpy used to be the same
-    # assert np.testing.assert_almost_equal(motion0, motion1)
+    motion0 = motions["rigid / decentralized / torch / time_horizon_s"]
+    motion1 = motions["rigid / decentralized / numpy / time_horizon_s"],
+    np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
-    motion0, motion1 = motions["non-rigid / decentralized / torch"], motions["non-rigid / decentralized / numpy"]
-    # TODO : later torch and numpy used to be the same
-    # assert np.testing.assert_almost_equal(motion0, motion1)
+    motion0 = motions["non-rigid / decentralized / torch"]
+    motion1 = motions["non-rigid / decentralized / numpy"]
+    np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
-    motion0, motion1 = (
-        motions["non-rigid / decentralized / torch / time_horizon_s"],
-        motions["non-rigid / decentralized / numpy / time_horizon_s"],
-    )
-    # TODO : later torch and numpy used to be the same
-    # assert np.testing.assert_almost_equal(motion0, motion1)
+    motion0 = motions["non-rigid / decentralized / torch / time_horizon_s"]
+    motion1 = motions["non-rigid / decentralized / numpy / time_horizon_s"],
+    np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
-    motion0, motion1 = (
-        motions["non-rigid / decentralized / torch / spatial_prior"],
-        motions["non-rigid / decentralized / numpy / spatial_prior"],
-    )
-    # TODO : later torch and numpy used to be the same
-    # assert np.testing.assert_almost_equal(motion0, motion1)
+    motion0 = motions["non-rigid / decentralized / torch / spatial_prior"]
+    motion1 = motions["non-rigid / decentralized / numpy / spatial_prior"]
+    np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
 
 if __name__ == "__main__":

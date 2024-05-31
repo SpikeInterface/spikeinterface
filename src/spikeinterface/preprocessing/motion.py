@@ -1,15 +1,13 @@
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 
 import numpy as np
-import json
-import copy
-
-from spikeinterface.core import get_noise_levels, fix_job_kwargs
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc
+from spikeinterface.core import fix_job_kwargs, get_noise_levels
 from spikeinterface.core.core_tools import SIJsonEncoder
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 
 motion_options_preset = {
     # This preset should be the most acccurate

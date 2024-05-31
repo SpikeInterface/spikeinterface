@@ -1,13 +1,10 @@
-import pytest
+import shutil
 from pathlib import Path
 
-import shutil
-
-from spikeinterface.core import generate_recording
-
-from spikeinterface.preprocessing import correct_motion, load_motion_info
-
 import numpy as np
+import pytest
+from spikeinterface.core import generate_recording
+from spikeinterface.preprocessing import correct_motion, load_motion_info
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "preprocessing"
