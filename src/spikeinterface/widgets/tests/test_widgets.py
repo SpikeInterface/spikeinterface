@@ -4,9 +4,12 @@ import os
 from pathlib import Path
 
 if __name__ != "__main__":
-    import matplotlib
+    try:
+        import matplotlib
 
-    matplotlib.use("Agg")
+        matplotlib.use("Agg")
+    except:
+        pass
 
 
 from spikeinterface import (
