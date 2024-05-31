@@ -40,7 +40,6 @@ def run_kwargs():
     return generate_run_kwargs()
 
 
-@pytest.skipif()
 def test_spykingcircus(run_kwargs):
     sorting = ss.run_sorter("spykingcircus", output_folder=cache_folder / "spykingcircus", **run_kwargs)
     print("resulting sorting")
