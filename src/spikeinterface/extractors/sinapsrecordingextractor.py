@@ -83,11 +83,12 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
                 self.set_probe(probe,in_place=True)
             else:
                 raise ValueError(f"Unknown probe type: {probe_type}")
+            
+        self._kwargs = {"file_path": str(file_path.absolute())}
 
 read_sinaps_research_platform = define_function_from_class(
     source_class=SinapsResearchPlatformRecordingExtractor, name="read_sinaps_research_platform"
 )
-
 
 def parse_sinaps_meta(meta_file):
     meta_dict = {}

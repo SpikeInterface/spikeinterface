@@ -46,10 +46,6 @@ class SinapsResearchPlatformH5RecordingExtractor_Unsigned(BaseRecording):
         self.set_channel_offsets(sinaps_info["offset"])
         self.num_bits = sinaps_info["num_bits"]
 
-        # set other properties
-
-        self._kwargs = {"file_path": str(Path(file_path).absolute())}
-
         # set probe
         if sinaps_info['probe_type'] == 'p1024s1NHP':
             probe = get_probe(manufacturer='sinaps',
@@ -58,6 +54,11 @@ class SinapsResearchPlatformH5RecordingExtractor_Unsigned(BaseRecording):
             self.set_probe(probe, in_place=True)
         else:
             raise ValueError(f"Unknown probe type: {sinaps_info['probe_type']}")
+    
+
+        # set other properties
+
+        self._kwargs = {"file_path": str(Path(file_path).absolute())}
 
 
     def __del__(self):
@@ -97,6 +98,8 @@ class SinapsResearchPlatformH5RecordingExtractor(UnsignedToSignedRecording):
     def __init__(self, file_path):
         recording = SinapsResearchPlatformH5RecordingExtractor_Unsigned(file_path)
         UnsignedToSignedRecording.__init__(self, recording, bit_depth=recording.num_bits)
+
+        self._kwargs = {"file_path": str(Path(file_path).absolute())}
 
 
 read_sinaps_research_platform_h5 = define_function_from_class(
