@@ -31,7 +31,7 @@ jobs:
           pip install -e .[test_core]
       - name: Test core with pytest
         run: |
-          pytest -m "core" -vv -ra --durations=0 --durations-min=0.001 tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          pytest -m "core" -vv -ra --durations=0 --durations-min=0.001 | tee report.txt; test $? -eq 0 || exit 1
         shell: bash  # Necessary for pipeline to work on windows
       - name: Build test summary
         run: |
