@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate
 from spikeinterface.core import get_noise_levels
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import (
-    Benchmark, BenchmarkStudy, _simpleaxis)
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
