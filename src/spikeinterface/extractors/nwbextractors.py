@@ -18,7 +18,6 @@ def read_file_from_backend(
     cache: bool = False,
     stream_cache_path: str | Path | None = None,
     storage_options: dict | None = None,
-    backend: Literal["hdf5", "zarr"] | None = None,
 ):
     """
     Reads a file from a hdf5 or zarr backend.
@@ -87,7 +86,7 @@ def read_file_from_backend(
     else:
         import h5py
 
-        assert file is not None, "Unexpected, file is None"
+        assert file is not None, "Both file_path and file are None"
         open_file = h5py.File(file, "r")
 
     return open_file
@@ -124,11 +123,6 @@ def read_nwbfile(
     -------
     nwbfile : NWBFile
         The NWBFile object.
-
-    Raises
-    ------
-    AssertionError
-        If ROS3 support is not enabled.
 
     Notes
     -----
@@ -277,14 +271,17 @@ def _retrieve_unit_table_pynwb(nwbfile: "NWBFile", unit_table_path: Optional[str
 
 
 def _is_hdf5_file(filename_or_file):
-    # Source for magic numbers https://www.loc.gov/preservation/digital/formats/fdd/fdd000229.shtml
-    # We should find a better one though
     if isinstance(filename_or_file, (str, Path)):
-        with open(filename_or_file, "rb") as f:
-            file_signature = f.read(8)
+        import h5py
+
+        filename = str(filename_or_file)
+        is_hdf5 = h5py.h5f.is_hdf5(filename.encode("utf-8"))
     else:
         file_signature = filename_or_file.read(8)
-    return file_signature == b"\x89HDF\r\n\x1a\n"
+        # Source of the magic number https://docs.hdfgroup.org/hdf5/develop/_f_m_t3.html
+        is_hdf5 = file_signature == b"\x89HDF\r\n\x1a\n"
+
+    return is_hdf5
 
 
 def _get_backend_from_local_file(file_path: str | Path) -> str:
@@ -443,7 +440,8 @@ class NwbRecordingExtractor(BaseRecording):
     stream_cache_path: str, Path, or None, default: None
         Specifies the local path for caching the file. Relevant only if `cache` is True.
     storage_options: dict | None = None,
-        Additional parameters for the storage backend (e.g. AWS credentials) used for "zarr" stream_mode.
+        These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+        This is only used on the "zarr" stream_mode.
     use_pynwb: bool, default: False
         Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
         to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
@@ -680,7 +678,6 @@ class NwbRecordingExtractor(BaseRecording):
 
     def _fetch_recording_segment_info_backend(self, file, cache, load_time_vector, samples_for_rate_estimation):
         open_file = read_file_from_backend(
-            backend=self.backend,
             file_path=self.file_path,
             file=file,
             stream_mode=self.stream_mode,
@@ -863,6 +860,62 @@ class NwbRecordingExtractor(BaseRecording):
 
         return gains, offsets, locations, groups
 
+    @staticmethod
+    def fetch_available_electrical_series_paths(
+        file_path: str | Path,
+        stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
+        storage_options: dict | None = None,
+    ) -> list[str]:
+        """
+        Retrieves the paths to all ElectricalSeries objects within a neurodata file.
+
+        Parameters
+        ----------
+        file_path : str | Path
+            The path to the neurodata file to be analyzed.
+        stream_mode : "fsspec" | "remfile" | "zarr" | None, optional
+            Determines the streaming mode for reading the file. Use this for optimized reading from
+            different sources, such as local disk or remote servers.
+        storage_options: dict | None = None,
+            These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+            This is only used on the "zarr" stream_mode.
+        Returns
+        -------
+        list of str
+            A list of paths to all ElectricalSeries objects found in the file.
+
+
+        Notes
+        -----
+        The paths are returned as strings, and can be used to load the desired ElectricalSeries object.
+        Examples of paths are:
+            - "acquisition/ElectricalSeries1"
+            - "acquisition/ElectricalSeries2"
+            - "processing/ecephys/LFP/ElectricalSeries1"
+            - "processing/my_custom_module/MyContainer/ElectricalSeries2"
+        """
+
+        if stream_mode is None:
+            backend = _get_backend_from_local_file(file_path)
+        else:
+            if stream_mode == "zarr":
+                backend = "zarr"
+            else:
+                backend = "hdf5"
+
+        file_handle = read_file_from_backend(
+            file_path=file_path,
+            stream_mode=stream_mode,
+            storage_options=storage_options,
+        )
+
+        electrical_series_paths = _find_neurodata_type_from_backend(
+            file_handle,
+            neurodata_type="ElectricalSeries",
+            backend=backend,
+        )
+        return electrical_series_paths
+
 
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, electrical_series_data, times_kwargs):
@@ -941,7 +994,8 @@ class NwbSortingExtractor(BaseSorting):
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     storage_options: dict | None = None,
-        Additional parameters for the storage backend (e.g. AWS credentials) used for "zarr" stream_mode.
+        These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+        This is only used on the "zarr" stream_mode.
     use_pynwb: bool, default: False
         Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
         to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
@@ -1132,7 +1186,6 @@ class NwbSortingExtractor(BaseSorting):
         self, unit_table_path: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
     ):
         open_file = read_file_from_backend(
-            backend=self.backend,
             file_path=self.file_path,
             stream_mode=self.stream_mode,
             cache=cache,

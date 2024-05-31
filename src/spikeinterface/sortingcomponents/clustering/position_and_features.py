@@ -42,7 +42,7 @@ class PositionAndFeaturesClustering:
         "ms_before": 1.5,
         "ms_after": 1.5,
         "cleaning_method": "dip",
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
     }
 
     @classmethod

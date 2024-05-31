@@ -23,13 +23,12 @@ def test_select_peaks():
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         chunk_size=10000,
-        verbose=1,
         progress_bar=False,
         noise_levels=noise_levels,
     )
 
     peak_locations = localize_peaks(
-        recording, peaks, method="center_of_mass", n_jobs=2, chunk_size=10000, verbose=True, progress_bar=True
+        recording, peaks, method="center_of_mass", n_jobs=2, chunk_size=10000, progress_bar=True
     )
 
     n_peaks = 100

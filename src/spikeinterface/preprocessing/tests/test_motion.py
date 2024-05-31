@@ -3,10 +3,9 @@ from pathlib import Path
 
 import shutil
 
+from spikeinterface.core import generate_recording
 
 from spikeinterface.preprocessing import correct_motion, load_motion_info
-
-from spikeinterface.extractors import toy_example
 
 import numpy as np
 
@@ -19,7 +18,8 @@ print(cache_folder.absolute())
 
 
 def test_estimate_and_correct_motion():
-    rec, sorting = toy_example(num_segments=1, duration=30.0, num_units=10, num_channels=12)
+    rec = generate_recording(durations=[30.0], num_channels=12)
+
     print(rec)
 
     folder = cache_folder / "estimate_and_correct_motion"
