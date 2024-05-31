@@ -64,7 +64,7 @@ class ModelBasedClassification:
         self._check_params_for_classification()
 
         # Prepare input data
-        input_data[np.isinf(input_data)] = np.nan
+        input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
         input_data = input_data.astype("float32")
 
         # Apply classifier
@@ -107,7 +107,7 @@ class ModelBasedClassification:
 
         try:
             quality_metrics_params = self.sorting_analyzer.extensions["quality_metrics"].params["qm_params"]
-            template_metric_params = self.sorting_analyzer.extensions["template_metrics"].params["qm_params"]
+            template_metric_params = self.sorting_analyzer.extensions["template_metrics"].params["metrics_kwargs"]
         except KeyError:
             raise ValueError("Quality and template metrics must be computed before classification")
 
