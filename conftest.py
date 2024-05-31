@@ -32,23 +32,20 @@ def pytest_collection_modifyitems(config, items):
     """
 
     rootdir = Path(config.rootdir)
-
+    modules_location = rootdir / "src" / "spikeinterface"
     for item in items:
-        rel_path = Path(item.fspath).relative_to(rootdir)
-        rel_path_str = str(rel_path).replace("\\", "/")  # Convert Windows backslashes to forward slashes for consistency
-
-        if "sorters" in rel_path_str:
-            if "/internal/" in rel_path_str:
+        rel_path = Path(item.fspath).relative_to(modules_location)
+        module = rel_path.parts[0]
+        if module == "sorters":
+            if "internal" in rel_path.parts:
                 item.add_marker("sorters_internal")
-            elif "/external/" in rel_path_str:
+            elif "external" in rel_path.parts:
                 item.add_marker("sorters_external")
             else:
                 item.add_marker("sorters")
         else:
-            for mark_name in mark_names:
-                if f"/{mark_name}/" in rel_path_str:
-                    mark = getattr(pytest.mark, mark_name)
-                    item.add_marker(mark)
+            item.add_marker(module)
+
 
 
 def pytest_sessionfinish(session, exitstatus):
