@@ -12,7 +12,7 @@ from ..preprocessing.filter import fix_dtype
 def correct_motion_on_peaks(
     peaks,
     peak_locations,
-    sampling_frequency,
+    rec,
     motion,
 ):
     """
@@ -35,18 +35,16 @@ def correct_motion_on_peaks(
         Motion-corrected peak locations
     """
     corrected_peak_locations = peak_locations.copy()
+    times_s = rec.sample_index_to_time(peaks["sample_index"])
 
     for segment_index in range(motion.num_segments):
         i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
 
-        # TODO delegate times to recording object
-        spike_times = peaks["sample_index"][i0:i1] / sampling_frequency
+        spike_times = times_s[i0:i1]
         spike_locs = peak_locations[motion.direction][i0:i1]
-
         spike_displacement = motion.get_displacement_at_time_and_depth(
             spike_times, spike_locs, segment_index=segment_index
         )
-
         corrected_peak_locations[i0:i1][motion.direction] -= spike_displacement
 
     return corrected_peak_locations
@@ -403,6 +401,7 @@ class InterpolateMotionRecording(BasePreprocessor):
             interpolation_time_bin_centers_s=interpolation_time_bin_centers_s,
             dtype=dtype_.str,
         )
+        self._kwargs.update(spatial_interpolation_kwargs)
 
 
 class InterpolateMotionRecordingSegment(BasePreprocessorSegment):

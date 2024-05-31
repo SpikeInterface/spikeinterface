@@ -1,22 +1,20 @@
 from __future__ import annotations
 
 import json
+import pickle
 import time
 from pathlib import Path
-import pickle
-
-import numpy as np
-import scipy.interpolate
-
-from spikeinterface.core import get_noise_levels
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
-
 
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.interpolate
+from spikeinterface.core import get_noise_levels
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import (
+    Benchmark, BenchmarkStudy, _simpleaxis)
+from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.widgets import plot_probe_map
 
 # import MEArec as mr
@@ -670,7 +668,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         peak_locations_corrected = correct_motion_on_peaks(
 #             self.selected_peaks,
 #             self.peak_locations,
-#             self.recording.sampling_frequency,
+#             self.recording,
 #             self.motion,
 #             self.temporal_bins,
 #             self.spatial_bins,

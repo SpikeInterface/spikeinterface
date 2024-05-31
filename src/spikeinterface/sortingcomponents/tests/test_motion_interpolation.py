@@ -43,7 +43,7 @@ def test_correct_motion_on_peaks():
     corrected_peak_locations = correct_motion_on_peaks(
         peaks,
         peak_locations,
-        rec.sampling_frequency,
+        rec,
         motion,
     )
     # print(corrected_peak_locations)
