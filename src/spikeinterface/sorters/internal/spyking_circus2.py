@@ -210,6 +210,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["ms_before"] = exclude_sweep_ms
             clustering_params["ms_after"] = exclude_sweep_ms
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
+            clustering_params["verbose"] = verbose
 
             legacy = clustering_params.get("legacy", True)
 
@@ -323,7 +324,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting.save(folder=curation_folder)
                 # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params)
+            merging_params['templates'] = templates
+            sorting = merge_spikes(recording_w, sorting, **merging_params)
 
             if verbose:
                 print(f"Final merging, keeping {len(sorting.unit_ids)} units")
@@ -342,27 +344,3 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         sorting = sorting.save(folder=sorting_folder)
 
         return sorting
-
-
-def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
-
-    from spikeinterface.sortingcomponents.clustering.clustering_tools import (
-        resolve_merging_graph,
-        apply_merges_to_sorting,
-    )
-
-    sparsity = templates.sparsity
-    templates_array = templates.get_dense_templates().copy()
-
-    sa = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
-
-    sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"nbefore": templates.nbefore}
-    sa.extensions["templates"].data["average"] = templates_array
-    sa.compute("unit_locations", method="monopolar_triangulation")
-    merges = get_potential_auto_merge(sa, **merging_kwargs)
-    merges = resolve_merging_graph(sorting, merges)
-    sorting = apply_merges_to_sorting(sorting, merges)
-    # sorting = merge_units_sorting(sorting, merges)
-
-    return sorting
