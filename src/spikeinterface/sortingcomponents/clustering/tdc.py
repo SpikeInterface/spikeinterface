@@ -8,15 +8,12 @@ import string
 import shutil
 
 from spikeinterface.core import (
-    get_noise_levels,
-    NumpySorting,
     get_channel_distances,
     Templates,
     compute_sparsity,
     get_global_tmp_folder,
 )
 
-from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     ExtractDenseWaveforms,
@@ -33,8 +30,6 @@ from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAP
 from spikeinterface.sortingcomponents.clustering.split import split_clusters
 from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
 from spikeinterface.sortingcomponents.clustering.tools import compute_template_from_sparse
-
-from sklearn.decomposition import TruncatedSVD
 
 
 class TdcClustering:
@@ -85,6 +80,8 @@ class TdcClustering:
         )
 
         wfs = few_wfs[:, :, 0]
+        from sklearn.decomposition import TruncatedSVD
+
         tsvd = TruncatedSVD(params["svd"]["n_components"])
         tsvd.fit(wfs)
 
