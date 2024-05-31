@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 from tqdm.auto import tqdm, trange
-import scipy.interpolate
 
 try:
     import torch
@@ -325,6 +324,7 @@ class DecentralizedRegistration:
             bins = bins - np.mean(bins)
             smooth_kernel = np.exp(-(bins**2) / (2 * histogram_depth_smooth_um**2))
             smooth_kernel /= np.sum(smooth_kernel)
+
             motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[None, :], mode="same", axes=1)
 
         if histogram_time_smooth_s is not None:
@@ -1526,6 +1526,8 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=3
         mask = np.ones(motion_clean.shape[0], dtype="bool")
         for i in range(inds.size // 2):
             mask[inds[i * 2] : inds[i * 2 + 1]] = False
+        import scipy.interpolate
+
         f = scipy.interpolate.interp1d(temporal_bins[mask], one_motion[mask])
         one_motion[~mask] = f(temporal_bins[~mask])
 
