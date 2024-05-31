@@ -233,6 +233,21 @@ class BaseRecordingSnippets(BaseExtractor):
 
         return sub_recording
 
+    def set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
+
+        warning_msg = (
+            "`set_probes` is now a private function and the public function will be "
+            "removed in 0.103.0. Please use `set_probe` or `set_probegroups`"
+        )
+
+        warn(warning_msg, category=DeprecationWarning, stacklevel=2)
+
+        sub_recording = self._set_probes(
+            probe_or_probegroup=probe_or_probegroup, group_mode=group_mode, in_place=in_place
+        )
+
+        return sub_recording
+
     def get_probe(self):
         probes = self.get_probes()
         assert len(probes) == 1, "there are several probe use .get_probes() or get_probegroup()"
