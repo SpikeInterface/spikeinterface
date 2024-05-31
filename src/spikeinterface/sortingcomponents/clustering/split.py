@@ -10,8 +10,12 @@ import numpy as np
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 from .tools import aggregate_sparse_features, FeaturesLoader
-from .isocut5 import isocut5
 
+try:
+    import numba
+    from .isocut5 import isocut5
+except:
+    pass  # isocut requires numba
 
 # important all DEBUG and matplotlib are left in the code intentionally
 
