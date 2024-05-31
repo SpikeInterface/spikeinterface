@@ -17,7 +17,8 @@ else:
     cache_folder = Path("cache_folder") / "sorters"
 
 
-def setup_module():
+@pytest.fixture(scope="module")
+def setup_test_environment():
     test_dirs = [cache_folder / "mono", cache_folder / "multi"]
     for test_dir in test_dirs:
         if test_dir.exists():
@@ -27,9 +28,11 @@ def setup_module():
 
     rec2, _ = generate_ground_truth_recording(durations=[10, 10, 10])
     rec2 = rec2.save(folder=cache_folder / "multi")
+    yield
+    # Teardown logic (if needed) can go here
 
 
-def test_find_recording_folders():
+def test_find_recording_folders(setup_test_environment):
     rec1 = si.load_extractor(cache_folder / "mono")
     rec2 = si.load_extractor(cache_folder / "multi" / "binary.json", base_folder=cache_folder / "multi")
 
@@ -97,15 +100,12 @@ def test_install_package_in_container():
 
     # # pypi installation
     txt = install_package_in_container(container_client, "neo", installation_mode="pypi", version="0.11.0")
-    # print(txt)
     txt = container_client.run_command("pip list")
-    # print(txt)
 
     # # github installation
     txt = install_package_in_container(
         container_client, "spikeinterface", extra="[full]", installation_mode="github", version="0.99.0"
     )
-    # print(txt)
     txt = container_client.run_command("pip list")
     # print(txt)
 
