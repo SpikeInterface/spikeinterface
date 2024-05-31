@@ -53,47 +53,47 @@ def detect_bad_channels(
     ----------
     recording : BaseRecording
         The recording for which bad channels are detected
-    method : "coeherence+psd" | "std" | "mad" | "neighborhood_r2", default: "coeherence+psd"
+    method : "coeherence+psd" | "std" | "mad" | "neighborhood_r2", default : "coeherence+psd"
         The method to be used for bad channel detection
-    std_mad_threshold : float, default: 5
+    std_mad_threshold : float, default : 5
         The standard deviation/mad multiplier threshold
-    psd_hf_threshold (coeherence+psd) : float, default: 0.02
+    psd_hf_threshold (coeherence+psd) : float, default : 0.02
         An absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
         Channels with average power at >80% Nyquist larger than this threshold
         will be labeled as noise
-    dead_channel_threshold (coeherence+psd) : float, default: -0.5
+    dead_channel_threshold (coeherence+psd) : float, default : -0.5
         Threshold for channel coherence below which channels are labeled as dead
-    noisy_channel_threshold (coeherence+psd) : float, default: 1
+    noisy_channel_threshold (coeherence+psd) : float, default : 1
         Threshold for channel coherence above which channels are labeled as noisy (together with psd condition)
-    outside_channel_threshold (coeherence+psd) : float, default: -0.75
+    outside_channel_threshold (coeherence+psd) : float, default : -0.75
         Threshold for channel coherence above which channels at the edge of the recording are marked as outside
         of the brain
-    outside_channels_location (coeherence+psd) : "top" | "bottom" | "both", default: "top"
+    outside_channels_location (coeherence+psd) : "top" | "bottom" | "both", default : "top"
         Location of the outside channels. If "top", only the channels at the top of the probe can be
         marked as outside channels. If "bottom", only the channels at the bottom of the probe can be
         marked as outside channels. If "both", both the channels at the top and bottom of the probe can be
         marked as outside channels
-    n_neighbors (coeherence+psd) : int, default: 11
+    n_neighbors (coeherence+psd) : int, default : 11
         Number of channel neighbors to compute median filter (needs to be odd)
-    nyquist_threshold (coeherence+psd) : float, default: 0.8
+    nyquist_threshold (coeherence+psd) : float, default : 0.8
         Frequency with respect to Nyquist (Fn=1) above which the mean of the PSD is calculated and compared
         with psd_hf_threshold
-    direction (coeherence+psd): "x" | "y" | "z", default: "y"
+    direction (coeherence+psd) : "x" | "y" | "z", default : "y"
         The depth dimension
-    highpass_filter_cutoff : float, default: 300
+    highpass_filter_cutoff : float, default : 300
         If the recording is not filtered, the cutoff frequency of the highpass filter
-    chunk_duration_s : float, default: 0.5
+    chunk_duration_s : float, default : 0.5
         Duration of each chunk
-    num_random_chunks : int, default: 100
+    num_random_chunks : int, default : 100
         Number of random chunks
         Having many chunks is important for reproducibility.
-    welch_window_ms : float, default: 10
+    welch_window_ms : float, default : 10
         Window size for the scipy.signal.welch that will be converted to nperseg
-    neighborhood_r2_threshold : float, default: 0.95
+    neighborhood_r2_threshold : float, default : 0.95
         R^2 threshold for the neighborhood_r2 method.
-    neighborhood_r2_radius_um : float, default: 30
+    neighborhood_r2_radius_um : float, default : 30
         Spatial radius below which two channels are considered neighbors in the neighborhood_r2 method.
-    seed : int or None, default: None
+    seed : int or None, default : None
         The random seed to extract chunks
 
     Returns
@@ -298,19 +298,19 @@ def detect_bad_channels_ibl(
     psd_hf_threshold : float
         Threshold for high frequency PSD. If mean PSD above `nyquist_threshold` * fn is greater than this
         value, channels are flagged as noisy (together with channel coherence condition).
-    dead_channel_thr : float, default: -0.5
+    dead_channel_thr : float, default : -0.5
         Threshold for channel coherence below which channels are labeled as dead
-    noisy_channel_thr : float, default: 1
+    noisy_channel_thr : float, default : 1
         Threshold for channel coherence above which channels are labeled as noisy (together with psd condition)
-    outside_channel_thr : float, default: -0.75
+    outside_channel_thr : float, default : -0.75
         Threshold for channel coherence above which channels
-    n_neighbors : int, default: 11
+    n_neighbors : int, default : 11
         Number of neighbors to compute median fitler
-    nyquist_threshold : float, default: 0.8
+    nyquist_threshold : float, default : 0.8
         Threshold on Nyquist frequency to calculate HF noise band
-    welch_window_ms: float, default: 0.3
+    welch_window_ms : float, default : 0.3
         Window size for the scipy.signal.welch that will be converted to nperseg
-    outside_channels_location : "top" | "bottom" | "both", default: "top"
+    outside_channels_location : "top" | "bottom" | "both", default : "top"
         Location of the outside channels. If "top", only the channels at the top of the probe can be
         marked as outside channels. If "bottom", only the channels at the bottom of the probe can be
         marked as outside channels. If "both", both the channels at the top and bottom of the probe can be
@@ -378,9 +378,9 @@ def detrend(x, nmed):
     """
     Subtract the trend from a vector
     The trend is a median filtered version of the said vector with tapering
-    :param x: input vector
-    :param nmed: number of points of the median filter
-    :return: np.array
+    :param x : input vector
+    :param nmed : number of points of the median filter
+    :return : np.array
     """
     ntap = int(np.ceil(nmed / 2))
     xf = np.r_[np.zeros(ntap) + x[0], x, np.zeros(ntap) + x[-1]]

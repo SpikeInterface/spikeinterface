@@ -23,20 +23,20 @@ class GaussianFilterRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: BaseRecording
+    recording : BaseRecording
         The recording extractor to be filtered.
-    freq_min: float or None
+    freq_min : float or None
         The lower frequency cutoff for the bandpass filter.
         If None, the resulting object is a lowpass filter.
-    freq_max: float or None
+    freq_max : float or None
         The higher frequency cutoff for the bandpass filter.
         If None, the resulting object is a highpass filter.
-    margin_sd: float, default: 5.0
+    margin_sd : float, default : 5.0
         The number of standard deviation to take for margins.
 
     Returns
     -------
-    gaussian_filtered_recording: GaussianFilterRecording
+    gaussian_filtered_recording : GaussianFilterRecording
         The filtered recording extractor object.
     """
 

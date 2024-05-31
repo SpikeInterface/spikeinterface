@@ -94,7 +94,7 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        segment_index : int or None, default: None
+        segment_index : int or None, default : None
             The segment index to retrieve the number of samples for.
             For multi-segment objects, it is required
 
@@ -187,7 +187,7 @@ class BaseSorting(BaseExtractor):
         recording : BaseRecording
             Recording with the same number of segments as current sorting.
             Assigned to self._recording.
-        check_spike_frames : bool, default: True
+        check_spike_frames : bool, default : True
             If True, assert for each segment that all spikes are within the recording's range.
         """
         assert np.isclose(
@@ -320,8 +320,8 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        outputs: "dict" | "array", default: "dict"
-            Control the type of the returned object: a dict (keys are unit_ids) or an numpy array.
+        outputs : "dict" | "array", default : "dict"
+            Control the type of the returned object : a dict (keys are unit_ids) or an numpy array.
 
         Returns
         -------
@@ -374,7 +374,7 @@ class BaseSorting(BaseExtractor):
 
         Returns
         -------
-        total_num_spikes: int
+        total_num_spikes : int
             The total number of spike
         """
         return self.to_spike_vector().size
@@ -388,7 +388,7 @@ class BaseSorting(BaseExtractor):
         ----------
         unit_ids : numpy.array or list
             List of unit ids to keep
-        renamed_unit_ids : numpy.array or list, default: None
+        renamed_unit_ids : numpy.array or list, default : None
             If given, the kept unit ids are renamed
 
         Returns
@@ -519,7 +519,7 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        from_spike_vector: None | bool, default: None
+        from_spike_vector : None | bool, default : None
             If None, then it is automatic depending on whether the spike vector is cached.
             If True, will compute it from the spike vector.
             If False, will call `get_unit_spike_train` for each segment for each unit.
@@ -560,20 +560,20 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        concatenated: bool, default: True
+        concatenated : bool, default : True
             With concatenated=True the output is one numpy "spike vector" with spikes from all segments.
             With concatenated=False the output is a list "spike vector" by segment.
-        extremum_channel_inds: None or dict, default: None
+        extremum_channel_inds : None or dict, default : None
             If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
             This can be convinient for computing spikes postion after sorter.
             This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
-        use_cache: bool, default: True
+        use_cache : bool, default : True
             When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
             This caching only occurs when extremum_channel_inds=None.
 
         Returns
         -------
-        spikes: np.array
+        spikes : np.array
             Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes
             Or ("sample_index", "unit_index", "segment_index", "channel_index") if extremum_channel_inds
             is given
@@ -685,7 +685,7 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        n_jobs: int
+        n_jobs : int
             The number of jobs.
         Returns
         -------
@@ -727,8 +727,8 @@ class BaseSortingSegment(BaseSegment):
         Parameters
         ----------
         unit_id
-        start_frame: int, default: None
-        end_frame: int, default: None
+        start_frame : int, default : None
+        end_frame : int, default : None
 
         Returns
         -------

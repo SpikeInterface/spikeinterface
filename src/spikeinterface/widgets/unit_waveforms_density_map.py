@@ -16,21 +16,21 @@ class UnitWaveformDensityMapWidget(BaseWidget):
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer for calculating waveforms
-    channel_ids : list or None, default: None
+    channel_ids : list or None, default : None
         The channel ids to display
-    unit_ids : list or None, default: None
+    unit_ids : list or None, default : None
         List of unit ids
-    sparsity : ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default : None
         Optional ChannelSparsity to apply
         If SortingAnalyzer is already sparse, the argument is ignored
-    use_max_channel : bool, default: False
+    use_max_channel : bool, default : False
         Use only the max channel
-    peak_sign : "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default : "neg"
         Used to detect max channel only when use_max_channel=True
-    unit_colors : None or dict, default: None
+    unit_colors : None or dict, default : None
         A dict key is unit_id and value is any color format handled by matplotlib.
         If None, then the get_unit_colors() is internally used
-    same_axis : bool, default: False
+    same_axis : bool, default : False
         If True then all density are plot on the same axis and then channels is the union
         all channel per units
     """

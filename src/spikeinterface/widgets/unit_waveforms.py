@@ -19,64 +19,64 @@ class UnitWaveformsWidget(BaseWidget):
     sorting_analyzer_or_templates : SortingAnalyzer | Templates
         The SortingAnalyzer or Templates object.
         If Templates is given, the "plot_waveforms" argument is set to False
-    channel_ids: list or None, default: None
+    channel_ids : list or None, default : None
         The channel ids to display
-    unit_ids : list or None, default: None
+    unit_ids : list or None, default : None
         List of unit ids
-    plot_templates : bool, default: True
+    plot_templates : bool, default : True
         If True, templates are plotted over the waveforms
-    sparsity : ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default : None
         Optional ChannelSparsity to apply
         If SortingAnalyzer is already sparse, the argument is ignored
-    set_title : bool, default: True
+    set_title : bool, default : True
         Create a plot title with the unit number if True
-    plot_channels : bool, default: False
+    plot_channels : bool, default : False
         Plot channel locations below traces
-    unit_selected_waveforms : None or dict, default: None
+    unit_selected_waveforms : None or dict, default : None
         A dict key is unit_id and value is the subset of waveforms indices that should be
         be displayed (matplotlib backend)
-    max_spikes_per_unit : int or None, default: 50
+    max_spikes_per_unit : int or None, default : 50
         If given and unit_selected_waveforms is None, only max_spikes_per_unit random units are
         displayed per waveform, (matplotlib backend)
-    scale : float, default: 1
+    scale : float, default : 1
         Scale factor for the waveforms/templates (matplotlib backend)
-    widen_narrow_scale : float, default: 1
+    widen_narrow_scale : float, default : 1
         Scale factor for the x-axis of the waveforms/templates (matplotlib backend)
-    axis_equal : bool, default: False
+    axis_equal : bool, default : False
         Equal aspect ratio for x and y axis, to visualize the array geometry to scale
-    lw_waveforms : float, default: 1
+    lw_waveforms : float, default : 1
         Line width for the waveforms, (matplotlib backend)
-    lw_templates : float, default: 2
+    lw_templates : float, default : 2
         Line width for the templates, (matplotlib backend)
-    unit_colors : None or dict, default: None
+    unit_colors : None or dict, default : None
         A dict key is unit_id and value is any color format handled by matplotlib.
         If None, then the get_unit_colors() is internally used. (matplotlib / ipywidgets backend)
-    alpha_waveforms : float, default: 0.5
+    alpha_waveforms : float, default : 0.5
         Alpha value for waveforms (matplotlib backend)
-    alpha_templates : float, default: 1
+    alpha_templates : float, default : 1
         Alpha value for templates, (matplotlib backend)
-    shade_templates : bool, default: True
+    shade_templates : bool, default : True
         If True, templates are shaded, see templates_percentile_shading argument
-    templates_percentile_shading : float, tuple/list of floats, or None, default: (1, 25, 75, 99)
+    templates_percentile_shading : float, tuple/list of floats, or None, default : (1, 25, 75, 99)
         It controls the shading of the templates.
         If None, the shading is +/- the standard deviation of the templates.
         If float, it controls the percentile of the template values used to shade the templates.
-        Note that it is one-sided: if 5 is given, the 5th and 95th percentiles are used to shade
+        Note that it is one-sided : if 5 is given, the 5th and 95th percentiles are used to shade
         the templates. If list of floats, it needs to be have an even number of elements which control
         the lower and upper percentile used to shade the templates. The first half of the elements
         are used for the lower bounds, and the second half for the upper bounds.
         Inner elements produce darker shadings. For sortingview backend only 2 or 4 elements are
         supported.
-    scalebar : bool, default: False
+    scalebar : bool, default : False
         Display a scale bar on the waveforms plot (matplotlib backend)
-    hide_unit_selector : bool, default: False
+    hide_unit_selector : bool, default : False
         For sortingview backend, if True the unit selector is not displayed
-    same_axis : bool, default: False
+    same_axis : bool, default : False
         If True, waveforms and templates are displayed on the same axis (matplotlib backend)
-    x_offset_units : bool, default: False
+    x_offset_units : bool, default : False
         In case same_axis is True, this parameter allow to x-offset the waveforms for different units
         (recommended for a few units) (matlotlib backend)
-    plot_legend : bool, default: True
+    plot_legend : bool, default : True
         Display legend (matplotlib backend)
     """
 

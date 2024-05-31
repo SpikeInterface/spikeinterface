@@ -8,13 +8,13 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import get_chunk_with_margin
 
 
-_common_filter_docs = """**filter_kwargs: keyword arguments for parallel processing:
+_common_filter_docs = """**filter_kwargs : keyword arguments for parallel processing:
 
-            * filter_order: order
+            * filter_order : order
                 The order of the filter
-            * filter_mode: "sos or "ba"
+            * filter_mode : "sos or "ba"
                 "sos" is bi quadratic and more stable than ab so thery are prefered.
-            * ftype: str
+            * ftype : str
                 Filter type for iirdesign ("butter" / "cheby1" / ... all possible of scipy.signal.iirdesign)
     """
 
@@ -30,28 +30,28 @@ class FilterRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The recording extractor to be re-referenced
-    band: float or list, default: [300.0, 6000.0]
+    band : float or list, default : [300.0, 6000.0]
         If float, cutoff frequency in Hz for "highpass" filter type
         If list. band (low, high) in Hz for "bandpass" filter type
-    btype: "bandpass" | "highpass", default: "bandpass"
+    btype : "bandpass" | "highpass", default : "bandpass"
         Type of the filter
-    margin_ms: float, default: 5.0
+    margin_ms : float, default : 5.0
         Margin in ms on border to avoid border effect
-    filter_mode: "sos" | "ba", default: "sos"
+    filter_mode : "sos" | "ba", default : "sos"
         Filter form of the filter coefficients:
         - second-order sections ("sos")
-        - numerator/denominator: ("ba")
-    coef: array or None, default: None
+        - numerator/denominator : ("ba")
+    coef : array or None, default : None
         Filter coefficients in the filter_mode form.
-    dtype: dtype or None, default: None
+    dtype : dtype or None, default : None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
 
     Returns
     -------
-    filter_recording: FilterRecording
+    filter_recording : FilterRecording
         The filtered recording extractor object
 
     """
@@ -168,20 +168,20 @@ class BandpassFilterRecording(FilterRecording):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The recording extractor to be re-referenced
-    freq_min: float
+    freq_min : float
         The highpass cutoff frequency in Hz
-    freq_max: float
+    freq_max : float
         The lowpass cutoff frequency in Hz
-    margin_ms: float
+    margin_ms : float
         Margin in ms on border to avoid border effect
-    dtype: dtype or None
+    dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
     Returns
     -------
-    filter_recording: BandpassFilterRecording
+    filter_recording : BandpassFilterRecording
         The bandpass-filtered recording extractor object
     """
 
@@ -204,18 +204,18 @@ class HighpassFilterRecording(FilterRecording):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The recording extractor to be re-referenced
-    freq_min: float
+    freq_min : float
         The highpass cutoff frequency in Hz
-    margin_ms: float
+    margin_ms : float
         Margin in ms on border to avoid border effect
-    dtype: dtype or None
+    dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
     Returns
     -------
-    filter_recording: HighpassFilterRecording
+    filter_recording : HighpassFilterRecording
         The highpass-filtered recording extractor object
     """
 
@@ -234,16 +234,16 @@ class NotchFilterRecording(BasePreprocessor):
     """
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be notch-filtered
-    freq: int or float
+    freq : int or float
         The target frequency in Hz of the notch filter
-    q: int
+    q : int
         The quality factor of the notch filter
     {}
     Returns
     -------
-    filter_recording: NotchFilterRecording
+    filter_recording : NotchFilterRecording
         The notch-filtered recording extractor object
     """
 

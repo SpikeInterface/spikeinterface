@@ -24,25 +24,25 @@ class SortingSummaryWidget(BaseWidget):
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
-    unit_ids : list or None, default: None
+    unit_ids : list or None, default : None
         List of unit ids
-    sparsity : ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default : None
         Optional ChannelSparsity to apply
         If SortingAnalyzer is already sparse, the argument is ignored
-    max_amplitudes_per_unit : int or None, default: None
+    max_amplitudes_per_unit : int or None, default : None
         Maximum number of spikes per unit for plotting amplitudes.
         If None, all spikes are plotted
-    min_similarity_for_correlograms : float, default: 0.2
+    min_similarity_for_correlograms : float, default : 0.2
         Threshold for computing pair-wise cross-correlograms. If template similarity between two units
         is below this threshold, the cross-correlogram is not computed
         (sortingview backend)
-    curation : bool, default: False
+    curation : bool, default : False
         If True, manual curation is enabled
         (sortingview backend)
-    label_choices : list or None, default: None
+    label_choices : list or None, default : None
         List of labels to be added to the curation table
         (sortingview backend)
-    unit_table_properties : list or None, default: None
+    unit_table_properties : list or None, default : None
         List of properties to be added to the unit table
         (sortingview backend)
     """

@@ -18,17 +18,17 @@ class CurationSorting:
 
     Parameters
     ----------
-    parent_sorting: Recording
+    parent_sorting : Recording
         The recording object
-    properties_policy: "keep" | "remove", default: "keep"
+    properties_policy : "keep" | "remove", default : "keep"
         Policy used to propagate properties after split and merge operation. If "keep" the properties will be
         passed to the new units (if the original units have the same value). If "remove" the new units will have
         an empty value for all the properties
-    make_graph: bool
+    make_graph : bool
         True to keep a Networkx graph instance with the curation history
     Returns
     -------
-    sorting: Sorting
+    sorting : Sorting
         Sorting object with the selected units merged
     """
 
@@ -67,14 +67,14 @@ class CurationSorting:
 
         Parameters
         ----------
-        split_unit_id: int or str
+        split_unit_id : int or str
             The unit to split
-        indices_list: list or np.array
+        indices_list : list or np.array
             A list of index arrays selecting the spikes to split in each segment.
             Each array can contain more than 2 indices (e.g. for splitting in 3 or more units) and it should
             be the same length as the spike train (for each segment).
             If the sorting has only one segment, indices_list can be a single array
-        new_unit_ids: list[str|int] ot None
+        new_unit_ids : list[str|int] ot None
             List of new unit ids. If None, a new unit id is automatically selected
         """
         current_sorting = self._sorting_stages[self._sorting_stages_i]
@@ -108,11 +108,11 @@ class CurationSorting:
 
         Parameters
         ----------
-        units_to_merge: list[str|int]
+        units_to_merge : list[str|int]
             List of unit ids to merge
-        new_unit_id: int or str
+        new_unit_id : int or str
             The new unit id. If None, a new unit id is automatically selected
-        delta_time_ms: float
+        delta_time_ms : float
             Number of ms to consider for duplicated spikes. None won't check for duplications
         """
         current_sorting = self._sorting_stages[self._sorting_stages_i]
@@ -143,7 +143,7 @@ class CurationSorting:
 
         Parameters
         ----------
-        unit_ids: list[str|int]
+        unit_ids : list[str|int]
             List of unit ids to remove
         """
         current_sorting = self._sorting_stages[self._sorting_stages_i]
@@ -174,7 +174,7 @@ class CurationSorting:
         ----------
         unit_ids : list[str|int]
             List of unit ids to select
-        renamed_unit_ids : list or None, default: None
+        renamed_unit_ids : list or None, default : None
             List of new unit ids to rename the selected units
         """
         new_sorting = self._sorting_stages[self._sorting_stages_i].select_units(unit_ids, renamed_unit_ids)
@@ -256,7 +256,7 @@ class CurationSorting:
 
         Parameters
         ----------
-        **kwargs: dict
+        **kwargs : dict
             Keyword arguments for Networkx draw function
         """
         assert self._make_graph, "to make a graph use make_graph=True"

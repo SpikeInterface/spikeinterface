@@ -25,9 +25,9 @@ class UnitSummaryWidget(BaseWidget):
         The SortingAnalyzer object
     unit_id : int or str
         The unit id to plot the summary of
-    unit_colors : dict or None, default: None
+    unit_colors : dict or None, default : None
         If given, a dictionary with unit ids as keys and colors as values,
-    sparsity : ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default : None
         Optional ChannelSparsity to apply.
         If SortingAnalyzer is already sparse, the argument is ignored
     """

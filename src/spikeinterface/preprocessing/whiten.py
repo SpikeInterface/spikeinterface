@@ -15,36 +15,36 @@ class WhitenRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be whitened.
-    dtype: None or dtype, default: None
+    dtype : None or dtype, default : None
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
-    mode: "global" | "local", default: "global"
+    mode : "global" | "local", default : "global"
         "global" use the entire covariance matrix to compute the W matrix
         "local" use local covariance (by radius) to compute the W matrix
-    radius_um: None or float, default: None
+    radius_um : None or float, default : None
         Used for mode = "local" to get the neighborhood
-    apply_mean: bool, default: False
+    apply_mean : bool, default : False
         Substract or not the mean matrix M before the dot product with W.
-    int_scale : None or float, default: None
+    int_scale : None or float, default : None
         Apply a scaling factor to fit the integer range.
         This is used when the dtype is an integer, so that the output is scaled.
         For example, a value of `int_scale=200` will scale the traces value to a standard deviation of 200.
-    eps : float or None, default: None
+    eps : float or None, default : None
         Small epsilon to regularize SVD.
         If None, eps is defaulted to 1e-8. If the data is float type and scaled down to very small values,
         then the eps is automatically set to a small fraction (1e-3) of the median of the squared data.
-    W : 2d np.array or None, default: None
+    W : 2d np.array or None, default : None
         Pre-computed whitening matrix
-    M : 1d np.array or None, default: None
+    M : 1d np.array or None, default : None
         Pre-computed means.
         M can be None when previously computed with apply_mean=False
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
-    whitened_recording: WhitenRecording
+    whitened_recording : WhitenRecording
         The whitened recording extractor
     """
 
@@ -147,9 +147,9 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
         Keyword arguments for  get_random_data_chunks()
     apply_mean : bool
         If True, the mean is removed prior to computing the covariance
-    radius_um : float or None, default: None
+    radius_um : float or None, default : None
         Used for mode = "local" to get the neighborhood
-    eps : float or None, default: None
+    eps : float or None, default : None
         Small epsilon to regularize SVD. If None, the default is set to 1e-8, but if the data is float type and scaled
         down to very small values, eps is automatically set to a small fraction (1e-3) of the median of the squared data.
 

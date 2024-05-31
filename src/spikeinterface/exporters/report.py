@@ -28,19 +28,19 @@ def export_report(
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    output_folder: str
+    output_folder : str
         The output folder where the report files are saved
-    remove_if_exists: bool, default: False
+    remove_if_exists : bool, default : False
         If True and the output folder exists, it is removed
-    format: str, default: "png"
+    format : str, default : "png"
         The output figure format (any format handled by matplotlib)
-    peak_sign: "neg" or "pos", default: "neg"
+    peak_sign : "neg" or "pos", default : "neg"
         used to compute amplitudes and metrics
-    show_figures: bool, default: False
+    show_figures : bool, default : False
         If True, figures are shown. If False, figures are closed after saving
-    force_computation:  bool, default: False
+    force_computation :  bool, default : False
         Force or not some heavy computaion before exporting
     {}
     """

@@ -34,9 +34,9 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    all_annotations: bool, default: False
+    all_annotations : bool, default : False
         Load exhaustively all annotations from neo.
     """
 
@@ -120,14 +120,14 @@ def read_mearec(file_path):
 
     Parameters
     ----------
-    file_path: str or Path
+    file_path : str or Path
         Path to MEArec h5 file
 
     Returns
     -------
-    recording: MEArecRecordingExtractor
+    recording : MEArecRecordingExtractor
         The recording extractor object
-    sorting: MEArecSortingExtractor
+    sorting : MEArecSortingExtractor
         The sorting extractor object
     """
     recording = MEArecRecordingExtractor(file_path)

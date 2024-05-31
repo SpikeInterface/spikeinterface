@@ -15,9 +15,9 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    all_annotations: bool, default: False
+    all_annotations : bool, default : False
         Load exhaustively all annotations from neo.
     """
 

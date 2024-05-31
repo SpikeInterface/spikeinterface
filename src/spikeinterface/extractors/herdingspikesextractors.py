@@ -22,7 +22,7 @@ class HerdingspikesSortingExtractor(BaseSorting):
     ----------
     folder_path : str or Path
         Path to the ALF folder.
-    load_unit_info : bool, default: True
+    load_unit_info : bool, default : True
         Whether to load the unit info from the file.
 
     Returns

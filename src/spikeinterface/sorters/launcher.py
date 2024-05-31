@@ -62,20 +62,20 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
     Parameters
     ----------
-    job_list: list of dict
+    job_list : list of dict
         A list a dict that are propagated to run_sorter(...)
-    engine: str "loop", "joblib", "dask", "slurm"
+    engine : str "loop", "joblib", "dask", "slurm"
         The engine to run the list.
-        * "loop": a simple loop. This engine is
-    engine_kwargs: dict
+        * "loop" : a simple loop. This engine is
+    engine_kwargs : dict
 
-    return_output: bool, dfault False
+    return_output : bool, dfault False
         Return a sortings or None.
         This also overwrite kwargs in  in run_sorter(with_sorting=True/False)
 
     Returns
     -------
-    sortings: None or list of sorting
+    sortings : None or list of sorting
         With engine="loop" or "joblib" you can optional get directly the list of sorting result if return_output=True.
     """
 
@@ -227,30 +227,30 @@ def run_sorter_by_property(
 
     Parameters
     ----------
-    sorter_name: str
+    sorter_name : str
         The sorter name
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to be sorted
-    grouping_property: object
+    grouping_property : object
         Property to split by before sorting
-    folder: str | Path
+    folder : str | Path
         The working directory.
-    mode_if_folder_exists: bool or None, default: None
+    mode_if_folder_exists : bool or None, default : None
         Must be None. This is deprecated.
         If not None then a warning is raise.
         Will be removed in next release.
-    engine: "loop" | "joblib" | "dask", default: "loop"
+    engine : "loop" | "joblib" | "dask", default : "loop"
         Which engine to use to run sorter.
-    engine_kwargs: dict
+    engine_kwargs : dict
         This contains kwargs specific to the launcher engine:
             * "loop" : no kwargs
             * "joblib" : {"n_jobs" : } number of processes
             * "dask" : {"client":} the dask client for submitting task
-    verbose: bool, default: False
+    verbose : bool, default : False
         Controls sorter verboseness
-    docker_image: None or str, default: None
+    docker_image : None or str, default : None
         If str run the sorter inside a container (docker) using the docker package
-    **sorter_params: keyword args
+    **sorter_params : keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
     Returns
