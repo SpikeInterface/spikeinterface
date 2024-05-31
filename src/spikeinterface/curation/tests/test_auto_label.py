@@ -57,7 +57,7 @@ def test_model_based_classification_get_metrics_for_classification(
 
     # Compute all of the required metrics in sorting_analyzer
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics[0])
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names = required_metrics[1])
+    sorting_analyzer_for_curation.compute("template_metrics", metric_names=required_metrics[1])
     # Check that the metrics data is returned as a pandas DataFrame
     metrics_data = model_based_classification._get_metrics_for_classification()
     assert metrics_data.shape[0] == len(sorting_analyzer_for_curation.sorting.get_unit_ids())
@@ -78,9 +78,10 @@ def test_model_based_classification_check_params_for_classification(
 
     # Check that function runs without error when required_metrics are computed
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics[0])
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names = required_metrics[1])
+    sorting_analyzer_for_curation.compute("template_metrics", metric_names=required_metrics[1])
 
     model_based_classification._check_params_for_classification()
+
 
 # TODO: fix this test
 def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, pipeline, required_metrics):
