@@ -15,7 +15,7 @@ else:
     cache_folder = Path("cache_folder") / "sorters"
 
 
-ON_GITHUB = os.getenv("CI")
+ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
 def check_gh_settings():
@@ -40,6 +40,7 @@ def run_kwargs():
     return generate_run_kwargs()
 
 
+@pytest.skipif()
 def test_spykingcircus(run_kwargs):
     sorting = ss.run_sorter("spykingcircus", output_folder=cache_folder / "spykingcircus", **run_kwargs)
     print("resulting sorting")

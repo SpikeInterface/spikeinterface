@@ -16,7 +16,7 @@ else:
 
 os.environ["SINGULARITY_DISABLE_CACHE"] = "true"
 
-ON_GITHUB = os.getenv("CI")
+ON_GITHUB = os.getenv("GITHUB_ACTIONS")
 
 
 def clean_singularity_cache():
