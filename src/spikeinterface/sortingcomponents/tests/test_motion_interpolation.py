@@ -5,11 +5,8 @@ import pytest
 import spikeinterface.core as sc
 from spikeinterface import download_dataset
 from spikeinterface.sortingcomponents.motion_interpolation import (
-    InterpolateMotionRecording,
-    correct_motion_on_peaks,
-    interpolate_motion,
-    interpolate_motion_on_traces,
-)
+    InterpolateMotionRecording, correct_motion_on_peaks, interpolate_motion,
+    interpolate_motion_on_traces)
 from spikeinterface.sortingcomponents.motion_utils import Motion
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
@@ -102,6 +99,22 @@ def test_interpolation_simple():
     assert traces_corrected.shape == (nc0, nc0)
     assert np.array_equal(traces_corrected[:, 0], np.ones(nt))
     assert np.array_equal(traces_corrected[:, 1:], np.zeros((nt, nc0 - 1)))
+
+    # let's try a new version where we interpolate too slowly
+    rec_corrected = interpolate_motion(
+        rec, true_motion, spatial_interpolation_method="nearest", num_closest=2, interpolation_time_bin_size_s=2
+    )
+    traces_corrected = rec_corrected.get_traces()
+    assert traces_corrected.shape == (nc0, nc0)
+    # what happens with nearest here?
+    # well... due to rounding towards the nearest even number, the motion (which at
+    # these time bin centers is 0.5, 2.5, 4.5, ...) flips the signal's nearest
+    # neighbor back and forth between the first and second channels
+    assert np.all(traces_corrected[::2, 0] == 1)
+    assert np.all(traces_corrected[1::2, 0] == 0)
+    assert np.all(traces_corrected[1::2, 1] == 1)
+    assert np.all(traces_corrected[::2, 1] == 0)
+    assert np.all(traces_corrected[:, 2:] == 0)
 
 
 def test_InterpolateMotionRecording():

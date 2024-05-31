@@ -1,13 +1,12 @@
-import shutil
 from pathlib import Path
 
 import numpy as np
 import pytest
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
+from spikeinterface.sortingcomponents.peak_localization import \
+    LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 if hasattr(pytest, "global_test_folder"):
@@ -153,7 +152,6 @@ def test_estimate_motion():
         )
         kwargs.update(cases_kwargs)
 
-        job_kwargs = dict(progress_bar=False)
         motion, extra_check = estimate_motion(recording, peaks, peak_locations, **kwargs)
         motions[name] = motion
 

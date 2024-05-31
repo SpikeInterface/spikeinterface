@@ -3,7 +3,8 @@ from __future__ import annotations
 import numpy as np
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
-from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.preprocessing.basepreprocessor import (
+    BasePreprocessor, BasePreprocessorSegment)
 
 from ..preprocessing.filter import fix_dtype
 
@@ -285,7 +286,7 @@ class InterpolateMotionRecording(BasePreprocessor):
         Recording after motion correction
     """
 
-    name = "correct_motion"
+    name = "interpolate_motion"
 
     def __init__(
         self,
@@ -299,6 +300,7 @@ class InterpolateMotionRecording(BasePreprocessor):
         interpolation_time_bin_centers_s=None,
         interpolation_time_bin_size_s=None,
         dtype=None,
+        **spatial_interpolation_kwargs,
     ):
         # assert recording.get_num_segments() == 1, "correct_motion() is only available for single-segment recordings"
 
@@ -307,7 +309,9 @@ class InterpolateMotionRecording(BasePreprocessor):
             f"'direction' {motion.direction} not available. "
             f"Channel locations have {channel_locations.ndim} dimensions."
         )
-        spatial_interpolation_kwargs = dict(sigma_um=sigma_um, p=p, num_closest=num_closest)
+        spatial_interpolation_kwargs = dict(
+            sigma_um=sigma_um, p=p, num_closest=num_closest, **spatial_interpolation_kwargs
+        )
         if border_mode == "remove_channels":
             locs = channel_locations[:, motion.dim]
             l0, l1 = np.min(locs), np.max(locs)
