@@ -78,7 +78,7 @@ jobs:
         run: chmod +x .github/run_tests.sh
         shell: bash
       - name: Test core
-        run: ./.github/run_tests.sh core
+        run: ./.github/run_tests.sh core --no-virtual-env
         shell: bash
       - name: Test extractors
         env:
