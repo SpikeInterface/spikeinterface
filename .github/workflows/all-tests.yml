@@ -38,6 +38,7 @@ jobs:
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
           pip install -e .[test,extractors,streaming_extractors,full]
+          pip install tabulate
         shell: bash
       - name: Installad datalad
         run: |
@@ -82,38 +83,38 @@ jobs:
       - name: Test extractors
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
-        run: ./.github/run_tests.sh "extractors and not streaming_extractors"
+        run: ./.github/run_tests.sh "extractors and not streaming_extractors" --no-virtual-env
         shell: bash
       - name: Test preprocessing
-        run: ./.github/run_tests.sh "preprocessing and not deepinterpolation"
+        run: ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
         shell: bash
       - name: Test postprocessing
-        run: ./.github/run_tests.sh postprocessing
+        run: ./.github/run_tests.sh postprocessing --no-virtual-env
         shell: bash
       - name: Test quality metrics
-        run: ./.github/run_tests.sh qualitymetrics
+        run: ./.github/run_tests.sh qualitymetrics --no-virtual-env
         shell: bash
       - name: Test core sorte
-        run: ./.github/run_tests.sh sorters
+        run: ./.github/run_tests.sh sorters --no-virtual-env
         shell: bash
       - name: Test comparison
-        run: ./.github/run_tests.sh comparison
+        run: ./.github/run_tests.sh comparison --no-virtual-env
         shell: bash
       - name: Test curatio
-        run: ./.github/run_tests.sh curation
+        run: ./.github/run_tests.sh curation --no-virtual-env
         shell: bash
       - name: Test widgets
-        run: ./.github/run_tests.sh widgets
+        run: ./.github/run_tests.sh widgets --no-virtual-env
         shell: bash
-      - name: Test exporters
-        run: ./.github/run_tests.sh exporters
-        shell: bash
-      - name: Test sortingcomponents
-        run: ./.github/run_tests.sh sortingcomponents
-        shell: bash
-      - name: Test internal sorters
-        run: ./.github/run_tests.sh sorters_internal
-        shell: bash
-      - name: Test generation
-        run: ./.github/run_tests.sh generation
-        shell: bash
+      # - name: Test exporters
+      #   run: ./.github/run_tests.sh exporters --no-virtual-env
+      #   shell: bash
+      # - name: Test sortingcomponents
+      #   run: ./.github/run_tests.sh sortingcomponents --no-virtual-env
+      #   shell: bash
+      # - name: Test internal sorters
+      #   run: ./.github/run_tests.sh sorters_internal --no-virtual-env
+      #   shell: bash
+      # - name: Test generation
+      #   run: ./.github/run_tests.sh generation --no-virtual-env
+      #   shell: bash

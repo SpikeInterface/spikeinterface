@@ -100,7 +100,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             window_on_margin=True,
         )
 
-        traces_shift = apply_fshift_optimized(traces_chunk, self.sample_shifts[channel_indices], axis=0)
+        traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts[channel_indices], axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
@@ -134,32 +134,6 @@ def apply_fshift_sam(sig, sample_shifts, axis=0):
     else:
         shifts = omega[np.newaxis, :] * sample_shifts[:, np.newaxis]
     sig_shift = np.fft.irfft(sig_f * np.exp(-1j * shifts), n=n, axis=axis)
-    return sig_shift
-
-
-def apply_fshift_optimized(sig, sample_shifts, axis=0):
-    """
-    Apply the shift on a traces buffer.
-    """
-    n = sig.shape[axis]
-    sig_f = np.fft.rfft(sig, axis=axis)
-
-    # Using np.fft.rfftfreq to get the frequency bins directly
-    omega = 2 * np.pi * np.fft.rfftfreq(n)
-
-    # Adjust shifts for the appropriate axis without unnecessary broadcasting
-    if axis == 0:
-        shifts = omega[:, np.newaxis] * sample_shifts[np.newaxis, :]
-    else:
-        shifts = omega[np.newaxis, :] * sample_shifts[:, np.newaxis]
-
-    # Avoid creating large intermediate arrays by directly computing the phase shift
-    phase_shift = np.exp(-1j * shifts)
-
-    # In-place multiplication if possible to save memory
-    sig_f *= phase_shift
-
-    sig_shift = np.fft.irfft(sig_f, n=n, axis=axis)
     return sig_shift
 
 
