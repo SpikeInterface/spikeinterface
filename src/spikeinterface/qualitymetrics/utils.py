@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.stats import multivariate_normal
 
 
 def create_ground_truth_pc_distributions(center_locations, total_points):
@@ -22,6 +21,8 @@ def create_ground_truth_pc_distributions(center_locations, total_points):
     numpy.array
         Labels for each point
     """
+    from scipy.stats import multivariate_normal
+
     np.random.seed(0)
 
     if len(np.array(center_locations).shape) == 1:
