@@ -109,7 +109,7 @@ class SplitUnitSorting(BaseSorting):
             self.register_recording(sorting._recording)
 
         self._kwargs = dict(
-            parent_sorting=sorting,
+            sorting=sorting,
             split_unit_id=split_unit_id,
             indices_list=indices_list,
             new_unit_ids=new_unit_ids,

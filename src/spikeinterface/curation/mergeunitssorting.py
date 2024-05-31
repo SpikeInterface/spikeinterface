@@ -139,7 +139,7 @@ class MergeUnitsSorting(BaseSorting):
         # make it jsonable
         units_to_merge = [list(e) for e in units_to_merge]
         self._kwargs = dict(
-            parent_sorting=sorting,
+            sorting=sorting,
             units_to_merge=units_to_merge,
             new_unit_ids=new_unit_ids,
             properties_policy=properties_policy,

@@ -53,7 +53,7 @@ class CurationSorting:
         else:
             self.max_used_id = max(parent_units) if len(parent_units) > 0 else 0
 
-        self._kwargs = dict(parent_sorting=sorting, make_graph=make_graph, properties_policy=properties_policy)
+        self._kwargs = dict(sorting=sorting, make_graph=make_graph, properties_policy=properties_policy)
 
     def _get_unused_id(self, n=1):
         # check units in the graph to the next unused unit id
