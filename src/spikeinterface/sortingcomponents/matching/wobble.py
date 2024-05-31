@@ -966,6 +966,8 @@ def compute_objective(traces, template_data, approx_rank):
     # Filter using overlap-and-add convolution
     spatially_filtered_data = np.matmul(spatial_filters, traces.T[np.newaxis, :, :])
     scaled_filtered_data = spatially_filtered_data * singular_filters
+    from scipy import signal
+
     objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal_filters, axes=2, mode="full")
     objective += np.sum(objective_by_rank, axis=0)
     return objective
