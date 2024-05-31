@@ -101,12 +101,12 @@ class BaseRecordingSnippets(BaseExtractor):
         assert isinstance(probe, Probe), "must give Probe"
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
-        return self.set_probes(probegroup, group_mode=group_mode, in_place=in_place)
+        return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
     def set_probegroup(self, probegroup, group_mode="by_probe", in_place=False):
-        return self.set_probes(probegroup, group_mode=group_mode, in_place=in_place)
+        return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
-    def set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
+    def _set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
         """
         Attach a list of Probe objects to a recording.
         For this Probe.device_channel_indices is used to link contacts to recording channels.
@@ -329,7 +329,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_channel_locations(self, locations, channel_ids=None):
         if self.get_property("contact_vector") is not None:
-            raise ValueError("set_channel_locations(..) destroy the probe description, prefer set_probes(..)")
+            raise ValueError("set_channel_locations(..) destroys the probe description, prefer _set_probes(..)")
         self.set_property("location", locations, ids=channel_ids)
 
     def get_channel_locations(self, channel_ids=None, axes: str = "xy"):
