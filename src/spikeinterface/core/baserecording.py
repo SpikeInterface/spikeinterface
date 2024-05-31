@@ -381,6 +381,11 @@ class BaseRecording(BaseRecordingSnippets):
         bool
             True if the recording has scaled traces, False otherwise
         """
+        warnings.warn(
+            "`has_scaled_traces` is deprecated and will be removed in 0.103.0. Use has_scaleable_traces() instead",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
         return self.has_scaled()
 
     def get_time_info(self, segment_index=None) -> dict:
@@ -640,6 +645,7 @@ class BaseRecording(BaseRecordingSnippets):
         warnings.warn(
             "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
             DeprecationWarning,
+            stacklevel=2,
         )
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording

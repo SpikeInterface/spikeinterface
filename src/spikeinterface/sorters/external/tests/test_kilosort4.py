@@ -2,8 +2,7 @@ import unittest
 import pytest
 from pathlib import Path
 
-from spikeinterface import load_extractor
-from spikeinterface.extractors import toy_example
+from spikeinterface import load_extractor, generate_ground_truth_recording
 from spikeinterface.sorters import Kilosort4Sorter, run_sorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
@@ -23,7 +22,7 @@ class Kilosort4SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
         if (cache_folder / "rec").is_dir():
             recording = load_extractor(cache_folder / "rec")
         else:
-            recording, _ = toy_example(num_channels=32, duration=60, seed=0, num_segments=1)
+            recording, _ = generate_ground_truth_recording(num_channels=32, durations=[60], seed=0)
             recording = recording.save(folder=cache_folder / "rec", verbose=False, format="binary")
         self.recording = recording
         print(self.recording)
