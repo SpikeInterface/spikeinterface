@@ -67,11 +67,11 @@ class ModelBasedClassification:
         input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
         input_data = input_data.astype("float32")
 
-        print(input_data)
-
         # Apply classifier
         predictions = self.pipeline.predict(input_data)
         probabilities = self.pipeline.predict_proba(input_data)
+
+        # TODO: add feature importance?
 
         # Make output dict with {unit_id: (prediction, probability)}
         classified_units = {
