@@ -78,4 +78,4 @@ jobs:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         run: |
           pip install pytest-sugar
-          pytest-sugar -m "not sorters_external" -vv -ra --durations=0
+          pytest -m "not sorters_external" -vv -ra --durations=0
