@@ -384,9 +384,7 @@ def correct_motion(
     t1 = time.perf_counter()
     run_times["estimate_motion"] = t1 - t0
 
-    recording_corrected = InterpolateMotionRecording(
-        recording, motion, **interpolate_motion_kwargs
-    )
+    recording_corrected = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
 
     if folder is not None:
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
@@ -434,7 +432,7 @@ def load_motion_info(folder):
             motion_info[name] = np.load(folder / f"{name}.npy")
         else:
             motion_info[name] = None
-    
+
     motion_info["motion"] = Motion.load(folder / "motion")
 
     return motion_info

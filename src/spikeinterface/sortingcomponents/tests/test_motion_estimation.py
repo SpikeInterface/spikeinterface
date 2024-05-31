@@ -200,7 +200,7 @@ def test_estimate_motion():
 
     # same params with differents engine should be the same
     motion0, motion1 = motions["rigid / decentralized / torch"], motions["rigid / decentralized / numpy"]
-    assert (motion0 == motion1)
+    assert motion0 == motion1
 
     motion0, motion1 = (
         motions["rigid / decentralized / torch / time_horizon_s"],

@@ -3,8 +3,7 @@ from __future__ import annotations
 import numpy as np
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
-from spikeinterface.preprocessing.basepreprocessor import (
-    BasePreprocessor, BasePreprocessorSegment)
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from ..preprocessing.filter import fix_dtype
 
@@ -346,8 +345,7 @@ class InterpolateMotionRecording(BasePreprocessor):
             if recording.dtype.kind == "f":
                 dtype = recording.dtype
             else:
-                raise ValueError(
-                    f"Can't interpolate traces of recording with non-floating dtype={recording.dtype=}.")
+                raise ValueError(f"Can't interpolate traces of recording with non-floating dtype={recording.dtype=}.")
 
         dtype_ = fix_dtype(recording, dtype)
         BasePreprocessor.__init__(self, recording, channel_ids=channel_ids, dtype=dtype_)

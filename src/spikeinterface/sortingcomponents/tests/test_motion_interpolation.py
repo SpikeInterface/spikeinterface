@@ -5,8 +5,11 @@ import pytest
 import spikeinterface.core as sc
 from spikeinterface import download_dataset
 from spikeinterface.sortingcomponents.motion_interpolation import (
-    InterpolateMotionRecording, correct_motion_on_peaks, interpolate_motion,
-    interpolate_motion_on_traces)
+    InterpolateMotionRecording,
+    correct_motion_on_peaks,
+    interpolate_motion,
+    interpolate_motion_on_traces,
+)
 from spikeinterface.sortingcomponents.motion_utils import Motion
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 

@@ -25,7 +25,7 @@ def test_estimate_and_correct_motion():
     folder = cache_folder / "estimate_and_correct_motion"
     if folder.exists():
         shutil.rmtree(folder)
-    
+
     rec_corrected = correct_motion(rec, folder=folder)
     print(rec_corrected)
 
