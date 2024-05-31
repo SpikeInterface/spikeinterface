@@ -17,7 +17,7 @@ from spikeinterface.core.core_tools import check_json
 #  * generate drifting signals for test estimate_motion and interpolate_motion: SIMPLE ONE DONE?
 #  * uncomment assert in test_estimate_motion (aka debug torch vs numpy diff): DONE
 #  * delegate times to recording object in
-#       * estimate motion
+#       * estimate motion: DONE
 #       * correct_motion_on_peaks()
 #       * interpolate_motion_on_traces()
 # propagate to benchmark estimate motion

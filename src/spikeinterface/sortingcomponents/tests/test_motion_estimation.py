@@ -201,7 +201,7 @@ def test_estimate_motion():
     assert motion0 == motion1
 
     motion0 = motions["rigid / decentralized / torch / time_horizon_s"]
-    motion1 = motions["rigid / decentralized / numpy / time_horizon_s"],
+    motion1 = motions["rigid / decentralized / numpy / time_horizon_s"]
     np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
     motion0 = motions["non-rigid / decentralized / torch"]
@@ -209,7 +209,7 @@ def test_estimate_motion():
     np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
     motion0 = motions["non-rigid / decentralized / torch / time_horizon_s"]
-    motion1 = motions["non-rigid / decentralized / numpy / time_horizon_s"],
+    motion1 = motions["non-rigid / decentralized / numpy / time_horizon_s"]
     np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
     motion0 = motions["non-rigid / decentralized / torch / spatial_prior"]
