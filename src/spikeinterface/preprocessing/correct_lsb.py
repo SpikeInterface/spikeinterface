@@ -59,7 +59,7 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
         # apply LSB division and instantiate parent
         recording_lsb = scale(recording_lsb, gain=1.0 / lsb, dtype=dtype)
         # if recording has scaled traces, correct gains
-        if recording.has_scaled():
+        if recording.has_scaleable_traces():
             recording_lsb.set_channel_gains(recording_lsb.get_channel_gains() * lsb)
     return recording_lsb
 

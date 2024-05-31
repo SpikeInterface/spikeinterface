@@ -165,7 +165,7 @@ def detect_bad_channels(
 
     elif method == "coherence+psd":
         # some checks
-        assert recording.has_scaled(), (
+        assert recording.has_scaleable_traces(), (
             "The 'coherence+psd' method uses thresholds assuming the traces are in uV, "
             "but the recording does not have scaled traces. If the recording is already scaled, "
             "you need to set gains and offsets: "
