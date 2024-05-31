@@ -156,6 +156,7 @@ def nwbfile_with_ecephys_content():
 
 def _generate_nwbfile(backend, file_path):
     from pynwb import NWBHDF5IO
+    from hdmf_zarr import NWBZarrIO
 
     nwbfile = nwbfile_with_ecephys_content()
     if backend == "hdf5":
