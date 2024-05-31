@@ -13,6 +13,10 @@ env:
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
   KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
 
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   run:
     name: ${{ matrix.os }} Python ${{ matrix.python-version }}
@@ -28,29 +32,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip' # caching pip dependencies
       - name: Install packages
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          python -m pip install -U pip  # Official recommended way
           pip install -e .[test,extractors,streaming_extractors,full]
         shell: bash
-      - name: Get ephy_testing_data current head hash
-        # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-        id: vars
-        run: |
-          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-        shell: bash
-      - name: Restore cached gin data for extractors tests
-        uses: actions/cache/restore@v4
-        id: cache-datasets
-        env:
-          # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-          HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
-        with:
-          path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
-          restore-keys: ${{ runner.os }}-datasets
       - name: Installad datalad
         run: |
           pip install datalad-installer
@@ -89,9 +77,5 @@ jobs:
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         run: |
-          pytest -m "not sorters_external" -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
-          echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY
-          pip install tabulate
-          python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY
-          cat $GITHUB_STEP_SUMMARY
-          rm report_full.txt
+          pip install pytest-sugar
+          pytest-sugar -m "not sorters_external" -vv -ra --durations=0
