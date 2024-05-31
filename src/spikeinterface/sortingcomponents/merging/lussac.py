@@ -150,7 +150,7 @@ def compute_nb_coincidence(spike_train1, spike_train2, max_time) -> float:
     return n_coincident + p_high * n_coincident_high + p_low * n_coincident_low
 
 
-def estimate_contamination(spike_train: np.ndarray, refractory_period: tuple[float, float]) -> float:
+def estimate_contamination(spike_train: np.ndarray, sf: float, T: int, refractory_period: tuple[float, float]) -> float:
     """
     Estimates the contamination of a spike train by looking at the number of refractory period violations.
     The spike train is assumed to have spikes coming from a neuron, and noisy spikes that are random and
@@ -179,6 +179,8 @@ def estimate_contamination(spike_train: np.ndarray, refractory_period: tuple[flo
 def estimate_cross_contamination(
     spike_train1: np.ndarray,
     spike_train2: np.ndarray,
+    sf: float,
+    T: int,
     refractory_period: tuple[float, float],
     limit: float | None = None,
 ) -> tuple[float, float] | float:
@@ -203,7 +205,7 @@ def estimate_cross_contamination(
 
     N1 = len(spike_train1)
     N2 = len(spike_train2)
-    C1 = estimate_contamination(spike_train1, refractory_period)
+    C1 = estimate_contamination(spike_train1, sf, T, refractory_period)
 
     t_c = refractory_period[0] * 1e-3 * sf
     t_r = refractory_period[1] * 1e-3 * sf
@@ -261,6 +263,8 @@ def aurelien_merge(
     pairs = []
     sorting = analyzer.sorting
     recording = analyzer.recording
+    sf = analyzer.recording.sampling_frequency
+    n_frames = analyzer.recording.get_num_samples()
 
     for unit_id1 in analyzer.unit_ids:
         for unit_id2 in analyzer.unit_ids:
@@ -304,7 +308,7 @@ def aurelien_merge(
             spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
             spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
             CC, p_value = estimate_cross_contamination(
-                spike_train1, spike_train2, refractory_period, limit=CC_threshold
+                spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold
             )
 
             if p_value < 0.2:
