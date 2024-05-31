@@ -34,7 +34,6 @@ def get_dataset():
     return recording, sorting
 
 
-@pytest.mark.usefixtures("create_cache_folder")
 class AnalyzerExtensionCommonTestSuite:
     """
     Common tests with class approach to compute extension on several cases (3 format x 2 sparsity)
