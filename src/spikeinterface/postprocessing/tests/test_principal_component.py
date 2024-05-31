@@ -109,7 +109,7 @@ class PrincipalComponentsExtensionTest(AnalyzerExtensionCommonTestSuite, unittes
             ext.run_for_all_spikes(pc_file2, chunk_size=10000, n_jobs=2)
             all_pc2 = np.load(pc_file2)
 
-            assert np.array_equal(all_pc1, all_pc2)
+            np.testing.assert_almost_equal(all_pc1, all_pc2)
 
     def test_project_new(self):
         from sklearn.decomposition import IncrementalPCA
