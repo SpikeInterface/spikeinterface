@@ -4,7 +4,6 @@ from __future__ import annotations
 
 
 import numpy as np
-from sklearn.preprocessing import QuantileTransformer
 
 
 def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **method_kwargs):
@@ -83,6 +82,7 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
 
     :py:func:`spikeinterface.sortingcomponents.peak_selection.select_peaks` for detailed documentation.
     """
+    from sklearn.preprocessing import QuantileTransformer
 
     selected_indices = []
 

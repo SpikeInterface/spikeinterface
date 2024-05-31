@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy import signal
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
-import matplotlib.pyplot as plt
 
 from .main import BaseTemplateMatchingEngine
 from spikeinterface.core.template import Templates
@@ -556,6 +554,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         Finally, it generates a new spike train from the spike times, and returns it along with additional metrics about
         each spike.
         """
+        from scipy import signal
+
         # Get spike times (indices) using peaks in the objective
         objective_template_max = np.max(objective_normalized, axis=0)
         spike_window = (template_meta.num_samples - 1, objective_normalized.shape[1] - template_meta.num_samples)
@@ -718,6 +718,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # Upsample and compute optimal template shift
         window_len_upsampled = template_meta.peak_window_len * params.jitter_factor
+        from scipy import signal
+
         if not params.scale_amplitudes:
             # Perform simple upsampling using scipy.signal.resample
             high_resolution_peaks = signal.resample(objective_peaks, window_len_upsampled, axis=0)
@@ -862,6 +864,8 @@ def upsample_and_jitter(temporal, jitter_factor, num_samples):
     approx_rank = temporal.shape[2]
     num_samples_super_res = num_samples * jitter_factor
     temporal_flipped = np.flip(temporal, axis=1)  # TODO: why do we need to flip the temporal components?
+    from scipy import signal
+
     temporal_jittered = signal.resample(temporal_flipped, num_samples_super_res, axis=1)
 
     original_index = np.arange(0, num_samples_super_res, jitter_factor)  # indices of original data
