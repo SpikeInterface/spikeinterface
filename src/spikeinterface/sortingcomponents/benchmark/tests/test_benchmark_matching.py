@@ -2,7 +2,6 @@ import pytest
 
 import shutil
 
-import pandas as pd
 
 from spikeinterface.core import (
     get_noise_levels,
