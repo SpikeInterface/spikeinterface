@@ -16,13 +16,13 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     ----------
     folder_path : str or Path
         Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups : list or str, default : None
+    exclude_cluster_groups : list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
-    keep_good_only : bool, default : True
+    keep_good_only : bool, default: True
         Whether to only keep good units.
-    remove_empty_units : bool, default : True
+    remove_empty_units : bool, default: True
         If True, empty units are removed from the sorting extractor.
-    load_all_cluster_properties : bool, default : True
+    load_all_cluster_properties : bool, default: True
         If True, all cluster properties are loaded from the tsv/csv files.
     """
 
@@ -206,9 +206,9 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     ----------
     folder_path : str or Path
         Path to the output Phy folder (containing the params.py).
-    exclude_cluster_groups : list or str, default : None
+    exclude_cluster_groups : list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
-    load_all_cluster_properties : bool, default : True
+    load_all_cluster_properties : bool, default: True
         If True, all cluster properties are loaded from the tsv/csv files.
 
     Returns
@@ -247,10 +247,10 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     ----------
     folder_path : str or Path
         Path to the output Phy folder (containing the params.py).
-    keep_good_only : bool, default : True
+    keep_good_only : bool, default: True
         Whether to only keep good units.
         If True, only Kilosort-labeled 'good' units are returned.
-    remove_empty_units : bool, default : True
+    remove_empty_units : bool, default: True
         If True, empty units are removed from the sorting extractor.
 
     Returns

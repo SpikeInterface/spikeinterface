@@ -13,23 +13,23 @@ class MotionWidget(BaseWidget):
     ----------
     motion_info : dict
         The motion info return by correct_motion() or load back with load_motion_info()
-    recording : RecordingExtractor, default : None
+    recording : RecordingExtractor, default: None
         The recording extractor object (only used to get "real" times)
-    sampling_frequency : float, default : None
+    sampling_frequency : float, default: None
         The sampling frequency (needed if recording is None)
-    depth_lim : tuple or None, default : None
+    depth_lim : tuple or None, default: None
         The min and max depth to display, if None (min and max of the recording)
-    motion_lim : tuple or None, default : None
+    motion_lim : tuple or None, default: None
         The min and max motion to display, if None (min and max of the motion)
-    color_amplitude : bool, default : False
+    color_amplitude : bool, default: False
         If True, the color of the scatter points is the amplitude of the peaks
-    scatter_decimate : int, default : None
+    scatter_decimate : int, default: None
         If > 1, the scatter points are decimated
-    amplitude_cmap : str, default : "inferno"
+    amplitude_cmap : str, default: "inferno"
         The colormap to use for the amplitude
-    amplitude_clim : tuple or None, default : None
+    amplitude_clim : tuple or None, default: None
         The min and max amplitude to display, if None (min and max of the amplitudes)
-    amplitude_alpha : float, default : 1
+    amplitude_alpha : float, default: 1
         The alpha of the scatter points
     """
 

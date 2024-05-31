@@ -21,44 +21,44 @@ class SpikesOnTracesWidget(BaseWidget):
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    channel_ids : list or None, default : None
+    channel_ids : list or None, default: None
         The channel ids to display
-    unit_ids : list or None, default : None
+    unit_ids : list or None, default: None
         List of unit ids
-    order_channel_by_depth : bool, default : False
+    order_channel_by_depth : bool, default: False
         If true orders channel by depth
-    time_range : list or None, default : None
+    time_range : list or None, default: None
         List with start time and end time in seconds
-    sparsity : ChannelSparsity or None, default : None
+    sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply
         If SortingAnalyzer is already sparse, the argument is ignored
-    unit_colors : dict or None, default : None
+    unit_colors : dict or None, default: None
         If given, a dictionary with unit ids as keys and colors as values
         If None, then the get_unit_colors() is internally used. (matplotlib backend)
-    mode : "line" | "map" | "auto", default : "auto"
+    mode : "line" | "map" | "auto", default: "auto"
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled : bool, default : False
+    return_scaled : bool, default: False
         If True and the recording has scaled traces, it plots the scaled traces
-    cmap : str, default : "RdBu"
+    cmap : str, default: "RdBu"
         matplotlib colormap used in mode "map"
-    show_channel_ids : bool, default : False
+    show_channel_ids : bool, default: False
         Set yticks with channel ids
-    color_groups : bool, default : False
+    color_groups : bool, default: False
         If True groups are plotted with different colors
-    color : str or None, default : None
+    color : str or None, default: None
         The color used to draw the traces
-    clim : None, tuple or dict, default : None
+    clim : None, tuple or dict, default: None
         When mode is "map", this argument controls color limits.
         If dict, keys should be the same as recording keys
-    scale : float, default : 1
+    scale : float, default: 1
         Scale factor for the traces
-    with_colorbar : bool, default : True
+    with_colorbar : bool, default: True
         When mode is "map", a colorbar is added
-    tile_size : int, default : 512
+    tile_size : int, default: 512
         For sortingview backend, the size of each tile in the rendered image
-    seconds_per_row : float, default : 0.2
+    seconds_per_row : float, default: 0.2
         For "map" mode and sortingview backend, seconds to render in each row
     """
 

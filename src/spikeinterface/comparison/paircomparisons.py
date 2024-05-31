@@ -116,19 +116,19 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         The first sorting for the comparison
     sorting2 : SortingExtractor
         The second sorting for the comparison
-    sorting1_name : str, default : None
+    sorting1_name : str, default: None
         The name of sorter 1
-    sorting2_name : : str, default : None
+    sorting2_name : : str, default: None
         The name of sorter 2
-    delta_time : float, default : 0.4
+    delta_time : float, default: 0.4
         Number of ms to consider coincident spikes
-    match_score : float, default : 0.5
+    match_score : float, default: 0.5
         Minimum agreement score to match units
-    chance_score : float, default : 0.1
+    chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
-    n_jobs : int, default : -1
+    n_jobs : int, default: -1
         Number of cores to use in parallel. Uses all available if -1
-    verbose : bool, default : False
+    verbose : bool, default: False
         If True, output is verbose
 
     Returns
@@ -219,35 +219,35 @@ class GroundTruthComparison(BasePairSorterComparison):
         The first sorting for the comparison
     tested_sorting : SortingExtractor
         The second sorting for the comparison
-    gt_name : str, default : None
+    gt_name : str, default: None
         The name of sorter 1
-    tested_name : : str, default : None
+    tested_name : : str, default: None
         The name of sorter 2
-    delta_time : float, default : 0.4
+    delta_time : float, default: 0.4
         Number of ms to consider coincident spikes
-    match_score : float, default : 0.5
+    match_score : float, default: 0.5
         Minimum agreement score to match units
-    chance_score : float, default : 0.1
+    chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
-    redundant_score : float, default : 0.2
+    redundant_score : float, default: 0.2
         Agreement score above which units are redundant
-    overmerged_score : float, default : 0.2
+    overmerged_score : float, default: 0.2
         Agreement score above which units can be overmerged
-    well_detected_score : float, default : 0.8
+    well_detected_score : float, default: 0.8
         Agreement score above which units are well detected
-    exhaustive_gt : bool, default : False
+    exhaustive_gt : bool, default: False
         Tell if the ground true is "exhaustive" or not. In other world if the
         GT have all possible units. It allows more performance measurement.
         For instance, MEArec simulated dataset have exhaustive_gt=True
-    match_mode : "hungarian" | "best", default : "hungarian"
+    match_mode : "hungarian" | "best", default: "hungarian"
         The method to match units
-    n_jobs : int, default : -1
+    n_jobs : int, default: -1
         Number of cores to use in parallel. Uses all available if -1
-    compute_labels : bool, default : False
+    compute_labels : bool, default: False
         If True, labels are computed at instantiation
-    compute_misclassifications : bool, default : False
+    compute_misclassifications : bool, default: False
         If True, misclassifications are computed at instantiation
-    verbose : bool, default : False
+    verbose : bool, default: False
         If True, output is verbose
 
     Returns
@@ -392,9 +392,9 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        method : "by_unit" | "pooled_with_average", default : "by_unit"
+        method : "by_unit" | "pooled_with_average", default: "by_unit"
             The method to compute performance
-        output : "pandas" | "dict", default : "pandas"
+        output : "pandas" | "dict", default: "pandas"
             The output format
 
         Returns
@@ -478,7 +478,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        well_detected_score : float, default : None
+        well_detected_score : float, default: None
             The agreement score above which tested units
             are counted as "well detected".
         """
@@ -514,7 +514,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        redundant_score : float, default : None
+        redundant_score : float, default: None
             The agreement score below which tested units
             are counted as "false positive"" (and not "redundant").
         """
@@ -554,7 +554,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        redundant_score=None : float, default : None
+        redundant_score=None : float, default: None
             The agreement score above which tested units
             are counted as "redundant" (and not "false positive" ).
         """
@@ -589,7 +589,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        overmerged_score : float, default : None
+        overmerged_score : float, default: None
             Tested units with 2 or more agreement scores above "overmerged_score"
             are counted as "overmerged".
         """
@@ -700,15 +700,15 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         The first SortingAnalyzer to get templates to compare
     sorting_analyzer_2 : SortingAnalyzer
         The second SortingAnalyzer to get templates to compare
-    unit_ids1 : list, default : None
+    unit_ids1 : list, default: None
         List of units from sorting_analyzer_1 to compare
-    unit_ids2 : list, default : None
+    unit_ids2 : list, default: None
         List of units from sorting_analyzer_2 to compare
-    similarity_method : str, default : "cosine_similarity"
+    similarity_method : str, default: "cosine_similarity"
         Method for the similaroty matrix
-    sparsity_dict : dict, default : None
+    sparsity_dict : dict, default: None
         Dictionary for sparsity
-    verbose : bool, default : False
+    verbose : bool, default: False
         If True, output is verbose
 
     Returns

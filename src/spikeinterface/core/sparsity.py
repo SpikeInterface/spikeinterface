@@ -567,20 +567,20 @@ def estimate_sparsity(
         The recording
     sorting : BaseSorting
         The sorting
-    num_spikes_for_sparsity : int, default : 100
+    num_spikes_for_sparsity : int, default: 100
         How many spikes per units to compute the sparsity
-    ms_before : float, default : 1.0
+    ms_before : float, default: 1.0
         Cut out in ms before spike time
-    ms_after : float, default : 2.5
+    ms_after : float, default: 2.5
         Cut out in ms after spike time
-    method : "radius" | "best_channels", default : "radius"
+    method : "radius" | "best_channels", default: "radius"
         Sparsity method propagated to the `compute_sparsity()` function.
         Only "radius" or "best_channels" are implemented
-    peak_sign : "neg" | "pos" | "both", default : "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
-    radius_um : float, default : 100.0
+    radius_um : float, default: 100.0
         Used for "radius" method
-    num_channels : int, default : 5
+    num_channels : int, default: 5
         Used for "best_channels" method
 
     {}

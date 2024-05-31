@@ -160,7 +160,7 @@ class ZarrSortingExtractor(BaseSorting):
         Path to the zarr root file
     storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
-    zarr_group : str or None, default : None
+    zarr_group : str or None, default: None
         Optional zarr group path to load the sorting from. This can be used when the sorting is not stored at the root, but in sub group.
     Returns
     -------
@@ -294,7 +294,7 @@ def get_default_zarr_compressor(clevel: int = 5):
 
     Parameters
     ----------
-    clevel : int, default : 5
+    clevel : int, default: 5
         Compression level (higher -> more compressed).
         Minimum 1, maximum 9. By default 5
 
@@ -459,17 +459,17 @@ def add_traces_to_zarr(
         The zarr group to add traces to
     dataset_paths : list
         List of paths to traces datasets in the zarr group
-    channel_chunk_size : int or None, default : None (chunking in time only)
+    channel_chunk_size : int or None, default: None (chunking in time only)
         Channels per chunk
-    dtype : dtype, default : None
+    dtype : dtype, default: None
         Type of the saved data
-    compressor : zarr compressor or None, default : None
+    compressor : zarr compressor or None, default: None
         Zarr compressor
-    filters : list, default : None
+    filters : list, default: None
         List of zarr filters
-    verbose : bool, default : False
+    verbose : bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint : bool, default : True
+    auto_cast_uint : bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """

@@ -26,7 +26,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
     noise_levels : array
         Noise levels if already computed
 
-    mode : "zeros" | "noise, default : "zeros"
+    mode : "zeros" | "noise, default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
 
         - "zeros": Artifacts are replaced by zeros.

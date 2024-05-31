@@ -235,20 +235,20 @@ def run_sorter_by_property(
         Property to split by before sorting
     folder : str | Path
         The working directory.
-    mode_if_folder_exists : bool or None, default : None
+    mode_if_folder_exists : bool or None, default: None
         Must be None. This is deprecated.
         If not None then a warning is raise.
         Will be removed in next release.
-    engine : "loop" | "joblib" | "dask", default : "loop"
+    engine : "loop" | "joblib" | "dask", default: "loop"
         Which engine to use to run sorter.
     engine_kwargs : dict
         This contains kwargs specific to the launcher engine:
             * "loop" : no kwargs
             * "joblib" : {"n_jobs" : } number of processes
             * "dask" : {"client":} the dask client for submitting task
-    verbose : bool, default : False
+    verbose : bool, default: False
         Controls sorter verboseness
-    docker_image : None or str, default : None
+    docker_image : None or str, default: None
         If str run the sorter inside a container (docker) using the docker package
     **sorter_params : keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)

@@ -27,13 +27,13 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path : str
         The file path to the binary container usually a .dat, .lfp, .eeg extension.
-    xml_file_path : str, default : None
+    xml_file_path : str, default: None
         The path to the xml file. If None, the xml file is assumed to have the same name as the binary file.
-    stream_id : str, default : None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name : str, default : None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations : bool, default : False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     """
 
@@ -94,12 +94,12 @@ class NeuroScopeSortingExtractor(BaseSorting):
     clufile_path : PathType
         Optional. Path to a particular .clu text file. If given, only the single .clu file
         (and the respective .res file) are loaded
-    keep_mua_units : bool, default : True
+    keep_mua_units : bool, default: True
         Optional. Whether or not to return sorted spikes from multi-unit activity
     exclude_shanks : list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res.%i and .clu.%i pairs.
-    xml_file_path : PathType, default : None
+    xml_file_path : PathType, default: None
         Path to the .xml file referenced by this sorting.
     """
 
@@ -306,14 +306,14 @@ def read_neuroscope(
         The xml file.
     stream_id : str or None
         The stream id to load. If None, the first stream is loaded
-    keep_mua_units : bool, default : False
+    keep_mua_units : bool, default: False
         Optional. Whether or not to return sorted spikes from multi-unit activity
     exclude_shanks : list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res. % i and .clu. % i pairs.
-    load_recording : bool, default : True
+    load_recording : bool, default: True
         If True, the recording is loaded
-    load_sorting : bool, default : False
+    load_sorting : bool, default: False
         If True, the sorting is loaded
     """
     outputs = ()

@@ -31,7 +31,7 @@ class GaussianFilterRecording(BasePreprocessor):
     freq_max : float or None
         The higher frequency cutoff for the bandpass filter.
         If None, the resulting object is a highpass filter.
-    margin_sd : float, default : 5.0
+    margin_sd : float, default: 5.0
         The number of standard deviation to take for margins.
 
     Returns

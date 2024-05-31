@@ -48,17 +48,17 @@ class NormalizeByQuantileRecording(BasePreprocessor):
     ----------
     recording : RecordingExtractor
         The recording extractor to be transformed
-    scale : float, default : 1.0
+    scale : float, default: 1.0
         Scale for the output distribution
-    median : float, default : 0.0
+    median : float, default: 0.0
         Median for the output distribution
-    q1 : float, default : 0.01
+    q1 : float, default: 0.01
         Lower quantile used for measuring the scale
-    q1 : float, default : 0.99
+    q1 : float, default: 0.99
         Upper quantile used for measuring the
-    mode : "by_channel" | "pool_channel", default : "by_channel"
+    mode : "by_channel" | "pool_channel", default: "by_channel"
         If "by_channel" each channel is rescaled independently.
-    dtype : str or np.dtype, default : "float32"
+    dtype : str or np.dtype, default: "float32"
         The dtype of the output traces
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
@@ -136,7 +136,7 @@ class ScaleRecording(BasePreprocessor):
         Scalar for the traces of the recording extractor or array with scalars for each channel
     offset : float or array
         Offset for the traces of the recording extractor or array with offsets for each channel
-    dtype : str or np.dtype, default : "float32"
+    dtype : str or np.dtype, default: "float32"
         The dtype of the output traces
 
     Returns
@@ -192,9 +192,9 @@ class CenterRecording(BasePreprocessor):
     ----------
     recording : RecordingExtractor
         The recording extractor to be centered
-    mode : "median" | "mean", default : "median"
+    mode : "median" | "mean", default: "median"
         The method used to center the traces
-    dtype : str or np.dtype, default : "float32"
+    dtype : str or np.dtype, default: "float32"
         The dtype of the output traces
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
@@ -240,7 +240,7 @@ class ZScoreRecording(BasePreprocessor):
     ----------
     recording : RecordingExtractor
         The recording extractor to be centered
-    mode : "median+mad" | "mean+std", default : "median+mad"
+    mode : "median+mad" | "mean+std", default: "median+mad"
         The mode to compute the zscore
     dtype : None or dtype
         If None the the parent dtype is kept.

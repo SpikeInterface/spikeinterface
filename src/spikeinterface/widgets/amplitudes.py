@@ -17,22 +17,22 @@ class AmplitudesWidget(BaseWidget):
     ----------
     sorting_analyzer : SortingAnalyzer
         The input waveform extractor
-    unit_ids : list or None, default : None
+    unit_ids : list or None, default: None
         List of unit ids
-    segment_index : int or None, default : None
+    segment_index : int or None, default: None
         The segment index (or None if mono-segment)
-    max_spikes_per_unit : int or None, default : None
+    max_spikes_per_unit : int or None, default: None
         Number of max spikes per unit to display. Use None for all spikes
-    hide_unit_selector : bool, default : False
+    hide_unit_selector : bool, default: False
         If True the unit selector is not displayed
         (sortingview backend)
-    plot_histogram : bool, default : False
+    plot_histogram : bool, default: False
         If True, an histogram of the amplitudes is plotted on the right axis
         (matplotlib backend)
-    bins : int or None, default : None
+    bins : int or None, default: None
         If plot_histogram is True, the number of bins for the amplitude histogram.
         If None this is automatically adjusted
-    plot_legend : bool, default : True
+    plot_legend : bool, default: True
         True includes legend in plot
     """
 

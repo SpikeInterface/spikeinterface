@@ -24,7 +24,7 @@ class SplitUnitSorting(BaseSorting):
         If the sorting has only one segment, indices_list can be a single array
     new_unit_ids : int
         Unit ids of the new units to be created
-    properties_policy : "keep" | "remove", default : "keep"
+    properties_policy : "keep" | "remove", default: "keep"
         Policy used to propagate properties. If "keep" the properties will be passed to the new units
          (if the units_to_merge have the same value). If "remove" the new units will have an empty
          value for all the properties of the new unit

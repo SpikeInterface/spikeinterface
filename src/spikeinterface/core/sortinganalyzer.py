@@ -59,20 +59,20 @@ def create_sorting_analyzer(
         The sorting object
     recording : Recording
         The recording object
-    folder : str or Path or None, default : None
+    folder : str or Path or None, default: None
         The folder where waveforms are cached
-    format : "memory | "binary_folder" | "zarr", default : "memory"
+    format : "memory | "binary_folder" | "zarr", default: "memory"
         The mode to store waveforms. If "folder", waveforms are stored on disk in the specified folder.
         The "folder" argument must be specified in case of mode "folder".
         If "memory" is used, the waveforms are stored in RAM. Use this option carefully!
-    sparse : bool, default : True
+    sparse : bool, default: True
         If True, then a sparsity mask is computed using the `estimate_sparsity()` function using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
         Then, the sparsity will be propagated to all ResultExtention that handle sparsity (like wavforms, pca, ...)
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
-    sparsity : ChannelSparsity or None, default : None
+    sparsity : ChannelSparsity or None, default: None
         The sparsity used to compute waveforms. If this is given, `sparse` is ignored.
-    return_scaled : bool, default : True
+    return_scaled : bool, default: True
         All extensions that play with traces will use this global return_scaled : "waveforms", "noise_levels", "templates".
         This prevent return_scaled being differents from different extensions and having wrong snr for instance.
 
@@ -150,7 +150,7 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
     ----------
     folder : str or Path
         The folder / zarr folder where the waveform extractor is stored
-    load_extensions : bool, default : True
+    load_extensions : bool, default: True
         Load all extensions or not.
     format : "auto" | "binary_folder" | "zarr"
         The format of the folder.
@@ -685,7 +685,7 @@ class SortingAnalyzer:
         ----------
         folder : str or Path
             The output waveform folder
-        format : "binary_folder" | "zarr", default : "binary_folder"
+        format : "binary_folder" | "zarr", default: "binary_folder"
             The backend to use for saving the waveforms
         """
         return self._save_or_select(format=format, folder=folder, unit_ids=None)
@@ -849,9 +849,9 @@ class SortingAnalyzer:
             * a dict: compute several extensions. The keys are the extension names and the values are dictiopnaries with the extension parameters.
             * a list: compute several extensions. The list contains the extension names. Additional parameters can be passed with the extension_params
               argument.
-        save : bool, default : True
+        save : bool, default: True
             If True the extension is saved to disk (only if sorting analyzer format is not "memory")
-        extension_params : dict or None, default : None
+        extension_params : dict or None, default: None
             If input is a list, this parameter can be used to specify parameters for each extension.
             The extension_params keys must be included in the input list.
         **kwargs:
@@ -914,7 +914,7 @@ class SortingAnalyzer:
         extension_name : str
             The name of the extension.
             For instance "waveforms", "templates", ...
-        save : bool, default : True
+        save : bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
@@ -982,7 +982,7 @@ class SortingAnalyzer:
         ----------
         extensions : dict
             Keys are extension_names and values are params.
-        save : bool, default : True
+        save : bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
@@ -1343,7 +1343,7 @@ def get_extension_class(extension_name: str, auto_import=True):
     ----------
     extension_name : str
         The extension name.
-    auto_import : bool, default : True
+    auto_import : bool, default: True
         Auto import the module if the extension class is not registered yet.
 
     Returns

@@ -80,10 +80,10 @@ def move_dense_templates(templates_array, displacements, source_probe, dest_prob
         shape : (num_displacement, 2)
     source_probe : Probe
         The Probe object on which templates_array are defined
-    dest_probe : Probe | None, default : None
+    dest_probe : Probe | None, default: None
         The destination Probe. Can be different geometry than the original.
         If None then the same probe  is used.
-    interpolation_method : "cubic" | "linear", default : "cubic"
+    interpolation_method : "cubic" | "linear", default: "cubic"
         The interpolation method.
 
     Returns
@@ -194,7 +194,7 @@ def make_linear_displacement(start, stop, num_step=10):
         The start position.
     stop : np.array of 2 elements
         The stop position.
-    num_step : int, default : 10
+    num_step : int, default: 10
         The number of steps between start and stop.
 
     Returns
@@ -225,18 +225,18 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
     displacement_sampling_frequency : float
         The sampling frequency of drift vector
-    displacement_unit_factor : numpy array or None, default : None
+    displacement_unit_factor : numpy array or None, default: None
         A array containing the factor per unit of the drift.
         This is used to create non rigid with a factor gradient of depending on units position.
         shape (num_units, num_motions)
         If None then all unit have the same factor (1) and the drift is rigid.
-    parent_recording : BaseRecording or None, default : None
+    parent_recording : BaseRecording or None, default: None
         The recording over which to add the templates.
         If None, will default to traces containing all 0.
-    num_samples : list[int] or int or None, default : None
+    num_samples : list[int] or int or None, default: None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
-    amplitude_factor : list of numpy array or numpy array or float or None, default : None
+    amplitude_factor : list of numpy array or numpy array or float or None, default: None
         Controls the amplitude scaling for each spike for each unit.
         If None, no amplitude scaling is applied.
         If scalar all spikes have the same factor (certainly useless).

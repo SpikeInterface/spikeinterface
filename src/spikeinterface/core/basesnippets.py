@@ -237,7 +237,7 @@ class BaseSnippetsSegment(BaseSegment):
         ----------
         indices : list[int]
             Indices of the snippets to return
-        channel_indices : Union[list, None], default : None
+        channel_indices : Union[list, None], default: None
             Indices of channels to return, or all channels if None
 
         Returns
@@ -269,9 +269,9 @@ class BaseSnippetsSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame : Union[int, None], default : None
+        start_frame : Union[int, None], default: None
             start sample index, or zero if None
-        end_frame : Union[int, None], default : None
+        end_frame : Union[int, None], default: None
             end_sample, or number of samples if None
 
         Returns

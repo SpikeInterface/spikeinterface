@@ -139,7 +139,7 @@ class SharedMemoryRecording(BaseRecording):
         Times in seconds of the first sample for each segment
     channel_ids : list
         An optional list of channel_ids. If None, linear channels are assumed
-    main_shm_owner : bool, default : True
+    main_shm_owner : bool, default: True
         If True, the main instance will unlink the sharedmem buffer when deleted
     """
 
@@ -306,7 +306,7 @@ class NumpySorting(BaseSorting):
             An array of spike times (in frames)
         labels_list : list of array (or array)
             An array of spike labels corresponding to the given times
-        unit_ids : list or None, default : None
+        unit_ids : list or None, default: None
             The explicit list of unit_ids that should be extracted from labels_list
             If None, then it will be np.unique(labels_list)
         """
@@ -668,7 +668,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         ----------
         indices : list[int]
             Indices of the snippets to return
-        channel_indices : Union[list, None], default : None
+        channel_indices : Union[list, None], default: None
             Indices of channels to return, or all channels if None
 
         Returns
@@ -689,9 +689,9 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
 
         Parameters
         ----------
-        start_frame : Union[int, None], default : None
+        start_frame : Union[int, None], default: None
             start sample index, or zero if None
-        end_frame : Union[int, None], default : None
+        end_frame : Union[int, None], default: None
             end_sample, or number of samples if None
         Returns
         -------

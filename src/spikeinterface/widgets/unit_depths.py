@@ -18,11 +18,11 @@ class UnitDepthsWidget(BaseWidget):
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
-    unit_colors :  dict or None, default : None
+    unit_colors :  dict or None, default: None
         If given, a dictionary with unit ids as keys and colors as values
-    depth_axis : int, default : 1
+    depth_axis : int, default: 1
         The dimension of unit_locations that is depth
-    peak_sign : "neg" | "pos" | "both", default : "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Sign of peak for amplitudes
     """
 

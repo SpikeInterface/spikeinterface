@@ -15,15 +15,15 @@ class MultiCompGraphWidget(BaseWidget):
     ----------
     multi_comparison : BaseMultiComparison
         The multi comparison object
-    draw_labels : bool, default : False
+    draw_labels : bool, default: False
         If True unit labels are shown
-    node_cmap : matplotlib colormap, default : "viridis"
+    node_cmap : matplotlib colormap, default: "viridis"
         The colormap to be used for the nodes
-    edge_cmap : matplotlib colormap, default : "hot"
+    edge_cmap : matplotlib colormap, default: "hot"
         The colormap to be used for the edges
-    alpha_edges : float, default : 0.5
+    alpha_edges : float, default: 0.5
         Alpha value for edges
-    colorbar : bool, default : False
+    colorbar : bool, default: False
         If True a colorbar for the edges is plotted
     """
 
@@ -121,13 +121,13 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
     ----------
     multi_comparison : BaseMultiComparison
         The multi comparison object
-    plot_type : "pie" | "bar", default : "pie"
+    plot_type : "pie" | "bar", default: "pie"
         The plot type
-    cmap : matplotlib colormap, default : "YlOrRd"
+    cmap : matplotlib colormap, default: "YlOrRd"
         The colormap to be used for the nodes
-    fontsize : int, default : 9
+    fontsize : int, default: 9
         The text fontsize
-    show_legend : bool, default : True
+    show_legend : bool, default: True
         If True a legend is shown
     """
 
@@ -199,11 +199,11 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
     ----------
     multi_comparison : BaseMultiComparison
         The multi comparison object
-    plot_type : "pie" | "bar", default : "pie
+    plot_type : "pie" | "bar", default: "pie
         The plot type
-    cmap : matplotlib colormap, default : "Reds"
+    cmap : matplotlib colormap, default: "Reds"
         The colormap to be used for the nodes
-    fontsize : int, default : 9
+    fontsize : int, default: 9
         The text fontsize
     show_legend : bool
         Show the legend in the last axes

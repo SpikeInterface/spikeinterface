@@ -20,7 +20,7 @@ class CurationSorting:
     ----------
     parent_sorting : Recording
         The recording object
-    properties_policy : "keep" | "remove", default : "keep"
+    properties_policy : "keep" | "remove", default: "keep"
         Policy used to propagate properties after split and merge operation. If "keep" the properties will be
         passed to the new units (if the original units have the same value). If "remove" the new units will have
         an empty value for all the properties
@@ -174,7 +174,7 @@ class CurationSorting:
         ----------
         unit_ids : list[str|int]
             List of unit ids to select
-        renamed_unit_ids : list or None, default : None
+        renamed_unit_ids : list or None, default: None
             List of new unit ids to rename the selected units
         """
         new_sorting = self._sorting_stages[self._sorting_stages_i].select_units(unit_ids, renamed_unit_ids)

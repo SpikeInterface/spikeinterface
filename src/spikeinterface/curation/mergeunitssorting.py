@@ -19,7 +19,7 @@ class MergeUnitsSorting(BaseSorting):
         but it can also have more (merge multiple units at once).
     new_unit_ids : None or list
         A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`
-    properties_policy : "keep" | "remove", default : "keep"
+    properties_policy : "keep" | "remove", default: "keep"
         Policy used to propagate properties. If "keep" the properties will be passed to the new units
          (if the units_to_merge have the same value). If "remove" the new units will have an empty
          value for all the properties of the new unit.

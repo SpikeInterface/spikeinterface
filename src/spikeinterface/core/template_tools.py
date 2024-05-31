@@ -15,7 +15,7 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_sc
     ----------
     one_object : Templates | SortingAnalyzer
         The Templates or SortingAnalyzer objects. If SortingAnalyzer, it needs the "templates" extension.
-    return_scaled : bool, default : True
+    return_scaled : bool, default: True
         If True, templates are scaled.
 
     Returns
@@ -69,7 +69,7 @@ def get_template_amplitudes(
         A Templates or a SortingAnalyzer object
     peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
-    mode : "extremum" | "at_index" | "peak_to_peak", default : "at_index"
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
         Where the amplitude is computed
         * "extremum" : take the peak value (max or min depending on `peak_sign`)
         * "at_index" : take value at `nbefore` index
@@ -135,12 +135,12 @@ def get_template_extremum_channel(
         A Templates or a SortingAnalyzer object
     peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
-    mode : "extremum" | "at_index" | "peak_to_peak", default : "at_index"
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
         Where the amplitude is computed
         * "extremum" : take the peak value (max or min depending on `peak_sign`)
         * "at_index" : take value at `nbefore` index
         * "peak_to_peak" : take the peak-to-peak amplitude
-    outputs : "id" | "index", default : "id"
+    outputs : "id" | "index", default: "id"
         * "id" : channel id
         * "index" : channel index
 
@@ -248,7 +248,7 @@ def get_template_extremum_amplitude(
         A Templates or a SortingAnalyzer object
     peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
-    mode : "extremum" | "at_index" | "peak_to_peak", default : "at_index"
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
         Where the amplitude is computed
         * "extremum": take the peak value (max or min depending on `peak_sign`)
         * "at_index": take value at `nbefore` index

@@ -188,9 +188,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int or None, default : None
+        segment_index : int or None, default: None
             The segment index to retrieve the number of samples for.
-            For multi-segment objects, it is required, default : None
+            For multi-segment objects, it is required, default: None
             With single segment recording returns the number of samples in the segment
 
         Returns
@@ -223,9 +223,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int or None, default : None
+        segment_index : int or None, default: None
             The sample index to retrieve the duration for.
-            For multi-segment objects, it is required, default : None
+            For multi-segment objects, it is required, default: None
             With single segment recording returns the duration of the single segment
 
         Returns
@@ -256,9 +256,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int or None, default : None
+        segment_index : int or None, default: None
             The index of the segment for which the memory size should be calculated.
-            For multi-segment objects, it is required, default : None
+            For multi-segment objects, it is required, default: None
             With single segment recording returns the memory size of the single segment
 
         Returns
@@ -301,20 +301,20 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int | None, default : None
-            The segment index to get traces from. If recording is multi-segment, it is required, default : None
-        start_frame : int | None, default : None
-            The start frame. If None, 0 is used, default : None
-        end_frame : int | None, default : None
-            The end frame. If None, the number of samples in the segment is used, default : None
-        channel_ids : list | np.array | tuple | None, default : None
-            The channel ids. If None, all channels are used, default : None
-        order : "C" | "F" | None, default : None
+        segment_index : int | None, default: None
+            The segment index to get traces from. If recording is multi-segment, it is required, default: None
+        start_frame : int | None, default: None
+            The start frame. If None, 0 is used, default: None
+        end_frame : int | None, default: None
+            The end frame. If None, the number of samples in the segment is used, default: None
+        channel_ids : list | np.array | tuple | None, default: None
+            The channel ids. If None, all channels are used, default: None
+        order : "C" | "F" | None, default: None
             The order of the traces ("C" | "F"). If None, traces are returned as they are
-        return_scaled : bool, default : False
+        return_scaled : bool, default: False
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
             traces are scaled to uV
-        cast_unsigned : bool, default : False
+        cast_unsigned : bool, default: False
             If True and the traces are unsigned, they are cast to integer and centered
             (an offset of (2**nbits) is subtracted)
 
@@ -424,7 +424,7 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int or None, default : None
+        segment_index : int or None, default: None
             The segment index (required for multi-segment)
 
         Returns
@@ -442,7 +442,7 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int or None, default : None
+        segment_index : int or None, default: None
             The segment index (required for multi-segment)
 
         Returns
@@ -462,9 +462,9 @@ class BaseRecording(BaseRecordingSnippets):
         ----------
         times : 1d np.array
             The time vector
-        segment_index : int or None, default : None
+        segment_index : int or None, default: None
             The segment index (required for multi-segment)
-        with_warning : bool, default : True
+        with_warning : bool, default: True
             If True, a warning is printed
         """
         segment_index = self._check_segment_index(segment_index)
@@ -830,11 +830,11 @@ class BaseRecordingSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame : int | None, default : None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame : int | None, default : None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
-        channel_indices : list | np.array | tuple | None, default : None
+        channel_indices : list | np.array | tuple | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns

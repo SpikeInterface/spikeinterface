@@ -14,16 +14,16 @@ class TemplateSimilarityWidget(BaseWidget):
     ----------
     sorting_analyzer : SortingAnalyzer
         The object to get template similarity from
-    unit_ids : list or None, default : None
-        List of unit ids default : None
-    display_diagonal_values : bool, default : False
+    unit_ids : list or None, default: None
+        List of unit ids default: None
+    display_diagonal_values : bool, default: False
         If False, the diagonal is displayed as zeros.
         If True, the similarity values (all 1s) are displayed
-    cmap : matplotlib colormap, default : "viridis"
+    cmap : matplotlib colormap, default: "viridis"
         The matplotlib colormap
-    show_unit_ticks : bool, default : False
+    show_unit_ticks : bool, default: False
         If True, ticks display unit ids
-    show_colorbar : bool, default : True
+    show_colorbar : bool, default: True
         If True, color bar is displayed
     """
 

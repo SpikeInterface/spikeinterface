@@ -38,24 +38,24 @@ class CommonReferenceRecording(BasePreprocessor):
     ----------
     recording : RecordingExtractor
         The recording extractor to be re-referenced
-    reference : "global" | "single" | "local", default : "global"
+    reference : "global" | "single" | "local", default: "global"
         If "global" the reference is the average or median across all the channels.
         If "single", the reference is a single channel or a list of channels that need to be set with the `ref_channel_ids`.
         If "local", the reference is the set of channels within an annulus that must be set with the `local_radius` parameter.
-    operator : "median" | "average", default : "median"
+    operator : "median" | "average", default: "median"
         If "median", a common median reference (CMR) is implemented (the median of
             the selected channels is removed for each timestamp).
         If "average", common average reference (CAR) is implemented (the mean of the selected channels is removed
             for each timestamp).
-    groups : list or None, default : None
+    groups : list or None, default: None
         List of lists containing the channel ids for splitting the reference. The CMR, CAR, or referencing with respect to
         single channels are applied group-wise. However, this is not applied for the local CAR.
         It is useful when dealing with different channel groups, e.g. multiple tetrodes.
-    ref_channel_ids : list or str or int, default : None
+    ref_channel_ids : list or str or int, default: None
         If no "groups" are specified, all channels are referenced to "ref_channel_ids". If "groups" is provided, then a
         list of channels to be applied to each group is expected. If "single" reference, a list of one channel or an
         int is expected.
-    local_radius : tuple(int, int), default : (30, 55)
+    local_radius : tuple(int, int), default: (30, 55)
         Use in the local CAR implementation as the selecting annulus with the following format:
 
         `(exclude radius, include radius)`
@@ -65,7 +65,7 @@ class CommonReferenceRecording(BasePreprocessor):
         include radius delineates the outer boundary of the annulus whose role is to exclude channels
         that are too far away.
 
-    dtype : None or dtype, default : None
+    dtype : None or dtype, default: None
         If None the parent dtype is kept.
 
     Returns
