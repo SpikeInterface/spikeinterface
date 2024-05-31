@@ -32,7 +32,6 @@ def pytest_collection_modifyitems(config, items):
     """
 
     rootdir = Path(config.rootdir)
-    mark_names = ["sorters_internal", "sorters_external", "sorters"]
 
     for item in items:
         rel_path = Path(item.fspath).relative_to(rootdir)
