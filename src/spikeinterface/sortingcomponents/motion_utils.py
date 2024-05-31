@@ -18,8 +18,8 @@ from spikeinterface.core.core_tools import check_json
 #  * uncomment assert in test_estimate_motion (aka debug torch vs numpy diff): DONE
 #  * delegate times to recording object in
 #       * estimate motion: DONE
-#       * correct_motion_on_peaks()
-#       * interpolate_motion_on_traces()
+#       * correct_motion_on_peaks(): DONE
+#       * interpolate_motion_on_traces(): DONE
 # propagate to benchmark estimate motion
 # update plot_motion() dans widget
 
