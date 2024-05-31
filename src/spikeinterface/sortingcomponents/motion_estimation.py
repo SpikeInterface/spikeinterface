@@ -959,10 +959,15 @@ def compute_global_displacement(
         One of "gradient"
 
     """
+    import scipy.sparse
+    import scipy
+    from scipy.optimize import minimize
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.linalg import lsqr
+    from scipy.stats import zscore
+
     if convergence_method == "gradient_descent":
         size = pairwise_displacement.shape[0]
-        from scipy.optimize import minimize
-        from scipy.sparse import csr_matrix
 
         D = pairwise_displacement
         if pairwise_displacement_weight is not None or sparse_mask is not None:
@@ -1005,9 +1010,6 @@ def compute_global_displacement(
         displacement = res.x
 
     elif convergence_method == "lsqr_robust":
-        from scipy.sparse import csr_matrix
-        from scipy.sparse.linalg import lsqr
-        from scipy.stats import zscore
 
         if sparse_mask is not None:
             I, J = np.nonzero(sparse_mask > 0)
@@ -1043,8 +1045,6 @@ def compute_global_displacement(
 
     elif convergence_method == "lsmr":
         import gc
-        from scipy import sparse
-        from scipy.stats import zscore
 
         D = pairwise_displacement
 
