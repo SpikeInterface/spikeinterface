@@ -38,7 +38,7 @@ class PositionAndPCAClustering:
         "ms_after": 2.5,
         "n_components_by_channel": 3,
         "n_components": 5,
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
         "hdbscan_global_kwargs": {"min_cluster_size": 20, "allow_single_cluster": True, "core_dist_n_jobs": -1},
         "hdbscan_local_kwargs": {"min_cluster_size": 20, "allow_single_cluster": True, "core_dist_n_jobs": -1},
         "waveform_mode": "shared_memory",

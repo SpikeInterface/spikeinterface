@@ -286,6 +286,16 @@ class TestWidgets(unittest.TestCase):
                         backend=backend,
                         **self.backend_kwargs[backend],
                     )
+                    # test with templates
+                    templates_ext = self.sorting_analyzer_dense.get_extension("templates")
+                    templates = templates_ext.get_data(outputs="Templates")
+                    sw.plot_unit_templates(
+                        templates,
+                        sparsity=self.sparsity_strict,
+                        unit_ids=unit_ids,
+                        backend=backend,
+                        **self.backend_kwargs[backend],
+                    )
                 else:
                     # sortingview doesn't support more than 2 shadings
                     with self.assertRaises(AssertionError):

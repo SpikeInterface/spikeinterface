@@ -64,10 +64,10 @@ _common_param_doc = """
         The sorter name
     recording: RecordingExtractor
         The recording extractor to be spike sorted
-    output_folder: str or Path
+    folder: str or Path
         Path to output folder
     remove_existing_folder: bool
-        If True and output_folder exists yet then delete.
+        If True and folder exists then delete.
     delete_output_folder: bool, default: False
         If True, output folder is deleted
     verbose: bool, default: False
@@ -104,6 +104,8 @@ _common_param_doc = """
         The spikeinterface version to install in the container. If None, the current version is used
     spikeinterface_folder_source: Path or None, default: None
         In case of installation_mode="folder", the spikeinterface folder source to use to install in the container
+    output_folder: None, default: None
+        Do not use. Deprecated output function to be removed in 0.103.
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
@@ -117,7 +119,7 @@ _common_param_doc = """
 def run_sorter(
     sorter_name: str,
     recording: BaseRecording,
-    output_folder: Optional[str] = None,
+    folder: Optional[str] = None,
     remove_existing_folder: bool = False,
     delete_output_folder: bool = False,
     verbose: bool = False,
@@ -126,6 +128,7 @@ def run_sorter(
     singularity_image: Optional[Union[bool, str]] = False,
     delete_container_files: bool = True,
     with_output: bool = True,
+    output_folder: None = None,
     **sorter_params,
 ):
     """
@@ -138,10 +141,17 @@ def run_sorter(
     >>> sorting = run_sorter("tridesclous", recording)
     """
 
+    if output_folder is not None:
+        deprecation_msg = (
+            "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
+        )
+        folder = output_folder
+        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
+
     common_kwargs = dict(
         sorter_name=sorter_name,
         recording=recording,
-        output_folder=output_folder,
+        folder=folder,
         remove_existing_folder=remove_existing_folder,
         delete_output_folder=delete_output_folder,
         verbose=verbose,
@@ -181,12 +191,13 @@ run_sorter.__doc__ = run_sorter.__doc__.format(_common_param_doc)
 def run_sorter_local(
     sorter_name,
     recording,
-    output_folder=None,
+    folder=None,
     remove_existing_folder=True,
     delete_output_folder=False,
     verbose=False,
     raise_error=True,
     with_output=True,
+    output_folder=None,
     **sorter_params,
 ):
     """
@@ -198,7 +209,7 @@ def run_sorter_local(
         The sorter name
     recording: RecordingExtractor
         The recording extractor to be spike sorted
-    output_folder: str or Path
+    folder: str or Path
         Path to output folder. If None, a folder is created in the current directory
     remove_existing_folder: bool, default: True
         If True and output_folder exists yet then delete
@@ -211,23 +222,32 @@ def run_sorter_local(
         If False, the process continues and the error is logged in the log file
     with_output: bool, default: True
         If True, the output Sorting is returned as a Sorting
+    output_folder: None, default: None
+        Do not use. Deprecated output function to be removed in 0.103.
     **sorter_params: keyword args
     """
     if isinstance(recording, list):
         raise Exception("If you want to run several sorters/recordings use run_sorter_jobs(...)")
 
+    if output_folder is not None:
+        deprecation_msg = (
+            "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
+        )
+        folder = output_folder
+        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
+
     SorterClass = sorter_dict[sorter_name]
 
     # only classmethod call not instance (stateless at instance level but state is in folder)
-    output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
-    SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
-    SorterClass.setup_recording(recording, output_folder, verbose=verbose)
-    SorterClass.run_from_folder(output_folder, raise_error, verbose)
+    folder = SorterClass.initialize_folder(recording, folder, verbose, remove_existing_folder)
+    SorterClass.set_params_to_folder(recording, folder, sorter_params, verbose)
+    SorterClass.setup_recording(recording, folder, verbose=verbose)
+    SorterClass.run_from_folder(folder, raise_error, verbose)
     if with_output:
-        sorting = SorterClass.get_result_from_folder(output_folder, register_recording=True, sorting_info=True)
+        sorting = SorterClass.get_result_from_folder(folder, register_recording=True, sorting_info=True)
     else:
         sorting = None
-    sorter_output_folder = output_folder / "sorter_output"
+    sorter_output_folder = folder / "sorter_output"
     if delete_output_folder:
         if with_output and sorting is not None:
             # if we delete the folder the sorting can have a data reference to deleted file/folder: we need a copy
@@ -248,7 +268,7 @@ def run_sorter_container(
     recording: BaseRecording,
     mode: str,
     container_image: Optional[str] = None,
-    output_folder: Optional[str] = None,
+    folder: Optional[str] = None,
     remove_existing_folder: bool = True,
     delete_output_folder: bool = False,
     verbose: bool = False,
@@ -259,6 +279,7 @@ def run_sorter_container(
     installation_mode="auto",
     spikeinterface_version=None,
     spikeinterface_folder_source=None,
+    output_folder: None = None,
     **sorter_params,
 ):
     """
@@ -309,13 +330,20 @@ def run_sorter_container(
     """
 
     assert installation_mode in ("auto", "pypi", "github", "folder", "dev", "no-install")
+
+    if output_folder is not None:
+        deprecation_msg = (
+            "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
+        )
+        folder = output_folder
+        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
     spikeinterface_version = spikeinterface_version or si_version
 
     if extra_requirements is None:
         extra_requirements = []
 
     # common code for docker and singularity
-    if output_folder is None:
+    if folder is None:
         output_folder = sorter_name + "_output"
 
     if container_image is None:
@@ -325,8 +353,8 @@ def run_sorter_container(
             raise ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
 
     SorterClass = sorter_dict[sorter_name]
-    output_folder = Path(output_folder).absolute().resolve()
-    parent_folder = output_folder.parent.absolute().resolve()
+    folder = Path(folder).absolute().resolve()
+    parent_folder = folder.parent.absolute().resolve()
     parent_folder.mkdir(parents=True, exist_ok=True)
 
     # find input folder of recording for folder bind
@@ -580,8 +608,8 @@ if __name__ == '__main__':
             shutil.rmtree(py_user_base_folder, ignore_errors=True)
 
     # check error
-    output_folder = Path(output_folder)
-    log_file = output_folder / "spikeinterface_log.json"
+    folder = Path(folder)
+    log_file = folder / "spikeinterface_log.json"
     if not log_file.is_file():
         run_error = True
     else:
@@ -596,40 +624,40 @@ if __name__ == '__main__':
     else:
         if with_output:
             try:
-                sorting = SorterClass.get_result_from_folder(output_folder)
+                sorting = SorterClass.get_result_from_folder(folder)
             except Exception as e:
                 try:
                     sorting = load_extractor(in_container_sorting_folder)
                 except FileNotFoundError:
                     SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 
-    sorter_output_folder = output_folder / "sorter_output"
+    sorter_output_folder = folder / "sorter_output"
     if delete_output_folder:
         shutil.rmtree(sorter_output_folder)
 
     return sorting
 
 
-def read_sorter_folder(output_folder, register_recording=True, sorting_info=True, raise_error=True):
+def read_sorter_folder(folder, register_recording=True, sorting_info=True, raise_error=True):
     """
     Load a sorting object from a spike sorting output folder.
-    The 'output_folder' must contain a valid 'spikeinterface_log.json' file
+    The 'folder' must contain a valid 'spikeinterface_log.json' file
 
 
     Parameters
     ----------
-    output_folder: Pth or str
+    folder: Pth or str
         The sorter folder
     register_recording: bool, default: True
         Attach recording (when json or pickle) to the sorting
     sorting_info: bool, default: True
         Attach sorting info to the sorting.
     """
-    output_folder = Path(output_folder)
-    log_file = output_folder / "spikeinterface_log.json"
+    folder = Path(folder)
+    log_file = folder / "spikeinterface_log.json"
 
     if not log_file.is_file():
-        raise Exception(f"This folder {output_folder} does not have spikeinterface_log.json")
+        raise Exception(f"This folder {folder} does not have spikeinterface_log.json")
 
     with log_file.open("r", encoding="utf8") as f:
         log = json.load(f)
@@ -637,13 +665,13 @@ def read_sorter_folder(output_folder, register_recording=True, sorting_info=True
     run_error = bool(log["error"])
     if run_error:
         if raise_error:
-            raise SpikeSortingError(f"Spike sorting failed for {output_folder}")
+            raise SpikeSortingError(f"Spike sorting failed for {folder}")
         else:
             return
 
     sorter_name = log["sorter_name"]
     SorterClass = sorter_dict[sorter_name]
     sorting = SorterClass.get_result_from_folder(
-        output_folder, register_recording=register_recording, sorting_info=sorting_info
+        folder, register_recording=register_recording, sorting_info=sorting_info
     )
     return sorting
