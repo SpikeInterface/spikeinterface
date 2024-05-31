@@ -1,18 +1,12 @@
 import pytest
-from pathlib import Path
 
-from spikeinterface import NumpyRecording, set_global_tmp_folder
+from spikeinterface import NumpyRecording
 from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import resample
 
 
 import numpy as np
 from scipy.fft import fft, fftfreq
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
 
 DEBUG = False
 # DEBUG = True
