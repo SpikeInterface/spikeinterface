@@ -11,7 +11,7 @@ from spikeinterface.sorters import run_sorter
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
-if hasattr(pytest, "global_test_folder"):
+if hasattr(pytest, "global_test_folder"):  # TODO try to replace with pytest fixture (tricky one)
     cache_folder = pytest.global_test_folder / "sorters"
 else:
     cache_folder = Path("cache_folder") / "sorters"
