@@ -79,7 +79,6 @@ jobs:
         shell: bash
       - name: Test core
         run: pytest -m "core"
-        shell: bash
       - name: Test extractors
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
