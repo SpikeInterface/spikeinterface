@@ -6,8 +6,6 @@ from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.generate import generate_recording
 from spikeinterface.preprocessing import gaussian_filter
 from numpy.testing import assert_allclose
-import scipy
-import matplotlib.pyplot as plt
 from spikeinterface.core import NumpyRecording
 
 
@@ -71,10 +69,14 @@ def test_bandpower(freq_min, freq_max, debug=False):
     # Welch power density
     trace = rec.get_traces()[:, 0]
     trace_filt = rec_filt.get_traces(0)[:, 0]
+    import scipy
+
     f, Pxx = scipy.signal.welch(trace, fs=fs)
     _, Pxx_filt = scipy.signal.welch(trace_filt, fs=fs)
 
     if debug:
+        import matplotlib.pyplot as plt
+
         plt.plot(f, Pxx, label="Welch original")
         plt.plot(f, Pxx_filt, label="Welch gaussian filter")
         plt.plot(f, Pxx - Pxx_filt, label="difference")

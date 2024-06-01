@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import json
 import time
 from pathlib import Path
-import pickle
 
 import numpy as np
-import scipy.interpolate
 
 from spikeinterface.core import get_noise_levels
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -16,7 +13,6 @@ from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
 
 
-import matplotlib.pyplot as plt
 from spikeinterface.widgets import plot_probe_map
 
 # import MEArec as mr
@@ -36,6 +32,7 @@ def get_gt_motion_from_unit_displacement(
     spatial_bins,
     direction_dim=1,
 ):
+    import scipy.interpolate
 
     unit_displacements = unit_displacements[:, :, direction_dim]
     times = np.arange(unit_displacements.shape[0]) / displacement_sampling_frequency
@@ -166,6 +163,7 @@ class MotionEstimationStudy(BenchmarkStudy):
         self.plot_drift(case_keys=case_keys, tested_drift=False, scaling_probe=scaling_probe, figsize=figsize)
 
     def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True, scaling_probe=1.0, figsize=(8, 6)):
+        import matplotlib.pyplot as plt
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -231,6 +229,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             # ax0.set_ylim()
 
     def plot_errors(self, case_keys=None, figsize=None, lim=None):
+        import matplotlib.pyplot as plt
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
