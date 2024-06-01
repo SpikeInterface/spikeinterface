@@ -12,7 +12,7 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 
-from .quality_metric_list import calculate_pc_metrics, _misc_metric_name_to_func, _possible_pc_metric_names
+from .quality_metric_list import compute_pc_metrics, _misc_metric_name_to_func, _possible_pc_metric_names
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
 
@@ -143,7 +143,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         if len(pc_metric_names) > 0 and not self.params["skip_pc_metrics"]:
             if not self.sorting_analyzer.has_extension("principal_components"):
                 raise ValueError("waveform_principal_component must be provied")
-            pc_metrics = calculate_pc_metrics(
+            pc_metrics = compute_pc_metrics(
                 self.sorting_analyzer,
                 unit_ids=non_empty_unit_ids,
                 metric_names=pc_metric_names,
