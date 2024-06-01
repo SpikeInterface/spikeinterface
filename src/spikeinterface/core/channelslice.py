@@ -11,7 +11,7 @@ class ChannelSliceRecording(BaseRecording):
     """
     Class to slice a Recording object based on channel_ids.
 
-    Do not use this class directly but use `recording.channel_slice(...)`
+    Not intending to be used directly, use methods of `BaseRecording` such as `recording.select_channels`.
 
     """
 

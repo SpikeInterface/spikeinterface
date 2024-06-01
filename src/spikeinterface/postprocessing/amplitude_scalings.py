@@ -11,7 +11,7 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 
-from ..core.template_tools import _get_dense_templates_array, _get_nbefore
+from ..core.template_tools import get_dense_templates_array, _get_nbefore
 
 # DEBUG = True
 
@@ -60,9 +60,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
     """
 
     extension_name = "amplitude_scalings"
-    depend_on = [
-        "fast_templates|templates",
-    ]
+    depend_on = ["templates"]
     need_recording = True
     use_nodepipeline = True
     nodepipeline_variables = ["amplitude_scalings", "collision_mask"]
@@ -109,10 +107,9 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        # TODO return_scaled is not any more a property of SortingAnalyzer this is hard coded for now
-        return_scaled = True
+        return_scaled = self.sorting_analyzer.return_scaled
 
-        all_templates = _get_dense_templates_array(self.sorting_analyzer, return_scaled=return_scaled)
+        all_templates = get_dense_templates_array(self.sorting_analyzer, return_scaled=return_scaled)
         nbefore = _get_nbefore(self.sorting_analyzer)
         nafter = all_templates.shape[1] - nbefore
 
@@ -184,7 +181,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         nodes = [spike_retriever_node, amplitude_scalings_node]
         return nodes
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amp_scalings, collision_mask = run_node_pipeline(
@@ -193,6 +190,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name="amplitude_scalings",
             gather_mode="memory",
+            verbose=verbose,
         )
         self.data["amplitude_scalings"] = amp_scalings
         if self.params["handle_collisions"]:
@@ -230,7 +228,7 @@ class AmplitudeScalingNode(PipelineNode):
     ):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.return_scaled = return_scaled
-        if return_scaled and recording.has_scaled():
+        if return_scaled and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_gains()

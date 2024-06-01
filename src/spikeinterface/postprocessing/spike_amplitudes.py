@@ -17,7 +17,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
     AnalyzerExtension
     Computes the spike amplitudes.
 
-    Need "templates" or "fast_templates" to be computed first.
+    Needs "templates" to be computed first.
     Localize spikes in 2D or 3D with several methods given the template.
 
     Parameters
@@ -55,9 +55,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
     """
 
     extension_name = "spike_amplitudes"
-    depend_on = [
-        "fast_templates|templates",
-    ]
+    depend_on = ["templates"]
     need_recording = True
     use_nodepipeline = True
     nodepipeline_variables = ["amplitudes"]
@@ -68,8 +66,8 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
 
         self._all_spikes = None
 
-    def _set_params(self, peak_sign="neg", return_scaled=True):
-        params = dict(peak_sign=str(peak_sign), return_scaled=bool(return_scaled))
+    def _set_params(self, peak_sign="neg"):
+        params = dict(peak_sign=peak_sign)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -89,18 +87,12 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         sorting = self.sorting_analyzer.sorting
 
         peak_sign = self.params["peak_sign"]
-        return_scaled = self.params["return_scaled"]
+        return_scaled = self.sorting_analyzer.return_scaled
 
         extremum_channels_indices = get_template_extremum_channel(
             self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
         )
         peak_shifts = get_template_extremum_channel_peak_shift(self.sorting_analyzer, peak_sign=peak_sign)
-
-        if return_scaled:
-            # check if has scaled values:
-            if not recording.has_scaled_traces() and recording.get_dtype().kind == "i":
-                warnings.warn("Recording doesn't have scaled traces! Setting 'return_scaled' to False")
-                return_scaled = False
 
         spike_retriever_node = SpikeRetriever(
             recording, sorting, channel_from_template=True, extremum_channel_inds=extremum_channels_indices
@@ -115,7 +107,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         nodes = [spike_retriever_node, spike_amplitudes_node]
         return nodes
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amps = run_node_pipeline(
@@ -124,6 +116,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name="spike_amplitudes",
             gather_mode="memory",
+            verbose=False,
         )
         self.data["amplitudes"] = amps
 
@@ -162,7 +155,7 @@ class SpikeAmplitudeNode(PipelineNode):
     ):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.return_scaled = return_scaled
-        if return_scaled and recording.has_scaled():
+        if return_scaled and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_gains()

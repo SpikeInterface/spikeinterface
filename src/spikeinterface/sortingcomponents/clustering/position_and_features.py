@@ -42,7 +42,7 @@ class PositionAndFeaturesClustering:
         "ms_before": 1.5,
         "ms_after": 1.5,
         "cleaning_method": "dip",
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
     }
 
     @classmethod
@@ -184,7 +184,12 @@ class PositionAndFeaturesClustering:
                 **params["job_kwargs"],
             )
             templates = Templates(
-                templates_array=templates_array, sampling_frequency=fs, nbefore=nbefore, probe=recording.get_probe()
+                templates_array=templates_array,
+                sampling_frequency=fs,
+                nbefore=nbefore,
+                sparsity_mask=None,
+                probe=recording.get_probe(),
+                is_scaled=False,
             )
 
             labels, peak_labels = remove_duplicates_via_matching(

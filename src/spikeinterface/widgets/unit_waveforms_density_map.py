@@ -57,7 +57,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             unit_ids = sorting_analyzer.unit_ids
 
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting_analyzer.sorting)
+            unit_colors = get_unit_colors(sorting_analyzer)
 
         if use_max_channel:
             assert len(unit_ids) == 1, " UnitWaveformDensity : use_max_channel=True works only with one unit"
@@ -79,7 +79,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         channel_inds = used_sparsity.unit_id_to_channel_indices
 
         # bins
-        ext_templates = sorting_analyzer.get_extension("templates") or sorting_analyzer.get_extension("fast_templates")
+        ext_templates = sorting_analyzer.get_extension("templates")
         templates = ext_templates.get_templates(unit_ids=unit_ids)
         bin_min = np.min(templates) * 1.3
         bin_max = np.max(templates) * 1.3

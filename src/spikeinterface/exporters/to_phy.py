@@ -32,7 +32,7 @@ def export_to_phy(
     copy_binary: bool = True,
     remove_if_exists: bool = False,
     peak_sign: Literal["both", "neg", "pos"] = "neg",
-    template_mode: str = "median",
+    template_mode: str = "average",
     dtype: Optional[npt.DTypeLike] = None,
     verbose: bool = True,
     use_relative_path: bool = False,
@@ -59,7 +59,7 @@ def export_to_phy(
         If True and "output_folder" exists, it is removed and overwritten
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Used by compute_spike_amplitudes
-    template_mode: str, default: "median"
+    template_mode: str, default: "average"
         Parameter "mode" to be given to SortingAnalyzer.get_template()
     dtype: dtype or None, default: None
         Dtype to save binary data
@@ -147,7 +147,7 @@ def export_to_phy(
             rec_path = "None"
     else:  # don't save recording.dat
         if copy_binary:
-            warnings.warn("Recording will not be copied since waveform extractor is recordingless.")
+            warnings.warn("Recording will not be copied since sorting_analyzer is recordingless.")
         rec_path = "None"
 
     dtype_str = np.dtype(dtype).name
@@ -180,10 +180,8 @@ def export_to_phy(
 
     # export templates/templates_ind/similar_templates
     # shape (num_units, num_samples, max_num_channels)
-    templates_ext = sorting_analyzer.get_extension("templates") or sorting_analyzer.get_extension("fast_templates")
-    assert (
-        templates_ext is not None
-    ), "export_to_phy need SortingAnalyzer with extension 'templates' or 'fast_templates'"
+    templates_ext = sorting_analyzer.get_extension("templates")
+    assert templates_ext is not None, "export_to_phy requires a SortingAnalyzer with the extension 'templates'"
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
     dense_templates = templates_ext.get_templates(unit_ids=unit_ids, operator=template_mode)
     num_samples = dense_templates.shape[1]

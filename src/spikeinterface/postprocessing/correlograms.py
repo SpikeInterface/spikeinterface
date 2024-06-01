@@ -4,6 +4,8 @@ import warnings
 import numpy as np
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension, SortingAnalyzer
 
+from spikeinterface.core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+
 try:
     import numba
 
@@ -68,7 +70,7 @@ class ComputeCorrelograms(AnalyzerExtension):
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
-    def _run(self):
+    def _run(self, verbose=False):
         ccgs, bins = compute_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
         self.data["ccgs"] = ccgs
         self.data["bins"] = bins
@@ -87,6 +89,10 @@ def compute_correlograms(
     bin_ms: float = 1.0,
     method: str = "auto",
 ):
+
+    if isinstance(sorting_analyzer_or_sorting, MockWaveformExtractor):
+        sorting_analyzer_or_sorting = sorting_analyzer_or_sorting.sorting
+
     if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
         return compute_correlograms_sorting_analyzer(
             sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
@@ -310,7 +316,7 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
 
 if HAVE_NUMBA:
 
-    @numba.jit((numba.int64[::1], numba.int32, numba.int32), nopython=True, nogil=True, cache=True)
+    @numba.jit(nopython=True, nogil=True, cache=False)
     def _compute_autocorr_numba(spike_times, window_size, bin_size):
         num_half_bins = window_size // bin_size
         num_bins = 2 * num_half_bins
@@ -335,7 +341,7 @@ if HAVE_NUMBA:
 
         return auto_corr
 
-    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32, numba.int32), nopython=True, nogil=True, cache=True)
+    @numba.jit(nopython=True, nogil=True, cache=False)
     def _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size):
         num_half_bins = window_size // bin_size
         num_bins = 2 * num_half_bins
@@ -361,10 +367,9 @@ if HAVE_NUMBA:
         return cross_corr
 
     @numba.jit(
-        (numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
         nopython=True,
         nogil=True,
-        cache=True,
+        cache=False,
         parallel=True,
     )
     def _compute_correlograms_numba(correlograms, spike_times, spike_labels, window_size, bin_size):

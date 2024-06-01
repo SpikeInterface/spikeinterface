@@ -221,6 +221,7 @@ def distribute_waveforms_to_buffers(
     mode="memmap",
     sparsity_mask=None,
     job_name=None,
+    verbose=False,
     **job_kwargs,
 ):
     """
@@ -281,7 +282,9 @@ def distribute_waveforms_to_buffers(
     )
     if job_name is None:
         job_name = f"extract waveforms {mode} multi buffer"
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+    processor = ChunkRecordingExecutor(
+        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+    )
     processor.run()
 
 
@@ -410,6 +413,7 @@ def extract_waveforms_to_single_buffer(
     sparsity_mask=None,
     copy=True,
     job_name=None,
+    verbose=False,
     **job_kwargs,
 ):
     """
@@ -523,7 +527,9 @@ def extract_waveforms_to_single_buffer(
         if job_name is None:
             job_name = f"extract waveforms {mode} mono buffer"
 
-        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+        processor = ChunkRecordingExecutor(
+            recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+        )
         processor.run()
 
     if mode == "memmap":
@@ -696,6 +702,8 @@ def has_exceeding_spikes(recording, sorting):
         if len(spike_vector_seg) > 0:
             if spike_vector_seg["sample_index"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:
                 return True
+            if spike_vector_seg["sample_index"][0] < 0:
+                return True
     return False
 
 
@@ -781,6 +789,7 @@ def estimate_templates_with_accumulator(
     return_scaled: bool = True,
     job_name=None,
     return_std: bool = False,
+    verbose: bool = False,
     **job_kwargs,
 ):
     """
@@ -859,12 +868,20 @@ def estimate_templates_with_accumulator(
 
     if job_name is None:
         job_name = "estimate_templates_with_accumulator"
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+    processor = ChunkRecordingExecutor(
+        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+    )
     processor.run()
 
     # average
     waveforms_sum = np.sum(waveform_accumulator_per_worker, axis=0)
-    template_means = waveforms_sum
+    if return_std:
+        # we need a copy here because we will use the means to compute the stds
+        template_means = waveforms_sum.copy()
+    else:
+        # waveforms_sum will also be changed in this case when acting on template_means
+        template_means = waveforms_sum
+
     unit_indices, spike_count = np.unique(spikes["unit_index"], return_counts=True)
     template_means[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
 
@@ -872,12 +889,12 @@ def estimate_templates_with_accumulator(
         waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
         # standard deviation
         template_stds = np.zeros_like(template_means)
-        for i, (unit_index, count) in enumerate(zip(unit_indices, spike_count)):
+        for unit_index, count in zip(unit_indices, spike_count):
             residuals = (
-                waveforms_squared_sum[unit_index] - 2 * count * template_means[unit_index] * waveforms_sum[unit_index]
+                waveforms_squared_sum[unit_index] - 2 * template_means[unit_index] * waveforms_sum[unit_index]
             ) + count * template_means[unit_index] ** 2
+            residuals[residuals < 0] = 0
             template_stds[unit_index] = np.sqrt(residuals / count)
-        assert np.all(template_stds >= 0)
         del waveform_squared_accumulator_per_worker
         shm_squared.unlink()
         shm_squared.close()

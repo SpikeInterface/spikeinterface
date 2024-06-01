@@ -31,13 +31,12 @@ def has_plexon2_dependencies():
         # On Windows, no need for additional dependencies
         return True
 
-    elif os_type == "Linux":
-        # Check for 'wine' using dpkg
-        try:
-            result_wine = subprocess.run(
-                ["dpkg", "-l", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-            )
-        except subprocess.CalledProcessError:
+    elif os_type == "Linux" or os_type == "Darwin":
+        # Check for 'wine' using which. "which" works for both mac and linux
+        # if package exists it returns a 0. Anything else is an error code.
+
+        result_wine = subprocess.run(["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        if result_wine.returncode != 0:
             return False
 
         # Check for 'zugbruecke' using pip
@@ -48,7 +47,6 @@ def has_plexon2_dependencies():
         except ImportError:
             return False
     else:
-        # Not sure about MacOS
         raise ValueError(f"Unsupported OS: {os_type}")
 
 
@@ -314,6 +312,7 @@ class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("spikegadgets/20210225_em8_minirec2_ac.rec", {"stream_id": "ECU"}),
         ("spikegadgets/20210225_em8_minirec2_ac.rec", {"stream_id": "trodes"}),
         "spikegadgets/W122_06_09_2019_1_fromSD.rec",
+        "spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec",
     ]
 
 

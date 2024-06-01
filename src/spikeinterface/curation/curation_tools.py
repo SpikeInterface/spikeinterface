@@ -59,7 +59,7 @@ def _find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int
 
 if HAVE_NUMBA:
 
-    @numba.jit(nopython=True, nogil=True, cache=True)
+    @numba.jit(nopython=True, nogil=True, cache=False)
     def _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period):
         indices_of_duplicates = numba.typed.List()
         N = len(spike_train)

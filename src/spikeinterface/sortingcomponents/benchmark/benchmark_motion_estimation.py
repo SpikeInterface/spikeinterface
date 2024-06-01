@@ -1,22 +1,19 @@
 from __future__ import annotations
 
 import json
+import pickle
 import time
 from pathlib import Path
-import pickle
-
-import numpy as np
-import scipy.interpolate
-
-from spikeinterface.core import get_noise_levels
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
-
 
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.interpolate
+from spikeinterface.core import get_noise_levels
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
+from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.widgets import plot_probe_map
 
 # import MEArec as mr
@@ -28,43 +25,7 @@ from spikeinterface.widgets import plot_probe_map
 # TODO : read from mearec
 
 
-def get_unit_disclacement(displacement_vectors, displacement_unit_factor, direction_dim=1):
-    """
-    Get final displacement vector unit per units.
-
-    See drifting_tools for shapes.
-
-
-    Parameters
-    ----------
-
-    displacement_vectors: list of numpy array
-        The lenght of the list is the number of segment.
-        Per segment, the drift vector is a numpy array with shape (num_times, 2, num_motions)
-        num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
-    displacement_unit_factor: numpy array or None, default: None
-        A array containing the factor per unit of the drift.
-        This is used to create non rigid with a factor gradient of depending on units position.
-        shape (num_units, num_motions)
-        If None then all unit have the same factor (1) and the drift is rigid.
-
-    Returns
-    -------
-    unit_displacements:  numpy array
-        shape (num_times, num_units)
-
-
-    """
-    num_units = displacement_unit_factor.shape[0]
-    unit_displacements = np.zeros((displacement_vectors.shape[0], num_units))
-    for i in range(displacement_vectors.shape[2]):
-        m = displacement_vectors[:, direction_dim, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
-        unit_displacements[:, :] += m
-
-    return unit_displacements
-
-
-def get_gt_motion_from_unit_discplacement(
+def get_gt_motion_from_unit_displacement(
     unit_displacements,
     displacement_sampling_frequency,
     unit_locations,
@@ -73,6 +34,7 @@ def get_gt_motion_from_unit_discplacement(
     direction_dim=1,
 ):
 
+    unit_displacements = unit_displacements[:, :, direction_dim]
     times = np.arange(unit_displacements.shape[0]) / displacement_sampling_frequency
     f = scipy.interpolate.interp1d(times, unit_displacements, axis=0)
     unit_displacements = f(temporal_bins)
@@ -152,23 +114,14 @@ class MotionEstimationBenchmark(Benchmark):
         temporal_bins = self.result["temporal_bins"]
         spatial_bins = self.result["spatial_bins"]
 
-        # time interpolatation of unit displacements
-        times = np.arange(self.unit_displacements.shape[0]) / self.displacement_sampling_frequency
-        f = scipy.interpolate.interp1d(times, self.unit_displacements, axis=0)
-        unit_displacements = f(temporal_bins)
-
-        # spatial interpolataion of units discplacement
-        if spatial_bins.shape[0] == 1:
-            # rigid
-            gt_motion = np.mean(unit_displacements, axis=1)[:, None]
-        else:
-            # non rigid
-            gt_motion = np.zeros_like(raw_motion)
-            for t in range(temporal_bins.shape[0]):
-                f = scipy.interpolate.interp1d(
-                    self.unit_locations[:, self.direction_dim], unit_displacements[t, :], fill_value="extrapolate"
-                )
-                gt_motion[t, :] = f(spatial_bins)
+        gt_motion = get_gt_motion_from_unit_displacement(
+            self.unit_displacements,
+            self.displacement_sampling_frequency,
+            self.unit_locations,
+            temporal_bins,
+            spatial_bins,
+            direction_dim=self.direction_dim,
+        )
 
         # align globally gt_motion and motion to avoid offsets
         motion = raw_motion.copy()
@@ -207,6 +160,9 @@ class MotionEstimationStudy(BenchmarkStudy):
         return benchmark
 
     def plot_true_drift(self, case_keys=None, scaling_probe=1.5, figsize=(8, 6)):
+        self.plot_drift(case_keys=case_keys, tested_drift=False, scaling_probe=scaling_probe, figsize=figsize)
+
+    def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True, scaling_probe=1.0, figsize=(8, 6)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -235,13 +191,18 @@ class MotionEstimationStudy(BenchmarkStudy):
             temporal_bins = bench.result["temporal_bins"]
             spatial_bins = bench.result["spatial_bins"]
             gt_motion = bench.result["gt_motion"]
+            motion = bench.result["motion"]
 
             # for i in range(self.gt_unit_positions.shape[1]):
             #     ax.plot(temporal_bins, self.gt_unit_positions[:, i], alpha=0.5, ls="--", c="0.5")
 
             for i in range(gt_motion.shape[1]):
                 depth = spatial_bins[i]
-                ax.plot(temporal_bins, gt_motion[:, i] + depth, color="green", lw=4)
+                if gt_drift:
+                    ax.plot(temporal_bins, gt_motion[:, i] + depth, color="green", lw=4)
+                if tested_drift:
+                    ax.plot(temporal_bins, motion[:, i] + depth, color="cyan", lw=2)
+
             ax.set_xlabel("time (s)")
             _simpleaxis(ax)
             ax.set_yticks([])
@@ -325,12 +286,14 @@ class MotionEstimationStudy(BenchmarkStudy):
             if lim is not None:
                 ax.set_ylim(0, lim)
 
-    def plot_summary_errors(self, case_keys=None, show_legend=True, colors=None, figsize=(15, 5)):
+    def plot_summary_errors(self, case_keys=None, show_legend=True, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
         fig, axes = plt.subplots(1, 3, figsize=figsize)
+
+        colors = self.get_colors()
 
         for count, key in enumerate(case_keys):
 
@@ -342,7 +305,9 @@ class MotionEstimationStudy(BenchmarkStudy):
             temporal_bins = bench.result["temporal_bins"]
             spatial_bins = bench.result["spatial_bins"]
 
-            c = colors[count] if colors is not None else None
+            # c = colors[count] if colors is not None else None
+            c = colors[key]
+
             errors = gt_motion - motion
             mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
             depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
@@ -702,7 +667,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         peak_locations_corrected = correct_motion_on_peaks(
 #             self.selected_peaks,
 #             self.peak_locations,
-#             self.recording.sampling_frequency,
+#             self.recording,
 #             self.motion,
 #             self.temporal_bins,
 #             self.spatial_bins,
@@ -764,7 +729,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
 #         n = self.motion.shape[1]
 #         step = int(np.ceil(max(1, n / show_only)))
-#         colors = plt.cm.get_cmap("jet", n)
+#         colors = plt.colormaps["jet"].resampled(n)
 #         for i in range(0, n, step):
 #             ax = axs[0]
 #             ax.plot(self.temporal_bins, self.gt_motion[:, i], lw=1.5, ls="--", color=colors(i))

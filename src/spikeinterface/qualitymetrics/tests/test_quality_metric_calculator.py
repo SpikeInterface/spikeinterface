@@ -5,6 +5,8 @@ from pathlib import Path
 import numpy as np
 import shutil
 
+from pandas import isnull
+
 from spikeinterface.core import (
     generate_ground_truth_recording,
     create_sorting_analyzer,
@@ -43,11 +45,11 @@ def get_sorting_analyzer(seed=2205):
             maximum_z=20.0,
         ),
         generate_templates_kwargs=dict(
-            unit_params_range=dict(
-                alpha=(9_000.0, 12_000.0),
+            unit_params=dict(
+                alpha=(200.0, 500.0),
             )
         ),
-        noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=seed,
     )
 
@@ -117,8 +119,6 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     sorting_analyzer_norec._recording = None
     assert not sorting_analyzer_norec.has_recording()
 
-    print(sorting_analyzer_norec)
-
     metrics_norec = compute_quality_metrics(
         sorting_analyzer_norec,
         metric_names=None,
@@ -161,7 +161,7 @@ def test_empty_units(sorting_analyzer_simple):
     )
 
     for empty_unit_id in sorting_empty.get_empty_unit_ids():
-        assert np.all(np.isnan(metrics_empty.loc[empty_unit_id]))
+        assert np.all(isnull(metrics_empty.loc[empty_unit_id].values))
 
 
 # TODO @alessio all theses old test should be moved in test_metric_functions.py or test_pca_metrics()
