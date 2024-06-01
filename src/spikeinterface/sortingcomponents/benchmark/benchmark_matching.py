@@ -8,8 +8,6 @@ from spikeinterface.widgets import (
     plot_comparison_collision_by_similarity,
 )
 
-import pylab as plt
-import matplotlib.patches as mpatches
 import numpy as np
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
@@ -66,6 +64,7 @@ class MatchingStudy(BenchmarkStudy):
     def plot_agreements(self, case_keys=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -132,6 +131,8 @@ class MatchingStudy(BenchmarkStudy):
             case_keys = list(self.cases.keys())
 
         num_methods = len(case_keys)
+        import pylab as plt
+
         fig, axs = plt.subplots(ncols=num_methods, nrows=num_methods, figsize=(10, 10))
         for i, key1 in enumerate(case_keys):
             for j, key2 in enumerate(case_keys):
@@ -165,6 +166,8 @@ class MatchingStudy(BenchmarkStudy):
                         ax.set_xticks([])
                     if i == num_methods - 1 and j == num_methods - 1:
                         patches = []
+                        import matplotlib.patches as mpatches
+
                         for color, name in zip(colors, performance_names):
                             patches.append(mpatches.Patch(color=color, label=name))
                         ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
