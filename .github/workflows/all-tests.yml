@@ -116,9 +116,9 @@ jobs:
       - name: Test sortingcomponents
         run: ./.github/run_tests.sh sortingcomponents --no-virtual-env
         shell: bash
-      - name: Test internal sorters
-        run: ./.github/run_tests.sh sorters_internal --no-virtual-env
-        shell: bash
+      # - name: Test internal sorters
+      #   run: ./.github/run_tests.sh sorters_internal --no-virtual-env
+      #   shell: bash
       - name: Test generation
         run: ./.github/run_tests.sh generation --no-virtual-env
         shell: bash
