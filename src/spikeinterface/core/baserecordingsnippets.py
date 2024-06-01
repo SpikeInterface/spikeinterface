@@ -237,7 +237,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
         warning_msg = (
             "`set_probes` is now a private function and the public function will be "
-            "removed in 0.103.0. Please use `set_probe` or `set_probegroups`"
+            "removed in 0.103.0. Please use `set_probe` or `set_probegroups` instead"
         )
 
         warn(warning_msg, category=DeprecationWarning, stacklevel=2)
