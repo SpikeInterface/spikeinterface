@@ -8,7 +8,7 @@ from spikeinterface.core import (
 
 
 from spikeinterface.qualitymetrics import (
-    calculate_pc_metrics,
+    compute_pc_metrics,
     nearest_neighbors_isolation,
     nearest_neighbors_noise_overlap,
 )
@@ -51,10 +51,10 @@ def test_calculate_pc_metrics(sorting_analyzer_simple):
     import pandas as pd
 
     sorting_analyzer = sorting_analyzer_simple
-    res1 = calculate_pc_metrics(sorting_analyzer, n_jobs=1, progress_bar=True)
+    res1 = compute_pc_metrics(sorting_analyzer, n_jobs=1, progress_bar=True)
     res1 = pd.DataFrame(res1)
 
-    res2 = calculate_pc_metrics(sorting_analyzer, n_jobs=2, progress_bar=True)
+    res2 = compute_pc_metrics(sorting_analyzer, n_jobs=2, progress_bar=True)
     res2 = pd.DataFrame(res2)
 
     for k in res1.columns:
