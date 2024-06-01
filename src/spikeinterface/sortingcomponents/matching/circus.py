@@ -4,11 +4,7 @@ from __future__ import annotations
 
 
 import numpy as np
-import warnings
 
-import scipy.spatial
-
-import scipy
 
 try:
     import sklearn
@@ -23,9 +19,16 @@ from spikeinterface.core import get_noise_levels
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel
 from spikeinterface.core.template import Templates
 
-(potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
+try:
+    import scipy.spatial
 
-(nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)
+    import scipy
+
+    (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
+
+    (nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)
+except:
+    pass
 
 spike_dtype = [
     ("sample_index", "int64"),
