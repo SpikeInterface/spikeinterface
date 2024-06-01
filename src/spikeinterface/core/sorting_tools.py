@@ -108,7 +108,7 @@ def get_numba_vector_to_list_of_spiketrain():
 
     import numba
 
-    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int64), nopython=True, nogil=True, cache=False)
+    @numba.jit(nopython=True, nogil=True, cache=False)
     def vector_to_list_of_spiketrain_numba(sample_indices, unit_indices, num_units):
         """
         Fast implementation of vector_to_dict using numba loop.
