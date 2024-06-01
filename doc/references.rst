@@ -9,7 +9,7 @@ Please cite SpikeInterface in your papers with our eLife paper: [Buccino]_
 SpikeInterface stands on the shoulders of giants!
 Each method in SpikeInterface draws on (or directly runs) independently-created methods.
 Please try to reference the individual works that are important for your analysis pipeline.
-If you notice a missing reference, please let us know by submitting an issue on Github.
+If you notice a missing reference, please let us know by `submitting an issue <https://github.com/SpikeInterface/spikeinterface/issues/new>`_ on Github.
 
 Preprocessing Module
 --------------------
