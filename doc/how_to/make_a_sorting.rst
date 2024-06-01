@@ -31,7 +31,7 @@ This :code:`Sorting` contains important information about your spike trains incl
 the spike times (i.e. when the neurons were actually firing) the unit labels (i.e.
 who the spikes belong to. Also called cluster ids by some sorters), the unit ids (the unique
 set of unit labels) and the sampling_frequency. To make your own :code:`Sorting` object you can
-use :code:`NumpySorting`. It is important to note if you are new to spike trains that they
+use :code:`NumpySorting`. It is important to note that in SpikeiInterface spike trains are handled internally in samples/frames rather than in seconds and we use the sampling frequency to ...
 are typically stored in samples/frames rather than in seconds. So you should input the times
 in samples/frames. The sampling_frequency allows for easily switching between samples and seconds.
 
