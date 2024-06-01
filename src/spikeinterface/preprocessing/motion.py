@@ -275,11 +275,8 @@ def correct_motion(
     recording_corrected: Recording
         The motion corrected recording
     motion_info: dict
-        Optional output if `output_motion_info=True`
+        Optional output if `output_motion_info=True`. The key "motion" holds the Motion object.
     """
-
-    # TODO : Use motion object
-
     # local import are important because "sortingcomponents" is not important by default
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
