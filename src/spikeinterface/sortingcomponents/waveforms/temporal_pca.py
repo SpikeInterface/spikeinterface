@@ -6,14 +6,11 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
-from sklearn.decomposition import IncrementalPCA
 
 from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.core import BaseRecording
-from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface import NumpySorting, create_sorting_analyzer
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from .waveform_utils import to_temporal_representation, from_temporal_representation
@@ -96,7 +93,7 @@ class TemporalPCBaseNode(WaveformsNode):
         ms_after: float = 1.0,
         whiten: bool = True,
         radius_um: float = None,
-    ) -> IncrementalPCA:
+    ) -> "IncrementalPCA":
         """
         Train a pca model using the data in the recording object and the parameters provided.
         Note that this model returns the pca model from scikit-learn but the model is also saved in the path provided
