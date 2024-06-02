@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import scipy
 from spikeinterface.core import (
     get_noise_levels,
     get_channel_distances,
@@ -129,6 +128,8 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         # ~ print(unit_locations)
 
         # distance between units
+        import scipy
+
         unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
 
         # seach for closet units and unitary discriminant vector
@@ -156,6 +157,8 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         d["closest_units"] = closest_units
 
         # distance channel from unit
+        import scipy
+
         distances = scipy.spatial.distance.cdist(channel_locations, unit_locations, metric="euclidean")
         near_cluster_mask = distances < d["radius_um"]
 
