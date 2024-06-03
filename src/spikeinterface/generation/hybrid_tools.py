@@ -80,14 +80,7 @@ def estimate_templates_from_recording(
     probe = recording.get_probe()
 
     templates = Templates(
-        templates_array, 
-        sampling_frequency, 
-        nbefore, 
-        True,
-        sparsity_mask, 
-        channel_ids, 
-        unit_ids, 
-        probe=probe
+        templates_array, sampling_frequency, nbefore, True, sparsity_mask, channel_ids, unit_ids, probe=probe
     )
 
     return templates
