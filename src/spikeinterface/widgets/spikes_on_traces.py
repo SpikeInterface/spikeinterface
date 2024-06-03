@@ -92,7 +92,6 @@ class SpikesOnTracesWidget(BaseWidget):
         self.check_extensions(sorting_analyzer, "unit_locations")
 
         sorting: BaseSorting = sorting_analyzer.sorting
-        recording: BaseRecording = sorting_analyzer.recording
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
@@ -219,9 +218,9 @@ class SpikesOnTracesWidget(BaseWidget):
 
                     nbefore = nafter = int(dp.spike_width_ms / 2 * sorting_analyzer.sampling_frequency / 1000)
                     waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-nbefore, nafter) - frame_range[0]
-                    waveform_idxs = np.clip(waveform_idxs, 0, len(traces_widget.data_plot["times"]) - 1)
+                    waveform_idxs = np.clip(waveform_idxs, 0, len(traces_widget.data_plot["times_in_range"]) - 1)
 
-                    times = traces_widget.data_plot["times"][waveform_idxs]
+                    times = traces_widget.data_plot["times_in_range"][waveform_idxs]
 
                     # discontinuity
                     times[:, -1] = np.nan

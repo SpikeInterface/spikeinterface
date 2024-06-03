@@ -221,6 +221,7 @@ def distribute_waveforms_to_buffers(
     mode="memmap",
     sparsity_mask=None,
     job_name=None,
+    verbose=False,
     **job_kwargs,
 ):
     """
@@ -281,7 +282,9 @@ def distribute_waveforms_to_buffers(
     )
     if job_name is None:
         job_name = f"extract waveforms {mode} multi buffer"
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+    processor = ChunkRecordingExecutor(
+        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+    )
     processor.run()
 
 
@@ -410,6 +413,7 @@ def extract_waveforms_to_single_buffer(
     sparsity_mask=None,
     copy=True,
     job_name=None,
+    verbose=False,
     **job_kwargs,
 ):
     """
@@ -523,7 +527,9 @@ def extract_waveforms_to_single_buffer(
         if job_name is None:
             job_name = f"extract waveforms {mode} mono buffer"
 
-        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+        processor = ChunkRecordingExecutor(
+            recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+        )
         processor.run()
 
     if mode == "memmap":
@@ -696,6 +702,8 @@ def has_exceeding_spikes(recording, sorting):
         if len(spike_vector_seg) > 0:
             if spike_vector_seg["sample_index"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:
                 return True
+            if spike_vector_seg["sample_index"][0] < 0:
+                return True
     return False
 
 
@@ -781,6 +789,7 @@ def estimate_templates_with_accumulator(
     return_scaled: bool = True,
     job_name=None,
     return_std: bool = False,
+    verbose: bool = False,
     **job_kwargs,
 ):
     """
@@ -859,7 +868,9 @@ def estimate_templates_with_accumulator(
 
     if job_name is None:
         job_name = "estimate_templates_with_accumulator"
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+    processor = ChunkRecordingExecutor(
+        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+    )
     processor.run()
 
     # average

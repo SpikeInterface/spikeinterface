@@ -205,9 +205,11 @@ def test_ComputeNoiseLevels(format, sparse):
 def test_get_children_dependencies():
     assert "waveforms" in _extension_children["random_spikes"]
 
-    children = _get_children_dependencies("random_spikes")
-    assert "waveforms" in children
-    assert "templates" in children
+    rs_children = _get_children_dependencies("random_spikes")
+    assert "waveforms" in rs_children
+    assert "templates" in rs_children
+
+    assert rs_children.index("waveforms") < rs_children.index("templates")
 
 
 def test_delete_on_recompute():
@@ -220,6 +222,26 @@ def test_delete_on_recompute():
     sorting_analyzer.compute("random_spikes")
     assert sorting_analyzer.get_extension("templates") is None
     assert sorting_analyzer.get_extension("waveforms") is None
+
+
+def test_compute_several():
+    sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
+
+    # should raise an error since waveforms depends on random_spikes, which isn't calculated
+    with pytest.raises(AssertionError):
+        sorting_analyzer.compute(["waveforms"])
+
+    # check that waveforms are calculated
+    sorting_analyzer.compute(["random_spikes", "waveforms"])
+    waveform_data = sorting_analyzer.get_extension("waveforms").get_data()
+    assert waveform_data is not None
+
+    sorting_analyzer.delete_extension("waveforms")
+    sorting_analyzer.delete_extension("random_spikes")
+
+    # check that waveforms are calculated as before, even when parent is after child
+    sorting_analyzer.compute(["waveforms", "random_spikes"])
+    assert np.all(waveform_data == sorting_analyzer.get_extension("waveforms").get_data())
 
 
 if __name__ == "__main__":

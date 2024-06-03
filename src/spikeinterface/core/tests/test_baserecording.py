@@ -358,5 +358,13 @@ def test_rename_channels():
     assert np.array_equal(renamed_channel_ids, ["a", "b", "c"])
 
 
+def test_select_channels():
+    recording = generate_recording(durations=[1.0], num_channels=3)
+    renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])
+    selected_recording = renamed_recording.select_channels(channel_ids=["a", "c"])
+    selected_channel_ids = selected_recording.get_channel_ids()
+    assert np.array_equal(selected_channel_ids, ["a", "c"])
+
+
 if __name__ == "__main__":
     test_BaseRecording()

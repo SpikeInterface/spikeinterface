@@ -1448,7 +1448,7 @@ def generate_templates(
     mode="ellipsoid",
 ):
     """
-    Generate some templates from the given channel positions and neuron position.s
+    Generate some templates from the given channel positions and neuron positions.
 
     The implementation is very naive : it generates a mono channel waveform using generate_single_fake_waveform()
     and duplicates this same waveform on all channel given a simple decay law per unit.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 import numpy as np
 import zarr
@@ -72,7 +73,7 @@ class ZarrRecordingExtractor(BaseRecording):
             time_kwargs = {}
             time_vector = self._root.get(f"times_seg{segment_index}", None)
             if time_vector is not None:
-                time_kwargs["time_vector"] = time_vector
+                time_kwargs["time_vector"] = time_vector[:]
             else:
                 if t_starts is None:
                     t_start = None
@@ -308,13 +309,14 @@ def get_default_zarr_compressor(clevel: int = 5):
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
 
 
-def add_properties_and_annotations(
-    zarr_group: zarr.hierarchy.Group, recording_or_sorting: Union[BaseRecording, BaseSorting]
-):
+def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_or_sorting: BaseRecording | BaseSorting):
     # save properties
     prop_group = zarr_group.create_group("properties")
     for key in recording_or_sorting.get_property_keys():
         values = recording_or_sorting.get_property(key)
+        if values.dtype.kind == "O":
+            warnings.warn(f"Property {key} not saved because it is a python Object type")
+            continue
         prop_group.create_dataset(name=key, data=values, compressor=None)
 
     # save annotations
