@@ -249,7 +249,7 @@ class LocalFeatureClustering:
             import matplotlib.pyplot as plt
 
             labels_set = np.setdiff1d(possible_labels, [-1])
-            colors = plt.get_cmap("tab10", len(labels_set))
+            colors = plt.colormaps["tab10"].resampled(len(labels_set))
             colors = {k: colors(i) for i, k in enumerate(labels_set)}
             colors[-1] = "k"
             fix, axs = plt.subplots(nrows=2)

@@ -61,7 +61,7 @@ def _split_waveforms(
         local_feature_plot = local_feature
 
         unique_lab = np.unique(local_labels_with_noise)
-        cmap = plt.get_cmap("jet", unique_lab.size)
+        cmap = plt.colormaps["jet"].resampled(unique_lab.size)
         cmap = {k: cmap(l) for l, k in enumerate(unique_lab)}
         cmap[-1] = "k"
         active_ind = np.arange(local_feature.shape[0])
@@ -144,7 +144,7 @@ def _split_waveforms_nested(
             local_feature_plot = reducer.fit_transform(local_feature)
 
             unique_lab = np.unique(active_labels_with_noise)
-            cmap = plt.get_cmap("jet", unique_lab.size)
+            cmap = plt.colormaps["jet"].resampled(unique_lab.size)
             cmap = {k: cmap(l) for l, k in enumerate(unique_lab)}
             cmap[-1] = "k"
             cmap[-2] = "b"
@@ -275,7 +275,7 @@ def auto_split_clustering(
 
             fig, ax = plt.subplots()
             plot_labels_set = np.unique(local_labels_with_noise)
-            cmap = plt.get_cmap("jet", plot_labels_set.size)
+            cmap = plt.colormaps["jet"].resampled(unique_lab.size)
             cmap = {k: cmap(l) for l, k in enumerate(plot_labels_set)}
             cmap[-1] = "k"
             cmap[-2] = "b"

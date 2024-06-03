@@ -911,9 +911,11 @@ class WaveformExtractor:
             )
             if self.recording.get_probegroup() is not None:
                 probegroup = self.recording.get_probegroup()
+            with_recording = True
         else:
             rec_attributes = deepcopy(self._rec_attributes)
-            probegroup = rec_attributes["probegroup"]
+            probegroup = rec_attributes.pop("probegroup")
+            with_recording = False
 
         if self.is_sparse():
             assert sparsity is None, "WaveformExtractor is already sparse!"
@@ -1026,7 +1028,7 @@ class WaveformExtractor:
                         name=f"sampled_index_{unit_id}", data=sampled_indices, compressor=compressor
                     )
 
-        new_we = WaveformExtractor.load(folder)
+        new_we = WaveformExtractor.load(folder, with_recording=with_recording)
 
         # save waveform extensions
         for ext_name in self.get_available_extension_names():
@@ -1926,10 +1928,16 @@ class BaseWaveformExtractorExtension:
             params = cls.load_params_from_folder(folder)
 
         if "sparsity" in params and params["sparsity"] is not None:
-            params["sparsity"] = ChannelSparsity.from_dict(params["sparsity"])
-
-        # if waveform_extractor is None:
-        #     waveform_extractor = WaveformExtractor.load(folder)
+            sparsity_params = params["sparsity"]
+            # handle old sparsity version
+            if "unit_ids" not in params["sparsity"]:
+                sparsity_params = {}
+                sparsity_params["unit_ids"] = waveform_extractor.unit_ids
+                sparsity_params["channel_ids"] = waveform_extractor.channel_ids
+                sparsity_params["unit_id_to_channel_ids"] = params["sparsity"]
+            else:
+                sparsity_params = params["sparsity"]
+            params["sparsity"] = ChannelSparsity.from_dict(sparsity_params)
 
         # make instance with params
         ext = cls(waveform_extractor)

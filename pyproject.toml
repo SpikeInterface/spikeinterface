@@ -23,7 +23,7 @@ dependencies = [
     "numpy",
     "threadpoolctl>=3.0.0",
     "tqdm",
-    "zarr>=0.2.16, <2.18",
+    "zarr>=2.16,<2.18",
     "neo>=0.13.0",
     "probeinterface>=0.2.21",
 ]
@@ -94,13 +94,13 @@ full = [
     "scikit-learn",
     "networkx",
     "distinctipy",
-    "matplotlib",
+    "matplotlib>=3.6",
     "cuda-python; platform_system != 'Darwin'",
     "numba",
 ]
 
 widgets = [
-    "matplotlib",
+    "matplotlib>=3.6",
     "ipympl",
     "ipywidgets",
     "sortingview>=0.12.0",
