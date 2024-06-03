@@ -664,24 +664,24 @@ class GroundTruthComparison(BasePairSorterComparison):
 
 _template_txt_performance = """PERFORMANCE ({method})
 -----------
-ACCURACY : {accuracy}
-RECALL : {recall}
-PRECISION : {precision}
-FALSE DISCOVERY RATE : {false_discovery_rate}
-MISS RATE : {miss_rate}
+ACCURACY: {accuracy}
+RECALL: {recall}
+PRECISION: {precision}
+FALSE DISCOVERY RATE: {false_discovery_rate}
+MISS RATE: {miss_rate}
 """
 
 _template_summary_part1 = """SUMMARY
 -------
-GT num_units : {num_gt}
-TESTED num_units : {num_tested}
-num_well_detected : {num_well_detected}
-num_redundant : {num_redundant}
-num_overmerged : {num_overmerged}
+GT num_units: {num_gt}
+TESTED num_units: {num_tested}
+num_well_detected: {num_well_detected}
+num_redundant: {num_redundant}
+num_overmerged: {num_overmerged}
 """
 
 _template_summary_part2 = """num_false_positive_units {num_false_positive_units}
-num_bad : {num_bad}
+num_bad: {num_bad}
 """
 
 
