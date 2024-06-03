@@ -21,8 +21,8 @@ from .drifting_generator import (
 )
 
 from .template_database import (
-    fetch_template_dataset,
-    fetch_templates_info,
-    list_available_datasets,
-    get_templates_from_database,
+    fetch_template_object_from_database,
+    fetch_templates_database_info,
+    list_available_datasets_in_template_database,
+    query_templates_from_database,
 )

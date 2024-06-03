@@ -6,7 +6,7 @@ from spikeinterface.core.template import Templates
 
 
 @functools.cache
-def fetch_template_dataset(dataset="test_templates.zarr") -> Templates:
+def fetch_template_object_from_database(dataset="test_templates.zarr") -> Templates:
     """
     Fetch a template dataset from the spikeinterface template database.
     A dataset is a collection of templates with associated metadata for one specific recording.
@@ -31,7 +31,7 @@ def fetch_template_dataset(dataset="test_templates.zarr") -> Templates:
 
 
 @functools.cache
-def fetch_templates_info() -> "pandas.DataFrame":
+def fetch_templates_database_info() -> "pandas.DataFrame":
     """
     Fetch the information about the templates in the spikeinterface template database.
 
@@ -48,7 +48,7 @@ def fetch_templates_info() -> "pandas.DataFrame":
     return df
 
 
-def list_available_datasets() -> list:
+def list_available_datasets_in_template_database() -> list:
     """
     List all available datasets in the spikeinterface template database.
 
@@ -57,21 +57,19 @@ def list_available_datasets() -> list:
     list
         List of available datasets.
     """
-    df = fetch_templates_info()
+    df = fetch_templates_database_info()
     datasets = np.unique(df["dataset"]).tolist()
 
     return datasets
 
 
-def get_templates_from_database(
-    template_df_or_indices: "pandas.DataFrame | list[int] | np.ndarray", verbose: bool = False
-) -> Templates:
+def query_templates_from_database(template_df: "pandas.DataFrame", verbose: bool = False) -> Templates:
     """
     Retrieve templates from the spikeinterface template database.
 
     Parameters
     ----------
-    template_df_or_indices : pd.DataFrame or array-like
+    template_df : pd.DataFrame
         Dataframe containing the template information, obtained by slicing/querying the output of fetch_templates_info.
 
     Returns
@@ -82,11 +80,7 @@ def get_templates_from_database(
     import pandas as pd
 
     templates_array = []
-    if isinstance(template_df_or_indices, pd.DataFrame):
-        template_info = template_df_or_indices
-    else:
-        template_info = fetch_templates_info().iloc[template_df_or_indices]
-    requested_datasets = np.unique(template_info["dataset"]).tolist()
+    requested_datasets = np.unique(template_df["dataset"]).tolist()
     if verbose:
         print(f"Fetching templates from {len(requested_datasets)} datasets")
 
@@ -97,7 +91,7 @@ def get_templates_from_database(
     channel_ids = None
 
     for dataset in requested_datasets:
-        templates = fetch_template_dataset(dataset)
+        templates = fetch_template_object_from_database(dataset)
 
         # check consisency across datasets
         if nbefore is None:
@@ -125,8 +119,9 @@ def get_templates_from_database(
             channel_locations - channel_locations[0],
         ), "Channel locations are not consistent across datasets"
 
-        template_indices = template_info[template_info["dataset"] == dataset]["template_index"]
+        template_indices = template_df[template_df["dataset"] == dataset]["template_index"]
         templates_array.append(templates.templates_array[template_indices, :, :])
+
     templates_array = np.concatenate(templates_array, axis=0)
     templates = Templates(
         templates_array,
