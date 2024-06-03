@@ -125,13 +125,13 @@ class DriftingTemplates(Templates):
 
     @classmethod
     def from_static(cls, templates):
-        drifting_teplates = cls(
+        drifting_templates = cls(
             templates_array=templates.templates_array,
             sampling_frequency=templates.sampling_frequency,
             nbefore=templates.nbefore,
             probe=templates.probe,
         )
-        return drifting_teplates
+        return drifting_templates
 
     def move_one_template(self, unit_index, displacement, **interpolation_kwargs):
         """
@@ -264,9 +264,9 @@ class InjectDriftingTemplatesRecording(BaseRecording):
     ):
         import scipy.spatial
 
-        assert isinstance(
-            drifting_templates, DriftingTemplates
-        ), "drifting_templates must be a DriftingTemplates object"
+        # assert isinstance(
+        #     drifting_templates, DriftingTemplates
+        # ), "drifting_templates must be a DriftingTemplates object"
         self.drifting_templates = drifting_templates
 
         if parent_recording is None:
@@ -442,7 +442,8 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         # TODO: self.upsample_vector = upsample_vector
         self.upsample_vector = None
         self.parent_recording = parent_recording_segment
-        self.num_samples = parent_recording_segment.get_num_frames() if num_samples is None else num_samples
+        self.num_samples = parent_recording_segment.get_num_samples() if num_samples is None else num_samples
+        self.num_samples = int(num_samples)
 
         self.displacement_indices = displacement_indices
         self.templates_array_moved = templates_array_moved
@@ -507,7 +508,7 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
             wf = template[start_template:end_template]
             if self.amplitude_vector is not None:
                 wf *= self.amplitude_vector[i]
-            traces[start_traces:end_traces] += wf
+            traces[start_traces:end_traces] += wf.astype(self.dtype, copy=False)
 
         return traces.astype(self.dtype)
 

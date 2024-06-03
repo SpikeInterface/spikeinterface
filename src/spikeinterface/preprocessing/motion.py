@@ -5,6 +5,8 @@ from pathlib import Path
 
 import numpy as np
 import json
+import shutil
+
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
@@ -333,7 +335,7 @@ def correct_motion(
 
         node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
 
-        # node nolcalize
+        # node detect + localize
         method = localize_peaks_kwargs.pop("method", "center_of_mass")
         method_class = localize_peak_methods[method]
         node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs)
@@ -416,6 +418,28 @@ for k, v in motion_options_preset.items():
     _doc_presets = _doc_presets + f"      * {k}: {doc}\n"
 
 correct_motion.__doc__ = correct_motion.__doc__.format(_doc_presets, _shared_job_kwargs_doc)
+
+
+def save_motion_info(motion_info, folder, overwrite=False):
+    folder = Path(folder)
+    if folder.is_dir():
+        if not overwrite:
+            raise FileExistsError(f"Folder {folder} already exists. Use `overwrite=True` to overwrite.")
+        else:
+            shutil.rmtree(folder)
+    folder.mkdir(exist_ok=True, parents=True)
+
+    (folder / "parameters.json").write_text(
+        json.dumps(motion_info["parameters"], indent=4, cls=SIJsonEncoder), encoding="utf8"
+    )
+    (folder / "run_times.json").write_text(json.dumps(motion_info["run_times"], indent=4), encoding="utf8")
+
+    np.save(folder / "peaks.npy", motion_info["peaks"])
+    np.save(folder / "peak_locations.npy", motion_info["peak_locations"])
+    np.save(folder / "motion.npy", motion_info["motion"])
+    np.save(folder / "temporal_bins.npy", motion_info["temporal_bins"])
+    if motion_info["spatial_bins"] is not None:
+        np.save(folder / "spatial_bins.npy", motion_info["spatial_bins"])
 
 
 def load_motion_info(folder):
