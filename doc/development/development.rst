@@ -165,16 +165,16 @@ This allows users to quickly understand the type of data that should be input in
 
         Parameters
         ----------
-        param_a: dict
+        param_a : dict
             A dictionary containing the data
-        param_b: int, default: 5
+        param_b : int, default: 5
             A scaling factor to be applied to the data
-        param_c: "mean" | "median", default: "mean"
+        param_c : "mean" | "median", default: "mean"
             What to calculate on the data
 
         Returns
         -------
-        great_data: dict
+        great_data : dict
             A dictionary of the processed data
         """
 
