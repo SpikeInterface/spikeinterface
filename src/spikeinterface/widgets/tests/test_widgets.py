@@ -4,11 +4,12 @@ import os
 from pathlib import Path
 
 if __name__ != "__main__":
-    import matplotlib
+    try:
+        import matplotlib
 
-    matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
+        matplotlib.use("Agg")
+    except:
+        pass
 
 
 from spikeinterface import (
@@ -283,6 +284,16 @@ class TestWidgets(unittest.TestCase):
                         self.sorting_analyzer_sparse,
                         unit_ids=unit_ids,
                         templates_percentile_shading=[1, 5, 25, 75, 95, 99],
+                        backend=backend,
+                        **self.backend_kwargs[backend],
+                    )
+                    # test with templates
+                    templates_ext = self.sorting_analyzer_dense.get_extension("templates")
+                    templates = templates_ext.get_data(outputs="Templates")
+                    sw.plot_unit_templates(
+                        templates,
+                        sparsity=self.sparsity_strict,
+                        unit_ids=unit_ids,
                         backend=backend,
                         **self.backend_kwargs[backend],
                     )
@@ -568,12 +579,15 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends_by_sorter:
             sw.plot_multicomparison_agreement_by_sorter(mcmp)
             if backend == "matplotlib":
+                import matplotlib.pyplot as plt
+
                 _, axes = plt.subplots(len(mcmp.object_list), 1)
                 sw.plot_multicomparison_agreement_by_sorter(mcmp, axes=axes)
 
 
 if __name__ == "__main__":
     # unittest.main()
+    import matplotlib.pyplot as plt
 
     TestWidgets.setUpClass()
     mytest = TestWidgets()

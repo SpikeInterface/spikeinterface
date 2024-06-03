@@ -2,10 +2,6 @@ import pytest
 
 import shutil
 
-import spikeinterface.full as si
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
 
 from spikeinterface.core import (
     get_noise_levels,
@@ -71,6 +67,8 @@ def test_benchmark_matching():
     study.plot_performances_vs_snr()
     study.plot_agreements()
     study.plot_comparison_matching()
+    import matplotlib.pyplot as plt
+
     plt.show()
 
 

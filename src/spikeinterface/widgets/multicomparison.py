@@ -87,7 +87,7 @@ class MultiCompGraphWidget(BaseWidget):
             nodelist=sorted(g.nodes),
             edge_color=edge_col,
             alpha=dp.alpha_edges,
-            edge_cmap=plt.cm.get_cmap(dp.edge_cmap),
+            edge_cmap=plt.colormaps[dp.edge_cmap],
             edge_vmin=mcmp.match_score,
             edge_vmax=1,
             ax=self.ax,
@@ -106,7 +106,7 @@ class MultiCompGraphWidget(BaseWidget):
             import matplotlib.pyplot as plt
 
             norm = mpl_colors.Normalize(vmin=mcmp.match_score, vmax=1)
-            cmap = plt.cm.get_cmap(dp.edge_cmap)
+            cmap = plt.colormaps[dp.edge_cmap]
             m = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
             self.figure.colorbar(m)
 
@@ -159,7 +159,7 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         mcmp = dp.multi_comparison
-        cmap = plt.get_cmap(dp.cmap)
+        cmap = plt.colormaps[dp.cmap]
         colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(mcmp.name_list))])
         sg_names, sg_units = mcmp.compute_subgraphs()
         # fraction of units with agreement > threshold
@@ -242,7 +242,7 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         backend_kwargs["ncols"] = len(name_list)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        cmap = plt.get_cmap(dp.cmap)
+        cmap = plt.colormaps[dp.cmap]
         colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(mcmp.name_list))])
         sg_names, sg_units = mcmp.compute_subgraphs()
         # fraction of units with agreement > threshold
