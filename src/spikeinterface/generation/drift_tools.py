@@ -1,10 +1,13 @@
 from __future__ import annotations
+
+import math
 from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
-from spikeinterface.core import Templates, BaseRecording, BaseSorting, BaseRecordingSegment
-import math
+from probeinterface import Probe
+from spikeinterface.core import (BaseRecording, BaseRecordingSegment,
+                                 BaseSorting, Templates)
 
 
 def interpolate_templates(templates_array, source_locations, dest_locations, interpolation_method="cubic"):
@@ -117,11 +120,20 @@ class DriftingTemplates(Templates):
     """
 
     def __init__(self, **kwargs):
-        Templates.__init__(self, **kwargs)
+        super().__init__(self, **kwargs)
         assert self.probe is not None, "DriftingTemplates need a Probe in the init"
 
-        self.templates_array_moved = None
-        self.displacements = None
+        has_temps_moved = "templates_array_moved" in kwargs
+        has_disps = "displacements" in kwargs
+        precomputed = has_temps_moved or has_disps
+        if precomputed and not (has_temps_moved and has_disps):
+            raise ValueError(
+                "Please pass both template_array_moved and displacements to DriftingTemplates "
+                "if you are using precomputed displaceed templates."
+            )
+
+        self.templates_array_moved = kwargs.get("templates_array_moved", None)
+        self.displacements = kwargs.get("displacements", None)
 
     @classmethod
     def from_static(cls, templates):
@@ -132,6 +144,38 @@ class DriftingTemplates(Templates):
             probe=templates.probe,
         )
         return drifting_templates
+
+    @classmethod
+    def from_precomputed(
+        cls,
+        templates_array_moved: ArrayLike,
+        displacements: ArrayLike,
+        sampling_frequency: float,
+        nbefore: int,
+        probe: Probe,
+    ):
+        """Construct a DriftingTemplates object given precomputed drifting templates
+
+        Arguments
+        ---------
+        templates_array_moved : np.array
+            Shape is (num_displacement, num_templates, num_samples, num_channels)
+        displacements : np.array
+            Shape is (num_displacement, 2). Last axis is xy, as in make_linear_displacement below.
+        sampling_frequency : float
+        nbefore : int
+        probe : probeinterface.Probe
+        """
+        # take the central templates as representatives, just to make the super()
+        # constructor happy. they won't be used as drifting templates.
+        templates_static = templates_array_moved[templates_array_moved.shape[0] // 2]
+        return cls(
+            templates_array=templates_static,
+            displacements=displacements,
+            sampling_frequency=sampling_frequency,
+            nbefore=nbefore,
+            probe=probe,
+        )
 
     def move_one_template(self, unit_index, displacement, **interpolation_kwargs):
         """
