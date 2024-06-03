@@ -80,7 +80,14 @@ def estimate_templates_from_recording(
     probe = recording.get_probe()
 
     templates = Templates(
-        templates_array, sampling_frequency, nbefore, sparsity_mask, channel_ids, unit_ids, probe=probe
+        templates_array, 
+        sampling_frequency, 
+        nbefore, 
+        True,
+        sparsity_mask, 
+        channel_ids, 
+        unit_ids, 
+        probe=probe
     )
 
     return templates
@@ -411,7 +418,7 @@ def generate_hybrid_recording(
         )
         nbefore = int(ms_before * sampling_frequency / 1000.0)
         nafter = int(ms_after * sampling_frequency / 1000.0)
-        templates_ = Templates(templates_array, sampling_frequency, nbefore, None, None, None, probe)
+        templates_ = Templates(templates_array, sampling_frequency, nbefore, True, None, None, None, probe)
     else:
         assert isinstance(templates, Templates), "templates should be a Templates object"
         assert (
@@ -437,7 +444,7 @@ def generate_hybrid_recording(
 
         # manage scaling of templates
         templates_ = templates
-        if recording.has_scaled():
+        if recording.has_scaleable_traces():
             if templates_in_uV:
                 templates_array = (templates_array - recording.get_channel_offsets()) / recording.get_channel_gains()
                 # make a copy of the templates and reset templates_array (might have scaled templates)
