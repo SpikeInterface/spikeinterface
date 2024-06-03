@@ -1530,7 +1530,7 @@ def compute_sd_ratio(
                 # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
                 # TODO: Take into account that templates for different segments might differ.
                 p = nsamples * n_spikes[unit_id] / sorting_analyzer.get_total_samples()
-                total_variance = p * np.mean(template**2) - p**2 * np.mean(template)**2
+                total_variance = p * np.mean(template**2) - p**2 * np.mean(template) ** 2
 
                 std_noise = np.sqrt(std_noise**2 - total_variance)
 
