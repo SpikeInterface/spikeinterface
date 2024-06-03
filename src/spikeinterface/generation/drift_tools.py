@@ -120,7 +120,7 @@ class DriftingTemplates(Templates):
     """
 
     def __init__(self, **kwargs):
-        super().__init__(self, **kwargs)
+        Templates.__init__(self, **kwargs)
         assert self.probe is not None, "DriftingTemplates need a Probe in the init"
 
         has_temps_moved = "templates_array_moved" in kwargs
