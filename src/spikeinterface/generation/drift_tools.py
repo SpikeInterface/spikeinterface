@@ -6,8 +6,7 @@ from typing import Optional
 import numpy as np
 from numpy.typing import ArrayLike
 from probeinterface import Probe
-from spikeinterface.core import (BaseRecording, BaseRecordingSegment,
-                                 BaseSorting, Templates)
+from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, Templates
 
 
 def interpolate_templates(templates_array, source_locations, dest_locations, interpolation_method="cubic"):
