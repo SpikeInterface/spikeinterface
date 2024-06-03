@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 from tqdm.auto import tqdm, trange
-import scipy.interpolate
 
 try:
     import torch
@@ -319,12 +318,14 @@ class DecentralizedRegistration:
             spatial_bin_edges=spatial_bin_edges,
             weight_with_amplitude=weight_with_amplitude,
         )
+        import scipy.signal
 
         if histogram_depth_smooth_um is not None:
             bins = np.arange(motion_histogram.shape[1]) * bin_um
             bins = bins - np.mean(bins)
             smooth_kernel = np.exp(-(bins**2) / (2 * histogram_depth_smooth_um**2))
             smooth_kernel /= np.sum(smooth_kernel)
+
             motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[None, :], mode="same", axes=1)
 
         if histogram_time_smooth_s is not None:
@@ -958,10 +959,14 @@ def compute_global_displacement(
         One of "gradient"
 
     """
+    import scipy
+    from scipy.optimize import minimize
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.linalg import lsqr
+    from scipy.stats import zscore
+
     if convergence_method == "gradient_descent":
         size = pairwise_displacement.shape[0]
-        from scipy.optimize import minimize
-        from scipy.sparse import csr_matrix
 
         D = pairwise_displacement
         if pairwise_displacement_weight is not None or sparse_mask is not None:
@@ -1004,9 +1009,6 @@ def compute_global_displacement(
         displacement = res.x
 
     elif convergence_method == "lsqr_robust":
-        from scipy.sparse import csr_matrix
-        from scipy.sparse.linalg import lsqr
-        from scipy.stats import zscore
 
         if sparse_mask is not None:
             I, J = np.nonzero(sparse_mask > 0)
@@ -1043,7 +1045,6 @@ def compute_global_displacement(
     elif convergence_method == "lsmr":
         import gc
         from scipy import sparse
-        from scipy.stats import zscore
 
         D = pairwise_displacement
 
@@ -1526,6 +1527,8 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=3
         mask = np.ones(motion_clean.shape[0], dtype="bool")
         for i in range(inds.size // 2):
             mask[inds[i * 2] : inds[i * 2 + 1]] = False
+        import scipy.interpolate
+
         f = scipy.interpolate.interp1d(temporal_bins[mask], one_motion[mask])
         one_motion[~mask] = f(temporal_bins[~mask])
 
