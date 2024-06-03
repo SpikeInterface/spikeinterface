@@ -15,6 +15,7 @@ from spikeinterface.sortingcomponents.tools import remove_empty_templates
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.sparsity import compute_sparsity
 
+
 class MatchingBenchmark(Benchmark):
 
     def __init__(self, recording, gt_sorting, params):
@@ -241,19 +242,19 @@ class MatchingStudy(BenchmarkStudy):
 
             y_before = self.get_result(before)["gt_comparison"].get_performance()[k].values
             y_after = self.get_result(after)["gt_comparison"].get_performance()[k].values
-            #if count < 2:
-            #ax.set_xticks([], [])
-            #elif count == 2:
+            # if count < 2:
+            # ax.set_xticks([], [])
+            # elif count == 2:
             ax.set_xlabel("depth (um)")
             im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), cmap="coolwarm")
             fig.colorbar(im, ax=ax, label=k)
             im.set_clim(-1, 1)
             ax.set_title(k)
             ax.set_ylabel("snr")
-    
-        #fig.subplots_adjust(right=0.85)
-        #cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
-        #cbar = fig.colorbar(im, cax=cbar_ax, label=metric)
+
+        # fig.subplots_adjust(right=0.85)
+        # cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
+        # cbar = fig.colorbar(im, cax=cbar_ax, label=metric)
 
         # if count == 2:
         #    ax.legend()

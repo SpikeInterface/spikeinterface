@@ -176,12 +176,13 @@ class GroundTruthStudy:
         for f in (log_file, comparison_file):
             if f.exists():
                 f.unlink()
-    
+
     def set_colors(self, colors=None, map_name="tab20"):
         if colors is None:
             case_keys = list(self.cases.keys())
-            self.colors = get_some_colors(case_keys, map_name=map_name, 
-                                          color_engine = "matplotlib", shuffle=False, margin=0)
+            self.colors = get_some_colors(
+                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0
+            )
         else:
             self.colors = colors
 

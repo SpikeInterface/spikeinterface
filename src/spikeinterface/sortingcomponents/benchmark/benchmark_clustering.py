@@ -239,7 +239,7 @@ class ClusteringStudy(BenchmarkStudy):
             fig.colorbar(im, ax=axes[0, count])
             label = self.cases[key]["label"]
             axes[0, count].set_title(label)
-        
+
         return fig
 
     def plot_metrics_vs_snr(self, metric="agreement", case_keys=None, figsize=(15, 5), axes=None):
@@ -298,7 +298,7 @@ class ClusteringStudy(BenchmarkStudy):
             label = self.cases[key]["label"]
             axes[count].set_title(label)
             axes[count].legend()
-        
+
         if fig is not None:
             return fig
 
@@ -355,7 +355,7 @@ class ClusteringStudy(BenchmarkStudy):
             elif metric == "agreement":
                 for found, real in zip(matched_ids2[mask], unit_ids1[mask]):
                     to_plot += [scores.at[real, found]]
-            elif metric in ['recall', 'precision', 'accuracy']:
+            elif metric in ["recall", "precision", "accuracy"]:
                 to_plot = result["gt_comparison"].get_performance()[metric].values
                 depth_matched = depth
                 snr_matched = metrics["snr"]
@@ -368,14 +368,14 @@ class ClusteringStudy(BenchmarkStudy):
             label = self.cases[key]["label"]
             axes[0, count].set_title(label)
             if count > 0:
-                axes[0, count].set_ylabel('')
+                axes[0, count].set_ylabel("")
                 axes[0, count].set_yticks([], [])
             # axs[0, count].legend()
-        
+
         fig.subplots_adjust(right=0.85)
         cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
         fig.colorbar(im, cax=cbar_ax, label=metric)
-        
+
         return fig
 
     def plot_unit_losses(self, cases_before, cases_after, metric="agreement", figsize=None):
@@ -398,19 +398,17 @@ class ClusteringStudy(BenchmarkStudy):
             ax.set_ylabel("depth (um)")
             ax.set_ylabel("snr")
             if count > 0:
-                ax.set_ylabel('')
+                ax.set_ylabel("")
                 ax.set_yticks([], [])
             im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), cmap="coolwarm")
             im.set_clim(-1, 1)
-            #fig.colorbar(im, ax=ax)
-            #ax.set_title(k)
-            
+            # fig.colorbar(im, ax=ax)
+            # ax.set_title(k)
 
         fig.subplots_adjust(right=0.85)
         cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
         cbar = fig.colorbar(im, cax=cbar_ax, label=metric)
-        #cbar.set_clim(-1, 1)
-
+        # cbar.set_clim(-1, 1)
 
         return fig
 
