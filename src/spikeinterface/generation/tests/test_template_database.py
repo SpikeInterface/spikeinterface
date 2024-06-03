@@ -10,7 +10,7 @@ from spikeinterface.generation import (
 )
 
 
-def test_fetch_datasets():
+def test_fetch_template_object_from_database():
 
     available_datasets = list_available_datasets_in_template_database()
     assert len(available_datasets) > 0
@@ -46,6 +46,6 @@ def test_query_templates_from_database():
 
 
 if __name__ == "__main__":
-    test_fetch_datasets()
+    test_fetch_template_object_from_database()
     test_fetch_templates_database_info()
     test_query_templates_from_database()

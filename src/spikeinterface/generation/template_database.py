@@ -63,15 +63,13 @@ def list_available_datasets_in_template_database() -> list:
     return datasets
 
 
-def query_templates_from_database(
-    template_df_or_indices: "pandas.DataFrame | list[int] | np.ndarray", verbose: bool = False
-) -> Templates:
+def query_templates_from_database(template_df: "pandas.DataFrame", verbose: bool = False) -> Templates:
     """
     Retrieve templates from the spikeinterface template database.
 
     Parameters
     ----------
-    template_df_or_indices : pd.DataFrame or array-like
+    template_df : pd.DataFrame
         Dataframe containing the template information, obtained by slicing/querying the output of fetch_templates_info.
 
     Returns
@@ -82,11 +80,7 @@ def query_templates_from_database(
     import pandas as pd
 
     templates_array = []
-    if isinstance(template_df_or_indices, pd.DataFrame):
-        template_info = template_df_or_indices
-    else:
-        template_info = fetch_templates_database_info().iloc[template_df_or_indices]
-    requested_datasets = np.unique(template_info["dataset"]).tolist()
+    requested_datasets = np.unique(template_df["dataset"]).tolist()
     if verbose:
         print(f"Fetching templates from {len(requested_datasets)} datasets")
 
@@ -125,7 +119,7 @@ def query_templates_from_database(
             channel_locations - channel_locations[0],
         ), "Channel locations are not consistent across datasets"
 
-        template_indices = template_info[template_info["dataset"] == dataset]["template_index"]
+        template_indices = template_df[template_df["dataset"] == dataset]["template_index"]
         templates_array.append(templates.templates_array[template_indices, :, :])
 
     templates_array = np.concatenate(templates_array, axis=0)
