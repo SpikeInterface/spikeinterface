@@ -64,7 +64,7 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 def compute_similarity_with_templates_array(templates_array, other_templates_array, method, n_shifts):
     import sklearn.metrics.pairwise
 
-    if method == "cosine_similarity":
+    if method in ["cosine_similarity", "l1", "l2"]:
         nb_templates = templates_array.shape[0]
         assert templates_array.shape[0] == other_templates_array.shape[0]
         n = templates_array.shape[1]
@@ -76,8 +76,14 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
             other_templates_flat = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(
                 templates_array.shape[0], -1
             )
-            similarity[count] = sklearn.metrics.pairwise.cosine_similarity(templates_flat, other_templates_flat)
-        similarity = np.max(similarity, axis=0)
+            if method == 'cosine_similarity':
+                similarity[count] = sklearn.metrics.pairwise.cosine_similarity(templates_flat, other_templates_flat)
+            elif method in ['l1', 'l2']:
+                similarity[count] = sklearn.metrics.pairwise.pairwise_distances(templates_flat, other_templates_flat, metric=method)
+        if method == 'cosine_similarity':
+            similarity = np.max(similarity, axis=0)
+        elif method in ['l1', 'l2']:
+            similarity = np.min(similarity, axis=0)
     else:
         raise ValueError(f"compute_template_similarity(method {method}) not exists")
 

@@ -13,6 +13,9 @@ class SimilarityExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCas
     extension_class = ComputeTemplateSimilarity
     extension_function_params_list = [
         dict(method="cosine_similarity"),
+        dict(method="cosine_similarity", max_lag_ms=0.5),
+        dict(method="l2"),
+        dict(method="l1"),
     ]
 
 
