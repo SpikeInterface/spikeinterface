@@ -4,8 +4,7 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-
-from ..preprocessing.filter import fix_dtype
+from spikeinterface.preprocessing.filter import fix_dtype
 
 
 def correct_motion_on_peaks(

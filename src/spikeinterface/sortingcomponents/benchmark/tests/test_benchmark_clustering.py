@@ -1,7 +1,4 @@
 import pytest
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
 import numpy as np
 
 import shutil
@@ -75,6 +72,8 @@ def test_benchmark_clustering():
     study.plot_run_times()
     study.plot_metrics_vs_snr("cosine")
     study.homogeneity_score(ignore_noise=False)
+    import matplotlib.pyplot as plt
+
     plt.show()
 
 
