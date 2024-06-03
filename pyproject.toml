@@ -100,7 +100,7 @@ full = [
 ]
 
 widgets = [
-    "matplotlib",
+    "matplotlib<3.9",
     "ipympl",
     "ipywidgets",
     "sortingview>=0.12.0",
