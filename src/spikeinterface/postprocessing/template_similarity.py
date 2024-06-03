@@ -15,7 +15,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     sorting_analyzer: SortingAnalyzer
         The SortingAnalyzer object
     method: str, default: "cosine_similarity"
-        The method to compute the similarity
+        The method to compute the similarity. Can be in ["l2", "l1", "cosine_similarity"]
+    max_lag_ms: float, default 0
+        If specified, the best distance for all given lag within max_lag_ms is kept, for every template
 
     Returns
     -------
