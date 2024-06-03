@@ -473,6 +473,7 @@ def run_node_pipeline(
     squeeze_output=True,
     folder=None,
     names=None,
+    verbose=False,
 ):
     """
     Common function to run pipeline with peak detector or already detected peak.
@@ -499,6 +500,7 @@ def run_node_pipeline(
         init_args,
         gather_func=gather_func,
         job_name=job_name,
+        verbose=verbose,
         **job_kwargs,
     )
 

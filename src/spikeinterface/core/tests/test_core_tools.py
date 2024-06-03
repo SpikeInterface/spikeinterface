@@ -11,6 +11,7 @@ from spikeinterface.core.core_tools import (
     check_paths_relative,
     normal_pdf,
     convert_string_to_bytes,
+    add_suffix,
 )
 
 
@@ -18,6 +19,22 @@ if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
 else:
     cache_folder = Path("cache_folder") / "core"
+
+
+def test_add_suffix():
+    # first case - no dot provided before extension
+    file_path = "testpath"
+    possible_suffix = ["raw", "bin", "path"]
+    file_path_with_suffix = add_suffix(file_path, possible_suffix)
+    expected_path = "testpath.raw"
+    assert str(file_path_with_suffix) == expected_path
+
+    # second case - dot provided before extension
+    file_path = "testpath"
+    possible_suffix = [".raw", ".bin", ".path"]
+    file_path_with_suffix = add_suffix(file_path, possible_suffix)
+    expected_path = "testpath.raw"
+    assert str(file_path_with_suffix) == expected_path
 
 
 def test_path_utils_functions():

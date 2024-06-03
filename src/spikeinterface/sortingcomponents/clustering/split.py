@@ -4,15 +4,18 @@ from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
-from sklearn.decomposition import TruncatedSVD, PCA
 
 import numpy as np
 
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 from .tools import aggregate_sparse_features, FeaturesLoader
-from .isocut5 import isocut5
 
+try:
+    import numba
+    from .isocut5 import isocut5
+except:
+    pass  # isocut requires numba
 
 # important all DEBUG and matplotlib are left in the code intentionally
 
@@ -217,6 +220,8 @@ class LocalFeatureClustering:
         flatten_features = aligned_wfs.reshape(aligned_wfs.shape[0], -1)
 
         if flatten_features.shape[1] > n_pca_features:
+            from sklearn.decomposition import PCA
+
             if scale_n_pca_by_depth:
                 # tsvd = TruncatedSVD(n_pca_features * recursion_level)
                 tsvd = PCA(n_pca_features * recursion_level, whiten=True)
@@ -254,7 +259,7 @@ class LocalFeatureClustering:
             import matplotlib.pyplot as plt
 
             labels_set = np.setdiff1d(possible_labels, [-1])
-            colors = plt.get_cmap("tab10", len(labels_set))
+            colors = plt.colormaps["tab10"].resampled(len(labels_set))
             colors = {k: colors(i) for i, k in enumerate(labels_set)}
             colors[-1] = "k"
             fix, axs = plt.subplots(nrows=2)

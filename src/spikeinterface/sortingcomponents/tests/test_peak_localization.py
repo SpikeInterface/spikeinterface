@@ -10,8 +10,8 @@ from spikeinterface.sortingcomponents.tests.common import make_dataset
 def test_localize_peaks():
     recording, _ = make_dataset()
 
-    # job_kwargs = dict(n_jobs=2, chunk_size=10000, verbose=False, progress_bar=True)
-    job_kwargs = dict(n_jobs=1, chunk_size=10000, verbose=False, progress_bar=True)
+    # job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
+    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
     peaks = detect_peaks(
         recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs

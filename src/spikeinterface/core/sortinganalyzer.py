@@ -5,6 +5,7 @@ from pathlib import Path
 from itertools import chain
 import os
 import json
+import math
 import pickle
 import weakref
 import shutil
@@ -130,7 +131,7 @@ def create_sorting_analyzer(
     else:
         sparsity = None
 
-    if return_scaled and not recording.has_scaled_traces() and recording.get_dtype().kind == "i":
+    if return_scaled and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
         print("create_sorting_analyzer: recording does not have scaling to uV, forcing return_scaled=False")
         return_scaled = False
 
@@ -237,7 +238,21 @@ class SortingAnalyzer:
         return_scaled=True,
     ):
         # some checks
-        assert sorting.sampling_frequency == recording.sampling_frequency
+        if sorting.sampling_frequency != recording.sampling_frequency:
+            if math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
+                warnings.warn(
+                    "Sorting and Recording have a small difference in sampling frequency. "
+                    "This could be due to rounding of floats. Using the sampling frequency from the Recording."
+                )
+                # we make a copy here to change the smapling frequency
+                sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+                sorting._sampling_frequency = recording.sampling_frequency
+            else:
+                raise ValueError(
+                    f"Sorting and Recording sampling frequencies are too different: "
+                    f"recording: {recording.sampling_frequency} - sorting: {sorting.sampling_frequency}. "
+                    "Ensure that you are associating the correct Recording and Sorting when creating a SortingAnalyzer."
+                )
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
         check_probe_do_not_overlap(all_probes)
@@ -570,9 +585,10 @@ class SortingAnalyzer:
             rec_attributes["probegroup"] = None
 
         # sparsity
-        if "sparsity_mask" in zarr_root.attrs:
-            # sparsity = zarr_root.attrs["sparsity"]
-            sparsity = ChannelSparsity(zarr_root["sparsity_mask"], cls.unit_ids, rec_attributes["channel_ids"])
+        if "sparsity_mask" in zarr_root:
+            sparsity = ChannelSparsity(
+                np.array(zarr_root["sparsity_mask"]), sorting.unit_ids, rec_attributes["channel_ids"]
+            )
         else:
             sparsity = None
 
@@ -819,7 +835,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
-    def compute(self, input, save=True, extension_params=None, **kwargs):
+    def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs):
         """
         Compute one extension or several extensiosn.
         Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
@@ -867,11 +883,11 @@ class SortingAnalyzer:
         )
         """
         if isinstance(input, str):
-            return self.compute_one_extension(extension_name=input, save=save, **kwargs)
+            return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
         elif isinstance(input, dict):
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
-            self.compute_several_extensions(extensions=input, save=save, **job_kwargs)
+            self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
@@ -882,11 +898,11 @@ class SortingAnalyzer:
                         ext_name in input
                     ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
                     extensions[ext_name] = ext_params
-            self.compute_several_extensions(extensions=extensions, save=save, **job_kwargs)
+            self.compute_several_extensions(extensions=extensions, save=save, verbose=verbose, **job_kwargs)
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
 
-    def compute_one_extension(self, extension_name, save=True, **kwargs):
+    def compute_one_extension(self, extension_name, save=True, verbose=False, **kwargs):
         """
         Compute one extension.
 
@@ -909,7 +925,7 @@ class SortingAnalyzer:
         Returns
         -------
         result_extension: AnalyzerExtension
-            Return the extension instance.
+            Return the extension instance
 
         Examples
         --------
@@ -945,13 +961,16 @@ class SortingAnalyzer:
 
         extension_instance = extension_class(self)
         extension_instance.set_params(save=save, **params)
-        extension_instance.run(save=save, **job_kwargs)
+        if extension_class.need_job_kwargs:
+            extension_instance.run(save=save, verbose=verbose, **job_kwargs)
+        else:
+            extension_instance.run(save=save, verbose=verbose)
 
         self.extensions[extension_name] = extension_instance
 
         return extension_instance
 
-    def compute_several_extensions(self, extensions, save=True, **job_kwargs):
+    def compute_several_extensions(self, extensions, save=True, verbose=False, **job_kwargs):
         """
         Compute several extensions
 
@@ -1005,9 +1024,9 @@ class SortingAnalyzer:
         for extension_name, extension_params in extensions_without_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
-                self.compute_one_extension(extension_name, save=save, **extension_params, **job_kwargs)
+                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
             else:
-                self.compute_one_extension(extension_name, save=save, **extension_params)
+                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params)
         # then extensions with pipeline
         if len(extensions_with_pipeline) > 0:
             all_nodes = []
@@ -1037,6 +1056,7 @@ class SortingAnalyzer:
                 job_name=job_name,
                 gather_mode="memory",
                 squeeze_output=False,
+                verbose=verbose,
             )
 
             for r, result in enumerate(results):
@@ -1055,9 +1075,9 @@ class SortingAnalyzer:
         for extension_name, extension_params in extensions_post_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
-                self.compute_one_extension(extension_name, save=save, **extension_params, **job_kwargs)
+                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
             else:
-                self.compute_one_extension(extension_name, save=save, **extension_params)
+                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params)
 
     def get_saved_extension_names(self):
         """
@@ -1581,10 +1601,6 @@ class AnalyzerExtension:
                 self.data[ext_data_name] = ext_data
 
         elif self.format == "zarr":
-            # Alessio
-            # TODO: we need decide if we make a copy to memory or keep the lazy loading. For binary_folder it used to be lazy with memmap
-            # but this make the garbage complicated when a data is hold by a plot but the o SortingAnalyzer is delete
-            # lets talk
             extension_group = self._get_zarr_extension_group(mode="r")
             for ext_data_name in extension_group.keys():
                 ext_data_ = extension_group[ext_data_name]
@@ -1600,7 +1616,8 @@ class AnalyzerExtension:
                 elif "object" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 else:
-                    ext_data = ext_data_
+                    # this load in memmory
+                    ext_data = np.array(ext_data_)
                 self.data[ext_data_name] = ext_data
 
     def copy(self, new_sorting_analyzer, unit_ids=None):
