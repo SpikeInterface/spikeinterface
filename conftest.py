@@ -25,31 +25,27 @@ def pytest_sessionstart(session):
     for mark_name in mark_names:
         (pytest.global_test_folder / mark_name).mkdir()
 
-
 def pytest_collection_modifyitems(config, items):
     """
     This function marks (in the pytest sense) the tests according to their name and file_path location
     Marking them in turn allows the tests to be run by using the pytest -m marker_name option.
     """
 
-
-    # python 3.4/3.5 compat: rootdir = pathlib.Path(str(config.rootdir))
     rootdir = Path(config.rootdir)
-
+    modules_location = rootdir / "src" / "spikeinterface"
     for item in items:
-        rel_path = Path(item.fspath).relative_to(rootdir)
-        if "sorters" in str(rel_path):
-            if "/internal/" in str(rel_path):
+        rel_path = Path(item.fspath).relative_to(modules_location)
+        module = rel_path.parts[0]
+        if module == "sorters":
+            if "internal" in rel_path.parts:
                 item.add_marker("sorters_internal")
-            elif "/external/" in str(rel_path):
+            elif "external" in rel_path.parts:
                 item.add_marker("sorters_external")
             else:
                 item.add_marker("sorters")
         else:
-            for mark_name in mark_names:
-                if f"/{mark_name}/" in str(rel_path):
-                    mark = getattr(pytest.mark, mark_name)
-                    item.add_marker(mark)
+            item.add_marker(module)
+
 
 
 def pytest_sessionfinish(session, exitstatus):
