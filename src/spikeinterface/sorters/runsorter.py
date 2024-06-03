@@ -380,11 +380,11 @@ def run_sorter_container(
         json.dumps(check_json(sorter_params), indent=4), encoding="utf8"
     )
 
-    in_container_sorting_folder = output_folder / "in_container_sorting"
+    in_container_sorting_folder = folder / "in_container_sorting"
 
     # if in Windows, skip C:
     parent_folder_unix = path_to_unix(parent_folder)
-    output_folder_unix = path_to_unix(output_folder)
+    output_folder_unix = path_to_unix(folder)
     recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
     in_container_sorting_folder_unix = path_to_unix(in_container_sorting_folder)
 
@@ -586,7 +586,7 @@ if __name__ == '__main__':
         # this do not work with singularity:
         # cmd = f'chown {uid}:{uid} -R "{output_folder}"'
         # this approach is better
-        cmd = ["chown", f"{uid}:{uid}", "-R", f"{output_folder}"]
+        cmd = ["chown", f"{uid}:{uid}", "-R", f"{folder}"]
         res_output = container_client.run_command(cmd)
     else:
         # not needed for Windows
