@@ -12,8 +12,12 @@ from spikeinterface.core import (
 
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
+from spikeinterface.qualitymetrics.quality_metric_list import (
+    _misc_metric_name_to_func,
+)
 
 from spikeinterface.qualitymetrics import (
+    get_quality_metric_list,
     mahalanobis_metrics,
     lda_metrics,
     nearest_neighbors_metrics,
@@ -45,6 +49,57 @@ from spikeinterface.core.basesorting import minimum_spike_dtype
 
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
+
+
+def _small_sorting_analyzer():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[2.0],
+        num_units=4,
+        seed=1205,
+    )
+
+    sorting = sorting.select_units([3, 2, 0], ["#3", "#9", "#4"])
+
+    sorting_analyzer = create_sorting_analyzer(recording=recording, sorting=sorting, format="memory")
+
+    extensions_to_compute = {
+        "random_spikes": {"seed": 1205},
+        "noise_levels": {"seed": 1205},
+        "waveforms": {},
+        "templates": {},
+        "spike_amplitudes": {},
+        "principal_components": {},
+    }
+
+    sorting_analyzer.compute(extensions_to_compute)
+
+    return sorting_analyzer
+
+
+@pytest.fixture(scope="module")
+def small_sorting_analyzer():
+    return _small_sorting_analyzer()
+
+
+def test_unit_structure_in_output(small_sorting_analyzer):
+    for metric_name in get_quality_metric_list():
+        result = _misc_metric_name_to_func[metric_name](sorting_analyzer=small_sorting_analyzer)
+
+        if isinstance(result, dict):
+            assert list(result.keys()) == ["#3", "#9", "#4"]
+        else:
+            for one_result in result:
+                assert list(one_result.keys()) == ["#3", "#9", "#4"]
+
+    for metric_name in get_quality_metric_list():
+        result = _misc_metric_name_to_func[metric_name](sorting_analyzer=small_sorting_analyzer, unit_ids=["#9", "#3"])
+
+        if isinstance(result, dict):
+            assert list(result.keys()) == ["#9", "#3"]
+        else:
+            for one_result in result:
+                print(metric_name)
+                assert list(one_result.keys()) == ["#9", "#3"]
 
 
 def _sorting_analyzer_simple():
