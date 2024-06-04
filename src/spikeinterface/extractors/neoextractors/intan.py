@@ -23,6 +23,10 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
+    ignore_integrity_checks, bool, default: False.
+        If True, data that violates integrity assumptions will be loaded. At the moment the only integrity
+        check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
+        the attribute `discontinuous_timestamps` to True in the underlying neo object.
     """
 
     mode = "file"
@@ -57,7 +61,8 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         import packaging
         import neo
 
-        if packaging.version.parse(neo.__version__) > packaging.version.parse("0.13.1"):
+        neo_version = packaging.version.parse(neo.__version__)
+        if neo_version > packaging.version.parse("0.13.1"):
             neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
         else:
             neo_kwargs = {"filename": str(file_path)}
