@@ -52,7 +52,15 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, ignore_integrity_checks: bool = False):
-        neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
+
+        # Only propagate the argument if the version is greater than 0.13.1
+        import packaging
+        import neo
+
+        if packaging.version.parse(neo.__version__) > packaging.version.parse("0.13.1"):
+            neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
+        else:
+            neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
 
 
