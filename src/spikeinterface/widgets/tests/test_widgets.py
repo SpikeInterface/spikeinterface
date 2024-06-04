@@ -32,6 +32,7 @@ else:
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
+SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW"))
 
 
 class TestWidgets(unittest.TestCase):
@@ -99,7 +100,7 @@ class TestWidgets(unittest.TestCase):
         cls.skip_backends = ["ipywidgets", "ephyviewer", "spikeinterface_gui"]
         # cls.skip_backends = ["ipywidgets", "ephyviewer", "sortingview"]
 
-        if ON_GITHUB and not KACHERY_CLOUD_SET:
+        if (ON_GITHUB and not KACHERY_CLOUD_SET) or (SKIP_SORTINGVIEW):
             cls.skip_backends.append("sortingview")
 
         print(f"Widgets tests: skipping backends - {cls.skip_backends}")

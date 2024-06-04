@@ -12,23 +12,23 @@ class MergeUnitsSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting: Recording
+    sorting: BaseSorting
         The sorting object
-    units_to_merge: list/tuple of lists/tuples
+    units_to_merge : list/tuple of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
         but it can also have more (merge multiple units at once).
-    new_unit_ids: None or list
+    new_unit_ids : None or list
         A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`
-    properties_policy: "keep" | "remove", default: "keep"
+    properties_policy : "keep" | "remove", default: "keep"
         Policy used to propagate properties. If "keep" the properties will be passed to the new units
          (if the units_to_merge have the same value). If "remove" the new units will have an empty
          value for all the properties of the new unit.
-    delta_time_ms: float or None
+    delta_time_ms : float or None
         Number of ms to consider for duplicated spikes. None won't check for duplications
 
     Returns
     -------
-    sorting: Sorting
+    sorting : Sorting
         Sorting object with the selected units merged
     """
 
