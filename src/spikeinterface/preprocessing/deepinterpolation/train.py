@@ -1,5 +1,4 @@
 from __future__ import annotations
-import json
 import os
 import warnings
 from pathlib import Path
@@ -9,9 +8,6 @@ from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
 
 from .tf_utils import import_tf
-
-# from .generators import define_recording_generator_class
-
 from ...core import BaseRecording
 
 

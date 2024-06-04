@@ -1,15 +1,8 @@
 from __future__ import annotations
-import tempfile
-import json
 from typing import Optional
 import numpy as np
-import os
 
-from ...core import load_extractor, concatenate_recordings, BaseRecording, BaseRecordingSegment
-
-from .tf_utils import has_tf, import_tf
-
-from ...core import load_extractor
+from ...core import concatenate_recordings, BaseRecording, BaseRecordingSegment
 
 from deepinterpolation.generator_collection import SequentialGenerator
 

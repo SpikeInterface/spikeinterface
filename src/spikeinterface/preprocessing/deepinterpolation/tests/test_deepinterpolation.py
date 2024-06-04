@@ -1,6 +1,8 @@
 import pytest
 import numpy as np
 from pathlib import Path
+from packaging.version import parse
+from warnings import warn
 
 import probeinterface
 from spikeinterface import generate_recording, append_recordings
@@ -14,7 +16,11 @@ try:
     import tensorflow
     import deepinterpolation
 
-    HAVE_DEEPINTERPOLATION = True
+    if parse(deepinterpolation.__version__) >= parse("0.2.0"):
+        HAVE_DEEPINTERPOLATION = True
+    else:
+        warn("DeepInterpolation version >=0.2.0 is required for the tests. Skipping...")
+        HAVE_DEEPINTERPOLATION = False
 except ImportError:
     HAVE_DEEPINTERPOLATION = False
 
