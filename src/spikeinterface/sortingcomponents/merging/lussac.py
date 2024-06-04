@@ -42,112 +42,112 @@ def binom_sf(x: int, n: float, p: float) -> float:
     return f(n)
 
 
-@numba.jit((numba.float32,), nopython=True, nogil=True, cache=True)
-def _get_border_probabilities(max_time) -> tuple[int, int, float, float]:
-    """
-    Computes the integer borders, and the probability of 2 spikes distant by this border to be closer than max_time.
+if HAVE_NUMBA:
 
-    @param max_time: float
-        The maximum time between 2 spikes to be considered as a coincidence.
-    @return border_low, border_high, p_low, p_high: tuple[int, int, float, float]
-        The borders and their probabilities.
-    """
+    @numba.jit((numba.float32,), nopython=True, nogil=True, cache=True)
+    def _get_border_probabilities(max_time) -> tuple[int, int, float, float]:
+        """
+        Computes the integer borders, and the probability of 2 spikes distant by this border to be closer than max_time.
 
-    border_high = math.ceil(max_time)
-    border_low = math.floor(max_time)
-    p_high = 0.5 * (max_time - border_high + 1) ** 2
-    p_low = 0.5 * (1 - (max_time - border_low) ** 2) + (max_time - border_low)
+        @param max_time: float
+            The maximum time between 2 spikes to be considered as a coincidence.
+        @return border_low, border_high, p_low, p_high: tuple[int, int, float, float]
+            The borders and their probabilities.
+        """
 
-    if border_low == 0:
-        p_low -= 0.5 * (-max_time + 1) ** 2
+        border_high = math.ceil(max_time)
+        border_low = math.floor(max_time)
+        p_high = 0.5 * (max_time - border_high + 1) ** 2
+        p_low = 0.5 * (1 - (max_time - border_low) ** 2) + (max_time - border_low)
 
-    return border_low, border_high, p_low, p_high
+        if border_low == 0:
+            p_low -= 0.5 * (-max_time + 1) ** 2
 
+        return border_low, border_high, p_low, p_high
 
-@numba.jit((numba.int64[:], numba.float32), nopython=True, nogil=True, cache=True)
-def compute_nb_violations(spike_train, max_time) -> float:
-    """
-    Computes the number of refractory period violations in a spike train.
+    @numba.jit((numba.int64[:], numba.float32), nopython=True, nogil=True, cache=True)
+    def compute_nb_violations(spike_train, max_time) -> float:
+        """
+        Computes the number of refractory period violations in a spike train.
 
-    @param spike_train: array[int64] (n_spikes)
-        The spike train to compute the number of violations for.
-    @param max_time: float32
-        The maximum time to consider for violations (in number of samples).
-    @return n_violations: float
-        The number of spike pairs that violate the refractory period.
-    """
+        @param spike_train: array[int64] (n_spikes)
+            The spike train to compute the number of violations for.
+        @param max_time: float32
+            The maximum time to consider for violations (in number of samples).
+        @return n_violations: float
+            The number of spike pairs that violate the refractory period.
+        """
 
-    if max_time <= 0.0:
-        return 0.0
+        if max_time <= 0.0:
+            return 0.0
 
-    border_low, border_high, p_low, p_high = _get_border_probabilities(max_time)
-    n_violations = 0
-    n_violations_low = 0
-    n_violations_high = 0
+        border_low, border_high, p_low, p_high = _get_border_probabilities(max_time)
+        n_violations = 0
+        n_violations_low = 0
+        n_violations_high = 0
 
-    for i in range(len(spike_train) - 1):
-        for j in range(i + 1, len(spike_train)):
-            diff = spike_train[j] - spike_train[i]
+        for i in range(len(spike_train) - 1):
+            for j in range(i + 1, len(spike_train)):
+                diff = spike_train[j] - spike_train[i]
 
-            if diff > border_high:
-                break
-            if diff == border_high:
-                n_violations_high += 1
-            elif diff == border_low:
-                n_violations_low += 1
-            else:
-                n_violations += 1
+                if diff > border_high:
+                    break
+                if diff == border_high:
+                    n_violations_high += 1
+                elif diff == border_low:
+                    n_violations_low += 1
+                else:
+                    n_violations += 1
 
-    return n_violations + p_high * n_violations_high + p_low * n_violations_low
+        return n_violations + p_high * n_violations_high + p_low * n_violations_low
 
+    @numba.jit((numba.int64[:], numba.int64[:], numba.float32), nopython=True, nogil=True, cache=True)
+    def compute_nb_coincidence(spike_train1, spike_train2, max_time) -> float:
+        """
+        Computes the number of coincident spikes between two spike trains.
+        Spike timings are integers, so their real timing follows a uniform distribution between t - dt/2 and t + dt/2.
+        Under the assumption that the uniform distributions from two spikes are independent, we can compute the probability
+        of those two spikes being closer than the coincidence window:
+        f(x) = 1/2 (x+1)² if -1 <= x <= 0
+        f(x) = 1/2 (1-x²) + x if 0 <= x <= 1
+        where x is the distance between max_time floor/ceil(max_time)
 
-@numba.jit((numba.int64[:], numba.int64[:], numba.float32), nopython=True, nogil=True, cache=True)
-def compute_nb_coincidence(spike_train1, spike_train2, max_time) -> float:
-    """
-    Computes the number of coincident spikes between two spike trains.
-    Spike timings are integers, so their real timing follows a uniform distribution between t - dt/2 and t + dt/2.
-    Under the assumption that the uniform distributions from two spikes are independent, we can compute the probability
-    of those two spikes being closer than the coincidence window:
-    f(x) = 1/2 (x+1)² if -1 <= x <= 0
-    f(x) = 1/2 (1-x²) + x if 0 <= x <= 1
-    where x is the distance between max_time floor/ceil(max_time)
+        @param spike_train1: array[int64] (n_spikes1)
+            The spike train of the first unit.
+        @param spike_train2: array[int64] (n_spikes2)
+            The spike train of the second unit.
+        @param max_time: float32
+            The maximum time to consider for coincidence (in number samples).
+        @return n_coincidence: float
+            The number of coincident spikes.
+        """
 
-    @param spike_train1: array[int64] (n_spikes1)
-        The spike train of the first unit.
-    @param spike_train2: array[int64] (n_spikes2)
-        The spike train of the second unit.
-    @param max_time: float32
-        The maximum time to consider for coincidence (in number samples).
-    @return n_coincidence: float
-        The number of coincident spikes.
-    """
+        if max_time <= 0:
+            return 0.0
 
-    if max_time <= 0:
-        return 0.0
+        border_low, border_high, p_low, p_high = _get_border_probabilities(max_time)
+        n_coincident = 0
+        n_coincident_low = 0
+        n_coincident_high = 0
 
-    border_low, border_high, p_low, p_high = _get_border_probabilities(max_time)
-    n_coincident = 0
-    n_coincident_low = 0
-    n_coincident_high = 0
+        start_j = 0
+        for i in range(len(spike_train1)):
+            for j in range(start_j, len(spike_train2)):
+                diff = spike_train1[i] - spike_train2[j]
 
-    start_j = 0
-    for i in range(len(spike_train1)):
-        for j in range(start_j, len(spike_train2)):
-            diff = spike_train1[i] - spike_train2[j]
+                if diff > border_high:
+                    start_j += 1
+                    continue
+                if diff < -border_high:
+                    break
+                if abs(diff) == border_high:
+                    n_coincident_high += 1
+                elif abs(diff) == border_low:
+                    n_coincident_low += 1
+                else:
+                    n_coincident += 1
 
-            if diff > border_high:
-                start_j += 1
-                continue
-            if diff < -border_high:
-                break
-            if abs(diff) == border_high:
-                n_coincident_high += 1
-            elif abs(diff) == border_low:
-                n_coincident_low += 1
-            else:
-                n_coincident += 1
-
-    return n_coincident + p_high * n_coincident_high + p_low * n_coincident_low
+        return n_coincident + p_high * n_coincident_high + p_low * n_coincident_low
 
 
 def estimate_contamination(spike_train: np.ndarray, sf: float, T: int, refractory_period: tuple[float, float]) -> float:
