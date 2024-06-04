@@ -11,7 +11,7 @@ class MotionWidget(BaseWidget):
 
     Parameters
     ----------
-    motion_info: dict
+    motion_info : dict
         The motion info return by correct_motion() or load back with load_motion_info()
     recording : RecordingExtractor, default: None
         The recording extractor object (only used to get "real" times)

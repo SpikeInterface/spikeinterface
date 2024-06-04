@@ -18,15 +18,15 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks, specify the block index you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     """
 
