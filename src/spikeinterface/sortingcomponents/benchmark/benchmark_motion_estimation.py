@@ -5,7 +5,6 @@ from pathlib import Path
 import pickle
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 from spikeinterface.core import get_noise_levels
@@ -289,6 +288,7 @@ class MotionEstimationStudy(BenchmarkStudy):
                 ax.set_ylim(0, lim)
 
     def plot_summary_errors(self, case_keys=None, show_legend=True, figsize=(15, 5)):
+        import matplotlib.pyplot as plt
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
