@@ -17,11 +17,11 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
 
     Returns
     -------
-    recording: BinaryFolderRecording
+    recording : BinaryFolderRecording
         The recording
     """
 

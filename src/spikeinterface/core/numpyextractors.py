@@ -27,13 +27,13 @@ class NumpyRecording(BaseRecording):
 
     Parameters
     ----------
-    traces_list:  list of array or array (if mono segment)
+    traces_list :  list of array or array (if mono segment)
         The traces to instantiate a mono or multisegment Recording
-    sampling_frequency: float
+    sampling_frequency : float
         The sampling frequency in Hz
-    t_starts: None or list of float
+    t_starts : None or list of float
         Times in seconds of the first sample for each segment
-    channel_ids: list
+    channel_ids : list
         An optional list of channel_ids. If None, linear channels are assumed
     """
 
@@ -127,19 +127,19 @@ class SharedMemoryRecording(BaseRecording):
 
     Parameters
     ----------
-    shm_names: list
+    shm_names : list
         List of sharedmem names for each segment
-    shape_list: list
+    shape_list : list
         List of shape of sharedmem buffer for each segment
         The first dimension is the number of samples, the second is the number of channels.
         Note that the number of channels must be the same for all segments
-    sampling_frequency: float
+    sampling_frequency : float
         The sampling frequency in Hz
-    t_starts: None or list of float
+    t_starts : None or list of float
         Times in seconds of the first sample for each segment
-    channel_ids: list
+    channel_ids : list
         An optional list of channel_ids. If None, linear channels are assumed
-    main_shm_owner: bool, default: True
+    main_shm_owner : bool, default: True
         If True, the main instance will unlink the sharedmem buffer when deleted
     """
 
@@ -246,11 +246,11 @@ class NumpySorting(BaseSorting):
 
     Parameters
     ----------
-    spikes:  numpy.array
+    spikes :  numpy.array
         A numpy vector, the one given by Sorting.to_spike_vector().
-    sampling_frequency: float
+    sampling_frequency : float
         The sampling frequency in Hz
-    channel_ids: list
+    channel_ids : list
         A list of unit_ids.
     """
 
@@ -302,11 +302,11 @@ class NumpySorting(BaseSorting):
 
         Parameters
         ----------
-        times_list: list of array (or array)
+        times_list : list of array (or array)
             An array of spike times (in frames)
-        labels_list: list of array (or array)
+        labels_list : list of array (or array)
             An array of spike labels corresponding to the given times
-        unit_ids: list or None, default: None
+        unit_ids : list or None, default: None
             The explicit list of unit_ids that should be extracted from labels_list
             If None, then it will be np.unique(labels_list)
         """
@@ -352,7 +352,7 @@ class NumpySorting(BaseSorting):
 
         Parameters
         ----------
-        dict_list: list of dict
+        dict_list : list of dict
         """
         if isinstance(units_dict_list, dict):
             units_dict_list = [units_dict_list]
@@ -445,7 +445,7 @@ class NumpySorting(BaseSorting):
             Peaks array as returned by the 'detect_peaks()' function
         sampling_frequency : float
             the sampling frequency in Hz
-        unit_ids: np.array
+        unit_ids : np.array
             The unit_ids vector which is generally the channel_ids but can be different.
 
         Returns
@@ -593,14 +593,14 @@ class NumpySnippets(BaseSnippets):
 
     Parameters
     ----------
-    snippets_list:  list of array or array (if mono segment)
+    snippets_list :  list of array or array (if mono segment)
         The snippets to instantiate a mono or multisegment basesnippet
-    spikesframes_list: list of array or array (if mono segment)
+    spikesframes_list : list of array or array (if mono segment)
         Frame of each snippet
-    sampling_frequency: float
+    sampling_frequency : float
         The sampling frequency in Hz
 
-    channel_ids: list
+    channel_ids : list
         An optional list of channel_ids. If None, linear channels are assumed
     """
 
@@ -666,14 +666,14 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
 
         Parameters
         ----------
-        indices: list[int]
+        indices : list[int]
             Indices of the snippets to return
-        channel_indices: Union[list, None], default: None
+        channel_indices : Union[list, None], default: None
             Indices of channels to return, or all channels if None
 
         Returns
         -------
-        snippets: np.ndarray
+        snippets : np.ndarray
             Array of snippets, num_snippets x num_samples x num_channels
         """
         if indices is None:
@@ -689,13 +689,13 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
 
         Parameters
         ----------
-        start_frame: Union[int, None], default: None
+        start_frame : Union[int, None], default: None
             start sample index, or zero if None
-        end_frame: Union[int, None], default: None
+        end_frame : Union[int, None], default: None
             end_sample, or number of samples if None
         Returns
         -------
-        snippets: slice
+        snippets : slice
             slice of selected snippets
         """
         # must be implemented in subclass
@@ -713,7 +713,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         """Returns the frames of the snippets in this segment
 
         Returns:
-            SampleIndex: Number of samples in the segment
+            SampleIndex : Number of samples in the segment
         """
         if indices is None:
             return self._spikestimes

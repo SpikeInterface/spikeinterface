@@ -13,24 +13,24 @@ class SplitUnitSorting(BaseSorting):
 
     Parameters
     ----------
-    parent_sorting: Recording
+    parent_sorting : Recording
         The recording object
-    parent_unit_id: int
+    parent_unit_id : int
         Unit id of the unit to split
-    indices_list: list or np.array
+    indices_list : list or np.array
         A list of index arrays selecting the spikes to split in each segment.
         Each array can contain more than 2 indices (e.g. for splitting in 3 or more units) and it should
         be the same length as the spike train (for each segment).
         If the sorting has only one segment, indices_list can be a single array
-    new_unit_ids: int
+    new_unit_ids : int
         Unit ids of the new units to be created
-    properties_policy: "keep" | "remove", default: "keep"
+    properties_policy : "keep" | "remove", default: "keep"
         Policy used to propagate properties. If "keep" the properties will be passed to the new units
          (if the units_to_merge have the same value). If "remove" the new units will have an empty
          value for all the properties of the new unit
     Returns
     -------
-    sorting: Sorting
+    sorting : Sorting
         Sorting object with the selected units split
     """
 
