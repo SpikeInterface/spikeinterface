@@ -24,11 +24,11 @@ def test_benchmark_merging():
     gt_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
 
     splitted_sorting = {}
-    splitted_sorting['times'] = split_sorting_by_times(gt_analyzer)
-    splitted_sorting['amplitudes'] = split_sorting_by_amplitudes(gt_analyzer)
+    splitted_sorting["times"] = split_sorting_by_times(gt_analyzer)
+    splitted_sorting["amplitudes"] = split_sorting_by_amplitudes(gt_analyzer)
 
     cases = {}
-    for splits in ['times', 'amplitudes']:
+    for splits in ["times", "amplitudes"]:
         for method in ["circus", "lussac"]:
             cases[(method, splits)] = {
                 "label": f"{method}",
@@ -36,7 +36,6 @@ def test_benchmark_merging():
                 "init_kwargs": {"gt_sorting": gt_sorting, "splitted_cells": splitted_sorting[splits][1]},
                 "params": {"method": method, "splitted_sorting": splitted_sorting[splits][0], "method_kwargs": {}},
             }
-
 
     if study_folder.exists():
         shutil.rmtree(study_folder)

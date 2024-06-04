@@ -517,12 +517,12 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
 
 
 def split_sorting_by_times(sorting_or_sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95):
-    
+
     if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
         sorting = sorting_or_sorting_analyzer.sorting
     else:
         sorting = sorting_or_sorting_analyzer
-        
+
     sorting_split = sorting.select_units(sorting.unit_ids)
     split_units = []
     original_units = []

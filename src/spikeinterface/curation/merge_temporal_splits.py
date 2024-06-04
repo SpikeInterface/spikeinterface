@@ -1,7 +1,7 @@
 from __future__ import annotations
 import numpy as np
 
-from .auto_merge import check_improve_contaminations_score, compute_templates_diff,compute_refrac_period_violations
+from .auto_merge import check_improve_contaminations_score, compute_templates_diff, compute_refrac_period_violations
 
 
 def presence_distance(sorting, unit1, unit2, bin_duration_s=2, percentile_norm=90, bins=None):
@@ -55,6 +55,7 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, percentile_norm=9
 
     return d
 
+
 def compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs):
     """
     Get the potential drift-related merges based on similarity and presence completeness.
@@ -97,21 +98,22 @@ def compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs):
     return presence_distances
 
 
-def get_potential_temporal_splits(sorting_analyzer, 
-                                  minimum_spikes=100,
-                                  presence_distance_threshold=0.1, 
-                                  template_diff_thresh=0.25,
-                                  censored_period_ms=0.3,
-                                  refractory_period_ms=1.0,
-                                  num_channels=5,
-                                  num_shift=5,
-                                  contamination_threshold=0.2,
-                                  firing_contamination_balance=1.5,
-                                  extra_outputs=False,
-                                  steps=None,
-                                  template_metric="l1",
-                                  **presence_distance_kwargs):
-    
+def get_potential_temporal_splits(
+    sorting_analyzer,
+    minimum_spikes=100,
+    presence_distance_threshold=0.1,
+    template_diff_thresh=0.25,
+    censored_period_ms=0.3,
+    refractory_period_ms=1.0,
+    num_channels=5,
+    num_shift=5,
+    contamination_threshold=0.2,
+    firing_contamination_balance=1.5,
+    extra_outputs=False,
+    steps=None,
+    template_metric="l1",
+    **presence_distance_kwargs,
+):
     """
     Algorithm to find and check potential temporal merges between units.
 
@@ -129,7 +131,7 @@ def get_potential_temporal_splits(sorting_analyzer,
 
         Q = f(1 - (k + 1)C)
 
-    
+
     """
 
     import scipy
@@ -162,7 +164,7 @@ def get_potential_temporal_splits(sorting_analyzer,
         to_remove = num_spikes < minimum_spikes
         pair_mask[to_remove, :] = False
         pair_mask[:, to_remove] = False
-    
+
     # STEP 2 : remove contaminated auto corr
     if "remove_contaminated" in steps:
         contaminations, nb_violations = compute_refrac_period_violations(
@@ -173,7 +175,7 @@ def get_potential_temporal_splits(sorting_analyzer,
         to_remove = contaminations > contamination_threshold
         pair_mask[to_remove, :] = False
         pair_mask[:, to_remove] = False
-    
+
     # STEP 2 : check if potential merge with CC also have template similarity
     if "template_similarity" in steps:
         templates_ext = sorting_analyzer.get_extension("templates")
@@ -182,7 +184,7 @@ def get_potential_temporal_splits(sorting_analyzer,
         ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
 
         templates_array = templates_ext.get_data(outputs="numpy")
-        
+
         templates_diff = compute_templates_diff(
             sorting,
             templates_array,
@@ -196,7 +198,7 @@ def get_potential_temporal_splits(sorting_analyzer,
         pair_mask = pair_mask & (templates_diff < template_diff_thresh)
 
     # STEP 3 : validate the potential merges with CC increase the contamination quality metrics
-    if "presence_distance" in steps:        
+    if "presence_distance" in steps:
         presence_distances = compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs)
         pair_mask = pair_mask & (presence_distances < presence_distance_threshold)
 
@@ -209,8 +211,8 @@ def get_potential_temporal_splits(sorting_analyzer,
             firing_contamination_balance,
             refractory_period_ms,
             censored_period_ms,
-       )
-    
+        )
+
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
     potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
