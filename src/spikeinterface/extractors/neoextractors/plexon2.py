@@ -13,13 +13,13 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     """
 
@@ -48,9 +48,9 @@ class Plexon2SortingExtractor(NeoBaseSortingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    sampling_frequency: float, default: None
+    sampling_frequency : float, default: None
         The sampling frequency of the sorting (required for multiple streams with different sampling frequencies).
     """
 
@@ -82,7 +82,7 @@ class Plexon2EventExtractor(NeoBaseEventExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
 
     """
 

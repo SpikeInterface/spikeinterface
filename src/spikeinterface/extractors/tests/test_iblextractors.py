@@ -4,7 +4,6 @@ from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
-import requests
 
 from spikeinterface.extractors import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
 
@@ -16,6 +15,7 @@ PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 class TestDefaultIblRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
+        import requests
         from one.api import ONE
 
         cls.eid = EID

@@ -6,24 +6,13 @@ from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.widgets import (
     plot_probe_map,
     plot_agreement_matrix,
-    plot_comparison_collision_by_similarity,
-    plot_unit_templates,
-    plot_unit_waveforms,
 )
-from spikeinterface.comparison.comparisontools import make_matching_events
 
-import matplotlib.patches as mpatches
 
-# from spikeinterface.postprocessing import get_template_extremum_channel
-from spikeinterface.core import get_noise_levels
-
-import pylab as plt
 import numpy as np
 
 
 from .benchmark_tools import BenchmarkStudy, Benchmark
-from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
@@ -180,6 +169,7 @@ class ClusteringStudy(BenchmarkStudy):
     def plot_agreements(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -193,6 +183,7 @@ class ClusteringStudy(BenchmarkStudy):
     def plot_performances_vs_snr(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
 
@@ -218,6 +209,7 @@ class ClusteringStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -254,6 +246,7 @@ class ClusteringStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -308,6 +301,7 @@ class ClusteringStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -365,6 +359,7 @@ class ClusteringStudy(BenchmarkStudy):
         return fig
 
     def plot_unit_losses(self, case_before, case_after, metric="agreement", figsize=None):
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
 
@@ -407,6 +402,7 @@ class ClusteringStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         num_methods = len(case_keys)
         fig, axs = plt.subplots(ncols=num_methods, nrows=num_methods, figsize=(10, 10))
@@ -442,6 +438,8 @@ class ClusteringStudy(BenchmarkStudy):
                         ax.set_xticks([])
                     if i == num_methods - 1 and j == num_methods - 1:
                         patches = []
+                        import matplotlib.patches as mpatches
+
                         for color, name in zip(colors, performance_names):
                             patches.append(mpatches.Patch(color=color, label=name))
                         ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
@@ -460,6 +458,7 @@ class ClusteringStudy(BenchmarkStudy):
     def plot_some_over_merged(self, case_keys=None, overmerged_score=0.05, max_units=5, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         figs = []
         for count, key in enumerate(case_keys):
@@ -498,6 +497,7 @@ class ClusteringStudy(BenchmarkStudy):
     def plot_some_over_splited(self, case_keys=None, oversplit_score=0.05, max_units=5, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         figs = []
         for count, key in enumerate(case_keys):
