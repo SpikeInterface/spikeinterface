@@ -55,17 +55,15 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         sparsity = self.sorting_analyzer.sparsity
         if sparsity is not None:
             mask = sparsity.mask
-            if self.params['common_support'] == 'dense':
-                mask = np.ones((templates_array.shape[0], templates_array.shape[0], templates_array.shape[2]), dtype=bool)
-            elif self.params['common_support'] == 'intersection':
+            if self.params["common_support"] == "dense":
+                mask = np.ones(
+                    (templates_array.shape[0], templates_array.shape[0], templates_array.shape[2]), dtype=bool
+                )
+            elif self.params["common_support"] == "intersection":
                 mask = np.logical_and(mask, mask[:, None])
 
         similarity = compute_similarity_with_templates_array(
-            templates_array, 
-            templates_array, 
-            method=self.params["method"], 
-            n_shifts=n_shifts, 
-            support=mask
+            templates_array, templates_array, method=self.params["method"], n_shifts=n_shifts, support=mask
         )
         self.data["similarity"] = similarity
 
@@ -79,8 +77,9 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 
 def compute_similarity_with_templates_array(templates_array, other_templates_array, method, n_shifts, support=None):
-    
+
     import sklearn.metrics.pairwise
+
     if method in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS:
         nb_templates = templates_array.shape[0]
         assert templates_array.shape[0] == other_templates_array.shape[0]
@@ -91,19 +90,17 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
         for count, shift in enumerate(range(-n_shifts, n_shifts + 1)):
             for i in range(nb_templates):
                 templates_flat = templates_array[i, n_shifts : n - n_shifts].reshape(1, -1)
-                
+
                 other_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift]
-                other_templates_flat = (other_templates * support[i][:, None, :]).reshape(
-                    templates_array.shape[0], -1
-                )
+                other_templates_flat = (other_templates * support[i][:, None, :]).reshape(templates_array.shape[0], -1)
                 similarity[count, i] = sklearn.metrics.pairwise.pairwise_distances(
                     templates_flat, other_templates_flat, metric=method
                 )
-            
+
         similarity = np.min(similarity, axis=0)
         if method == "cosine":
             similarity = 1 - similarity
-            
+
     else:
         raise ValueError(f"compute_template_similarity (method {method}) not exists")
 
