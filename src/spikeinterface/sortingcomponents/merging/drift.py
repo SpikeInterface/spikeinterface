@@ -5,6 +5,8 @@ from .main import BaseMergingEngine
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph, apply_merges_to_sorting
+from spikeinterface.curation.merge_temporal_splits import get_potential_temporal_splits
+from spikeinterface.curation.auto_merge import get_potential_auto_merge
 
 class DriftMerging(BaseMergingEngine):
     """
@@ -13,9 +15,17 @@ class DriftMerging(BaseMergingEngine):
 
     default_params = {
         "templates": None,
-        "similarity_threshold": 0.7,
-        "presence_distance_threshold": 0.1,
-        "bin_duration_s": 2,
+        "curation_kwargs" : {
+            "minimum_spikes": 50,
+            "corr_diff_thresh": 0.5,
+            "template_metric": "cosine",
+            "num_channels": None,
+            "num_shift": 5,
+        },
+        "temporal_splits_kwargs" :  {
+            "minimum_spikes": 50,
+            "presence_distance_threshold": 0.1,
+        }
     }
 
     def __init__(self, recording, sorting, kwargs):
@@ -38,7 +48,8 @@ class DriftMerging(BaseMergingEngine):
         self.analyzer.compute(["template_similarity"])
 
     def run(self, extra_outputs=False):
-        merges = get_potential_drift_merges(self.analyzer, **self.default_params)
+        merges = get_potential_auto_merge(self.analyzer, **self.default_params['curation_kwargs'])
+        merges += get_potential_temporal_splits(self.analyzer, **self.default_params['temporal_splits_kwargs'])
         merges = resolve_merging_graph(self.sorting, merges)
         sorting = apply_merges_to_sorting(self.sorting, merges)
         if extra_outputs:
