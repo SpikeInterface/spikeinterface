@@ -149,25 +149,24 @@ def apply_fshift_optimized(sig, sample_shifts, axis=0):
     import scipy.fft
 
     n = sig.shape[axis]
-    sig_f = scipy.fft.rfft(sig, axis=axis, overwrite_x=True)
+    sig_f = scipy.fft.rfft(sig, n=n, axis=axis, overwrite_x=True)
 
-    # Using np.fft.rfftfreq to get the frequency bins directly
-    omega = 2 * np.pi * np.fft.rfftfreq(n)
+    num_channels = sample_shifts.size
+    fourier_signal_size = sig_f.shape[axis]
 
-    # Adjust shifts for the appropriate axis without unnecessary broadcasting
     if axis == 0:
-        shifts = omega[:, np.newaxis] * sample_shifts[np.newaxis, :]
+        omega = np.empty(shape=(fourier_signal_size, num_channels))
+        omega[:, :] = 2 * np.pi * np.fft.rfftfreq(n)[:, np.newaxis]
+        shifts = np.multiply(omega, sample_shifts[np.newaxis, :], out=omega)
     else:
-        shifts = omega[np.newaxis, :] * sample_shifts[:, np.newaxis]
+        raise NotImplementedError("Axis != 0 is not implemented yet")
 
     # Avoid creating large intermediate arrays by directly computing the phase shift
     phase_shift = np.exp(-1j * shifts)
+    phase_shifted_signal = np.multiply(sig_f, phase_shift, out=phase_shift)
 
-    # In-place multiplication if possible to save memory
-    sig_f *= phase_shift
-
-    sig_shift = scipy.fft.irfft(sig_f, n=n, axis=axis, overwrite_x=True)
-    return sig_shift
+    translated_signal = scipy.fft.irfft(phase_shifted_signal, n=n, axis=axis, overwrite_x=True)
+    return translated_signal
 
 
 apply_fshift = apply_fshift_sam
