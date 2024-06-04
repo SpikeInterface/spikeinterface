@@ -128,5 +128,6 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
 # # Fit the pipeline
 # pipeline.fit(X, y)
 
-# # Save the pipeline to a file
-# pkl.dump(pipeline, 'trained_pipeline.pkl')
+# # Save the pipeline to a pickle file
+# with open("trained_pipeline.pkl", "wb") as f:
+#     pkl.dump(pipeline, f)
