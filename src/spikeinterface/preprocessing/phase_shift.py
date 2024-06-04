@@ -103,7 +103,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             window_on_margin=True,
         )
         if self.use_optimized:
-            traces_shift = apply_fshift_optimized(traces_chunk, self.sample_shifts[channel_indices], axis=0)
+            traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
         else:
             traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts[channel_indices], axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
@@ -142,31 +142,61 @@ def apply_fshift_sam(sig, sample_shifts, axis=0):
     return sig_shift
 
 
-def apply_fshift_optimized(sig, sample_shifts, axis=0):
+def apply_frequency_shift(signal, shift_samples, axis=0):
     """
-    Apply the shift on a traces buffer.
+    Apply frequency shift to a signal buffer.
+
+    Parameters
+    ----------
+    signal : ndarray
+        Input signal array to be shifted.
+    shift_samples : ndarray
+        Array of sample shifts for each channel. Phase shifts are in units of 1/sampling_rate.
+    axis : int, optional
+        Axis along which to perform the shift. Currently, only axis=0 is supported.
+
+    Returns
+    -------
+    shifted_signal : ndarray
+        Signal array with the applied frequency shifts.
+
+    Notes
+    -----
+    The function works by transforming the signal to the frequency domain using the real FFT (rFFT),
+    applying phase shifts, and then transforming back to the time domain using the inverse real FFT (irFFT).
+    The phase shifts are calculated based on the frequency grid obtained from the FFT.
+
+    The key steps are:
+    1. Compute the rFFT of the input signal.
+    2. Calculate the frequency grid and use it to compute the phase shifts.
+    3. Apply the phase shifts in the frequency domain.
+    4. Perform the inverse rFFT to obtain the shifted signal in the time domain.
+
+    This method leverages the properties of the Fourier transform, where a phase shift in the frequency domain
+    corresponds to a time shift in the time domain.
     """
     import scipy.fft
 
-    n = sig.shape[axis]
-    sig_f = scipy.fft.rfft(sig, n=n, axis=axis, overwrite_x=True)
+    signal_length = signal.shape[axis]
+    num_channels = shift_samples.size
+    fourier_signal_size = signal_length // 2 + 1
 
-    num_channels = sample_shifts.size
-    fourier_signal_size = sig_f.shape[axis]
+    frequency_domain_signal = scipy.fft.rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
 
     if axis == 0:
-        omega = np.empty(shape=(fourier_signal_size, num_channels))
-        omega[:, :] = 2 * np.pi * np.fft.rfftfreq(n)[:, np.newaxis]
-        shifts = np.multiply(omega, sample_shifts[np.newaxis, :], out=omega)
+        frequency_grid = np.empty(shape=(fourier_signal_size, num_channels))
+        frequency_grid[:, :] = 2 * np.pi * np.fft.rfftfreq(signal_length)[:, np.newaxis]
+        shifts = np.multiply(frequency_grid, shift_samples[np.newaxis, :], out=frequency_grid)
     else:
         raise NotImplementedError("Axis != 0 is not implemented yet")
 
-    # Avoid creating large intermediate arrays by directly computing the phase shift
-    phase_shift = np.exp(-1j * shifts)
-    phase_shifted_signal = np.multiply(sig_f, phase_shift, out=phase_shift)
+    # Rotate the signal in the frequency domain
+    rotations = np.exp(-1j * shifts)
+    phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
 
-    translated_signal = scipy.fft.irfft(phase_shifted_signal, n=n, axis=axis, overwrite_x=True)
-    return translated_signal
+    # Inverse FFT to get the translated signal
+    shifted_signal = scipy.fft.irfft(phase_shifted_signal, n=signal_length, axis=axis, overwrite_x=True)
+    return shifted_signal
 
 
 apply_fshift = apply_fshift_sam
