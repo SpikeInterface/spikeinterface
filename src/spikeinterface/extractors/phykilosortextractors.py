@@ -172,7 +172,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 if load_all_cluster_properties:
                     # pandas loads strings as objects
                     if cluster_info[prop_name].values.dtype.kind == "O":
-                        prop_dtype = type(cluster_info[prop_name].values[0])
+                        for value in cluster_info[prop_name].values:
+                            if isinstance(value, (np.floating, float)) and np.isnan(value):  # Blank values are encoded as 'NaN'.
+                                continue
+                                
+                            prop_dtype = type(value)
+                            break
                         values_ = cluster_info[prop_name].values.astype(prop_dtype)
                     else:
                         values_ = cluster_info[prop_name].values
