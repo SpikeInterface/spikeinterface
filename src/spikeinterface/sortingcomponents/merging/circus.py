@@ -52,8 +52,16 @@ class CircusMerging(BaseMergingEngine):
         self.analyzer.compute(["template_similarity"])
 
     def run(self, extra_outputs=False):
-        merges = get_potential_auto_merge(self.analyzer, **self.default_params["curation_kwargs"])
-        merges += get_potential_temporal_splits(self.analyzer, **self.default_params["temporal_splits_kwargs"])
+        curation_kwargs = self.default_params.get('curation_kwargs', None)
+        if curation_kwargs is not None:
+            merges = get_potential_auto_merge(self.analyzer, **curation_kwargs)
+        else:
+            merges = []
+
+        temporal_splits_kwargs = self.default_params.get('temporal_splits_kwargs', None)
+        if temporal_splits_kwargs is not None:
+            merges += get_potential_temporal_splits(self.analyzer, **temporal_splits_kwargs)
+
         merges = resolve_merging_graph(self.sorting, merges)
         sorting = apply_merges_to_sorting(self.sorting, merges)
         if extra_outputs:
