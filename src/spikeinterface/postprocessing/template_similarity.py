@@ -59,7 +59,6 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 mask = np.ones((templates_array.shape[0], templates_array.shape[0], templates_array.shape[2]), dtype=bool)
             elif self.params['common_support'] == 'intersection':
                 mask = np.logical_and(mask, mask[:, None])
-            print(mask.shape)
 
         similarity = compute_similarity_with_templates_array(
             templates_array, 
@@ -111,10 +110,10 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
     return similarity
 
 
-def compute_template_similarity_by_pair(sorting_analyzer_1, sorting_analyzer_2, method="cosine_similarity"):
+def compute_template_similarity_by_pair(sorting_analyzer_1, sorting_analyzer_2, method="cosine", **kwargs):
     templates_array_1 = get_dense_templates_array(sorting_analyzer_1, return_scaled=True)
     templates_array_2 = get_dense_templates_array(sorting_analyzer_2, return_scaled=True)
-    similarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method)
+    similarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method, **kwargs)
     return similarity
 
 
