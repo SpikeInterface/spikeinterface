@@ -8,11 +8,11 @@ import shutil
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset, cache_folder
 from spikeinterface.sortingcomponents.benchmark.benchmark_merging import MergingStudy
-from spikeinterface.generation.drift_tools import split_sorting_by_amplitudes
+from spikeinterface.generation.drift_tools import split_sorting_by_amplitudes, split_sorting_by_times
 
 
 @pytest.mark.skip()
-def test_benchmark_clustering():
+def test_benchmark_merging():
 
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
@@ -24,16 +24,21 @@ def test_benchmark_clustering():
     datasets = {"toy": gt_analyzer}
 
     gt_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
-    new_sorting_amp, splitted_cells_amp = split_sorting_by_amplitudes(gt_analyzer)
+
+    splitted_sorting = {}
+    splitted_sorting['times'] = split_sorting_by_times(gt_analyzer)
+    splitted_sorting['amplitudes'] = split_sorting_by_amplitudes(gt_analyzer)
 
     cases = {}
-    for method in ["circus", "lussac"]:
-        cases[method] = {
-            "label": f"{method} on toy",
-            "dataset": "toy",
-            "init_kwargs": {"gt_sorting": gt_sorting, "splitted_cells": splitted_cells_amp},
-            "params": {"method": method, "splitted_sorting": new_sorting_amp, "method_kwargs": {}},
-        }
+    for splits in ['times', 'amplitudes']:
+        for method in ["circus", "lussac"]:
+            cases[(method, splits)] = {
+                "label": f"{method}",
+                "dataset": "toy",
+                "init_kwargs": {"gt_sorting": gt_sorting, "splitted_cells": splitted_sorting[splits][1]},
+                "params": {"method": method, "splitted_sorting": splitted_sorting[splits][0], "method_kwargs": {}},
+            }
+
 
     if study_folder.exists():
         shutil.rmtree(study_folder)
@@ -57,7 +62,7 @@ def test_benchmark_clustering():
     # plots
     # study.plot_performances_vs_snr()
     study.plot_agreements()
-    # study.plot_comparison_clustering()
+    study.plot_unit_counts()
     # study.plot_error_metrics()
     # study.plot_metrics_vs_snr()
     # study.plot_run_times()
