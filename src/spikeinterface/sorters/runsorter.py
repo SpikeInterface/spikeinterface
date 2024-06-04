@@ -141,7 +141,7 @@ def run_sorter(
     >>> sorting = run_sorter("tridesclous", recording)
     """
 
-    if output_folder is not None:
+    if output_folder is not None and folder is None:
         deprecation_msg = (
             "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
         )
@@ -229,7 +229,7 @@ def run_sorter_local(
     if isinstance(recording, list):
         raise Exception("If you want to run several sorters/recordings use run_sorter_jobs(...)")
 
-    if output_folder is not None:
+    if output_folder is not None and folder is None:
         deprecation_msg = (
             "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
         )
@@ -331,7 +331,7 @@ def run_sorter_container(
 
     assert installation_mode in ("auto", "pypi", "github", "folder", "dev", "no-install")
 
-    if output_folder is not None:
+    if output_folder is not None and folder is None:
         deprecation_msg = (
             "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
         )
@@ -344,7 +344,7 @@ def run_sorter_container(
 
     # common code for docker and singularity
     if folder is None:
-        output_folder = sorter_name + "_output"
+        folder = sorter_name + "_output"
 
     if container_image is None:
         if sorter_name in SORTER_DOCKER_MAP:
@@ -380,11 +380,11 @@ def run_sorter_container(
         json.dumps(check_json(sorter_params), indent=4), encoding="utf8"
     )
 
-    in_container_sorting_folder = output_folder / "in_container_sorting"
+    in_container_sorting_folder = folder / "in_container_sorting"
 
     # if in Windows, skip C:
     parent_folder_unix = path_to_unix(parent_folder)
-    output_folder_unix = path_to_unix(output_folder)
+    output_folder_unix = path_to_unix(folder)
     recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
     in_container_sorting_folder_unix = path_to_unix(in_container_sorting_folder)
 
@@ -586,7 +586,7 @@ if __name__ == '__main__':
         # this do not work with singularity:
         # cmd = f'chown {uid}:{uid} -R "{output_folder}"'
         # this approach is better
-        cmd = ["chown", f"{uid}:{uid}", "-R", f"{output_folder}"]
+        cmd = ["chown", f"{uid}:{uid}", "-R", f"{folder}"]
         res_output = container_client.run_command(cmd)
     else:
         # not needed for Windows
