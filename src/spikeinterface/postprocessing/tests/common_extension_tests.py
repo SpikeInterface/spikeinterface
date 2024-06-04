@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-import pandas as pd
 import shutil
-import platform
 from pathlib import Path
 
 from spikeinterface.core import generate_ground_truth_recording

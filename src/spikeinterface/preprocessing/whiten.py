@@ -15,17 +15,17 @@ class WhitenRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be whitened.
-    dtype: None or dtype, default: None
+    dtype : None or dtype, default: None
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
-    mode: "global" | "local", default: "global"
+    mode : "global" | "local", default: "global"
         "global" use the entire covariance matrix to compute the W matrix
         "local" use local covariance (by radius) to compute the W matrix
-    radius_um: None or float, default: None
+    radius_um : None or float, default: None
         Used for mode = "local" to get the neighborhood
-    apply_mean: bool, default: False
+    apply_mean : bool, default: False
         Substract or not the mean matrix M before the dot product with W.
     int_scale : None or float, default: None
         Apply a scaling factor to fit the integer range.
@@ -44,7 +44,7 @@ class WhitenRecording(BasePreprocessor):
 
     Returns
     -------
-    whitened_recording: WhitenRecording
+    whitened_recording : WhitenRecording
         The whitened recording extractor
     """
 

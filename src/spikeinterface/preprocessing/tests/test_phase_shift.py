@@ -1,24 +1,7 @@
-import pytest
-from pathlib import Path
-import shutil
-
 import numpy as np
-from numpy.testing import assert_array_almost_equal
 from spikeinterface import NumpyRecording
-from spikeinterface.core import generate_recording
-from spikeinterface import NumpyRecording, set_global_tmp_folder
 
 from spikeinterface.preprocessing import phase_shift
-from spikeinterface.preprocessing.phase_shift import apply_fshift
-
-import scipy.fft
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
 
 
 def create_shifted_channel():

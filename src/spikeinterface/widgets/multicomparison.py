@@ -13,17 +13,17 @@ class MultiCompGraphWidget(BaseWidget):
 
     Parameters
     ----------
-    multi_comparison: BaseMultiComparison
+    multi_comparison : BaseMultiComparison
         The multi comparison object
-    draw_labels: bool, default: False
+    draw_labels : bool, default: False
         If True unit labels are shown
-    node_cmap: matplotlib colormap, default: "viridis"
+    node_cmap : matplotlib colormap, default: "viridis"
         The colormap to be used for the nodes
-    edge_cmap: matplotlib colormap, default: "hot"
+    edge_cmap : matplotlib colormap, default: "hot"
         The colormap to be used for the edges
-    alpha_edges: float, default: 0.5
+    alpha_edges : float, default: 0.5
         Alpha value for edges
-    colorbar: bool, default: False
+    colorbar : bool, default: False
         If True a colorbar for the edges is plotted
     """
 
@@ -87,7 +87,7 @@ class MultiCompGraphWidget(BaseWidget):
             nodelist=sorted(g.nodes),
             edge_color=edge_col,
             alpha=dp.alpha_edges,
-            edge_cmap=plt.cm.get_cmap(dp.edge_cmap),
+            edge_cmap=plt.colormaps[dp.edge_cmap],
             edge_vmin=mcmp.match_score,
             edge_vmax=1,
             ax=self.ax,
@@ -106,7 +106,7 @@ class MultiCompGraphWidget(BaseWidget):
             import matplotlib.pyplot as plt
 
             norm = mpl_colors.Normalize(vmin=mcmp.match_score, vmax=1)
-            cmap = plt.cm.get_cmap(dp.edge_cmap)
+            cmap = plt.colormaps[dp.edge_cmap]
             m = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
             self.figure.colorbar(m)
 
@@ -119,15 +119,15 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
 
     Parameters
     ----------
-    multi_comparison: BaseMultiComparison
+    multi_comparison : BaseMultiComparison
         The multi comparison object
-    plot_type: "pie" | "bar", default: "pie"
+    plot_type : "pie" | "bar", default: "pie"
         The plot type
-    cmap: matplotlib colormap, default: "YlOrRd"
+    cmap : matplotlib colormap, default: "YlOrRd"
         The colormap to be used for the nodes
-    fontsize: int, default: 9
+    fontsize : int, default: 9
         The text fontsize
-    show_legend: bool, default: True
+    show_legend : bool, default: True
         If True a legend is shown
     """
 
@@ -159,7 +159,7 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         mcmp = dp.multi_comparison
-        cmap = plt.get_cmap(dp.cmap)
+        cmap = plt.colormaps[dp.cmap]
         colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(mcmp.name_list))])
         sg_names, sg_units = mcmp.compute_subgraphs()
         # fraction of units with agreement > threshold
@@ -197,15 +197,15 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
 
     Parameters
     ----------
-    multi_comparison: BaseMultiComparison
+    multi_comparison : BaseMultiComparison
         The multi comparison object
-    plot_type: "pie" | "bar", default: "pie
+    plot_type : "pie" | "bar", default: "pie
         The plot type
-    cmap: matplotlib colormap, default: "Reds"
+    cmap : matplotlib colormap, default: "Reds"
         The colormap to be used for the nodes
-    fontsize: int, default: 9
+    fontsize : int, default: 9
         The text fontsize
-    show_legend: bool
+    show_legend : bool
         Show the legend in the last axes
 
     """
@@ -242,7 +242,7 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         backend_kwargs["ncols"] = len(name_list)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        cmap = plt.get_cmap(dp.cmap)
+        cmap = plt.colormaps[dp.cmap]
         colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(mcmp.name_list))])
         sg_names, sg_units = mcmp.compute_subgraphs()
         # fraction of units with agreement > threshold

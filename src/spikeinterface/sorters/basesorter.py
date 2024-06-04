@@ -17,15 +17,14 @@ import warnings
 
 from spikeinterface.core import load_extractor, BaseRecordingSnippets
 from spikeinterface.core.core_tools import check_json
+from spikeinterface.core.globals import get_global_job_kwargs
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
 
 
-default_job_kwargs = {"n_jobs": -1}
-
 default_job_kwargs_description = {
-    "n_jobs": "Number of jobs (when saving ti binary) - default -1 (all cores)",
-    "chunk_size": "Number of samples per chunk (when saving ti binary) - default global",
+    "n_jobs": "Number of jobs (when saving to binary) - default global",
+    "chunk_size": "Number of samples per chunk (when saving to binary) - default global",
     "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default global",
     "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default global",
     "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)"
@@ -156,7 +155,7 @@ class BaseSorter:
     def default_params(cls):
         p = copy.deepcopy(cls._default_params)
         if cls.requires_binary_data:
-            job_kwargs = fix_job_kwargs(default_job_kwargs)
+            job_kwargs = get_global_job_kwargs()
             p.update(job_kwargs)
         return p
 
@@ -350,7 +349,7 @@ class BaseSorter:
 
         Returns
         -------
-        is_compiled: bool
+        is_compiled : bool
             Boolean indicating if a bash command for cls.compiled_name exists or not
         """
         if cls.compiled_name is None:

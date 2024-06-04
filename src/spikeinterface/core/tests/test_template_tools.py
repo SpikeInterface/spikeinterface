@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
 
@@ -54,10 +55,10 @@ def _get_templates_object_from_sorting_analyzer(sorting_analyzer):
 
 def test_get_template_amplitudes(sorting_analyzer):
     peak_values = get_template_amplitudes(sorting_analyzer)
-    print(peak_values)
     templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
-    peak_values = get_template_amplitudes(templates)
-    print(peak_values)
+    peak_values = get_template_amplitudes(templates, abs_value=True)
+    peak_to_peak_values = get_template_amplitudes(templates, mode="peak_to_peak")
+    assert np.all(ptp > p for ptp, p in zip(peak_to_peak_values.values(), peak_values.values()))
 
 
 def test_get_template_extremum_channel(sorting_analyzer):

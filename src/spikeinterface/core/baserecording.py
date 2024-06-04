@@ -381,6 +381,11 @@ class BaseRecording(BaseRecordingSnippets):
         bool
             True if the recording has scaled traces, False otherwise
         """
+        warnings.warn(
+            "`has_scaled_traces` is deprecated and will be removed in 0.103.0. Use has_scaleable_traces() instead",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
         return self.has_scaled()
 
     def get_time_info(self, segment_index=None) -> dict:
@@ -394,9 +399,9 @@ class BaseRecording(BaseRecordingSnippets):
         dict
             A dictionary containing the following key-value pairs:
 
-            - "sampling_frequency": The sampling frequency of the RecordingSegment.
-            - "t_start": The start time of the RecordingSegment.
-            - "time_vector": The time vector of the RecordingSegment.
+            - "sampling_frequency" : The sampling frequency of the RecordingSegment.
+            - "t_start" : The start time of the RecordingSegment.
+            - "time_vector" : The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -491,7 +496,7 @@ class BaseRecording(BaseRecordingSnippets):
         rs = self._recording_segments[segment_index]
         return rs.time_to_sample_index(time_s)
 
-    def _save(self, format="binary", **save_kwargs):
+    def _save(self, format="binary", verbose: bool = False, **save_kwargs):
         # handle t_starts
         t_starts = []
         has_time_vectors = []
@@ -510,7 +515,7 @@ class BaseRecording(BaseRecordingSnippets):
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
 
-            write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
+            write_binary_recording(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
 
@@ -540,6 +545,8 @@ class BaseRecording(BaseRecordingSnippets):
 
                 cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
             else:
+                from spikeinterface.core import NumpyRecording
+
                 cached = NumpyRecording.from_recording(self, **job_kwargs)
 
         elif format == "zarr":
@@ -547,7 +554,9 @@ class BaseRecording(BaseRecordingSnippets):
 
             zarr_path = kwargs.pop("zarr_path")
             storage_options = kwargs.pop("storage_options")
-            ZarrRecordingExtractor.write_recording(self, zarr_path, storage_options, **kwargs, **job_kwargs)
+            ZarrRecordingExtractor.write_recording(
+                self, zarr_path, storage_options, verbose=verbose, **kwargs, **job_kwargs
+            )
             cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
         elif format == "nwb":
@@ -636,6 +645,7 @@ class BaseRecording(BaseRecordingSnippets):
         warnings.warn(
             "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
             DeprecationWarning,
+            stacklevel=2,
         )
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
@@ -762,9 +772,9 @@ class BaseRecordingSegment(BaseSegment):
         dict
             A dictionary containing the following key-value pairs:
 
-            - "sampling_frequency": The sampling frequency of the RecordingSegment.
-            - "t_start": The start time of the RecordingSegment.
-            - "time_vector": The time vector of the RecordingSegment.
+            - "sampling_frequency" : The sampling frequency of the RecordingSegment.
+            - "t_start" : The start time of the RecordingSegment.
+            - "time_vector" : The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -804,7 +814,7 @@ class BaseRecordingSegment(BaseSegment):
         """Returns the number of samples in this signal segment
 
         Returns:
-            SampleIndex: Number of samples in the signal segment
+            SampleIndex : Number of samples in the signal segment
         """
         # must be implemented in subclass
         raise NotImplementedError
@@ -820,16 +830,16 @@ class BaseRecordingSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame: int | None, default: None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame: int | None, default: None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
-        channel_indices: list | np.array | tuple | None, default: None
+        channel_indices : list | np.array | tuple | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
         -------
-        traces: np.ndarray
+        traces : np.ndarray
             Array of traces, num_samples x num_channels
         """
         # must be implemented in subclass
