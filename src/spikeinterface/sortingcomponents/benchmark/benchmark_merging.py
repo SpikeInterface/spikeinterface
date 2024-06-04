@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from spikeinterface.sortingcomponents.merging import merge_spikes
-from spikeinterface.core import NumpySorting
-from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
+from spikeinterface.comparison import compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
     plot_agreement_matrix,
     plot_unit_templates,
@@ -10,11 +9,8 @@ from spikeinterface.widgets import (
     plot_crosscorrelograms,
 )
 
-import pylab as plt
-import matplotlib.patches as mpatches
 import numpy as np
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
-from spikeinterface.core.basesorting import minimum_spike_dtype
 
 
 class MergingBenchmark(Benchmark):
@@ -95,6 +91,8 @@ class MergingStudy(BenchmarkStudy):
         return count_units
 
     def plot_agreements(self, case_keys=None, figsize=(15, 15)):
+        import matplotlib.pyplot as plt
+
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
@@ -171,7 +169,7 @@ class MergingStudy(BenchmarkStudy):
         src, tgt = splits[:, 0], splits[:, 1]
         src = analyzer.sorting.ids_to_indices(src)
         tgt = analyzer.sorting.ids_to_indices(tgt)
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=2, nrows=2, figsize=figsize, squeeze=True)
         axs[0, 0].scatter(distances["similarity"].flatten(), distances["time_distance"].flatten(), c="k", alpha=0.25)

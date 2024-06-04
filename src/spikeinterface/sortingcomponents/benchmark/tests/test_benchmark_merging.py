@@ -1,7 +1,5 @@
 import pytest
-import pandas as pd
 from pathlib import Path
-import matplotlib.pyplot as plt
 import numpy as np
 
 import shutil
@@ -68,7 +66,8 @@ def test_benchmark_merging():
     # study.plot_run_times()
     # study.plot_metrics_vs_snr("cosine")
     # study.homogeneity_score(ignore_noise=False)
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.show()
 
 
 if __name__ == "__main__":
