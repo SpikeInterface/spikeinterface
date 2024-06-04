@@ -29,8 +29,16 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = "IntanRawIO"
     name = "intan"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False, use_names_as_ids=False):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
+    def __init__(
+        self,
+        file_path,
+        stream_id=None,
+        stream_name=None,
+        all_annotations=False,
+        use_names_as_ids=False,
+        ignore_integrity_checks: bool = False,
+    ):
+        neo_kwargs = self.map_to_neo_kwargs(file_path, ignore_integrity_checks=ignore_integrity_checks)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -43,8 +51,8 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(file_path)}
+    def map_to_neo_kwargs(cls, file_path, ignore_integrity_checks: bool = False):
+        neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
         return neo_kwargs
 
 
