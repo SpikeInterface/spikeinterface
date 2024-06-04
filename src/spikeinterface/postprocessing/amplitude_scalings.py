@@ -382,7 +382,7 @@ class AmplitudeScalingNode(PipelineNode):
 
 
 ### Collision handling ###
-def _units_are_spatially_overlapping(sparsity_mask, i, j):
+def _are_units_spatially_overlapping(sparsity_mask, i, j):
     """
     Returns True if the unit indices i and j are
     spatially overlapping, False otherwise
@@ -473,7 +473,7 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
         # spikes that overlap spatially
         for possible_overlapping_spike_index in possible_overlapping_spike_indices:
 
-            if _units_are_spatially_overlapping(
+            if _are_units_spatially_overlapping(
                 sparsity_mask,
                 spike["unit_index"],
                 spikes_within_margin[possible_overlapping_spike_index]["unit_index"],
