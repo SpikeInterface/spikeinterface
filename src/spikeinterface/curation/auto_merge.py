@@ -13,7 +13,7 @@ from .mergeunitssorting import MergeUnitsSorting
 
 def get_potential_auto_merge(
     sorting_analyzer,
-    minimum_spikes=1000,
+    minimum_spikes=100,
     maximum_distance_um=150.0,
     peak_sign="neg",
     bin_ms=0.25,

@@ -3,6 +3,7 @@ from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 from spikeinterface.core import Templates, BaseRecording, BaseSorting, BaseRecordingSegment
 import math
 
@@ -515,8 +516,13 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-def split_sorting_by_time(sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95):
-    sorting = sorting_analyzer.sorting
+def split_sorting_by_time(sorting_or_sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95):
+    
+    if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
+        sorting = sorting_analyzer.sorting
+    else:
+        sorting = sorting_or_sorting_analyzer
+        
     sorting_split = sorting.select_units(sorting.unit_ids)
     split_units = []
     original_units = []
