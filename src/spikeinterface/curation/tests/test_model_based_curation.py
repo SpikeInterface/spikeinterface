@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 import numpy as np
-import joblib
+import pickle as pkl
 from sklearn.pipeline import Pipeline
 
 from spikeinterface.core import create_sorting_analyzer
@@ -10,7 +10,7 @@ from spikeinterface.curation import get_potential_auto_merge
 from spikeinterface.qualitymetrics import get_quality_metric_list
 
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
-from spikeinterface.curation.auto_label import ModelBasedClassification
+from spikeinterface.curation.model_based_curation import ModelBasedClassification
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "curation"
@@ -20,7 +20,9 @@ else:
 
 @pytest.fixture
 def pipeline():
-    pipeline = joblib.load("trained_pipeline.pkl")
+    # Load trained_pipeline.pkl
+    with open("trained_pipeline.pkl", "rb") as f:
+        pipeline = pkl.load(f)
     return pipeline
 
 
@@ -97,7 +99,7 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
 # from sklearn.linear_model import LogisticRegression
 # from sklearn.pipeline import Pipeline
 # import numpy as np
-# import joblib
+# import pickle as pkl
 
 # from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 
@@ -127,4 +129,4 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
 # pipeline.fit(X, y)
 
 # # Save the pipeline to a file
-# joblib.dump(pipeline, 'trained_pipeline.pkl')
+# pkl.dump(pipeline, 'trained_pipeline.pkl')
