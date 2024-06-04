@@ -21,11 +21,14 @@ class CircusMerging(BaseMergingEngine):
             "corr_diff_thresh": 0.5,
             "template_metric": "cosine",
             "num_channels": None,
-            "num_shift": 5,
+            "num_shift": 10,
         },
         "temporal_splits_kwargs": {
             "minimum_spikes": 50,
             "presence_distance_threshold": 0.1,
+            "template_metric": "cosine",
+            "num_channels": None,
+            "num_shift": 10,
         },
     }
 
