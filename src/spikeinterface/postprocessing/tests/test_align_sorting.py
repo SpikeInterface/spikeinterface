@@ -40,7 +40,3 @@ def test_align_sorting():
             st = sorting.get_unit_spike_train(unit_id)
             st_clean = sorting_aligned.get_unit_spike_train(unit_id)
             assert np.array_equal(st, st_clean)
-
-
-if __name__ == "__main__":
-    test_align_sorting()
