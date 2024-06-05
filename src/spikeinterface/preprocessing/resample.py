@@ -34,6 +34,9 @@ class ResampleRecording(BasePreprocessor):
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
     skip_checks : bool, default: False
         If True, checks on sampling frequencies and cutoff filter frequencies are skipped
+    margin_ms : float, default: 100.0
+        Margin in ms on border to avoid border effect
+
 
     Returns
     -------

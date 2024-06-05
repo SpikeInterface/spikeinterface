@@ -31,6 +31,9 @@ class PhaseShiftRecording(BasePreprocessor):
     inter_sample_shift : None or numpy array, default: None
         If "inter_sample_shift" is not in recording properties,
         we can externally provide one.
+    dtype : None | str | dtype, default: None
+        Dtype of input and output `recording` objects.
+
 
     Returns
     -------

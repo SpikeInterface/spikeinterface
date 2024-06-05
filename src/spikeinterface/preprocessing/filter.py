@@ -43,11 +43,16 @@ class FilterRecording(BasePreprocessor):
         Filter form of the filter coefficients:
         - second-order sections ("sos")
         - numerator/denominator : ("ba")
-    coef : array or None, default: None
+    coeff : array | None, default: None
         Filter coefficients in the filter_mode form.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
-    {}
+    add_reflect_padding : Bool, default False
+        If True, uses a left and right margin during calculation.
+    ftype : str | None, default: "butter"
+        The type of IIR filter to design, used in `scipy.signal.iirfilter`.
+    filter_order : int, default: 5
+        The order of the filter, used in `scipy.signal.iirfilter`.
 
     Returns
     -------
@@ -178,7 +183,9 @@ class BandpassFilterRecording(FilterRecording):
         Margin in ms on border to avoid border effect
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
-    {}
+    **filter_kwargs : dict
+        Keyword arguments for `spikeinterface.preprocessing.FilterRecording` class.
+
     Returns
     -------
     filter_recording : BandpassFilterRecording
@@ -212,6 +219,9 @@ class HighpassFilterRecording(FilterRecording):
         Margin in ms on border to avoid border effect
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
+    **filter_kwargs : dict
+        Keyword arguments for `spikeinterface.preprocessing.FilterRecording` class.
+
     {}
     Returns
     -------
@@ -240,6 +250,11 @@ class NotchFilterRecording(BasePreprocessor):
         The target frequency in Hz of the notch filter
     q : int
         The quality factor of the notch filter
+    dtype : None | dtype, default: None
+        dtype of recording. If None, will take from `recording`
+    margin_ms : float, default: 5.0
+        Margin in ms on border to avoid border effect
+
     {}
     Returns
     -------

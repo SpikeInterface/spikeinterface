@@ -25,7 +25,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
         One list per segment of tuples (start_frame, end_frame) to silence
     noise_levels : array
         Noise levels if already computed
-
+    seed : int | None, default: None
+        Random seed for `get_noise_levels`
     mode : "zeros" | "noise, default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
 

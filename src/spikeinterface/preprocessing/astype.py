@@ -14,8 +14,20 @@ class AstypeRecording(BasePreprocessor):
 
     For recording with an unsigned dtype, please use the `unsigned_to_signed` preprocessing function.
 
-    If `round` is True, will round the values to the nearest integer.
-    If `round` is None, will round in the case of float to integer conversion.
+    Parameters
+    ----------
+    dtype : None | str | dtype, default: None
+        dtype of the output recording.
+    recording : Recording
+        The recording extractor to be converted.
+    round : Bool
+        If True, will round the values to the nearest integer.
+        If None, will round in the case of float to integer conversion.
+
+    Returns
+    -------
+    astype_recording : AstypeRecording
+        The converted recording extractor object
     """
 
     name = "astype"
