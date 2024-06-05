@@ -10,13 +10,3 @@ class TestComputeSpikeAmplitudes(AnalyzerExtensionCommonTestSuite):
     extension_function_params_list = [
         dict(),
     ]
-
-
-if __name__ == "__main__":
-    test = TestComputeSpikeAmplitudes()
-    test.setUpClass()
-    test.test_extension()
-
-    # for k, sorting_analyzer in test.sorting_analyzers.items():
-    #     print(sorting_analyzer)
-    #     print(sorting_analyzer.get_extension("spike_amplitudes").data["amplitudes"].shape)

@@ -34,11 +34,3 @@ def test_check_equal_template_with_distribution_overlap():
                 continue
             waveforms1 = wf_ext.get_waveforms_one_unit(unit_id1)
             check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
-
-
-if __name__ == "__main__":
-    # test = SimilarityExtensionTest()
-    # test.setUpClass()
-    # test.test_extension()
-
-    test_check_equal_template_with_distribution_overlap()

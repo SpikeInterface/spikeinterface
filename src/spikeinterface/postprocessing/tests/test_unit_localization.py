@@ -12,10 +12,3 @@ class TestUnitLocationsExtension(AnalyzerExtensionCommonTestSuite):
         dict(method="monopolar_triangulation", radius_um=150),
         dict(method="monopolar_triangulation", radius_um=150, optimizer="minimize_with_log_penality"),
     ]
-
-
-if __name__ == "__main__":
-    test = TestUnitLocationsExtension()
-    test.setUpClass()
-    test.test_extension()
-    # test.tearDown()

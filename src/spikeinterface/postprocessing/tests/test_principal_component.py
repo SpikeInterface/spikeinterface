@@ -112,7 +112,6 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
             assert np.array_equal(all_pc1, all_pc2)
 
     def test_project_new(self):
-        from sklearn.decomposition import IncrementalPCA
 
         sorting_analyzer = self._prepare_sorting_analyzer(format="memory", sparse=False)
 
@@ -130,16 +129,6 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         assert new_proj.shape[0] == num_spike
         assert new_proj.shape[1] == n_components
         assert new_proj.shape[2] == ext_pca.data["pca_projection"].shape[2]
-
-
-if __name__ == "__main__":
-    test = TestPrincipalComponentsExtension()
-    test.setUpClass()
-    test.test_extension()
-    test.test_mode_concatenated()
-    test.test_get_projections()
-    test.test_compute_for_all_spikes()
-    test.test_project_new()
 
     # ext = test.sorting_analyzers["sparseTrue_memory"].get_extension("principal_components")
     # pca = ext.data["pca_projection"]

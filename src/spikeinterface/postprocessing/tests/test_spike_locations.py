@@ -18,9 +18,3 @@ class TestSpikeLocationsExtension(AnalyzerExtensionCommonTestSuite):
         dict(method="monopolar_triangulation"),  # , chunk_size=10000, n_jobs=1
         dict(method="grid_convolution"),  # , chunk_size=10000, n_jobs=1
     ]
-
-
-if __name__ == "__main__":
-    test = TestSpikeLocationsExtension()
-    test.setUpClass()
-    test.test_extension()

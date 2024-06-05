@@ -44,10 +44,3 @@ def _test_ISI(sorting, window_ms: float, bin_ms: float, methods: List[str]):
         else:
             assert np.all(ISI == ref_ISI), f"Failed with method={method}"
             assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
-
-
-if __name__ == "__main__":
-    test = TestComputeISIHistograms()
-    test.setUpClass()
-    test.test_extension()
-    test.test_compute_ISI()

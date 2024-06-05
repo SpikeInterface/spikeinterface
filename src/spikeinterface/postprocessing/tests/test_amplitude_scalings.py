@@ -33,10 +33,3 @@ class TestAmplitudeScalingsExtension(AnalyzerExtensionCommonTestSuite):
         # fig, ax = plt.subplots()
         # ax.hist(ext.data["amplitude_scalings"])
         # plt.show()
-
-
-if __name__ == "__main__":
-    test = TestAmplitudeScalingsExtension()
-    test.setUpClass()
-    test.test_extension()
-    test.test_scaling_values()

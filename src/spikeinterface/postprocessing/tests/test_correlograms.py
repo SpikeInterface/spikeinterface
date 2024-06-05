@@ -190,15 +190,3 @@ def test_detect_injected_correlation():
     #     ax.set_title(method)
     #     ax.legend()
     # plt.show()
-
-
-if __name__ == "__main__":
-    # test_make_bins()
-    # test_equal_results_correlograms()
-    # test_flat_cross_correlogram()
-    # test_auto_equal_cross_correlograms()
-    # test_detect_injected_correlation()
-
-    test = TestComputeCorrelograms()
-    test.setUpClass()
-    test.test_extension()

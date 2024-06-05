@@ -12,9 +12,3 @@ class TestTemplateMetrics(AnalyzerExtensionCommonTestSuite):
         dict(upsampling_factor=2),
         dict(include_multi_channel_metrics=True),
     ]
-
-
-if __name__ == "__main__":
-    test = TestTemplateMetrics()
-    test.setUpClass()
-    test.test_extension()
