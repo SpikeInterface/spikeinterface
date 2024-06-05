@@ -11,7 +11,12 @@ class TestSimilarityExtension(AnalyzerExtensionCommonTestSuite):
         self.run_extension_tests(ComputeTemplateSimilarity, params=dict(method="cosine_similarity"))
 
     def test_check_equal_template_with_distribution_overlap(self):
-
+        """
+        Create a sorting object, extract its waveforms. Compare waveforms
+        from all pairs of units (excluding a unit against itself)
+        and check `check_equal_template_with_distribution_overlap()`
+        correctly determines they are different.
+        """
         sorting_analyzer = self._prepare_sorting_analyzer("memory", None, ComputeTemplateSimilarity)
         sorting_analyzer.compute("random_spikes")
         sorting_analyzer.compute("waveforms")
@@ -25,4 +30,5 @@ class TestSimilarityExtension(AnalyzerExtensionCommonTestSuite):
                 if unit_id0 == unit_id1:
                     continue
                 waveforms1 = wf_ext.get_waveforms_one_unit(unit_id1)
-                check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
+
+                assert not check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
