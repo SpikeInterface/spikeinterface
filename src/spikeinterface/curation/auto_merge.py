@@ -61,7 +61,7 @@ def get_potential_auto_merge(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    minimum_spikes: int, default: 100
+    minimum_spikes : int, default: 100
         Minimum number of spikes for each unit to consider a potential merge.
         Enough spikes are needed to estimate the correlogram
     maximum_distance_um : float, default: 150
