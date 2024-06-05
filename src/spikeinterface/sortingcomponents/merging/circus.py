@@ -49,8 +49,8 @@ class CircusMerging(BaseMergingEngine):
             self.analyzer = create_sorting_analyzer(sorting, recording, format="memory")
             self.analyzer.compute(["random_spikes", "templates"])
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
-        
-        #self.analyzer.compute(["template_similarity"], max_lag_ms=0.5, metric='cosine')
+
+        # self.analyzer.compute(["template_similarity"], max_lag_ms=0.5, metric='cosine')
 
     def run(self, extra_outputs=False):
         curation_kwargs = self.default_params.get("curation_kwargs", None)
