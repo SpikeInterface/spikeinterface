@@ -188,6 +188,8 @@ def compute_whitening_matrix(
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
 
+    regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {}
+
     if apply_mean:
         M = np.mean(random_data, axis=0)
         M = M[None, :]
@@ -205,14 +207,6 @@ def compute_whitening_matrix(
         if regularize_kwargs is None:
             regularize_kwargs = {}
         regularize_kwargs["assume_centered"] = True
-        job_kwargs = get_global_job_kwargs()
-        if "n_jobs" in job_kwargs and "n_jobs" not in regularize_kwargs:
-            n_jobs = job_kwargs["n_jobs"]
-            if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
-                import os
-
-                n_jobs = int(n_jobs * os.cpu_count())
-            regularize_kwargs["n_jobs"] = n_jobs
         estimator = sklearn.covariance.GraphicalLassoCV(**regularize_kwargs)
         estimator.fit(data)
         cov = estimator.covariance_
