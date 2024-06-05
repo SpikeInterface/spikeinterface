@@ -42,11 +42,11 @@ class WhitenRecording(BasePreprocessor):
         Pre-computed means.
         M can be None when previously computed with apply_mean=False
     regularize : bool, default: False
-        Boolean to decide if we want to regularize the covariance matrix, using the GraphicalLassoCV() method
-        of sklearn
-    regularize_kwargs : None or dict
-        Dictionary of the parameters that could be provided to the GraphicalLassoCV() method of sklearn, if
-        the covariance matrix needs to be regularized
+        Boolean to decide if we want to regularize the covariance matrix, using a chosen method
+        of sklearn, specified in regularize_kwargs. Default is GraphicalLassoCV
+    regularize_kwargs : {'method' : 'GraphicalLassoCV'}
+        Dictionary of the parameters that could be provided to the method of sklearn, if
+        the covariance matrix needs to be regularized.
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
@@ -63,7 +63,7 @@ class WhitenRecording(BasePreprocessor):
         dtype=None,
         apply_mean=False,
         regularize=False,
-        regularize_kwargs=None,
+        regularize_kwargs={'method' : 'GraphicalLassoCV'},
         mode="global",
         radius_um=100.0,
         int_scale=None,
@@ -173,11 +173,11 @@ def compute_whitening_matrix(
         Small epsilon to regularize SVD. If None, the default is set to 1e-8, but if the data is float type and scaled
         down to very small values, eps is automatically set to a small fraction (1e-3) of the median of the squared data.
     regularize : bool, default: False
-        Boolean to decide if we want to regularize the covariance matrix, using the GraphicalLassoCV() method
-        of sklearn
-    regularize_kwargs : None or dict
-        Dictionary of the parameters that could be provided to the GraphicalLassoCV() method of sklearn, if
-        the covariance matrix needs to be regularized
+        Boolean to decide if we want to regularize the covariance matrix, using a chosen method
+        of sklearn, specified in regularize_kwargs. Default is GraphicalLassoCV
+    regularize_kwargs : {'method' : 'GraphicalLassoCV'}
+        Dictionary of the parameters that could be provided to the method of sklearn, if
+        the covariance matrix needs to be regularized.
     Returns
     -------
     W : 2D array
@@ -188,7 +188,7 @@ def compute_whitening_matrix(
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
 
-    regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {}
+    regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {'method' : 'GraphicalLassoCV'}
 
     if apply_mean:
         M = np.mean(random_data, axis=0)
@@ -202,10 +202,10 @@ def compute_whitening_matrix(
         cov = data.T @ data
         cov = cov / data.shape[0]
     else:
-        import sklearn.covariance
-
+        import sklearn.covariance as cov
+        method = regularize_kwargs.pop('method')
         regularize_kwargs["assume_centered"] = True
-        estimator = sklearn.covariance.GraphicalLassoCV(**regularize_kwargs)
+        estimator = eval(f"cov.{method}")(**regularize_kwargs)
         estimator.fit(data)
         cov = estimator.covariance_
 
