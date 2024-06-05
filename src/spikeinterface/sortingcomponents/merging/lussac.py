@@ -289,7 +289,7 @@ def lussac_merge(
             spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
             if not (len(spike_train1) > minimum_spikes and len(spike_train2) > minimum_spikes):
                 continue
-            
+
             # Computing template difference
             template1 = analyzer.get_extension("templates").get_unit_template(unit_id1)
             template2 = analyzer.get_extension("templates").get_unit_template(unit_id2)
@@ -323,7 +323,7 @@ def lussac_merge(
                         d = 1 - np.sum(temp1 * temp2) / norm
                     all_shift_diff.append(d)
             else:
-                all_shift_diff = [1]*len(all_shifts)
+                all_shift_diff = [1] * len(all_shifts)
 
             max_diff = np.min(all_shift_diff)
 
@@ -348,19 +348,19 @@ class LussacMerging(BaseMergingEngine):
     """
 
     default_params = {
-        "templates": None, 
-        "minimum_spikes" : 50,
+        "templates": None,
+        "minimum_spikes": 50,
         "refractory_period": (0.4, 1.9),
         "template_metric": "l1",
         "num_channels": 5,
-        "verbose" : False
-        }
+        "verbose": False,
+    }
 
     def __init__(self, recording, sorting, kwargs):
         self.params = self.default_params.copy()
         self.params.update(**kwargs)
         self.sorting = sorting
-        self.verbose = self.params.pop('verbose')
+        self.verbose = self.params.pop("verbose")
         self.recording = recording
         self.templates = self.params.pop("templates", None)
         if self.templates is not None:
