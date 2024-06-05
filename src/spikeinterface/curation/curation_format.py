@@ -1,9 +1,14 @@
 from itertools import combinations
 
 
+supported_curation_format_versions = {"1"}
+
+
 def validate_curation_dict(curation_dict):
     """
     Validate that the curation dictionary given as parameter complies with the format
+
+    The function do not return anything. This raise an error if something is wring in the format.
 
     Parameters
     ----------
@@ -12,39 +17,52 @@ def validate_curation_dict(curation_dict):
 
     Returns
     -------
+    Nothing.
+    
 
     """
 
-    supported_versions = {1}
+    # format
+    if "format_version" not in curation_dict:
+        raise ValueError("No version_format")
+
+    if curation_dict["format_version"] not in supported_curation_format_versions:
+        raise ValueError(
+            f"Format version ({curation_dict['format_version']}) not supported. " f"Only {supported_curation_format_versions} are valid"
+        )
+
+    # unit_ids    
     unit_set = set(curation_dict["unit_ids"])
     labeled_unit_set = set([lbl["unit_id"] for lbl in curation_dict["manual_labels"]])
     merged_units_set = set(sum(curation_dict["merged_unit_groups"], []))
     removed_units_set = set(curation_dict["removed_units"])
     if not labeled_unit_set.issubset(unit_set):
-        raise ValueError("Some labeled units are not in the unit list")
+        raise ValueError("Curation format: some labeled units are not in the unit list")
     if not merged_units_set.issubset(unit_set):
-        raise ValueError("Some merged units are not in the unit list")
+        raise ValueError("Curation format: some merged units are not in the unit list")
     if not removed_units_set.issubset(unit_set):
-        raise ValueError("Some removed units are not in the unit list")
+        raise ValueError("Curation format: some removed units are not in the unit list")
+
     all_merging_groups = [set(group) for group in curation_dict["merged_unit_groups"]]
     for gp_1, gp_2 in combinations(all_merging_groups, 2):
         if len(gp_1.intersection(gp_2)) != 0:
             raise ValueError("Some units belong to multiple merge groups")
     if len(removed_units_set.intersection(merged_units_set)) != 0:
         raise ValueError("Some units were merged and deleted")
-    if curation_dict["format_version"] not in supported_versions:
-        raise ValueError(
-            f"Format version ({curation_dict['format_version']}) not supported. " f"Only {supported_versions} are valid"
-        )
+
     # Check the labels exclusivity
     for lbl in curation_dict["manual_labels"]:
-        lbl_key = lbl["label_category"]
-        is_exclusive = curation_dict["label_definitions"][lbl_key]["auto_exclusive"]
-        if is_exclusive and not isinstance(lbl["labels"], str):
-            raise ValueError(f"{lbl_key} are mutually exclusive labels. {lbl['labels']} is invalid")
-        elif not is_exclusive and not isinstance(lbl["labels"], list):
-            raise ValueError(f"{lbl_key} are not mutually exclusive labels. " f"{lbl['labels']} should be a lists")
-    return True
+        for label_key in curation_dict["label_definitions"].keys():
+            if label_key in lbl:
+                unit_id = lbl["unit_id"]
+                label_value = lbl[label_key]
+                if not isinstance(label_value, list):
+                    raise ValueError(f"Curation format: manual_labels {unit_id} is invalid shoudl be a list")
+
+                is_exclusive = curation_dict["label_definitions"][label_key]["exclusive"]
+
+                if is_exclusive and not len(label_value) <=1:
+                    raise ValueError(f"Curation format: manual_labels {unit_id} {label_key} are exclusive labels. {label_value} is invalid")
 
 
 def convert_from_sortingview(sortingview_dict, destination_format=1):
@@ -83,7 +101,7 @@ def convert_from_sortingview(sortingview_dict, destination_format=1):
         u_id = unit_id_type(unit_id)
         all_units.append(u_id)
         manual_labels.append({"unit_id": u_id, "label_category": general_cat, "labels": l_labels})
-    labels_def = {"all_labels": {"name": "all_labels", "label_options": all_labels, "auto_exclusive": False}}
+    labels_def = {"all_labels": {"name": "all_labels", "label_options": all_labels, "exclusive": False}}
 
     curation_dict = {
         "unit_ids": None,

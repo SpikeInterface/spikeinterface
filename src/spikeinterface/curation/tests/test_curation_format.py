@@ -1,6 +1,7 @@
 from spikeinterface.curation.curation_format import validate_curation_dict
 import pytest
 
+import json
 
 """example = {
     'unit_ids': List[str, int],
@@ -8,12 +9,11 @@ import pytest
         'category_key1':
         {'name': str,
          'label_options': List[str],
-         'auto_exclusive': bool}
+         'exclusive': bool}
     },
     'manual_labels': [
         {'unit_id': str or int,
-         'label_category': str,
-         'labels': list or str
+         category_key1': List[str],
          }
     ],
     'merged_unit_groups': List[List[unit_ids]],  # one cell goes into at most one list
@@ -21,136 +21,64 @@ import pytest
 }
 """
 
-valid_int = {
+
+curation_ids_int = {
+    "format_version": "1",
     "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
     "label_definitions": {
-        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
-        "experimental": {
-            "name": "experimental",
-            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_exclusive": False,
+        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
+        "putative_type": {"name": "putative_type", "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral" ], "exclusive": False},
         },
-    },
     "manual_labels": [
-        {"unit_id": 1, "label_category": "quality", "labels": "good"},
-        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
-        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
+        {"unit_id": 1, "quality": ["good"]},
+        {"unit_id": 2, "quality": ["noise", ], "putative_type":["excitatory", "pyramidal"]},
+        {"unit_id": 3, "putative_type": ["inhibitory"]},
     ],
     "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
-    "format_version": 1,
+    
 }
 
-
-valid_str = {
+curation_ids_str = {
+    "format_version": "1",
     "unit_ids": ["u1", "u2", "u3", "u6", "u10", "u14", "u20", "u31", "u42"],
     "label_definitions": {
-        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
-        "experimental": {
-            "name": "experimental",
-            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_exclusive": False,
+        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
+        "putative_type": {"name": "putative_type", "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral" ], "exclusive": False},
         },
-    },
     "manual_labels": [
-        {"unit_id": "u1", "label_category": "quality", "labels": "good"},
-        {"unit_id": "u2", "label_category": "quality", "labels": "noise"},
-        {"unit_id": "u2", "label_category": "experimental", "labels": ["chronic", "headfixed"]},
+        {"unit_id": "u1", "quality": ["good"]},
+        {"unit_id": "u2", "quality": ["noise", ], "putative_type":["excitatory", "pyramidal"]},
+        {"unit_id": "u3", "putative_type": ["inhibitory"]},
     ],
     "merged_unit_groups": [["u3", "u6"], ["u10", "u14", "u20"]],  # one cell goes into at most one list
     "removed_units": ["u31", "u42"],  # Can not be  in the merged_units
-    "format_version": 1,
 }
 
-# This is a failure example
-duplicate_merge = {
-    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "label_definitions": {
-        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
-        "experimental": {
-            "name": "experimental",
-            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_exclusive": False,
-        },
-    },
-    "manual_labels": [
-        {"unit_id": 1, "label_category": "quality", "labels": "good"},
-        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
-        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
-    ],
-    "merged_unit_groups": [[3, 6, 10], [10, 14, 20]],  # one cell goes into at most one list
-    "removed_units": [31, 42],  # Can not be  in the merged_units
-    "format_version": 1,
-}
+# This is a failure example with duplicated merge
+duplicate_merge = curation_ids_int.copy()
+duplicate_merge["merged_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
 
 
-# This is a failure example
-merged_and_removed = {
-    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "label_definitions": {
-        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
-        "experimental": {
-            "name": "experimental",
-            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_exclusive": False,
-        },
-    },
-    "manual_labels": [
-        {"unit_id": 1, "label_category": "quality", "labels": "good"},
-        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
-        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
-    ],
-    "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
-    "removed_units": [3, 31, 42],  # Can not be  in the merged_units
-    "format_version": 1,
-}
+# This is a failure example with unit 3 both in removed and merged
+merged_and_removed = curation_ids_int.copy()
+merged_and_removed["merged_unit_groups"] = [[3, 6], [10, 14, 20]]
+merged_and_removed["removed_units"] = [3, 31, 42]
 
+# this is a failure because unit 99 is not in the initial list
+unknown_merged_unit = curation_ids_int.copy()
+unknown_merged_unit["merged_unit_groups"] = [[3, 6, 99], [10, 14, 20]]
 
-unknown_merged_unit = {
-    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "label_definitions": {
-        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
-        "experimental": {
-            "name": "experimental",
-            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_exclusive": False,
-        },
-    },
-    "manual_labels": [
-        {"unit_id": 1, "label_category": "quality", "labels": "good"},
-        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
-        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
-    ],
-    "merged_unit_groups": [[3, 6, 99], [10, 14, 20]],  # one cell goes into at most one list
-    "removed_units": [31, 42],  # Can not be  in the merged_units
-    "format_version": 1,
-}
-
-
-unknown_removed_unit = {
-    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "label_definitions": {
-        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "auto_exclusive": True},
-        "experimental": {
-            "name": "experimental",
-            "label_options": ["acute", "chronic", "headfixed", "freelymoving"],
-            "auto_exclusive": False,
-        },
-    },
-    "manual_labels": [
-        {"unit_id": 1, "label_category": "quality", "labels": "good"},
-        {"unit_id": 2, "label_category": "quality", "labels": "noise"},
-        {"unit_id": 2, "label_category": "experimental", "labels": ["chronic", "headfixed"]},
-    ],
-    "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
-    "removed_units": [31, 42, 99],  # Can not be  in the merged_units
-    "format_version": 1,
-}
+# this is a failure because unit 99 is not in the initial list
+unknown_removed_unit = curation_ids_int.copy()
+unknown_removed_unit["removed_units"] = [31, 42, 99]
 
 
 def test_curation_format_validation():
-    assert validate_curation_dict(valid_int)
-    assert validate_curation_dict(valid_str)
+    validate_curation_dict(curation_ids_int)
+    validate_curation_dict(curation_ids_str)
+
+
     with pytest.raises(ValueError):
         # Raised because duplicated merged units
         validate_curation_dict(duplicate_merge)
@@ -163,3 +91,16 @@ def test_curation_format_validation():
     with pytest.raises(ValueError):
         # Raise beecause Some removed units are not in the unit list
         validate_curation_dict(unknown_removed_unit)
+
+
+def test_to_from_json():
+
+    json.loads(json.dumps(curation_ids_int, indent=4))
+    json.loads(json.dumps(curation_ids_str, indent=4))
+
+
+
+
+if __name__ == "__main__":
+    test_curation_format_validation()
+    # test_to_from_json()

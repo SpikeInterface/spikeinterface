@@ -41,6 +41,111 @@ The merging and splitting operations are handled by the :py:class:`~spikeinterfa
     # here is the final clean sorting
     clean_sorting = cs.sorting
 
+Manual curation format
+----------------------
+
+SpikeInterface internally support a manual curation format JSON based.
+When a mnual curation is necessary, modifying in place a dataset is a bad practice.
+Instead, to keep the reproducibility in the spike sorting piepline, we introduce a manual curation format,
+simple and JSON based. This format defines at the moment : merges + deletions + manual tags.
+The simple file can be kept along side the output of a sorter and applied on the result to have a "clean" result.
+
+This format has two part:
+
+  * **definition** with the folowing keys:
+
+    * "format_version" : format specification
+    * "unit_ids" : give the list of unit_ds
+    * "label_definitions" : list of label category and possible labels per category.
+                            Every category can be *exclusive=True* onely one label or *exclusive=False* several labels possible
+
+  * **manual output** curation with the folowing keys:
+
+    * "manual_labels"
+    * "merged_unit_groups"
+    * "removed_units"
+
+Here the description of the format with a simple example:
+
+.. code-block:: json
+
+
+    {
+        # the first part of the format is the definitation
+        "format_version": "1",
+        "unit_ids": [
+            "u1",
+            "u2",
+            "u3",
+            "u6",
+            "u10",
+            "u14",
+            "u20",
+            "u31",
+            "u42"
+        ],
+        "label_definitions": {
+            "quality": {
+                "name": "quality",
+                "label_options": [
+                    "good",
+                    "noise",
+                    "MUA",
+                    "artifact"
+                ],
+                "exclusive": true
+            },
+            "experimental": {
+                "name": "experimental",
+                "label_options": [
+                    "acute",
+                    "chronic",
+                    "headfixed",
+                    "freelymoving"
+                ],
+                "exclusive": false
+            }
+        },
+        # the second part of the format is manual action
+        "manual_labels": [
+            {
+                "unit_id": "u1",
+                "label_category": "quality",
+                "labels": "good"
+            },
+            {
+                "unit_id": "u2",
+                "label_category": "quality",
+                "labels": "noise"
+            },
+            {
+                "unit_id": "u2",
+                "label_category": "experimental",
+                "labels": [
+                    "chronic",
+                    "headfixed"
+                ]
+            }
+        ],
+        "merged_unit_groups": [
+            [
+                "u3",
+                "u6"
+            ],
+            [
+                "u10",
+                "u14",
+                "u20"
+            ]
+        ],
+        "removed_units": [
+            "u31",
+            "u42"
+        ]
+    }
+
+
+
 
 Automatic curation tools
 ------------------------
