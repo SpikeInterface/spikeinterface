@@ -187,7 +187,6 @@ def compute_whitening_matrix(
 
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
-    random_data = random_data
 
     if apply_mean:
         M = np.mean(random_data, axis=0)
