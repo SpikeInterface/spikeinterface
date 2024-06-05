@@ -41,10 +41,10 @@ class WhitenRecording(BasePreprocessor):
     M : 1d np.array or None, default: None
         Pre-computed means.
         M can be None when previously computed with apply_mean=False
-    regularize: bool, default False
+    regularize : bool, default: False
         Boolean to decide if we want to regularize the covariance matrix, using the GraphicalLassoCV() method
         of sklearn
-    regularize_kwargs: None or dict
+    regularize_kwargs : None or dict
         Dictionary of the parameters that could be provided to the GraphicalLassoCV() method of sklearn, if
         the covariance matrix needs to be regularized
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
