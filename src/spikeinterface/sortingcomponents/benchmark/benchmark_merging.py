@@ -132,59 +132,59 @@ class MergingStudy(BenchmarkStudy):
             analyzer.compute(["spike_amplitudes"])
         plot_unit_templates(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])
 
-    def visualize_splits(self, case_key, figsize=(15, 5)):
-        cc_similarities = []
-        from ..merging.drift import compute_presence_distance
+    # def visualize_splits(self, case_key, figsize=(15, 5)):
+    #     cc_similarities = []
+    #     from spikeinterface.curation. import compute_presence_distance
 
-        analyzer = self.get_sorting_analyzer(case_key)
-        if analyzer.get_extension("template_similarity") is None:
-            analyzer.compute(["template_similarity"])
+    #     analyzer = self.get_sorting_analyzer(case_key)
+    #     if analyzer.get_extension("template_similarity") is None:
+    #         analyzer.compute(["template_similarity"])
 
-        distances = {}
-        distances["similarity"] = analyzer.get_extension("template_similarity").get_data()
-        sorting = analyzer.sorting
+    #     distances = {}
+    #     distances["similarity"] = analyzer.get_extension("template_similarity").get_data()
+    #     sorting = analyzer.sorting
 
-        distances["time_distance"] = np.ones((analyzer.get_num_units(), analyzer.get_num_units()))
-        for i, unit1 in enumerate(analyzer.unit_ids):
-            for j, unit2 in enumerate(analyzer.unit_ids):
-                if unit2 <= unit1:
-                    continue
-                d = compute_presence_distance(analyzer, unit1, unit2)
-                distances["time_distance"][i, j] = d
+    #     distances["time_distance"] = np.ones((analyzer.get_num_units(), analyzer.get_num_units()))
+    #     for i, unit1 in enumerate(analyzer.unit_ids):
+    #         for j, unit2 in enumerate(analyzer.unit_ids):
+    #             if unit2 <= unit1:
+    #                 continue
+    #             d = compute_presence_distance(analyzer, unit1, unit2)
+    #             distances["time_distance"][i, j] = d
 
-        import lussac.utils as utils
+    #     import lussac.utils as utils
 
-        distances["cross_cont"] = np.ones((analyzer.get_num_units(), analyzer.get_num_units()))
-        for i, unit1 in enumerate(analyzer.unit_ids):
-            for j, unit2 in enumerate(analyzer.unit_ids):
-                if unit2 <= unit1:
-                    continue
-                spike_train1 = np.array(sorting.get_unit_spike_train(unit1))
-                spike_train2 = np.array(sorting.get_unit_spike_train(unit2))
-                distances["cross_cont"][i, j], _ = utils.estimate_cross_contamination(
-                    spike_train1, spike_train2, (1, 4), limit=0.1
-                )
+    #     distances["cross_cont"] = np.ones((analyzer.get_num_units(), analyzer.get_num_units()))
+    #     for i, unit1 in enumerate(analyzer.unit_ids):
+    #         for j, unit2 in enumerate(analyzer.unit_ids):
+    #             if unit2 <= unit1:
+    #                 continue
+    #             spike_train1 = np.array(sorting.get_unit_spike_train(unit1))
+    #             spike_train2 = np.array(sorting.get_unit_spike_train(unit2))
+    #             distances["cross_cont"][i, j], _ = utils.estimate_cross_contamination(
+    #                 spike_train1, spike_train2, (1, 4), limit=0.1
+    #             )
 
-        splits = np.array(self.benchmarks[case_key].splitted_cells)
-        src, tgt = splits[:, 0], splits[:, 1]
-        src = analyzer.sorting.ids_to_indices(src)
-        tgt = analyzer.sorting.ids_to_indices(tgt)
-        import matplotlib.pyplot as plt
+    #     splits = np.array(self.benchmarks[case_key].splitted_cells)
+    #     src, tgt = splits[:, 0], splits[:, 1]
+    #     src = analyzer.sorting.ids_to_indices(src)
+    #     tgt = analyzer.sorting.ids_to_indices(tgt)
+    #     import matplotlib.pyplot as plt
 
-        fig, axs = plt.subplots(ncols=2, nrows=2, figsize=figsize, squeeze=True)
-        axs[0, 0].scatter(distances["similarity"].flatten(), distances["time_distance"].flatten(), c="k", alpha=0.25)
-        axs[0, 0].scatter(distances["similarity"][src, tgt], distances["time_distance"][src, tgt], c="r")
-        axs[0, 0].set_xlabel("cc similarity")
-        axs[0, 0].set_ylabel("presence ratio")
+    #     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=figsize, squeeze=True)
+    #     axs[0, 0].scatter(distances["similarity"].flatten(), distances["time_distance"].flatten(), c="k", alpha=0.25)
+    #     axs[0, 0].scatter(distances["similarity"][src, tgt], distances["time_distance"][src, tgt], c="r")
+    #     axs[0, 0].set_xlabel("cc similarity")
+    #     axs[0, 0].set_ylabel("presence ratio")
 
-        axs[1, 0].scatter(distances["similarity"].flatten(), distances["cross_cont"].flatten(), c="k", alpha=0.25)
-        axs[1, 0].scatter(distances["similarity"][src, tgt], distances["cross_cont"][src, tgt], c="r")
-        axs[1, 0].set_xlabel("cc similarity")
-        axs[1, 0].set_ylabel("cross cont")
+    #     axs[1, 0].scatter(distances["similarity"].flatten(), distances["cross_cont"].flatten(), c="k", alpha=0.25)
+    #     axs[1, 0].scatter(distances["similarity"][src, tgt], distances["cross_cont"][src, tgt], c="r")
+    #     axs[1, 0].set_xlabel("cc similarity")
+    #     axs[1, 0].set_ylabel("cross cont")
 
-        axs[0, 1].scatter(distances["cross_cont"].flatten(), distances["time_distance"].flatten(), c="k", alpha=0.25)
-        axs[0, 1].scatter(distances["cross_cont"][src, tgt], distances["time_distance"][src, tgt], c="r")
-        axs[0, 1].set_xlabel("cross_cont")
-        axs[0, 1].set_ylabel("presence ratio")
+    #     axs[0, 1].scatter(distances["cross_cont"].flatten(), distances["time_distance"].flatten(), c="k", alpha=0.25)
+    #     axs[0, 1].scatter(distances["cross_cont"][src, tgt], distances["time_distance"][src, tgt], c="r")
+    #     axs[0, 1].set_xlabel("cross_cont")
+    #     axs[0, 1].set_ylabel("presence ratio")
 
-        plt.show()
+    #     plt.show()

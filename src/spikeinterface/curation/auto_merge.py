@@ -442,6 +442,7 @@ def compute_templates_diff(
         sparsity_mask = sparsity.mask
 
     templates_diff = np.full((n, n), np.nan, dtype="float64")
+    all_shifts = range(-num_shift, num_shift + 1)
     for unit_ind1 in range(n):
         for unit_ind2 in range(unit_ind1 + 1, n):
             if not pair_mask[unit_ind1, unit_ind2]:
@@ -453,31 +454,33 @@ def compute_templates_diff(
             if not adaptative_masks:
                 chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
             else:
-                chan_inds = np.intersect1d(
-                    np.flatnonzero(sparsity_mask[unit_ind1]), np.flatnonzero(sparsity_mask[unit_ind2])
-                )
+                chan_inds = np.flatnonzero(sparsity_mask[unit_ind1] * sparsity_mask[unit_ind2])
 
-            template1 = template1[:, chan_inds]
-            template2 = template2[:, chan_inds]
+            if len(chan_inds) > 0:
+                template1 = template1[:, chan_inds]
+                template2 = template2[:, chan_inds]
 
-            num_samples = template1.shape[0]
-            if template_metric == "l1":
-                norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
-            elif template_metric == "l2":
-                norm = np.sum(template1**2) + np.sum(template2**2)
-            elif template_metric == "cosine":
-                norm = np.linalg.norm(template1) * np.linalg.norm(template2)
-            all_shift_diff = []
-            for shift in range(-num_shift, num_shift + 1):
-                temp1 = template1[num_shift : num_samples - num_shift, :]
-                temp2 = template2[num_shift + shift : num_samples - num_shift + shift, :]
+                num_samples = template1.shape[0]
                 if template_metric == "l1":
-                    d = np.sum(np.abs(temp1 - temp2)) / norm
+                    norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
                 elif template_metric == "l2":
-                    d = np.linalg.norm(temp1 - temp2) / norm
+                    norm = np.sum(template1**2) + np.sum(template2**2)
                 elif template_metric == "cosine":
-                    d = 1 - np.sum(temp1 * temp2) / norm
-                all_shift_diff.append(d)
+                    norm = np.linalg.norm(template1) * np.linalg.norm(template2)
+                all_shift_diff = []
+                for shift in all_shifts:
+                    temp1 = template1[num_shift : num_samples - num_shift, :]
+                    temp2 = template2[num_shift + shift : num_samples - num_shift + shift, :]
+                    if template_metric == "l1":
+                        d = np.sum(np.abs(temp1 - temp2)) / norm
+                    elif template_metric == "l2":
+                        d = np.linalg.norm(temp1 - temp2) / norm
+                    elif template_metric == "cosine":
+                        d = 1 - np.sum(temp1 * temp2) / norm
+                    all_shift_diff.append(d)
+            else:
+                all_shift_diff = [0]*len(all_shifts)
+                    
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
 
     return templates_diff

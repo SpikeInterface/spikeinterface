@@ -58,11 +58,11 @@ class CircusMerging(BaseMergingEngine):
             merges = get_potential_auto_merge(self.analyzer, **curation_kwargs)
         else:
             merges = []
-
+        print(len(merges))
         temporal_splits_kwargs = self.default_params.get("temporal_splits_kwargs", None)
         if temporal_splits_kwargs is not None:
             merges += get_potential_temporal_splits(self.analyzer, **temporal_splits_kwargs)
-
+        print(len(merges))
         merges = resolve_merging_graph(self.sorting, merges)
         sorting = apply_merges_to_sorting(self.sorting, merges)
         if extra_outputs:
