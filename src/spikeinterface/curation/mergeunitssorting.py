@@ -12,7 +12,7 @@ class MergeUnitsSorting(BaseSorting):
 
     Parameters
     ----------
-    parent_sorting : Recording
+    sorting: BaseSorting
         The sorting object
     units_to_merge : list/tuple of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
@@ -32,8 +32,8 @@ class MergeUnitsSorting(BaseSorting):
         Sorting object with the selected units merged
     """
 
-    def __init__(self, parent_sorting, units_to_merge, new_unit_ids=None, properties_policy="keep", delta_time_ms=0.4):
-        self._parent_sorting = parent_sorting
+    def __init__(self, sorting, units_to_merge, new_unit_ids=None, properties_policy="keep", delta_time_ms=0.4):
+        self._parent_sorting = sorting
 
         if not isinstance(units_to_merge[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge
@@ -41,8 +41,8 @@ class MergeUnitsSorting(BaseSorting):
 
         num_merge = len(units_to_merge)
 
-        parents_unit_ids = parent_sorting.unit_ids
-        sampling_frequency = parent_sorting.get_sampling_frequency()
+        parents_unit_ids = sorting.unit_ids
+        sampling_frequency = sorting.get_sampling_frequency()
 
         all_removed_ids = []
         for ids in units_to_merge:
@@ -93,17 +93,17 @@ class MergeUnitsSorting(BaseSorting):
             sub_segment = MergeUnitsSortingSegment(parent_segment, units_to_merge, new_unit_ids, rm_dup_delta)
             self.add_sorting_segment(sub_segment)
 
-        ann_keys = parent_sorting._annotations.keys()
-        self._annotations = deepcopy({k: parent_sorting._annotations[k] for k in ann_keys})
+        ann_keys = sorting._annotations.keys()
+        self._annotations = deepcopy({k: sorting._annotations[k] for k in ann_keys})
 
         # copy properties for unchanged units, and check if units propierties are the same
-        keep_parent_inds = parent_sorting.ids_to_indices(keep_unit_ids)
+        keep_parent_inds = sorting.ids_to_indices(keep_unit_ids)
         # ~ all_removed_inds = parent_sorting.ids_to_indices(all_removed_ids)
         keep_inds = self.ids_to_indices(keep_unit_ids)
         # ~ merge_inds = self.ids_to_indices(new_unit_ids)
-        prop_keys = parent_sorting.get_property_keys()
+        prop_keys = sorting.get_property_keys()
         for key in prop_keys:
-            parent_values = parent_sorting.get_property(key)
+            parent_values = sorting.get_property(key)
 
             if properties_policy == "keep":
                 # propagate keep values
@@ -111,7 +111,7 @@ class MergeUnitsSorting(BaseSorting):
                 new_values = np.empty(shape=shape, dtype=parent_values.dtype)
                 new_values[keep_inds] = parent_values[keep_parent_inds]
                 for new_id, ids in zip(new_unit_ids, units_to_merge):
-                    removed_inds = parent_sorting.ids_to_indices(ids)
+                    removed_inds = sorting.ids_to_indices(ids)
                     merge_values = parent_values[removed_inds]
 
                     same_property_values = np.all([np.array_equal(m, merge_values[0]) for m in merge_values[1:]])
@@ -133,13 +133,13 @@ class MergeUnitsSorting(BaseSorting):
             elif properties_policy == "remove":
                 self.set_property(key, parent_values[keep_parent_inds], keep_unit_ids)
 
-        if parent_sorting.has_recording():
-            self.register_recording(parent_sorting._recording)
+        if sorting.has_recording():
+            self.register_recording(sorting._recording)
 
         # make it jsonable
         units_to_merge = [list(e) for e in units_to_merge]
         self._kwargs = dict(
-            parent_sorting=parent_sorting,
+            sorting=sorting,
             units_to_merge=units_to_merge,
             new_unit_ids=new_unit_ids,
             properties_policy=properties_policy,

@@ -23,14 +23,26 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    ignore_integrity_checks : bool, default: False.
+        If True, data that violates integrity assumptions will be loaded. At the moment the only integrity
+        check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
+        the attribute `discontinuous_timestamps` to True in the underlying neo object.
     """
 
     mode = "file"
     NeoRawIOClass = "IntanRawIO"
     name = "intan"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False, use_names_as_ids=False):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
+    def __init__(
+        self,
+        file_path,
+        stream_id=None,
+        stream_name=None,
+        all_annotations=False,
+        use_names_as_ids=False,
+        ignore_integrity_checks: bool = False,
+    ):
+        neo_kwargs = self.map_to_neo_kwargs(file_path, ignore_integrity_checks=ignore_integrity_checks)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -43,8 +55,17 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(file_path)}
+    def map_to_neo_kwargs(cls, file_path, ignore_integrity_checks: bool = False):
+
+        # Only propagate the argument if the version is greater than 0.13.1
+        import packaging
+        import neo
+
+        neo_version = packaging.version.parse(neo.__version__)
+        if neo_version > packaging.version.parse("0.13.1"):
+            neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
+        else:
+            neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
 
 

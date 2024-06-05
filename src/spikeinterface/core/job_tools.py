@@ -96,7 +96,8 @@ def fix_job_kwargs(runtime_job_kwargs):
     else:
         n_jobs = int(n_jobs)
 
-    job_kwargs["n_jobs"] = max(n_jobs, 1)
+    n_jobs = max(n_jobs, 1)
+    job_kwargs["n_jobs"] = min(n_jobs, os.cpu_count())
 
     if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_set_global_job_kwargs_set():
         warnings.warn(
