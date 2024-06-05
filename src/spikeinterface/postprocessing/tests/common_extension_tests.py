@@ -70,9 +70,6 @@ class AnalyzerExtensionCommonTestSuite:
     This also test the select_units() ability.
     """
 
-    extension_class = None
-    extension_function_params_list = None
-
     @pytest.fixture(autouse=True, scope="class")
     def setUpClass(self):
         """
@@ -87,52 +84,45 @@ class AnalyzerExtensionCommonTestSuite:
         are available to all subclass instances.
         """
         self.__class__.recording, self.__class__.sorting = get_dataset()
-        # sparsity is computed once for all cases to save processing time and force a small radius
+
         self.__class__.sparsity = estimate_sparsity(
             self.__class__.recording, self.__class__.sorting, method="radius", radius_um=20
         )
 
-    @property
-    def extension_name(self):
-        return self.extension_class.extension_name
-
-    def _prepare_sorting_analyzer(self, format, sparse):
-        # prepare a SortingAnalyzer object with depencies already computed
+    def _prepare_sorting_analyzer(self, format, sparse, extension_class):
+        """prepare a SortingAnalyzer object with depencies already computed"""
         sparsity_ = self.sparsity if sparse else None
         sorting_analyzer = get_sorting_analyzer(
-            self.recording, self.sorting, format=format, sparsity=sparsity_, name=self.extension_class.extension_name
+            self.recording, self.sorting, format=format, sparsity=sparsity_, name=extension_class.extension_name
         )
         sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
-        for dependency_name in self.extension_class.depend_on:
+        for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 dependency_name = dependency_name.split("|")[0]
             sorting_analyzer.compute(dependency_name)
         return sorting_analyzer
 
-    def _check_one(self, sorting_analyzer):
-        if self.extension_class.need_job_kwargs:
+    def _check_one(self, sorting_analyzer, extension_class, params):
+        """"""
+        if extension_class.need_job_kwargs:
             job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
         else:
             job_kwargs = dict()
 
-        # TODO: a downside of this approach is each parameterisation does
-        # not get it's own test, but all falls under the same test.
-        for params in self.extension_function_params_list:
-            print("  params", params)
-            ext = sorting_analyzer.compute(self.extension_name, **params, **job_kwargs)
-            assert len(ext.data) > 0
-            main_data = ext.get_data()
+        ext = sorting_analyzer.compute(extension_class.extension_name, **params, **job_kwargs)
+        assert len(ext.data) > 0
+        main_data = ext.get_data()
 
-        ext = sorting_analyzer.get_extension(self.extension_name)
+        ext = sorting_analyzer.get_extension(extension_class.extension_name)
         assert ext is not None
 
         some_unit_ids = sorting_analyzer.unit_ids[::2]
         sliced = sorting_analyzer.select_units(some_unit_ids, format="memory")
         assert np.array_equal(sliced.unit_ids, sorting_analyzer.unit_ids[::2])
 
-    def test_extension(self):
+    def run_extension_tests(self, extension_class, params):
         for sparse in (True, False):
             for format in ("memory", "binary_folder", "zarr"):
                 print("sparse", sparse, format)
-                sorting_analyzer = self._prepare_sorting_analyzer(format, sparse)
-                self._check_one(sorting_analyzer)
+                sorting_analyzer = self._prepare_sorting_analyzer(format, sparse, extension_class)
+                self._check_one(sorting_analyzer, extension_class, params)
