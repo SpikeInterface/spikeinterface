@@ -11,7 +11,7 @@ from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerE
 DEBUG = False
 
 
-class PrincipalComponentsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
+class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
     extension_class = ComputePrincipalComponents
     extension_function_params_list = [
         dict(mode="by_channel_local"),
