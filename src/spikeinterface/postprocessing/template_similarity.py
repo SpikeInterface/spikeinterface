@@ -49,12 +49,12 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         templates_array = get_dense_templates_array(
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
         )
-            
+
         similarity = compute_similarity_with_templates_array(
-            templates_array, 
-            templates_array, 
-            method=self.params["method"], 
-            n_shifts=n_shifts, 
+            templates_array,
+            templates_array,
+            method=self.params["method"],
+            n_shifts=n_shifts,
         )
         self.data["similarity"] = similarity
 
@@ -68,7 +68,7 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 
 def compute_similarity_with_templates_array(templates_array, other_templates_array, method, n_shifts):
-    
+
     import sklearn.metrics.pairwise
 
     if method in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS:
@@ -82,9 +82,7 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
         for count, shift in enumerate(range(-n_shifts, n_shifts + 1)):
             src_templates = templates_array[:, n_shifts : n - n_shifts].reshape(nb_templates, -1)
             tgt_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(nb_templates, -1)
-            similarity[count] = sklearn.metrics.pairwise.pairwise_distances(
-                    src_templates, tgt_templates, metric=method
-                )
+            similarity[count] = sklearn.metrics.pairwise.pairwise_distances(src_templates, tgt_templates, metric=method)
 
         similarity = np.min(similarity, axis=0)
         if method == "cosine":
