@@ -480,7 +480,7 @@ def compute_templates_diff(
                     all_shift_diff.append(d)
             else:
                 all_shift_diff = [1] * len(all_shifts)
-                    
+
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
 
     return templates_diff
