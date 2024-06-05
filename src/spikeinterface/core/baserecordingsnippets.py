@@ -72,6 +72,9 @@ class BaseRecordingSnippets(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
 
+    def _select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecordingSnippets":
+        raise NotImplementedError
+
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         raise NotImplementedError
 
@@ -445,6 +448,22 @@ class BaseRecordingSnippets(BaseExtractor):
             The object with sliced channels
         """
         return self._channel_slice(channel_ids, renamed_channel_ids=renamed_channel_ids)
+
+    def select_channels(self, channel_ids):
+        """
+        Returns a new object with sliced channels.
+
+        Parameters
+        ----------
+        channel_ids : np.array or list
+            The list of channels to keep
+
+        Returns
+        -------
+        BaseRecordingSnippets
+            The object with sliced channels
+        """
+        return self._select_channels(channel_ids)
 
     def remove_channels(self, remove_channel_ids):
         """
