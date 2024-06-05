@@ -21,13 +21,13 @@ def binom_sf(x: int, n: float, p: float) -> float:
     From values where the cdf is really close to 1.0, the survival function gives more precise results.
     Allows for a non-integer n (uses interpolation).
 
-    @param x: int
+    @param x : int
         The number of successes.
-    @param n: float
+    @param n : float
         The number of trials.
     @param p: float
         The probability of success.
-    @return sf: float
+    @return sf : float
         The survival function of the binomial distribution.
     """
 
@@ -49,7 +49,7 @@ if HAVE_NUMBA:
         """
         Computes the integer borders, and the probability of 2 spikes distant by this border to be closer than max_time.
 
-        @param max_time: float
+        @param max_time : float
             The maximum time between 2 spikes to be considered as a coincidence.
         @return border_low, border_high, p_low, p_high: tuple[int, int, float, float]
             The borders and their probabilities.
@@ -70,11 +70,11 @@ if HAVE_NUMBA:
         """
         Computes the number of refractory period violations in a spike train.
 
-        @param spike_train: array[int64] (n_spikes)
+        @param spike_train : array[int64] (n_spikes)
             The spike train to compute the number of violations for.
-        @param max_time: float32
+        @param max_time : float32
             The maximum time to consider for violations (in number of samples).
-        @return n_violations: float
+        @return n_violations : float
             The number of spike pairs that violate the refractory period.
         """
 
@@ -112,13 +112,13 @@ if HAVE_NUMBA:
         f(x) = 1/2 (1-x²) + x if 0 <= x <= 1
         where x is the distance between max_time floor/ceil(max_time)
 
-        @param spike_train1: array[int64] (n_spikes1)
+        @param spike_train1 : array[int64] (n_spikes1)
             The spike train of the first unit.
-        @param spike_train2: array[int64] (n_spikes2)
+        @param spike_train2 : array[int64] (n_spikes2)
             The spike train of the second unit.
-        @param max_time: float32
+        @param max_time : float32
             The maximum time to consider for coincidence (in number samples).
-        @return n_coincidence: float
+        @return n_coincidence : float
             The number of coincident spikes.
         """
 
@@ -157,11 +157,11 @@ def estimate_contamination(spike_train: np.ndarray, sf: float, T: int, refractor
     uncorrelated to the neuron. Under this assumption, we can estimate the contamination (i.e. the
     fraction of noisy spikes to the total number of spikes).
 
-    @param spike_train: np.ndarray
+    @param spike_train : np.ndarray
         The unit's spike train.
-    @param refractory_period: tuple[float, float]
+    @param refractory_period : tuple[float, float]
         The censored and refractory period (t_c, t_r) used (in ms).
-    @return estimated_contamination: float
+    @return estimated_contamination : float
         The estimated contamination between 0 and 1.
     """
 
@@ -188,15 +188,15 @@ def estimate_cross_contamination(
     Estimates the cross-contamination of the second spike train with the neuron of the first spike train.
     Also performs a statistical test to check if the cross-contamination is significantly higher than a given limit.
 
-    @param spike_train1: np.ndarray
+    @param spike_train1 : np.ndarray
         The spike train of the first unit.
-    @param spike_train2: np.ndarray
+    @param spike_train2 : np.ndarray
         The spike train of the second unit.
-    @param refractory_period: tuple[float, float]
+    @param refractory_period : tuple[float, float]
         The censored and refractory period (t_c, t_r) used (in ms).
-    @param limit: float | None
+    @param limit : float | None
         The higher limit of cross-contamination for the statistical test.
-    @return (estimated_cross_cont, p_value): tuple[float, float] if limit is not None
+    @return (estimated_cross_cont, p_value) : tuple[float, float] if limit is not None
             estimated_cross_cont: float if limit is None
         Returns the estimation of cross-contamination, as well as the p-value of the statistical test if the limit is given.
     """
@@ -244,21 +244,21 @@ def lussac_merge(
 
     Parameters
     ----------
-    analyzer: SortingAnalyzer
+    analyzer : SortingAnalyzer
         The analyzer to look at
-    refractory_period: array/list/tuple of 2 floats
+    refractory_period : array/list/tuple of 2 floats
         (censored_period_ms, refractory_period_ms)
-    minimum_spikes: int, default: 100
+    minimum_spikes : int, default: 100
         Minimum number of spikes for each unit to consider a potential merge.
-    template_diff_thresh: float
+    template_diff_thresh : float
         The threshold on the template difference.
         Any pair above this threshold will not be considered.
-    CC_treshold: float
+    CC_treshold : float
         The threshold on the cross-contamination.
         Any pair above this threshold will not be considered.
-    max_shift: int
+    max_shift : int
         The maximum shift when comparing the templates (in number of time samples).
-    max_channels: int
+    max_channels : int
         The maximum number of channels to consider when comparing the templates.
     """
 
