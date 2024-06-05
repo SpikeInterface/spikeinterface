@@ -157,7 +157,7 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, required_metri
 
     if not isinstance(pipeline, Pipeline):
         raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
-    
+
     model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline, required_metrics)
 
     classified_units = model_based_classification.predict_labels()
