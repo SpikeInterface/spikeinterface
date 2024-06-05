@@ -60,53 +60,53 @@ SORTER_DOCKER_MAP = {k: f"{REGISTRY}/{v}-base" for k, v in SORTER_DOCKER_MAP.ite
 _common_param_doc = """
     Parameters
     ----------
-    sorter_name: str
+    sorter_name : str
         The sorter name
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be spike sorted
-    folder: str or Path
+    folder : str or Path
         Path to output folder
-    remove_existing_folder: bool
+    remove_existing_folder : bool
         If True and folder exists then delete.
-    delete_output_folder: bool, default: False
+    delete_output_folder : bool, default: False
         If True, output folder is deleted
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose
-    raise_error: bool, default: True
+    raise_error : bool, default: True
         If True, an error is raised if spike sorting fails
         If False, the process continues and the error is logged in the log file.
-    docker_image: bool or str, default: False
+    docker_image : bool or str, default: False
         If True, pull the default docker container for the sorter and run the sorter in that container using docker.
         Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
         If False, the sorter is run locally
-    singularity_image: bool or str, default: False
+    singularity_image : bool or str, default: False
         If True, pull the default docker container for the sorter and run the sorter in that container using
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled
         from Docker Hub. If False, the sorter is run locally
-    with_output: bool, default: True
+    with_output : bool, default: True
         If True, the output Sorting is returned as a Sorting
-    delete_container_files: bool, default: True
+    delete_container_files : bool, default: True
         If True, the container temporary files are deleted after the sorting is done
-    extra_requirements: list, default: None
+    extra_requirements : list, default: None
         List of extra requirements to install in the container
-    installation_mode: "auto" | "pypi" | "github" | "folder" | "dev" | "no-install", default: "auto"
+    installation_mode : "auto" | "pypi" | "github" | "folder" | "dev" | "no-install", default: "auto"
         How spikeinterface is installed in the container:
-          * "auto": if host installation is a pip release then use "github" with tag
+          * "auto" : if host installation is a pip release then use "github" with tag
                     if host installation is DEV_MODE=True then use "dev"
-          * "pypi": use pypi with pip install spikeinterface
-          * "github": use github with `pip install git+https`
-          * "folder": mount a folder in container and install from this one.
+          * "pypi" : use pypi with pip install spikeinterface
+          * "github" : use github with `pip install git+https`
+          * "folder" : mount a folder in container and install from this one.
                       So the version in the container is a different spikeinterface version from host, useful for
                       cross checks
-          * "dev": same as "folder", but the folder is the spikeinterface.__file__ to ensure same version as host
-          * "no-install": do not install spikeinterface in the container because it is already installed
-    spikeinterface_version: str, default: None
+          * "dev" : same as "folder", but the folder is the spikeinterface.__file__ to ensure same version as host
+          * "no-install" : do not install spikeinterface in the container because it is already installed
+    spikeinterface_version : str, default: None
         The spikeinterface version to install in the container. If None, the current version is used
-    spikeinterface_folder_source: Path or None, default: None
+    spikeinterface_folder_source : Path or None, default: None
         In case of installation_mode="folder", the spikeinterface folder source to use to install in the container
-    output_folder: None, default: None
+    output_folder : None, default: None
         Do not use. Deprecated output function to be removed in 0.103.
-    **sorter_params: keyword args
+    **sorter_params : keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
     Returns
@@ -205,26 +205,26 @@ def run_sorter_local(
 
     Parameters
     ----------
-    sorter_name: str
+    sorter_name : str
         The sorter name
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be spike sorted
-    folder: str or Path
+    folder : str or Path
         Path to output folder. If None, a folder is created in the current directory
-    remove_existing_folder: bool, default: True
+    remove_existing_folder : bool, default: True
         If True and output_folder exists yet then delete
-    delete_output_folder: bool, default: False
+    delete_output_folder : bool, default: False
         If True, output folder is deleted
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose
-    raise_error: bool, default: True
+    raise_error : bool, default: True
         If True, an error is raised if spike sorting fails.
         If False, the process continues and the error is logged in the log file
-    with_output: bool, default: True
+    with_output : bool, default: True
         If True, the output Sorting is returned as a Sorting
-    output_folder: None, default: None
+    output_folder : None, default: None
         Do not use. Deprecated output function to be removed in 0.103.
-    **sorter_params: keyword args
+    **sorter_params : keyword args
     """
     if isinstance(recording, list):
         raise Exception("If you want to run several sorters/recordings use run_sorter_jobs(...)")
@@ -286,46 +286,46 @@ def run_sorter_container(
 
     Parameters
     ----------
-    sorter_name: str
+    sorter_name : str
         The sorter name
-    recording: BaseRecording
+    recording : BaseRecording
         The recording extractor to be spike sorted
-    mode: str
-        The container mode: "docker" or "singularity"
-    container_image: str, default: None
+    mode : str
+        The container mode : "docker" or "singularity"
+    container_image : str, default: None
         The container image name and tag. If None, the default container image is used
-    output_folder: str, default: None
+    output_folder : str, default: None
         Path to output folder
-    remove_existing_folder: bool, default: True
+    remove_existing_folder : bool, default: True
         If True and output_folder exists yet then delete
-    delete_output_folder: bool, default: False
+    delete_output_folder : bool, default: False
         If True, output folder is deleted
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose
-    raise_error: bool, default: True
+    raise_error : bool, default: True
         If True, an error is raised if spike sorting fails
-    with_output: bool, default: True
+    with_output : bool, default: True
         If True, the output Sorting is returned as a Sorting
-    delete_container_files: bool, default: True
+    delete_container_files : bool, default: True
         If True, the container temporary files are deleted after the sorting is done
-    extra_requirements: list, default: None
+    extra_requirements : list, default: None
         List of extra requirements to install in the container
-    installation_mode: "auto" | "pypi" | "github" | "folder" | "dev" | "no-install", default: "auto"
+    installation_mode : "auto" | "pypi" | "github" | "folder" | "dev" | "no-install", default: "auto"
         How spikeinterface is installed in the container:
-          * "auto": if host installation is a pip release then use "github" with tag
+          * "auto" : if host installation is a pip release then use "github" with tag
                     if host installation is DEV_MODE=True then use "dev"
-          * "pypi": use pypi with pip install spikeinterface
-          * "github": use github with `pip install git+https`
-          * "folder": mount a folder in container and install from this one.
+          * "pypi" : use pypi with pip install spikeinterface
+          * "github" : use github with `pip install git+https`
+          * "folder" : mount a folder in container and install from this one.
                       So the version in the container is a different spikeinterface version from host, useful for
                       cross checks
-          * "dev": same as "folder", but the folder is the spikeinterface.__file__ to ensure same version as host
-          * "no-install": do not install spikeinterface in the container because it is already installed
-    spikeinterface_version: str, default: None
+          * "dev" : same as "folder", but the folder is the spikeinterface.__file__ to ensure same version as host
+          * "no-install" : do not install spikeinterface in the container because it is already installed
+    spikeinterface_version : str, default: None
         The spikeinterface version to install in the container. If None, the current version is used
-    spikeinterface_folder_source: Path or None, default: None
+    spikeinterface_folder_source : Path or None, default: None
         In case of installation_mode="folder", the spikeinterface folder source to use to install in the container
-    **sorter_params: keyword args for the sorter
+    **sorter_params : keyword args for the sorter
 
     """
 
@@ -646,11 +646,11 @@ def read_sorter_folder(folder, register_recording=True, sorting_info=True, raise
 
     Parameters
     ----------
-    folder: Pth or str
+    folder : Pth or str
         The sorter folder
-    register_recording: bool, default: True
+    register_recording : bool, default: True
         Attach recording (when json or pickle) to the sorting
-    sorting_info: bool, default: True
+    sorting_info : bool, default: True
         Attach sorting info to the sorting.
     """
     folder = Path(folder)
