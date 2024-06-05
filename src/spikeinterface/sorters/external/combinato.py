@@ -12,12 +12,6 @@ from ..basesorter import BaseSorter
 from spikeinterface.extractors import CombinatoSortingExtractor
 from spikeinterface.preprocessing import ScaleRecording
 
-try:
-    import h5py
-
-    HAVE_H5PY = True
-except ImportError:
-    HAVE_H5PY = False
 
 PathType = Union[str, Path]
 
@@ -128,6 +122,12 @@ class CombinatoSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
+        try:
+            import h5py
+
+            HAVE_H5PY = True
+        except ImportError:
+            HAVE_H5PY = False
         assert HAVE_H5PY, "You must install h5py for combinato"
         # Generate h5 files in the dataset directory
         chan_ids = recording.get_channel_ids()

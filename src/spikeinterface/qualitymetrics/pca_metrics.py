@@ -9,14 +9,6 @@ import numpy as np
 from tqdm.auto import tqdm
 from concurrent.futures import ProcessPoolExecutor
 
-try:
-    import scipy.stats
-    import scipy.spatial.distance
-    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-    from sklearn.neighbors import NearestNeighbors
-    from sklearn.decomposition import IncrementalPCA
-except:
-    pass
 
 import warnings
 
@@ -237,6 +229,8 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     ----------
     Based on metrics described in [Schmitzer-Torbert]_
     """
+    import scipy.stats
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     pcs_for_other_units = all_pcs[all_labels != this_unit_id, :]
@@ -291,6 +285,7 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
     ----------
     Based on metric described in [Hill]_
     """
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
     X = all_pcs
 
@@ -348,6 +343,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
     ----------
     Based on metrics described in [Chung]_
     """
+    from sklearn.neighbors import NearestNeighbors
 
     total_spikes = all_pcs.shape[0]
     ratio = max_spikes / total_spikes
@@ -474,6 +470,8 @@ def nearest_neighbors_isolation(
     ----------
     Based on isolation metric described in [Chung]_
     """
+    from sklearn.decomposition import IncrementalPCA
+
     rng = np.random.default_rng(seed=seed)
 
     waveforms_ext = sorting_analyzer.get_extension("waveforms")
@@ -796,6 +794,7 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     ----------
     Based on simplified silhouette score suggested by [Hruschka]_
     """
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     centroid_for_this_unit = np.expand_dims(np.mean(pcs_for_this_unit, 0), 0)
@@ -846,6 +845,7 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
     ----------
     Based on [Rousseeuw]_
     """
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     distances_for_this_unit = scipy.spatial.distance.cdist(pcs_for_this_unit, pcs_for_this_unit)
@@ -905,6 +905,7 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
         (1) ranges from 0 to 1; and
         (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
     """
+    from sklearn.neighbors import NearestNeighbors
 
     # get lengths
     n_spikes_target = pcs_target_unit.shape[0]

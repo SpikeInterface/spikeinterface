@@ -45,11 +45,10 @@ for import_statement in import_statement_list:
         time_taken = float(result.stdout.strip())
         time_taken_list.append(time_taken)
 
-    # for time in time_taken_list:
-        # Uncomment once exporting import is fixed
-        # if time > 2.5:
-        #     exceptions.append(f"Importing {import_statement} took too long: {time:.2f} seconds")
-        #     break
+    for time in time_taken_list:
+        if time > 2.5:
+            exceptions.append(f"Importing {import_statement} took too long: {time:.2f} seconds")
+            break
 
     if time_taken_list:
         avg_time_taken = sum(time_taken_list) / len(time_taken_list)

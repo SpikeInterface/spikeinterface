@@ -3,8 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from collections import deque
 
-import numpy as np
-
 
 class MatlabHelper:
     extractor_name = "MATSortingExtractor"
