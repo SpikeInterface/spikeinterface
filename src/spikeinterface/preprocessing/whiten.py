@@ -172,10 +172,10 @@ def compute_whitening_matrix(
     eps : float or None, default: None
         Small epsilon to regularize SVD. If None, the default is set to 1e-8, but if the data is float type and scaled
         down to very small values, eps is automatically set to a small fraction (1e-3) of the median of the squared data.
-    regularize: bool, default False
+    regularize : bool, default: False
         Boolean to decide if we want to regularize the covariance matrix, using the GraphicalLassoCV() method
         of sklearn
-    regularize_kwargs: None or dict
+    regularize_kwargs : None or dict
         Dictionary of the parameters that could be provided to the GraphicalLassoCV() method of sklearn, if
         the covariance matrix needs to be regularized
     Returns
