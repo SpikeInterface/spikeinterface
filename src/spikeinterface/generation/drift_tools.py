@@ -516,25 +516,27 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-def split_sorting_by_times(sorting_or_sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95):
+def split_sorting_by_times(sorting_or_sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, seed=None):
 
     if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
         sorting = sorting_or_sorting_analyzer.sorting
     else:
         sorting = sorting_or_sorting_analyzer
 
+    rng = np.random.RandomState(seed)
+
     sorting_split = sorting.select_units(sorting.unit_ids)
     split_units = []
     original_units = []
     nb_splits = int(splitting_probability * len(sorting.unit_ids))
-    to_split_ids = np.random.choice(sorting.unit_ids, nb_splits, replace=False)
+    to_split_ids = rng.choice(sorting.unit_ids, nb_splits, replace=False)
     import spikeinterface.curation as scur
 
     for unit in to_split_ids:
         num_spikes = len(sorting_split.get_unit_spike_train(unit))
         indices = np.zeros(num_spikes, dtype=int)
-        indices[: num_spikes // 2] = (np.random.rand(num_spikes // 2) < partial_split_prob).astype(int)
-        indices[num_spikes // 2 :] = (np.random.rand(num_spikes - num_spikes // 2) < 1 - partial_split_prob).astype(int)
+        indices[: num_spikes // 2] = (rng.rand(num_spikes // 2) < partial_split_prob).astype(int)
+        indices[num_spikes // 2 :] = (rng.rand(num_spikes - num_spikes // 2) < 1 - partial_split_prob).astype(int)
         sorting_split = scur.split_unit_sorting(
             sorting_split, split_unit_id=unit, indices_list=indices, properties_policy="remove"
         )
@@ -543,7 +545,7 @@ def split_sorting_by_times(sorting_or_sorting_analyzer, splitting_probability=0.
     return sorting_split, split_units
 
 
-def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5):
+def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5, seed=None):
     """
     Fonction used to split a sorting based on the amplitudes of the units. This
     might be used for benchmarking meta merging step (see components)
@@ -553,6 +555,7 @@ def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5):
         sorting_analyzer.compute("spike_amplitudes")
 
     sa = sorting_analyzer
+    rng = np.random.RandomState(seed)
 
     from spikeinterface.core.numpyextractors import NumpySorting
     from spikeinterface.core.template_tools import get_template_extremum_channel
@@ -562,7 +565,7 @@ def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5):
     new_spikes = spikes.copy()
     amplitudes = sa.get_extension("spike_amplitudes").get_data()
     nb_splits = int(splitting_probability * len(sa.sorting.unit_ids))
-    to_split_ids = np.random.choice(sa.sorting.unit_ids, nb_splits, replace=False)
+    to_split_ids = rng.choice(sa.sorting.unit_ids, nb_splits, replace=False)
     max_index = np.max(spikes["unit_index"])
     new_unit_ids = list(sa.sorting.unit_ids.copy())
     splitted_pairs = []
@@ -579,7 +582,7 @@ def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5):
 
         amplitude_mask = (amplitudes > m) * (amplitudes < thresh)
         mask = ind_mask & amplitude_mask
-        new_spikes["unit_index"][mask] = (max_index + 1) * np.random.rand(np.sum(mask)) > 0.5
+        new_spikes["unit_index"][mask] = (max_index + 1) * rng.rand(np.sum(mask)) > 0.5
         max_index += 1
         new_unit_ids += [max(new_unit_ids) + 1]
         splitted_pairs += [(unit_id, new_unit_ids[-1])]

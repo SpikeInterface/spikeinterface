@@ -229,13 +229,14 @@ def estimate_cross_contamination(
     return estimation, p_value
 
 
-def aurelien_merge(
+def lussac_merge(
     analyzer,
     refractory_period,
-    template_threshold: float = 0.2,
-    CC_threshold: float = 0.1,
-    max_shift: int = 10,
-    max_channels: int = 10,
+    minimum_spikes=100,
+    template_diff_thresh: float = 0.25,
+    CC_threshold: float = 0.2,
+    max_shift: int = 5,
+    num_channels: int = 5,
     template_metric="l1",
 ) -> list[tuple]:
     """
@@ -247,7 +248,9 @@ def aurelien_merge(
         The analyzer to look at
     refractory_period: array/list/tuple of 2 floats
         (censored_period_ms, refractory_period_ms)
-    template_threshold: float
+    minimum_spikes: int, default: 100
+        Minimum number of spikes for each unit to consider a potential merge.
+    template_diff_thresh: float
         The threshold on the template difference.
         Any pair above this threshold will not be considered.
     CC_treshold: float
@@ -262,55 +265,75 @@ def aurelien_merge(
     assert HAVE_NUMBA, "Numba should be installed"
     pairs = []
     sorting = analyzer.sorting
-    recording = analyzer.recording
     sf = analyzer.recording.sampling_frequency
     n_frames = analyzer.recording.get_num_samples()
+    sparsity = analyzer.sparsity
+    all_shifts = range(-max_shift, max_shift + 1)
+    unit_ids = sorting.unit_ids
 
-    for unit_id1 in analyzer.unit_ids:
-        for unit_id2 in analyzer.unit_ids:
-            if unit_id2 <= unit_id1:
+    if sparsity is None:
+        adaptative_masks = False
+        sparsity_mask = None
+    else:
+        adaptative_masks = num_channels == None
+        sparsity_mask = sparsity.mask
+
+    for unit_ind1 in range(len(unit_ids)):
+        for unit_ind2 in range(unit_ind1 + 1, len(unit_ids)):
+
+            unit_id1 = unit_ids[unit_ind1]
+            unit_id2 = unit_ids[unit_ind2]
+
+            # Checking that we have enough spikes
+            spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
+            spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
+            if not (len(spike_train1) > minimum_spikes and len(spike_train2) > minimum_spikes):
                 continue
-
+            
             # Computing template difference
             template1 = analyzer.get_extension("templates").get_unit_template(unit_id1)
             template2 = analyzer.get_extension("templates").get_unit_template(unit_id2)
 
-            best_channel_indices = np.argsort(np.max(np.abs(template1) + np.abs(template2), axis=0))[::-1][
-                :max_channels
-            ]
+            if not adaptative_masks:
+                chan_inds = np.argsort(np.max(np.abs(template1) + np.abs(template2), axis=0))[::-1][:num_channels]
+            else:
+                chan_inds = np.flatnonzero(sparsity_mask[unit_ind1] * sparsity_mask[unit_ind2])
 
-            if template_metric == "l1":
-                norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
-            elif template_metric == "l2":
-                norm = np.sum(template1**2) + np.sum(template2**2)
-            elif template_metric == "cosine":
-                norm = np.linalg.norm(template1) * np.linalg.norm(template2)
+            if len(chan_inds) > 0:
+                template1 = template1[:, chan_inds]
+                template2 = template2[:, chan_inds]
 
-            all_shift_diff = []
-            n = len(template1)
-            for shift in range(-max_shift, max_shift + 1):
-                temp1 = template1[max_shift : n - max_shift, best_channel_indices]
-                temp2 = template2[max_shift + shift : n - max_shift + shift, best_channel_indices]
                 if template_metric == "l1":
-                    d = np.sum(np.abs(temp1 - temp2)) / norm
+                    norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
                 elif template_metric == "l2":
-                    d = np.linalg.norm(temp1 - temp2) / norm
+                    norm = np.sum(template1**2) + np.sum(template2**2)
                 elif template_metric == "cosine":
-                    d = 1 - np.sum(temp1 * temp2) / norm
-                all_shift_diff.append(d)
+                    norm = np.linalg.norm(template1) * np.linalg.norm(template2)
+
+                all_shift_diff = []
+                n = len(template1)
+                for shift in all_shifts:
+                    temp1 = template1[max_shift : n - max_shift, :]
+                    temp2 = template2[max_shift + shift : n - max_shift + shift, :]
+                    if template_metric == "l1":
+                        d = np.sum(np.abs(temp1 - temp2)) / norm
+                    elif template_metric == "l2":
+                        d = np.linalg.norm(temp1 - temp2) / norm
+                    elif template_metric == "cosine":
+                        d = 1 - np.sum(temp1 * temp2) / norm
+                    all_shift_diff.append(d)
+            else:
+                all_shift_diff = [1]*len(all_shifts)
 
             max_diff = np.min(all_shift_diff)
 
-            if max_diff > template_threshold:
+            if max_diff > template_diff_thresh:
                 continue
 
             # Compuyting the cross-contamination difference
-            spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
-            spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
             CC, p_value = estimate_cross_contamination(
                 spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold
             )
-
             if p_value < 0.2:
                 continue
 
@@ -324,13 +347,22 @@ class LussacMerging(BaseMergingEngine):
     Meta merging inspired from the Lussac metric
     """
 
-    default_params = {"templates": None, "refractory_period": (0.4, 1.9)}
+    default_params = {
+        "templates": None, 
+        "minimum_spikes" : 50,
+        "refractory_period": (0.4, 1.9),
+        "template_metric": "cosine",
+        "num_channels": 5,
+        "verbose" : False
+        }
 
     def __init__(self, recording, sorting, kwargs):
-        self.default_params.update(**kwargs)
+        self.params = self.default_params.copy()
+        self.params.update(**kwargs)
         self.sorting = sorting
+        self.verbose = self.params.pop('verbose')
         self.recording = recording
-        self.templates = self.default_params.pop("templates", None)
+        self.templates = self.params.pop("templates", None)
         if self.templates is not None:
             sparsity = self.templates.sparsity
             templates_array = self.templates.get_dense_templates().copy()
@@ -345,7 +377,9 @@ class LussacMerging(BaseMergingEngine):
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
 
     def run(self, extra_outputs=False):
-        merges = aurelien_merge(self.analyzer, **self.default_params)
+        merges = lussac_merge(self.analyzer, **self.params)
+        if self.verbose:
+            print(f"{len(merges)} merges have been detected")
         merges = resolve_merging_graph(self.sorting, merges)
         sorting = apply_merges_to_sorting(self.sorting, merges)
         if extra_outputs:

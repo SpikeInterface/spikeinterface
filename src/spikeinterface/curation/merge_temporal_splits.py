@@ -84,7 +84,7 @@ def compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs):
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
 
-    distances = np.ones((sorting.get_num_units(), sorting.get_num_units()))
+    presence_distances = np.ones((sorting.get_num_units(), sorting.get_num_units()))
 
     for unit_ind1 in range(n):
         for unit_ind2 in range(unit_ind1 + 1, n):
@@ -93,8 +93,8 @@ def compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs):
             unit1 = unit_ids[unit_ind1]
             unit2 = unit_ids[unit_ind2]
             d = presence_distance(sorting, unit1, unit2, **presence_distance_kwargs)
-            distances[unit_ind1, unit_ind2] = d
-    presence_distances = np.triu(distances)
+            presence_distances[unit_ind1, unit_ind2] = d
+
     return presence_distances
 
 

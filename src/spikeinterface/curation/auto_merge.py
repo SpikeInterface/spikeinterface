@@ -61,7 +61,7 @@ def get_potential_auto_merge(
     ----------
     sorting_analyzer: SortingAnalyzer
         The SortingAnalyzer
-    minimum_spikes: int, default: 1000
+    minimum_spikes: int, default: 100
         Minimum number of spikes for each unit to consider a potential merge.
         Enough spikes are needed to estimate the correlogram
     maximum_distance_um: float, default: 150
@@ -479,7 +479,7 @@ def compute_templates_diff(
                         d = 1 - np.sum(temp1 * temp2) / norm
                     all_shift_diff.append(d)
             else:
-                all_shift_diff = [0]*len(all_shifts)
+                all_shift_diff = [1]*len(all_shifts)
                     
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
 

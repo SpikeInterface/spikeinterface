@@ -16,27 +16,30 @@ class CircusMerging(BaseMergingEngine):
 
     default_params = {
         "templates": None,
+        "verbose" : False,
         "curation_kwargs": {
             "minimum_spikes": 50,
             "corr_diff_thresh": 0.5,
             "template_metric": "cosine",
-            "num_channels": None,
-            "num_shift": 10,
+            "num_channels": 5,
+            "num_shift": 5,
         },
         "temporal_splits_kwargs": {
             "minimum_spikes": 50,
             "presence_distance_threshold": 0.1,
             "template_metric": "cosine",
-            "num_channels": None,
-            "num_shift": 10,
+            "num_channels": 5,
+            "num_shift": 5,
         },
     }
 
     def __init__(self, recording, sorting, kwargs):
-        self.default_params.update(**kwargs)
+        self.params = self.default_params.copy()
+        self.params.update(**kwargs)
         self.sorting = sorting
         self.recording = recording
-        self.templates = self.default_params.pop("templates", None)
+        self.verbose = self.params.pop('verbose')
+        self.templates = self.params.pop("templates", None)
         if self.templates is not None:
             sparsity = self.templates.sparsity
             templates_array = self.templates.get_dense_templates().copy()
@@ -53,16 +56,18 @@ class CircusMerging(BaseMergingEngine):
         # self.analyzer.compute(["template_similarity"], max_lag_ms=0.5, metric='cosine')
 
     def run(self, extra_outputs=False):
-        curation_kwargs = self.default_params.get("curation_kwargs", None)
+        curation_kwargs = self.params.get("curation_kwargs", None)
         if curation_kwargs is not None:
             merges = get_potential_auto_merge(self.analyzer, **curation_kwargs)
         else:
             merges = []
-        print(len(merges))
-        temporal_splits_kwargs = self.default_params.get("temporal_splits_kwargs", None)
+        if self.verbose:
+            print(f'{len(merges)} merges have been detected via auto merges')
+        temporal_splits_kwargs = self.params.get("temporal_splits_kwargs", None)
         if temporal_splits_kwargs is not None:
             merges += get_potential_temporal_splits(self.analyzer, **temporal_splits_kwargs)
-        print(len(merges))
+            if self.verbose:
+                print(f'{len(merges)} merges have been detected via additional temporal splits')
         merges = resolve_merging_graph(self.sorting, merges)
         sorting = apply_merges_to_sorting(self.sorting, merges)
         if extra_outputs:
