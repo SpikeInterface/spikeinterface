@@ -432,7 +432,8 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
         An array of spikes, where spikes are represented by their:
             (sample_index, channel_index, amplitude, segment_index, unit_index, in_margin)
     spikes_within_margin: np.array
-        An array of spikes whose peaks are close to another spike, within a given margin
+        An array of spikes, of the same format as `spikes`, whose peaks are close to
+        another spike within a given margin
     delta_collision_samples: int
         The maximum number of samples between two spikes to consider them as overlapping
     sparsity_mask: boolean mask
