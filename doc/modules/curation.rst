@@ -44,10 +44,10 @@ The merging and splitting operations are handled by the :py:class:`~spikeinterfa
 Manual curation format
 ----------------------
 
-SpikeInterface internally support a manual curation format JSON based.
-When a mnual curation is necessary, modifying in place a dataset is a bad practice.
-Instead, to keep the reproducibility in the spike sorting piepline, we introduce a manual curation format,
-simple and JSON based. This format defines at the moment : merges + deletions + manual tags.
+SpikeInterface internally supports a JSON-based manual curation format.
+When manual curation is necessary, modifying a dataset in place is a bad practice.
+Instead, to ensure the reproducibility of the spike sorting pipelines, we have introduced a simple and JSON-based manual curation format.
+This format defines at the moment : merges + deletions + manual tags.
 The simple file can be kept along side the output of a sorter and applied on the result to have a "clean" result.
 
 This format has two part:
@@ -55,8 +55,8 @@ This format has two part:
   * **definition** with the folowing keys:
 
     * "format_version" : format specification
-    * "unit_ids" : give the list of unit_ds
-    * "label_definitions" : list of label category and possible labels per category.
+    * "unit_ids" : the list of unit_ds
+    * "label_definitions" : list of label categories and possible labels per category.
                             Every category can be *exclusive=True* onely one label or *exclusive=False* several labels possible
 
   * **manual output** curation with the folowing keys:
@@ -65,7 +65,7 @@ This format has two part:
     * "merged_unit_groups"
     * "removed_units"
 
-Here the description of the format with a simple example:
+Here is the description of the format with a simple example:
 
 .. code-block:: json
 
