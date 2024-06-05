@@ -140,13 +140,20 @@ class ComputeSpikeLocations(AnalyzerExtension):
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
             spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
+            segment_cum_count = np.insert(
+                np.cumsum([len(spike_vector[a]) for a in range(0, self.sorting_analyzer.sorting.get_num_segments())]),
+                0,
+                0,
+            )
             spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
             spike_locations_by_units = {}
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 spike_locations_by_units[segment_index] = {}
                 for unit_id in unit_ids:
                     inds = spike_indices[segment_index][unit_id]
-                    spike_locations_by_units[segment_index][unit_id] = all_spike_locations[inds]
+                    spike_locations_by_units[segment_index][unit_id] = all_spike_locations[
+                        segment_cum_count[segment_index] + inds
+                    ]
             return spike_locations_by_units
         else:
             raise ValueError(f"Wrong .get_data(outputs={outputs})")
