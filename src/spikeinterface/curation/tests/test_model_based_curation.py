@@ -20,9 +20,10 @@ else:
 @pytest.fixture
 def pipeline():
     from sklearn.pipeline import Pipeline
+    pipeline_path = Path(__file__).parent / "trained_pipeline.pkl"
 
     # Load trained_pipeline.pkl
-    with open("trained_pipeline.pkl", "rb") as f:
+    with open(pipeline_path, "rb") as f:
         pipeline = pkl.load(f)
     return pipeline
 
