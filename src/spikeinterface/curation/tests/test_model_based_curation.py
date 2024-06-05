@@ -20,6 +20,7 @@ else:
 @pytest.fixture
 def pipeline():
     from sklearn.pipeline import Pipeline
+
     pipeline_path = Path(__file__).parent / "trained_pipeline.pkl"
 
     # Load trained_pipeline.pkl
