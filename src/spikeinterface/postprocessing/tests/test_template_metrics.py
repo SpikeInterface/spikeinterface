@@ -5,7 +5,7 @@ from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerE
 from spikeinterface.postprocessing import ComputeTemplateMetrics
 
 
-class TemplateMetricsTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
+class TestTemplateMetrics(AnalyzerExtensionCommonTestSuite):
     extension_class = ComputeTemplateMetrics
     extension_function_params_list = [
         dict(),
@@ -15,6 +15,6 @@ class TemplateMetricsTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == "__main__":
-    test = TemplateMetricsTest()
+    test = TestTemplateMetrics()
     test.setUpClass()
     test.test_extension()
