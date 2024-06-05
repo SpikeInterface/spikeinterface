@@ -61,13 +61,27 @@ def get_sorting_analyzer(recording, sorting, format="memory", sparsity=None, nam
 
 class AnalyzerExtensionCommonTestSuite:
     """
-    Common tests with class approach to compute extension on several cases (3 format x 2 sparsity)
+    Common tests with class approach to compute extension on several cases,
+    format ("memory", "binary_folder", "zarr") and sparsity (True, False).
+    Extensions refer to the extension classes that handle the postprocessing,
+    for example extracting principal components or amplitude scalings.
 
-    This is done a a list of differents parameters (extension_function_params_list).
+    This base class provides a fixture which sets a recording
+    and sorting object onto itself, which are set up once each time
+    the base class is subclassed in a test environment. The recording
+    and sorting object are used in the creation of the `sorting_analyzer`
+    object used to run postprocessing routines.
 
-    This automatically precompute extension dependencies with default params before running computation.
+    When subclassed, a test function that parametrises arguments
+    that are passed to the `sorting_analyzer.compute()` can be setup.
+    This must call `run_extension_tests()`  which sets up a `sorting_analyzer`
+    with the relevant format and sparsity. This also automatically precomputes
+    extension dependencies with default params, Then, `check_one()` is called
+    which runs the compute function with the passed params and tests that:
 
-    This also test the select_units() ability.
+    1) the returned extractor object has data on it
+    2) check `sorting_analyzer.get_extension()` does not return None
+    3) the correct units are sliced with the `select_units()` function.
     """
 
     @pytest.fixture(autouse=True, scope="class")
@@ -90,20 +104,31 @@ class AnalyzerExtensionCommonTestSuite:
         )
 
     def _prepare_sorting_analyzer(self, format, sparse, extension_class):
-        """prepare a SortingAnalyzer object with depencies already computed"""
+        """
+        Prepare a SortingAnalyzer object with dependencies already computed
+        according to format (e.g. "memory", "binary_folder", "zarr")
+        and sparsity (e.g. True, False).
+        """
         sparsity_ = self.sparsity if sparse else None
+
         sorting_analyzer = get_sorting_analyzer(
             self.recording, self.sorting, format=format, sparsity=sparsity_, name=extension_class.extension_name
         )
         sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
+
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 dependency_name = dependency_name.split("|")[0]
             sorting_analyzer.compute(dependency_name)
+
         return sorting_analyzer
 
     def _check_one(self, sorting_analyzer, extension_class, params):
-        """"""
+        """
+        Take a prepared sorting analyzer object, compute the extension of interest
+        with the passed parameters, and check the output is not empty, the extension
+        exists and `select_units()` method works.
+        """
         if extension_class.need_job_kwargs:
             job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
         else:
@@ -121,6 +146,11 @@ class AnalyzerExtensionCommonTestSuite:
         assert np.array_equal(sliced.unit_ids, sorting_analyzer.unit_ids[::2])
 
     def run_extension_tests(self, extension_class, params):
+        """
+        Convenience function to perform all checks on the extension
+        of interest with the passed parameters. Will perform tests
+        for sparsity and format.
+        """
         for sparse in (True, False):
             for format in ("memory", "binary_folder", "zarr"):
                 print("sparse", sparse, format)
