@@ -73,11 +73,24 @@ class AnalyzerExtensionCommonTestSuite:
     extension_class = None
     extension_function_params_list = None
 
-    @classmethod
-    def setUpClass(cls):
-        cls.recording, cls.sorting = get_dataset()
+    @pytest.fixture(autouse=True, scope="class")
+    def setUpClass(self):
+        """
+        This method sets up the class once at the start of testing. It is
+        in scope for the lifetime of te class and is reused across all
+        tests that inherit from this base class to save processing time and
+        force a small radius.
+
+        When setting attributes on `self` in `scope="class"` a new
+        class instance is used for each. In this case, we have to set
+        from the base object `__class__` to ensure the attributes
+        are available to all subclass instances.
+        """
+        self.__class__.recording, self.__class__.sorting = get_dataset()
         # sparsity is computed once for all cases to save processing time and force a small radius
-        cls.sparsity = estimate_sparsity(cls.recording, cls.sorting, method="radius", radius_um=20)
+        self.__class__.sparsity = estimate_sparsity(
+            self.__class__.recording, self.__class__.sorting, method="radius", radius_um=20
+        )
 
     @property
     def extension_name(self):
@@ -114,12 +127,10 @@ class AnalyzerExtensionCommonTestSuite:
         some_unit_ids = sorting_analyzer.unit_ids[::2]
         sliced = sorting_analyzer.select_units(some_unit_ids, format="memory")
         assert np.array_equal(sliced.unit_ids, sorting_analyzer.unit_ids[::2])
-        # print(sliced)
 
     def test_extension(self):
         for sparse in (True, False):
             for format in ("memory", "binary_folder", "zarr"):
-                print()
                 print("sparse", sparse, format)
                 sorting_analyzer = self._prepare_sorting_analyzer(format, sparse)
                 self._check_one(sorting_analyzer)
