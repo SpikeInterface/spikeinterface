@@ -1,6 +1,3 @@
-import unittest
-import numpy as np
-
 from spikeinterface.postprocessing import ComputeSpikeLocations
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 import pytest

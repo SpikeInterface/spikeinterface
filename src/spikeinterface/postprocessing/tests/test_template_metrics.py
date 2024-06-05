@@ -1,6 +1,3 @@
-import unittest
-
-
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.postprocessing import ComputeTemplateMetrics
 import pytest

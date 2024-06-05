@@ -1,6 +1,4 @@
-import unittest
 import numpy as np
-from typing import List
 
 try:
     import numba
@@ -38,13 +36,11 @@ def test_make_bins():
     bin_ms = 1.6421
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
     assert bins.size == np.floor(window_ms / bin_ms) + 1
-    # print(bins, window_size, bin_size)
 
     window_ms = 60.0
     bin_ms = 2.0
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
     assert bins.size == np.floor(window_ms / bin_ms) + 1
-    # print(bins, window_size, bin_size)
 
 
 def _test_correlograms(sorting, window_ms, bin_ms, methods):

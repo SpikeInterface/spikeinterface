@@ -1,9 +1,5 @@
-import unittest
-
 from spikeinterface.postprocessing.tests.common_extension_tests import (
     AnalyzerExtensionCommonTestSuite,
-    get_sorting_analyzer,
-    get_dataset,
 )
 
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap, ComputeTemplateSimilarity

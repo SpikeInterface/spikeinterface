@@ -1,14 +1,7 @@
-import unittest
 import pytest
-from pathlib import Path
-
 import numpy as np
-
-from spikeinterface.postprocessing import ComputePrincipalComponents, compute_principal_components
+from spikeinterface.postprocessing import ComputePrincipalComponents
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite, cache_folder
-
-
-DEBUG = False
 
 
 class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):

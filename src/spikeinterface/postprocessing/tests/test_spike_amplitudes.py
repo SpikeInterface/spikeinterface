@@ -1,6 +1,3 @@
-import unittest
-import numpy as np
-
 from spikeinterface.postprocessing import ComputeSpikeAmplitudes
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 

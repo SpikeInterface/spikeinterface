@@ -1,10 +1,9 @@
-import unittest
 import numpy as np
 from typing import List
 
 
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
-from spikeinterface.postprocessing import compute_isi_histograms, ComputeISIHistograms
+from spikeinterface.postprocessing import ComputeISIHistograms
 from spikeinterface.postprocessing.isi import _compute_isi_histograms
 import pytest
 
