@@ -5,7 +5,7 @@ from spikeinterface.postprocessing import ComputeSpikeLocations
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
 
-class SpikeLocationsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
+class TestSpikeLocationsExtension(AnalyzerExtensionCommonTestSuite):
     extension_class = ComputeSpikeLocations
     extension_function_params_list = [
         dict(
@@ -21,6 +21,6 @@ class SpikeLocationsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.Tes
 
 
 if __name__ == "__main__":
-    test = SpikeLocationsExtensionTest()
+    test = TestSpikeLocationsExtension()
     test.setUpClass()
     test.test_extension()
