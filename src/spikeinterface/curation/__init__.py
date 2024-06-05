@@ -15,4 +15,3 @@ from .splitunitsorting import SplitUnitSorting, split_unit_sorting
 from .curation_format import validate_curation_dict
 
 from .sortingview_curation import apply_sortingview_curation
-

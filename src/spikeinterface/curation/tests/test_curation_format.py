@@ -6,8 +6,6 @@ import json
 from spikeinterface.curation.curation_format import validate_curation_dict, convert_from_sortingview_curation_format_v0
 
 
-
-
 """example = {
     'unit_ids': List[str, int],
     'label_definitions': {
@@ -139,7 +137,6 @@ def test_convert_from_sortingview_curation_format_v0():
             curation_v1 = convert_from_sortingview_curation_format_v0(curation_v0)
             # print(curation_v1)
             validate_curation_dict(curation_v1)
-
 
 
 if __name__ == "__main__":
