@@ -16,19 +16,19 @@ class CircusMerging(BaseMergingEngine):
 
     default_params = {
         "templates": None,
-        "verbose": False,
+        "verbose" : False,
         "curation_kwargs": {
             "minimum_spikes": 50,
             "corr_diff_thresh": 0.5,
             "template_metric": "cosine",
-            "firing_contamination_balance": 0.5,
+            "firing_contamination_balance" : 0.5,
             "num_channels": 5,
             "num_shift": 5,
         },
         "temporal_splits_kwargs": {
             "minimum_spikes": 50,
             "presence_distance_threshold": 0.1,
-            "firing_contamination_balance": 0.5,
+            "firing_contamination_balance" : 0.5,
             "template_metric": "l1",
             "num_channels": 5,
             "num_shift": 5,
@@ -40,7 +40,7 @@ class CircusMerging(BaseMergingEngine):
         self.params.update(**kwargs)
         self.sorting = sorting
         self.recording = recording
-        self.verbose = self.params.pop("verbose")
+        self.verbose = self.params.pop('verbose')
         self.templates = self.params.pop("templates", None)
         if self.templates is not None:
             sparsity = self.templates.sparsity
@@ -64,12 +64,12 @@ class CircusMerging(BaseMergingEngine):
         else:
             merges = []
         if self.verbose:
-            print(f"{len(merges)} merges have been detected via auto merges")
+            print(f'{len(merges)} merges have been detected via auto merges')
         temporal_splits_kwargs = self.params.get("temporal_splits_kwargs", None)
         if temporal_splits_kwargs is not None:
             merges += get_potential_temporal_splits(self.analyzer, **temporal_splits_kwargs)
             if self.verbose:
-                print(f"{len(merges)} merges have been detected via additional temporal splits")
+                print(f'{len(merges)} merges have been detected via additional temporal splits')
         merges = resolve_merging_graph(self.sorting, merges)
         sorting = apply_merges_to_sorting(self.sorting, merges)
         if extra_outputs:
