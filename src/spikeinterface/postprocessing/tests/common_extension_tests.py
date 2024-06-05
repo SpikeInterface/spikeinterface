@@ -115,6 +115,8 @@ class AnalyzerExtensionCommonTestSuite:
         else:
             job_kwargs = dict()
 
+        # TODO: a downside of this approach is each parameterisation does
+        # not get it's own test, but all falls under the same test.
         for params in self.extension_function_params_list:
             print("  params", params)
             ext = sorting_analyzer.compute(self.extension_name, **params, **job_kwargs)
