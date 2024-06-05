@@ -40,7 +40,7 @@ class PhaseShiftRecording(BasePreprocessor):
 
     name = "phase_shift"
 
-    def __init__(self, recording, margin_ms=40.0, inter_sample_shift=None, dtype=None, use_optimzed=True):
+    def __init__(self, recording, margin_ms=40.0, inter_sample_shift=None, dtype=None):
         if inter_sample_shift is None:
             assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"
             sample_shifts = recording.get_property("inter_sample_shift")
@@ -63,9 +63,7 @@ class PhaseShiftRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording._recording_segments:
-            rec_segment = PhaseShiftRecordingSegment(
-                parent_segment, sample_shifts, margin, dtype, tmp_dtype, use_optimzed=use_optimzed
-            )
+            rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, dtype, tmp_dtype)
             self.add_recording_segment(rec_segment)
 
         # for dumpability
@@ -75,13 +73,12 @@ class PhaseShiftRecording(BasePreprocessor):
 
 
 class PhaseShiftRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, tmp_dtype, use_optimzed):
+    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, tmp_dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = sample_shifts
         self.margin = margin
         self.dtype = dtype
         self.tmp_dtype = tmp_dtype
-        self.use_optimized = use_optimzed
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -102,11 +99,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             add_zeros=True,
             window_on_margin=True,
         )
-        if self.use_optimized:
-            traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
-        else:
-            traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts[channel_indices], axis=0)
-        # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
+        traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
         if self.tmp_dtype is not None:
@@ -121,30 +114,9 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 phase_shift = define_function_from_class(source_class=PhaseShiftRecording, name="phase_shift")
 
 
-def apply_fshift_sam(sig, sample_shifts, axis=0):
-    """
-    Apply the shift on a traces buffer.
-    """
-    n = sig.shape[axis]
-    sig_f = np.fft.rfft(sig, axis=axis)
-    if n % 2 == 0:
-        # n is even sig_f[-1] is nyquist and so pi
-        omega = np.linspace(0, np.pi, sig_f.shape[axis])
-    else:
-        # n is odd sig_f[-1] is exactly nyquist!! we need (n-1) / n factor!!
-        omega = np.linspace(0, np.pi * (n - 1) / n, sig_f.shape[axis])
-    # broadcast omega and sample_shifts depend the axis
-    if axis == 0:
-        shifts = omega[:, np.newaxis] * sample_shifts[np.newaxis, :]
-    else:
-        shifts = omega[np.newaxis, :] * sample_shifts[:, np.newaxis]
-    sig_shift = np.fft.irfft(sig_f * np.exp(-1j * shifts), n=n, axis=axis)
-    return sig_shift
-
-
 def apply_frequency_shift(signal, shift_samples, axis=0):
     """
-    Apply frequency shift to a signal buffer.
+    Apply frequency shift to a signal buffer. This allow for shifting that are sub-sample accurate.
 
     Parameters
     ----------
@@ -182,9 +154,11 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     fourier_signal_size = signal_length // 2 + 1
 
     frequency_domain_signal = scipy.fft.rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
+    fourier_signal_size = frequency_domain_signal.shape[0]
 
     if axis == 0:
         frequency_grid = np.empty(shape=(fourier_signal_size, num_channels))
+        # Note that np.fft.rfttfreq handles both even and odd signal lengths
         frequency_grid[:, :] = 2 * np.pi * np.fft.rfftfreq(signal_length)[:, np.newaxis]
         shifts = np.multiply(frequency_grid, shift_samples[np.newaxis, :], out=frequency_grid)
     else:
@@ -199,7 +173,7 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     return shifted_signal
 
 
-apply_fshift = apply_fshift_sam
+apply_fshift = apply_frequency_shift
 
 
 def apply_fshift_ibl(w, s, axis=0, ns=None):
