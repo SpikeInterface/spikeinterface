@@ -14,7 +14,7 @@ class CollisionGTComparison(GroundTruthComparison):
     This class needs maintenance and need a bit of refactoring.
 
 
-    collision_lag: float
+    collision_lag : float
         Collision lag in ms.
 
     """

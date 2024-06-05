@@ -18,7 +18,7 @@ import_statement_list = [
 
 n_samples = 10
 # Note that the symbols at the end are for centering the table
-markdown_output = f"## \n\n| Imported Module ({n_samples=}) | Importing Time (seconds) | Standard Deviation (seconds) |\n| :--: | :--------------: | :------------------: |\n"
+markdown_output = f"## \n\n| Imported Module ({n_samples=}) | Importing Time (seconds) | Standard Deviation (seconds) | Times List (seconds) |\n| :--: | :--------------: | :------------------: | :-------------: |\n"
 
 exceptions = []
 
@@ -45,10 +45,17 @@ for import_statement in import_statement_list:
         time_taken = float(result.stdout.strip())
         time_taken_list.append(time_taken)
 
+    # for time in time_taken_list:
+        # Uncomment once exporting import is fixed
+        # if time > 2.5:
+        #     exceptions.append(f"Importing {import_statement} took too long: {time:.2f} seconds")
+        #     break
+
     if time_taken_list:
         avg_time_taken = sum(time_taken_list) / len(time_taken_list)
         std_dev_time_taken = math.sqrt(sum((x - avg_time_taken) ** 2 for x in time_taken_list) / len(time_taken_list))
-        markdown_output += f"| `{import_statement}` | {avg_time_taken:.2f} | {std_dev_time_taken:.2f} |\n"
+        times_list_str = ", ".join(f"{time:.2f}" for time in time_taken_list)
+        markdown_output += f"| `{import_statement}` | {avg_time_taken:.2f} | {std_dev_time_taken:.2f} | {times_list_str} |\n"
 
 if exceptions:
     raise Exception("\n".join(exceptions))

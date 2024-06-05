@@ -59,53 +59,53 @@ def get_potential_auto_merge(
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
     minimum_spikes: int, default: 100
         Minimum number of spikes for each unit to consider a potential merge.
         Enough spikes are needed to estimate the correlogram
-    maximum_distance_um: float, default: 150
+    maximum_distance_um : float, default: 150
         Maximum distance between units for considering a merge
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Peak sign used to estimate the maximum channel of a template
-    bin_ms: float, default: 0.25
+    bin_ms : float, default: 0.25
         Bin size in ms used for computing the correlogram
-    window_ms: float, default: 100
+    window_ms : float, default: 100
         Window size in ms used for computing the correlogram
-    corr_diff_thresh: float, default: 0.16
+    corr_diff_thresh : float, default: 0.16
         The threshold on the "correlogram distance metric" for considering a merge.
         It needs to be between 0 and 1
-    template_diff_thresh: float, default: 0.25
+    template_diff_thresh : float, default: 0.25
         The threshold on the "template distance metric" for considering a merge.
         It needs to be between 0 and 1
-    template_metric: 'l1'
+    template_metric : 'l1'
         The metric to be used when comparing templates. Default is l1 norm
-    censored_period_ms: float, default: 0.3
+    censored_period_ms : float, default: 0.3
         Used to compute the refractory period violations aka "contamination"
-    refractory_period_ms: float, default: 1
+    refractory_period_ms : float, default: 1
         Used to compute the refractory period violations aka "contamination"
-    sigma_smooth_ms: float, default: 0.6
+    sigma_smooth_ms : float, default: 0.6
         Parameters to smooth the correlogram estimation
-    contamination_threshold: float, default: 0.2
+    contamination_threshold : float, default: 0.2
         Threshold for not taking in account a unit when it is too contaminated
-    adaptative_window_threshold:: float, default: 0.5
+    adaptative_window_threshold : : float, default: 0.5
         Parameter to detect the window size in correlogram estimation
-    censor_correlograms_ms: float, default: 0.15
+    censor_correlograms_ms : float, default: 0.15
         The period to censor on the auto and cross-correlograms
-    num_channels: int, default: 5
+    num_channels : int, default: 5
         Number of channel to use for template similarity computation
-    num_shift: int, default: 5
+    num_shift : int, default: 5
         Number of shifts in samles to be explored for template similarity computation
-    firing_contamination_balance: float, default: 1.5
+    firing_contamination_balance : float, default: 1.5
         Parameter to control the balance between firing rate and contamination in computing unit "quality score"
-    extra_outputs: bool, default: False
+    extra_outputs : bool, default: False
         If True, an additional dictionary (`outs`) with processed data is returned
-    steps: None or list of str, default: None
+    steps : None or list of str, default: None
         which steps to run (gives flexibility to running just some steps)
         If None all steps are done.
-        Pontential steps: "min_spikes", "remove_contaminated", "unit_positions", "correlogram", "template_similarity",
+        Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram", "template_similarity",
         "check_increase_score". Please check steps explanations above!
-    template_metric: 'l1', 'l2' or 'cosine'
+    template_metric : 'l1', 'l2' or 'cosine'
         The metric to consider when measuring the distances between templates. Default is l1
 
     Returns
@@ -258,18 +258,18 @@ def compute_correlogram_diff(
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The sorting object
-    correlograms_smoothed: array 3d
+    correlograms_smoothed : array 3d
         The 3d array containing all cross and auto correlograms
         (smoothed by a convolution with a gaussian curve)
-    bins: array
+    bins : array
         Bins of the correlograms
     win_sized:
         TODO
-    adaptative_window_threshold: float
+    adaptative_window_threshold : float
         TODO
-    pair_mask: None or boolean array
+    pair_mask : None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
 
@@ -365,9 +365,9 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
 
     Parameters
     ----------
-    auto_corr: np.ndarray
+    auto_corr : np.ndarray
         Correlogram used for adaptive window.
-    threshold: float
+    threshold : float
         Minimum threshold of correlogram (all peaks under this threshold are discarded).
 
     Returns
@@ -410,21 +410,21 @@ def compute_templates_diff(
         The sorting object
     templates_array : np.array
         The templates array (num_units, num_samples, num_channels).
-    num_channels: int, default: 5
+    num_channels : int, default: 5
         Number of channel to use for template similarity computation
-    num_shift: int, default: 5
+    num_shift : int, default: 5
         Number of shifts in samles to be explored for template similarity computation
-    pair_mask: None or boolean array
+    pair_mask : None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
-    template_metric: 'l1', 'l2' or 'cosine'
+    template_metric : 'l1', 'l2' or 'cosine'
         The metric to consider when measuring the distances between templates. Default is l1
-    sparsity: None or ChannelSparsity
+    sparsity : None or ChannelSparsity
         Optionaly a ChannelSparsity object.
 
     Returns
     -------
-    templates_diff: np.array
+    templates_diff : np.array
         2D array with template differences
     """
     unit_ids = sorting.unit_ids

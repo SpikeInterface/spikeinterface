@@ -17,21 +17,21 @@ def interpolate_templates(templates_array, source_locations, dest_locations, int
 
     Parameters
     ----------
-    templates_array: np.array
+    templates_array : np.array
         A numpy array with dense templates_array.
         shape = (num_templates, num_samples, num_channels)
-    source_locations: np.array
+    source_locations : np.array
         The channel source location corresponding to templates_array.
         shape = (num_channels, 2)
-    dest_locations: np.array
+    dest_locations : np.array
         The new channel position, if ndim == 3, then the interpolation is broadcated with last dim.
         shape = (num_channels, 2) or (num_motions, num_channels, 2)
-    interpolation_method: str, default "cubic"
+    interpolation_method : str, default "cubic"
         The interpolation method.
 
     Returns
     -------
-    new_templates_array: np.array
+    new_templates_array : np.array
         shape = (num_templates, num_samples, num_channels) or = (num_motions, num_templates, num_samples, num_channel)
     """
     import scipy.interpolate
@@ -73,23 +73,23 @@ def move_dense_templates(templates_array, displacements, source_probe, dest_prob
 
     Parameters
     ----------
-    templates_array: np.array
+    templates_array : np.array
         A numpy array with dense templates_array.
         shape = (num_templates, num_samples, num_channels)
-    displacements: np.array
+    displacements : np.array
         Displacement vector
-        shape: (num_displacement, 2)
-    source_probe: Probe
+        shape : (num_displacement, 2)
+    source_probe : Probe
         The Probe object on which templates_array are defined
-    dest_probe: Probe | None, default: None
+    dest_probe : Probe | None, default: None
         The destination Probe. Can be different geometry than the original.
         If None then the same probe  is used.
-    interpolation_method: "cubic" | "linear", default: "cubic"
+    interpolation_method : "cubic" | "linear", default: "cubic"
         The interpolation method.
 
     Returns
     -------
-    new_templates_array: np.array
+    new_templates_array : np.array
         shape = (num_displacement, num_templates, num_samples, num_channels)
     """
     assert displacements.ndim == 2
@@ -140,16 +140,16 @@ class DriftingTemplates(Templates):
 
         Parameters
         ----------
-        unit_index: int
+        unit_index : int
             The unit index to move.
-        displacements: np.array
+        displacements : np.array
             The displacement vector.
             shape = (1, 2)
-        **interpolation_kwargs: keyword arguments for `move_dense_templates` function
+        **interpolation_kwargs : keyword arguments for `move_dense_templates` function
 
         Returns
         -------
-        template_array_moved: np.array
+        template_array_moved : np.array
             The moved template.
             shape = (num_displacements, num_samples, num_channels)
         """
@@ -172,10 +172,10 @@ class DriftingTemplates(Templates):
 
         Parameters
         ----------
-        displacements: np.array
+        displacements : np.array
             The displacement vector.
             shape = (num_displacements, 2)
-        **interpolation_kwargs: keyword arguments for `move_dense_templates` function
+        **interpolation_kwargs : keyword arguments for `move_dense_templates` function
         """
         dense_static_templates = self.get_dense_templates()
 
@@ -191,16 +191,16 @@ def make_linear_displacement(start, stop, num_step=10):
 
     Parameters
     ----------
-    start: np.array of 2 elements
+    start : np.array of 2 elements
         The start position.
-    stop: np.array of 2 elements
+    stop : np.array of 2 elements
         The stop position.
-    num_step: int, default: 10
+    num_step : int, default: 10
         The number of steps between start and stop.
 
     Returns
     -------
-    displacements: np.array
+    displacements : np.array
         The displacements with shape (num_step, 2)
     """
     displacements = (stop[np.newaxis, :] - start[np.newaxis, :]) / (num_step - 1) * np.arange(num_step)[
@@ -216,28 +216,28 @@ class InjectDriftingTemplatesRecording(BaseRecording):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         Sorting object containing all the units and their spike train
-    drifting_templates: DriftingTemplates
+    drifting_templates : DriftingTemplates
         The drifting template object
-    displacement_vectors: list of numpy array
+    displacement_vectors : list of numpy array
         The lenght of the list is the number of segment.
         Per segment, the drift vector is a numpy array with shape (num_times, 2, num_motions)
         num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
-    displacement_sampling_frequency: float
+    displacement_sampling_frequency : float
         The sampling frequency of drift vector
-    displacement_unit_factor: numpy array or None, default: None
+    displacement_unit_factor : numpy array or None, default: None
         A array containing the factor per unit of the drift.
         This is used to create non rigid with a factor gradient of depending on units position.
         shape (num_units, num_motions)
         If None then all unit have the same factor (1) and the drift is rigid.
-    parent_recording: BaseRecording or None, default: None
+    parent_recording : BaseRecording or None, default: None
         The recording over which to add the templates.
         If None, will default to traces containing all 0.
-    num_samples: list[int] or int or None, default: None
+    num_samples : list[int] or int or None, default: None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
-    amplitude_factor: list of numpy array or numpy array or float or None, default: None
+    amplitude_factor : list of numpy array or numpy array or float or None, default: None
         Controls the amplitude scaling for each spike for each unit.
         If None, no amplitude scaling is applied.
         If scalar all spikes have the same factor (certainly useless).
@@ -245,7 +245,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
 
     Returns
     -------
-    injected_recording: InjectDriftingTemplatesRecording
+    injected_recording : InjectDriftingTemplatesRecording
         The recording with the templates injected.
     """
 

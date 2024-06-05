@@ -78,7 +78,7 @@ def detect_bad_channels(
     nyquist_threshold (coeherence+psd) : float, default: 0.8
         Frequency with respect to Nyquist (Fn=1) above which the mean of the PSD is calculated and compared
         with psd_hf_threshold
-    direction (coeherence+psd): "x" | "y" | "z", default: "y"
+    direction (coeherence+psd) : "x" | "y" | "z", default: "y"
         The depth dimension
     highpass_filter_cutoff : float, default: 300
         If the recording is not filtered, the cutoff frequency of the highpass filter
@@ -308,7 +308,7 @@ def detect_bad_channels_ibl(
         Number of neighbors to compute median fitler
     nyquist_threshold : float, default: 0.8
         Threshold on Nyquist frequency to calculate HF noise band
-    welch_window_ms: float, default: 0.3
+    welch_window_ms : float, default: 0.3
         Window size for the scipy.signal.welch that will be converted to nperseg
     outside_channels_location : "top" | "bottom" | "both", default: "top"
         Location of the outside channels. If "top", only the channels at the top of the probe can be
@@ -378,9 +378,9 @@ def detrend(x, nmed):
     """
     Subtract the trend from a vector
     The trend is a median filtered version of the said vector with tapering
-    :param x: input vector
-    :param nmed: number of points of the median filter
-    :return: np.array
+    :param x : input vector
+    :param nmed : number of points of the median filter
+    :return : np.array
     """
     ntap = int(np.ceil(nmed / 2))
     xf = np.r_[np.zeros(ntap) + x[0], x, np.zeros(ntap) + x[-1]]

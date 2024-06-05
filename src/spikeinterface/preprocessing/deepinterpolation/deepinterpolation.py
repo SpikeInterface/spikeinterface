@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 from typing import Optional
+from packaging.version import parse
 
 from .tf_utils import has_tf, import_tf
-from ...core import BaseRecording
 from ...core.core_tools import define_function_from_class
 from ..basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from ..zero_channel_pad import ZeroChannelPaddedRecording
-from spikeinterface.core import get_random_data_chunks
 
 
 class DeepInterpolatedRecording(BasePreprocessor):
@@ -66,6 +64,11 @@ class DeepInterpolatedRecording(BasePreprocessor):
         disable_tf_logger: bool = True,
         memory_gpu: Optional[int] = None,
     ):
+        import deepinterpolation
+
+        if parse(deepinterpolation.__version__) < parse("0.2.0"):
+            raise ImportError("DeepInterpolation version must be at least 0.2.0")
+
         assert has_tf(
             use_gpu, disable_tf_logger, memory_gpu
         ), "To use DeepInterpolation, you first need to install `tensorflow`."
