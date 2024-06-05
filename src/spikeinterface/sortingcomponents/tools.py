@@ -52,6 +52,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
     nbefore = int(ms_before * rec.sampling_frequency / 1000.0)
     nafter = int(ms_after * rec.sampling_frequency / 1000.0)
 
+    ## Ideally, we should ensure that all peaks are within valid ranges to avoid taking nan values
     mask = spikes["sample_index"] > nbefore
     spikes = spikes[mask]
 
@@ -83,7 +84,8 @@ def get_prototype_spike(recording, peaks, ms_before=0.5, ms_after=0.5, nb_peaks=
     waveforms = extract_waveform_at_max_channel(
         recording, some_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
     )
-    prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
     return prototype
 
 
