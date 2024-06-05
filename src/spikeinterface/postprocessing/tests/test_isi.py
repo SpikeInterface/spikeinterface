@@ -30,8 +30,10 @@ class TestComputeISIHistograms(AnalyzerExtensionCommonTestSuite):
 
     def test_compute_ISI(self):
         """
-        Requires as list because everything tested against Numpy.
-        But numpy is not tested against anything.
+        This test checks the creation of ISI histograms matches across
+        "numpy", "auto" and "numba" methods. Does not parameterize as requires
+        as list because everything tested against Numpy. The Numpy result is not
+        explicitly tested.
         """
         methods = ["numpy", "auto"]
         if HAVE_NUMBA:
