@@ -6,8 +6,6 @@ import json
 from spikeinterface.curation.curation_format import validate_curation_dict, convert_from_sortingview_curation_format_v0, curation_label_to_dataframe
 
 
-
-
 """example = {
     'unit_ids': List[str, int],
     'label_definitions': {
@@ -147,7 +145,6 @@ def test_curation_label_to_dataframe():
 
     df = curation_label_to_dataframe(curation_ids_str)
     # print(df)
-
 
 if __name__ == "__main__":
     # test_curation_format_validation()

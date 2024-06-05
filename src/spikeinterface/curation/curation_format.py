@@ -120,7 +120,6 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
         "manual_labels": manual_labels,
         "merged_unit_groups": merge_groups,
         "removed_units": [],
-        
     }
 
     return curation_dict
