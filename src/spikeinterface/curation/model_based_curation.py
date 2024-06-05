@@ -38,6 +38,7 @@ class ModelBasedClassification:
     _check_params_for_classification()
         Checks if the parameters for classification match the training parameters.
     """
+
     def __init__(self, sorting_analyzer: SortingAnalyzer, pipeline, required_metrics: Sequence[str]):
         from sklearn.pipeline import Pipeline
 
