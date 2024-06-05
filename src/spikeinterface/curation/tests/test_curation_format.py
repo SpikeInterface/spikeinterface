@@ -32,16 +32,25 @@ curation_ids_int = {
     "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
     "label_definitions": {
         "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
-        "putative_type": {"name": "putative_type", "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral" ], "exclusive": False},
+        "putative_type": {
+            "name": "putative_type",
+            "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral"],
+            "exclusive": False,
         },
+    },
     "manual_labels": [
         {"unit_id": 1, "quality": ["good"]},
-        {"unit_id": 2, "quality": ["noise", ], "putative_type":["excitatory", "pyramidal"]},
+        {
+            "unit_id": 2,
+            "quality": [
+                "noise",
+            ],
+            "putative_type": ["excitatory", "pyramidal"],
+        },
         {"unit_id": 3, "putative_type": ["inhibitory"]},
     ],
     "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
-    
 }
 
 curation_ids_str = {
@@ -49,11 +58,21 @@ curation_ids_str = {
     "unit_ids": ["u1", "u2", "u3", "u6", "u10", "u14", "u20", "u31", "u42"],
     "label_definitions": {
         "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
-        "putative_type": {"name": "putative_type", "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral" ], "exclusive": False},
+        "putative_type": {
+            "name": "putative_type",
+            "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral"],
+            "exclusive": False,
         },
+    },
     "manual_labels": [
         {"unit_id": "u1", "quality": ["good"]},
-        {"unit_id": "u2", "quality": ["noise", ], "putative_type":["excitatory", "pyramidal"]},
+        {
+            "unit_id": "u2",
+            "quality": [
+                "noise",
+            ],
+            "putative_type": ["excitatory", "pyramidal"],
+        },
         {"unit_id": "u3", "putative_type": ["inhibitory"]},
     ],
     "merged_unit_groups": [["u3", "u6"], ["u10", "u14", "u20"]],  # one cell goes into at most one list
@@ -82,7 +101,6 @@ unknown_removed_unit["removed_units"] = [31, 42, 99]
 def test_curation_format_validation():
     validate_curation_dict(curation_ids_int)
     validate_curation_dict(curation_ids_str)
-
 
     with pytest.raises(ValueError):
         # Raised because duplicated merged units

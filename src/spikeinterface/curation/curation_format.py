@@ -18,7 +18,7 @@ def validate_curation_dict(curation_dict):
     Returns
     -------
     Nothing.
-    
+
 
     """
 
@@ -28,7 +28,8 @@ def validate_curation_dict(curation_dict):
 
     if curation_dict["format_version"] not in supported_curation_format_versions:
         raise ValueError(
-            f"Format version ({curation_dict['format_version']}) not supported. " f"Only {supported_curation_format_versions} are valid"
+            f"Format version ({curation_dict['format_version']}) not supported. "
+            f"Only {supported_curation_format_versions} are valid"
         )
 
     # unit_ids
@@ -64,8 +65,10 @@ def validate_curation_dict(curation_dict):
 
                 is_exclusive = curation_dict["label_definitions"][label_key]["exclusive"]
 
-                if is_exclusive and not len(label_value) <=1:
-                    raise ValueError(f"Curation format: manual_labels {unit_id} {label_key} are exclusive labels. {label_value} is invalid")
+                if is_exclusive and not len(label_value) <= 1:
+                    raise ValueError(
+                        f"Curation format: manual_labels {unit_id} {label_key} are exclusive labels. {label_value} is invalid"
+                    )
 
 
 def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_format="1"):
