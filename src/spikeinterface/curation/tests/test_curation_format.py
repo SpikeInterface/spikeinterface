@@ -1,7 +1,12 @@
-from spikeinterface.curation.curation_format import validate_curation_dict
 import pytest
 
+from pathlib import Path
 import json
+
+from spikeinterface.curation.curation_format import validate_curation_dict, convert_from_sortingview_curation_format_v0
+
+
+
 
 """example = {
     'unit_ids': List[str, int],
@@ -99,8 +104,27 @@ def test_to_from_json():
     json.loads(json.dumps(curation_ids_str, indent=4))
 
 
+def test_convert_from_sortingview_curation_format_v0():
+
+    parent_folder = Path(__file__).parent
+    for filename in (
+        "sv-sorting-curation.json",
+        "sv-sorting-curation-int.json",
+        "sv-sorting-curation-str.json",
+        "sv-sorting-curation-false-positive.json",
+    ):
+
+        json_file = parent_folder / filename
+        with open(json_file, "r") as f:
+            curation_v0 = json.load(f)
+            # print(curation_v0)
+            curation_v1 = convert_from_sortingview_curation_format_v0(curation_v0)
+            # print(curation_v1)
+            validate_curation_dict(curation_v1)
+
 
 
 if __name__ == "__main__":
-    test_curation_format_validation()
+    # test_curation_format_validation()
     # test_to_from_json()
+    test_convert_from_sortingview_curation_format_v0()

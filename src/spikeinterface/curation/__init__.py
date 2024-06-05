@@ -11,4 +11,8 @@ from .curationsorting import CurationSorting, curation_sorting
 from .mergeunitssorting import MergeUnitsSorting, merge_units_sorting
 from .splitunitsorting import SplitUnitSorting, split_unit_sorting
 
+# curation format
+from .curation_format import validate_curation_dict
+
 from .sortingview_curation import apply_sortingview_curation
+
