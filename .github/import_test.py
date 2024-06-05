@@ -46,7 +46,7 @@ for import_statement in import_statement_list:
         time_taken_list.append(time_taken)
 
     for time in time_taken_list:
-        if time > 2.5:
+        if time > 1.0:
             exceptions.append(f"Importing {import_statement} took too long: {time:.2f} seconds")
             break
 
