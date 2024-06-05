@@ -203,9 +203,6 @@ def compute_whitening_matrix(
         cov = cov / data.shape[0]
     else:
         import sklearn.covariance
-
-        if regularize_kwargs is None:
-            regularize_kwargs = {}
         regularize_kwargs["assume_centered"] = True
         estimator = sklearn.covariance.GraphicalLassoCV(**regularize_kwargs)
         estimator.fit(data)
