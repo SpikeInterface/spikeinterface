@@ -132,7 +132,7 @@ class ModelBasedClassification:
         # This would need to account for the fact that these extensions may no longer exist
 
 
-def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline: Pipeline, required_metrics: Sequence[str]):
+def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, required_metrics: Sequence[str]):
     """
     Automatically labels units based on a model-based classification.
 
@@ -151,6 +151,12 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline: Pipeline, requ
         A dictionary containing the classified units, where the keys are the unit IDs and the values are a tuple of labels and confidence.
 
     """
+
+    from sklearn.pipeline import Pipeline
+
+    if not isinstance(pipeline, Pipeline):
+        raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
+    
     model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline, required_metrics)
 
     classified_units = model_based_classification.predict_labels()
