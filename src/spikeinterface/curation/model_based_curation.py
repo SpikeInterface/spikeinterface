@@ -1,6 +1,5 @@
 from typing import Sequence
 import numpy as np
-import pandas as pd
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.qualitymetrics.quality_metric_calculator import get_default_qm_params
@@ -86,6 +85,8 @@ class ModelBasedClassification:
 
     def _get_metrics_for_classification(self):
         """Check if all required metrics are present and return a DataFrame of metrics for classification"""
+
+        import pandas as pd
 
         try:
             quality_metrics = self.sorting_analyzer.extensions["quality_metrics"].data["metrics"]
