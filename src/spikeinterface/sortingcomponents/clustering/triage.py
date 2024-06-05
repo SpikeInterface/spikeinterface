@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.spatial import KDTree
 
 
 def nearest_neighor_triage(
@@ -14,6 +13,8 @@ def nearest_neighor_triage(
     ptp_weighting=True,
 ):
     feats = np.c_[scales[0] * x, scales[1] * y, scales[2] * np.log(maxptps)]
+    from scipy.spatial import KDTree
+
     tree = KDTree(feats)
     dist, _ = tree.query(feats, k=6)
     dist = dist[:, 1:]

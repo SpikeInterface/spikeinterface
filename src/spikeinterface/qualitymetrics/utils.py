@@ -1,27 +1,29 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.stats import multivariate_normal
 
 
 def create_ground_truth_pc_distributions(center_locations, total_points):
-    """Simulate PCs as multivariate Gaussians, for testing PC-based quality metrics
-    Values are created for only one channel and vary along one dimension
+    """
+    Simulate PCs as multivariate Gaussians, for testing PC-based quality metrics
+    Values are created for only one channel and vary along one dimension.
 
     Parameters
     ----------
     center_locations : array-like (units, ) or (channels, units)
-        Mean of the multivariate gaussian at each channel for each unit
+        Mean of the multivariate gaussian at each channel for each unit.
     total_points : array-like
-        Number of points in each unit distribution
+        Number of points in each unit distribution.
 
     Returns
     -------
-    numpy.ndarray
-        PC scores for each point
-    numpy.array
-        Labels for each point
+    all_pcs : numpy.ndarray
+        PC scores for each point.
+    all_labels : numpy.array
+        Labels for each point.
     """
+    from scipy.stats import multivariate_normal
+
     np.random.seed(0)
 
     if len(np.array(center_locations).shape) == 1:

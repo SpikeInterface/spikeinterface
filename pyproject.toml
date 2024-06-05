@@ -91,7 +91,7 @@ full = [
     "h5py",
     "pandas",
     "xarray",
-    "scipy<1.13",
+    "scipy",
     "scikit-learn",
     "networkx",
     "distinctipy",
