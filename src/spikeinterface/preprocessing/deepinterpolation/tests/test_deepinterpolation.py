@@ -73,7 +73,7 @@ def test_deepinterpolation_generator_borders(recording_and_shape_fixture):
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency()
-def test_deepinterpolation_training(recording_and_shape_fixture):
+def test_deepinterpolation_training(recording_and_shape_fixture, create_cache_folder):
     recording, desired_shape = recording_and_shape_fixture
 
     cache_folder = create_cache_folder
@@ -101,7 +101,7 @@ def test_deepinterpolation_training(recording_and_shape_fixture):
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency(depends=["test_deepinterpolation_training"])
-def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path):
+def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path, create_cache_folder):
     recording, desired_shape = recording_and_shape_fixture
     cache_folder = create_cache_folder
 
@@ -130,7 +130,7 @@ def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path):
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency(depends=["test_deepinterpolation_training"])
-def test_deepinterpolation_inference(recording_and_shape_fixture):
+def test_deepinterpolation_inference(recording_and_shape_fixture, create_cache_folder):
     recording, desired_shape = recording_and_shape_fixture
     pre_frame = post_frame = 20
     cache_folder = create_cache_folder
@@ -157,7 +157,7 @@ def test_deepinterpolation_inference(recording_and_shape_fixture):
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency(depends=["test_deepinterpolation_training"])
-def test_deepinterpolation_inference_multi_job(recording_and_shape_fixture):
+def test_deepinterpolation_inference_multi_job(recording_and_shape_fixture, create_cache_folder):
     recording, desired_shape = recording_and_shape_fixture
     pre_frame = post_frame = 20
     cache_folder = create_cache_folder
