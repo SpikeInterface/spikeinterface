@@ -9,7 +9,6 @@ from spikeinterface.core.template_tools import get_template_extremum_channel, ge
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
-from spikeinterface.core.sorting_tools import spike_vector_to_indices
 
 
 class ComputeSpikeAmplitudes(AnalyzerExtension):
@@ -125,15 +124,14 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         if outputs == "numpy":
             return all_amplitudes
         elif outputs == "by_unit":
-            unit_ids = self.sorting_analyzer.unit_ids
-            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
+            sorting = self.sorting_analyzer.sorting
+            spikes = sorting.to_spike_vector()
             amplitudes_by_units = {}
-            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+            for segment_index in range(sorting.get_num_segments()):
                 amplitudes_by_units[segment_index] = {}
-                for unit_id in unit_ids:
-                    inds = spike_indices[segment_index][unit_id]
-                    amplitudes_by_units[segment_index][unit_id] = all_amplitudes[inds]
+                for unit_index, unit_id in enumerate(sorting.unit_ids):
+                    spike_mask = (spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index)
+                    amplitudes_by_units[segment_index][unit_id] = all_amplitudes[spike_mask]
             return amplitudes_by_units
         else:
             raise ValueError(f"Wrong .get_data(outputs={outputs})")
