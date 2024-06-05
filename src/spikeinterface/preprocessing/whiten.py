@@ -188,7 +188,7 @@ def compute_whitening_matrix(
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
 
-    regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {'method' : 'GraphicalLassoCV'}
+    regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {"method": "GraphicalLassoCV"}
 
     if apply_mean:
         M = np.mean(random_data, axis=0)
@@ -203,7 +203,8 @@ def compute_whitening_matrix(
         cov = cov / data.shape[0]
     else:
         import sklearn.covariance as cov
-        method = regularize_kwargs.pop('method')
+
+        method = regularize_kwargs.pop("method")
         regularize_kwargs["assume_centered"] = True
         estimator = eval(f"cov.{method}")(**regularize_kwargs)
         estimator.fit(data)
