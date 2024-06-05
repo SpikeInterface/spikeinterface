@@ -16,7 +16,7 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-class ComputeISIHistogramsTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
+class TestComputeISIHistograms(AnalyzerExtensionCommonTestSuite):
     extension_class = ComputeISIHistograms
     extension_function_params_list = [
         dict(method="numpy"),
