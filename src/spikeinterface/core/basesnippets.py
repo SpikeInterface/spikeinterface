@@ -138,7 +138,7 @@ class BaseSnippets(BaseRecordingSnippets):
     def _select_channels(self, channel_ids: list | np.array | tuple) -> "BaseSnippets":
         from .channelslice import ChannelSliceSnippets
 
-        return ChannelSliceSnippets(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
+        return ChannelSliceSnippets(self, channel_ids)
 
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceSnippets
