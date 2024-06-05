@@ -63,7 +63,7 @@ class WhitenRecording(BasePreprocessor):
         dtype=None,
         apply_mean=False,
         regularize=False,
-        regularize_kwargs={},
+        regularize_kwargs=None,
         mode="global",
         radius_um=100.0,
         int_scale=None,
