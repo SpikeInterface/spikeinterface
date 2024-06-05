@@ -14,16 +14,21 @@ from spikeinterface import NumpySorting, generate_sorting
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.postprocessing import ComputeCorrelograms
 from spikeinterface.postprocessing.correlograms import compute_correlograms_on_sorting, _make_bins
+import pytest
 
 
 class TestComputeCorrelograms(AnalyzerExtensionCommonTestSuite):
-    extension_class = ComputeCorrelograms
-    extension_function_params_list = [
-        dict(method="numpy"),
-        dict(method="auto"),
-    ]
-    if HAVE_NUMBA:
-        extension_function_params_list.append(dict(method="numba"))
+
+    @pytest.mark.parametrize(
+        "params",
+        [
+            dict(method="numpy"),
+            dict(method="auto"),
+            pytest.param(dict(method="numba"), marks=pytest.mark.skipif("not HAVE_NUMBA")),
+        ],
+    )
+    def test_extension(self, params):
+        self.run_extension_tests(ComputeCorrelograms, params)
 
 
 def test_make_bins():
