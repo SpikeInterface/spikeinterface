@@ -5,7 +5,7 @@ from spikeinterface.postprocessing import ComputeSpikeAmplitudes
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
 
-class ComputeSpikeAmplitudesTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
+class TestComputeSpikeAmplitudes(AnalyzerExtensionCommonTestSuite):
     extension_class = ComputeSpikeAmplitudes
     extension_function_params_list = [
         dict(),
@@ -13,7 +13,7 @@ class ComputeSpikeAmplitudesTest(AnalyzerExtensionCommonTestSuite, unittest.Test
 
 
 if __name__ == "__main__":
-    test = ComputeSpikeAmplitudesTest()
+    test = TestComputeSpikeAmplitudes()
     test.setUpClass()
     test.test_extension()
 
