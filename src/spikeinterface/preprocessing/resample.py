@@ -37,7 +37,7 @@ class ResampleRecording(BasePreprocessor):
 
     Returns
     -------
-    resample_recording: ResampleRecording
+    resample_recording : ResampleRecording
         The resampled recording extractor object.
 
     """

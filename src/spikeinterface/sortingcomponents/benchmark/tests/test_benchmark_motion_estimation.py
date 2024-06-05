@@ -1,9 +1,5 @@
 import pytest
 
-import spikeinterface.full as si
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
 
 import shutil
 
@@ -77,6 +73,7 @@ def test_benchmark_motion_estimaton(create_cache_folder):
     study.plot_true_drift()
     study.plot_errors()
     study.plot_summary_errors()
+    import matplotlib.pyplot as plt
 
     plt.show()
 

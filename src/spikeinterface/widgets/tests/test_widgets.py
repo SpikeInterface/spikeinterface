@@ -3,11 +3,12 @@ import pytest
 import os
 
 if __name__ != "__main__":
-    import matplotlib
+    try:
+        import matplotlib
 
-    matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
+        matplotlib.use("Agg")
+    except:
+        pass
 
 
 from spikeinterface import (
@@ -24,6 +25,7 @@ from spikeinterface.preprocessing import scale
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
+SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW"))
 
 
 class TestWidgets(unittest.TestCase):
@@ -91,7 +93,7 @@ class TestWidgets(unittest.TestCase):
         cls.skip_backends = ["ipywidgets", "ephyviewer", "spikeinterface_gui"]
         # cls.skip_backends = ["ipywidgets", "ephyviewer", "sortingview"]
 
-        if ON_GITHUB and not KACHERY_CLOUD_SET:
+        if (ON_GITHUB and not KACHERY_CLOUD_SET) or (SKIP_SORTINGVIEW):
             cls.skip_backends.append("sortingview")
 
         print(f"Widgets tests: skipping backends - {cls.skip_backends}")
@@ -571,12 +573,15 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends_by_sorter:
             sw.plot_multicomparison_agreement_by_sorter(mcmp)
             if backend == "matplotlib":
+                import matplotlib.pyplot as plt
+
                 _, axes = plt.subplots(len(mcmp.object_list), 1)
                 sw.plot_multicomparison_agreement_by_sorter(mcmp, axes=axes)
 
 
 if __name__ == "__main__":
     # unittest.main()
+    import matplotlib.pyplot as plt
 
     TestWidgets.setUpClass()
     mytest = TestWidgets()

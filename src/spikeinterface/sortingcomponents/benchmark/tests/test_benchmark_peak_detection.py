@@ -2,12 +2,6 @@ import pytest
 
 import shutil
 
-import spikeinterface.full as si
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
-import numpy as np
-
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset
 from spikeinterface.sortingcomponents.benchmark.benchmark_peak_detection import PeakDetectionStudy
@@ -75,6 +69,7 @@ def test_benchmark_peak_detection(create_cache_folder):
     study.plot_performances_vs_snr()
     study.plot_template_similarities()
     study.plot_run_times()
+    import matplotlib.pyplot as plt
 
     plt.show()
 

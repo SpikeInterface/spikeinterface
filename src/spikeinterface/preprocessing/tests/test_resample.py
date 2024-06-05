@@ -1,12 +1,8 @@
-import pytest
-
-from spikeinterface import NumpyRecording
-from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import resample
+from spikeinterface.core import NumpyRecording
 
 
 import numpy as np
-from scipy.fft import fft, fftfreq
 
 DEBUG = False
 # DEBUG = True
@@ -66,6 +62,8 @@ def create_sinusoidal_traces(sampling_frequency=3e4, duration=30, freqs_n=10, ma
 
 
 def get_fft(traces, sampling_frequency):
+    from scipy.fft import fft, fftfreq
+
     # Return the power spectrum of the positive fft
     N = len(traces)
     yf = fft(traces)

@@ -18,26 +18,27 @@ class CurationSorting:
 
     Parameters
     ----------
-    parent_sorting: Recording
-        The recording object
-    properties_policy: "keep" | "remove", default: "keep"
+    sorting: BaseSorting
+        The sorting object
+    properties_policy : "keep" | "remove", default: "keep"
         Policy used to propagate properties after split and merge operation. If "keep" the properties will be
         passed to the new units (if the original units have the same value). If "remove" the new units will have
         an empty value for all the properties
-    make_graph: bool
+    make_graph : bool
         True to keep a Networkx graph instance with the curation history
     Returns
     -------
-    sorting: Sorting
+    sorting : Sorting
         Sorting object with the selected units merged
     """
 
-    def __init__(self, parent_sorting, make_graph=False, properties_policy="keep"):
+    def __init__(self, sorting, make_graph=False, properties_policy="keep"):
+
         # to allow undo and redo a list of sortingextractors is keep
-        self._sorting_stages = [parent_sorting]
+        self._sorting_stages = [sorting]
         self._sorting_stages_i = 0
         self._properties_policy = properties_policy
-        parent_units = parent_sorting.get_unit_ids()
+        parent_units = sorting.get_unit_ids()
         self._make_graph = make_graph
         if make_graph:
             # to easily allow undo and redo a list of graphs with the history of the curation is keep
@@ -52,7 +53,7 @@ class CurationSorting:
         else:
             self.max_used_id = max(parent_units) if len(parent_units) > 0 else 0
 
-        self._kwargs = dict(parent_sorting=parent_sorting, make_graph=make_graph, properties_policy=properties_policy)
+        self._kwargs = dict(sorting=sorting, make_graph=make_graph, properties_policy=properties_policy)
 
     def _get_unused_id(self, n=1):
         # check units in the graph to the next unused unit id
@@ -67,14 +68,14 @@ class CurationSorting:
 
         Parameters
         ----------
-        split_unit_id: int or str
+        split_unit_id : int or str
             The unit to split
-        indices_list: list or np.array
+        indices_list : list or np.array
             A list of index arrays selecting the spikes to split in each segment.
             Each array can contain more than 2 indices (e.g. for splitting in 3 or more units) and it should
             be the same length as the spike train (for each segment).
             If the sorting has only one segment, indices_list can be a single array
-        new_unit_ids: list[str|int] ot None
+        new_unit_ids : list[str|int] ot None
             List of new unit ids. If None, a new unit id is automatically selected
         """
         current_sorting = self._sorting_stages[self._sorting_stages_i]
@@ -108,11 +109,11 @@ class CurationSorting:
 
         Parameters
         ----------
-        units_to_merge: list[str|int]
+        units_to_merge : list[str|int]
             List of unit ids to merge
-        new_unit_id: int or str
+        new_unit_id : int or str
             The new unit id. If None, a new unit id is automatically selected
-        delta_time_ms: float
+        delta_time_ms : float
             Number of ms to consider for duplicated spikes. None won't check for duplications
         """
         current_sorting = self._sorting_stages[self._sorting_stages_i]
@@ -121,7 +122,7 @@ class CurationSorting:
         elif new_unit_id not in units_to_merge:
             assert new_unit_id not in current_sorting.unit_ids, f"new_unit_id already exists!"
         new_sorting = MergeUnitsSorting(
-            parent_sorting=current_sorting,
+            sorting=current_sorting,
             units_to_merge=units_to_merge,
             new_unit_ids=[new_unit_id],
             delta_time_ms=delta_time_ms,
@@ -143,7 +144,7 @@ class CurationSorting:
 
         Parameters
         ----------
-        unit_ids: list[str|int]
+        unit_ids : list[str|int]
             List of unit ids to remove
         """
         current_sorting = self._sorting_stages[self._sorting_stages_i]
@@ -256,7 +257,7 @@ class CurationSorting:
 
         Parameters
         ----------
-        **kwargs: dict
+        **kwargs : dict
             Keyword arguments for Networkx draw function
         """
         assert self._make_graph, "to make a graph use make_graph=True"

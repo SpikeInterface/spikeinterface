@@ -1,11 +1,7 @@
-import unittest
 import pytest
-import warnings
 from pathlib import Path
 import numpy as np
-import shutil
 
-from pandas import isnull
 
 from spikeinterface.core import (
     generate_ground_truth_recording,
@@ -155,6 +151,8 @@ def test_empty_units(sorting_analyzer_simple):
     )
 
     for empty_unit_id in sorting_empty.get_empty_unit_ids():
+        from pandas import isnull
+
         assert np.all(isnull(metrics_empty.loc[empty_unit_id].values))
 
 

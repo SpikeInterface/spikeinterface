@@ -16,7 +16,7 @@ def create_cache_folder(tmp_path_factory):
     return cache_folder
 
 
-ON_GITHUB = os.getenv("CI")
+ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
 def check_gh_settings():

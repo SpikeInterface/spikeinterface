@@ -344,7 +344,7 @@ def run_sorter_container(
 
     # common code for docker and singularity
     if folder is None:
-        folder = sorter_name + "_output"
+        output_folder = sorter_name + "_output"
 
     if container_image is None:
         if sorter_name in SORTER_DOCKER_MAP:
@@ -380,11 +380,11 @@ def run_sorter_container(
         json.dumps(check_json(sorter_params), indent=4), encoding="utf8"
     )
 
-    in_container_sorting_folder = folder / "in_container_sorting"
+    in_container_sorting_folder = output_folder / "in_container_sorting"
 
     # if in Windows, skip C:
     parent_folder_unix = path_to_unix(parent_folder)
-    folder_unix = path_to_unix(folder)
+    output_folder_unix = path_to_unix(output_folder)
     recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
     in_container_sorting_folder_unix = path_to_unix(in_container_sorting_folder)
 
@@ -410,9 +410,9 @@ if __name__ == '__main__':
         sorter_params = json.load(f)
 
     # run in container
-    folder = '{folder_unix}'
+    output_folder = '{output_folder_unix}'
     sorting = run_sorter_local(
-        '{sorter_name}', recording, folder=folder,
+        '{sorter_name}', recording, output_folder=output_folder,
         remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
         verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
@@ -584,9 +584,9 @@ if __name__ == '__main__':
     if platform.system() != "Windows":
         uid = os.getuid()
         # this do not work with singularity:
-        # cmd = f'chown {uid}:{uid} -R "{folder}"'
+        # cmd = f'chown {uid}:{uid} -R "{output_folder}"'
         # this approach is better
-        cmd = ["chown", f"{uid}:{uid}", "-R", f"{folder}"]
+        cmd = ["chown", f"{uid}:{uid}", "-R", f"{output_folder}"]
         res_output = container_client.run_command(cmd)
     else:
         # not needed for Windows

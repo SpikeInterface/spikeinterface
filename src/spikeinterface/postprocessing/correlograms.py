@@ -316,7 +316,7 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
 
 if HAVE_NUMBA:
 
-    @numba.jit((numba.int64[::1], numba.int32, numba.int32), nopython=True, nogil=True, cache=False)
+    @numba.jit(nopython=True, nogil=True, cache=False)
     def _compute_autocorr_numba(spike_times, window_size, bin_size):
         num_half_bins = window_size // bin_size
         num_bins = 2 * num_half_bins
@@ -341,7 +341,7 @@ if HAVE_NUMBA:
 
         return auto_corr
 
-    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32, numba.int32), nopython=True, nogil=True, cache=False)
+    @numba.jit(nopython=True, nogil=True, cache=False)
     def _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size):
         num_half_bins = window_size // bin_size
         num_bins = 2 * num_half_bins
@@ -367,7 +367,6 @@ if HAVE_NUMBA:
         return cross_corr
 
     @numba.jit(
-        (numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
         nopython=True,
         nogil=True,
         cache=False,

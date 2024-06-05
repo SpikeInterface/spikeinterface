@@ -2,8 +2,6 @@ import pytest
 
 import shutil
 
-import matplotlib.pyplot as plt
-
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset
 
@@ -58,6 +56,8 @@ def test_benchmark_peak_localization(create_cache_folder):
     study.plot_comparison_positions()
     study.plot_run_times()
 
+    import matplotlib.pyplot as plt
+
     plt.show()
 
 
@@ -98,6 +98,8 @@ def test_benchmark_unit_localization(create_cache_folder):
     study.plot_comparison_positions()
     study.plot_template_errors()
     study.plot_run_times()
+
+    import matplotlib.pyplot as plt
 
     plt.show()
 
