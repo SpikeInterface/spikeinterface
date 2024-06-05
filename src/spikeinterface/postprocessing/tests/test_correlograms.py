@@ -199,6 +199,6 @@ if __name__ == "__main__":
     # test_auto_equal_cross_correlograms()
     # test_detect_injected_correlation()
 
-    test = ComputeCorrelogramsTest()
+    test = TestComputeCorrelograms()
     test.setUpClass()
     test.test_extension()

@@ -133,7 +133,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
 
 
 if __name__ == "__main__":
-    test = PrincipalComponentsExtensionTest()
+    test = TestPrincipalComponentsExtension()
     test.setUpClass()
     test.test_extension()
     test.test_mode_concatenated()
