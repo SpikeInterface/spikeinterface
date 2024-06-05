@@ -44,7 +44,7 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
             probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
 
         if probegroup is not None:
-            self._set_probes(probegroup, in_place=True)
+            self.set_probegroup(probegroup, in_place=True)
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
