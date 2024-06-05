@@ -3,7 +3,7 @@ from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerE
 from spikeinterface.postprocessing import ComputeUnitLocations
 
 
-class UnitLocationsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
+class TestUnitLocationsExtension(AnalyzerExtensionCommonTestSuite):
     extension_class = ComputeUnitLocations
     extension_function_params_list = [
         dict(method="center_of_mass", radius_um=100),
@@ -15,7 +15,7 @@ class UnitLocationsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.Test
 
 
 if __name__ == "__main__":
-    test = UnitLocationsExtensionTest()
+    test = TestUnitLocationsExtension()
     test.setUpClass()
     test.test_extension()
     # test.tearDown()
