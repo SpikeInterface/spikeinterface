@@ -69,7 +69,6 @@ Here is the description of the format with a simple example:
 
 .. code-block:: json
 
-
     {
         # the first part of the format is the definitation
         "format_version": "1",
@@ -86,7 +85,6 @@ Here is the description of the format with a simple example:
         ],
         "label_definitions": {
             "quality": {
-                "name": "quality",
                 "label_options": [
                     "good",
                     "noise",
@@ -95,13 +93,12 @@ Here is the description of the format with a simple example:
                 ],
                 "exclusive": true
             },
-            "experimental": {
-                "name": "experimental",
+            "putative_type": {
                 "label_options": [
-                    "acute",
-                    "chronic",
-                    "headfixed",
-                    "freelymoving"
+                    "excitatory",
+                    "inhibitory",
+                    "pyramidal",
+                    "mitral"
                 ],
                 "exclusive": false
             }
@@ -110,20 +107,24 @@ Here is the description of the format with a simple example:
         "manual_labels": [
             {
                 "unit_id": "u1",
-                "label_category": "quality",
-                "labels": "good"
+                "quality": [
+                    "good"
+                ]
             },
             {
                 "unit_id": "u2",
-                "label_category": "quality",
-                "labels": "noise"
+                "quality": [
+                    "noise"
+                ],
+                "putative_type": [
+                    "excitatory",
+                    "pyramidal"
+                ]
             },
             {
-                "unit_id": "u2",
-                "label_category": "experimental",
-                "labels": [
-                    "chronic",
-                    "headfixed"
+                "unit_id": "u3",
+                "putative_type": [
+                    "inhibitory"
                 ]
             }
         ],
@@ -143,7 +144,6 @@ Here is the description of the format with a simple example:
             "u42"
         ]
     }
-
 
 
 

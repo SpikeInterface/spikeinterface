@@ -150,4 +150,6 @@ if __name__ == "__main__":
     # test_curation_format_validation()
     # test_to_from_json()
     # test_convert_from_sortingview_curation_format_v0()
-    test_curation_label_to_dataframe()
+    # test_curation_label_to_dataframe()
+
+    print(json.dumps(curation_ids_str, indent=4))
