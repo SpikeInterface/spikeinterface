@@ -126,3 +126,44 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
     return curation_dict
 
 
+def curation_label_to_dataframe(curation_dict):
+    """
+    Transform the curation dict into a pandas dataframe.
+    For label category with exclusive=True : a column is created and values are the unique label.
+    For label category with exclusive=False : one column per possible is created and values are boolean.
+
+    If exclusive=False and the same label appear several times then it raises an error.
+    
+    Parameters
+    ----------
+    curation_dict : dict
+        A curation dictionary
+
+    Returns
+    -------
+    labels : pd.DataFrame
+        dataframe with labels.
+    """
+    import pandas as pd
+    labels = pd.DataFrame(index=curation_dict["unit_ids"])
+
+    for label_key, label_def in curation_dict["label_definitions"].items():
+        if label_def["exclusive"]:
+            assert label_key not in labels.columns, f"{label_key} is already a column"
+            labels[label_key] = pd.Series(dtype=str)
+            labels[label_key][:] = ""
+            for lbl in curation_dict["manual_labels"]:
+                value = lbl.get(label_key, [])
+                if len(value) == 1:
+                    labels.at[lbl["unit_id"], label_key] = value[0]
+        else:
+            for label_opt in label_def["label_options"]:
+                assert label_opt not in labels.columns, f"{label_opt} is already a column"
+                labels[label_opt] = pd.Series(dtype=bool)
+                labels[label_opt][:] = False
+            for lbl in curation_dict["manual_labels"]:
+                values = lbl.get(label_key, [])
+                for value in values:
+                    labels.at[lbl["unit_id"], value] = True
+    
+    return labels

@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 import json
 
-from spikeinterface.curation.curation_format import validate_curation_dict, convert_from_sortingview_curation_format_v0
+from spikeinterface.curation.curation_format import validate_curation_dict, convert_from_sortingview_curation_format_v0, curation_label_to_dataframe
 
 
 
@@ -12,7 +12,7 @@ from spikeinterface.curation.curation_format import validate_curation_dict, conv
     'unit_ids': List[str, int],
     'label_definitions': {
         'category_key1':
-        {'name': str,
+        {
          'label_options': List[str],
          'exclusive': bool}
     },
@@ -31,9 +31,8 @@ curation_ids_int = {
     "format_version": "1",
     "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
     "label_definitions": {
-        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
+        "quality": {"label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
         "putative_type": {
-            "name": "putative_type",
             "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral"],
             "exclusive": False,
         },
@@ -57,9 +56,8 @@ curation_ids_str = {
     "format_version": "1",
     "unit_ids": ["u1", "u2", "u3", "u6", "u10", "u14", "u20", "u31", "u42"],
     "label_definitions": {
-        "quality": {"name": "quality", "label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
+        "quality": {"label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
         "putative_type": {
-            "name": "putative_type",
             "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral"],
             "exclusive": False,
         },
@@ -140,9 +138,19 @@ def test_convert_from_sortingview_curation_format_v0():
             # print(curation_v1)
             validate_curation_dict(curation_v1)
 
+def test_curation_label_to_dataframe():
+
+    df = curation_label_to_dataframe(curation_ids_int)
+    assert "quality" in df.columns
+    assert "excitatory" in df.columns
+    print(df)
+
+    df = curation_label_to_dataframe(curation_ids_str)
+    # print(df)
 
 
 if __name__ == "__main__":
     # test_curation_format_validation()
     # test_to_from_json()
-    test_convert_from_sortingview_curation_format_v0()
+    # test_convert_from_sortingview_curation_format_v0()
+    test_curation_label_to_dataframe()
