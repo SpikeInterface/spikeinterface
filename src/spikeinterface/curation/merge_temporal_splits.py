@@ -203,15 +203,15 @@ def get_potential_temporal_splits(
         pair_mask = pair_mask & (presence_distances < presence_distance_threshold)
 
     # STEP 4 : validate the potential merges with CC increase the contamination quality metrics
-    if "check_increase_score" in steps:
-        pair_mask, pairs_decreased_score = check_improve_contaminations_score(
-            sorting_analyzer,
-            pair_mask,
-            contaminations,
-            firing_contamination_balance,
-            refractory_period_ms,
-            censored_period_ms,
-        )
+    # if "check_increase_score" in steps:
+    #     pair_mask, pairs_decreased_score = check_improve_contaminations_score(
+    #         sorting_analyzer,
+    #         pair_mask,
+    #         contaminations,
+    #         firing_contamination_balance,
+    #         refractory_period_ms,
+    #         censored_period_ms,
+    #     )
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)

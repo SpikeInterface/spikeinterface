@@ -351,7 +351,7 @@ class LussacMerging(BaseMergingEngine):
         "templates": None, 
         "minimum_spikes" : 50,
         "refractory_period": (0.4, 1.9),
-        "template_metric": "cosine",
+        "template_metric": "l1",
         "num_channels": 5,
         "verbose" : False
         }

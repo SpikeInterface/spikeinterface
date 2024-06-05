@@ -20,14 +20,14 @@ class CircusMerging(BaseMergingEngine):
         "curation_kwargs": {
             "minimum_spikes": 50,
             "corr_diff_thresh": 0.5,
-            "template_metric": "cosine",
+            "template_metric": "l1",
             "num_channels": 5,
             "num_shift": 5,
         },
         "temporal_splits_kwargs": {
             "minimum_spikes": 50,
             "presence_distance_threshold": 0.1,
-            "template_metric": "cosine",
+            "template_metric": "l1",
             "num_channels": 5,
             "num_shift": 5,
         },
