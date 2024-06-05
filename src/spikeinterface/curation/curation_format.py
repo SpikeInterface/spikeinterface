@@ -132,7 +132,7 @@ def curation_label_to_dataframe(curation_dict):
     For label category with exclusive=False : one column per possible is created and values are boolean.
 
     If exclusive=False and the same label appear several times then it raises an error.
-    
+
     Parameters
     ----------
     curation_dict : dict
@@ -144,6 +144,7 @@ def curation_label_to_dataframe(curation_dict):
         dataframe with labels.
     """
     import pandas as pd
+
     labels = pd.DataFrame(index=curation_dict["unit_ids"])
 
     for label_key, label_def in curation_dict["label_definitions"].items():
@@ -164,5 +165,5 @@ def curation_label_to_dataframe(curation_dict):
                 values = lbl.get(label_key, [])
                 for value in values:
                     labels.at[lbl["unit_id"], value] = True
-    
+
     return labels
