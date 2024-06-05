@@ -1,7 +1,6 @@
 from typing import Sequence
 import numpy as np
 import pandas as pd
-from sklearn.pipeline import Pipeline
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.qualitymetrics.quality_metric_calculator import get_default_qm_params
@@ -39,8 +38,11 @@ class ModelBasedClassification:
     _check_params_for_classification()
         Checks if the parameters for classification match the training parameters.
     """
+    def __init__(self, sorting_analyzer: SortingAnalyzer, pipeline, required_metrics: Sequence[str]):
+        from sklearn.pipeline import Pipeline
 
-    def __init__(self, sorting_analyzer: SortingAnalyzer, pipeline: Pipeline, required_metrics: Sequence[str]):
+        if not isinstance(pipeline, Pipeline):
+            raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
 
         self.sorting_analyzer = sorting_analyzer
         self.required_metrics = required_metrics

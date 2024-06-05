@@ -2,7 +2,6 @@ import pytest
 from pathlib import Path
 import numpy as np
 import pickle as pkl
-from sklearn.pipeline import Pipeline
 
 from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core.generate import inject_some_split_units
@@ -20,6 +19,8 @@ else:
 
 @pytest.fixture
 def pipeline():
+    from sklearn.pipeline import Pipeline
+
     # Load trained_pipeline.pkl
     with open("trained_pipeline.pkl", "rb") as f:
         pipeline = pkl.load(f)
