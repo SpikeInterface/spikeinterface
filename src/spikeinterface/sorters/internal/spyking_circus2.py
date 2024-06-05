@@ -325,7 +325,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting.save(folder=curation_folder)
                 # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            merging_params["method_kwargs"] = {"templates" : templates}
+            merging_params["method_kwargs"] = {"templates": templates}
             sorting = merge_spikes(recording_w, sorting, **merging_params)
 
             if verbose:
