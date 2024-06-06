@@ -13,8 +13,8 @@ a :code:`SortingAnalyzer``).
 The Sorting object is a core object within SpikeInterface that acts as a convenient
 way to interface with sorting results, no matter which sorter was used to generate
 them. **At a fundamental level it is a series of spike times and a series of labels
-for each spike along with some associated metadata.** Below, we will show you have
-to take your existing data and load it as a SpikeInterface :code:`Sorting`` object.
+for each unit and a sampling frequency for transforming frames to time.** Below, we will show you have
+to take your existing data and load it as a SpikeInterface :code:`Sorting` object.
 
 
 Reading a standard spike sorting format into a :code:`Sorting`
@@ -30,7 +30,7 @@ For most spike sorting output formats the :code:`Sorting` is automatically gener
     # most formats will have a read_xx that can used.
     phy_sorting = read_phy('path/to/folder')
 
-And voila you now have your :code:`Sorting` object generated and can use it for further analysis. For all the
+And voilà you now have your :code:`Sorting` object generated and can use it for further analysis. For all the
 current formats see :ref:`compatible_formats`.
 
 
@@ -70,7 +70,7 @@ the requested unit_ids).
                                                     np.array([1000,12000,15000,22000])
                                                     ],
                                                 labels_list=[
-                                                    np.array([0,1,0,1])
+                                                    np.array(["a","b","a","b"])
                                                     ],
                                                 sampling_frequency=30_000.0
                                                 )
