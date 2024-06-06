@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import json
-from dataclasses import dataclass, field, astuple
+from dataclasses import dataclass, field, astuple, replace
 from probeinterface import Probe
 from pathlib import Path
 from .sparsity import ChannelSparsity
@@ -152,14 +152,13 @@ class Templates:
         unit_ids_list = list(self.unit_ids)
         unit_indices = np.array([unit_ids_list.index(unit_id) for unit_id in unit_ids], dtype=int)
         sliced_sparsity_mask = None if self.sparsity_mask is None else self.sparsity_mask[unit_indices]
-        return Templates(
+
+        # Data class method to only change selected fields
+        return replace(
+            self,
             templates_array=self.templates_array[unit_indices],
-            sampling_frequency=self.sampling_frequency,
-            nbefore=self.nbefore,
             sparsity_mask=sliced_sparsity_mask,
-            channel_ids=self.channel_ids,
             unit_ids=unit_ids,
-            probe=self.probe,
             check_for_consistent_sparsity=False,
         )
 
@@ -178,14 +177,13 @@ class Templates:
         channel_ids_list = list(self.channel_ids)
         channel_indices = np.array([channel_ids_list.index(channel_id) for channel_id in channel_ids])
         sliced_sparsity_mask = None if self.sparsity_mask is None else self.sparsity_mask[:, channel_indices]
-        return Templates(
+
+        # Data class method to only change selected fields
+        return replace(
+            self,
             templates_array=self.templates_array[:, :, channel_indices],
-            sampling_frequency=self.sampling_frequency,
-            nbefore=self.nbefore,
             sparsity_mask=sliced_sparsity_mask,
             channel_ids=channel_ids,
-            unit_ids=self.unit_ids,
-            probe=self.probe,
             check_for_consistent_sparsity=False,
         )
 
