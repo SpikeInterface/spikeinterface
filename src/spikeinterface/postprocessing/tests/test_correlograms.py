@@ -51,22 +51,8 @@ def _test_correlograms(sorting, window_ms, bin_ms, methods):
     for method in methods:
         correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
         if method == "numpy":
-            ref_correlograms = correlograms
             ref_bins = bins
         else:
-            # ~ import matplotlib.pyplot as plt
-            # ~ for i in range(ref_correlograms.shape[1]):
-            # ~ for j in range(ref_correlograms.shape[1]):
-            # ~ fig, ax = plt.subplots()
-            # ~ ax.plot(bins[:-1], ref_correlograms[i, j, :], color='green', label='numpy')
-            # ~ ax.plot(bins[:-1], correlograms[i, j, :], color='red', label=method)
-            # ~ ax.legend()
-            # ~ ax.set_title(f'{i} {j}')
-            # ~ plt.show()
-
-            # numba and numyp do not have exactly the same output
-            # assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
-
             assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
 
