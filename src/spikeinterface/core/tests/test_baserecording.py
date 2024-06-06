@@ -18,14 +18,9 @@ from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.core import generate_recording
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-    cache_folder.mkdir(exist_ok=True, parents=True)
 
-
-def test_BaseRecording():
+def test_BaseRecording(create_cache_folder):
+    cache_folder = create_cache_folder
     num_seg = 2
     num_chan = 3
     num_samples = 30
