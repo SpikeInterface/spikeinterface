@@ -13,32 +13,32 @@ class SplitUnitSorting(BaseSorting):
 
     Parameters
     ----------
-    parent_sorting: Recording
-        The recording object
-    parent_unit_id: int
+    sorting: BaseSorting
+        The sorting object
+    parent_unit_id : int
         Unit id of the unit to split
-    indices_list: list or np.array
+    indices_list : list or np.array
         A list of index arrays selecting the spikes to split in each segment.
         Each array can contain more than 2 indices (e.g. for splitting in 3 or more units) and it should
         be the same length as the spike train (for each segment).
         If the sorting has only one segment, indices_list can be a single array
-    new_unit_ids: int
+    new_unit_ids : int
         Unit ids of the new units to be created
-    properties_policy: "keep" | "remove", default: "keep"
+    properties_policy : "keep" | "remove", default: "keep"
         Policy used to propagate properties. If "keep" the properties will be passed to the new units
          (if the units_to_merge have the same value). If "remove" the new units will have an empty
          value for all the properties of the new unit
     Returns
     -------
-    sorting: Sorting
+    sorting : Sorting
         Sorting object with the selected units split
     """
 
-    def __init__(self, parent_sorting, split_unit_id, indices_list, new_unit_ids=None, properties_policy="keep"):
+    def __init__(self, sorting, split_unit_id, indices_list, new_unit_ids=None, properties_policy="keep"):
         if type(indices_list) is not list:
             indices_list = [indices_list]
-        parents_unit_ids = parent_sorting.unit_ids
-        assert parent_sorting.get_num_segments() == len(
+        parents_unit_ids = sorting.unit_ids
+        assert sorting.get_num_segments() == len(
             indices_list
         ), "The length of indices_list must be the same as parent_sorting.get_num_segments"
         split_unit_indices = np.unique([np.unique(v) for v in indices_list])
@@ -70,10 +70,10 @@ class SplitUnitSorting(BaseSorting):
             np.isin(new_unit_ids, unchanged_units)
         ), "new_unit_ids should be new unit ids or no more than one unit id can be found in split_unit_id"
 
-        sampling_frequency = parent_sorting.get_sampling_frequency()
+        sampling_frequency = sorting.get_sampling_frequency()
         units_ids = np.concatenate([unchanged_units, new_unit_ids])
 
-        self._parent_sorting = parent_sorting
+        self._parent_sorting = sorting
 
         BaseSorting.__init__(self, sampling_frequency, units_ids)
         assert all(
@@ -85,18 +85,18 @@ class SplitUnitSorting(BaseSorting):
             self.add_sorting_segment(sub_segment)
 
         # copy properties
-        ann_keys = parent_sorting._annotations.keys()
-        self._annotations = deepcopy({k: parent_sorting._annotations[k] for k in ann_keys})
+        ann_keys = sorting._annotations.keys()
+        self._annotations = deepcopy({k: sorting._annotations[k] for k in ann_keys})
 
         # copy properties for unchanged units, and check if units propierties
-        keep_parent_inds = parent_sorting.ids_to_indices(unchanged_units)
-        split_unit_id_ind = parent_sorting.id_to_index(split_unit_id)
+        keep_parent_inds = sorting.ids_to_indices(unchanged_units)
+        split_unit_id_ind = sorting.id_to_index(split_unit_id)
         keep_units_inds = self.ids_to_indices(unchanged_units)
         split_unit_ind = self.ids_to_indices(new_unit_ids)
         # copy properties from original units to split ones
-        prop_keys = parent_sorting._properties.keys()
+        prop_keys = sorting._properties.keys()
         for k in prop_keys:
-            values = parent_sorting._properties[k]
+            values = sorting._properties[k]
             if properties_policy == "keep":
                 new_values = np.empty_like(values, shape=len(units_ids))
                 new_values[keep_units_inds] = values[keep_parent_inds]
@@ -105,11 +105,11 @@ class SplitUnitSorting(BaseSorting):
                 continue
             self.set_property(k, values[keep_parent_inds], unchanged_units)
 
-        if parent_sorting.has_recording():
-            self.register_recording(parent_sorting._recording)
+        if sorting.has_recording():
+            self.register_recording(sorting._recording)
 
         self._kwargs = dict(
-            parent_sorting=parent_sorting,
+            sorting=sorting,
             split_unit_id=split_unit_id,
             indices_list=indices_list,
             new_unit_ids=new_unit_ids,
