@@ -105,7 +105,10 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
 
 
 def openMCSH5File(filename, stream_id):
-    """Open an MCS hdf5 file, read and return the recording info."""
+    """Open an MCS hdf5 file, read and return the recording info. 
+       Specs can be found online 
+       https://www.multichannelsystems.com/downloads/documentation?page=3
+    """
     rf = h5py.File(filename, "r")
 
     stream_name = "Stream_" + str(stream_id)
@@ -125,7 +128,7 @@ def openMCSH5File(filename, stream_id):
     exponent = info["Exponent"][0]
     convFact = info["ConversionFactor"][0]
     gain_uV = 1e6 * (convFact.astype(float) * (10.0**exponent))
-    offset_uV = 1e6 * (info["ADZero"].astype(float) * (10.0**exponent))
+    offset_uV = - 1e6 * (info["ADZero"].astype(float) * (10.0**exponent))
 
     nRecCh, nFrames = data.shape
     channel_ids = [f"Ch{ch}" for ch in info["ChannelID"]]
