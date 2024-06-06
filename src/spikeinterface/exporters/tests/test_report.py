@@ -4,6 +4,9 @@ from spikeinterface.exporters import export_report
 
 from spikeinterface.exporters.tests.common import (
     make_sorting_analyzer,
+    sorting_analyzer_dense_for_export,
+    sorting_analyzer_sparse_for_export,
+    sorting_analyzer_with_group_for_export,
 )
 
 

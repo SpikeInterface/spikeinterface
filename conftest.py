@@ -14,7 +14,7 @@ mark_names = ["core", "extractors", "preprocessing", "postprocessing",
               "widgets", "exporters", "sortingcomponents", "generation"]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def create_cache_folder(tmp_path_factory):
     cache_folder = tmp_path_factory.mktemp("cache_folder")
     return cache_folder
