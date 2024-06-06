@@ -516,12 +516,9 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-def split_sorting_by_times(sorting_analyzer, 
-                           splitting_probability=0.5, 
-                           partial_split_prob=0.95, 
-                           unit_ids=None,
-                           min_snr=None,
-                           seed=None):
+def split_sorting_by_times(
+    sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, unit_ids=None, min_snr=None, seed=None
+):
     sa = sorting_analyzer
     sorting = sa.sorting
     rng = np.random.RandomState(seed)
@@ -536,16 +533,17 @@ def split_sorting_by_times(sorting_analyzer,
             if sa.get_extension("noise_levels") is None:
                 sa.compute("noise_levels")
             if sa.get_extension("quality_metrics") is None:
-                sa.compute('quality_metrics', metric_names=['snr'])
-            
-            snr = sa.get_extension('quality_metrics').get_data()['snr'].values
+                sa.compute("quality_metrics", metric_names=["snr"])
+
+            snr = sa.get_extension("quality_metrics").get_data()["snr"].values
             select_from = select_from[snr > min_snr]
-    
+
         to_split_ids = rng.choice(select_from, nb_splits, replace=False)
     else:
         to_split_ids = unit_ids
 
     import spikeinterface.curation as scur
+
     for unit in to_split_ids:
         num_spikes = len(sorting_split.get_unit_spike_train(unit))
         indices = np.zeros(num_spikes, dtype=int)
@@ -559,11 +557,7 @@ def split_sorting_by_times(sorting_analyzer,
     return sorting_split, split_units
 
 
-def split_sorting_by_amplitudes(sorting_analyzer, 
-                                splitting_probability=0.5, 
-                                unit_ids=None,
-                                min_snr=None,
-                                seed=None):
+def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5, unit_ids=None, min_snr=None, seed=None):
     """
     Fonction used to split a sorting based on the amplitudes of the units. This
     might be used for benchmarking meta merging step (see components)
@@ -590,9 +584,9 @@ def split_sorting_by_amplitudes(sorting_analyzer,
             if sa.get_extension("noise_levels") is None:
                 sa.compute("noise_levels")
             if sa.get_extension("quality_metrics") is None:
-                sa.compute('quality_metrics', metric_names=['snr'])
-            
-            snr = sa.get_extension('quality_metrics').get_data()['snr'].values
+                sa.compute("quality_metrics", metric_names=["snr"])
+
+            snr = sa.get_extension("quality_metrics").get_data()["snr"].values
             select_from = select_from[snr > min_snr]
         to_split_ids = rng.choice(select_from, nb_splits, replace=False)
     else:
