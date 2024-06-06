@@ -129,23 +129,24 @@ def test_save_and_load_zarr(template_type, is_scaled, tmp_path):
     assert original_template == loaded_template
 
 
-# @pytest.mark.parametrize("is_scaled", [True, False])
-# @pytest.mark.parametrize("template_type", ["dense", "sparse"])
-# def test_select_units(template_type, is_scaled):
-#     template = generate_test_template(template_type, is_scaled)
-#     selected_unit_ids = ["unit_b"]
+@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("template_type", ["dense", "sparse"])
+def test_select_units(template_type, is_scaled):
+    template = generate_test_template(template_type, is_scaled)
+    selected_unit_ids = ["unit_a", "unit_c"]
+    selected_unit_ids_indices = [0, 2]
 
-#     selected_template = template.select_units(selected_unit_ids)
+    selected_template = template.select_units(selected_unit_ids)
 
-#     # Verify that the selected template has the correct number of units
-#     assert selected_template.num_units == len(selected_unit_ids)
-#     # Verify that the unit ids match
-#     assert np.array_equal(selected_template.unit_ids, selected_unit_ids)
-#     # Verify that the templates data matches
-#     assert np.array_equal(selected_template.templates_array, template.templates_array[selected_unit_ids])
+    # Verify that the selected template has the correct number of units
+    assert selected_template.num_units == len(selected_unit_ids)
+    # Verify that the unit ids match
+    assert np.array_equal(selected_template.unit_ids, selected_unit_ids)
+    # Verify that the templates data matches
+    assert np.array_equal(selected_template.templates_array, template.templates_array[selected_unit_ids_indices])
 
-#     if template.sparsity_mask is not None:
-#         assert np.array_equal(selected_template.sparsity_mask, template.sparsity_mask[selected_unit_ids])
+    if template.sparsity_mask is not None:
+        assert np.array_equal(selected_template.sparsity_mask, template.sparsity_mask[selected_unit_ids_indices])
 
 
 if __name__ == "__main__":
