@@ -1,17 +1,8 @@
-import pytest
-from pathlib import Path
-
-
 from spikeinterface.preprocessing import resample
 from spikeinterface.core import NumpyRecording
 
 
 import numpy as np
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
 
 DEBUG = False
 # DEBUG = True

@@ -188,9 +188,9 @@ def test_fix_job_kwargs():
         assert fixed_job_kwargs["n_jobs"] == 1
 
     # test float value > 1 is cast to correct int
-    job_kwargs = dict(n_jobs=4.0, progress_bar=False, chunk_duration="1s")
+    job_kwargs = dict(n_jobs=float(os.cpu_count()), progress_bar=False, chunk_duration="1s")
     fixed_job_kwargs = fix_job_kwargs(job_kwargs)
-    assert fixed_job_kwargs["n_jobs"] == 4
+    assert fixed_job_kwargs["n_jobs"] == os.cpu_count()
 
     # test wrong keys
     with pytest.raises(AssertionError):

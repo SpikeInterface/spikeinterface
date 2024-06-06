@@ -21,12 +21,6 @@ from spikeinterface.generation import generate_drifting_recording
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sortingcomponents_benchmark"
-else:
-    cache_folder = Path("cache_folder") / "sortingcomponents_benchmark"
-
-
 def make_dataset():
     recording, gt_sorting = generate_ground_truth_recording(
         durations=[60.0],

@@ -1,25 +1,20 @@
-import pytest
 import shutil
-from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.postprocessing import compute_principal_components
 
-
-from spikeinterface.core import compute_sparsity
 from spikeinterface.exporters import export_to_phy
 
 from spikeinterface.exporters.tests.common import (
-    cache_folder,
     make_sorting_analyzer,
+    sorting_analyzer_dense_for_export,
     sorting_analyzer_sparse_for_export,
     sorting_analyzer_with_group_for_export,
-    sorting_analyzer_dense_for_export,
 )
 
 
-def test_export_to_phy_dense(sorting_analyzer_dense_for_export):
+def test_export_to_phy_dense(sorting_analyzer_dense_for_export, create_cache_folder):
+    cache_folder = create_cache_folder
     output_folder1 = cache_folder / "phy_output_dense"
     for f in (output_folder1,):
         if f.is_dir():
@@ -38,7 +33,8 @@ def test_export_to_phy_dense(sorting_analyzer_dense_for_export):
     )
 
 
-def test_export_to_phy_sparse(sorting_analyzer_sparse_for_export):
+def test_export_to_phy_sparse(sorting_analyzer_sparse_for_export, create_cache_folder):
+    cache_folder = create_cache_folder
     output_folder1 = cache_folder / "phy_output_1"
     output_folder2 = cache_folder / "phy_output_2"
     for f in (output_folder1, output_folder2):
@@ -70,7 +66,8 @@ def test_export_to_phy_sparse(sorting_analyzer_sparse_for_export):
     )
 
 
-def test_export_to_phy_by_property(sorting_analyzer_with_group_for_export):
+def test_export_to_phy_by_property(sorting_analyzer_with_group_for_export, create_cache_folder):
+    cache_folder = create_cache_folder
     output_folder = cache_folder / "phy_output_property"
 
     for f in (output_folder,):

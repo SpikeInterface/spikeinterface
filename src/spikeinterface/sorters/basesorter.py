@@ -102,7 +102,7 @@ class BaseSorter:
         # installed ?
         if not cls.is_installed():
             raise Exception(
-                f"The sorter {cls.sorter_name} is not installed." f"Please install it with:  \n{cls.installation_mesg} "
+                f"The sorter {cls.sorter_name} is not installed. Please install it with:\n{cls.installation_mesg}"
             )
 
         if not isinstance(recording, BaseRecordingSnippets):
@@ -349,7 +349,7 @@ class BaseSorter:
 
         Returns
         -------
-        is_compiled: bool
+        is_compiled : bool
             Boolean indicating if a bash command for cls.compiled_name exists or not
         """
         if cls.compiled_name is None:
