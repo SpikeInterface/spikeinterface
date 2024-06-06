@@ -610,15 +610,18 @@ def _plot_collisions(sorting_analyzer, sparsity=None, num_collisions=None):
     num_collisions : int, default=None
         Number of collisions to plot. If None, all collisions are plotted.
     """
-    assert sorting_analyzer.is_extension("amplitude_scalings"), "Could not find amplitude scalings extension!"
-    sac = sorting_analyzer.load_extension("amplitude_scalings")
-    handle_collisions = sac._params["handle_collisions"]
+    assert sorting_analyzer.has_extension("amplitude_scalings"), "Could not find amplitude scalings extension!"
+    sac = sorting_analyzer.get_extension("amplitude_scalings")
+    handle_collisions = sac.params["handle_collisions"]
     assert handle_collisions, "Amplitude scalings was run without handling collisions!"
     scalings = sac.get_data()
 
     # overlapping_mask = sac.overlapping_mask
     # num_collisions = num_collisions or len(overlapping_mask)
-    spikes = sac.spikes
+    spikes = sorting_analyzer.sorting.to_spike_vector()
+
+    # TODO: this is broken, sac no longer (06/06/2024)
+    # has _extension_data and its collisions attribute is unused
     collisions = sac._extension_data[f"collisions"]
     collision_keys = list(collisions.keys())
     num_collisions = num_collisions or len(collisions)
