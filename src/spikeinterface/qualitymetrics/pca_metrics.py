@@ -667,6 +667,8 @@ def nearest_neighbors_noise_overlap(
     ----------
     Based on noise overlap metric described in [Chung]_
     """
+    from sklearn.decomposition import IncrementalPCA
+
     rng = np.random.default_rng(seed=seed)
 
     waveforms_ext = sorting_analyzer.get_extension("waveforms")
