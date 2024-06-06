@@ -111,7 +111,7 @@ def export_report(
     # global figures
     fig = plt.figure(figsize=(20, 10))
     w = sw.plot_unit_locations(sorting_analyzer, figure=fig, unit_colors=unit_colors)
-    fig.savefig(output_folder / f"unit_localization.{format}")
+    fig.savefig(output_folder / f"unit_locations.{format}")
     if not show_figures:
         plt.close(fig)
 
