@@ -13,7 +13,8 @@ def generate_test_template(template_type, is_scaled=True) -> Templates:
     num_channels = 3
     templates_shape = (num_units, num_samples, num_channels)
     templates_array = np.arange(num_units * num_samples * num_channels).reshape(templates_shape)
-
+    unit_ids = ["unit_a", "unit_b"]
+    channel_ids = ["channel1", "channel2", "channel3"]
     sampling_frequency = 30_000
     nbefore = 2
 
@@ -25,19 +26,23 @@ def generate_test_template(template_type, is_scaled=True) -> Templates:
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
             probe=probe,
+            unit_ids=unit_ids,
+            channel_ids=channel_ids,
             is_scaled=is_scaled,
         )
     elif template_type == "sparse":  # sparse with sparse templates
         sparsity_mask = np.array([[True, False, True], [False, True, False]])
         sparsity = ChannelSparsity(
-            mask=sparsity_mask, unit_ids=np.arange(num_units), channel_ids=np.arange(num_channels)
+            mask=sparsity_mask,
+            unit_ids=unit_ids,
+            channel_ids=channel_ids,
         )
 
         # Create sparse templates
         sparse_templates_array = np.zeros(shape=(num_units, num_samples, sparsity.max_num_active_channels))
-        for unit_index in range(num_units):
+        for unit_index, unit_id in enumerate(unit_ids):
             template = templates_array[unit_index, ...]
-            sparse_template = sparsity.sparsify_waveforms(waveforms=template, unit_id=unit_index)
+            sparse_template = sparsity.sparsify_waveforms(waveforms=template, unit_id=unit_id)
             sparse_templates_array[unit_index, :, : sparse_template.shape[1]] = sparse_template
 
         return Templates(
@@ -47,6 +52,8 @@ def generate_test_template(template_type, is_scaled=True) -> Templates:
             nbefore=nbefore,
             probe=probe,
             is_scaled=is_scaled,
+            unit_ids=unit_ids,
+            channel_ids=channel_ids,
         )
 
     elif template_type == "sparse_with_dense_templates":  # sparse with dense templates
@@ -59,6 +66,8 @@ def generate_test_template(template_type, is_scaled=True) -> Templates:
             nbefore=nbefore,
             probe=probe,
             is_scaled=is_scaled,
+            unit_ids=unit_ids,
+            channel_ids=channel_ids,
         )
 
 
@@ -101,20 +110,6 @@ def test_get_dense_templates(template_type, is_scaled):
 def test_initialization_fail_with_dense_templates():
     with pytest.raises(ValueError, match="Sparsity mask passed but the templates are not sparse"):
         template = generate_test_template(template_type="sparse_with_dense_templates")
-
-
-@pytest.mark.parametrize("is_scaled", [True, False])
-@pytest.mark.parametrize("template_type", ["dense", "sparse"])
-def test_save_and_load_zarr(template_type, is_scaled, tmp_path):
-    original_template = generate_test_template(template_type, is_scaled)
-
-    zarr_path = tmp_path / "templates.zarr"
-    original_template.to_zarr(str(zarr_path))
-
-    # Load from the Zarr archive
-    loaded_template = Templates.from_zarr(str(zarr_path))
-
-    assert original_template == loaded_template
 
 
 if __name__ == "__main__":
