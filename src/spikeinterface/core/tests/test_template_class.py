@@ -149,6 +149,28 @@ def test_select_units(template_type, is_scaled):
         assert np.array_equal(selected_template.sparsity_mask, template.sparsity_mask[selected_unit_ids_indices])
 
 
+@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("template_type", ["dense"])
+def test_select_channels(template_type, is_scaled):
+    template = generate_test_template(template_type, is_scaled)
+    selected_channel_ids = ["channel1", "channel3"]
+    selected_channel_ids_indices = [0, 2]
+
+    selected_template = template.select_channels(selected_channel_ids)
+
+    # Verify that the selected template has the correct number of channels
+    assert selected_template.num_channels == len(selected_channel_ids)
+    # Verify that the channel ids match
+    assert np.array_equal(selected_template.channel_ids, selected_channel_ids)
+    # Verify that the templates data matches
+    assert np.array_equal(
+        selected_template.templates_array, template.templates_array[:, :, selected_channel_ids_indices]
+    )
+
+    if template.sparsity_mask is not None:
+        assert np.array_equal(selected_template.sparsity_mask, template.sparsity_mask[:, selected_channel_ids_indices])
+
+
 if __name__ == "__main__":
     # test_json_serialization("sparse")
     test_json_serialization("dense")
