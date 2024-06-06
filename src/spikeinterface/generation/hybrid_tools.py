@@ -37,13 +37,13 @@ def estimate_templates_from_recording(
 
     Parameters
     ----------
-    ms_before: float
+    ms_before : float
         The time before peaks of templates
-    ms_after: float
+    ms_after : float
         The time after peaks of templates
-    sorter_name: str
+    sorter_name : str
         The sorter to be used in order to get some fast clustering
-    run_sorter_kwargs: dict
+    run_sorter_kwargs : dict
         The parameters to provide to the run_sorter function of spikeinterface
 
 
@@ -335,41 +335,41 @@ def generate_hybrid_recording(
 
     Parameters
     ----------
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to inject units in
-    motion_info: All the information about the motion
+    motion_info : All the information about the motion
         The motion datastructure of the recording
-    num_units: int, default: 10
+    num_units : int, default: 10
         Number of units,  not used when sorting is given.
-    sorting: Sorting or None
+    sorting : Sorting or None
         An external sorting object. If not provide, one is genrated.
-    templates: Templates or None, default: None
+    templates : Templates or None, default: None
         The templates of units.
         If None they are generated.
-    templates_in_uV: bool, default: True
+    templates_in_uV : bool, default: True
         If True, the templates are in uV, otherwise they are in the same unit as the recording.
         In case the recording has scaling, the templates are "unscaled" before injection.
-    ms_before: float, default: 1.5
+    ms_before : float, default: 1.5
         Cut out in ms before spike peak.
-    ms_after: float, default: 3
+    ms_after : float, default: 3
         Cut out in ms after spike peak.
-    unit_locations: np.array, default: None
+    unit_locations : np.array, default: None
         The locations at which the templates should be injected. If not provided, generated (see
         generate_unit_location_kwargs)
-    upsample_factor: None or int, default: None
+    upsample_factor : None or int, default: None
         A upsampling factor used only when templates are not provided.
-    upsample_vector: np.array or None
+    upsample_vector : np.array or None
         Optional the upsample_vector can given. This has the same shape as spike_vector
-    amplitude_std: float, default: 0.05
+    amplitude_std : float, default: 0.05
         The standard deviation of the modulation to apply to the spikes when injecting them
         into the recording.
-    generate_sorting_kwargs: dict
+    generate_sorting_kwargs : dict
         When sorting is not provide, this dict is used to generated a Sorting.
-    generate_unit_locations_kwargs: dict
+    generate_unit_locations_kwargs : dict
         Dict used to generated template when template not provided.
-    generate_templates_kwargs: dict
+    generate_templates_kwargs : dict
         Dict used to generated template when template not provided.
-    seed: int or None
+    seed : int or None
         Seed for random initialization.
         If None a diffrent Recording is generated at every call.
         Note: even with None a generated recording keep internaly a seed to regenerate the same signal after dump/load.
