@@ -2,21 +2,16 @@ import pytest
 
 import shutil
 
-import spikeinterface.full as si
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
-import numpy as np
 
-
-from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset, cache_folder
+from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset
 from spikeinterface.sortingcomponents.benchmark.benchmark_peak_detection import PeakDetectionStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
 @pytest.mark.skip()
-def test_benchmark_peak_detection():
+def test_benchmark_peak_detection(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
     # recording, gt_sorting = make_dataset()
@@ -68,6 +63,7 @@ def test_benchmark_peak_detection():
     study.plot_performances_vs_snr()
     study.plot_template_similarities()
     study.plot_run_times()
+    import matplotlib.pyplot as plt
 
     plt.show()
 

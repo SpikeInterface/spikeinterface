@@ -152,7 +152,7 @@ for providing parameters, however is a little different. The project prefers the
 
 .. code-block:: bash
 
-    parameter_name: type, default: default_value
+    parameter_name : type, default: default_value
 
 
 This allows users to quickly understand the type of data that should be input into a function as well as whether a default is supplied. A full example would be:
@@ -165,21 +165,22 @@ This allows users to quickly understand the type of data that should be input in
 
         Parameters
         ----------
-        param_a: dict
+        param_a : dict
             A dictionary containing the data
-        param_b: int, default: 5
+        param_b : int, default: 5
             A scaling factor to be applied to the data
-        param_c: "mean" | "median", default: "mean"
+        param_c : "mean" | "median", default: "mean"
             What to calculate on the data
 
         Returns
         -------
-        great_data: dict
+        great_data : dict
             A dictionary of the processed data
         """
 
 
-Note that in this example we demonstrate two other docstring conventions followed by SpikeInterface. First, that all string arguments should be presented
+There should be a space between each parameter and the colon following it. This is neccessary for using the `numpydoc validator <https://numpydoc.readthedocs.io/en/latest/validation.html>`_.
+In the above example we demonstrate two other docstring conventions followed by SpikeInterface. First, that all string arguments should be presented
 with double quotes. This is the same stylistic convention followed by Black and enforced by the pre-commit for the repo. Second, when a parameter is a
 string with a limited number of values (e.g. :code:`mean` and :code:`median`), rather than give the type a value of :code:`str`, please list the possible strings
 so that the user knows what the options are.

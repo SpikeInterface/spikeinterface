@@ -22,12 +22,12 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to ibl folder.
-    load_sync_channel: bool, default: False
+    load_sync_channel : bool, default: False
         Load or not the last channel (sync).
         If not then the probe is loaded.
-    stream_name: str, default: "ap".
+    stream_name : str, default: "ap".
         Whether to load AP or LFP band, one
         of "ap" or "lp".
 

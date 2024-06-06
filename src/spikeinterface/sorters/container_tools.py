@@ -7,11 +7,6 @@ import random
 import string
 
 # TODO move this inside functions
-try:
-    HAS_DOCKER = True
-    import docker
-except ModuleNotFoundError:
-    HAS_DOCKER = False
 
 
 from spikeinterface.core.core_tools import recursive_path_modifier
@@ -83,8 +78,8 @@ class ContainerClient:
         container_requires_gpu = extra_kwargs.get("container_requires_gpu", None)
 
         if mode == "docker":
-            if not HAS_DOCKER:
-                raise ModuleNotFoundError("No module named 'docker'")
+            import docker
+
             client = docker.from_env()
             if container_requires_gpu is not None:
                 extra_kwargs.pop("container_requires_gpu")
@@ -108,12 +103,12 @@ class ContainerClient:
             elif Path(sif_file).exists():
                 singularity_image = sif_file
             else:
-                if HAS_DOCKER:
-                    docker_image = self._get_docker_image(container_image)
-                    if docker_image and len(docker_image.tags) > 0:
-                        tag = docker_image.tags[0]
-                        print(f"Building singularity image from local docker image: {tag}")
-                        singularity_image = Client.build(f"docker-daemon://{tag}", sif_file, sudo=False)
+
+                docker_image = self._get_docker_image(container_image)
+                if docker_image and len(docker_image.tags) > 0:
+                    tag = docker_image.tags[0]
+                    print(f"Building singularity image from local docker image: {tag}")
+                    singularity_image = Client.build(f"docker-daemon://{tag}", sif_file, sudo=False)
                 if not singularity_image:
                     print(f"Singularity: pulling image {container_image}")
                     singularity_image = Client.pull(f"docker://{container_image}")
@@ -134,6 +129,8 @@ class ContainerClient:
 
     @staticmethod
     def _get_docker_image(container_image):
+        import docker
+
         docker_client = docker.from_env(timeout=300)
         try:
             docker_image = docker_client.images.get(container_image)

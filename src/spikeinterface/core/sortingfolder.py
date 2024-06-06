@@ -82,11 +82,11 @@ class NpzFolderSorting(NpzSortingExtractor):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
 
     Returns
     -------
-    sorting: NpzFolderSorting
+    sorting : NpzFolderSorting
         The sorting
     """
 

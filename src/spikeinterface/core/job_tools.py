@@ -3,12 +3,11 @@ Some utils to handle parallel jobs on top of job and/or loky
 """
 
 from __future__ import annotations
-from pathlib import Path
 import numpy as np
 import platform
 import os
 import warnings
-from spikeinterface.core.core_tools import convert_string_to_bytes
+from spikeinterface.core.core_tools import convert_string_to_bytes, convert_bytes_to_str, convert_seconds_to_str
 
 import sys
 from tqdm.auto import tqdm
@@ -18,22 +17,22 @@ import multiprocessing as mp
 from threadpoolctl import threadpool_limits
 
 
-_shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel processing:
+_shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel processing:
             * chunk_duration or chunk_size or chunk_memory or total_memory
-                - chunk_size: int
+                - chunk_size : int
                     Number of samples per chunk
-                - chunk_memory: str
+                - chunk_memory : str
                     Memory usage for each job (e.g. "100M", "1G", "500MiB", "2GiB")
-                - total_memory: str
+                - total_memory : str
                     Total memory usage (e.g. "500M", "2G")
                 - chunk_duration : str or float or None
                     Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
-            * n_jobs: int | float
+            * n_jobs : int | float
                 Number of jobs to use. With -1 the number of jobs is the same as number of cores.
                 Using a float between 0 and 1 will use that fraction of the total cores.
-            * progress_bar: bool
+            * progress_bar : bool
                 If True, a progress bar is printed
-            * mp_context: "fork" | "spawn" | None, default: None
+            * mp_context : "fork" | "spawn" | None, default: None
                 Context for multiprocessing. It can be None, "fork" or "spawn".
                 Note that "fork" is only safely available on LINUX systems
     """
@@ -47,7 +46,6 @@ job_keys = (
     "chunk_duration",
     "progress_bar",
     "mp_context",
-    "verbose",
     "max_threads_per_process",
 )
 
@@ -98,7 +96,8 @@ def fix_job_kwargs(runtime_job_kwargs):
     else:
         n_jobs = int(n_jobs)
 
-    job_kwargs["n_jobs"] = max(n_jobs, 1)
+    n_jobs = max(n_jobs, 1)
+    job_kwargs["n_jobs"] = min(n_jobs, os.cpu_count())
 
     if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_set_global_job_kwargs_set():
         warnings.warn(
@@ -131,6 +130,8 @@ def split_job_kwargs(mixed_kwargs):
 
 def divide_segment_into_chunks(num_frames, chunk_size):
     if chunk_size is None:
+        chunks = [(0, num_frames)]
+    elif chunk_size > num_frames:
         chunks = [(0, num_frames)]
     else:
         n = num_frames // chunk_size
@@ -194,24 +195,24 @@ def ensure_chunk_size(
     "chunk_size" is the traces.shape[0] for each worker.
 
     Flexible chunk_size setter with 3 ways:
-        * "chunk_size": is the length in sample for each chunk independently of channel count and dtype.
-        * "chunk_memory": total memory per chunk per worker
-        * "total_memory": total memory over all workers.
+        * "chunk_size" : is the length in sample for each chunk independently of channel count and dtype.
+        * "chunk_memory" : total memory per chunk per worker
+        * "total_memory" : total memory over all workers.
 
     If chunk_size/chunk_memory/total_memory are all None then there is no chunk computing
     and the full trace is retrieved at once.
 
     Parameters
     ----------
-    chunk_size: int or None
+    chunk_size : int or None
         size for one chunk per job
-    chunk_memory: str or None
+    chunk_memory : str or None
         must end with "k", "M", "G", etc for decimal units and "ki", "Mi", "Gi", etc for
         binary units. (e.g. "1k", "500M", "2G", "1ki", "500Mi", "2Gi")
-    total_memory: str or None
+    total_memory : str or None
         must end with "k", "M", "G", etc for decimal units and "ki", "Mi", "Gi", etc for
         binary units. (e.g. "1k", "500M", "2G", "1ki", "500Mi", "2Gi")
-    chunk_duration: None or float or str
+    chunk_duration : None or float or str
         Units are second if float.
         If str then the str must contain units(e.g. "1s", "500ms")
     """
@@ -246,12 +247,12 @@ def ensure_chunk_size(
         else:
             raise ValueError("chunk_duration must be str or float")
     else:
+        # Edge case to define single chunk per segment for n_jobs=1.
+        # All chunking parameters equal None mean single chunk per segment
         if n_jobs == 1:
-            # not chunk computing
-            # TODO Discuss, Sam, is this something that we want to do?
-            # Even in single process mode, we should chunk the data to avoid loading the whole thing into memory I feel
-            # Am I wrong?
-            chunk_size = None
+            num_segments = recording.get_num_segments()
+            samples_in_larger_segment = max([recording.get_num_samples(segment) for segment in range(num_segments)])
+            chunk_size = samples_in_larger_segment
         else:
             raise ValueError("For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory")
 
@@ -272,47 +273,47 @@ class ChunkRecordingExecutor:
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording to be processed
-    func: function
+    func : function
         Function that runs on each chunk
-    init_func: function
+    init_func : function
         Initializer function to set the global context (accessible by "func")
-    init_args: tuple
+    init_args : tuple
         Arguments for init_func
-    verbose: bool
+    verbose : bool
         If True, output is verbose
-    job_name: str, default: ""
+    job_name : str, default: ""
         Job name
-    handle_returns: bool, default: False
+    handle_returns : bool, default: False
         If True, the function can return values
-    gather_func: None or callable, default: None
+    gather_func : None or callable, default: None
         Optional function that is called in the main thread and retrieves the results of each worker.
         This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
-    n_jobs: int, default: 1
+    n_jobs : int, default: 1
         Number of jobs to be used. Use -1 to use as many jobs as number of cores
-    total_memory: str, default: None
+    total_memory : str, default: None
         Total memory (RAM) to use (e.g. "1G", "500M")
-    chunk_memory: str, default: None
+    chunk_memory : str, default: None
         Memory per chunk (RAM) to use (e.g. "1G", "500M")
-    chunk_size: int or None, default: None
+    chunk_size : int or None, default: None
         Size of each chunk in number of samples. If "total_memory" or "chunk_memory" are used, it is ignored.
     chunk_duration : str or float or None
         Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
     mp_context : "fork" | "spawn" | None, default: None
         "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
         "fork" is only safely available on LINUX systems.
-    max_threads_per_process: int or None, default: None
+    max_threads_per_process : int or None, default: None
         Limit the number of thread per process using threadpoolctl modules.
         This used only when n_jobs>1
         If None, no limits.
-    progress_bar: bool, default: False
+    progress_bar : bool, default: False
         If True, a progress bar is printed to monitor the progress of the process
 
 
     Returns
     -------
-    res: list
+    res : list
         If "handle_returns" is True, the results for each chunk process
     """
 
@@ -368,27 +369,21 @@ class ChunkRecordingExecutor:
         self.max_threads_per_process = max_threads_per_process
 
         if verbose:
-            if self.n_jobs > 1:
-                chunk_memory = self.chunk_size * recording.get_num_channels() * np.dtype(recording.get_dtype()).itemsize
-                total_memory = chunk_memory * self.n_jobs
-                chunk_duration = self.chunk_size / recording.get_sampling_frequency()
-                from spikeinterface.core.core_tools import convert_bytes_to_str, convert_seconds_to_str
-
-                chunk_memory_str = convert_bytes_to_str(chunk_memory)
-                total_memory_str = convert_bytes_to_str(total_memory)
-                chunk_duration_str = convert_seconds_to_str(chunk_duration)
-                print(
-                    self.job_name,
-                    "\n"
-                    f"n_jobs={self.n_jobs} - "
-                    f"samples_per_chunk={self.chunk_size:,} - "
-                    f"chunk_memory={chunk_memory_str} - "
-                    f"total_memory={total_memory_str} - "
-                    f"chunk_duration={chunk_duration_str}",
-                )
-
-            else:
-                print(self.job_name, "with n_jobs =", self.n_jobs, "and chunk_size =", self.chunk_size)
+            chunk_memory = self.chunk_size * recording.get_num_channels() * np.dtype(recording.get_dtype()).itemsize
+            total_memory = chunk_memory * self.n_jobs
+            chunk_duration = self.chunk_size / recording.get_sampling_frequency()
+            chunk_memory_str = convert_bytes_to_str(chunk_memory)
+            total_memory_str = convert_bytes_to_str(total_memory)
+            chunk_duration_str = convert_seconds_to_str(chunk_duration)
+            print(
+                self.job_name,
+                "\n"
+                f"n_jobs={self.n_jobs} - "
+                f"samples_per_chunk={self.chunk_size:,} - "
+                f"chunk_memory={chunk_memory_str} - "
+                f"total_memory={total_memory_str} - "
+                f"chunk_duration={chunk_duration_str}",
+            )
 
     def run(self):
         """

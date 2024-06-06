@@ -14,9 +14,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str, default: None
+    exclude_cluster_groups : list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
         Whether to only keep good units.
@@ -203,9 +203,9 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to the output Phy folder (containing the params.py).
-    exclude_cluster_groups: list or str, default: None
+    exclude_cluster_groups : list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     load_all_cluster_properties : bool, default: True
         If True, all cluster properties are loaded from the tsv/csv files.
@@ -243,7 +243,7 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to the output Phy folder (containing the params.py).
     keep_good_only : bool, default: True
         Whether to only keep good units.

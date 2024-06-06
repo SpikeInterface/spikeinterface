@@ -48,11 +48,19 @@ class BaseRecordingSnippets(BaseExtractor):
     def get_dtype(self):
         return self._dtype
 
-    def has_scaled(self):
+    def has_scaleable_traces(self):
         if self.get_property("gain_to_uV") is None or self.get_property("offset_to_uV") is None:
             return False
         else:
             return True
+
+    def has_scaled(self):
+        warn(
+            "`has_scaled` has been deprecated and will be removed in 0.103.0. Please use `has_scaleable_traces()`",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.has_scaleable_traces()
 
     def has_probe(self):
         return "contact_vector" in self.get_property_keys()
@@ -93,12 +101,12 @@ class BaseRecordingSnippets(BaseExtractor):
         assert isinstance(probe, Probe), "must give Probe"
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
-        return self.set_probes(probegroup, group_mode=group_mode, in_place=in_place)
+        return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
     def set_probegroup(self, probegroup, group_mode="by_probe", in_place=False):
-        return self.set_probes(probegroup, group_mode=group_mode, in_place=in_place)
+        return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
-    def set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
+    def _set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
         """
         Attach a list of Probe objects to a recording.
         For this Probe.device_channel_indices is used to link contacts to recording channels.
@@ -225,6 +233,21 @@ class BaseRecordingSnippets(BaseExtractor):
 
         return sub_recording
 
+    def set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
+
+        warning_msg = (
+            "`set_probes` is now a private function and the public function will be "
+            "removed in 0.103.0. Please use `set_probe` or `set_probegroups` instead"
+        )
+
+        warn(warning_msg, category=DeprecationWarning, stacklevel=2)
+
+        sub_recording = self._set_probes(
+            probe_or_probegroup=probe_or_probegroup, group_mode=group_mode, in_place=in_place
+        )
+
+        return sub_recording
+
     def get_probe(self):
         probes = self.get_probes()
         assert len(probes) == 1, "there are several probe use .get_probes() or get_probegroup()"
@@ -321,7 +344,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_channel_locations(self, locations, channel_ids=None):
         if self.get_property("contact_vector") is not None:
-            raise ValueError("set_channel_locations(..) destroy the probe description, prefer set_probes(..)")
+            raise ValueError("set_channel_locations(..) destroys the probe description, prefer _set_probes(..)")
         self.set_property("location", locations, ids=channel_ids)
 
     def get_channel_locations(self, channel_ids=None, axes: str = "xy"):

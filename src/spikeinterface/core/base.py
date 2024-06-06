@@ -848,8 +848,8 @@ class BaseExtractor:
     # TODO rename to saveto_binary_folder
     def save_to_folder(
         self,
-        name: str = None,
-        folder: str | Path = None,
+        name: str | None = None,
+        folder: str | Path | None = None,
         overwrite: str = False,
         verbose: bool = True,
         **save_kwargs,
@@ -857,11 +857,11 @@ class BaseExtractor:
         """
         Save the extractor and its data to a folder.
 
-        This method extracts trace data, saves it to a file (using a memory-mapped format
-        with BinaryRecordingExtractor), and stores both the original extractor's provenance
-        and the cached extractor's metadata in JSON format.
+        This method extracts trace data, saves it to a file (using a memory-mapped approach),
+        and stores both the original extractor's provenance
+        and the extractor's metadata in JSON format.
 
-        The folder final location and name can be specified in a couple of ways ways:
+        The folder's final location and name can be specified in a couple of ways ways:
 
         1. Explicitly providing the full path:
         ```
@@ -897,7 +897,7 @@ class BaseExtractor:
         Returns
         -------
         cached_extractor
-            A saved copy of the extractor in the specified format (e.g., BinaryRecordingExtractor).
+            A saved copy of the extractor in the specified format.
 
         Raises
         ------
