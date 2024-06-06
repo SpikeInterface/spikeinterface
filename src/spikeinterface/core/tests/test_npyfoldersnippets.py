@@ -7,13 +7,15 @@ from spikeinterface.core import load_extractor
 from spikeinterface.core import generate_snippets
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
+@pytest.fixture(scope="module")
+def cache_folder_creation(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
+    return cache_folder
 
 
-def test_NpyFolderSnippets():
+def test_NpyFolderSnippets(cache_folder_creation):
+
+    cache_folder = cache_folder_creation
     snippets, _ = generate_snippets(num_channels=10, durations=[2.0, 1.0])
     folder = cache_folder / "npy_folder_1"
 

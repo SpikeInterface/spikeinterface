@@ -17,14 +17,6 @@ from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
 
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
-
-
 class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
@@ -89,6 +81,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        try:
+            import hdbscan
+
+            HAVE_HDBSCAN = True
+        except:
+            HAVE_HDBSCAN = False
+
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy

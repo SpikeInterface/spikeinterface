@@ -14,13 +14,9 @@ from spikeinterface import (
 )
 from spikeinterface.core.job_tools import fix_job_kwargs
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
 
-
-def test_global_dataset_folder():
+def test_global_dataset_folder(create_cache_folder):
+    cache_folder = create_cache_folder
     dataset_folder = get_global_dataset_folder()
     assert dataset_folder.is_dir()
     new_dataset_folder = cache_folder / "dataset_folder"
@@ -29,7 +25,8 @@ def test_global_dataset_folder():
     assert new_dataset_folder.is_dir()
 
 
-def test_global_tmp_folder():
+def test_global_tmp_folder(create_cache_folder):
+    cache_folder = create_cache_folder
     tmp_folder = get_global_tmp_folder()
     assert tmp_folder.is_dir()
     new_tmp_folder = cache_folder / "tmp_folder"

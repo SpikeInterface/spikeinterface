@@ -355,7 +355,7 @@ class BaseRecording(BaseRecordingSnippets):
                     )
                     warnings.warn(message)
 
-            if not self.has_scaled():
+            if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
                     # this helps a lot for simulated data
