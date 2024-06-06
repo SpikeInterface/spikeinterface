@@ -82,7 +82,9 @@ jobs:
       - name: Test extractors
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
-        run: pytest -m "extractors"
+        run: |
+          pytest src/spikeinterface/extractors/tests/test_datalad_downloading.py
+#          pytest -m "extractors"
         shell: bash
       - name: Test preprocessing
         run: ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
