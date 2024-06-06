@@ -136,7 +136,7 @@ class AnalyzerExtensionCommonTestSuite:
 
         ext = sorting_analyzer.compute(extension_class.extension_name, **params, **job_kwargs)
         assert len(ext.data) > 0
-        main_data = ext.get_data()
+        assert len(main_data) > 0
 
         ext = sorting_analyzer.get_extension(extension_class.extension_name)
         assert ext is not None
