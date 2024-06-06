@@ -63,6 +63,9 @@ class MCSH5RecordingExtractor(BaseRecording):
         # set gain
         self.set_channel_gains(mcs_info["gain"])
 
+        # set offsets
+        self.set_channel_offsets(mcs_info["offset"])
+
         # set other properties
         self.set_property("electrode_labels", mcs_info["electrode_labels"])
 
@@ -122,6 +125,7 @@ def openMCSH5File(filename, stream_id):
     exponent = info["Exponent"][0]
     convFact = info["ConversionFactor"][0]
     gain = convFact.astype(float) * (10.0**exponent)
+    offset = info['ADZero'].astype(float) * (10.0**exponent)
 
     nRecCh, nFrames = data.shape
     channel_ids = [f"Ch{ch}" for ch in info["ChannelID"]]
@@ -151,6 +155,7 @@ def openMCSH5File(filename, stream_id):
         "electrode_labels": electrodeLabels,
         "gain": gain,
         "dtype": dtype,
+        "offset" : offset
     }
 
     return mcs_info
