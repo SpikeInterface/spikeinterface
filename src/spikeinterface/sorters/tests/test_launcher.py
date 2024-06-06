@@ -44,7 +44,7 @@ def get_job_list(base_folder):
     return jobs
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def job_list(create_cache_folder):
     cache_folder = create_cache_folder
     folder = cache_folder / "sorting_output"
