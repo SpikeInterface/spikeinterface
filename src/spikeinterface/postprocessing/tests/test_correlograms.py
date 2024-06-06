@@ -93,20 +93,12 @@ def test_flat_cross_correlogram():
     if HAVE_NUMBA:
         methods.append("numba")
 
-    # ~ import matplotlib.pyplot as plt
-    # ~ fig, ax = plt.subplots()
-
     for method in methods:
         correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=50.0, bin_ms=1.0, method=method)
         cc = correlograms[0, 1, :].copy()
         m = np.mean(cc)
         assert np.all(cc > (m * 0.90))
         assert np.all(cc < (m * 1.10))
-
-        # ~ ax.plot(bins[:-1], cc, label=method)
-    # ~ ax.legend()
-    # ~ ax.set_ylim(0, np.max(correlograms) * 1.1)
-    # ~ plt.show()
 
 
 def test_auto_equal_cross_correlograms():
@@ -145,16 +137,6 @@ def test_auto_equal_cross_correlograms():
             assert np.array_equal(cc_corrected[num_half_bins + 1 :], ac[num_half_bins + 1 :])
         else:
             assert np.array_equal(cc_corrected, ac)
-
-        # ~ import matplotlib.pyplot as plt
-        # ~ fig, ax = plt.subplots()
-        # ~ ax.plot(bins[:-1], cc, marker='*',  color='red', label='cross-corr')
-        # ~ ax.plot(bins[:-1], cc_corrected, marker='*', color='orange', label='cross-corr corrected')
-        # ~ ax.plot(bins[:-1], ac, marker='*', color='green', label='auto-corr')
-        # ~ ax.set_title(method)
-        # ~ ax.legend()
-        # ~ ax.set_ylim(0, np.max(correlograms) * 1.1)
-        # ~ plt.show()
 
 
 def test_detect_injected_correlation():
@@ -195,12 +177,3 @@ def test_detect_injected_correlation():
         sampling_period_ms = 1000.0 / sampling_frequency
         assert abs(peak_location_01_ms) - injected_delta_ms < sampling_period_ms
         assert abs(peak_location_02_ms) - injected_delta_ms < sampling_period_ms
-
-    #     import matplotlib.pyplot as plt
-    #     fig, ax = plt.subplots()
-    #     half_bin_ms = np.mean(np.diff(bins)) / 2.
-    #     ax.plot(bins[:-1]+half_bin_ms, cc_01, marker='*',  color='red', label='cross-corr 0>1')
-    #     ax.plot(bins[:-1]+half_bin_ms, cc_10, marker='*',  color='orange', label='cross-corr 1>0')
-    #     ax.set_title(method)
-    #     ax.legend()
-    # plt.show()

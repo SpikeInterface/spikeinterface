@@ -35,8 +35,3 @@ class TestAmplitudeScalingsExtension(AnalyzerExtensionCommonTestSuite):
             scalings = ext.data["amplitude_scalings"][mask]
             median_scaling = np.median(scalings)
             np.testing.assert_array_equal(np.round(median_scaling), 1)
-
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots()
-        # ax.hist(ext.data["amplitude_scalings"])
-        # plt.show()

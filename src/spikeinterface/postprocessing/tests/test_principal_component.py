@@ -166,10 +166,3 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         assert new_proj.shape[0] == num_spike
         assert new_proj.shape[1] == n_components
         assert new_proj.shape[2] == ext_pca.data["pca_projection"].shape[2]
-
-    # ext = test.sorting_analyzers["sparseTrue_memory"].get_extension("principal_components")
-    # pca = ext.data["pca_projection"]
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # ax.scatter(pca[:, 0, 0], pca[:, 0, 1])
-    # plt.show()
