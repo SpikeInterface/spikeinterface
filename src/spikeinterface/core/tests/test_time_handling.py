@@ -1,17 +1,11 @@
 import pytest
-from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import generate_recording, generate_sorting
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-
-
-def test_time_handling():
+def test_time_handling(create_cache_folder):
+    cache_folder = create_cache_folder
     durations = [[10], [10, 5]]
 
     # test multi-segment

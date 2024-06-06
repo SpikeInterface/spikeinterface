@@ -10,15 +10,14 @@ from spikeinterface.core import (
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import (
     make_dataset,
-    cache_folder,
     compute_gt_templates,
 )
 from spikeinterface.sortingcomponents.benchmark.benchmark_matching import MatchingStudy
 
 
 @pytest.mark.skip()
-def test_benchmark_matching():
-
+def test_benchmark_matching(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
     recording, gt_sorting, gt_analyzer = make_dataset()
