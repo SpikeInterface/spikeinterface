@@ -67,7 +67,7 @@ the requested unit_ids).
     # we have four spikes that are spread among two neurons
     my_sorting = NumpySorting.from_times_labels(
                                                 times_list=[
-                                                    np.array([1000,12000,15000,22000])
+                                                    np.array([1000,12000,15000,22000])   # Note these are samples/frames not times in seconds
                                                     ],
                                                 labels_list=[
                                                     np.array(["a","b","a","b"])
