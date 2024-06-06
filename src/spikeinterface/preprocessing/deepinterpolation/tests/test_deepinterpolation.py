@@ -1,21 +1,26 @@
 import pytest
 import numpy as np
 from pathlib import Path
+from packaging.version import parse
+from warnings import warn
 
 import probeinterface
-from spikeinterface import download_dataset, generate_recording, append_recordings, concatenate_recordings
-from spikeinterface.extractors import read_mearec, read_spikeglx, read_openephys
+from spikeinterface import generate_recording, append_recordings
 from spikeinterface.preprocessing import depth_order, zscore
 
 from spikeinterface.preprocessing.deepinterpolation import train_deepinterpolation, deepinterpolate
-from spikeinterface.preprocessing.deepinterpolation import train_deepinterpolation, deepinterpolate
+from spikeinterface.preprocessing.deepinterpolation.train import train_deepinterpolation_process
 
 
 try:
     import tensorflow
     import deepinterpolation
 
-    HAVE_DEEPINTERPOLATION = True
+    if parse(deepinterpolation.__version__) >= parse("0.2.0"):
+        HAVE_DEEPINTERPOLATION = True
+    else:
+        warn("DeepInterpolation version >=0.2.0 is required for the tests. Skipping...")
+        HAVE_DEEPINTERPOLATION = False
 except ImportError:
     HAVE_DEEPINTERPOLATION = False
 
@@ -67,6 +72,7 @@ def test_deepinterpolation_generator_borders(recording_and_shape_fixture):
 
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
+@pytest.mark.dependency()
 def test_deepinterpolation_training(recording_and_shape_fixture):
     recording, desired_shape = recording_and_shape_fixture
 
@@ -87,6 +93,7 @@ def test_deepinterpolation_training(recording_and_shape_fixture):
         run_uid="si_test",
         pre_post_omission=1,
         desired_shape=desired_shape,
+        nb_workers=1,
     )
     print(model_path)
 
@@ -173,6 +180,6 @@ if __name__ == "__main__":
     recording_shape = recording_and_shape()
     test_deepinterpolation_training(recording_shape)
     # test_deepinterpolation_transfer()
-    test_deepinterpolation_inference(recording_shape)
+    # test_deepinterpolation_inference(recording_shape)
     # test_deepinterpolation_inference_multi_job()
     # test_deepinterpolation_generator_borders(recording_shape)
