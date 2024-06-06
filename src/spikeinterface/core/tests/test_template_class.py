@@ -8,13 +8,13 @@ from probeinterface import generate_multi_columns_probe
 
 
 def generate_test_template(template_type, is_scaled=True) -> Templates:
-    num_units = 2
+    num_units = 3
     num_samples = 5
-    num_channels = 3
+    num_channels = 4
     templates_shape = (num_units, num_samples, num_channels)
     templates_array = np.arange(num_units * num_samples * num_channels).reshape(templates_shape)
-    unit_ids = ["unit_a", "unit_b"]
-    channel_ids = ["channel1", "channel2", "channel3"]
+    unit_ids = ["unit_a", "unit_b", "unit_c"]
+    channel_ids = ["channel1", "channel2", "channel3", "channel4"]
     sampling_frequency = 30_000
     nbefore = 2
 
@@ -31,7 +31,9 @@ def generate_test_template(template_type, is_scaled=True) -> Templates:
             is_scaled=is_scaled,
         )
     elif template_type == "sparse":  # sparse with sparse templates
-        sparsity_mask = np.array([[True, False, True], [False, True, False]])
+        sparsity_mask = np.array(
+            [[True, False, True, True], [False, True, False, False], [True, False, True, False]],
+        )
         sparsity = ChannelSparsity(
             mask=sparsity_mask,
             unit_ids=unit_ids,
@@ -57,8 +59,9 @@ def generate_test_template(template_type, is_scaled=True) -> Templates:
         )
 
     elif template_type == "sparse_with_dense_templates":  # sparse with dense templates
-        sparsity_mask = np.array([[True, False, True], [False, True, False]])
-
+        sparsity_mask = np.array(
+            [[True, False, True, True], [False, True, False, False], [True, False, True, False]],
+        )
         return Templates(
             templates_array=templates_array,
             sparsity_mask=sparsity_mask,
@@ -110,6 +113,39 @@ def test_get_dense_templates(template_type, is_scaled):
 def test_initialization_fail_with_dense_templates():
     with pytest.raises(ValueError, match="Sparsity mask passed but the templates are not sparse"):
         template = generate_test_template(template_type="sparse_with_dense_templates")
+
+
+@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("template_type", ["dense", "sparse"])
+def test_save_and_load_zarr(template_type, is_scaled, tmp_path):
+    original_template = generate_test_template(template_type, is_scaled)
+
+    zarr_path = tmp_path / "templates.zarr"
+    original_template.to_zarr(str(zarr_path))
+
+    # Load from the Zarr archive
+    loaded_template = Templates.from_zarr(str(zarr_path))
+
+    assert original_template == loaded_template
+
+
+# @pytest.mark.parametrize("is_scaled", [True, False])
+# @pytest.mark.parametrize("template_type", ["dense", "sparse"])
+# def test_select_units(template_type, is_scaled):
+#     template = generate_test_template(template_type, is_scaled)
+#     selected_unit_ids = ["unit_b"]
+
+#     selected_template = template.select_units(selected_unit_ids)
+
+#     # Verify that the selected template has the correct number of units
+#     assert selected_template.num_units == len(selected_unit_ids)
+#     # Verify that the unit ids match
+#     assert np.array_equal(selected_template.unit_ids, selected_unit_ids)
+#     # Verify that the templates data matches
+#     assert np.array_equal(selected_template.templates_array, template.templates_array[selected_unit_ids])
+
+#     if template.sparsity_mask is not None:
+#         assert np.array_equal(selected_template.sparsity_mask, template.sparsity_mask[selected_unit_ids])
 
 
 if __name__ == "__main__":
