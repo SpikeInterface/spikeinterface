@@ -19,7 +19,7 @@ class UnitWaveformsWidget(BaseWidget):
     sorting_analyzer_or_templates : SortingAnalyzer | Templates
         The SortingAnalyzer or Templates object.
         If Templates is given, the "plot_waveforms" argument is set to False
-    channel_ids: list or None, default: None
+    channel_ids : list or None, default: None
         The channel ids to display
     unit_ids : list or None, default: None
         List of unit ids
@@ -61,7 +61,7 @@ class UnitWaveformsWidget(BaseWidget):
         It controls the shading of the templates.
         If None, the shading is +/- the standard deviation of the templates.
         If float, it controls the percentile of the template values used to shade the templates.
-        Note that it is one-sided: if 5 is given, the 5th and 95th percentiles are used to shade
+        Note that it is one-sided : if 5 is given, the 5th and 95th percentiles are used to shade
         the templates. If list of floats, it needs to be have an even number of elements which control
         the lower and upper percentile used to shade the templates. The first half of the elements
         are used for the lower bounds, and the second half for the upper bounds.

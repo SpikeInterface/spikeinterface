@@ -12,12 +12,6 @@ from spikeinterface.curation import get_potential_auto_merge
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "curation"
-else:
-    cache_folder = Path("cache_folder") / "curation"
-
-
 def test_get_auto_merge_list(sorting_analyzer_for_curation):
 
     sorting = sorting_analyzer_for_curation.sorting

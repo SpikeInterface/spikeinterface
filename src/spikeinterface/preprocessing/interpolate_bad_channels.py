@@ -21,7 +21,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: BaseRecording
+    recording : BaseRecording
         The parent recording
     bad_channel_ids : list or 1d np.array
         Channel ids of the bad channels to interpolate.
@@ -37,7 +37,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
     Returns
     -------
-    interpolated_recording: InterpolateBadChannelsRecording
+    interpolated_recording : InterpolateBadChannelsRecording
         The recording object with interpolated bad channels
     """
 

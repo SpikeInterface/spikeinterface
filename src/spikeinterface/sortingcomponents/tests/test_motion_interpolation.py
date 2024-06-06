@@ -1,8 +1,4 @@
-import pytest
-from pathlib import Path
 import numpy as np
-
-from spikeinterface import download_dataset
 
 from spikeinterface.sortingcomponents.motion_interpolation import (
     correct_motion_on_peaks,
@@ -11,12 +7,6 @@ from spikeinterface.sortingcomponents.motion_interpolation import (
 )
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
-
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sortingcomponents"
-else:
-    cache_folder = Path("cache_folder") / "sortingcomponents"
 
 
 def make_fake_motion(rec):

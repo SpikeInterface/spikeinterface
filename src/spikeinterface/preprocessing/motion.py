@@ -245,39 +245,39 @@ def correct_motion(
       * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion`
 
 
-    Possible presets: {}
+    Possible presets : {}
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be transformed
-    preset: str, default: "nonrigid_accurate"
+    preset : str, default: "nonrigid_accurate"
         The preset name
-    folder: Path str or None, default: None
+    folder : Path str or None, default: None
         If not None then intermediate motion info are saved into a folder
-    output_motion_info: bool, default: False
+    output_motion_info : bool, default: False
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
         This dictionary is the same when reloaded from the folder
-    detect_kwargs: dict
+    detect_kwargs : dict
         Optional parameters to overwrite the ones in the preset for "detect" step.
-    select_kwargs: dict
+    select_kwargs : dict
         If not None, optional parameters to overwrite the ones in the preset for "select" step.
         If None, the "select" step is skipped.
-    localize_peaks_kwargs: dict
+    localize_peaks_kwargs : dict
         Optional parameters to overwrite the ones in the preset for "localize" step.
-    estimate_motion_kwargs: dict
+    estimate_motion_kwargs : dict
         Optional parameters to overwrite the ones in the preset for "estimate_motion" step.
-    interpolate_motion_kwargs: dict
+    interpolate_motion_kwargs : dict
         Optional parameters to overwrite the ones in the preset for "detect" step.
 
     {}
 
     Returns
     -------
-    recording_corrected: Recording
+    recording_corrected : Recording
         The motion corrected recording
-    motion_info: dict
+    motion_info : dict
         Optional output if `output_motion_info=True`
     """
 

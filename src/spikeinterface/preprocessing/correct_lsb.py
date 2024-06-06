@@ -16,7 +16,7 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
     ----------
     recording : RecordingExtractor
         The recording extractor to be LSB-corrected.
-    num_chunks_per_segment: int, default: 20
+    num_chunks_per_segment : int, default: 20
         Number of chunks per segment for random chunk
     chunk_size : int, default: 10000
         Size of a chunk in number for random chunk
@@ -27,7 +27,7 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
 
     Returns
     -------
-    correct_lsb_recording: ScaleRecording
+    correct_lsb_recording : ScaleRecording
         The recording extractor with corrected LSB
     """
     random_data = get_random_data_chunks(
