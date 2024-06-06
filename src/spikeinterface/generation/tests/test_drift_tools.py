@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 import shutil
 
@@ -13,12 +12,6 @@ from spikeinterface.core.generate import generate_templates, generate_sorting, N
 from spikeinterface.core import Templates, BaseRecording
 
 from probeinterface import generate_multi_columns_probe
-
-
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
 
 
 def make_some_templates():

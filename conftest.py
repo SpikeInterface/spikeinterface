@@ -14,16 +14,10 @@ mark_names = ["core", "extractors", "preprocessing", "postprocessing",
               "widgets", "exporters", "sortingcomponents", "generation"]
 
 
-# define global test folder
-def pytest_sessionstart(session):
-    # setup_stuff
-    pytest.global_test_folder = Path(__file__).parent / "test_folder"
-    if pytest.global_test_folder.is_dir():
-        shutil.rmtree(pytest.global_test_folder)
-    pytest.global_test_folder.mkdir()
-
-    for mark_name in mark_names:
-        (pytest.global_test_folder / mark_name).mkdir()
+@pytest.fixture
+def create_cache_folder(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
+    return cache_folder
 
 def pytest_collection_modifyitems(config, items):
     """
@@ -45,12 +39,3 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker("sorters")
         else:
             item.add_marker(module)
-
-
-
-def pytest_sessionfinish(session, exitstatus):
-    # teardown_stuff only if tests passed
-    # We don't delete the test folder in the CI because it was causing problems with the code coverage.
-    if exitstatus == 0:
-        if pytest.global_test_folder.is_dir() and not ON_GITHUB:
-            shutil.rmtree(pytest.global_test_folder)

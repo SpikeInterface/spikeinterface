@@ -15,12 +15,6 @@ from spikeinterface.core.waveform_tools import (
 )
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def _check_all_wf_equal(list_wfs_arrays):
     wfs_arrays0 = list_wfs_arrays[0]
     for i, wfs_arrays in enumerate(list_wfs_arrays):

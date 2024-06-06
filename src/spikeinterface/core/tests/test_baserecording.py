@@ -19,12 +19,6 @@ from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core import generate_recording
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def test_BaseRecording(create_cache_folder):
     cache_folder = create_cache_folder
     num_seg = 2

@@ -9,12 +9,6 @@ from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 @pytest.mark.skip()
 def test_benchmark_peak_detection(create_cache_folder):
     cache_folder = create_cache_folder

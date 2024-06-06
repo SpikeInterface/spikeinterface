@@ -6,12 +6,6 @@ from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import whiten, scale, compute_whitening_matrix
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def test_whiten(create_cache_folder):
     cache_folder = create_cache_folder
     rec = generate_recording(num_channels=4)

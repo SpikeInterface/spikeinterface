@@ -26,12 +26,6 @@ from spikeinterface.core.testing import check_sorted_arrays_equal, check_sorting
 from spikeinterface.core.generate import generate_sorting
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def test_BaseSorting(create_cache_folder):
     cache_folder = create_cache_folder
     num_seg = 2

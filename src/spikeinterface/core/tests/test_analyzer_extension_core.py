@@ -11,12 +11,6 @@ from spikeinterface.core.sortinganalyzer import _extension_children, _get_childr
 import numpy as np
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def get_sorting_analyzer(cache_folder, format="memory", sparse=True):
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],

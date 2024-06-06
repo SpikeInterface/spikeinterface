@@ -25,12 +25,6 @@ except ImportError:
     HAVE_DEEPINTERPOLATION = False
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def recording_and_shape():
     num_cols = 2
     num_rows = 64

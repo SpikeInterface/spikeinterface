@@ -15,12 +15,6 @@ from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 from spikeinterface.core.base import BaseExtractor
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def test_BaseSnippets(create_cache_folder):
     cache_folder = create_cache_folder
     duration = [4, 3]

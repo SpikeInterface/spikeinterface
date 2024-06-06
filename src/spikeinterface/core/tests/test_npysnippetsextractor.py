@@ -5,12 +5,6 @@ from spikeinterface.core import NpySnippetsExtractor
 from spikeinterface.core import generate_snippets
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def test_NpySnippetsExtractor(create_cache_folder):
     cache_folder = create_cache_folder
     segment_durations = [2, 5]

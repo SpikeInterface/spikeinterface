@@ -10,12 +10,6 @@ from spikeinterface.core import ChannelSliceRecording, BinaryRecordingExtractor
 from spikeinterface.core.generate import generate_recording
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def test_ChannelSliceRecording(create_cache_folder):
     cache_folder = create_cache_folder
 

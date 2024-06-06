@@ -16,12 +16,6 @@ from spikeinterface.core.waveforms_extractor_backwards_compatibility import load
 from spikeinterface.core import extract_waveforms as old_extract_waveforms
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0, 20.0],

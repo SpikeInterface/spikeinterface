@@ -5,12 +5,6 @@ from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def test_mda_extractors(create_cache_folder):
     cache_folder = create_cache_folder
     rec, sort = generate_ground_truth_recording(durations=[10.0], num_units=10)

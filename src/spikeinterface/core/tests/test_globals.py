@@ -15,12 +15,6 @@ from spikeinterface import (
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def test_global_dataset_folder(create_cache_folder):
     cache_folder = create_cache_folder
     dataset_folder = get_global_dataset_folder()

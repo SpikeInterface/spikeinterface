@@ -9,12 +9,6 @@ from spikeinterface.core import BinaryFolderRecording, read_binary_folder, load_
 from spikeinterface.core import generate_recording
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def test_BinaryFolderRecording(create_cache_folder):
     cache_folder = create_cache_folder
     rec = generate_recording(num_channels=10, durations=[2.0, 2.0])

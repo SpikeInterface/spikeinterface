@@ -17,12 +17,6 @@ from spikeinterface.sortingcomponents.benchmark.benchmark_motion_estimation impo
 )
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 @pytest.mark.skip()
 def test_benchmark_motion_interpolation(create_cache_folder):
     cache_folder = create_cache_folder

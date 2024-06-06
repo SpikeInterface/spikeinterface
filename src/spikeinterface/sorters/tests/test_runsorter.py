@@ -15,12 +15,6 @@ def _generate_recording():
 
 
 @pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
-@pytest.fixture(scope="module")
 def generate_recording():
     return _generate_recording()
 

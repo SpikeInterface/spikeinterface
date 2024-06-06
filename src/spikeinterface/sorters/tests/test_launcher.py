@@ -14,12 +14,6 @@ NUM_RECORDINGS = 2
 SORTERS = ["tridesclous2"]
 
 
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
-
-
 def create_recordings(NUM_RECORDINGS=2, base_seed=42):
     recordings = []
     for i in range(NUM_RECORDINGS):

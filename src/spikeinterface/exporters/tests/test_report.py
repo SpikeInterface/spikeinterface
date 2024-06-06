@@ -1,19 +1,10 @@
 import shutil
 
-import pytest
-
 from spikeinterface.exporters import export_report
 
 from spikeinterface.exporters.tests.common import (
     make_sorting_analyzer,
-    sorting_analyzer_sparse_for_export,
 )
-
-
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return cache_folder
 
 
 def test_export_report(sorting_analyzer_sparse_for_export, create_cache_folder):

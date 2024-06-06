@@ -1,5 +1,4 @@
 import os
-import shutil
 
 import pytest
 
@@ -7,13 +6,6 @@ from spikeinterface import generate_ground_truth_recording
 from spikeinterface.core.core_tools import is_editable_mode
 import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
-
-
-@pytest.fixture(scope="module")
-def create_cache_folder(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-
-    return cache_folder
 
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
