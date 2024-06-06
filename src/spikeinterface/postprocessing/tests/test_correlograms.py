@@ -22,7 +22,7 @@ class TestComputeCorrelograms(AnalyzerExtensionCommonTestSuite):
         [
             dict(method="numpy"),
             dict(method="auto"),
-            pytest.param(dict(method="numba"), marks=pytest.mark.skipif("not HAVE_NUMBA")),
+            pytest.param(dict(method="numba"), marks=pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")),
         ],
     )
     def test_extension(self, params):
