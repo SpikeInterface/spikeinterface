@@ -56,13 +56,13 @@ class CircusClustering:
             "recursive_depth": 3,
             "returns_split_count": True,
         },
-        "radius_um": 50,
+        "radius_um": 100,
         "n_svd": [5, 2],
-        "ms_before": 2,
-        "ms_after": 2,
+        "ms_before": 0.5,
+        "ms_after": 0.5,
         "rank": 5,
         "noise_levels": None,
-        "tmp_folder": "test",
+        "tmp_folder": None,
         "job_kwargs": {},
         "verbose": True,
     }
@@ -187,26 +187,9 @@ class CircusClustering:
             neighbours_mask = get_channel_distances(recording) < radius_um
 
             # np.save(features_folder / "sparse_mask.npy", sparse_mask)
-            # np.save(features_folder / "peaks.npy", peaks)
-            # np.save(features_folder / "mask.npy", neighbours_mask)
-            # np.save(features_folder / "distances.npy", get_channel_distances(recording))
+            np.save(features_folder / "peaks.npy", peaks)
 
-            # features = np.load(tmp_folder / 'tsvd_features/sparse_tsvd.npy')
-            # positions = recording.get_channel_locations()
-            # m = len(peaks)
-            # dense_features = np.zeros((m, 5, len(positions)), dtype=np.float32)
-            # for i in range(m):
-            #     main_channel = peaks["channel_index"][i]
-            #     chan_inds = np.flatnonzero(neighbours_mask[main_channel])
-            #     dense_features[i, :, chan_inds] = (features[i][:, :len(chan_inds)]).T
-            
-            # energy_pca = np.linalg.norm(dense_features, axis=1)
-            # estimated_positions = energy_pca.dot(positions)/(energy_pca.sum(axis=1)[:, None])
-
-            # dist = np.linalg.norm(estimated_positions[:, np.newaxis] - positions[np.newaxis, :], axis=2)
-            # original_labels = np.argmin(dist, axis=1)
             original_labels = peaks["channel_index"]
-
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
 
             peak_labels, _ = split_clusters(
