@@ -22,14 +22,6 @@ from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
 
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
-
-
 class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
@@ -100,6 +92,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        try:
+            import hdbscan
+
+            HAVE_HDBSCAN = True
+        except:
+            HAVE_HDBSCAN = False
+
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy
@@ -179,6 +178,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if params["matched_filtering"]:
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
+            detection_params["ms_before"] = ms_before
 
             for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
                 if value in detection_params:

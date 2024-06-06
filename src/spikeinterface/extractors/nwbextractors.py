@@ -113,7 +113,7 @@ def read_nwbfile(
         The file-like object to read from. Either provide this or file_path.
     stream_mode : "fsspec" | "remfile" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
-    cache: bool, default: False
+    cache : bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path : str or None, default: None
@@ -406,12 +406,12 @@ class NwbRecordingExtractor(BaseRecording):
 
     Parameters
     ----------
-    file_path: str, Path, or None
+    file_path : str, Path, or None
         Path to the NWB file or an s3 URL. Use this parameter to specify the file location
         if not using the `file` parameter.
-    electrical_series_name: str or None, default: None
+    electrical_series_name : str or None, default: None
         Deprecated, use `electrical_series_path` instead.
-    electrical_series_path: str or None, default: None
+    electrical_series_path : str or None, default: None
         The name of the ElectricalSeries object within the NWB file. This parameter is crucial
         when the NWB file contains multiple ElectricalSeries objects. It helps in identifying
         which specific series to extract data from. If there is only one ElectricalSeries and
@@ -419,29 +419,30 @@ class NwbRecordingExtractor(BaseRecording):
         If multiple ElectricalSeries are present and this parameter is not set, an error is raised.
         The `electrical_series_path` corresponds to the path within the NWB file, e.g.,
         'acquisition/MyElectricalSeries`.
-    load_time_vector: bool, default: False
+    load_time_vector : bool, default: False
         If set to True, the time vector is also loaded into the recording object. Useful for
         cases where precise timing information is required.
-    samples_for_rate_estimation: int, default: 1000
+    samples_for_rate_estimation : int, default: 1000
         The number of timestamp samples used for estimating the sampling rate. This is relevant
         when the 'rate' attribute is not available in the ElectricalSeries.
     stream_mode : "fsspec" | "remfile" | "zarr" | None, default: None
         Determines the streaming mode for reading the file. Use this for optimized reading from
         different sources, such as local disk or remote servers.
-    load_channel_properties: bool, default: True
+    load_channel_properties : bool, default: True
         If True, all the channel properties are loaded from the NWB file and stored as properties.
         For streaming purposes, it can be useful to set this to False to speed up streaming.
-    file: file-like object or None, default: None
+    file : file-like object or None, default: None
         A file-like object representing the NWB file. Use this parameter if you have an in-memory
         representation of the NWB file instead of a file path.
-    cache: bool, default: False
+    cache : bool, default: False
         Indicates whether to cache the file locally when using streaming. Caching can improve performance for
         remote files.
-    stream_cache_path: str, Path, or None, default: None
+    stream_cache_path : str, Path, or None, default: None
         Specifies the local path for caching the file. Relevant only if `cache` is True.
-    storage_options: dict | None = None,
-        Additional parameters for the storage backend (e.g. AWS credentials) used for "zarr" stream_mode.
-    use_pynwb: bool, default: False
+    storage_options : dict | None = None,
+        These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+        This is only used on the "zarr" stream_mode.
+    use_pynwb : bool, default: False
         Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
         to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
 
@@ -861,8 +862,10 @@ class NwbRecordingExtractor(BaseRecording):
 
     @staticmethod
     def fetch_available_electrical_series_paths(
-        file_path: str | Path, stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None
-    ) -> List[str]:
+        file_path: str | Path,
+        stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
+        storage_options: dict | None = None,
+    ) -> list[str]:
         """
         Retrieves the paths to all ElectricalSeries objects within a neurodata file.
 
@@ -873,7 +876,9 @@ class NwbRecordingExtractor(BaseRecording):
         stream_mode : "fsspec" | "remfile" | "zarr" | None, optional
             Determines the streaming mode for reading the file. Use this for optimized reading from
             different sources, such as local disk or remote servers.
-
+        storage_options : dict | None = None,
+            These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+            This is only used on the "zarr" stream_mode.
         Returns
         -------
         list of str
@@ -901,6 +906,7 @@ class NwbRecordingExtractor(BaseRecording):
         file_handle = read_file_from_backend(
             file_path=file_path,
             stream_mode=stream_mode,
+            storage_options=storage_options,
         )
 
         electrical_series_paths = _find_neurodata_type_from_backend(
@@ -921,7 +927,7 @@ class NwbRecordingSegment(BaseRecordingSegment):
         """Returns the number of samples in this signal block
 
         Returns:
-            SampleIndex: Number of samples in the signal block
+            SampleIndex : Number of samples in the signal block
         """
         return self._num_samples
 
@@ -955,24 +961,24 @@ class NwbSortingExtractor(BaseSorting):
     """Load an NWBFile as a SortingExtractor.
     Parameters
     ----------
-    file_path: str or Path
+    file_path : str or Path
         Path to NWB file.
-    electrical_series_path: str or None, default: None
+    electrical_series_path : str or None, default: None
         The name of the ElectricalSeries (if multiple ElectricalSeries are present).
-    sampling_frequency: float or None, default: None
+    sampling_frequency : float or None, default: None
         The sampling frequency in Hz (required if no ElectricalSeries is available).
-    unit_table_path: str or None, default: "units"
+    unit_table_path : str or None, default: "units"
         The path of the unit table in the NWB file.
-    samples_for_rate_estimation: int, default: 100000
+    samples_for_rate_estimation : int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
     stream_mode : "fsspec" | "remfile" | "zarr" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
-    stream_cache_path: str or Path or None, default: None
+    stream_cache_path : str or Path or None, default: None
         Local path for caching. If None it uses the system temporary directory.
-    load_unit_properties: bool, default: True
+    load_unit_properties : bool, default: True
         If True, all the unit properties are loaded from the NWB file and stored as properties.
-    t_start: float or None, default: None
+    t_start : float or None, default: None
         This is the time at which the corresponding ElectricalSeries start. NWB stores its spikes as times
         and the `t_start` is used to convert the times to seconds. Concrently, the returned frames are computed as:
 
@@ -984,18 +990,19 @@ class NwbSortingExtractor(BaseSorting):
         When a `t_start` is not provided it will be inferred from the corresponding ElectricalSeries with name equal
         to `electrical_series_path`. The `t_start` then will be either the `ElectricalSeries.starting_time` or the
         first timestamp in the `ElectricalSeries.timestamps`.
-    cache: bool, default: False
+    cache : bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
-    storage_options: dict | None = None,
-        Additional parameters for the storage backend (e.g. AWS credentials) used for "zarr" stream_mode.
-    use_pynwb: bool, default: False
+    storage_options : dict | None = None,
+        These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+        This is only used on the "zarr" stream_mode.
+    use_pynwb : bool, default: False
         Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
         to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
 
     Returns
     -------
-    sorting: NwbSortingExtractor
+    sorting : NwbSortingExtractor
         The sorting extractor for the NWB file.
     """
 
@@ -1365,18 +1372,18 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
 
     Parameters
     ----------
-    file_path: str or Path
+    file_path : str or Path
         Path to NWB file.
     load_recording : bool, default: True
         If True, the recording object is loaded.
     load_sorting : bool, default: False
         If True, the recording object is loaded.
-    electrical_series_path: str or None, default: None
+    electrical_series_path : str or None, default: None
         The name of the ElectricalSeries (if multiple ElectricalSeries are present)
 
     Returns
     -------
-    extractors: extractor or tuple
+    extractors : extractor or tuple
         Single RecordingExtractor/SortingExtractor or tuple with both
         (depending on "load_recording"/"load_sorting") arguments.
     """

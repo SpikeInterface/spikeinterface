@@ -150,7 +150,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
 
-    def _run(self):
+    def _run(self, verbose=False):
         import pandas as pd
         from scipy.signal import resample_poly
 

@@ -146,7 +146,7 @@ def add_suffix(file_path, possible_suffix):
         possible_suffix = [possible_suffix]
     possible_suffix = [s if s.startswith(".") else "." + s for s in possible_suffix]
     if file_path.suffix not in possible_suffix:
-        file_path = file_path.parent / (file_path.name + "." + possible_suffix[0])
+        file_path = file_path.parent / (file_path.name + possible_suffix[0])
     return file_path
 
 

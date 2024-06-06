@@ -7,19 +7,13 @@ from spikeinterface.preprocessing import bandpass_filter
 from spikeinterface.comparison import GroundTruthStudy
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "comparison"
-else:
-    cache_folder = Path("cache_folder") / "comparison"
-    cache_folder.mkdir(exist_ok=True, parents=True)
-
-study_folder = cache_folder / "test_groundtruthstudy/"
-
-
-def setup_module():
+@pytest.fixture(scope="module")
+def setup_module(tmp_path_factory):
+    study_folder = tmp_path_factory.mktemp("study_folder")
     if study_folder.is_dir():
         shutil.rmtree(study_folder)
     create_a_study(study_folder)
+    return study_folder
 
 
 def simple_preprocess(rec):
@@ -74,7 +68,8 @@ def create_a_study(study_folder):
     # print(study)
 
 
-def test_GroundTruthStudy():
+def test_GroundTruthStudy(setup_module):
+    study_folder = setup_module
     study = GroundTruthStudy(study_folder)
     print(study)
 

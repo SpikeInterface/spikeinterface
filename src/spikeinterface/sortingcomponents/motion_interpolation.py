@@ -1,21 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
-import scipy.interpolate
-from tqdm import tqdm
 
-import scipy.spatial
 
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
-
-
-# try:
-#     import numba
-#     HAVE_NUMBA = True
-# except ImportError:
-#     HAVE_NUMBA = False
 
 
 def correct_motion_on_peaks(
@@ -52,6 +42,7 @@ def correct_motion_on_peaks(
         Motion-corrected peak locations
     """
     corrected_peak_locations = peak_locations.copy()
+    import scipy.interpolate
 
     spike_times = peaks["sample_index"] / sampling_frequency
     if spatial_bins.shape[0] == 1:
@@ -138,6 +129,8 @@ def interpolate_motion_on_traces(
             channel_motions = motion[bin_ind, 0]
         else:
             # non rigid : interpolation channel motion for this temporal bin
+            import scipy.interpolate
+
             f = scipy.interpolate.interp1d(
                 spatial_bins, motion[bin_ind, :], kind="linear", axis=0, bounds_error=False, fill_value="extrapolate"
             )
@@ -296,6 +289,9 @@ class InterpolateMotionRecording(BasePreprocessor):
                     best_motions = operator(motion[:, 0])
                 else:
                     # non rigid : interpolation channel motion for this temporal bin
+                    import scipy.spatial
+                    import scipy.interpolate
+
                     f = scipy.interpolate.interp1d(
                         spatial_bins,
                         operator(motion[:, :], axis=0),
