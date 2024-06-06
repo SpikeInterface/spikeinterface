@@ -1,21 +1,12 @@
 from __future__ import annotations
 
 import pytest
-import numpy as np
 import shutil
-from pathlib import Path
+import numpy as np
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core import estimate_sparsity
-
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "postprocessing"
-else:
-    cache_folder = Path("cache_folder") / "postprocessing"
-
-cache_folder.mkdir(exist_ok=True, parents=True)
 
 
 def get_dataset():
@@ -39,24 +30,6 @@ def get_dataset():
         seed=2205,
     )
     return recording, sorting
-
-
-def get_sorting_analyzer(recording, sorting, format="memory", sparsity=None, name=""):
-    sparse = sparsity is not None
-    if format == "memory":
-        folder = None
-    elif format == "binary_folder":
-        folder = cache_folder / f"test_{name}_sparse{sparse}_{format}"
-    elif format == "zarr":
-        folder = cache_folder / f"test_{name}_sparse{sparse}_{format}.zarr"
-    if folder and folder.exists():
-        shutil.rmtree(folder)
-
-    sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity
-    )
-
-    return sorting_analyzer
 
 
 class AnalyzerExtensionCommonTestSuite:
@@ -85,7 +58,7 @@ class AnalyzerExtensionCommonTestSuite:
     """
 
     @pytest.fixture(autouse=True, scope="class")
-    def setUpClass(self):
+    def setUpClass(self, create_cache_folder):
         """
         This method sets up the class once at the start of testing. It is
         in scope for the lifetime of te class and is reused across all
@@ -102,6 +75,7 @@ class AnalyzerExtensionCommonTestSuite:
         self.__class__.sparsity = estimate_sparsity(
             self.__class__.recording, self.__class__.sorting, method="radius", radius_um=20
         )
+        self.__class__.cache_folder = create_cache_folder
 
     def _prepare_sorting_analyzer(self, format, sparse, extension_class):
         """
@@ -111,7 +85,33 @@ class AnalyzerExtensionCommonTestSuite:
         """
         sparsity_ = self.sparsity if sparse else None
 
-        sorting_analyzer = get_sorting_analyzer(
+        sorting_analyzer = self.get_sorting_analyzer(
+            self.recording, self.sorting, format=format, sparsity=sparsity_, name=extension_class.extension_name
+        )
+        return sorting_analyzer
+
+    def get_sorting_analyzer(self, recording, sorting, format="memory", sparsity=None, name=""):
+        sparse = sparsity is not None
+
+        if format == "memory":
+            folder = None
+        elif format == "binary_folder":
+            folder = self.cache_folder / f"test_{name}_sparse{sparse}_{format}"
+        elif format == "zarr":
+            folder = self.cache_folder / f"test_{name}_sparse{sparse}_{format}.zarr"
+        if folder and folder.exists():
+            shutil.rmtree(folder)
+
+        sorting_analyzer = create_sorting_analyzer(
+            sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity
+        )
+
+        return sorting_analyzer
+
+    def _prepare_sorting_analyzer(self, format, sparse, extension_class):
+        # prepare a SortingAnalyzer object with depencies already computed
+        sparsity_ = self.sparsity if sparse else None
+        sorting_analyzer = self.get_sorting_analyzer(
             self.recording, self.sorting, format=format, sparsity=sparsity_, name=extension_class.extension_name
         )
         sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
@@ -136,6 +136,7 @@ class AnalyzerExtensionCommonTestSuite:
 
         ext = sorting_analyzer.compute(extension_class.extension_name, **params, **job_kwargs)
         assert len(ext.data) > 0
+        main_data = ext.get_data()
         assert len(main_data) > 0
 
         ext = sorting_analyzer.get_extension(extension_class.extension_name)

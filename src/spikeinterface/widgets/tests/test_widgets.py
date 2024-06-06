@@ -1,7 +1,6 @@
 import unittest
 import pytest
 import os
-from pathlib import Path
 
 if __name__ != "__main__":
     try:
@@ -22,12 +21,6 @@ from spikeinterface import (
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
 from spikeinterface.preprocessing import scale
-
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "widgets"
-else:
-    cache_folder = Path("cache_folder") / "widgets"
 
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
