@@ -12,8 +12,8 @@ from spikeinterface.postprocessing import check_equal_template_with_distribution
 class SimilarityExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
     extension_class = ComputeTemplateSimilarity
     extension_function_params_list = [
-        dict(method="cosine_similarity"),
-        dict(method="cosine_similarity", max_lag_ms=0.5),
+        dict(method="cosine"),
+        dict(method="cosine", max_lag_ms=0.5),
         dict(method="l2"),
         dict(method="l1"),
     ]
