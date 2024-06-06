@@ -30,6 +30,10 @@ class TestComputeCorrelograms(AnalyzerExtensionCommonTestSuite):
 
 
 def test_make_bins():
+    """
+    Check the `_make_bins()` function that generates time bins (lags) for
+    the correllogram creates the expected number of bins.
+    """
     sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     window_ms = 43.57
@@ -79,6 +83,10 @@ def test_equal_results_correlograms():
 
 
 def test_flat_cross_correlogram():
+    """
+    Check that the correlogram (num_units x num_units x num_bins) does not
+    vary too much across time bins (lags), for entries representing two different units.
+    """
     sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0], seed=0)
 
     methods = ["numpy"]
@@ -150,6 +158,11 @@ def test_auto_equal_cross_correlograms():
 
 
 def test_detect_injected_correlation():
+    """
+    Inject 1.44 ms of correlation every 13 spikes and compute
+    cross-correlation. Check that the time bin lag with the peak
+    correlation lag is 1.44 ms (within tolerance of a sampling period).
+    """
     methods = ["numpy"]
     if HAVE_NUMBA:
         methods.append("numba")
