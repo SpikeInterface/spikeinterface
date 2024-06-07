@@ -21,7 +21,7 @@ class PotentialMergesWidget(BaseWidget):
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
-        The input waveform extractor
+        The input sorting analyzer
     potential_merges : list of lists or tuples
         List of potential merges (see `spikeinterface.curation.get_potential_auto_merges`)
     segment_index : int
