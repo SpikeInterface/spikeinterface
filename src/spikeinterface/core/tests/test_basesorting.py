@@ -25,13 +25,9 @@ from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 from spikeinterface.core.generate import generate_sorting
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
 
-
-def test_BaseSorting():
+def test_BaseSorting(create_cache_folder):
+    cache_folder = create_cache_folder
     num_seg = 2
     file_path = cache_folder / "test_BaseSorting.npz"
     file_path.parent.mkdir(exist_ok=True)

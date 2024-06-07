@@ -1,19 +1,8 @@
-import pytest
-from pathlib import Path
-
-from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import NumpyRecording
 
 from spikeinterface.preprocessing import DirectionalDerivativeRecording, directional_derivative
 
 import numpy as np
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
 
 
 def test_directional_derivative():

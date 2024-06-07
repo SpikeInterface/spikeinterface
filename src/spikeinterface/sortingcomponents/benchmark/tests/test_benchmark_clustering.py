@@ -3,15 +3,15 @@ import numpy as np
 
 import shutil
 
-from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset, cache_folder
+from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset
 from spikeinterface.sortingcomponents.benchmark.benchmark_clustering import ClusteringStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
 @pytest.mark.skip()
-def test_benchmark_clustering():
-
+def test_benchmark_clustering(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
     recording, gt_sorting, gt_analyzer = make_dataset()

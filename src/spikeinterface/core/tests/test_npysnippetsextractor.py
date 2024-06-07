@@ -4,13 +4,9 @@ from pathlib import Path
 from spikeinterface.core import NpySnippetsExtractor
 from spikeinterface.core import generate_snippets
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
 
-
-def test_NpySnippetsExtractor():
+def test_NpySnippetsExtractor(create_cache_folder):
+    cache_folder = create_cache_folder
     segment_durations = [2, 5]
     sampling_frequency = 30000
     file_path = [cache_folder / f"test_NpySnippetsExtractor_{i}.npy" for i in range(len(segment_durations))]

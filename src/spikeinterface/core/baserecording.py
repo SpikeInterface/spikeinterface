@@ -355,7 +355,7 @@ class BaseRecording(BaseRecordingSnippets):
                     )
                     warnings.warn(message)
 
-            if not self.has_scaled():
+            if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
                     # this helps a lot for simulated data
@@ -605,7 +605,7 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
-    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
+    def _select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
         """
         Returns a new recording object with a subset of channels.
 
@@ -643,7 +643,7 @@ class BaseRecording(BaseRecordingSnippets):
         from .channelslice import ChannelSliceRecording
 
         warnings.warn(
-            "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            "Recording.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
