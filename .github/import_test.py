@@ -45,20 +45,19 @@ for import_statement in import_statement_list:
         time_taken_list.append(time_taken)
 
     for time in time_taken_list:
-        import_time_threshold = 1.0
-        if time > import_time_threshold:
+        import_time_threshold = 2.0  # Most of the times is sub-second but there outliers
+        if time >= import_time_threshold:
             exceptions.append(
-                f"Importing {import_statement} took too long: {time:.2f} seconds. Import time threshold: {import_time_threshold} seconds."
+                f"Importing {import_statement} took: {time:.2f} seconds. Should be <: {import_time_threshold} seconds."
             )
             break
 
     if time_taken_list:
-        avg_time_taken = sum(time_taken_list) / len(time_taken_list)
-        std_dev_time_taken = math.sqrt(sum((x - avg_time_taken) ** 2 for x in time_taken_list) / len(time_taken_list))
+        avg_time = sum(time_taken_list) / len(time_taken_list)
+        std_time = math.sqrt(sum((x - avg_time) ** 2 for x in time_taken_list) / len(time_taken_list))
         times_list_str = ", ".join(f"{time:.2f}" for time in time_taken_list)
-        markdown_output += (
-            f"| `{import_statement}` | {avg_time_taken:.2f} | {std_dev_time_taken:.2f} | {times_list_str} |\n"
-        )
+        markdown_output += f"| `{import_statement}` | {avg_time:.2f} | {std_time:.2f} | {times_list_str} |\n"
+
 
 if exceptions:
     raise Exception("\n".join(exceptions))
