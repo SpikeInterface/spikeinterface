@@ -355,7 +355,7 @@ class BaseRecording(BaseRecordingSnippets):
                     )
                     warnings.warn(message)
 
-            if not self.has_scaled():
+            if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
                     # this helps a lot for simulated data
@@ -399,9 +399,9 @@ class BaseRecording(BaseRecordingSnippets):
         dict
             A dictionary containing the following key-value pairs:
 
-            - "sampling_frequency": The sampling frequency of the RecordingSegment.
-            - "t_start": The start time of the RecordingSegment.
-            - "time_vector": The time vector of the RecordingSegment.
+            - "sampling_frequency" : The sampling frequency of the RecordingSegment.
+            - "t_start" : The start time of the RecordingSegment.
+            - "time_vector" : The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -605,7 +605,7 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
-    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
+    def _select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
         """
         Returns a new recording object with a subset of channels.
 
@@ -643,7 +643,7 @@ class BaseRecording(BaseRecordingSnippets):
         from .channelslice import ChannelSliceRecording
 
         warnings.warn(
-            "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            "Recording.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -772,9 +772,9 @@ class BaseRecordingSegment(BaseSegment):
         dict
             A dictionary containing the following key-value pairs:
 
-            - "sampling_frequency": The sampling frequency of the RecordingSegment.
-            - "t_start": The start time of the RecordingSegment.
-            - "time_vector": The time vector of the RecordingSegment.
+            - "sampling_frequency" : The sampling frequency of the RecordingSegment.
+            - "t_start" : The start time of the RecordingSegment.
+            - "time_vector" : The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -814,7 +814,7 @@ class BaseRecordingSegment(BaseSegment):
         """Returns the number of samples in this signal segment
 
         Returns:
-            SampleIndex: Number of samples in the signal segment
+            SampleIndex : Number of samples in the signal segment
         """
         # must be implemented in subclass
         raise NotImplementedError
@@ -830,16 +830,16 @@ class BaseRecordingSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame: int | None, default: None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame: int | None, default: None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
-        channel_indices: list | np.array | tuple | None, default: None
+        channel_indices : list | np.array | tuple | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
         -------
-        traces: np.ndarray
+        traces : np.ndarray
             Array of traces, num_samples x num_channels
         """
         # must be implemented in subclass

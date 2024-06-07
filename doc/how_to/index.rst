@@ -1,5 +1,5 @@
 How to Guides
-=========
+=============
 
 Guides on how to solve specific, short problems in SpikeInterface. Learn how to...
 
@@ -12,3 +12,4 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     load_matlab_data
     combine_recordings
     process_by_channel_group
+    load_your_data_into_sorting
