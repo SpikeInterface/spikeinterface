@@ -53,6 +53,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "nPCs": 3,
         "ntbuff": 64,
         "nfilt_factor": 4,
+        "whiteningRange": 32.0,
         "NT": None,
         "AUCsplit": 0.9,
         "do_correction": True,
@@ -82,6 +83,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "ntbuff": "Samples of symmetrical buffer for whitening and spike detection",
         "nfilt_factor": "Max number of clusters per good channel (even temporary ones) 4",
         "do_correction": "If True drift registration is applied",
+        "whiteningRange": "Number of channels to use for whitening each channel",
         "NT": "Batch size (if None it is automatically computed)",
         "AUCsplit": "Threshold on the area under the curve (AUC) criterion for performing a split in the final step",
         "keep_good_only": "If True only 'good' units are returned",
@@ -220,7 +222,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops["NT"] = params[
             "NT"
         ]  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
-        ops["whiteningRange"] = 32.0  # number of channels to use for whitening each channel
+        ops["whiteningRange"] = params["whiteningRange"]  # number of channels to use for whitening each channel
         ops["nSkipCov"] = 25.0  # compute whitening matrix from every N-th batch
         ops["nPCs"] = params["nPCs"]  # how many PCs to project the spikes into
         ops["useRAM"] = 0.0  # not yet available
