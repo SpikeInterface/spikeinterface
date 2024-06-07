@@ -605,7 +605,7 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
-    def _select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
+    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
         """
         Returns a new recording object with a subset of channels.
 
