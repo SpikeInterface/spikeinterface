@@ -66,14 +66,14 @@ the requested unit_ids).
     # in this case we are making a monosegment sorting
     # we have four spikes that are spread among two neurons
     my_sorting = NumpySorting.from_times_labels(
-                                                times_list=[
-                                                    np.array([1000,12000,15000,22000])   # Note these are samples/frames not times in seconds
-                                                    ],
-                                                labels_list=[
-                                                    np.array(["a","b","a","b"])
-                                                    ],
-                                                sampling_frequency=30_000.0
-                                                )
+        times_list=[
+            np.array([1000,12000,15000,22000])   # Note these are samples/frames not times in seconds
+            ],
+        labels_list=[
+            np.array(["a","b","a","b"])
+            ],
+        sampling_frequency=30_000.0
+        )
 
 
 With a unit dictionary
@@ -88,19 +88,19 @@ dict for monosegment. We still need to separately specify the sampling_frequency
     from spikeinterface.core import NumpySorting
 
     my_sorting = NumpySorting.from_unit_dict(
-                                             units_dict_list={
-                                                              '0': [1000,15000],
-                                                              '1': [12000,22000],
-                                                              },
-                                             sampling_frequency=30_000.0
-                                           )
+        units_dict_list={
+                        '0': [1000,15000],
+                        '1': [12000,22000],
+                        },
+        sampling_frequency=30_000.0
+        )
 
 
 With Neo SpikeTrains
 ^^^^^^^^^^^^^^^^^^^^
 
 Finally since SpikeInterface is tightly integrated with the Neo project you can create
-a sorting from :code:`Neo.SpikeTrain` objects. See :doc:`Neo documentation<neo:index>`` for more information on
+a sorting from :code:`Neo.SpikeTrain` objects. See :doc:`Neo documentation<neo:index>` for more information on
 using :code:`Neo.SpikeTrain`'s.
 
 .. code-block:: python
@@ -108,8 +108,10 @@ using :code:`Neo.SpikeTrain`'s.
     from spikeinterface.core import NumpySorting
 
     # neo_spiketrain is a Neo spiketrain object
-    my_sorting = NumpySorting.from_neo_spiketrain_list(neo_spiketrain,
-                                                       sampling_frequency=30_000.0)
+    my_sorting = NumpySorting.from_neo_spiketrain_list(
+        neo_spiketrain,
+        sampling_frequency=30_000.0,
+        )
 
 
 Loading multisegment data into a :code:`Sorting`
@@ -129,18 +131,18 @@ a single list. Let's go through one example for using :code:`from_times_labels`:
     # we have four spikes that are spread among two neurons
     # in each segment
     my_sorting = NumpySorting.from_times_labels(
-                                                times_list=[
-                                                    np.array([1000,12000,15000,22000]),
-                                                    np.array([30000,33000, 41000, 47000]),
-                                                    np.array([50000,53000,64000,70000]),
-                                                    ],
-                                                labels_list=[
-                                                    np.array([0,1,0,1]),
-                                                    np.array([0,0,1,1]),
-                                                    np.array([1,0,1,0]),
-                                                ],
-                                                sampling_frequency=30_000.0
-                                                )
+        times_list=[
+            np.array([1000,12000,15000,22000]),
+            np.array([30000,33000, 41000, 47000]),
+            np.array([50000,53000,64000,70000]),
+            ],
+        labels_list=[
+            np.array([0,1,0,1]),
+            np.array([0,0,1,1]),
+            np.array([1,0,1,0]),
+        ],
+        sampling_frequency=30_000.0
+        )
 
 
 Next steps
