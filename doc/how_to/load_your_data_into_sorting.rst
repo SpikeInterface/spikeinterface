@@ -89,9 +89,9 @@ dict for monosegment. We still need to separately specify the sampling_frequency
 
     my_sorting = NumpySorting.from_unit_dict(
         units_dict_list={
-                        '0': [1000,15000],
-                        '1': [12000,22000],
-                        },
+            '0': [1000,15000],
+            '1': [12000,22000],
+            },
         sampling_frequency=30_000.0
         )
 
