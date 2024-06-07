@@ -730,7 +730,7 @@ class NwbRecordingExtractor(BaseRecording):
             sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
 
         if load_time_vector and timestamps is not None:
-            times_kwargs = dict(time_vector=electrical_series.timestamps)
+            times_kwargs = dict(time_vector=electrical_series["timestamps"])
         else:
             times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
 

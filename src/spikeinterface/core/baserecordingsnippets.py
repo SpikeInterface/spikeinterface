@@ -72,6 +72,9 @@ class BaseRecordingSnippets(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
 
+    def _select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecordingSnippets":
+        raise NotImplementedError
+
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         raise NotImplementedError
 
@@ -190,7 +193,7 @@ class BaseRecordingSnippets(BaseExtractor):
             if np.array_equal(new_channel_ids, self.get_channel_ids()):
                 sub_recording = self.clone()
             else:
-                sub_recording = self.channel_slice(new_channel_ids)
+                sub_recording = self.select_channels(new_channel_ids)
 
         # create a vector that handle all contacts in property
         sub_recording.set_property("contact_vector", probe_as_numpy_array, ids=None)
@@ -461,6 +464,22 @@ class BaseRecordingSnippets(BaseExtractor):
         """
         return self._channel_slice(channel_ids, renamed_channel_ids=renamed_channel_ids)
 
+    def select_channels(self, channel_ids):
+        """
+        Returns a new object with sliced channels.
+
+        Parameters
+        ----------
+        channel_ids : np.array or list
+            The list of channels to keep
+
+        Returns
+        -------
+        BaseRecordingSnippets
+            The object with sliced channels
+        """
+        return self._select_channels(channel_ids)
+
     def remove_channels(self, remove_channel_ids):
         """
         Returns a new object with removed channels.
@@ -545,7 +564,7 @@ class BaseRecordingSnippets(BaseExtractor):
         for value in np.unique(values):
             (inds,) = np.nonzero(values == value)
             new_channel_ids = self.get_channel_ids()[inds]
-            subrec = self.channel_slice(new_channel_ids)
+            subrec = self.select_channels(new_channel_ids)
             if outputs == "list":
                 recordings.append(subrec)
             elif outputs == "dict":
