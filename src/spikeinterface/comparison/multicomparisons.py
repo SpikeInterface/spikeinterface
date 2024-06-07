@@ -186,7 +186,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         warnings.warn(
             "save_to_folder() is deprecated. "
             "You should save and load the multi sorting comparison object using pickle."
-            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb')))))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
+            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb'))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -218,7 +218,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         warnings.warn(
             "load_from_folder() is deprecated. "
             "You should save and load the multi sorting comparison object using pickle."
-            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb')))))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
+            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb'))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
             DeprecationWarning,
             stacklevel=2,
         )
