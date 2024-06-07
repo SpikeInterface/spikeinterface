@@ -45,7 +45,7 @@ def test_select_peaks():
             selected_peaks.size <= n_peaks
         ), "selected_peaks is not the right size when return_indices=False, select_per_channel=False"
 
-        selected_peaks = select_peaks(peaks, recording=recording, method=method, margin=(10,10), **select_kwargs)
+        selected_peaks = select_peaks(peaks, recording=recording, method=method, margin=(10, 10), **select_kwargs)
         assert (
             selected_peaks.size <= n_peaks
         ), "selected_peaks is not the right size when return_indices=False, select_per_channel=False"

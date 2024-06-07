@@ -6,7 +6,9 @@ from __future__ import annotations
 import numpy as np
 
 
-def select_peaks(peaks, recording=None, method="uniform", seed=None, return_indices=False, margin=None, **method_kwargs):
+def select_peaks(
+    peaks, recording=None, method="uniform", seed=None, return_indices=False, margin=None, **method_kwargs
+):
     """
     Method to select a subset of peaks from a set of peaks.
     Usually use for reducing computational foorptint of downstream methods.
@@ -28,7 +30,7 @@ def select_peaks(peaks, recording=None, method="uniform", seed=None, return_indi
         The seed for random generations
     return_indices: bool
         If True, return the indices of selection such that selected_peaks = peaks[selected_indices]
-    margin : Margin in timesteps. default: None. Otherwise should be a tuple (nbefore, nafter) 
+    margin : Margin in timesteps. default: None. Otherwise should be a tuple (nbefore, nafter)
         preventing peaks to be selected at the borders of the segments. A recording should be provided to get the duration
         of the segments
 
@@ -71,7 +73,7 @@ def select_peaks(peaks, recording=None, method="uniform", seed=None, return_indi
 
     if margin is not None:
         assert recording is not None, "recording should be provided if margin is not None"
-    
+
     selected_indices = select_peak_indices(peaks, method=method, seed=seed, **method_kwargs)
     selected_peaks = peaks[selected_indices]
 
@@ -85,7 +87,7 @@ def select_peaks(peaks, recording=None, method="uniform", seed=None, return_indi
             to_keep[i0:i1] &= selected_peaks["sample_index"][i0:i1] < (duration - margin[1])
         selected_indices = selected_indices[to_keep]
         select_peaks = peaks[selected_indices]
-    
+
     if return_indices:
         return selected_peaks, selected_indices
     else:
