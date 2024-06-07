@@ -18,7 +18,8 @@ def test_fetch_template_object_from_database():
     templates = fetch_template_object_from_database("test_templates.zarr")
     assert isinstance(templates, Templates)
 
-    assert templates.num_units == 100
+    assert templates.num_units == 89
+    assert templates.num_samples == 240
     assert templates.num_channels == 384
 
 
