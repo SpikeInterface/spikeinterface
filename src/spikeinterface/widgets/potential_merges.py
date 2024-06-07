@@ -60,6 +60,7 @@ class PotentialMergesWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
+        from math import lcm
         import matplotlib.pyplot as plt
 
         # import ipywidgets.widgets as widgets
@@ -118,9 +119,9 @@ class PotentialMergesWidget(BaseWidget):
             immediate_plot=False,
         )
 
-        self.unit_selector = W.Dropdown(
-            options=data_plot["potential_merges"], value=data_plot["potential_merges"][0], layout=W.Layout(width="3cm")
-        )
+        options = ["-".join([str(u) for u in m]) for m in data_plot["potential_merges"]]
+        value = options[0]
+        self.unit_selector = W.Dropdown(options=options, value=value, layout=W.Layout(width="3cm"))
         self.previous_num_merges = len(data_plot["potential_merges"][0])
         self.scaler = ScaleWidget(value=1.0)
         self.widen_narrow = WidenNarrowWidget(value=1.0)
@@ -133,6 +134,14 @@ class PotentialMergesWidget(BaseWidget):
             pane_widths=ratios + [0],
         )
 
+        if len(np.unique([len(m) for m in self.data_plot["potential_merges"]])) == 1:
+            ncols = 2 * len(self.data_plot)
+        else:
+            ncols = lcm(*[len(m) for m in self.data_plot["potential_merges"]])
+        right_axes = int(ncols * 2 / 3)
+        self.ncols = ncols
+        self.right_axes = right_axes
+
         # a first update
         self._update_plot(None)
 
@@ -143,14 +152,15 @@ class PotentialMergesWidget(BaseWidget):
         if backend_kwargs["display"]:
             display(self.widget)
 
-    def _update_gs(self, merge_units, ncols, right_axes):
+    def _update_gs(self, merge_units):
         import matplotlib.gridspec as gridspec
 
         # we create a vertical grid with 1 row between the 3 first plots
         n_units = len(merge_units)
-        unit_len_in_gs = ncols // n_units
+        ncols = self.ncols
+        right_axes = self.right_axes
+        unit_len_in_gs = self.ncols // n_units
         nrows = ncols * 3 + 2
-        print("Unit len in gs", unit_len_in_gs)
 
         if self.gs is not None and self.previous_num_merges == len(merge_units):
             self.ax_templates.clear()
@@ -161,10 +171,6 @@ class PotentialMergesWidget(BaseWidget):
                 ax.clear()
         else:
             self.figure.clear()
-            if self.axes_cc is not None:
-                for ax in self.axes_cc.flatten():
-                    ax.remove()
-
             self.gs = gridspec.GridSpec(nrows, ncols, figure=self.figure)
             self.ax_templates = self.figure.add_subplot(self.gs[:ncols, :right_axes])
             self.ax_probe = self.figure.add_subplot(self.gs[:ncols, right_axes:])
@@ -188,23 +194,17 @@ class PotentialMergesWidget(BaseWidget):
         self.previous_num_merges = len(merge_units)
 
     def _update_plot(self, change=None):
-        from math import lcm
 
         merge_units = self.unit_selector.value
         channel_locations = self.data_plot["sorting_analyzer"].get_channel_locations()
-
-        if len(np.unique([len(m) for m in self.data_plot["potential_merges"]])) == 1:
-            ncols = 2 * len(merge_units)
-        else:
-            ncols = lcm(*[len(m) for m in self.data_plot["potential_merges"]])
-        right_axes = int(ncols * 2 / 3)
-        print(ncols, right_axes)
-        self._update_gs(merge_units, ncols, right_axes)
+        unit_ids = self.data_plot["sorting_analyzer"].unit_ids
 
         # unroll the merges
+        unit_ids_str = [str(u) for u in unit_ids]
         plot_unit_ids = []
-        for m in merge_units:
-            plot_unit_ids.append(m)
+        for m in merge_units.split("-"):
+            plot_unit_ids.append(unit_ids[unit_ids_str.index(m)])
+        self._update_gs(plot_unit_ids)
 
         backend_kwargs_mpl = default_backend_kwargs["matplotlib"].copy()
         backend_kwargs_mpl.pop("axes")
