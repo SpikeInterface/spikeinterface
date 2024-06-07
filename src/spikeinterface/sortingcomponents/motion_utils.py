@@ -236,3 +236,11 @@ class Motion:
             return False
 
         return True
+    
+    def copy(self):
+        return Motion(
+            self.displacement.copy(),
+            self.temporal_bins_s.copy(),
+            self.spatial_bins_um.copy(),
+            interpolation_method=self.interpolation_method
+        )
