@@ -6,8 +6,7 @@ import shutil
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 import spikeinterface.widgets as sw
 from spikeinterface.core import get_template_extremum_channel, get_template_extremum_amplitude
-from spikeinterface.postprocessing import compute_spike_amplitudes, compute_unit_locations, compute_correlograms
-from spikeinterface.qualitymetrics import compute_quality_metrics
+from spikeinterface.postprocessing import compute_correlograms
 
 
 def export_report(
@@ -28,19 +27,19 @@ def export_report(
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    output_folder: str
+    output_folder : str
         The output folder where the report files are saved
-    remove_if_exists: bool, default: False
+    remove_if_exists : bool, default: False
         If True and the output folder exists, it is removed
-    format: str, default: "png"
+    format : str, default: "png"
         The output figure format (any format handled by matplotlib)
-    peak_sign: "neg" or "pos", default: "neg"
+    peak_sign : "neg" or "pos", default: "neg"
         used to compute amplitudes and metrics
-    show_figures: bool, default: False
+    show_figures : bool, default: False
         If True, figures are shown. If False, figures are closed after saving
-    force_computation:  bool, default: False
+    force_computation :  bool, default: False
         Force or not some heavy computaion before exporting
     {}
     """
@@ -60,7 +59,7 @@ def export_report(
     else:
         spike_amplitudes = None
         print(
-            "export_report(): spike_amplitudes will not be exported. Use compute_spike_amplitudes() if you want to include them."
+            "export_report(): spike_amplitudes will not be exported. Use sorting_analyzer.compute('spike_amplitudes') if you want to include them."
         )
 
     # load or compute quality_metrics
@@ -72,7 +71,7 @@ def export_report(
     else:
         metrics = None
         print(
-            "export_report(): quality metrics will not be exported. Use compute_quality_metrics() if you want to include them."
+            "export_report(): quality metrics will not be exported. Use sorting_analyzer.compute('quality_metrics') if you want to include them."
         )
 
     # load or compute correlograms
@@ -83,7 +82,7 @@ def export_report(
     else:
         correlograms = None
         print(
-            "export_report(): correlograms will not be exported. Use compute_correlograms() if you want to include them."
+            "export_report(): correlograms will not be exported. Use sorting_anlyzer.compute('correlograms') if you want to include them."
         )
 
     # pre-compute unit locations if not done
@@ -102,9 +101,9 @@ def export_report(
     units = pd.DataFrame(index=unit_ids)  #  , columns=['max_on_channel_id', 'amplitude'])
     units.index.name = "unit_id"
     units["max_on_channel_id"] = pd.Series(
-        get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="id")
+        get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="id")
     )
-    units["amplitude"] = pd.Series(get_template_extremum_amplitude(sorting_analyzer, peak_sign="neg"))
+    units["amplitude"] = pd.Series(get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign))
     units.to_csv(output_folder / "unit list.csv", sep="\t")
 
     unit_colors = sw.get_unit_colors(sorting)

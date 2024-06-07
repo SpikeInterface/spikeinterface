@@ -17,17 +17,17 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    mea_pitch: float, default: None
+    mea_pitch : float, default: None
         The inter-electrode distance (pitch) between electrodes.
-    electrode_width: float, default: None
+    electrode_width : float, default: None
         Width of the electrodes in um.
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     """
 

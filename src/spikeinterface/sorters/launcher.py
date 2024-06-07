@@ -62,20 +62,20 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
     Parameters
     ----------
-    job_list: list of dict
+    job_list : list of dict
         A list a dict that are propagated to run_sorter(...)
-    engine: str "loop", "joblib", "dask", "slurm"
+    engine : str "loop", "joblib", "dask", "slurm"
         The engine to run the list.
-        * "loop": a simple loop. This engine is
-    engine_kwargs: dict
+        * "loop" : a simple loop. This engine is
+    engine_kwargs : dict
 
-    return_output: bool, dfault False
+    return_output : bool, dfault False
         Return a sortings or None.
         This also overwrite kwargs in  in run_sorter(with_sorting=True/False)
 
     Returns
     -------
-    sortings: None or list of sorting
+    sortings : None or list of sorting
         With engine="loop" or "joblib" you can optional get directly the list of sorting result if return_output=True.
     """
 
@@ -206,13 +206,14 @@ def run_sorter_by_property(
     sorter_name,
     recording,
     grouping_property,
-    working_folder,
+    folder,
     mode_if_folder_exists=None,
     engine="loop",
     engine_kwargs={},
     verbose=False,
     docker_image=None,
     singularity_image=None,
+    working_folder: None = None,
     **sorter_params,
 ):
     """
@@ -226,30 +227,30 @@ def run_sorter_by_property(
 
     Parameters
     ----------
-    sorter_name: str
+    sorter_name : str
         The sorter name
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to be sorted
-    grouping_property: object
+    grouping_property : object
         Property to split by before sorting
-    working_folder: str
+    folder : str | Path
         The working directory.
-    mode_if_folder_exists: bool or None, default: None
+    mode_if_folder_exists : bool or None, default: None
         Must be None. This is deprecated.
         If not None then a warning is raise.
         Will be removed in next release.
-    engine: "loop" | "joblib" | "dask", default: "loop"
+    engine : "loop" | "joblib" | "dask", default: "loop"
         Which engine to use to run sorter.
-    engine_kwargs: dict
+    engine_kwargs : dict
         This contains kwargs specific to the launcher engine:
             * "loop" : no kwargs
             * "joblib" : {"n_jobs" : } number of processes
             * "dask" : {"client":} the dask client for submitting task
-    verbose: bool, default: False
+    verbose : bool, default: False
         Controls sorter verboseness
-    docker_image: None or str, default: None
+    docker_image : None or str, default: None
         If str run the sorter inside a container (docker) using the docker package
-    **sorter_params: keyword args
+    **sorter_params : keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
     Returns
@@ -263,18 +264,26 @@ def run_sorter_by_property(
     processing.
 
     >>> sorting = si.run_sorter_by_property("tridesclous", recording, grouping_property="group",
-                                            working_folder="sort_by_group", engine="joblib",
+                                            folder="sort_by_group", engine="joblib",
                                             engine_kwargs={"n_jobs": 4})
 
     """
     if mode_if_folder_exists is not None:
         warnings.warn(
-            "run_sorter_by_property(): mode_if_folder_exists is not used anymore",
+            "run_sorter_by_property(): mode_if_folder_exists is not used anymore and will be removed in 0.102.0",
             DeprecationWarning,
             stacklevel=2,
         )
 
-    working_folder = Path(working_folder).absolute()
+    if working_folder is not None:
+        warnings.warn(
+            "`working_folder` is deprecated and will be removed in 0.103. Please use folder instead",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        folder = working_folder
+
+    working_folder = Path(folder).absolute()
 
     assert grouping_property in recording.get_property_keys(), (
         f"The 'grouping_property' {grouping_property} is not " f"a recording property!"
@@ -286,7 +295,7 @@ def run_sorter_by_property(
         job = dict(
             sorter_name=sorter_name,
             recording=rec,
-            output_folder=working_folder / str(k),
+            folder=working_folder / str(k),
             verbose=verbose,
             docker_image=docker_image,
             singularity_image=singularity_image,

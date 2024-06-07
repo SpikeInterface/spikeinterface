@@ -30,7 +30,7 @@ class CrossCorrelogramsWidget(BaseWidget):
         this argument is ignored
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
-    unit_colors: dict or None, default: None
+    unit_colors : dict or None, default: None
         If given, a dictionary with unit ids as keys and colors as values
     """
 
@@ -46,7 +46,9 @@ class CrossCorrelogramsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        sorting_analyzer_or_sorting = self.ensure_sorting_analyzer(sorting_analyzer_or_sorting)
+
+        if not isinstance(sorting_analyzer_or_sorting, BaseSorting):
+            sorting_analyzer_or_sorting = self.ensure_sorting_analyzer(sorting_analyzer_or_sorting)
 
         if min_similarity_for_correlograms is None:
             min_similarity_for_correlograms = 0

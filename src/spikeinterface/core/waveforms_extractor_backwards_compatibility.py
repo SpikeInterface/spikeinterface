@@ -138,6 +138,9 @@ class MockWaveformExtractor:
     def delete_waveforms(self) -> None:
         self.sorting_analyzer.delete_extension("waveforms")
 
+    def delete_extension(self, extension) -> None:
+        self.sorting_analyzer.delete_extension()
+
     @property
     def recording(self) -> BaseRecording:
         return self.sorting_analyzer.recording
@@ -222,6 +225,9 @@ class MockWaveformExtractor:
     def get_sorting_property(self, key) -> np.ndarray:
         return self.sorting_analyzer.get_sorting_property(key)
 
+    def get_available_extension_names(self):
+        return self.sorting_analyzer.get_loaded_extension_names()
+
     @property
     def sparsity(self):
         return self.sorting_analyzer.sparsity
@@ -231,17 +237,31 @@ class MockWaveformExtractor:
         if self.sorting_analyzer.format != "memory":
             return self.sorting_analyzer.folder
 
+    @property
+    def format(self):
+        if self.sorting_analyzer.format == "binary_folder":
+            return "binary"
+        else:
+            return self.sorting_analyzer.format
+
     def has_extension(self, extension_name: str) -> bool:
         return self.sorting_analyzer.has_extension(extension_name)
+
+    def select_units(self, unit_ids):
+        return self.sorting_analyzer.select_units(unit_ids)
 
     def get_sampled_indices(self, unit_id):
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) with a complex dtype as follow
         selected_spikes = []
         for segment_index in range(self.get_num_segments()):
             # inds = self.sorting_analyzer.get_selected_indices_in_spike_train(unit_id, segment_index)
+            assert self.sorting_analyzer.has_extension(
+                "random_spikes"
+            ), "get_sampled_indices() requires the 'random_spikes' extension."
             inds = self.sorting_analyzer.get_extension("random_spikes").get_selected_indices_in_spike_train(
                 unit_id, segment_index
             )
+
             sampled_index = np.zeros(inds.size, dtype=[("spike_index", "int64"), ("segment_index", "int64")])
             sampled_index["spike_index"] = inds
             sampled_index["segment_index"][:] = segment_index
@@ -260,7 +280,13 @@ class MockWaveformExtractor:
         # lazy and cache are ingnored
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
+
+        assert self.sorting_analyzer.has_extension(
+            "random_spikes"
+        ), "get_sampled_indices() requires the 'random_spikes' extension."
+
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
@@ -484,6 +510,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext = ComputeRandomSpikes(sorting_analyzer)
         ext.params = dict()
         ext.data = dict(random_spikes_indices=random_spikes_indices)
+        sorting_analyzer.extensions["random_spikes"] = ext
 
         ext = ComputeWaveforms(sorting_analyzer)
         ext.params = dict(

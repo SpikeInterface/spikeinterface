@@ -18,14 +18,9 @@ from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.core import generate_recording
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-    cache_folder.mkdir(exist_ok=True, parents=True)
 
-
-def test_BaseRecording():
+def test_BaseRecording(create_cache_folder):
+    cache_folder = create_cache_folder
     num_seg = 2
     num_chan = 3
     num_samples = 30
@@ -356,6 +351,14 @@ def test_rename_channels():
     renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])
     renamed_channel_ids = renamed_recording.get_channel_ids()
     assert np.array_equal(renamed_channel_ids, ["a", "b", "c"])
+
+
+def test_select_channels():
+    recording = generate_recording(durations=[1.0], num_channels=3)
+    renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])
+    selected_recording = renamed_recording.select_channels(channel_ids=["a", "c"])
+    selected_channel_ids = selected_recording.get_channel_ids()
+    assert np.array_equal(selected_channel_ids, ["a", "c"])
 
 
 if __name__ == "__main__":
