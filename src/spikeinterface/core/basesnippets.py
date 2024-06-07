@@ -135,13 +135,14 @@ class BaseSnippets(BaseRecordingSnippets):
     def _save(self, format="binary", **save_kwargs):
         raise NotImplementedError
 
-    def _select_channels(self, channel_ids: list | np.array | tuple) -> "BaseSnippets":
+    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseSnippets":
         from .channelslice import ChannelSliceSnippets
 
         return ChannelSliceSnippets(self, channel_ids)
 
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceSnippets
+        import warnings
 
         warnings.warn(
             "Snippets.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
