@@ -41,7 +41,7 @@ Release notes
   releases/0.9.1.rst
 
 
-(PRE-RELEASE) Version 0.100.0rc0
+(PRE-RELEASE) Version 0.101.0rc0
 ================================
 
 * Major release with `SortingAnalyzer`
