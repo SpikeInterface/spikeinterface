@@ -49,9 +49,8 @@ class ComputeRandomSpikes(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _run(
-        self,
-    ):
+    def _run(self, verbose=False):
+
         self.data["random_spikes_indices"] = random_spikes_selection(
             self.sorting_analyzer.sorting,
             num_samples=self.sorting_analyzer.rec_attributes["num_samples"],
@@ -145,7 +144,7 @@ class ComputeWaveforms(AnalyzerExtension):
     def nafter(self):
         return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         self.data.clear()
 
         recording = self.sorting_analyzer.recording
@@ -183,6 +182,7 @@ class ComputeWaveforms(AnalyzerExtension):
             sparsity_mask=sparsity_mask,
             copy=copy,
             job_name="compute_waveforms",
+            verbose=verbose,
             **job_kwargs,
         )
 
@@ -311,7 +311,7 @@ class ComputeTemplates(AnalyzerExtension):
         )
         return params
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         self.data.clear()
 
         if self.sorting_analyzer.has_extension("waveforms"):
@@ -330,16 +330,26 @@ class ComputeTemplates(AnalyzerExtension):
 
             return_scaled = self.sorting_analyzer.return_scaled
 
-            self.data["average"], self.data["std"] = estimate_templates_with_accumulator(
+            return_std = "std" in self.params["operators"]
+            output = estimate_templates_with_accumulator(
                 recording,
                 some_spikes,
                 unit_ids,
                 self.nbefore,
                 self.nafter,
                 return_scaled=return_scaled,
-                return_std=True,
+                return_std=return_std,
+                verbose=verbose,
                 **job_kwargs,
             )
+
+            # Output of estimate_templates_with_accumulator is either (templates,) or (templates, stds)
+            if return_std:
+                templates, stds = output
+                self.data["average"] = templates
+                self.data["std"] = stds
+            else:
+                self.data["average"] = output
 
     def _compute_and_append_from_waveforms(self, operators):
         if not self.sorting_analyzer.has_extension("waveforms"):
@@ -365,7 +375,12 @@ class ComputeTemplates(AnalyzerExtension):
 
         # spikes = self.sorting_analyzer.sorting.to_spike_vector()
         # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
+
+        assert self.sorting_analyzer.has_extension(
+            "random_spikes"
+        ), "compute templates requires the random_spikes extension. You can run sorting_analyzer.get_random_spikes()"
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
             wfs = waveforms[spike_mask, :, :]
@@ -474,9 +489,9 @@ class ComputeTemplates(AnalyzerExtension):
                 self.params["operators"] += [(operator, percentile)]
             templates_array = self.data[key]
 
-        if save:
-            if not self.sorting_analyzer.is_read_only():
-                self.save()
+            if save:
+                if not self.sorting_analyzer.is_read_only():
+                    self.save()
 
         if unit_ids is not None:
             unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
@@ -494,6 +509,7 @@ class ComputeTemplates(AnalyzerExtension):
                 channel_ids=self.sorting_analyzer.channel_ids,
                 unit_ids=unit_ids,
                 probe=self.sorting_analyzer.get_probe(),
+                is_scaled=self.sorting_analyzer.return_scaled,
             )
         else:
             raise ValueError("outputs must be numpy or Templates")
@@ -566,7 +582,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         # this do not depend on units
         return self.data
 
-    def _run(self):
+    def _run(self, verbose=False):
         self.data["noise_levels"] = get_noise_levels(
             self.sorting_analyzer.recording, return_scaled=self.sorting_analyzer.return_scaled, **self.params
         )

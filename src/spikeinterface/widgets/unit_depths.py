@@ -22,7 +22,7 @@ class UnitDepthsWidget(BaseWidget):
         If given, a dictionary with unit ids as keys and colors as values
     depth_axis : int, default: 1
         The dimension of unit_locations that is depth
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Sign of peak for amplitudes
     """
 
@@ -35,7 +35,7 @@ class UnitDepthsWidget(BaseWidget):
         unit_ids = sorting_analyzer.sorting.unit_ids
 
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting_analyzer.sorting)
+            unit_colors = get_unit_colors(sorting_analyzer)
 
         colors = [unit_colors[unit_id] for unit_id in unit_ids]
 

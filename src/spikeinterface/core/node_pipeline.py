@@ -255,7 +255,7 @@ class SpikeRetriever(PeakSource):
         return (local_peaks,)
 
 
-def sorting_to_peaks(sorting, extremum_channel_inds, dtype):
+def sorting_to_peaks(sorting, extremum_channel_inds, dtype=spike_peak_dtype):
     spikes = sorting.to_spike_vector()
     peaks = np.zeros(spikes.size, dtype=dtype)
     peaks["sample_index"] = spikes["sample_index"]
@@ -473,6 +473,7 @@ def run_node_pipeline(
     squeeze_output=True,
     folder=None,
     names=None,
+    verbose=False,
 ):
     """
     Common function to run pipeline with peak detector or already detected peak.
@@ -499,6 +500,7 @@ def run_node_pipeline(
         init_args,
         gather_func=gather_func,
         job_name=job_name,
+        verbose=verbose,
         **job_kwargs,
     )
 
@@ -645,7 +647,7 @@ class GatherToNpy:
         self.shapes0 = []
         self.final_shapes = []
         for name in names:
-            filename = folder / (name + ".npy")
+            filename = self.folder / (name + ".npy")
             f = open(filename, "wb+")
             f.seek(npy_header_size)
             self.files.append(f)

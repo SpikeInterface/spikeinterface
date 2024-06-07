@@ -13,13 +13,13 @@ class ISIDistributionWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting: SortingExtractor
+    sorting : SortingExtractor
         The sorting extractor object
-    unit_ids: list
+    unit_ids : list
         List of unit ids
-    bins_ms: int
+    bins_ms : int
         Bin size in ms
-    window_ms: float
+    window_ms : float
         Window size in ms
 
     """

@@ -1,5 +1,4 @@
 import pytest
-import shutil
 from pathlib import Path
 import numpy as np
 from spikeinterface.core import (
@@ -11,10 +10,8 @@ from spikeinterface.core import (
     synthesize_random_firings,
 )
 
-# from spikeinterface.extractors.toy_example import toy_example
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
-from spikeinterface.qualitymetrics import calculate_pc_metrics
 
 from spikeinterface.qualitymetrics import (
     mahalanobis_metrics,
@@ -40,11 +37,6 @@ from spikeinterface.qualitymetrics import (
 )
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
-
-# if hasattr(pytest, "global_test_folder"):
-#     cache_folder = pytest.global_test_folder / "qualitymetrics"
-# else:
-#     cache_folder = Path("cache_folder") / "qualitymetrics"
 
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")

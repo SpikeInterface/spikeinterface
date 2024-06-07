@@ -39,6 +39,32 @@ class BaseSorting(BaseExtractor):
             txt += "\n  file_path: {}".format(self._kwargs["file_path"])
         return txt
 
+    def _repr_html_(self):
+        common_style = "margin-left: 10px;"
+        border_style = "border:1px solid #ddd; padding:10px;"
+
+        html_header = f"<div style='{border_style}'><strong>{self.__repr__()}</strong></div>"
+
+        html_unit_ids = f"<details style='{common_style}'>  <summary><strong>Unit IDs</strong></summary><ul>"
+        html_unit_ids += f"{self.unit_ids} </details>"
+
+        html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
+        for key, value in self._annotations.items():
+            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
+        html_annotations += f"</details>"
+
+        html_unit_properties = (
+            f"<details style='{common_style}'><summary><strong>Unit Properties</strong></summary><ul>"
+        )
+        for key, value in self._properties.items():
+            # Add a further indent for each property
+            value_formatted = np.asarray(value)
+            html_unit_properties += f"<details><summary><strong>{key}</strong></summary>{value_formatted}</details>"
+        html_unit_properties += "</ul></details>"
+
+        html_repr = html_header + html_unit_ids + html_annotations + html_unit_properties
+        return html_repr
+
     @property
     def unit_ids(self):
         return self._main_ids
@@ -294,8 +320,8 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        outputs: "dict" | "array", default: "dict"
-            Control the type of the returned object: a dict (keys are unit_ids) or an numpy array.
+        outputs : "dict" | "array", default: "dict"
+            Control the type of the returned object : a dict (keys are unit_ids) or an numpy array.
 
         Returns
         -------
@@ -348,7 +374,7 @@ class BaseSorting(BaseExtractor):
 
         Returns
         -------
-        total_num_spikes: int
+        total_num_spikes : int
             The total number of spike
         """
         return self.to_spike_vector().size
@@ -493,7 +519,7 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        from_spike_vector: None | bool, default: None
+        from_spike_vector : None | bool, default: None
             If None, then it is automatic depending on whether the spike vector is cached.
             If True, will compute it from the spike vector.
             If False, will call `get_unit_spike_train` for each segment for each unit.
@@ -534,20 +560,20 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        concatenated: bool, default: True
+        concatenated : bool, default: True
             With concatenated=True the output is one numpy "spike vector" with spikes from all segments.
             With concatenated=False the output is a list "spike vector" by segment.
-        extremum_channel_inds: None or dict, default: None
+        extremum_channel_inds : None or dict, default: None
             If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
             This can be convinient for computing spikes postion after sorter.
             This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
-        use_cache: bool, default: True
+        use_cache : bool, default: True
             When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
             This caching only occurs when extremum_channel_inds=None.
 
         Returns
         -------
-        spikes: np.array
+        spikes : np.array
             Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes
             Or ("sample_index", "unit_index", "segment_index", "channel_index") if extremum_channel_inds
             is given
@@ -659,7 +685,7 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
-        n_jobs: int
+        n_jobs : int
             The number of jobs.
         Returns
         -------
@@ -701,8 +727,8 @@ class BaseSortingSegment(BaseSegment):
         Parameters
         ----------
         unit_id
-        start_frame: int, default: None
-        end_frame: int, default: None
+        start_frame : int, default: None
+        end_frame : int, default: None
 
         Returns
         -------

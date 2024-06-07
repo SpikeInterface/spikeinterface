@@ -2,7 +2,7 @@
 
 In this examples folder, we only keep the light-weight .py files that will appear in the docs.
 
-The `modules_gallery` folder will be built with `sphinx-gallery` (all examples starting with `plot_`) will be run in
+The `tutorials` folder will be built with `sphinx-gallery` (all examples starting with `plot_`) will be run in
 Read The Docs and added to the documentation at run-time.
 
 The `how_to` examples, instead, are manually run and added to the documentation.
