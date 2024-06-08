@@ -17,6 +17,7 @@ from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
 
+
 class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
