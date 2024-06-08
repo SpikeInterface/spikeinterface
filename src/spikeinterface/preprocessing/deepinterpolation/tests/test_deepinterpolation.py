@@ -25,12 +25,6 @@ except ImportError:
     HAVE_DEEPINTERPOLATION = False
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "deepinterpolation"
-else:
-    cache_folder = Path("cache_folder") / "deepinterpolation"
-
-
 def recording_and_shape():
     num_cols = 2
     num_rows = 64
@@ -44,7 +38,7 @@ def recording_and_shape():
     return recording, desired_shape
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def recording_and_shape_fixture():
     return recording_and_shape()
 
@@ -73,9 +67,10 @@ def test_deepinterpolation_generator_borders(recording_and_shape_fixture):
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency()
-def test_deepinterpolation_training(recording_and_shape_fixture):
+def test_deepinterpolation_training(recording_and_shape_fixture, create_cache_folder):
     recording, desired_shape = recording_and_shape_fixture
 
+    cache_folder = create_cache_folder
     model_folder = Path(cache_folder) / "training"
     # train
     model_path = train_deepinterpolation(
@@ -93,15 +88,15 @@ def test_deepinterpolation_training(recording_and_shape_fixture):
         run_uid="si_test",
         pre_post_omission=1,
         desired_shape=desired_shape,
-        nb_workers=1,
     )
     print(model_path)
 
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency(depends=["test_deepinterpolation_training"])
-def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path):
+def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path, create_cache_folder):
     recording, desired_shape = recording_and_shape_fixture
+    cache_folder = create_cache_folder
 
     existing_model_path = Path(cache_folder) / "training" / "si_test_training_model.h5"
     model_folder = Path(tmp_path) / "transfer"
@@ -128,9 +123,10 @@ def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path):
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency(depends=["test_deepinterpolation_training"])
-def test_deepinterpolation_inference(recording_and_shape_fixture):
-    recording, desired_shape = recording_and_shape_fixture
+def test_deepinterpolation_inference(recording_and_shape_fixture, create_cache_folder):
+    recording, _ = recording_and_shape_fixture
     pre_frame = post_frame = 20
+    cache_folder = create_cache_folder
     existing_model_path = Path(cache_folder) / "training" / "si_test_training_model.h5"
 
     recording_di = deepinterpolate(
@@ -154,9 +150,10 @@ def test_deepinterpolation_inference(recording_and_shape_fixture):
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency(depends=["test_deepinterpolation_training"])
-def test_deepinterpolation_inference_multi_job(recording_and_shape_fixture):
-    recording, desired_shape = recording_and_shape_fixture
+def test_deepinterpolation_inference_multi_job(recording_and_shape_fixture, create_cache_folder):
+    recording, _ = recording_and_shape_fixture
     pre_frame = post_frame = 20
+    cache_folder = create_cache_folder
     existing_model_path = Path(cache_folder) / "training" / "si_test_training_model.h5"
 
     recording_di = deepinterpolate(

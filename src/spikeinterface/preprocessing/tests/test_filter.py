@@ -1,18 +1,10 @@
 import pytest
-from pathlib import Path
 
 import numpy as np
 from spikeinterface.core import generate_recording
 from spikeinterface import NumpyRecording, set_global_tmp_folder
 
 from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
 
 
 def test_filter():

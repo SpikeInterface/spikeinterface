@@ -11,13 +11,10 @@ from spikeinterface.sorters.container_tools import find_recording_folders, Conta
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sorters"
-else:
-    cache_folder = Path("cache_folder") / "sorters"
 
-
-def setup_module():
+@pytest.fixture(scope="module")
+def setup_module(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     test_dirs = [cache_folder / "mono", cache_folder / "multi"]
     for test_dir in test_dirs:
         if test_dir.exists():
@@ -27,9 +24,11 @@ def setup_module():
 
     rec2, _ = generate_ground_truth_recording(durations=[10, 10, 10])
     rec2 = rec2.save(folder=cache_folder / "multi")
+    return cache_folder
 
 
-def test_find_recording_folders():
+def test_find_recording_folders(setup_module):
+    cache_folder = setup_module
     rec1 = si.load_extractor(cache_folder / "mono")
     rec2 = si.load_extractor(cache_folder / "multi" / "binary.json", base_folder=cache_folder / "multi")
 
