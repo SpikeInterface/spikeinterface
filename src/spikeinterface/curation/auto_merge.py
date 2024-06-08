@@ -206,17 +206,21 @@ def get_potential_auto_merge(
             templates_ext is not None
         ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
 
-        templates_array = templates_ext.get_data(outputs="numpy")
+        template_similarity_ext = sorting_analyzer.get_extension('template_similarity')
+        if template_similarity_ext is not None:
+            templates_diff = template_similarity_ext.get_data()
+        else:
+            templates_array = templates_ext.get_data(outputs="numpy")
 
-        templates_diff = compute_templates_diff(
-            sorting,
-            templates_array,
-            num_channels=num_channels,
-            num_shift=num_shift,
-            pair_mask=pair_mask,
-            template_metric=template_metric,
-            sparsity=sorting_analyzer.sparsity,
-        )
+            templates_diff = compute_templates_diff(
+                sorting,
+                templates_array,
+                num_channels=num_channels,
+                num_shift=num_shift,
+                pair_mask=pair_mask,
+                template_metric=template_metric,
+                sparsity=sorting_analyzer.sparsity,
+            )
 
         pair_mask = pair_mask & (templates_diff < template_diff_thresh)
 
