@@ -18,7 +18,10 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         The method to compute the similarity. Can be in ["l2", "l1", "cosine"]
     max_lag_ms : float, default 0
         If specified, the best distance for all given lag within max_lag_ms is kept, for every template
-
+    support : str, default "dense" 
+        Support that should be considered to compute the distances between the templates, given their sparsities. 
+        Can be either ["dense", "union", "intersection"]
+        
     Returns
     -------
     similarity: np.array
@@ -34,8 +37,8 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, method="cosine", max_lag_ms=0, common_support="dense"):
-        params = dict(method=method, max_lag_ms=max_lag_ms, common_support=common_support)
+    def _set_params(self, method="cosine", max_lag_ms=0, support="dense"):
+        params = dict(method=method, max_lag_ms=max_lag_ms, support=support)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -49,12 +52,19 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         templates_array = get_dense_templates_array(
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
         )
-
+        sparsity = self.sorting_analyzer.sparsity
+        mask = None
+        if sparsity is not None:
+            if self.params["support"] == 'union':
+                mask = np.logical_or(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
+            elif self.params['support'] == 'intersection':
+                mask = np.logical_and(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
         similarity = compute_similarity_with_templates_array(
             templates_array,
             templates_array,
             method=self.params["method"],
             n_shifts=n_shifts,
+            mask = mask
         )
         self.data["similarity"] = similarity
 
@@ -67,7 +77,7 @@ register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 
-def compute_similarity_with_templates_array(templates_array, other_templates_array, method, n_shifts):
+def compute_similarity_with_templates_array(templates_array, other_templates_array, method, n_shifts, mask=None):
 
     import sklearn.metrics.pairwise
 
@@ -78,11 +88,30 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
         nb_templates = templates_array.shape[0]
         assert n_shifts < n, "max_lag is too large"
         similarity = np.zeros((2 * n_shifts + 1, nb_templates, nb_templates), dtype=np.float32)
+        if mask is not None:
+            units_overlaps = np.sum(mask, axis=2) > 0
+            overlapping_templates = {}
+            for i in range(nb_templates):
+                overlapping_templates[i] = np.flatnonzero(units_overlaps[i])
 
         for count, shift in enumerate(range(-n_shifts, n_shifts + 1)):
-            src_templates = templates_array[:, n_shifts : n - n_shifts].reshape(nb_templates, -1)
-            tgt_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(nb_templates, -1)
-            similarity[count] = sklearn.metrics.pairwise.pairwise_distances(src_templates, tgt_templates, metric=method)
+            if mask is None:
+                src_templates = templates_array[:, n_shifts : n - n_shifts].reshape(nb_templates, -1)
+                tgt_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(nb_templates, -1)                
+                similarity[count] = sklearn.metrics.pairwise.pairwise_distances(src_templates, tgt_templates, metric=method)
+            else:
+                src_sliced_templates = templates_array[:, n_shifts : n - n_shifts]
+                tgt_sliced_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift]
+                for i in range(nb_templates):
+                    src_template = src_sliced_templates[i]
+                    tgt_templates = tgt_sliced_templates[overlapping_templates[i]]
+                    for gcount, j in enumerate(overlapping_templates[i]):
+                        if j < i:
+                            continue
+                        src = src_template[:, mask[i, j]].reshape(1, -1)
+                        tgt = (tgt_templates[gcount][:, mask[j, i]]).reshape(1, -1)
+                        similarity[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric=method)
+                        similarity[count, j, i] = similarity[count, i, j]
 
         similarity = np.min(similarity, axis=0)
         if method == "cosine":
