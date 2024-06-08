@@ -18,10 +18,10 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         The method to compute the similarity. Can be in ["l2", "l1", "cosine"]
     max_lag_ms : float, default 0
         If specified, the best distance for all given lag within max_lag_ms is kept, for every template
-    support : str, default "dense" 
-        Support that should be considered to compute the distances between the templates, given their sparsities. 
+    support : str, default "dense"
+        Support that should be considered to compute the distances between the templates, given their sparsities.
         Can be either ["dense", "union", "intersection"]
-        
+
     Returns
     -------
     similarity: np.array
@@ -55,16 +55,12 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         sparsity = self.sorting_analyzer.sparsity
         mask = None
         if sparsity is not None:
-            if self.params["support"] == 'union':
+            if self.params["support"] == "union":
                 mask = np.logical_or(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
-            elif self.params['support'] == 'intersection':
+            elif self.params["support"] == "intersection":
                 mask = np.logical_and(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
         similarity = compute_similarity_with_templates_array(
-            templates_array,
-            templates_array,
-            method=self.params["method"],
-            n_shifts=n_shifts,
-            mask = mask
+            templates_array, templates_array, method=self.params["method"], n_shifts=n_shifts, mask=mask
         )
         self.data["similarity"] = similarity
 
@@ -97,8 +93,10 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
         for count, shift in enumerate(range(-n_shifts, n_shifts + 1)):
             if mask is None:
                 src_templates = templates_array[:, n_shifts : n - n_shifts].reshape(nb_templates, -1)
-                tgt_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(nb_templates, -1)                
-                similarity[count] = sklearn.metrics.pairwise.pairwise_distances(src_templates, tgt_templates, metric=method)
+                tgt_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(nb_templates, -1)
+                similarity[count] = sklearn.metrics.pairwise.pairwise_distances(
+                    src_templates, tgt_templates, metric=method
+                )
             else:
                 src_sliced_templates = templates_array[:, n_shifts : n - n_shifts]
                 tgt_sliced_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift]
