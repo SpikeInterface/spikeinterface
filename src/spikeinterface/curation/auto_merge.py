@@ -206,7 +206,7 @@ def get_potential_auto_merge(
             templates_ext is not None
         ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
 
-        template_similarity_ext = sorting_analyzer.get_extension('template_similarity')
+        template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
         if template_similarity_ext is not None:
             templates_diff = template_similarity_ext.get_data()
         else:
