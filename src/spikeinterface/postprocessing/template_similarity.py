@@ -7,8 +7,8 @@ from ..core.template_tools import get_dense_templates_array
 
 
 class ComputeTemplateSimilarity(AnalyzerExtension):
-    """Compute similarity between templates with several methods. 
-    
+    """Compute similarity between templates with several methods.
+
     Similarity is defined as 1 - distance(T_1, T_2) for two templates T_1, T_2
 
 
@@ -142,7 +142,7 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
                     distances[count] = sklearn.metrics.pairwise.pairwise_distances(
                         src_templates, tgt_templates, metric=method
                     )
-                
+
                 if n_shifts != 0:
                     distances[num_shifts - count - 1] = distances[count].T
 
@@ -173,7 +173,7 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
                             distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric=method)
 
                         distances[count, j, i] = distances[count, i, j]
-                
+
                 if n_shifts != 0:
                     distances[num_shifts - count - 1] = distances[count].T
 
