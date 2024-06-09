@@ -113,7 +113,6 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
                     norms_1 = np.linalg.norm(src_templates, ord=1, axis=1)
                     norms_2 = np.linalg.norm(tgt_templates, ord=1, axis=1)
                     denominator = norms_1[:, None] + norms_2[None, :]
-<<<<<<< HEAD
                     distances[count] = sklearn.metrics.pairwise.pairwise_distances(
                         src_templates, tgt_templates, metric='l1'
                     )
@@ -124,18 +123,6 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
                     denominator = norms_1[:, None] + norms_2[None, :]
                     distances[count] = sklearn.metrics.pairwise.pairwise_distances(
                         src_templates, tgt_templates, metric='l2'
-=======
-                    similarity[count] = sklearn.metrics.pairwise.pairwise_distances(
-                        src_templates, tgt_templates, metric="l1"
-                    )
-                    similarity[count] /= denominator
-                elif method == "l2_normalized":
-                    norms_1 = np.linalg.norm(src_templates, ord=2, axis=1)
-                    norms_2 = np.linalg.norm(tgt_templates, ord=2, axis=1)
-                    denominator = norms_1[:, None] + norms_2[None, :]
-                    similarity[count] = sklearn.metrics.pairwise.pairwise_distances(
-                        src_templates, tgt_templates, metric="l2"
->>>>>>> dfdefea756ad8140f408f679573ef16061c0a554
                     )
                     distances[count] /= denominator
                 else:
