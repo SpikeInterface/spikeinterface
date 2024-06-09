@@ -149,8 +149,8 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
                         tgt = (tgt_templates[gcount][:, mask[i, j]]).reshape(1, -1)
 
                         if method == "l1_normalized":
-                            norm_i = np.linalg.norm(src, ord=1)
-                            norm_j = np.linalg.norm(tgt, ord=1)
+                            norm_i = np.sum(np.abs(src))
+                            norm_j = np.sum(np.abs(tgt))
                             distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1")
                             distances[count, i, j] /= norm_i + norm_j
                         elif method == "l2_normalized":
