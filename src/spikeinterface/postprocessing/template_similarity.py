@@ -22,13 +22,10 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         If specified, the best distance for all given lag within max_lag_ms is kept, for every template
     support : str, default "dense"
         Support that should be considered to compute the distances between the templates, given their sparsities.
-        Can be either ["dense", "union", "intersection"]
+        Can be either ["dense", "union", "intersection", "union_if_intersection"]
 
     In case of "l1_normalized" or "l2_normalized", the formula used is:
-        similarity = norm(T_1 - T_2)/(norm(T_1) + norm(T_2))
-
-    Note also that in case of the cosine, the values are taken in line with the ones of the cosine similarity.
-    Similar templates have a value of 1, while it will be close to 0 for all other metrics.
+        similarity = 1 - norm(T_1 - T_2)/(norm(T_1) + norm(T_2))
 
     Returns
     -------
@@ -67,6 +64,12 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 mask = np.logical_or(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
             elif self.params["support"] == "intersection":
                 mask = np.logical_and(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
+            elif self.params["support"] == "union_if_intersection":
+                mask = np.logical_and(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
+                units_overlaps = np.sum(mask, axis=2) > 0
+                mask = np.logical_or(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
+                mask[~units_overlaps] = False
+
         similarity = compute_similarity_with_templates_array(
             templates_array, templates_array, method=self.params["method"], n_shifts=n_shifts, mask=mask
         )
