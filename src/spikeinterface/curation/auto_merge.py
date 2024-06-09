@@ -208,7 +208,9 @@ def get_potential_auto_merge(
 
         template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
         if template_similarity_ext is not None:
-            templates_diff = template_similarity_ext.get_data()
+            templates_similarity = template_similarity_ext.get_data()
+            pair_mask = pair_mask & (templates_similarity > (1 - template_diff_thresh))
+
         else:
             templates_array = templates_ext.get_data(outputs="numpy")
 
@@ -222,7 +224,7 @@ def get_potential_auto_merge(
                 sparsity=sorting_analyzer.sparsity,
             )
 
-        pair_mask = pair_mask & (templates_diff < template_diff_thresh)
+            pair_mask = pair_mask & (templates_diff < template_diff_thresh)
 
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     if "check_increase_score" in steps:
