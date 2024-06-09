@@ -15,12 +15,18 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
     method : str, default: "cosine"
-        The method to compute the similarity. Can be in ["l2", "l1", "cosine"]
+        The method to compute the similarity. Can be in ["l2", "l1", "cosine", "l1_normalized", "l2_normalized"]
     max_lag_ms : float, default 0
         If specified, the best distance for all given lag within max_lag_ms is kept, for every template
     support : str, default "dense"
         Support that should be considered to compute the distances between the templates, given their sparsities.
         Can be either ["dense", "union", "intersection"]
+
+    In case of "l1_normalized" or "l2_normalized", the formula used is:
+        similarity = norm(T_1 - T_2)/(norm(T_1) + norm(T_2))
+    
+    Note also that in case of the cosine, the values are taken in line with the ones of the cosine similarity.
+    Similar templates have a value of 1, while it will be close to 0 for all other metrics.
 
     Returns
     -------
@@ -77,7 +83,10 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
 
     import sklearn.metrics.pairwise
 
-    if method in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS:
+    all_metrics = list(sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys())
+    all_metrics += ['l1_normalized', 'l2_normalized']
+
+    if method in all_metrics:
         nb_templates = templates_array.shape[0]
         assert templates_array.shape[0] == other_templates_array.shape[0]
         n = templates_array.shape[1]
@@ -94,12 +103,35 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
             if mask is None:
                 src_templates = templates_array[:, n_shifts : n - n_shifts].reshape(nb_templates, -1)
                 tgt_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(nb_templates, -1)
-                similarity[count] = sklearn.metrics.pairwise.pairwise_distances(
-                    src_templates, tgt_templates, metric=method
-                )
+                if method == 'l1_normalized':
+                    norms_1 = np.linalg.norm(src_templates, ord=1, axis=1)
+                    norms_2 = np.linalg.norm(tgt_templates, ord=1, axis=1)
+                    denominator = norms_1[:, None] + norms_2[None, :]
+                    similarity[count] = sklearn.metrics.pairwise.pairwise_distances(
+                        src_templates, tgt_templates, metric='l1'
+                    )
+                    similarity[count] /= denominator
+                elif method == 'l2_normalized':
+                    norms_1 = np.linalg.norm(src_templates, ord=2, axis=1)
+                    norms_2 = np.linalg.norm(tgt_templates, ord=2, axis=1)
+                    denominator = norms_1[:, None] + norms_2[None, :]
+                    similarity[count] = sklearn.metrics.pairwise.pairwise_distances(
+                        src_templates, tgt_templates, metric='l2'
+                    )
+                    similarity[count] /= denominator
+                else:
+                    similarity[count] = sklearn.metrics.pairwise.pairwise_distances(
+                        src_templates, tgt_templates, metric=method
+                    )
             else:
                 src_sliced_templates = templates_array[:, n_shifts : n - n_shifts]
                 tgt_sliced_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift]
+                if method == 'l1_normalized':
+                    norms_1 = np.linalg.norm(src_sliced_templates, ord=1, axis=(1, 2))
+                    norms_2 = np.linalg.norm(tgt_sliced_templates, ord=1, axis=(1, 2))
+                elif method == 'l2_normalized':
+                    norms_1 = np.linalg.norm(src_sliced_templates, ord=2, axis=(1, 2))
+                    norms_2 = np.linalg.norm(tgt_sliced_templates, ord=2, axis=(1, 2))
                 for i in range(nb_templates):
                     src_template = src_sliced_templates[i]
                     tgt_templates = tgt_sliced_templates[overlapping_templates[i]]
@@ -108,7 +140,15 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
                             continue
                         src = src_template[:, mask[i, j]].reshape(1, -1)
                         tgt = (tgt_templates[gcount][:, mask[j, i]]).reshape(1, -1)
-                        similarity[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric=method)
+                        if method == 'l1_normalized':
+                            similarity[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric='l1')
+                            similarity[count, i, j] /= (norms_1[i] + norms_2[j])
+                        elif method == 'l2_normalized':
+                            similarity[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric='l2')
+                            similarity[count, i, j] /= (norms_1[i] + norms_2[j])
+                        else:
+                            similarity[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric=method)
+    
                         similarity[count, j, i] = similarity[count, i, j]
 
         similarity = np.min(similarity, axis=0)
