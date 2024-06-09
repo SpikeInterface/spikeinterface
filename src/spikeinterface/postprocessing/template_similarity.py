@@ -114,15 +114,15 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
                     norms_2 = np.linalg.norm(tgt_templates, ord=1, axis=1)
                     denominator = norms_1[:, None] + norms_2[None, :]
                     distances[count] = sklearn.metrics.pairwise.pairwise_distances(
-                        src_templates, tgt_templates, metric='l1'
+                        src_templates, tgt_templates, metric="l1"
                     )
                     distances[count] /= denominator
-                elif method == 'l2_normalized':
+                elif method == "l2_normalized":
                     norms_1 = np.linalg.norm(src_templates, ord=2, axis=1)
                     norms_2 = np.linalg.norm(tgt_templates, ord=2, axis=1)
                     denominator = norms_1[:, None] + norms_2[None, :]
                     distances[count] = sklearn.metrics.pairwise.pairwise_distances(
-                        src_templates, tgt_templates, metric='l2'
+                        src_templates, tgt_templates, metric="l2"
                     )
                     distances[count] /= denominator
                 else:
@@ -150,14 +150,16 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
                             continue
                         src = src_template[:, mask[i, j]].reshape(1, -1)
                         tgt = (tgt_templates[gcount][:, mask[j, i]]).reshape(1, -1)
-                        if method == 'l1_normalized':
-                            distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric='l1')
-                            distances[count, i, j] /= (norms_1[i] + norms_2[j])
-                        elif method == 'l2_normalized':
-                            distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric='l2')
-                            distances[count, i, j] /= (norms_1[i] + norms_2[j])
+                        if method == "l1_normalized":
+                            distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1")
+                            distances[count, i, j] /= norms_1[i] + norms_2[j]
+                        elif method == "l2_normalized":
+                            distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2")
+                            distances[count, i, j] /= norms_1[i] + norms_2[j]
                         else:
-                            distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric=method)
+                            distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(
+                                src, tgt, metric=method
+                            )
 
                         distances[count, j, i] = distances[count, i, j]
 
