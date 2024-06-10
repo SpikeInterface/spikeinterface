@@ -29,7 +29,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
     In case of cosine this is:
         similarity = 1 - sum(T_1.T_2)/(norm(T_1)norm(T_2))
-        
+
     Returns
     -------
     similarity: np.array
@@ -89,7 +89,7 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
 
     import sklearn.metrics.pairwise
 
-    all_metrics = ['cosine', 'l1', 'l2']
+    all_metrics = ["cosine", "l1", "l2"]
 
     if method in all_metrics:
         nb_templates = templates_array.shape[0]
