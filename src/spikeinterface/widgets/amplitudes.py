@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from networkx import layout
 import numpy as np
 from warnings import warn
 
