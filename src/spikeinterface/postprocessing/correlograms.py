@@ -307,24 +307,48 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
     return correlograms
 
 
+# TODO: it would be better for this function to take num_half_bins
+# and num_bins directly. However, this will break misc_metrics.slidingRP_violations()
+# Check tests for slidingRP_violations(), write one covering that functionality
+# if required, then make the refactoring.
+# TODO: also make clear the output are always counts, not correlation / covariance matrices
 def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size):
     """
+    A very well optimized algorithm for the cross-correlation of
+    spike trains, copied from phy package written by Cyrille Rossant.
 
+    This method does not perform a cross-correlation in the typical
+    way (sliding and computing correlations, or via Fourier transform).
+    Instead the time difference between every other spike within the
+    window is directly computer and stored as a count in the relevant bin.
+
+    Initially, the spike_times array is shifted by 1 position, and the difference
+    computed. This gives the time differences betwen the closest spikes
+    (skipping the zero-lag case). Next, the differences between
+    spikes times in samples are converted into units relative to
+    bin_size ('binarized'). Spikes in which the binarized difference to
+    their closest neighbouring spike is greater than half the bin-size are
+    masked and not compared in future. Finally, the indicies of the
+    (num_units, num_units, num_bins) correlogram in which there are
+    a match are found and iterated appropriated. This repeats
+    for all shifts long the spike_train until no spikes have a corepsponding
+    match within the window size.
+
+    # TODO: is every combination really checked in this shifting procedure?
 
     Parameters
     ----------
     spike_times : np.ndarray
-
+        An array of spike times (in samples, not seconds). This contains
+        spikes from all units.
     spike_labels : np.ndarray
-
+        An array of labels indicating the unit of the corresponding spike in
+        `spike_times`.
     window_size : int
-
+        The window size over which to perform the cross-correlation, in samples
     bin_size : int
-
-
+        The size of which to bin lags, in samples.  TODO: come up with some standard terminology and way of describing this from within the module.
     """
-    # TODO: pass directly the already calculated num_half_bins and
-    # num_bins
     num_half_bins = int(window_size // bin_size)
     num_bins = int(2 * num_half_bins)
     num_units = len(np.unique(spike_labels))
