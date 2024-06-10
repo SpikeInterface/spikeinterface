@@ -98,7 +98,7 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
         nb_templates = templates_array.shape[0]
         assert n_shifts < n, "max_lag is too large"
         num_shifts = 2 * n_shifts + 1
-        distances = np.zeros((num_shifts, nb_templates, nb_templates), dtype=np.float32)
+        distances = np.ones((num_shifts, nb_templates, nb_templates), dtype=np.float32)
         if mask is not None:
             units_overlaps = np.sum(mask, axis=2) > 0
             overlapping_templates = {}
