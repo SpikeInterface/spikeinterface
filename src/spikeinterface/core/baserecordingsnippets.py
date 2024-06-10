@@ -75,9 +75,6 @@ class BaseRecordingSnippets(BaseExtractor):
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         raise NotImplementedError
 
-    def _frame_slice(self, channel_ids, renamed_channel_ids=None):
-        raise NotImplementedError
-
     def set_probe(self, probe, group_mode="by_probe", in_place=False):
         """
         Attach a list of Probe object to a recording.
@@ -510,7 +507,7 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseRecordingSnippets
             The object with sliced frames
         """
-        return self._frame_slice(start_frame, end_frame)
+        raise NotImplementedError
 
     def select_segments(self, segment_indices):
         """

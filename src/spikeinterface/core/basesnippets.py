@@ -159,9 +159,6 @@ class BaseSnippets(BaseRecordingSnippets):
         sub_recording = ChannelSliceSnippets(self, new_channel_ids)
         return sub_recording
 
-    def _frame_slice(self, start_frame, end_frame):
-        raise NotImplementedError
-
     def _select_segments(self, segment_indices):
         from .segmentutils import SelectSegmentSnippets
 
