@@ -1,6 +1,6 @@
 from __future__ import annotations
 import numpy as np
-
+from ..core.template_tools import get_template_extremum_channel
 from .auto_merge import check_improve_contaminations_score, compute_templates_diff, compute_refrac_period_violations
 
 
@@ -112,6 +112,8 @@ def get_potential_temporal_splits(
     extra_outputs=False,
     steps=None,
     template_metric="l1",
+    maximum_distance_um=50.0,
+    peak_sign='neg',
     **presence_distance_kwargs,
 ):
     """
@@ -150,6 +152,7 @@ def get_potential_temporal_splits(
         steps = [
             "min_spikes",
             "remove_contaminated",
+            "unit_positions",
             "template_similarity",
             "presence_distance",
             "check_increase_score",
@@ -176,7 +179,23 @@ def get_potential_temporal_splits(
         pair_mask[to_remove, :] = False
         pair_mask[:, to_remove] = False
 
-    # STEP 2 : check if potential merge with CC also have template similarity
+    # STEP 3 : unit positions are estimated roughly with channel
+    if "unit_positions" in steps:
+        positions_ext = sorting_analyzer.get_extension("unit_locations")
+        if positions_ext is not None:
+            unit_locations = positions_ext.get_data()[:, :2]
+        else:
+            chan_loc = sorting_analyzer.get_channel_locations()
+            unit_max_chan = get_template_extremum_channel(
+                sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
+            )
+            unit_max_chan = list(unit_max_chan.values())
+            unit_locations = chan_loc[unit_max_chan, :]
+
+        unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
+        pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
+
+    # STEP 4 : check if potential merge with CC also have template similarity
     if "template_similarity" in steps:
         templates_ext = sorting_analyzer.get_extension("templates")
         assert (
@@ -202,12 +221,12 @@ def get_potential_temporal_splits(
 
             pair_mask = pair_mask & (templates_diff < template_diff_thresh)
 
-    # STEP 3 : validate the potential merges with CC increase the contamination quality metrics
+    # STEP 5 : validate the potential merges with CC increase the contamination quality metrics
     if "presence_distance" in steps:
         presence_distances = compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs)
         pair_mask = pair_mask & (presence_distances < presence_distance_threshold)
 
-    # STEP 4 : validate the potential merges with CC increase the contamination quality metrics
+    # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     if "check_increase_score" in steps:
         pair_mask, pairs_decreased_score = check_improve_contaminations_score(
             sorting_analyzer,

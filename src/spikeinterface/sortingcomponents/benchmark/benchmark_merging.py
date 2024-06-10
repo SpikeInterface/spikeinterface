@@ -117,13 +117,13 @@ class MergingStudy(BenchmarkStudy):
             if i == pair:
                 return count
 
-    def plot_splitted_amplitudes(self, case_key, pair_index=0):
+    def plot_splitted_amplitudes(self, case_key, pair_index=0, backend="ipywidgets"):
         analyzer = self.get_sorting_analyzer(case_key)
         if analyzer.get_extension("spike_amplitudes") is None:
             analyzer.compute(["spike_amplitudes"])
-        plot_amplitudes(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])
+        plot_amplitudes(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index], backend=backend)
 
-    def plot_splitted_correlograms(self, case_key, pair_index=0):
+    def plot_splitted_correlograms(self, case_key, pair_index=0, backend="ipywidgets"):
         analyzer = self.get_sorting_analyzer(case_key)
         if analyzer.get_extension("correlograms") is None:
             analyzer.compute(["correlograms"])
@@ -131,13 +131,13 @@ class MergingStudy(BenchmarkStudy):
             analyzer.compute(["template_similarity"])
         plot_crosscorrelograms(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])
 
-    def plot_splitted_templates(self, case_key, pair_index=0):
+    def plot_splitted_templates(self, case_key, pair_index=0, backend="ipywidgets"):
         analyzer = self.get_sorting_analyzer(case_key)
         if analyzer.get_extension("spike_amplitudes") is None:
             analyzer.compute(["spike_amplitudes"])
-        plot_unit_templates(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])
+        plot_unit_templates(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index], backend=backend)
 
-    def plot_potential_merges(self, case_key, min_snr=None):
+    def plot_potential_merges(self, case_key, min_snr=None, backend="ipywidgets"):
         analyzer = self.get_sorting_analyzer(case_key)
         mylist = self.get_splitted_pairs(case_key)
 
@@ -163,4 +163,4 @@ class MergingStudy(BenchmarkStudy):
 
         from spikeinterface.widgets import plot_potential_merges
 
-        plot_potential_merges(analyzer, mylist, backend="ipywidgets")
+        plot_potential_merges(analyzer, mylist, backend=backend)
