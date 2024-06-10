@@ -7,7 +7,6 @@ import numpy.typing as npt
 import shutil
 import warnings
 
-import spikeinterface
 from spikeinterface.core import (
     write_binary_recording,
     BinaryRecordingExtractor,
@@ -16,11 +15,6 @@ from spikeinterface.core import (
     SortingAnalyzer,
 )
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
-from spikeinterface.postprocessing import (
-    compute_spike_amplitudes,
-    compute_template_similarity,
-    compute_principal_components,
-)
 
 
 def export_to_phy(
