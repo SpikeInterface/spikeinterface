@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from networkx import layout
 import numpy as np
 from warnings import warn
 
@@ -215,7 +216,7 @@ class AmplitudesWidget(BaseWidget):
                 self.unit_selector,
                 self.checkbox_histograms,
             ],
-            layout=W.Layout(align_items="center", width="4cm", height="100%"),
+            layout=W.Layout(align_items="center", width="100%", height="100%"),
         )
 
         self.widget = W.AppLayout(
