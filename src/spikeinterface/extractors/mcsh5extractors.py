@@ -108,9 +108,9 @@ def openMCSH5File(filename, stream_id):
     Specs can be found online
     https://www.multichannelsystems.com/downloads/documentation?page=3
     """
-   
+
     import h5py
-    
+
     rf = h5py.File(filename, "r")
 
     stream_name = "Stream_" + str(stream_id)
