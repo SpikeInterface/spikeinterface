@@ -106,7 +106,6 @@ class MergingStudy(BenchmarkStudy):
 
     def plot_unit_counts(self, case_keys=None, figsize=None, **extra_kwargs):
         from spikeinterface.widgets.widget_list import plot_study_unit_counts
-
         plot_study_unit_counts(self, case_keys, figsize=figsize, **extra_kwargs)
 
     def get_splitted_pairs(self, case_key):
@@ -131,60 +130,30 @@ class MergingStudy(BenchmarkStudy):
         if analyzer.get_extension("spike_amplitudes") is None:
             analyzer.compute(["spike_amplitudes"])
         plot_unit_templates(analyzer, unit_ids=self.get_splitted_pairs(case_key)[pair_index])
+    
+    def plot_potential_merges(self, case_key, min_snr=None):
+        analyzer = self.get_sorting_analyzer(case_key)
+        mylist = self.get_splitted_pairs(case_key)
 
-    # def visualize_splits(self, case_key, figsize=(15, 5)):
-    #     cc_similarities = []
-    #     from spikeinterface.curation. import compute_presence_distance
+        if analyzer.get_extension("spike_amplitudes") is None:
+            analyzer.compute(["spike_amplitudes"])
+        if analyzer.get_extension("correlograms") is None:
+            analyzer.compute(["correlograms"])
 
-    #     analyzer = self.get_sorting_analyzer(case_key)
-    #     if analyzer.get_extension("template_similarity") is None:
-    #         analyzer.compute(["template_similarity"])
+        if min_snr is not None:
+            select_from = analyzer.sorting.unit_ids
+            if analyzer.get_extension("noise_levels") is None:
+                analyzer.compute("noise_levels")
+            if analyzer.get_extension("quality_metrics") is None:
+                analyzer.compute("quality_metrics", metric_names=["snr"])
 
-    #     distances = {}
-    #     distances["similarity"] = analyzer.get_extension("template_similarity").get_data()
-    #     sorting = analyzer.sorting
-
-    #     distances["time_distance"] = np.ones((analyzer.get_num_units(), analyzer.get_num_units()))
-    #     for i, unit1 in enumerate(analyzer.unit_ids):
-    #         for j, unit2 in enumerate(analyzer.unit_ids):
-    #             if unit2 <= unit1:
-    #                 continue
-    #             d = compute_presence_distance(analyzer, unit1, unit2)
-    #             distances["time_distance"][i, j] = d
-
-    #     import lussac.utils as utils
-
-    #     distances["cross_cont"] = np.ones((analyzer.get_num_units(), analyzer.get_num_units()))
-    #     for i, unit1 in enumerate(analyzer.unit_ids):
-    #         for j, unit2 in enumerate(analyzer.unit_ids):
-    #             if unit2 <= unit1:
-    #                 continue
-    #             spike_train1 = np.array(sorting.get_unit_spike_train(unit1))
-    #             spike_train2 = np.array(sorting.get_unit_spike_train(unit2))
-    #             distances["cross_cont"][i, j], _ = utils.estimate_cross_contamination(
-    #                 spike_train1, spike_train2, (1, 4), limit=0.1
-    #             )
-
-    #     splits = np.array(self.benchmarks[case_key].splitted_cells)
-    #     src, tgt = splits[:, 0], splits[:, 1]
-    #     src = analyzer.sorting.ids_to_indices(src)
-    #     tgt = analyzer.sorting.ids_to_indices(tgt)
-    #     import matplotlib.pyplot as plt
-
-    #     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=figsize, squeeze=True)
-    #     axs[0, 0].scatter(distances["similarity"].flatten(), distances["time_distance"].flatten(), c="k", alpha=0.25)
-    #     axs[0, 0].scatter(distances["similarity"][src, tgt], distances["time_distance"][src, tgt], c="r")
-    #     axs[0, 0].set_xlabel("cc similarity")
-    #     axs[0, 0].set_ylabel("presence ratio")
-
-    #     axs[1, 0].scatter(distances["similarity"].flatten(), distances["cross_cont"].flatten(), c="k", alpha=0.25)
-    #     axs[1, 0].scatter(distances["similarity"][src, tgt], distances["cross_cont"][src, tgt], c="r")
-    #     axs[1, 0].set_xlabel("cc similarity")
-    #     axs[1, 0].set_ylabel("cross cont")
-
-    #     axs[0, 1].scatter(distances["cross_cont"].flatten(), distances["time_distance"].flatten(), c="k", alpha=0.25)
-    #     axs[0, 1].scatter(distances["cross_cont"][src, tgt], distances["time_distance"][src, tgt], c="r")
-    #     axs[0, 1].set_xlabel("cross_cont")
-    #     axs[0, 1].set_ylabel("presence ratio")
-
-    #     plt.show()
+            snr = analyzer.get_extension("quality_metrics").get_data()["snr"].values
+            select_from = select_from[snr > min_snr]
+            mylist_selection = []
+            for i in mylist:
+                if (i[0] in select_from) or (i[1] in select_from):
+                    mylist_selection += [i]
+            mylist = mylist_selection
+            
+        from spikeinterface.widgets import plot_potential_merges
+        plot_potential_merges(analyzer, mylist , backend='ipywidgets')
