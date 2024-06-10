@@ -52,10 +52,6 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
     nbefore = int(ms_before * rec.sampling_frequency / 1000.0)
     nafter = int(ms_after * rec.sampling_frequency / 1000.0)
 
-    ## Ideally, we should ensure that all peaks are within valid ranges to avoid taking nan values
-    mask = spikes["sample_index"] > nbefore
-    spikes = spikes[mask]
-
     all_wfs = extract_waveforms_to_single_buffer(
         rec,
         spikes,
