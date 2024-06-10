@@ -111,6 +111,11 @@ class MergingStudy(BenchmarkStudy):
     def get_splitted_pairs(self, case_key):
         return self.benchmarks[case_key].splitted_cells
 
+    def get_splitted_pairs_index(self, case_key, pair):
+        for count, i in enumerate(self.benchmarks[case_key].splitted_cells):
+            if i == pair:
+                return count
+
     def plot_splitted_amplitudes(self, case_key, pair_index=0):
         analyzer = self.get_sorting_analyzer(case_key)
         if analyzer.get_extension("spike_amplitudes") is None:
