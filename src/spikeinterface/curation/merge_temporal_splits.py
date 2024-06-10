@@ -113,7 +113,7 @@ def get_potential_temporal_splits(
     steps=None,
     template_metric="l1",
     maximum_distance_um=50.0,
-    peak_sign='neg',
+    peak_sign="neg",
     **presence_distance_kwargs,
 ):
     """
