@@ -1,23 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import random
-
-from ..core import ChannelSparsity
-
-try:
-    import distinctipy
-
-    HAVE_DISTINCTIPY = True
-except ImportError:
-    HAVE_DISTINCTIPY = False
-
-try:
-    import matplotlib.pyplot as plt
-
-    HAVE_MPL = True
-except ImportError:
-    HAVE_MPL = False
 
 
 def get_some_colors(
@@ -50,6 +33,20 @@ def get_some_colors(
         A dict of colors for given keys.
 
     """
+    try:
+        import matplotlib.pyplot as plt
+
+        HAVE_MPL = True
+    except ImportError:
+        HAVE_MPL = False
+
+    try:
+        import distinctipy
+
+        HAVE_DISTINCTIPY = True
+    except ImportError:
+        HAVE_DISTINCTIPY = False
+
     assert color_engine in ("auto", "distinctipy", "matplotlib", "colorsys")
 
     possible_formats = ("RGBA",)
