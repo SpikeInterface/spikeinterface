@@ -256,10 +256,22 @@ def _relative_to(p, relative_folder):
     # custum os.path.relpath() with more checks
 
     relative_folder = Path(relative_folder).resolve()
-    p = Path(p).resolve()
+    p_resolved = Path(p).resolve()
     # the as_posix transform \\ to / on window which make better json files
-    rel_to = os.path.relpath(p.as_posix(), start=relative_folder.as_posix())
-    return Path(rel_to).as_posix()
+    rel_to = os.path.relpath(p_resolved.as_posix(), start=relative_folder.as_posix())
+    if Path(rel_to).exists():
+        return Path(rel_to).as_posix()
+    else:
+        return Path(p)
+
+
+def _make_absolute(p, base_folder):
+    # custum os.path.relpath() with more checks
+    base_folder = Path(base_folder)
+    if (base_folder / p).resolve().absolute().exists():
+        return (base_folder / p).resolve().absolute().as_posix()
+    else:
+        return Path(p)
 
 
 def check_paths_relative(input_dict, relative_folder) -> bool:
@@ -347,7 +359,7 @@ def make_paths_absolute(input_dict, base_folder):
     """
     base_folder = Path(base_folder)
     # use as_posix instead of str to make the path unix like even on window
-    func = lambda p: (base_folder / p).resolve().absolute().as_posix()
+    func = lambda p: _make_absolute(p, base_folder)
     output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
     return output_dict
 
