@@ -51,11 +51,11 @@ def test_path_utils_functions():
         assert d2["kwargs"]["path"].startswith("/yop")
         assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
 
-        d3 = make_paths_relative(d, Path("/yep"))
+        d3 = make_paths_relative(d, Path("/yep"), check_if_exists=False)
         assert d3["kwargs"]["path"] == "sub/path1"
         assert d3["kwargs"]["recording"]["kwargs"]["path"] == "sub/path2"
 
-        d4 = make_paths_absolute(d3, "/yop")
+        d4 = make_paths_absolute(d3, "/yop", check_if_exists=False)
         assert d4["kwargs"]["path"].startswith("/yop")
         assert d4["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
 
@@ -74,7 +74,7 @@ def test_path_utils_functions():
             }
         }
 
-        d2 = make_paths_relative(d, "c:\\yep")
+        d2 = make_paths_relative(d, "c:\\yep", check_if_exists=False)
         # the str be must unix like path even on windows for more portability
         assert d2["kwargs"]["path"] == "sub/path1"
         assert d2["kwargs"]["recording"]["kwargs"]["path"] == "sub/path2"
@@ -95,36 +95,37 @@ def test_path_utils_functions():
         # UNC can be relative to the same UNC
         assert check_paths_relative(d, r"\\host\share")
 
-    def test_convert_string_to_bytes():
-        # Test SI prefixes
-        assert convert_string_to_bytes("1k") == 1000
-        assert convert_string_to_bytes("1M") == 1000000
-        assert convert_string_to_bytes("1G") == 1000000000
-        assert convert_string_to_bytes("1T") == 1000000000000
-        assert convert_string_to_bytes("1P") == 1000000000000000
-        # Test IEC prefixes
-        assert convert_string_to_bytes("1Ki") == 1024
-        assert convert_string_to_bytes("1Mi") == 1048576
-        assert convert_string_to_bytes("1Gi") == 1073741824
-        assert convert_string_to_bytes("1Ti") == 1099511627776
-        assert convert_string_to_bytes("1Pi") == 1125899906842624
-        # Test mixed values
-        assert convert_string_to_bytes("1.5k") == 1500
-        assert convert_string_to_bytes("2.5M") == 2500000
-        assert convert_string_to_bytes("0.5G") == 500000000
-        assert convert_string_to_bytes("1.2T") == 1200000000000
-        assert convert_string_to_bytes("1.5Pi") == 1688849860263936
-        # Test zero values
-        assert convert_string_to_bytes("0k") == 0
-        assert convert_string_to_bytes("0Ki") == 0
-        # Test invalid inputs (should raise assertion error)
-        with pytest.raises(AssertionError) as e:
-            convert_string_to_bytes("1Z")
-            assert str(e.value) == "Unknown suffix: Z"
 
-        with pytest.raises(AssertionError) as e:
-            convert_string_to_bytes("1Xi")
-            assert str(e.value) == "Unknown suffix: Xi"
+def test_convert_string_to_bytes():
+    # Test SI prefixes
+    assert convert_string_to_bytes("1k") == 1000
+    assert convert_string_to_bytes("1M") == 1000000
+    assert convert_string_to_bytes("1G") == 1000000000
+    assert convert_string_to_bytes("1T") == 1000000000000
+    assert convert_string_to_bytes("1P") == 1000000000000000
+    # Test IEC prefixes
+    assert convert_string_to_bytes("1Ki") == 1024
+    assert convert_string_to_bytes("1Mi") == 1048576
+    assert convert_string_to_bytes("1Gi") == 1073741824
+    assert convert_string_to_bytes("1Ti") == 1099511627776
+    assert convert_string_to_bytes("1Pi") == 1125899906842624
+    # Test mixed values
+    assert convert_string_to_bytes("1.5k") == 1500
+    assert convert_string_to_bytes("2.5M") == 2500000
+    assert convert_string_to_bytes("0.5G") == 500000000
+    assert convert_string_to_bytes("1.2T") == 1200000000000
+    assert convert_string_to_bytes("1.5Pi") == 1688849860263936
+    # Test zero values
+    assert convert_string_to_bytes("0k") == 0
+    assert convert_string_to_bytes("0Ki") == 0
+    # Test invalid inputs (should raise assertion error)
+    with pytest.raises(AssertionError) as e:
+        convert_string_to_bytes("1Z")
+        assert str(e.value) == "Unknown suffix: Z"
+
+    with pytest.raises(AssertionError) as e:
+        convert_string_to_bytes("1Xi")
+        assert str(e.value) == "Unknown suffix: Xi"
 
 
 def test_normal_pdf() -> None:

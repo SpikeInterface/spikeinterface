@@ -1,5 +1,7 @@
 from __future__ import annotations
 from pathlib import Path, WindowsPath
+import re
+from tabnanny import check
 from typing import Union
 import os
 import sys
@@ -252,26 +254,33 @@ def _get_paths_list(d):
     return path_list
 
 
-def _relative_to(p, relative_folder):
+def _relative_to(p, relative_folder, check_if_exists=True):
     # custum os.path.relpath() with more checks
 
     relative_folder = Path(relative_folder).resolve()
     p_resolved = Path(p).resolve()
     # the as_posix transform \\ to / on window which make better json files
     rel_to = os.path.relpath(p_resolved.as_posix(), start=relative_folder.as_posix())
-    if Path(rel_to).exists():
-        return Path(rel_to).as_posix()
+    if check_if_exists:
+        if (relative_folder / rel_to).exists():
+            return Path(rel_to).as_posix()
+        else:
+            # this is then a kwarg with "path" in the name but not a path
+            return str(p)
     else:
-        return Path(p)
+        return Path(rel_to).as_posix()
 
 
-def _make_absolute(p, base_folder):
+def _make_absolute(p, base_folder, check_if_exists=True):
     # custum os.path.relpath() with more checks
     base_folder = Path(base_folder)
-    if (base_folder / p).resolve().absolute().exists():
-        return (base_folder / p).resolve().absolute().as_posix()
+    if check_if_exists:
+        if (base_folder / p).resolve().absolute().exists():
+            return (base_folder / p).resolve().absolute().as_posix()
+        else:
+            return str(p)
     else:
-        return Path(p)
+        return (base_folder / p).resolve().absolute().as_posix()
 
 
 def check_paths_relative(input_dict, relative_folder) -> bool:
@@ -319,16 +328,19 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     return len(not_possible) == 0
 
 
-def make_paths_relative(input_dict, relative_folder) -> dict:
+def make_paths_relative(input_dict, relative_folder, check_if_exists=True) -> dict:
     """
     Recursively transform a dict describing an BaseExtractor to make every path relative to a folder.
 
     Parameters
     ----------
-    input_dict: dict
+    input_dict : dict
         A dict describing an extactor obtained by BaseExtractor.to_dict()
-    relative_folder: str or Path
+    relative_folder : str or Path
         The folder to be relative to.
+    check_if_exists : bool, default: True
+        If True, check if the path exists before making it relative.
+        This is to protect kwargs with "path" in the name but not a path.
 
     Returns
     -------
@@ -336,21 +348,24 @@ def make_paths_relative(input_dict, relative_folder) -> dict:
         A copy of the input dict with modified paths.
     """
     relative_folder = Path(relative_folder).resolve().absolute()
-    func = lambda p: _relative_to(p, relative_folder)
+    func = lambda p: _relative_to(p, relative_folder, check_if_exists)
     output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
     return output_dict
 
 
-def make_paths_absolute(input_dict, base_folder):
+def make_paths_absolute(input_dict, base_folder, check_if_exists=True) -> dict:
     """
     Recursively transform a dict describing an BaseExtractor to make every path absolute given a base_folder.
 
     Parameters
     ----------
-    input_dict: dict
+    input_dict : dict
         A dict describing an extactor obtained by BaseExtractor.to_dict()
-    base_folder: str or Path
+    base_folder : str or Path
         The folder to be relative to.
+    check_if_exists : bool, default: True
+        If True, check if the absolute path exists before making it absolute.
+        This is to protect kwargs with "path" in the name but not a path.
 
     Returns
     -------
@@ -359,7 +374,7 @@ def make_paths_absolute(input_dict, base_folder):
     """
     base_folder = Path(base_folder)
     # use as_posix instead of str to make the path unix like even on window
-    func = lambda p: _make_absolute(p, base_folder)
+    func = lambda p: _make_absolute(p, base_folder, check_if_exists)
     output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
     return output_dict
 
