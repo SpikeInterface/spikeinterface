@@ -20,7 +20,7 @@ class AstypeRecording(BasePreprocessor):
         dtype of the output recording.
     recording : Recording
         The recording extractor to be converted.
-    round : Bool
+    round : Bool | None, default: None
         If True, will round the values to the nearest integer.
         If None, will round in the case of float to integer conversion.
 
