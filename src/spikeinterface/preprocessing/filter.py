@@ -222,7 +222,6 @@ class HighpassFilterRecording(FilterRecording):
     **filter_kwargs : dict
         Keyword arguments for `spikeinterface.preprocessing.FilterRecording` class.
 
-    {}
     Returns
     -------
     filter_recording : HighpassFilterRecording
@@ -255,7 +254,6 @@ class NotchFilterRecording(BasePreprocessor):
     margin_ms : float, default: 5.0
         Margin in ms on border to avoid border effect
 
-    {}
     Returns
     -------
     filter_recording : NotchFilterRecording
