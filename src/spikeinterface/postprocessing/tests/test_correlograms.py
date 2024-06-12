@@ -69,7 +69,7 @@ def test_equal_results_correlograms():
     if HAVE_NUMBA:
         methods.append("numba")
 
-    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5])
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     _test_correlograms(sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
     _test_correlograms(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
@@ -172,6 +172,7 @@ def test_detect_injected_correlation():
         assert abs(peak_location_02_ms) - injected_delta_ms < sampling_period_ms
 
 # do numpy and numba
+# TOOD: also test the direct spiketrain functions
 def test_correlograms_unit():
 
     sampling_rate = 30000

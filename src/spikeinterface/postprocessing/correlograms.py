@@ -68,21 +68,13 @@ class ComputeCorrelograms(AnalyzerExtension):
 
     Returns
     -------
-    ccgs : np.array
+    correlogram : np.array
         Correlograms with shape (num_units, num_units, num_bins)
         The diagonal of ccgs is the auto correlogram.
-        ccgs[A, B, :] is the symetrie of ccgs[B, A, :]
-        ccgs[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
+        correlogram[A, B, :] is the symetrie of correlogram[B, A, :]
+        correlogram[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
     bins :  np.array
         The bin edges in ms
-
-    Returns
-    -------
-        isi_histograms : np.array
-            2D array with ISI histograms (num_units, num_bins)
-        bins : np.array
-            1D array with bins in ms
-
     """
 
     extension_name = "correlograms"
@@ -119,6 +111,9 @@ class ComputeCorrelograms(AnalyzerExtension):
 register_result_extension(ComputeCorrelograms)
 compute_correlograms_sorting_analyzer = ComputeCorrelograms.function_factory()
 
+# TODO: Question: what is the main entry functions for this module?
+# is it only the below? If so can all other functions be made private?
+
 
 def compute_correlograms(
     sorting_analyzer_or_sorting,
@@ -127,9 +122,8 @@ def compute_correlograms(
     method: str = "auto",
 ):
     """
-    Convenience entry function to handle computation of
-    correlograms based on the method used. See ComputeCorrelograms()
-    for parameters.
+    Compute correlograms using Numba or Numpy.
+    See ComputeCorrelograms() for details.
     """
     if isinstance(sorting_analyzer_or_sorting, MockWaveformExtractor):
         sorting_analyzer_or_sorting = sorting_analyzer_or_sorting.sorting
@@ -195,9 +189,21 @@ def _compute_num_bins(window_size, bin_size):
     Internal function to compute number of bins, expects
     window_size and bin_size are already divisible and
     typically generated in `_make_bins()`.
+
+    Returns
+    -------
+    num_bins : int
+        The total number of bins to span the window, in samples
+    half_num_bins : int
+        Half the number of bins. The bins are an equal number
+        of bins that look forward and backwards from zero, e.g.
+        [..., -10 to -5, -5 to 0, 0 to 5, 5 to 10, ...]
+
     """
     num_half_bins = int(window_size // bin_size)
     num_bins = int(2 * num_half_bins)
+
+    return num_bins, num_half_bins
 
 
 def compute_autocorrelogram_from_spiketrain(spike_times, window_size, bin_size):
@@ -209,20 +215,20 @@ def compute_autocorrelogram_from_spiketrain(spike_times, window_size, bin_size):
 
     Parameters
     ----------
-    spike_times: np.ndarray
+    spike_times : np.ndarray
         The ordered spike train to compute the auto-correlogram.
-    window_size: int
+    window_size : int
         Compute the auto-correlogram between -window_size and +window_size (in sampling time).
-    bin_size: int
+    bin_size : int
         Size of a bin (in sampling time).
     Returns
     -------
-    tuple (auto_corr, bins)
-    auto_corr: np.ndarray[int64]
+    auto_corr : np.ndarray[int64]
         The computed auto-correlogram.
+    bins :
     """
     assert HAVE_NUMBA
-    return _compute_autocorr_numba(spike_times.astype(np.int64), window_size, bin_size)
+    return _compute_correlograms_one_segment_numba(spike_times.astype(np.int64, copy=False), window_size, bin_size)
 
 
 def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_size, bin_size):
@@ -250,7 +256,9 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
         The computed auto-correlogram.
     """
     assert HAVE_NUMBA
-    return _compute_crosscorr_numba(spike_times1.astype(np.int64), spike_times2.astype(np.int64), window_size, bin_size)
+    return _compute_correlograms_one_segment_numba(
+        spike_times1.astype(np.int64), spike_times2.astype(np.int64, copy=False), window_size, bin_size
+    )
 
 
 def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
@@ -323,12 +331,11 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
 def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size):
     """
     A very well optimized algorithm for the cross-correlation of
-    spike trains, copied from phy package written by Cyrille Rossant.
+    spike trains, copied from the Phy package, written by Cyrille Rossant.
 
-    This method does not perform a cross-correlation in the typical
-    way (sliding and computing correlations, or via Fourier transform).
-    Instead the time difference between every other spike within the
-    window is directly computer and stored as a count in the relevant bin.
+    For all spikes, time difference between this spike and
+    every other spike within the window is directly computed
+    and stored as a count in the relevant lag time bin.
 
     Initially, the spike_times array is shifted by 1 position, and the difference
     computed. This gives the time differences betwen the closest spikes
@@ -336,20 +343,21 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
     spikes times in samples are converted into units relative to
     bin_size ('binarized'). Spikes in which the binarized difference to
     their closest neighbouring spike is greater than half the bin-size are
-    masked and not compared in future. Finally, the indicies of the
-    (num_units, num_units, num_bins) correlogram in which there are
-    a match are found and iterated appropriated. This repeats
-    for all shifts long the spike_train until no spikes have a corepsponding
+    masked and not compared in future.
+
+    Finally, the indicies of the (num_units, num_units, num_bins) correlogram
+    that need incrementing are done so with `ravel_multi_index()`. This repeats
+    for all shifts along the spike_train until no spikes have a corresponding
     match within the window size.
 
     Parameters
     ----------
     spike_times : np.ndarray
-        An array of spike times (in samples, not seconds). This contains
-        spikes from all units.
+        An array of spike times (in samples, not seconds).
+        This contains spikes from all units.
     spike_labels : np.ndarray
-        An array of labels indicating the unit of the corresponding spike in
-        `spike_times`.
+        An array of labels indicating the unit of the corresponding
+        spike in `spike_times`.
     window_size : int
         The window size over which to perform the cross-correlation, in samples
     bin_size : int
@@ -408,17 +416,32 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
 
 def compute_correlograms_numba(sorting, window_size, bin_size):
     """
-    Computes several cross-correlogram in one course
-    from several cluster.
+    Computes cross-correlograms between all units in `sorting`.
 
     This is a "brute force" method using compiled code (numba)
-    to accelerate the computation.
+    to accelerate the computation. See
+    `_compute_correlograms_one_segment_numba()` for details.
+
+    Parameters
+    ----------
+    sorting : Sorting
+        A SpikeInterface Sorting object
+    window_size : int
+            The wi  ndow size over which to perform the cross-correlation, in samples
+    bin_size : int
+        The size of which to bin lags, in samples.
+
+    Returns
+    -------
+    correlograms: np.array
+        A (num_units, num_units, num_bins) array of correlograms
+        between all units at each lag time bin.
 
     Implementation: Aurélien Wyngaard
     """
     assert HAVE_NUMBA, "numba version of this function requires installation of numba"
 
-    num_bins, _ = _compute_num_bins(window_size, bin_size)
+    num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
     num_units = len(sorting.unit_ids)
 
     spikes = sorting.to_spike_vector(concatenated=False)
@@ -428,8 +451,14 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_labels = spikes[seg_index]["unit_index"]
 
-        _compute_correlograms_numba_new(
-            correlograms, spike_times.astype(np.int64), spike_labels.astype(np.int32), window_size, bin_size
+        _compute_correlograms_one_segment_numba(
+            correlograms,
+            spike_times.astype(np.int64, copy=False),
+            spike_labels.astype(np.int32, copy=False),
+            window_size,
+            bin_size,
+            num_bins,
+            num_half_bins,
         )
 
     return correlograms
@@ -442,15 +471,43 @@ if HAVE_NUMBA:
         nogil=True,
         cache=False,
     )
-    def _compute_correlograms_numba_new(correlograms, spike_times, spike_labels, window_size, bin_size):
+    def _compute_correlograms_one_segment_numba(
+        correlograms, spike_times, spike_labels, window_size, bin_size, num_bins, num_half_bins
+    ):
         """
+        Compute the correlograms using `numba` for speed.
 
-        TODO:
+        The algorithm works by brute-force iteration through all
+        pairs of spikes (skipping those when outside of the window).
+        The spike-time difference and its time bin are computed
+        and stored in a (num_units, num_units, num_bins)
+        correlogram. The correlogram must be passed as an
+        argument and is filled in-place.
 
+        Paramters
+        ---------
+
+        correlograms: np.array
+            A (num_units, num_units, num_bins) array of correlograms
+            between all units at each lag time bin. This is passed
+            as counts for all segments are added to it.
+        spike_times : np.ndarray
+            An array of spike times (in samples, not seconds).
+            This contains spikes from all units.
+        spike_labels : np.ndarray
+            An array of labels indicating the unit of the corresponding
+            spike in `spike_times`.
+        window_size : int
+            The window size over which to perform the cross-correlation, in samples
+        bin_size : int
+            The size of which to bin lags, in samples.
+        num_bins : int
+            The total number of bins to span the window, in samples
+        half_num_bins : int
+            Half the number of bins. The bins are an equal number
+            of bins that look forward and backwards from zero, e.g.
+            [..., -10 to -5, -5 to 0, 0 to 5, 5 to 10, ...]
         """
-        num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
-
-        # TODO: final checks for optimisation
         start_j = 0
         for i in range(spike_times.size):
             for j in range(start_j, spike_times.size):
@@ -460,10 +517,18 @@ if HAVE_NUMBA:
 
                 diff = spike_times[i] - spike_times[j]
 
-                if diff >= window_size:  # j is too far behind
+                # if the time of spike i is more than window size later than
+                # spike j, then spike i + 1 will also be more than a window size
+                # later than spike j. Iterate the start_j and check the next spike.
+                if diff >= window_size:
                     start_j += 1
                     continue
-                if diff < -window_size:  # j is too far ahead. i is done.
+
+                # If the time of spike i is more than a window size earlier
+                # than spike j, then all following j spikes will be even later
+                # i spikes and so all more than a window size earlier. So move
+                # onto the next i.
+                if diff < -window_size:
                     break
 
                 bin = diff // bin_size
