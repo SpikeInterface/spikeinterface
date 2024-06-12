@@ -232,7 +232,7 @@ def estimate_cross_contamination(
 def lussac_merge(
     analyzer,
     refractory_period,
-    minimum_spikes= 50,
+    minimum_spikes=50,
     template_diff_thresh: float = 0.25,
     CC_threshold: float = 0.2,
     max_shift: int = 5,
@@ -274,7 +274,7 @@ def lussac_merge(
     all_shifts = range(-max_shift, max_shift + 1)
     unit_ids = sorting.unit_ids
 
-    template_similarities = analyzer.get_extension('template_similarity')
+    template_similarities = analyzer.get_extension("template_similarity")
     if template_similarities is not None:
         template_diff_thresh = 1 - template_diff_thresh
 
@@ -286,7 +286,7 @@ def lussac_merge(
         sparsity_mask = sparsity.mask
 
     for unit_ind1 in range(len(unit_ids)):
-        
+
         unit_id1 = unit_ids[unit_ind1]
         spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
         if not len(spike_train1) > minimum_spikes:
@@ -350,11 +350,11 @@ def lussac_merge(
                 spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold
             )
 
-            if (p < p_value):
+            if p < p_value:
                 continue
-            
+
             potential_merges.append((unit_id1, unit_id2))
-    
+
     return potential_merges
 
 
@@ -367,7 +367,7 @@ class LussacMerging(BaseMergingEngine):
         "templates": None,
         "minimum_spikes": 50,
         "refractory_period": (0.3, 1.0),
-        "template_diff_thresh" : 0.3,
+        "template_diff_thresh": 0.3,
         "verbose": True,
     }
 

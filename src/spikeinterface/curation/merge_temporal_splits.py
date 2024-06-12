@@ -40,11 +40,11 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, percentile_norm=9
 
     h1, _ = np.histogram(st1, bins)
     h1 = h1.astype(float)
-    #norm_value1 = np.linalg.norm(h1)
+    # norm_value1 = np.linalg.norm(h1)
 
     h2, _ = np.histogram(st2, bins)
     h2 = h2.astype(float)
-    #norm_value2 = np.linalg.norm(h2)#np.percentile(h2, percentile_norm)
+    # norm_value2 = np.linalg.norm(h2)#np.percentile(h2, percentile_norm)
 
     # if not np.isnan(norm_value1) and not np.isnan(norm_value2) and norm_value1 > 0 and norm_value2 > 0:
     #     h1 = h1 / norm_value1
@@ -53,7 +53,8 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, percentile_norm=9
     # else:
     #     d = 1.0
     import scipy
-    xaxis = bins[1:]/sorting.sampling_frequency
+
+    xaxis = bins[1:] / sorting.sampling_frequency
     d = scipy.stats.wasserstein_distance(xaxis, xaxis, h1, h2)
 
     return d
