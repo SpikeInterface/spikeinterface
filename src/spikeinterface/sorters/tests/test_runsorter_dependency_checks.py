@@ -12,6 +12,10 @@ import copy
 
 
 def _monkeypatch_return_false():
+    """
+    A function to monkeypatch the `has_<dependecy>` functions,
+    ensuring the always return `False` at runtime.
+    """
     return False
 
 

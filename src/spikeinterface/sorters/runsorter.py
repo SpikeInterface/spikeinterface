@@ -181,13 +181,11 @@ def run_sorter(
 
             if not has_docker():
                 raise RuntimeError(
-                    "Docker is not installed. Install docker " "on this machine to run sorting with docker."
+                    "Docker is not installed. Install docker on this machine to run sorting with docker."
                 )
 
             if not has_docker_python():
-                raise RuntimeError(
-                    "The python `docker` package must be installed. " "Install with `pip install docker`"
-                )
+                raise RuntimeError("The python `docker` package must be installed. Install with `pip install docker`")
 
         else:
             mode = "singularity"
