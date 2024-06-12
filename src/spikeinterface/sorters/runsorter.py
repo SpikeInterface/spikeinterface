@@ -19,7 +19,18 @@ from .. import __version__ as si_version
 from ..core import BaseRecording, NumpySorting, load_extractor
 from ..core.core_tools import check_json, is_editable_mode
 from .sorterlist import sorter_dict
-from .utils import SpikeSortingError, has_nvidia, has_docker, has_docker_python, has_singularity, has_spython, has_docker_nvidia_installed, get_nvidia_docker_dependecies
+
+# full import required for monkeypatch testing.
+from spikeinterface.sorters.utils import (
+    SpikeSortingError,
+    has_nvidia,
+    has_docker,
+    has_docker_python,
+    has_singularity,
+    has_spython,
+    has_docker_nvidia_installed,
+    get_nvidia_docker_dependecies,
+)
 from .container_tools import (
     find_recording_folders,
     path_to_unix,
@@ -171,12 +182,14 @@ def run_sorter(
                 container_image = docker_image
 
             if not has_docker():
-                raise RuntimeError("Docker is not installed. Install docker "
-                                   "on this machine to run sorting with docker.")
+                raise RuntimeError(
+                    "Docker is not installed. Install docker " "on this machine to run sorting with docker."
+                )
 
             if not has_docker_python():
-                raise RuntimeError("The python `docker` package must be installed. "
-                                   "Install with `pip install docker`")
+                raise RuntimeError(
+                    "The python `docker` package must be installed. " "Install with `pip install docker`"
+                )
 
         else:
             mode = "singularity"
@@ -187,12 +200,16 @@ def run_sorter(
                 container_image = singularity_image
 
             if not has_singularity():
-                raise RuntimeError("Singularity is not installed. Install singularity "
-                                   "on this machine to run sorting with singularity.")
+                raise RuntimeError(
+                    "Singularity is not installed. Install singularity "
+                    "on this machine to run sorting with singularity."
+                )
 
             if not has_spython():
-                raise RuntimeError("The python `spython` package must be installed to "
-                                   "run singularity. Install with `pip install spython`")
+                raise RuntimeError(
+                    "The python `spython` package must be installed to "
+                    "run singularity. Install with `pip install spython`"
+                )
 
         return run_sorter_container(
             container_image=container_image,
