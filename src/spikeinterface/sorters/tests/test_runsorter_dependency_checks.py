@@ -95,7 +95,6 @@ class TestRunersorterDependencyChecks:
         return recording
 
     @pytest.mark.skipif(platform.system() != "Linux", reason="spython install only for Linux.")
-    @pytest.mark.skipif(not has_singularity(), reason="singularity required for this test.")
     @pytest.mark.parametrize("uninstall_python_dependency", ["spython"], indirect=True)
     def test_has_spython(self, recording, uninstall_python_dependency):
         """
@@ -105,7 +104,6 @@ class TestRunersorterDependencyChecks:
         assert has_spython() is False
 
     @pytest.mark.parametrize("uninstall_python_dependency", ["docker"], indirect=True)
-    @pytest.mark.skipif(not has_docker(), reason="docker required for this test.")
     def test_has_docker_python(self, recording, uninstall_python_dependency):
         """
         Test the `has_docker_python()` function, see class docstring and
