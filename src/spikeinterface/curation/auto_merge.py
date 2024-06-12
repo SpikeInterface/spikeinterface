@@ -193,7 +193,6 @@ def get_potential_auto_merge(
             correlograms_smoothed,
             bins,
             win_sizes,
-            adaptative_window_threshold=adaptative_window_threshold,
             pair_mask=pair_mask,
         )
         # print(correlogram_diff)
