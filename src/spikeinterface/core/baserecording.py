@@ -643,7 +643,7 @@ class BaseRecording(BaseRecordingSnippets):
         from .channelslice import ChannelSliceRecording
 
         warnings.warn(
-            "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            "Recording.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -657,7 +657,23 @@ class BaseRecording(BaseRecordingSnippets):
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 
-    def _frame_slice(self, start_frame, end_frame):
+    def frame_slice(self, start_frame: int, end_frame: int) -> BaseRecording:
+        """
+        Returns a new recording with sliced frames. Note that this operation is not in place.
+
+        Parameters
+        ----------
+        start_frame : int
+            The start frame
+        end_frame : int
+            The end frame
+
+        Returns
+        -------
+        BaseRecording
+            The object with sliced frames
+        """
+
         from .frameslicerecording import FrameSliceRecording
 
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
