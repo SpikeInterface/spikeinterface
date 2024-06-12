@@ -82,6 +82,7 @@ def has_nvidia():
     except RuntimeError:  #  Failed to dlopen libcuda.so
         return False
 
+
 def _run_subprocess_silently(command):
     output = subprocess.run(
         command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -90,12 +91,27 @@ def _run_subprocess_silently(command):
 
 
 def has_docker():
-    return self._run_subprocess_silently("docker --version").returncode == 0
+    return _run_subprocess_silently("docker --version").returncode == 0
 
 
 def has_singularity():
-    return self._run_subprocess_silently("singularity --version").returncode == 0
+    return _run_subprocess_silently("singularity --version").returncode == 0
 
+def get_nvidia_docker_dependecies():
+    return [
+        "nvidia-docker",
+        "nvidia-docker2",
+        "nvidia-container-toolkit",
+    ]
+
+def has_docker_nvidia_installed():
+    all_dependencies = get_nvidia_docker_dependecies()
+    has_dep = []
+    for dep in all_dependencies:
+        has_dep.append(
+            _run_subprocess_silently(f"{dep} --version").returncode == 0
+        )
+    return not any(has_dep)
 
 def has_docker_python():
     try:
