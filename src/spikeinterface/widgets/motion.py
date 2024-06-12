@@ -4,15 +4,110 @@ import numpy as np
 
 from .base import BaseWidget, to_attr
 
-
 class MotionWidget(BaseWidget):
     """
-    Plot unit depths
+    Plot the Motion object
+
+    Parameters
+    ----------
+    motion: Motion
+        The motion object
+    segment_index: None | int
+        If Motion is multi segment, the must be not None
+    mode: "auto" | "line" | "map"
+        How to plot map or lines.
+        "auto" make it automatic if the number of depth is too high.
+    """
+    def __init__(
+        self,
+        motion,
+        segment_index=None,
+        mode="line",
+        motion_lim=None,
+        backend=None,
+        **backend_kwargs,
+
+    ):  
+        if isinstance(motion, dict):
+            raise ValueError("The API has changed, plot_motion() used Motion object now, maybe you want plot_motion_info(motion_info)")
+
+        if segment_index is None:
+            if len(motion.displacement) == 1:
+                segment_index = 0
+            else:
+                raise ValueError("plot motion : teh Motion object is multi segment you must provide segmentindex=XX")
+
+        plot_data = dict(
+            motion=motion,
+            segment_index=segment_index,
+            mode=mode,
+        )
+
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)        
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
+        from matplotlib.colors import Normalize
+
+        dp = to_attr(data_plot)
+
+        motion = data_plot["motion"]
+        segment_index = data_plot["segment_index"]
+
+        assert backend_kwargs["axes"] is None
+
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+
+        displacement = motion.displacement[dp.segment_index]
+        temporal_bins_s = motion.temporal_bins_s[dp.segment_index]
+        depth = motion.spatial_bins_um
+
+        if dp.motion_lim is None:
+            motion_lim = np.max(np.abs(displacement)) * 1.05
+        else:
+            motion_lim = dp.motion_lim
+
+
+        ax = self.ax
+        fig = self.figure
+        if dp.mode == "line":
+            ax.plot(temporal_bins_s, displacement, alpha=0.2, color="black")
+            ax.plot(temporal_bins_s, np.mean(displacement, axis=1), color="C0")
+            ax.set_xlabel("Times [s]")
+            ax.set_ylabel("motion [um]")
+        elif dp.mode == "map":
+            im = ax.imshow(
+                displacement.T,
+                interpolation="nearest",
+                aspect="auto",
+                origin="lower",
+                extent=(temporal_bins_s[0], temporal_bins_s[-1], depth[0], depth[-1]),
+                cmap="PiYG"
+            )
+            im.set_clim(-motion_lim, motion_lim)
+            
+            cbar = fig.colorbar(im)
+            cbar.ax.set_ylabel("motion [um]")
+            ax.set_xlabel("Times [s]")
+            ax.set_ylabel("Depth [um]")
+
+
+class MotionInfoWidget(BaseWidget):
+    """
+    Plot motion information from the motion_info dict returned by correct_motion().
+    This plot:
+      * the motion iself
+      * the peak depth vs time before correction
+      * the peak depth vs time after correction
 
     Parameters
     ----------
     motion_info: dict
         The motion info return by correct_motion() or load back with load_motion_info()
+    segment_index: 
+
     recording : RecordingExtractor, default: None
         The recording extractor object (only used to get "real" times)
     sampling_frequency : float, default: None
@@ -36,6 +131,7 @@ class MotionWidget(BaseWidget):
     def __init__(
         self,
         motion_info,
+        segment_index=None,
         recording=None,
         depth_lim=None,
         motion_lim=None,
@@ -47,6 +143,14 @@ class MotionWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        
+        motion = motion_info["motion"]
+        if segment_index is None:
+            if len(motion.displacement) == 1:
+                segment_index = 0
+            else:
+                raise ValueError("plot motion : teh Motion object is multi segment you must provide segmentindex=XX")
+
         times = recording.get_times() if recording is not None else None
 
         plot_data = dict(
@@ -59,6 +163,8 @@ class MotionWidget(BaseWidget):
             amplitude_cmap=amplitude_cmap,
             amplitude_clim=amplitude_clim,
             amplitude_alpha=amplitude_alpha,
+            segment_index=segment_index,
+            recording=recording,
             **motion_info,
         )
 
@@ -80,7 +186,20 @@ class MotionWidget(BaseWidget):
         fig = self.figure
         fig.clear()
 
-        is_rigid = dp.motion.shape[1] == 1
+        is_rigid = dp.motion.spatial_bins_um.shape[0] == 1
+
+        motion = dp.motion
+
+
+        displacement = motion.displacement[dp.segment_index]
+        temporal_bins_s = motion.temporal_bins_s[dp.segment_index]
+        spatial_bins_um = motion.spatial_bins_um
+
+        if dp.motion_lim is None:
+            motion_lim = np.max(np.abs(displacement)) * 1.05
+        else:
+            motion_lim = dp.motion_lim
+
 
         gs = fig.add_gridspec(2, 2, wspace=0.3, hspace=0.3)
         ax0 = fig.add_subplot(gs[0, 0])
@@ -91,31 +210,23 @@ class MotionWidget(BaseWidget):
         ax1.sharex(ax0)
         ax1.sharey(ax0)
 
-        if dp.motion_lim is None:
-            motion_lim = np.max(np.abs(dp.motion)) * 1.05
-        else:
-            motion_lim = dp.motion_lim
-
         if dp.times is None:
-            temporal_bins_plot = dp.temporal_bins
+            # temporal_bins_plot = dp.temporal_bins
             x = dp.peaks["sample_index"] / dp.sampling_frequency
         else:
             # use real times and adjust temporal bins with t_start
-            temporal_bins_plot = dp.temporal_bins + dp.times[0]
+            # temporal_bins_plot = dp.temporal_bins + dp.times[0]
             x = dp.times[dp.peaks["sample_index"]]
 
         corrected_location = correct_motion_on_peaks(
             dp.peaks,
             dp.peak_locations,
-            dp.sampling_frequency,
-            dp.motion,
-            dp.temporal_bins,
-            dp.spatial_bins,
-            direction="y",
+            dp.recording,
+            dp.motion
         )
 
-        y = dp.peak_locations["y"]
-        y2 = corrected_location["y"]
+        y = dp.peak_locations[motion.direction]
+        y2 = corrected_location[motion.direction]
         if dp.scatter_decimate is not None:
             x = x[:: dp.scatter_decimate]
             y = y[:: dp.scatter_decimate]
@@ -156,8 +267,8 @@ class MotionWidget(BaseWidget):
         ax1.set_ylabel("Depth [um]")
         ax1.set_title("Corrected peak depth")
 
-        ax2.plot(temporal_bins_plot, dp.motion, alpha=0.2, color="black")
-        ax2.plot(temporal_bins_plot, np.mean(dp.motion, axis=1), color="C0")
+        ax2.plot(temporal_bins_s, displacement, alpha=0.2, color="black")
+        ax2.plot(temporal_bins_s, np.mean(displacement, axis=1), color="C0")
         ax2.set_ylim(-motion_lim, motion_lim)
         ax2.set_ylabel("Motion [um]")
         ax2.set_title("Motion vectors")
@@ -165,14 +276,14 @@ class MotionWidget(BaseWidget):
 
         if not is_rigid:
             im = ax3.imshow(
-                dp.motion.T,
+                displacement.T,
                 aspect="auto",
                 origin="lower",
                 extent=(
-                    temporal_bins_plot[0],
-                    temporal_bins_plot[-1],
-                    dp.spatial_bins[0],
-                    dp.spatial_bins[-1],
+                    temporal_bins_s[0],
+                    temporal_bins_s[-1],
+                    spatial_bins_um[0],
+                    spatial_bins_um[-1],
                 ),
             )
             im.set_clim(-motion_lim, motion_lim)

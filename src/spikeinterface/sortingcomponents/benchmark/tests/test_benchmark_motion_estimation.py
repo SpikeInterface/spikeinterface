@@ -52,13 +52,13 @@ def test_benchmark_motion_estimaton():
         )
 
     study_folder = cache_folder / "study_motion_estimation"
-    # if study_folder.exists():
-    #     shutil.rmtree(study_folder)
-    # study = MotionEstimationStudy.create(study_folder, datasets, cases)
+    if study_folder.exists():
+        shutil.rmtree(study_folder)
+    study = MotionEstimationStudy.create(study_folder, datasets, cases)
 
-    # # run and result
-    # study.run(**job_kwargs)
-    # study.compute_results()
+    # run and result
+    study.run(**job_kwargs)
+    study.compute_results()
 
     # load study to check persistency
     study = MotionEstimationStudy(study_folder)
