@@ -49,8 +49,11 @@ def test_benchmark_motion_interpolation():
         spatial_bins,
         direction_dim=1,
     )
+    # print(gt_motion)
+
+    # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
-    # ax.imshow(gt_motion.T)
+    # ax.imshow(gt_motion.displacement[0].T)
     # plt.show()
 
     cases = {}
@@ -131,6 +134,7 @@ def test_benchmark_motion_interpolation():
     study.plot_sorting_accuracy(mode="depth", mode_best_merge=False)
     study.plot_sorting_accuracy(mode="depth", mode_best_merge=True)
 
+    import matplotlib.pyplot as plt
     plt.show()
 
 

@@ -39,7 +39,7 @@ def get_gt_motion_from_unit_displacement(
     unit_displacements = unit_displacements[:, :, direction_dim]
     times = np.arange(unit_displacements.shape[0]) / displacement_sampling_frequency
     f = scipy.interpolate.interp1d(times, unit_displacements, axis=0)
-    unit_displacements = f(temporal_bins_s)
+    unit_displacements = f(temporal_bins_s.clip(times[0], times[-1]))
 
     # spatial interpolataion of units discplacement
     if spatial_bins_um.shape[0] == 1:
@@ -131,7 +131,7 @@ class MotionEstimationBenchmark(Benchmark):
 
         # align globally gt_motion and motion to avoid offsets
         motion = raw_motion.copy()
-        motion.displacement += np.median(gt_motion.displacement - motion.displacement)
+        motion.displacement[0] += np.median(gt_motion.displacement[0] - motion.displacement[0])
         self.result["gt_motion"] = gt_motion
         self.result["motion"] = motion
 
@@ -201,7 +201,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             # for i in range(self.gt_unit_positions.shape[1]):
             #     ax.plot(temporal_bins_s, self.gt_unit_positions[:, i], alpha=0.5, ls="--", c="0.5")
 
-            for i in range(gt_motion.shape[1]):
+            for i in range(gt_motion.displacement[0].shape[1]):
                 depth = motion.spatial_bins_um[i]
                 if gt_drift:
                     ax.plot(motion.temporal_bins_s[0], gt_motion.displacement[0][:, i] + depth, color="green", lw=4)
@@ -263,7 +263,8 @@ class MotionEstimationStudy(BenchmarkStudy):
                 aspect="auto",
                 interpolation="nearest",
                 origin="lower",
-                extent=(motion.temporal_bins_s[0], motion.temporal_bins_s[-1], motion.spatial_bins_um[0], motion.spatial_bins_um[-1]),
+                extent=(motion.temporal_bins_s[0][0], motion.temporal_bins_s[0][-1],
+                        motion.spatial_bins_um[0], motion.spatial_bins_um[-1]),
             )
             plt.colorbar(im, ax=ax, label="error")
             ax.set_ylabel("depth (um)")
@@ -274,7 +275,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             ax = fig.add_subplot(gs[1, 0])
             mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
-            ax.plot(motion.temporal_bins_s, mean_error)
+            ax.plot(motion.temporal_bins_s[0], mean_error)
             ax.set_xlabel("time (s)")
             ax.set_ylabel("error")
             _simpleaxis(ax)
@@ -319,7 +320,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
             depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
 
-            axes[0].plot(motion.temporal_bins_s, mean_error, lw=1, label=label, color=c)
+            axes[0].plot(motion.temporal_bins_s[0], mean_error, lw=1, label=label, color=c)
             parts = axes[1].violinplot(mean_error, [count], showmeans=True)
             if c is not None:
                 for pc in parts["bodies"]:
