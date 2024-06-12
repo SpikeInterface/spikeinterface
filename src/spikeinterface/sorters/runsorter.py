@@ -19,9 +19,7 @@ from .. import __version__ as si_version
 from ..core import BaseRecording, NumpySorting, load_extractor
 from ..core.core_tools import check_json, is_editable_mode
 from .sorterlist import sorter_dict
-
-# full import required for monkeypatch testing.
-from spikeinterface.sorters.utils import (
+from .utils import (
     SpikeSortingError,
     has_nvidia,
     has_docker,
