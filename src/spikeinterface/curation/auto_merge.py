@@ -251,7 +251,7 @@ def get_potential_auto_merge(
 
 
 def compute_correlogram_diff(
-    sorting, correlograms_smoothed, bins, win_sizes, adaptative_window_threshold=0.5, pair_mask=None
+    sorting, correlograms_smoothed, bins, win_sizes, pair_mask=None
 ):
     """
     Original author: Aurelien Wyngaard (lussac)
@@ -266,8 +266,6 @@ def compute_correlogram_diff(
     bins : array
         Bins of the correlograms
     win_sized:
-        TODO
-    adaptative_window_threshold : float
         TODO
     pair_mask : None or boolean array
         A bool matrix of size (num_units, num_units) to select
