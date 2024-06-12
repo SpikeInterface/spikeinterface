@@ -84,9 +84,10 @@ def has_nvidia():
 
 
 def _run_subprocess_silently(command):
-    output = subprocess.run(
-        command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
+    """
+    Run a subprocess command without outputting to stderr or stdout.
+    """
+    output = subprocess.run(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return output
 
 
@@ -97,25 +98,45 @@ def has_docker():
 def has_singularity():
     return _run_subprocess_silently("singularity --version").returncode == 0
 
+
+def has_docker_nvidia_installed():
+    """
+    On Linux, nvidia has a set of container dependencies
+    that are required for running GPU in docker. This is a little
+    complex and is described in more detail in the links below.
+    To summarise breifly, at least one of the `get_nvidia_docker_dependecies()`
+    is almost certainly required to run docker with GPU.
+
+    https://github.com/NVIDIA/nvidia-docker/issues/1268
+    https://www.howtogeek.com/devops/how-to-use-an-nvidia-gpu-with-docker-containers/
+
+    Returns
+    -------
+    Whether at least one of the dependencies listed in
+    `get_nvidia_docker_dependecies()` is installed.
+    """
+    all_dependencies = get_nvidia_docker_dependecies()
+    has_dep = []
+    for dep in all_dependencies:
+        has_dep.append(_run_subprocess_silently(f"{dep} --version").returncode == 0)
+    return not any(has_dep)
+
+
 def get_nvidia_docker_dependecies():
+    """
+    See `has_docker_nvidia_installed()`
+    """
     return [
         "nvidia-docker",
         "nvidia-docker2",
         "nvidia-container-toolkit",
     ]
 
-def has_docker_nvidia_installed():
-    all_dependencies = get_nvidia_docker_dependecies()
-    has_dep = []
-    for dep in all_dependencies:
-        has_dep.append(
-            _run_subprocess_silently(f"{dep} --version").returncode == 0
-        )
-    return not any(has_dep)
 
 def has_docker_python():
     try:
         import docker
+
         return True
     except ImportError:
         return False
@@ -124,6 +145,7 @@ def has_docker_python():
 def has_spython():
     try:
         import spython
+
         return True
     except ImportError:
         return False
