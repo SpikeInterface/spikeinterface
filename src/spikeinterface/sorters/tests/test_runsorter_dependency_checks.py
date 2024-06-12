@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import platform
 from spikeinterface import generate_ground_truth_recording
-from spikeinterface.sorters.utils import has_spython, has_docker_python
+from spikeinterface.sorters.utils import has_spython, has_docker_python, has_docker, has_singularity
 from spikeinterface.sorters import run_sorter
 import subprocess
 import sys
@@ -17,6 +17,10 @@ def _monkeypatch_return_false():
     ensuring the always return `False` at runtime.
     """
     return False
+
+
+def _monkeypatch_return_true():
+    return True
 
 
 class TestRunersorterDependencyChecks:
@@ -91,6 +95,7 @@ class TestRunersorterDependencyChecks:
         return recording
 
     @pytest.mark.skipif(platform.system() != "Linux", reason="spython install only for Linux.")
+    @pytest.mark.skipif(not has_singularity(), reason="singularity required for this test.")
     @pytest.mark.parametrize("uninstall_python_dependency", ["spython"], indirect=True)
     def test_has_spython(self, recording, uninstall_python_dependency):
         """
@@ -100,6 +105,7 @@ class TestRunersorterDependencyChecks:
         assert has_spython() is False
 
     @pytest.mark.parametrize("uninstall_python_dependency", ["docker"], indirect=True)
+    @pytest.mark.skipif(not has_docker(), reason="docker required for this test.")
     def test_has_docker_python(self, recording, uninstall_python_dependency):
         """
         Test the `has_docker_python()` function, see class docstring and
@@ -107,8 +113,7 @@ class TestRunersorterDependencyChecks:
         """
         assert has_docker_python() is False
 
-    @pytest.mark.parametrize("dependency", ["singularity", "spython"])
-    def test_has_singularity_and_spython(self, recording, monkeypatch, dependency):
+    def test_no_singularity_error_raised(self, recording, monkeypatch):
         """
         When running a sorting, if singularity dependencies (singularity
         itself or the `spython` package`) are not installed, an error is raised.
@@ -118,31 +123,46 @@ class TestRunersorterDependencyChecks:
         return False. Then, test the expected error is raised when the dependency
         is not found.
         """
-        test_func = f"has_{dependency}"
+        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_singularity", _monkeypatch_return_false)
 
-        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.{test_func}", _monkeypatch_return_false)
         with pytest.raises(RuntimeError) as e:
             run_sorter("kilosort2_5", recording, singularity_image=True)
 
-        if dependency == "spython":
-            assert "The python `spython` package must be installed" in str(e)
-        else:
-            assert "Singularity is not installed." in str(e)
+        assert "Singularity is not installed." in str(e)
 
-    @pytest.mark.parametrize("dependency", ["docker", "docker_python"])
-    def test_has_docker_and_docker_python(self, recording, monkeypatch, dependency):
+    def test_no_spython_error_raised(self, recording, monkeypatch):
         """
-        See `test_has_singularity_and_spython()` for details. This test
-        is almost identical, but with some key changes for Docker.
+        See `test_no_singularity_error_raised()`.
         """
-        test_func = f"has_{dependency}"
+        # make sure singularity test returns true as that comes first
+        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_singularity", _monkeypatch_return_true)
+        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_spython", _monkeypatch_return_false)
 
-        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.{test_func}", _monkeypatch_return_false)
+        with pytest.raises(RuntimeError) as e:
+            run_sorter("kilosort2_5", recording, singularity_image=True)
+
+        assert "The python `spython` package must be installed" in str(e)
+
+    def test_no_docker_error_raised(self, recording, monkeypatch):
+        """
+        See `test_no_singularity_error_raised()`.
+        """
+        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_docker", _monkeypatch_return_false)
 
         with pytest.raises(RuntimeError) as e:
             run_sorter("kilosort2_5", recording, docker_image=True)
 
-        if dependency == "docker_python":
-            assert "The python `docker` package must be installed" in str(e)
-        else:
-            assert "Docker is not installed." in str(e)
+        assert "Docker is not installed." in str(e)
+
+    def test_as_no_docker_python_error_raised(self, recording, monkeypatch):
+        """
+        See `test_no_singularity_error_raised()`.
+        """
+        # make sure docker test returns true as that comes first
+        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_docker", _monkeypatch_return_true)
+        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_docker_python", _monkeypatch_return_false)
+
+        with pytest.raises(RuntimeError) as e:
+            run_sorter("kilosort2_5", recording, docker_image=True)
+
+        assert "The python `docker` package must be installed" in str(e)
