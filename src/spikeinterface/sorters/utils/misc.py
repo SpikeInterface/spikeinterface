@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess  # TODO: decide best format for this
 from subprocess import check_output, CalledProcessError
 from typing import List, Union
 
@@ -79,4 +80,34 @@ def has_nvidia():
         cu_result_device_count, device_count = cuda.cuDeviceGetCount()
         return device_count > 0
     except RuntimeError:  #  Failed to dlopen libcuda.so
+        return False
+
+def _run_subprocess_silently(command):
+    output = subprocess.run(
+        command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    return output
+
+
+def has_docker():
+    return self._run_subprocess_silently("docker --version").returncode == 0
+
+
+def has_singularity():
+    return self._run_subprocess_silently("singularity --version").returncode == 0
+
+
+def has_docker_python():
+    try:
+        import docker
+        return True
+    except ImportError:
+        return False
+
+
+def has_spython():
+    try:
+        import spython
+        return True
+    except ImportError:
         return False

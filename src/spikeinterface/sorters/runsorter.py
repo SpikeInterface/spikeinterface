@@ -169,6 +169,15 @@ def run_sorter(
                 container_image = None
             else:
                 container_image = docker_image
+
+            if not has_docker():
+                raise RuntimeError("Docker is not installed. Install docker "
+                                   "on this machine to run sorting with docker.")
+
+            if not has_docker_python():
+                raise RuntimeError("The python `docker` package must be installed."
+                                   "Install with `pip install docker`")
+
         else:
             mode = "singularity"
             assert not docker_image
@@ -176,6 +185,15 @@ def run_sorter(
                 container_image = None
             else:
                 container_image = singularity_image
+
+            if not has_singularity():
+                raise RuntimeError("Singularity is not installed. Install singularity "
+                                   "on this machine to run sorting with singularity.")
+
+            if not has_spython():
+                raise RuntimeError("The python singularity package must be installed."
+                                   "Install with `pip install spython`")
+
         return run_sorter_container(
             container_image=container_image,
             mode=mode,
