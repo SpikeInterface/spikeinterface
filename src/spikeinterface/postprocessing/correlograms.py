@@ -26,9 +26,6 @@ except ModuleNotFoundError as err:
 # to provide a numpy and numba version. Consider window_size and bin_size
 # being taken as ms to match general API.
 
-# TODO: also make clear the output are always counts, not correlation / covariance matrices
-# 'lags': TODO: come up with some standard terminology and way of describing this from within the module.#
-
 
 class ComputeCorrelograms(AnalyzerExtension):
     """
@@ -70,7 +67,8 @@ class ComputeCorrelograms(AnalyzerExtension):
     -------
     correlogram : np.array
         Correlograms with shape (num_units, num_units, num_bins)
-        The diagonal of ccgs is the auto correlogram.
+        The diagonal of correlogram is the auto correlogram. The output
+        is in bin counts.
         correlogram[A, B, :] is the symetrie of correlogram[B, A, :]
         correlogram[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
     bins :  np.array
@@ -113,6 +111,7 @@ compute_correlograms_sorting_analyzer = ComputeCorrelograms.function_factory()
 
 # TODO: Question: what is the main entry functions for this module?
 # is it only the below? If so can all other functions be made private?
+# This would reduce some docstring duplication
 
 
 def compute_correlograms(
@@ -206,6 +205,7 @@ def _compute_num_bins(window_size, bin_size):
     return num_bins, num_half_bins
 
 
+# TODO: this can now be deprecated as there is no distinction at the Numba level.
 def compute_autocorrelogram_from_spiketrain(spike_times, window_size, bin_size):
     """
     Computes the auto-correlogram from a given spike train.
@@ -231,6 +231,10 @@ def compute_autocorrelogram_from_spiketrain(spike_times, window_size, bin_size):
     return _compute_correlograms_one_segment_numba(spike_times.astype(np.int64, copy=False), window_size, bin_size)
 
 
+# TODO: expose a numpy option also. UNless we want to force users to use `Sorting` or `SortingAnalyzer`.
+# I am not averse to this, is helps reduce the suface API and assist maintaince. If users
+# want to directly computer cross-correlograms they can use a private internal function.
+# Thoughts?
 def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_size, bin_size):
     """
     Computes the cros-correlogram between two given spike trains.
@@ -268,6 +272,18 @@ def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     Entry function to compute correlograms across all units in a `Sorting`
     object (i.e. spike trains at all determined offsets will be computed
     for each unit against every other unit).
+
+    Parameters
+    ----------
+    sorting : Sorting
+        A SpikeInterface Sorting object
+    window_ms : int
+            The window size over which to perform the cross-correlation, in ms
+    bin_ms : int
+        The size of which to bin lags, in ms.
+    method : str
+        To use "numpy" or "numba". "auto" will use numba if available,
+        otherwise numpy.
 
     Returns
     -------
