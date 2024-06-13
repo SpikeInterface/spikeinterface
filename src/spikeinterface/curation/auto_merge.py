@@ -109,7 +109,7 @@ def get_potential_auto_merge(
         If True, an additional dictionary (`outs`) with processed data is returned
     steps : None or list of str, default: None
         which steps to run (gives flexibility to running just some steps)
-        If None all steps are done.
+        If None all steps are done (except presence_distance).
         Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram",
         "template_similarity", "presence_distance", "check_increase_score".
         Please check steps explanations above!
@@ -137,6 +137,9 @@ def get_potential_auto_merge(
     #    * auto correlogram is contaminated
     #    * to far away one from each other
 
+    all_steps = ["min_spikes", "remove_contaminated", "unit_positions", "correlogram",
+        "template_similarity", "presence_distance", "check_increase_score"]
+
     if steps is None:
         if preset is None:
             steps = [
@@ -156,128 +159,125 @@ def get_potential_auto_merge(
                 "template_similarity",
                 "presence_distance",
                 "check_increase_score",
-            ]
+            ]       
 
     n = unit_ids.size
     pair_mask = np.ones((n, n), dtype="bool")
+    outs = dict()
 
-    if extra_outputs:
-        outs = dict()
+    for step in steps:
 
-    # STEP 1 :
-    if "min_spikes" in steps:
-        num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
-        to_remove = num_spikes < minimum_spikes
-        pair_mask[to_remove, :] = False
-        pair_mask[:, to_remove] = False
+        assert (step in all_steps), f"{step} is not a valid step"
 
-    # STEP 2 : remove contaminated auto corr
-    if "remove_contaminated" in steps:
-        contaminations, nb_violations = compute_refrac_period_violations(
-            sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
-        )
-        nb_violations = np.array(list(nb_violations.values()))
-        contaminations = np.array(list(contaminations.values()))
-        to_remove = contaminations > contamination_threshold
-        pair_mask[to_remove, :] = False
-        pair_mask[:, to_remove] = False
+        # STEP 1 :
+        if step == "min_spikes":
+            num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
+            to_remove = num_spikes < minimum_spikes
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
 
-    # STEP 3 : unit positions are estimated roughly with channel
-    if "unit_positions" in steps:
-        positions_ext = sorting_analyzer.get_extension("unit_locations")
-        if positions_ext is not None:
-            unit_locations = positions_ext.get_data()[:, :2]
-        else:
-            chan_loc = sorting_analyzer.get_channel_locations()
-            unit_max_chan = get_template_extremum_channel(
-                sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
+        # STEP 2 : remove contaminated auto corr
+        elif step == "remove_contaminated":
+            contaminations, nb_violations = compute_refrac_period_violations(
+                sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
             )
-            unit_max_chan = list(unit_max_chan.values())
-            unit_locations = chan_loc[unit_max_chan, :]
+            nb_violations = np.array(list(nb_violations.values()))
+            contaminations = np.array(list(contaminations.values()))
+            to_remove = contaminations > contamination_threshold
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
 
-        unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
-        pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
+        # STEP 3 : unit positions are estimated roughly with channel
+        elif step == "unit_positions" in steps:
+            positions_ext = sorting_analyzer.get_extension("unit_locations")
+            if positions_ext is not None:
+                unit_locations = positions_ext.get_data()[:, :2]
+            else:
+                chan_loc = sorting_analyzer.get_channel_locations()
+                unit_max_chan = get_template_extremum_channel(
+                    sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
+                )
+                unit_max_chan = list(unit_max_chan.values())
+                unit_locations = chan_loc[unit_max_chan, :]
 
-        if extra_outputs:
+            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
+            pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
             outs["unit_distances"] = unit_distances
 
-    # STEP 4 : potential auto merge by correlogram
-    if "correlogram" in steps:
-        correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
-        mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
-        correlograms[:, :, mask] = 0
-        correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
-        # find correlogram window for each units
-        win_sizes = np.zeros(n, dtype=int)
-        for unit_ind in range(n):
-            auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
-            thresh = np.max(auto_corr) * adaptative_window_threshold
-            win_size = get_unit_adaptive_window(auto_corr, thresh)
-            win_sizes[unit_ind] = win_size
-        correlogram_diff = compute_correlogram_diff(
-            sorting,
-            correlograms_smoothed,
-            win_sizes,
-            pair_mask=pair_mask,
-        )
-        # print(correlogram_diff)
-        pair_mask = pair_mask & (correlogram_diff < corr_diff_thresh)
-        if extra_outputs:
+        # STEP 4 : potential auto merge by correlogram
+        elif step == "correlogram" in steps:
+            correlograms_ext = sorting_analyzer.get_extension('correlograms')
+            if correlograms_ext is not None:
+                correlograms, bins = correlograms_ext.get_data()
+            else:
+                correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
+            mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
+            correlograms[:, :, mask] = 0
+            correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
+            # find correlogram window for each units
+            win_sizes = np.zeros(n, dtype=int)
+            for unit_ind in range(n):
+                auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
+                thresh = np.max(auto_corr) * adaptative_window_threshold
+                win_size = get_unit_adaptive_window(auto_corr, thresh)
+                win_sizes[unit_ind] = win_size
+            correlogram_diff = compute_correlogram_diff(
+                sorting,
+                correlograms_smoothed,
+                win_sizes,
+                pair_mask=pair_mask,
+            )
+            # print(correlogram_diff)
+            pair_mask = pair_mask & (correlogram_diff < corr_diff_thresh)
             outs["correlograms"] = correlograms
             outs["bins"] = bins
             outs["correlograms_smoothed"] = correlograms_smoothed
             outs["correlogram_diff"] = correlogram_diff
             outs["win_sizes"] = win_sizes
 
-    # STEP 5 : check if potential merge with CC also have template similarity
-    if "template_similarity" in steps:
-        templates_ext = sorting_analyzer.get_extension("templates")
-        assert (
-            templates_ext is not None
-        ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
+        # STEP 5 : check if potential merge with CC also have template similarity
+        elif step == "template_similarity" in steps:
+            template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
+            if template_similarity_ext is not None:
+                templates_similarity = template_similarity_ext.get_data()
+                templates_diff = 1 - templates_similarity
 
-        template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
-        if template_similarity_ext is not None:
-            templates_similarity = template_similarity_ext.get_data()
-            templates_diff = 1 - templates_similarity
+            else:
+                templates_ext = sorting_analyzer.get_extension("templates")
+                assert (
+                    templates_ext is not None
+                ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
+                templates_array = templates_ext.get_data(outputs="numpy")
 
-        else:
-            templates_array = templates_ext.get_data(outputs="numpy")
+                templates_diff = compute_templates_diff(
+                    sorting,
+                    templates_array,
+                    num_channels=num_channels,
+                    num_shift=num_shift,
+                    pair_mask=pair_mask,
+                    template_metric=template_metric,
+                    sparsity=sorting_analyzer.sparsity,
+                )
 
-            templates_diff = compute_templates_diff(
-                sorting,
-                templates_array,
-                num_channels=num_channels,
-                num_shift=num_shift,
-                pair_mask=pair_mask,
-                template_metric=template_metric,
-                sparsity=sorting_analyzer.sparsity,
-            )
-
-        pair_mask = pair_mask & (templates_diff < template_diff_thresh)
-
-        if extra_outputs:
+            pair_mask = pair_mask & (templates_diff < template_diff_thresh)
             outs["templates_diff"] = templates_diff
 
-    # STEP 6 : [optional] check how the rates overlap in times
-    if "presence_distance" in steps:
-        presence_distances = compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs)
-        pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
-
-        if extra_outputs:
+        # STEP 6 : [optional] check how the rates overlap in times
+        elif step == "presence_distance" in steps:
+            presence_distances = compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs)
+            pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
             outs["presence_distances"] = presence_distances
 
-    # STEP 7 : validate the potential merges with CC increase the contamination quality metrics
-    if "check_increase_score" in steps:
-        pair_mask, pairs_decreased_score = check_improve_contaminations_score(
-            sorting_analyzer,
-            pair_mask,
-            contaminations,
-            firing_contamination_balance,
-            refractory_period_ms,
-            censored_period_ms,
-        )
-        if extra_outputs:
+        # STEP 7 : validate the potential merges with CC increase the contamination quality metrics
+        elif step == "check_increase_score" in steps:
+            pair_mask, pairs_decreased_score = check_improve_contaminations_score(
+                sorting_analyzer,
+                pair_mask,
+                contaminations,
+                firing_contamination_balance,
+                refractory_period_ms,
+                censored_period_ms,
+            )
             outs["pairs_decreased_score"] = pairs_decreased_score
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
