@@ -1,7 +1,7 @@
 from __future__ import annotations
 import numpy as np
 
-def presence_distance(sorting, unit1, unit2, bin_duration_s=2, percentile_norm=90, bins=None):
+def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None):
     """
     Compute the presence distance between two units.
 
@@ -18,8 +18,6 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, percentile_norm=9
         The id of the second unit.
     bin_duration_s: float
         The duration of the bin in seconds.
-    percentile_norm: float
-        The percentile used to normalize the firing rate.
     bins: array-like
         The bins used to compute the firing rate.
 
