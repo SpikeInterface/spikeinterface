@@ -5,7 +5,6 @@ from .main import BaseMergingEngine
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
-from spikeinterface.curation.merge_temporal_splits import get_potential_temporal_splits
 from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph, apply_merges_to_sorting
 
 
