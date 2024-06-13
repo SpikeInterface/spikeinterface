@@ -42,7 +42,8 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, percentile_norm=9
     h2 = h2.astype(float)
 
     import scipy
-    xaxis = bins[1:]/sorting.sampling_frequency
+
+    xaxis = bins[1:] / sorting.sampling_frequency
     d = scipy.stats.wasserstein_distance(xaxis, xaxis, h1, h2)
 
     return d
