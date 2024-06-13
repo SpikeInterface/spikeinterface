@@ -290,9 +290,7 @@ def get_potential_auto_merge(
         return potential_merges
 
 
-def compute_correlogram_diff(
-    sorting, correlograms_smoothed, win_sizes, pair_mask=None
-):
+def compute_correlogram_diff(sorting, correlograms_smoothed, win_sizes, pair_mask=None):
     """
     Original author: Aurelien Wyngaard (lussac)
 
