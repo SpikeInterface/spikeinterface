@@ -16,7 +16,11 @@ def download_dataset(
     update_if_exists: bool = False,
 ) -> Path:
     """
-    Function to download dataset from a remote repository using pooch.
+    Function to download dataset from a remote repository using a combination of datalad and pooch.
+
+    Pooch is designed to download single files from a remote repository.
+    Because our datasets in gin sometimes point just to a folder, we still use datalad to download
+    a list of all the files in the folder and then use pooch to download them one by one.
 
     Parameters
     ----------
@@ -24,9 +28,9 @@ def download_dataset(
         The repository to download the dataset from
     remote_path : str, default: "mearec/mearec_test_10s.h5"
         A specific subdirectory in the repository to download (e.g. Mearec, SpikeGLX, etc)
-    local_folder : str, default: None
+    local_folder : str, optional
         The destination folder / directory to download the dataset to.
-        defaults to the path "get_global_dataset_folder()" / f{repo_name} (see `spikeinterface.core.globals`)
+        if None, then the path "get_global_dataset_folder()" / f{repo_name} is used (see `spikeinterface.core.globals`)
     update_if_exists : bool, default: False
         Forces re-download of the dataset if it already exists, default: False
 
@@ -34,6 +38,13 @@ def download_dataset(
     -------
     Path
         The local path to the downloaded dataset
+
+    Notes
+    -----
+    The reason we use pooch is because have had problems with datalad not being able to download
+    data on windows machines. Specially in the CI.
+
+    See https://handbook.datalad.org/en/latest/intro/windows.html
     """
     import pooch
     import datalad.api
@@ -69,7 +80,7 @@ def download_dataset(
 
     for file_path in files_to_download:
         remote_path = file_path.relative_to(local_folder)
-        url = f"{repo}/src/master/{remote_path}"
+        url = f"{repo}/raw/master/{remote_path}"
         file_path = local_folder / remote_path
         file_path.unlink(missing_ok=True)
 
