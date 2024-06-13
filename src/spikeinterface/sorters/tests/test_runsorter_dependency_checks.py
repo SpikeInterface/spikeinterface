@@ -20,14 +20,18 @@ def _monkeypatch_return_false():
 
 
 def _monkeypatch_return_true():
+    """
+    Monkeypatch for some `has_<dependency>` functions to
+    return `True` so functions that are later in the
+    `runsorter` code can be checked.
+    """
     return True
 
 
 class TestRunersorterDependencyChecks:
     """
-    This class performs tests to check whether expected
-    dependency checks prior to sorting are run. The
-    run_sorter function should raise an error if:
+    This class tests whether expected dependency checks prior to sorting are run.
+    The run_sorter function should raise an error if:
         - singularity is not installed
         - spython is not installed (python package)
         - docker is not installed
