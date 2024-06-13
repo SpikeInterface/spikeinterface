@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
 
+
 def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None):
     """
     Compute the presence distance between two units.
