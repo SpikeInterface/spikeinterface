@@ -106,13 +106,13 @@ def test_curation_format_validation():
         # Raised because duplicated merged units
         validate_curation_dict(duplicate_merge)
     with pytest.raises(ValueError):
-        # Raised because Some units belong to multiple merge groups"
+        # Raised because some units belong to merged and removed unit groups
         validate_curation_dict(merged_and_removed)
     with pytest.raises(ValueError):
         # Some merged units are not in the unit list
         validate_curation_dict(unknown_merged_unit)
     with pytest.raises(ValueError):
-        # Raise beecause Some removed units are not in the unit list
+        # Raise because some removed units are not in the unit list
         validate_curation_dict(unknown_removed_unit)
 
 

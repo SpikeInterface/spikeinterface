@@ -14,12 +14,6 @@ def validate_curation_dict(curation_dict):
     ----------
     curation_dict : dict
 
-
-    Returns
-    -------
-    Nothing.
-
-
     """
 
     # format
