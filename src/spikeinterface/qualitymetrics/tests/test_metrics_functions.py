@@ -38,6 +38,7 @@ from spikeinterface.qualitymetrics import (
     compute_amplitude_cv_metrics,
     compute_sd_ratio,
     get_synchrony_counts,
+    compute_quality_metrics,
 )
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
@@ -68,6 +69,7 @@ def _small_sorting_analyzer():
         "waveforms": {},
         "templates": {},
         "spike_amplitudes": {},
+        "spike_locations": {},
         "principal_components": {},
     }
 
@@ -100,6 +102,56 @@ def test_unit_structure_in_output(small_sorting_analyzer):
             for one_result in result:
                 print(metric_name)
                 assert list(one_result.keys()) == ["#9", "#3"]
+
+
+def test_unit_id_order_independence(small_sorting_analyzer):
+    """
+    Takes two almost-identical sorting_analyzers, whose unit_ids are in different orders and have different labels,
+    and checks that their calculated quality metrics are independent of the ordering and labelling.
+    """
+
+    recording, sorting = generate_ground_truth_recording(
+        durations=[2.0],
+        num_units=4,
+        seed=1205,
+    )
+    sorting = sorting.select_units([0, 2, 3])
+    small_sorting_analyzer_2 = create_sorting_analyzer(recording=recording, sorting=sorting, format="memory")
+
+    extensions_to_compute = {
+        "random_spikes": {"seed": 1205},
+        "noise_levels": {"seed": 1205},
+        "waveforms": {},
+        "templates": {},
+        "spike_amplitudes": {},
+        "spike_locations": {},
+        "principal_components": {},
+    }
+
+    small_sorting_analyzer_2.compute(extensions_to_compute)
+
+    # need special params to get non-nan results on a short recording
+    qm_params = {
+        "presence_ratio": {"bin_duration_s": 0.1},
+        "amplitude_cutoff": {"num_histogram_bins": 3},
+        "amplitude_cv": {"average_num_spikes_per_bin": 7, "min_num_bins": 3},
+        "firing_range": {"bin_size_s": 1},
+        "isi_violation": {"isi_threshold_ms": 10},
+        "drift": {"interval_s": 1, "min_spikes_per_interval": 5},
+        "sliding_rp_violation": {"max_ref_period_ms": 50, "bin_size_ms": 0.15},
+    }
+
+    quality_metrics_1 = compute_quality_metrics(
+        small_sorting_analyzer, metric_names=get_quality_metric_list(), qm_params=qm_params
+    )
+    quality_metrics_2 = compute_quality_metrics(
+        small_sorting_analyzer_2, metric_names=get_quality_metric_list(), qm_params=qm_params
+    )
+
+    for metric, metric_1_data in quality_metrics_1.items():
+        assert quality_metrics_2[metric][3] == metric_1_data["#3"]
+        assert quality_metrics_2[metric][2] == metric_1_data["#9"]
+        assert quality_metrics_2[metric][0] == metric_1_data["#4"]
 
 
 def _sorting_analyzer_simple():
