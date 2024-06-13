@@ -217,7 +217,6 @@ def get_potential_auto_merge(
         correlogram_diff = compute_correlogram_diff(
             sorting,
             correlograms_smoothed,
-            bins,
             win_sizes,
             pair_mask=pair_mask,
         )
