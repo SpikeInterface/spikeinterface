@@ -219,7 +219,6 @@ def get_potential_auto_merge(
             correlograms_smoothed,
             bins,
             win_sizes,
-            adaptative_window_threshold=adaptative_window_threshold,
             pair_mask=pair_mask,
         )
         # print(correlogram_diff)
@@ -293,7 +292,7 @@ def get_potential_auto_merge(
 
 
 def compute_correlogram_diff(
-    sorting, correlograms_smoothed, win_sizes, adaptative_window_threshold=0.5, pair_mask=None
+    sorting, correlograms_smoothed, win_sizes, pair_mask=None
 ):
     """
     Original author: Aurelien Wyngaard (lussac)
@@ -306,8 +305,6 @@ def compute_correlogram_diff(
         The 3d array containing all cross and auto correlograms
         (smoothed by a convolution with a gaussian curve)
     win_sizes:
-        TODO
-    adaptative_window_threshold : float
         TODO
     pair_mask : None or boolean array
         A bool matrix of size (num_units, num_units) to select
