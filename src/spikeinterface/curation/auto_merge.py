@@ -9,6 +9,7 @@ from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
+from .merge_temporal_splits import compute_presence_distance
 
 
 def get_potential_auto_merge(
@@ -28,10 +29,13 @@ def get_potential_auto_merge(
     censor_correlograms_ms: float = 0.15,
     num_channels=5,
     num_shift=5,
-    firing_contamination_balance=1.5,
+    firing_contamination_balance=2.5,
     extra_outputs=False,
     steps=None,
+    presence_distance_thresh=100,
+    preset=None,
     template_metric="l1",
+    **presence_distance_kwargs
 ):
     """
     Algorithm to find and check potential merges between units.
@@ -47,7 +51,8 @@ def get_potential_auto_merge(
         * STEP 3: estimated unit locations are close enough (`maximum_distance_um`)
         * STEP 4: the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
         * STEP 5: the templates of the two units are similar (`template_diff_thresh`)
-        * STEP 6: the unit "quality score" is increased after the merge.
+        * STEP 6: [optional] the presence distance of two units
+        * STEP 7: the unit "quality score" is increased after the merge.
 
     The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
     contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
@@ -96,15 +101,18 @@ def get_potential_auto_merge(
         Number of channel to use for template similarity computation
     num_shift : int, default: 5
         Number of shifts in samles to be explored for template similarity computation
-    firing_contamination_balance : float, default: 1.5
+    firing_contamination_balance : float, default: 2.5
         Parameter to control the balance between firing rate and contamination in computing unit "quality score"
+    presence_distance_thresh: float, default: 100
+        Parameter to control how present two units should be simultaneously
     extra_outputs : bool, default: False
         If True, an additional dictionary (`outs`) with processed data is returned
     steps : None or list of str, default: None
         which steps to run (gives flexibility to running just some steps)
         If None all steps are done.
-        Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram", "template_similarity",
-        "check_increase_score". Please check steps explanations above!
+        Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram", 
+        "template_similarity", "presence_distance", "check_increase_score". 
+        Please check steps explanations above!
     template_metric : 'l1', 'l2' or 'cosine'
         The metric to consider when measuring the distances between templates. Default is l1
 
@@ -122,6 +130,7 @@ def get_potential_auto_merge(
     sorting = sorting_analyzer.sorting
     recording = sorting_analyzer.recording
     unit_ids = sorting.unit_ids
+    sorting.register_recording(recording)
 
     # to get fast computation we will not analyse pairs when:
     #    * not enough spikes for one of theses
@@ -129,17 +138,31 @@ def get_potential_auto_merge(
     #    * to far away one from each other
 
     if steps is None:
-        steps = [
-            "min_spikes",
-            "remove_contaminated",
-            "unit_positions",
-            "correlogram",
-            "template_similarity",
-            "check_increase_score",
-        ]
+        if preset is None:
+            steps = [
+                "min_spikes",
+                "remove_contaminated",
+                "unit_positions",
+                "correlogram",
+                "template_similarity",
+                "check_increase_score",
+            ]
+        elif preset == 'temporal_splits':
+            steps = [
+                "min_spikes",
+                "remove_contaminated",
+                "unit_positions",
+                "correlogram",
+                "template_similarity",
+                "presence_distance",
+                "check_increase_score",
+            ]
 
     n = unit_ids.size
     pair_mask = np.ones((n, n), dtype="bool")
+
+    if extra_outputs:
+        outs = dict()
 
     # STEP 1 :
     if "min_spikes" in steps:
@@ -175,6 +198,9 @@ def get_potential_auto_merge(
         unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
         pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
 
+        if extra_outputs:
+            outs['unit_distances']=unit_distances
+
     # STEP 4 : potential auto merge by correlogram
     if "correlogram" in steps:
         correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
@@ -198,6 +224,12 @@ def get_potential_auto_merge(
         )
         # print(correlogram_diff)
         pair_mask = pair_mask & (correlogram_diff < corr_diff_thresh)
+        if extra_outputs:
+            outs['correlograms']=correlograms
+            outs['bins']=bins
+            outs['correlograms_smoothed']=correlograms_smoothed
+            outs['correlogram_diff']=correlogram_diff
+            outs['win_sizes']=win_sizes
 
     # STEP 5 : check if potential merge with CC also have template similarity
     if "template_similarity" in steps:
@@ -226,7 +258,19 @@ def get_potential_auto_merge(
 
         pair_mask = pair_mask & (templates_diff < template_diff_thresh)
 
-    # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
+        if extra_outputs:
+            outs['templates_diff']=templates_diff
+
+
+    # STEP 6 : [optional] check how the rates overlap in times
+    if "presence_distance" in steps:
+        presence_distances = compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs)
+        pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
+
+        if extra_outputs:
+            outs['presence_distances']=presence_distances
+
+    # STEP 7 : validate the potential merges with CC increase the contamination quality metrics
     if "check_increase_score" in steps:
         pair_mask, pairs_decreased_score = check_improve_contaminations_score(
             sorting_analyzer,
@@ -236,22 +280,14 @@ def get_potential_auto_merge(
             refractory_period_ms,
             censored_period_ms,
         )
+        if extra_outputs:
+            outs['pairs_decreased_score']=pairs_decreased_score
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
     potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
 
     if extra_outputs:
-        outs = dict(
-            correlograms=correlograms,
-            bins=bins,
-            correlograms_smoothed=correlograms_smoothed,
-            correlogram_diff=correlogram_diff,
-            win_sizes=win_sizes,
-            unit_distances=unit_distances,
-            templates_diff=templates_diff,
-            pairs_decreased_score=pairs_decreased_score,
-        )
         return potential_merges, outs
     else:
         return potential_merges
@@ -538,10 +574,10 @@ def check_improve_contaminations_score(
         f_new = compute_firing_rates(sorting_analyzer_new)[unit_id1]
 
         # old and new scores
-        k = 1 + firing_contamination_balance
-        score_1 = f_1 * (1 - k * c_1)
-        score_2 = f_2 * (1 - k * c_2)
-        score_new = f_new * (1 - k * c_new)
+        k = firing_contamination_balance
+        score_1 = f_1 * (1 - (k + 1) * c_1)
+        score_2 = f_2 * (1 - (k + 1) * c_2)
+        score_new = f_new * (1 - (k + 1) * c_new)
 
         if score_new < score_1 or score_new < score_2:
             # the score is not improved

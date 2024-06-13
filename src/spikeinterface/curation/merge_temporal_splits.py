@@ -1,15 +1,12 @@
 from __future__ import annotations
 import numpy as np
-from ..core.template_tools import get_template_extremum_channel
-from .auto_merge import check_improve_contaminations_score, compute_templates_diff, compute_refrac_period_violations
-
 
 def presence_distance(sorting, unit1, unit2, bin_duration_s=2, percentile_norm=90, bins=None):
     """
     Compute the presence distance between two units.
 
-    The presence distance is defined as the sum of the absolute difference between the sum of
-    the normalized firing profiles of the two units and a constant firing profile.
+    The presence distance is defined as the Wasserstein distance between the two histograms of
+    the firing activity over time.
 
     Parameters
     ----------
@@ -40,18 +37,10 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, percentile_norm=9
 
     h1, _ = np.histogram(st1, bins)
     h1 = h1.astype(float)
-    #norm_value1 = np.linalg.norm(h1)
 
     h2, _ = np.histogram(st2, bins)
     h2 = h2.astype(float)
-    #norm_value2 = np.linalg.norm(h2)#np.percentile(h2, percentile_norm)
 
-    # if not np.isnan(norm_value1) and not np.isnan(norm_value2) and norm_value1 > 0 and norm_value2 > 0:
-    #     h1 = h1 / norm_value1
-    #     h2 = h2 / norm_value2
-    #     d = np.sum(np.abs(h1 + h2 - np.ones_like(h1))) / sorting.get_total_duration()
-    # else:
-    #     d = 1.0
     import scipy
     xaxis = bins[1:]/sorting.sampling_frequency
     d = scipy.stats.wasserstein_distance(xaxis, xaxis, h1, h2)
@@ -99,157 +88,3 @@ def compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs):
             presence_distances[unit_ind1, unit_ind2] = d
 
     return presence_distances
-
-
-def get_potential_temporal_splits(
-    sorting_analyzer,
-    minimum_spikes=100,
-    presence_distance_threshold=50,
-    template_diff_thresh=0.25,
-    censored_period_ms=0.3,
-    refractory_period_ms=1.0,
-    num_channels=5,
-    num_shift=5,
-    contamination_threshold=0.2,
-    firing_contamination_balance=1.5,
-    extra_outputs=False,
-    steps=None,
-    template_metric="l1",
-    maximum_distance_um=150.0,
-    peak_sign="neg",
-    **presence_distance_kwargs,
-):
-    """
-    Algorithm to find and check potential temporal merges between units.
-
-    The merges are proposed when the following criteria are met:
-
-        * STEP 1: enough spikes are found in each units for computing the correlogram (`minimum_spikes`)
-        * STEP 2: the templates of the two units are similar (`template_diff_thresh`)
-        * STEP 3: the presence distance of the two units is high
-        * STEP 4: the unit "quality score" is increased after the merge.
-
-    The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
-    contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
-
-    .. math::
-
-        Q = f(1 - (k + 1)C)
-
-
-    """
-
-    import scipy
-
-    sorting = sorting_analyzer.sorting
-    recording = sorting_analyzer.recording
-    unit_ids = sorting.unit_ids
-    sorting.register_recording(recording)
-
-    # to get fast computation we will not analyse pairs when:
-    #    * not enough spikes for one of theses
-    #    * auto correlogram is contaminated
-    #    * to far away one from each other
-
-    if steps is None:
-        steps = [
-            "min_spikes",
-            "remove_contaminated",
-            "unit_positions",
-            "template_similarity",
-            "presence_distance",
-            "check_increase_score",
-        ]
-
-    n = unit_ids.size
-    pair_mask = np.ones((n, n), dtype="bool")
-
-    # STEP 1 :
-    if "min_spikes" in steps:
-        num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
-        to_remove = num_spikes < minimum_spikes
-        pair_mask[to_remove, :] = False
-        pair_mask[:, to_remove] = False
-
-    # STEP 2 : remove contaminated auto corr
-    if "remove_contaminated" in steps:
-        contaminations, nb_violations = compute_refrac_period_violations(
-            sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
-        )
-        nb_violations = np.array(list(nb_violations.values()))
-        contaminations = np.array(list(contaminations.values()))
-        to_remove = contaminations > contamination_threshold
-        pair_mask[to_remove, :] = False
-        pair_mask[:, to_remove] = False
-
-    # STEP 3 : unit positions are estimated roughly with channel
-    if "unit_positions" in steps:
-        positions_ext = sorting_analyzer.get_extension("unit_locations")
-        if positions_ext is not None:
-            unit_locations = positions_ext.get_data()[:, :2]
-        else:
-            chan_loc = sorting_analyzer.get_channel_locations()
-            unit_max_chan = get_template_extremum_channel(
-                sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
-            )
-            unit_max_chan = list(unit_max_chan.values())
-            unit_locations = chan_loc[unit_max_chan, :]
-
-        unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
-        pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
-
-    # STEP 4 : check if potential merge with CC also have template similarity
-    if "template_similarity" in steps:
-        templates_ext = sorting_analyzer.get_extension("templates")
-        assert (
-            templates_ext is not None
-        ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
-
-        template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
-        if template_similarity_ext is not None:
-            templates_similarity = template_similarity_ext.get_data()
-            templates_diff = 1 - templates_similarity
-        else:
-            templates_array = templates_ext.get_data(outputs="numpy")
-
-            templates_diff = compute_templates_diff(
-                sorting,
-                templates_array,
-                num_channels=num_channels,
-                num_shift=num_shift,
-                pair_mask=pair_mask,
-                template_metric=template_metric,
-                sparsity=sorting_analyzer.sparsity,
-            )
-
-        pair_mask = pair_mask & (templates_diff < template_diff_thresh)
-
-    # STEP 5 : validate the potential merges with CC increase the contamination quality metrics
-    if "presence_distance" in steps:
-        presence_distances = compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs)
-        pair_mask = pair_mask & (presence_distances > presence_distance_threshold)
-    # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
-    if "check_increase_score" in steps:
-        pair_mask, pairs_decreased_score = check_improve_contaminations_score(
-            sorting_analyzer,
-            pair_mask,
-            contaminations,
-            firing_contamination_balance,
-            refractory_period_ms,
-            censored_period_ms,
-        )
-
-    # FINAL STEP : create the final list from pair_mask boolean matrix
-    ind1, ind2 = np.nonzero(pair_mask)
-    potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
-
-    if extra_outputs:
-        outs = dict(
-            templates_diff=templates_diff,
-            unit_distances=unit_distances,
-            presence_distances=presence_distances,
-            pairs_decreased_score=pairs_decreased_score,
-        )
-        return potential_merges, outs
-    else:
-        return potential_merges
