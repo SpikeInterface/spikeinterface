@@ -35,7 +35,7 @@ def get_potential_auto_merge(
     presence_distance_thresh=100,
     preset=None,
     template_metric="l1",
-    **presence_distance_kwargs
+    **presence_distance_kwargs,
 ):
     """
     Algorithm to find and check potential merges between units.
@@ -110,8 +110,8 @@ def get_potential_auto_merge(
     steps : None or list of str, default: None
         which steps to run (gives flexibility to running just some steps)
         If None all steps are done.
-        Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram", 
-        "template_similarity", "presence_distance", "check_increase_score". 
+        Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram",
+        "template_similarity", "presence_distance", "check_increase_score".
         Please check steps explanations above!
     template_metric : 'l1', 'l2' or 'cosine'
         The metric to consider when measuring the distances between templates. Default is l1
@@ -147,7 +147,7 @@ def get_potential_auto_merge(
                 "template_similarity",
                 "check_increase_score",
             ]
-        elif preset == 'temporal_splits':
+        elif preset == "temporal_splits":
             steps = [
                 "min_spikes",
                 "remove_contaminated",
@@ -199,7 +199,7 @@ def get_potential_auto_merge(
         pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
 
         if extra_outputs:
-            outs['unit_distances']=unit_distances
+            outs["unit_distances"] = unit_distances
 
     # STEP 4 : potential auto merge by correlogram
     if "correlogram" in steps:
@@ -225,11 +225,11 @@ def get_potential_auto_merge(
         # print(correlogram_diff)
         pair_mask = pair_mask & (correlogram_diff < corr_diff_thresh)
         if extra_outputs:
-            outs['correlograms']=correlograms
-            outs['bins']=bins
-            outs['correlograms_smoothed']=correlograms_smoothed
-            outs['correlogram_diff']=correlogram_diff
-            outs['win_sizes']=win_sizes
+            outs["correlograms"] = correlograms
+            outs["bins"] = bins
+            outs["correlograms_smoothed"] = correlograms_smoothed
+            outs["correlogram_diff"] = correlogram_diff
+            outs["win_sizes"] = win_sizes
 
     # STEP 5 : check if potential merge with CC also have template similarity
     if "template_similarity" in steps:
@@ -259,8 +259,7 @@ def get_potential_auto_merge(
         pair_mask = pair_mask & (templates_diff < template_diff_thresh)
 
         if extra_outputs:
-            outs['templates_diff']=templates_diff
-
+            outs["templates_diff"] = templates_diff
 
     # STEP 6 : [optional] check how the rates overlap in times
     if "presence_distance" in steps:
@@ -268,7 +267,7 @@ def get_potential_auto_merge(
         pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
 
         if extra_outputs:
-            outs['presence_distances']=presence_distances
+            outs["presence_distances"] = presence_distances
 
     # STEP 7 : validate the potential merges with CC increase the contamination quality metrics
     if "check_increase_score" in steps:
@@ -281,7 +280,7 @@ def get_potential_auto_merge(
             censored_period_ms,
         )
         if extra_outputs:
-            outs['pairs_decreased_score']=pairs_decreased_score
+            outs["pairs_decreased_score"] = pairs_decreased_score
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
