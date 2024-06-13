@@ -137,8 +137,15 @@ def get_potential_auto_merge(
     #    * auto correlogram is contaminated
     #    * to far away one from each other
 
-    all_steps = ["min_spikes", "remove_contaminated", "unit_positions", "correlogram",
-        "template_similarity", "presence_distance", "check_increase_score"]
+    all_steps = [
+        "min_spikes",
+        "remove_contaminated",
+        "unit_positions",
+        "correlogram",
+        "template_similarity",
+        "presence_distance",
+        "check_increase_score",
+    ]
 
     if steps is None:
         if preset is None:
@@ -159,7 +166,7 @@ def get_potential_auto_merge(
                 "template_similarity",
                 "presence_distance",
                 "check_increase_score",
-            ]       
+            ]
 
     n = unit_ids.size
     pair_mask = np.ones((n, n), dtype="bool")
@@ -167,7 +174,7 @@ def get_potential_auto_merge(
 
     for step in steps:
 
-        assert (step in all_steps), f"{step} is not a valid step"
+        assert step in all_steps, f"{step} is not a valid step"
 
         # STEP 1 :
         if step == "min_spikes":
@@ -206,7 +213,7 @@ def get_potential_auto_merge(
 
         # STEP 4 : potential auto merge by correlogram
         elif step == "correlogram" in steps:
-            correlograms_ext = sorting_analyzer.get_extension('correlograms')
+            correlograms_ext = sorting_analyzer.get_extension("correlograms")
             if correlograms_ext is not None:
                 correlograms, bins = correlograms_ext.get_data()
             else:
