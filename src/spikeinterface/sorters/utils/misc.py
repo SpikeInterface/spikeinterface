@@ -119,7 +119,7 @@ def has_docker_nvidia_installed():
     has_dep = []
     for dep in all_dependencies:
         has_dep.append(_run_subprocess_silently(f"{dep} --version").returncode == 0)
-    return not any(has_dep)
+    return any(has_dep)
 
 
 def get_nvidia_docker_dependecies():

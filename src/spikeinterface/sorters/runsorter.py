@@ -494,7 +494,7 @@ if __name__ == '__main__':
             assert has_nvidia(), "The container requires a NVIDIA GPU capability, but it is not available"
             extra_kwargs["container_requires_gpu"] = True
 
-            if platform.system() == "Linux" and has_docker_nvidia_installed():
+            if platform.system() == "Linux" and not has_docker_nvidia_installed():
                 warn(
                     f"nvidia-required but none of \n{get_nvidia_docker_dependecies()}\n were found. "
                     f"This may result in an error being raised during sorting. Try "
