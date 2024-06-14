@@ -71,27 +71,26 @@ def download_dataset(
         dataset = datalad.api.install(path=local_folder, source=repo)
 
     local_path = local_folder / remote_path
+    dataset_status = dataset.status(path=remote_path, annex="simple")
 
-    if local_path.is_dir():
-        files_to_download = []
-        files_to_download = [file_path for file_path in local_path.rglob("*") if not file_path.is_dir()]
-    else:
-        files_to_download = [local_path]
+    # Download only files that also have a git-annex key
+    dataset_status_files = [status for status in dataset_status if status["type"] == "file"]
+    dataset_status_files = [status for status in dataset_status_files if "key" in status]
 
-    for file_path in files_to_download:
-        remote_path = file_path.relative_to(local_folder)
-        url = f"{repo}/raw/master/{remote_path}"
-        file_path = local_folder / remote_path
-        file_path.unlink(missing_ok=True)
-
+    git_annex_hashing_algorithm = {"MD5E": "md5"}
+    for status in dataset_status_files:
+        hash_algorithm = git_annex_hashing_algorithm[status["backend"]]
+        hash = status["keyname"].split(".")[0]
+        known_hash = f"{hash_algorithm}:{hash}"
+        fname = Path(status["path"]).relative_to(local_folder)
+        url = f"{repo}/raw/master/{fname}"
+        # Final path in pooch is path / fname
         full_path = pooch.retrieve(
             url=url,
-            fname=str(file_path),
+            fname=str(fname),
             path=local_folder,
-            known_hash=None,
+            known_hash=known_hash,
             progressbar=True,
         )
-
-        assert Path(full_path).is_file(), f"File {full_path} not found"
 
     return local_path

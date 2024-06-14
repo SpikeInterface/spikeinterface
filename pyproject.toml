@@ -139,8 +139,10 @@ test = [
 
     # for sortingview backend
     "sortingview",
-
+    # Download data
     "pooch>=1.8.2",
+    "datalad>=1.0.2",
+
     ## install tridesclous for testing ##
     "tridesclous>=1.6.8",
 
