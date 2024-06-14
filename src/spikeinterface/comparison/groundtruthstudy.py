@@ -9,10 +9,6 @@ import pickle
 import numpy as np
 
 from spikeinterface.core import load_extractor, create_sorting_analyzer, load_sorting_analyzer
-from spikeinterface.core.core_tools import SIJsonEncoder
-from spikeinterface.core.job_tools import split_job_kwargs
-from spikeinterface.widgets import get_some_colors
-
 from spikeinterface.sorters import run_sorter_jobs, read_sorter_folder
 
 from spikeinterface.qualitymetrics import compute_quality_metrics
@@ -178,6 +174,7 @@ class GroundTruthStudy:
                 f.unlink()
 
     def set_colors(self, colors=None, map_name="tab20"):
+        from spikeinterface.widgets import get_some_colors
         if colors is None:
             case_keys = list(self.cases.keys())
             self.colors = get_some_colors(
