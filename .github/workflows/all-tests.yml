@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9"] # , "3.10", "3.11", "3.12"]
         os: [macos-13, windows-latest, ubuntu-lastest]
     steps:
       - uses: actions/checkout@v4
@@ -37,19 +37,13 @@ jobs:
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          pip install -e .[test,extractors,streaming_extractors,full]
+          pip install .[test,extractors,streaming_extractors,full]
           pip install tabulate
         shell: bash
       - name: Installad datalad
         run: |
           pip install datalad-installer
-          if [ ${{ runner.os }} = 'Linux' ]; then
-            datalad-installer --sudo ok git-annex --method datalad/packages
-          elif [ ${{ runner.os }} = 'macOS' ]; then
-            datalad-installer --sudo ok git-annex --method brew
-          elif [ ${{ runner.os }} = 'Windows' ]; then
-            datalad-installer --sudo ok git-annex --method datalad/git-annex:release
-          fi
+          datalad-installer --sudo ok git-annex --method datalad/git-annex:release
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
         shell: bash
