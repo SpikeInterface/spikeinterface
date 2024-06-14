@@ -49,8 +49,6 @@ def download_dataset(
     import pooch
     import datalad.api
     from datalad.support.gitrepo import GitRepo
-    import requests
-    import time
 
     if local_folder is None:
         base_local_folder = get_global_dataset_folder()
@@ -82,34 +80,14 @@ def download_dataset(
         fname = Path(status["path"]).relative_to(local_folder)
         url = f"{repo}/raw/master/{fname.as_posix()}"
         expected_full_path = local_folder / fname
-        attempt = 0
-        max_attempts = 3
 
-        while attempt < max_attempts:
-            try:
-                full_path = pooch.retrieve(
-                    url=url,
-                    fname=str(fname),
-                    path=local_folder,
-                    known_hash=known_hash,
-                    progressbar=True,
-                )
-                assert full_path == str(expected_full_path)
-                break  # exit the loop if successful
-            except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 500:
-                    attempt += 1
-                    if attempt < max_attempts:
-                        print(
-                            f"500 Server Error encountered. Retrying in 10 seconds... (Attempt {attempt}/{max_attempts})"
-                        )
-                        time.sleep(10)
-                    else:
-                        raise RuntimeError(f"Tried {max_attempts} times . 500 Server Error persists.")
-                else:
-                    raise  #
+        full_path = pooch.retrieve(
+            url=url,
+            fname=str(fname),
+            path=local_folder,
+            known_hash=known_hash,
+            progressbar=True,
+        )
+        assert full_path == str(expected_full_path)
 
-            # Test that the full path is the expected one
-            assert full_path == str(expected_full_path)
-
-        return local_path
+    return local_path
