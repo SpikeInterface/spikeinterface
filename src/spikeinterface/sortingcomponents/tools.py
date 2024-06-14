@@ -104,7 +104,7 @@ def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache
     if mode == "memory":
         if HAVE_PSUTIL:
             assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
-            memory_usage = memory_limit * psutil.virtual_memory()[4]
+            memory_usage = memory_limit * psutil.virtual_memory().available
             if recording.get_total_memory_size() < memory_usage:
                 recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
             else:

@@ -4,7 +4,6 @@ from pathlib import Path
 from packaging import version
 from typing import Optional
 
-import neo
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -43,9 +42,8 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         use_names_as_ids=False,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        if version.parse(neo.__version__) > version.parse("0.12.0"):
-            # do not load spike because this is slow but not released yet
-            neo_kwargs["load_nev"] = False
+        neo_kwargs["load_nev"] = False  # Avoid loading spikes release in neo 0.12.0
+
         # trick to avoid to select automatically the correct stream_id
         suffix = Path(file_path).suffix
         if ".ns" in suffix:

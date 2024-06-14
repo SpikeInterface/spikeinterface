@@ -1,9 +1,7 @@
 from __future__ import annotations
-from operator import is_
 
 from .si_based import ComponentsBasedSorter
 
-import os
 import shutil
 import numpy as np
 
