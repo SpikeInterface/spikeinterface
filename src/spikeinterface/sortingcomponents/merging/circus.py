@@ -16,25 +16,23 @@ class CircusMerging(BaseMergingEngine):
     default_params = {
         "templates": None,
         "verbose": True,
-        "similarity_kwargs" : {"method" : "l2", 
-                               "support" : "union", 
-                               "max_lag_ms" : 0.2},
+        "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
         "curation_kwargs": {
             "minimum_spikes": 50,
             "corr_diff_thresh": 0.5,
             "maximum_distance_um": 20,
             "presence_distance_thresh": 100,
             "template_diff_thresh": 0.3,
-            "bin_ms" : 1,
-            "window_ms": 250
+            "bin_ms": 1,
+            "window_ms": 250,
         },
         "temporal_splits_kwargs": {
             "minimum_spikes": 50,
             "maximum_distance_um": 20,
             "presence_distance_thresh": 100,
             "template_diff_thresh": 0.3,
-            "bin_ms" : 1,
-            "window_ms": 250
+            "bin_ms": 1,
+            "window_ms": 250,
         },
     }
 
@@ -58,8 +56,7 @@ class CircusMerging(BaseMergingEngine):
             self.analyzer.compute(["random_spikes", "templates"])
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
 
-        self.analyzer.compute("template_similarity", 
-                              **self.params['similarity_kwargs'])
+        self.analyzer.compute("template_similarity", **self.params["similarity_kwargs"])
 
     def run(self, extra_outputs=False):
         curation_kwargs = self.params.get("curation_kwargs", None)
