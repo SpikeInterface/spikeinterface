@@ -287,7 +287,7 @@ def get_potential_auto_merge(
             presence_distances = compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs)
             pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
             outs["presence_distances"] = presence_distances
-        
+
         # STEP 7 : [optional] check if the cross contamination is significant
         elif step == "cross_contamination" in steps:
             refractory = (censored_period_ms, refractory_period_ms)
@@ -472,7 +472,7 @@ def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_p
         Any pair above this threshold will not be considered.
     refractory_period : array/list/tuple of 2 floats
         (censored_period_ms, refractory_period_ms)
-    
+
     """
 
     sorting = analyzer.sorting
@@ -481,7 +481,7 @@ def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_p
     sf = analyzer.recording.sampling_frequency
     n_frames = analyzer.recording.get_num_samples()
     from spikeinterface.sortingcomponents.merging.lussac import estimate_cross_contamination
-    
+
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
 
@@ -496,15 +496,16 @@ def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_p
         for unit_ind2 in range(unit_ind1 + 1, len(unit_ids)):
             if not pair_mask[unit_ind1, unit_ind2]:
                 continue
-            
+
             unit_id2 = unit_ids[unit_ind2]
             spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
             # Compuyting the cross-contamination difference
             CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2] = estimate_cross_contamination(
                 spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold
             )
-        
+
     return CC, p_values
+
 
 def compute_templates_diff(
     sorting, templates_array, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1", sparsity=None
