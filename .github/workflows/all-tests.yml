@@ -80,10 +80,10 @@ jobs:
       - name: Test core sorters
         run: ./.github/run_tests.sh sorters --no-virtual-env
         shell: bash
-      - name: Test core
-        run: pytest -m "core"
       - name: Test internal sorters
         run: ./.github/run_tests.sh sorters_internal --no-virtual-env
+      - name: Test core
+        run: pytest -m "core"
         shell: bash
       - name: Test extractors
         env:

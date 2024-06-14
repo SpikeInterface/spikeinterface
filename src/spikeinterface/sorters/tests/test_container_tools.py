@@ -8,6 +8,7 @@ import spikeinterface as si
 from spikeinterface import generate_ground_truth_recording
 
 from spikeinterface.sorters.container_tools import find_recording_folders, ContainerClient, install_package_in_container
+import platform
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
@@ -58,7 +59,9 @@ def test_find_recording_folders(setup_module):
     assert str(f2[0]) == str((cache_folder / "multi").absolute())
 
     # in this case the paths are in 3 separate drives
-    assert len(f3) == 3
+    # Not a good test on windows because all the paths resolve to C when absolute in `find_recording_folders`
+    if platform.system() != "Windows":
+        assert len(f3) == 3
 
 
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
