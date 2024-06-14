@@ -252,7 +252,7 @@ class UnitWaveformsWidget(BaseWidget):
         else:
             if dp.same_axis:
                 backend_kwargs["num_axes"] = 1
-                backend_kwargs["ncols"] = None
+                backend_kwargs["ncols"] = 1
             else:
                 backend_kwargs["num_axes"] = len(dp.unit_ids)
                 backend_kwargs["ncols"] = min(dp.ncols, len(dp.unit_ids))
@@ -487,11 +487,10 @@ class UnitWaveformsWidget(BaseWidget):
 
         # a first update
         self._update_plot(None)
-
-        self.unit_selector.observe(self._update_plot, names="value", type="change")
-        self.scaler.observe(self._update_plot, names="value", type="change")
-        self.widen_narrow.observe(self._update_plot, names="value", type="change")
         for w in (
+            self.unit_selector,
+            self.scaler,
+            self.widen_narrow,
             self.same_axis_button,
             self.plot_templates_button,
             self.template_shading_button,
@@ -592,30 +591,38 @@ class UnitWaveformsWidget(BaseWidget):
                     ax.axis("off")
 
         # update probe plot
-        self.ax_probe.plot(
-            channel_locations[:, 0], channel_locations[:, 1], ls="", marker="o", color="gray", markersize=2, alpha=0.5
+        self._plot_probe(
+            self.ax_probe,
+            channel_locations,
+            unit_ids,
         )
-        self.ax_probe.axis("off")
-        self.ax_probe.axis("equal")
-
-        # TODO this could be done with probeinterface plotting plotting tools!!
-        for unit in unit_ids:
-            channel_inds = data_plot["sparsity"].unit_id_to_channel_indices[unit]
-            self.ax_probe.plot(
-                channel_locations[channel_inds, 0],
-                channel_locations[channel_inds, 1],
-                ls="",
-                marker="o",
-                markersize=3,
-                color=self.next_data_plot["unit_colors"][unit],
-            )
-        self.ax_probe.set_xlim(np.min(channel_locations[:, 0]) - 10, np.max(channel_locations[:, 0]) + 10)
         fig_probe = self.ax_probe.get_figure()
 
         self.fig_wf.canvas.draw()
         self.fig_wf.canvas.flush_events()
         fig_probe.canvas.draw()
         fig_probe.canvas.flush_events()
+
+    def _plot_probe(self, ax, channel_locations, unit_ids):
+        # update probe plot
+        ax.plot(
+            channel_locations[:, 0], channel_locations[:, 1], ls="", marker="o", color="gray", markersize=2, alpha=0.5
+        )
+        ax.axis("off")
+        ax.axis("equal")
+
+        # TODO this could be done with probeinterface plotting plotting tools!!
+        for unit in unit_ids:
+            channel_inds = self.data_plot["sparsity"].unit_id_to_channel_indices[unit]
+            ax.plot(
+                channel_locations[channel_inds, 0],
+                channel_locations[channel_inds, 1],
+                ls="",
+                marker="o",
+                markersize=3,
+                color=self.data_plot["unit_colors"][unit],
+            )
+        ax.set_xlim(np.min(channel_locations[:, 0]) - 10, np.max(channel_locations[:, 0]) + 10)
 
 
 def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=False, widen_narrow_scale=1.0):
