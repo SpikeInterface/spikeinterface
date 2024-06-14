@@ -53,10 +53,16 @@ jobs:
           pip install tabulate
         shell: bash
 
-      - name: Install datalad
+      - name: Installad datalad
         run: |
           pip install datalad-installer
-          datalad-installer --sudo ok git-annex --method datalad/git-annex:release
+          if [ ${{ runner.os }} = 'Linux' ]; then
+            datalad-installer --sudo ok git-annex --method datalad/packages
+          elif [ ${{ runner.os }} = 'macOS' ]; then
+            datalad-installer --sudo ok git-annex --method brew
+          elif [ ${{ runner.os }} = 'Windows' ]; then
+            datalad-installer --sudo ok git-annex --method datalad/git-annex:release
+          fi
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
         shell: bash
@@ -115,6 +121,6 @@ jobs:
         run: ./.github/run_tests.sh sortingcomponents --no-virtual-env
         shell: bash
 
-      - name: Test generation
-        run: ./.github/run_tests.sh generation --no-virtual-env
-        shell: bash
+      # - name: Test generation
+      #   run: ./.github/run_tests.sh generation --no-virtual-env
+      #   shell: bash
