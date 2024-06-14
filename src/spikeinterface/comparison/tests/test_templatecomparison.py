@@ -1,19 +1,9 @@
 import shutil
 import pytest
-from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import create_sorting_analyzer, generate_ground_truth_recording
 from spikeinterface.comparison import compare_templates, compare_multiple_templates
-
-
-# if hasattr(pytest, "global_test_folder"):
-#     cache_folder = pytest.global_test_folder / "comparison"
-# else:
-#     cache_folder = Path("cache_folder") / "comparison"
-
-
-# test_dir = cache_folder / "temp_comp_test"
 
 
 # def setup_module():

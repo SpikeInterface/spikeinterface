@@ -1,6 +1,5 @@
 import pytest
 import shutil
-from pathlib import Path
 
 import pytest
 
@@ -10,11 +9,6 @@ from spikeinterface import NumpySorting
 from spikeinterface.core import generate_sorting
 
 from spikeinterface.postprocessing import align_sorting
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "postprocessing"
-else:
-    cache_folder = Path("cache_folder") / "postprocessing"
 
 
 def test_align_sorting():

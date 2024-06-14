@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.101.0"
+version = "0.101.0rc0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -91,7 +91,7 @@ full = [
     "h5py",
     "pandas",
     "xarray",
-    "scipy<1.13",
+    "scipy",
     "scikit-learn",
     "networkx",
     "distinctipy",
@@ -121,8 +121,8 @@ test_core = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test = [
@@ -139,10 +139,9 @@ test = [
 
     # for sortingview backend
     "sortingview",
-
-    # recent datalad need a too recent version for git-annex
-    # so we use an old one here
-    "datalad==0.16.2",
+    # Download data
+    "pooch>=1.8.2",
+    "datalad>=1.0.2",
 
     ## install tridesclous for testing ##
     "tridesclous>=1.6.8",
@@ -154,8 +153,8 @@ test = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 docs = [
@@ -175,8 +174,8 @@ docs = [
     "xarray", # For use of SortingAnalyzer zarr format
     "networkx",
     # for release we need pypi, so this needs to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
 ]
 

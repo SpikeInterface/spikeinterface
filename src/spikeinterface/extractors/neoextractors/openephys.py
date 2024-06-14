@@ -49,17 +49,17 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
         The folder path to load the recordings from
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotation from neo
-    ignore_timestamps_errors: None
+    ignore_timestamps_errors : None
         Deprecated keyword argument. This is now ignored.
         neo.OpenEphysRawIO is now handling gaps directly but makes the read slower.
     """
@@ -114,7 +114,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
         The folder path to the root folder (containing the record node folders)
     load_sync_channel : bool, default: False
         If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded
@@ -123,17 +123,17 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing
-    experiment_names: str, list, or None, default: None
+    experiment_names : str, list, or None, default: None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
         E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotation from neo
 
     """
@@ -283,7 +283,7 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
 
     """
 
@@ -307,15 +307,15 @@ def read_openephys(folder_path, **kwargs):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to openephys folder
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotation from neo
     load_sync_channel : bool, default: False
         If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
@@ -326,19 +326,19 @@ def read_openephys(folder_path, **kwargs):
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing.
         For open ephsy binary format only
-    experiment_names: str, list, or None, default: None
+    experiment_names : str, list, or None, default: None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
         E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
         For open ephsy binary format only
-    ignore_timestamps_errors: bool, default: False
+    ignore_timestamps_errors : bool, default: False
         Ignore the discontinuous timestamps errors in neo
         For open ephsy legacy format only
 
 
     Returns
     -------
-    recording: OpenEphysLegacyRecordingExtractor or OpenEphysBinaryExtractor
+    recording : OpenEphysLegacyRecordingExtractor or OpenEphysBinaryExtractor
     """
     # auto guess format
     files = [f for f in Path(folder_path).iterdir()]
@@ -357,14 +357,14 @@ def read_openephys_event(folder_path, block_index=None):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to openephys folder
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load.
 
     Returns
     -------
-    event: OpenEphysBinaryEventExtractor
+    event : OpenEphysBinaryEventExtractor
     """
     # auto guess format
     files = [str(f) for f in Path(folder_path).iterdir()]

@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.postprocessing import ComputePrincipalComponents, compute_principal_components
-from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite, cache_folder
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
 
 DEBUG = False
@@ -100,12 +100,12 @@ class PrincipalComponentsExtensionTest(AnalyzerExtensionCommonTestSuite, unittes
             sorting_analyzer.compute("principal_components", mode="by_channel_local", n_components=n_components)
             ext = sorting_analyzer.get_extension("principal_components")
 
-            pc_file1 = cache_folder / "all_pc1.npy"
+            pc_file1 = self.cache_folder / "all_pc1.npy"
             ext.run_for_all_spikes(pc_file1, chunk_size=10000, n_jobs=1)
             all_pc1 = np.load(pc_file1)
             assert all_pc1.shape[0] == num_spikes
 
-            pc_file2 = cache_folder / "all_pc2.npy"
+            pc_file2 = self.cache_folder / "all_pc2.npy"
             ext.run_for_all_spikes(pc_file2, chunk_size=10000, n_jobs=2)
             all_pc2 = np.load(pc_file2)
 

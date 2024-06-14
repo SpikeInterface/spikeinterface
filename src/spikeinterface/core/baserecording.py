@@ -355,7 +355,7 @@ class BaseRecording(BaseRecordingSnippets):
                     )
                     warnings.warn(message)
 
-            if not self.has_scaled():
+            if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
                     # this helps a lot for simulated data
@@ -399,9 +399,9 @@ class BaseRecording(BaseRecordingSnippets):
         dict
             A dictionary containing the following key-value pairs:
 
-            - "sampling_frequency": The sampling frequency of the RecordingSegment.
-            - "t_start": The start time of the RecordingSegment.
-            - "time_vector": The time vector of the RecordingSegment.
+            - "sampling_frequency" : The sampling frequency of the RecordingSegment.
+            - "t_start" : The start time of the RecordingSegment.
+            - "time_vector" : The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -643,7 +643,7 @@ class BaseRecording(BaseRecordingSnippets):
         from .channelslice import ChannelSliceRecording
 
         warnings.warn(
-            "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            "Recording.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -657,7 +657,23 @@ class BaseRecording(BaseRecordingSnippets):
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 
-    def _frame_slice(self, start_frame, end_frame):
+    def frame_slice(self, start_frame: int, end_frame: int) -> BaseRecording:
+        """
+        Returns a new recording with sliced frames. Note that this operation is not in place.
+
+        Parameters
+        ----------
+        start_frame : int
+            The start frame
+        end_frame : int
+            The end frame
+
+        Returns
+        -------
+        BaseRecording
+            The object with sliced frames
+        """
+
         from .frameslicerecording import FrameSliceRecording
 
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
@@ -772,9 +788,9 @@ class BaseRecordingSegment(BaseSegment):
         dict
             A dictionary containing the following key-value pairs:
 
-            - "sampling_frequency": The sampling frequency of the RecordingSegment.
-            - "t_start": The start time of the RecordingSegment.
-            - "time_vector": The time vector of the RecordingSegment.
+            - "sampling_frequency" : The sampling frequency of the RecordingSegment.
+            - "t_start" : The start time of the RecordingSegment.
+            - "time_vector" : The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -814,7 +830,7 @@ class BaseRecordingSegment(BaseSegment):
         """Returns the number of samples in this signal segment
 
         Returns:
-            SampleIndex: Number of samples in the signal segment
+            SampleIndex : Number of samples in the signal segment
         """
         # must be implemented in subclass
         raise NotImplementedError
@@ -830,16 +846,16 @@ class BaseRecordingSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame: int | None, default: None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame: int | None, default: None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
-        channel_indices: list | np.array | tuple | None, default: None
+        channel_indices : list | np.array | tuple | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
         -------
-        traces: np.ndarray
+        traces : np.ndarray
             Array of traces, num_samples x num_channels
         """
         # must be implemented in subclass
