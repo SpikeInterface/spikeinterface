@@ -34,15 +34,18 @@ jobs:
           python-version: ${{ matrix.python-version }}
           # cache: 'pip' # caching pip dependencies
 
+      - name: Get current hash (SHA) of the ephy_testing_data repo
+        id: repo_hash
+        run: |
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+
       - name: Cache datasets
         id: cache-datasets
         uses: actions/cache@v4
-        env:
-          # The key depends on the last commit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-          HASH_EPHY_DATASET: $(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)
         with:
           path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ env.HASH_EPHY_DATASET }}
+          key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
           restore-keys: ${{ runner.os }}-datasets
 
       - name: Install packages
