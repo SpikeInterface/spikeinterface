@@ -238,6 +238,9 @@ class LussacMerging(BaseMergingEngine):
     default_params = {
         "templates": None,
         "verbose": True,
+        "similarity_kwargs" : {"method" : "cosine", 
+                               "support" : "union", 
+                               "max_lag_ms" : 0.2},
         "lussac_kwargs": {
             "minimum_spikes": 50,
             "maximum_distance_um" : 10,
@@ -267,9 +270,7 @@ class LussacMerging(BaseMergingEngine):
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
 
         self.analyzer.compute("template_similarity", 
-                              method='cosine', 
-                              support='union', 
-                              max_lag_ms=0.2)
+                              **self.params['similarity_kwargs'])
 
     def run(self, extra_outputs=False):
         lussac_kwargs = self.params.get("lussac_kwargs", None)
