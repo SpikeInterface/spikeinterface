@@ -79,7 +79,6 @@ def download_dataset(
         known_hash = f"{hash_algorithm}:{hash}"
         fname = Path(status["path"]).relative_to(local_folder)
         url = f"{repo}/raw/master/{fname.as_posix()}"
-        # Final path in pooch is path / fname
         expected_full_path = local_folder / fname
         full_path = pooch.retrieve(
             url=url,
