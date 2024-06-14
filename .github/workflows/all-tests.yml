@@ -37,7 +37,7 @@ jobs:
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          pip install .[test,extractors,streaming_extractors,full]
+          pip install -e .[test,extractors,streaming_extractors,full]
           pip install tabulate
         shell: bash
       - name: Installad datalad
