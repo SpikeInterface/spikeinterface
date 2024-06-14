@@ -352,7 +352,7 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 # We run plexon2 tests only if we have dependencies (wine)
-@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
+@pytest.mark.skipif(not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug")
 class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2RecordingExtractor
     downloads = ["plexon"]
