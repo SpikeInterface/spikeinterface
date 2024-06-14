@@ -175,6 +175,7 @@ class GroundTruthStudy:
 
     def set_colors(self, colors=None, map_name="tab20"):
         from spikeinterface.widgets import get_some_colors
+
         if colors is None:
             case_keys = list(self.cases.keys())
             self.colors = get_some_colors(
