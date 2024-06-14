@@ -64,9 +64,6 @@ def download_dataset(
         dataset = datalad.api.Dataset(path=local_folder)
         # make sure git repo is in clean state
         repo_object = dataset.repo
-        if update_if_exists:
-            repo_object.call_git(["checkout", "--force", "master"])
-            dataset.update(merge=True)
     else:
         dataset = datalad.api.install(path=local_folder, source=repo)
 
@@ -83,8 +80,9 @@ def download_dataset(
         hash = status["keyname"].split(".")[0]
         known_hash = f"{hash_algorithm}:{hash}"
         fname = Path(status["path"]).relative_to(local_folder)
-        url = f"{repo}/raw/master/{fname}"
+        url = f"{repo}/raw/master/{fname.as_posix()}"
         # Final path in pooch is path / fname
+        expected_full_path = local_folder / fname
         full_path = pooch.retrieve(
             url=url,
             fname=str(fname),
@@ -92,5 +90,6 @@ def download_dataset(
             known_hash=known_hash,
             progressbar=True,
         )
+        assert full_path == str(expected_full_path)
 
     return local_path
