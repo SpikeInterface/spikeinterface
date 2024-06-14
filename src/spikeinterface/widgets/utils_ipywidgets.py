@@ -401,7 +401,7 @@ class UnitSelector(W.VBox):
             options=self.unit_ids,
             value=self.unit_ids,
             disabled=False,
-            layout=W.Layout(height="100%", width="80%", align="center"),
+            layout=W.Layout(height="100%", width="3cm", align="center"),
         )
 
         super(W.VBox, self).__init__(children=[label, self.selector], **kwargs)
