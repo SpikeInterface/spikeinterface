@@ -240,10 +240,10 @@ class LussacMerging(BaseMergingEngine):
         "verbose": True,
         "lussac_kwargs": {
             "minimum_spikes": 50,
-            "maximum_distance_um" : 10,
+            "maximum_distance_um": 10,
             "refractory_period": (0.3, 1.0),
             "template_diff_thresh": 0.5,
-        }
+        },
     }
 
     def __init__(self, recording, sorting, kwargs):
@@ -266,10 +266,7 @@ class LussacMerging(BaseMergingEngine):
             self.analyzer.compute(["random_spikes", "templates"])
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
 
-        self.analyzer.compute("template_similarity", 
-                              method='cosine', 
-                              support='union', 
-                              max_lag_ms=0.2)
+        self.analyzer.compute("template_similarity", method="cosine", support="union", max_lag_ms=0.2)
 
     def run(self, extra_outputs=False):
         lussac_kwargs = self.params.get("lussac_kwargs", None)
