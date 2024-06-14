@@ -1,0 +1,14 @@
+.. _release0.100.7:
+
+SpikeInterface 0.100.7 release notes
+------------------------------------
+
+7th June     2024
+
+Minor release with bug fixes
+
+* Fix get_traces for a local common reference (#2649)
+* Update KS4 parameters (#2810)
+* Zarr: extract time vector once and for all! (#2828)
+* Fix waveforms save in recordingless mode (#2889)
+* Fix the new way of handling cmap in matpltolib. This fix the matplotib 3.9 problem related to this (#2891)
