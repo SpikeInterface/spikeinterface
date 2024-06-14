@@ -204,17 +204,17 @@ def estimate_cross_contamination(
     spike_train1 = spike_train1.astype(np.int64, copy=False)
     spike_train2 = spike_train2.astype(np.int64, copy=False)
 
-    N1 = len(spike_train1)
-    N2 = len(spike_train2)
+    N1 = float(len(spike_train1))
+    N2 = float(len(spike_train2))
     C1 = estimate_contamination(spike_train1, sf, T, refractory_period)
 
-    t_c = refractory_period[0] * 1e-3 * sf
-    t_r = refractory_period[1] * 1e-3 * sf
+    t_c = int(round(refractory_period[0] * 1e-3 * sf))
+    t_r = int(round(refractory_period[1] * 1e-3 * sf))
     n_violations = compute_nb_coincidence(spike_train1, spike_train2, t_r) - compute_nb_coincidence(
         spike_train1, spike_train2, t_c
     )
 
-    estimation = 1 - ((n_violations * T) / (2 * N1 * N2 * t_r) - 1) / (C1 - 1) if C1 != 1.0 else -np.inf
+    estimation = 1 - ((n_violations * T) / (2 * N1 * N2 * t_r) - 1.0) / (C1 - 1.0) if C1 != 1.0 else -np.inf
     if limit is None:
         return estimation
 
@@ -238,14 +238,14 @@ class LussacMerging(BaseMergingEngine):
     default_params = {
         "templates": None,
         "verbose": True,
-        "similarity_kwargs" : {"method" : "cosine", 
+        "similarity_kwargs" : {"method" : "l2", 
                                "support" : "union", 
                                "max_lag_ms" : 0.2},
         "lussac_kwargs": {
             "minimum_spikes": 50,
-            "maximum_distance_um" : 10,
+            "maximum_distance_um" : 20,
             "refractory_period": (0.3, 1.0),
-            "template_diff_thresh": 0.5,
+            "template_diff_thresh": 0.3,
         }
     }
 
