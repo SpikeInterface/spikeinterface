@@ -10,14 +10,6 @@ from spikeinterface.core import write_binary_recording
 import json
 from ..basesorter import BaseSorter, get_job_kwargs
 
-try:
-    import pykilosort
-    from pykilosort import Bunch, add_default_handler, run
-
-    HAVE_PYKILOSORT = True
-except ImportError:
-    HAVE_PYKILOSORT = False
-
 
 class PyKilosortSorter(BaseSorter):
     """Pykilosort Sorter object."""
@@ -128,10 +120,19 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        try:
+            import pykilosort
+
+            HAVE_PYKILOSORT = True
+        except ImportError:
+            HAVE_PYKILOSORT = False
+
         return HAVE_PYKILOSORT
 
     @classmethod
     def get_sorter_version(cls):
+        import pykilosort
+
         return pykilosort.__version__
 
     @classmethod
@@ -150,6 +151,8 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        from pykilosort import Bunch, run
+
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
         if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):

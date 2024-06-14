@@ -135,9 +135,20 @@ class BaseSnippets(BaseRecordingSnippets):
     def _save(self, format="binary", **save_kwargs):
         raise NotImplementedError
 
-    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
+    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseSnippets":
         from .channelslice import ChannelSliceSnippets
 
+        return ChannelSliceSnippets(self, channel_ids)
+
+    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
+        from .channelslice import ChannelSliceSnippets
+        import warnings
+
+        warnings.warn(
+            "Snippets.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         sub_recording = ChannelSliceSnippets(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
 
@@ -147,9 +158,6 @@ class BaseSnippets(BaseRecordingSnippets):
         new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceSnippets(self, new_channel_ids)
         return sub_recording
-
-    def _frame_slice(self, start_frame, end_frame):
-        raise NotImplementedError
 
     def _select_segments(self, segment_indices):
         from .segmentutils import SelectSegmentSnippets
@@ -235,14 +243,14 @@ class BaseSnippetsSegment(BaseSegment):
 
         Parameters
         ----------
-        indices: list[int]
+        indices : list[int]
             Indices of the snippets to return
-        channel_indices: Union[list, None], default: None
+        channel_indices : Union[list, None], default: None
             Indices of channels to return, or all channels if None
 
         Returns
         -------
-        snippets: np.ndarray
+        snippets : np.ndarray
             Array of snippets, num_snippets x num_samples x num_channels
         """
         raise NotImplementedError
@@ -251,7 +259,7 @@ class BaseSnippetsSegment(BaseSegment):
         """Returns the number of snippets in this segment
 
         Returns:
-            SampleIndex: Number of snippets in the segment
+            SampleIndex : Number of snippets in the segment
         """
         raise NotImplementedError
 
@@ -259,7 +267,7 @@ class BaseSnippetsSegment(BaseSegment):
         """Returns the frames of the snippets in this  segment
 
         Returns:
-            SampleIndex: Number of samples in the  segment
+            SampleIndex : Number of samples in the  segment
         """
         raise NotImplementedError
 
@@ -269,14 +277,14 @@ class BaseSnippetsSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame: Union[int, None], default: None
+        start_frame : Union[int, None], default: None
             start sample index, or zero if None
-        end_frame: Union[int, None], default: None
+        end_frame : Union[int, None], default: None
             end_sample, or number of samples if None
 
         Returns
         -------
-        snippets: slice
+        snippets : slice
             slice of selected snippets
         """
         raise NotImplementedError

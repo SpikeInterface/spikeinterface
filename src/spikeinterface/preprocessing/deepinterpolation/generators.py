@@ -1,15 +1,8 @@
 from __future__ import annotations
-import tempfile
-import json
 from typing import Optional
 import numpy as np
-import os
 
-from ...core import load_extractor, concatenate_recordings, BaseRecording, BaseRecordingSegment
-
-from .tf_utils import has_tf, import_tf
-
-from ...core import load_extractor
+from ...core import concatenate_recordings, BaseRecording, BaseRecordingSegment
 
 from deepinterpolation.generator_collection import SequentialGenerator
 
@@ -41,16 +34,16 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
                 r.get_num_channels() == recordings[0].get_num_channels() for r in recordings[1:]
             ), "All recordings must have the same number of channels"
 
-        total_num_samples = np.sum(r.get_total_samples() for r in recordings)
+        total_num_samples = sum([r.get_total_samples() for r in recordings])
         # In case of multiple recordings and/or multiple segments, we calculate the frame periods to be excluded (borders)
         exclude_intervals = []
         pre_extended = pre_frame + pre_post_omission
         post_extended = post_frame + pre_post_omission
         for i, recording in enumerate(recordings):
-            total_samples_pre = np.sum(r.get_total_samples() for r in recordings[:i])
+            total_samples_pre = sum([r.get_total_samples() for r in recordings[:i]])
             for segment_index in range(recording.get_num_segments()):
                 # exclude samples at the border of the recordings
-                num_samples_segment_pre = np.sum(recording.get_num_samples(s) for s in np.arange(segment_index))
+                num_samples_segment_pre = sum([recording.get_num_samples(s) for s in np.arange(segment_index)])
                 if num_samples_segment_pre > 0:
                     exclude_intervals.append(
                         (
@@ -63,7 +56,7 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
                 exclude_intervals.append((total_samples_pre - pre_extended - 1, total_samples_pre + post_extended))
 
         total_valid_samples = (
-            total_num_samples - np.sum([end - start for start, end in exclude_intervals]) - pre_extended - post_extended
+            total_num_samples - sum([end - start for start, end in exclude_intervals]) - pre_extended - post_extended
         )
         self.total_samples = int(total_valid_samples) if total_samples == -1 else total_samples
         assert len(desired_shape) == 2, "desired_shape should be 2D"
@@ -86,12 +79,7 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
         sequential_generator_params["total_samples"] = self.total_samples
         sequential_generator_params["pre_post_omission"] = pre_post_omission
 
-        with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False, dir="/tmp") as f:
-            json.dump(sequential_generator_params, f)
-            f.flush()
-            json_path = f.name
-
-        super().__init__(json_path)
+        super().__init__(sequential_generator_params)
 
         self._update_end_frame(total_num_samples)
 
@@ -206,9 +194,6 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
         return output.squeeze().reshape(-1, self.recording.get_num_channels())
 
 
-from deepinterpolation.generator_collection import SequentialGenerator
-
-
 class SpikeInterfaceRecordingSegmentGenerator(SequentialGenerator):
     """This generator is used when dealing with a SpikeInterface recording.
     The desired shape controls the reshaping of the input data before convolutions."""
@@ -246,12 +231,7 @@ class SpikeInterfaceRecordingSegmentGenerator(SequentialGenerator):
         sequential_generator_params["total_samples"] = self.total_samples
         sequential_generator_params["pre_post_omission"] = pre_post_omission
 
-        with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False, dir="/tmp") as f:
-            json.dump(sequential_generator_params, f)
-            f.flush()
-            json_path = f.name
-
-        super().__init__(json_path)
+        super().__init__(sequential_generator_params)
 
         self._update_end_frame(num_segment_samples)
         # IMPORTANT: this is used for inference, so we don't want to shuffle

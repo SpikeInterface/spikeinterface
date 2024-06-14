@@ -10,11 +10,8 @@ from spikeinterface.core import ChannelSliceRecording, BinaryRecordingExtractor
 from spikeinterface.core.generate import generate_recording
 
 
-def test_ChannelSliceRecording():
-    if hasattr(pytest, "global_test_folder"):
-        cache_folder = pytest.global_test_folder / "core"
-    else:
-        cache_folder = Path("cache_folder") / "core"
+def test_ChannelSliceRecording(create_cache_folder):
+    cache_folder = create_cache_folder
 
     num_seg = 2
     num_chan = 3

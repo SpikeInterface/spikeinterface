@@ -12,9 +12,9 @@ class StudyRunTimesWidget(BaseWidget):
 
     Parameters
     ----------
-    study: GroundTruthStudy
+    study : GroundTruthStudy
         A study object.
-    case_keys: list or None
+    case_keys : list or None
         A selection of cases to plot, if None, then all.
 
     """
@@ -62,9 +62,9 @@ class StudyUnitCountsWidget(BaseWidget):
 
     Parameters
     ----------
-    study: GroundTruthStudy
+    study : GroundTruthStudy
         A study object.
-    case_keys: list or None
+    case_keys : list or None
         A selection of cases to plot, if None, then all.
 
     """
@@ -134,17 +134,17 @@ class StudyPerformances(BaseWidget):
 
     Parameters
     ----------
-    study: GroundTruthStudy
+    study : GroundTruthStudy
         A study object.
-    mode: "ordered" | "snr" | "swarm", default: "ordered"
+    mode : "ordered" | "snr" | "swarm", default: "ordered"
         Which plot mode to use:
 
         * "ordered": plot performance metrics vs unit indices ordered by decreasing accuracy
         * "snr": plot performance metrics vs snr
         * "swarm": plot performance metrics as a swarm plot (see seaborn.swarmplot for details)
-    performance_names: list or tuple, default: ("accuracy", "precision", "recall")
+    performance_names : list or tuple, default: ("accuracy", "precision", "recall")
         Which performances to plot ("accuracy", "precision", "recall")
-    case_keys: list or None
+    case_keys : list or None
         A selection of cases to plot, if None, then all.
     """
 
@@ -237,11 +237,11 @@ class StudyAgreementMatrix(BaseWidget):
 
     Parameters
     ----------
-    study: GroundTruthStudy
+    study : GroundTruthStudy
         A study object.
-    case_keys: list or None
+    case_keys : list or None
         A selection of cases to plot, if None, then all.
-    ordered: bool
+    ordered : bool
         Order units with best agreement scores.
         This enable to see agreement on a diagonal.
     """
@@ -310,9 +310,9 @@ class StudySummary(BaseWidget):
 
     Parameters
     ----------
-    study: GroundTruthStudy
+    study : GroundTruthStudy
         A study object.
-    case_keys: list or None, default: None
+    case_keys : list or None, default: None
         A selection of cases to plot, if None, then all.
     """
 

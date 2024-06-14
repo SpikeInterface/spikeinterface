@@ -7,7 +7,6 @@ import numpy.typing as npt
 import shutil
 import warnings
 
-import spikeinterface
 from spikeinterface.core import (
     write_binary_recording,
     BinaryRecordingExtractor,
@@ -16,11 +15,6 @@ from spikeinterface.core import (
     SortingAnalyzer,
 )
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
-from spikeinterface.postprocessing import (
-    compute_spike_amplitudes,
-    compute_template_similarity,
-    compute_principal_components,
-)
 
 
 def export_to_phy(
@@ -43,27 +37,27 @@ def export_to_phy(
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    output_folder: str | Path
+    output_folder : str | Path
         The output folder where the phy template-gui files are saved
-    compute_pc_features: bool, default: True
+    compute_pc_features : bool, default: True
         If True, pc features are computed
-    compute_amplitudes: bool, default: True
+    compute_amplitudes : bool, default: True
         If True, waveforms amplitudes are computed
-    sparsity: ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default: None
         The sparsity object
-    copy_binary: bool, default: True
+    copy_binary : bool, default: True
         If True, the recording is copied and saved in the phy "output_folder"
-    remove_if_exists: bool, default: False
+    remove_if_exists : bool, default: False
         If True and "output_folder" exists, it is removed and overwritten
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Used by compute_spike_amplitudes
-    template_mode: str, default: "average"
+    template_mode : str, default: "average"
         Parameter "mode" to be given to SortingAnalyzer.get_template()
-    dtype: dtype or None, default: None
+    dtype : dtype or None, default: None
         Dtype to save binary data
-    verbose: bool, default: True
+    verbose : bool, default: True
         If True, output is verbose
     use_relative_path : bool, default: False
         If True and `copy_binary=True` saves the binary file `dat_path` in the `params.py` relative to `output_folder` (ie `dat_path=r"recording.dat"`). If `copy_binary=False`, then uses a path relative to the `output_folder`
