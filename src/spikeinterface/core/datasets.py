@@ -62,8 +62,6 @@ def download_dataset(
     local_folder = Path(local_folder)
     if local_folder.exists() and GitRepo.is_valid_repo(local_folder):
         dataset = datalad.api.Dataset(path=local_folder)
-        # make sure git repo is in clean state
-        repo_object = dataset.repo
     else:
         dataset = datalad.api.install(path=local_folder, source=repo)
 
