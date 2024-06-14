@@ -4,13 +4,9 @@ from pathlib import Path
 from spikeinterface.core import NpzSortingExtractor
 from spikeinterface.core import create_sorting_npz
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
 
-
-def test_NpzSortingExtractor():
+def test_NpzSortingExtractor(create_cache_folder):
+    cache_folder = create_cache_folder
     num_seg = 2
     file_path = cache_folder / "test_NpzSortingExtractor.npz"
 

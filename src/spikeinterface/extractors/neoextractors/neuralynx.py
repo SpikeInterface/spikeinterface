@@ -18,18 +18,18 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
         The file path to load the recordings from.
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
-    exlude_filename: list[str], default: None
+    exlude_filename : list[str], default: None
         List of filename to exclude from the loading.
         For example, use `exclude_filename=["events.nev"]` to skip loading the event file.
-    strict_gap_mode: bool, default: False
+    strict_gap_mode : bool, default: False
         See neo documentation.
         Detect gaps using strict mode or not.
           * strict_gap_mode = True then a gap is consider when timstamp difference between two
@@ -78,14 +78,14 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
         The file path to load the recordings from.
-    sampling_frequency: float
+    sampling_frequency : float
         The sampling frequency for the spiking channels. When the signal data is available (.ncs) those files will be
         used to extract the frequency. Otherwise, the sampling frequency needs to be specified for this extractor.
-    stream_id: str, default: None
+    stream_id : str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
-    stream_name: str, default: None
+    stream_name : str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     """
 

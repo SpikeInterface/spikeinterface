@@ -155,7 +155,7 @@ class SpikeAmplitudeNode(PipelineNode):
     ):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.return_scaled = return_scaled
-        if return_scaled and recording.has_scaled():
+        if return_scaled and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_gains()

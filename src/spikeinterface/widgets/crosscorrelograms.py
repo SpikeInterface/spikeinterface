@@ -30,7 +30,7 @@ class CrossCorrelogramsWidget(BaseWidget):
         this argument is ignored
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
-    unit_colors: dict or None, default: None
+    unit_colors : dict or None, default: None
         If given, a dictionary with unit ids as keys and colors as values
     """
 

@@ -27,7 +27,7 @@ class SpikesOnTracesWidget(BaseWidget):
         List of unit ids
     order_channel_by_depth : bool, default: False
         If true orders channel by depth
-    time_range: list or None, default: None
+    time_range : list or None, default: None
         List with start time and end time in seconds
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply

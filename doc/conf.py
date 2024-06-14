@@ -67,6 +67,7 @@ extensions = [
     'numpydoc',
     'sphinx.ext.autosectionlabel',
     'sphinx_design',
+    'sphinxcontrib.jquery',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
     "IPython.sphinxext.ipython_directive",

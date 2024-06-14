@@ -14,14 +14,9 @@ from spikeinterface.core import NumpySnippets, load_extractor
 from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 from spikeinterface.core.base import BaseExtractor
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-    cache_folder.mkdir(exist_ok=True, parents=True)
 
-
-def test_BaseSnippets():
+def test_BaseSnippets(create_cache_folder):
+    cache_folder = create_cache_folder
     duration = [4, 3]
     num_channels = 3
     nbefore = 20

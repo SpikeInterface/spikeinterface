@@ -7,13 +7,6 @@ import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    import h5py
-
-    HAVE_MCSH5 = True
-except ImportError:
-    HAVE_MCSH5 = False
-
 
 class MCSH5RecordingExtractor(BaseRecording):
     """Load a MCS H5 file as a recording extractor.
@@ -32,7 +25,6 @@ class MCSH5RecordingExtractor(BaseRecording):
     """
 
     extractor_name = "MCSH5Recording"
-    installed = HAVE_MCSH5  # check at class level if installed or not
     mode = "file"
     installation_mesg = (
         "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
@@ -40,7 +32,14 @@ class MCSH5RecordingExtractor(BaseRecording):
     name = "mcsh5"
 
     def __init__(self, file_path, stream_id=0):
-        assert self.installed, self.installation_mesg
+
+        try:
+            import h5py
+
+            HAVE_MCSH5 = True
+        except ImportError:
+            raise ImportError(self.installation_mesg)
+
         self._file_path = file_path
 
         mcs_info = openMCSH5File(self._file_path, stream_id)
@@ -103,6 +102,8 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
 
 def openMCSH5File(filename, stream_id):
     """Open an MCS hdf5 file, read and return the recording info."""
+    import h5py
+
     rf = h5py.File(filename, "r")
 
     stream_name = "Stream_" + str(stream_id)

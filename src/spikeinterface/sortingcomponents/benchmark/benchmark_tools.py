@@ -4,16 +4,12 @@ from pathlib import Path
 import shutil
 import json
 import numpy as np
-import pandas as pd
 
-import matplotlib.pyplot as plt
 
 import time
 
-import os
 
 from spikeinterface.core import SortingAnalyzer
-from spikeinterface.core.core_tools import check_json
 from spikeinterface import load_extractor, split_job_kwargs, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.widgets import get_some_colors
 
@@ -252,6 +248,7 @@ class BenchmarkStudy:
             benchmark = self.benchmarks[key]
             assert benchmark is not None
             run_times[key] = benchmark.result["run_time"]
+        import pandas as pd
 
         df = pd.DataFrame(dict(run_times=run_times))
         if not isinstance(self.levels, str):
@@ -264,6 +261,8 @@ class BenchmarkStudy:
         run_times = self.get_run_times(case_keys=case_keys)
 
         colors = self.get_colors()
+        import matplotlib.pyplot as plt
+
         fig, ax = plt.subplots()
         labels = []
         for i, key in enumerate(case_keys):

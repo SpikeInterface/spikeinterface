@@ -17,29 +17,29 @@ class BinaryRecordingExtractor(BaseRecording):
 
     Parameters
     ----------
-    file_paths: str or Path or list
+    file_paths : str or Path or list
         Path to the binary file
-    sampling_frequency: float
+    sampling_frequency : float
         The sampling frequency
-    num_channels: int
+    num_channels : int
         Number of channels
-    num_chan: int [deprecated, use num_channels instead, will be removed as early as v0.100.0]
+    num_chan : int [deprecated, use num_channels instead, will be removed as early as v0.100.0]
         Number of channels
-    dtype: str or dtype
+    dtype : str or dtype
         The dtype of the binary file
-    time_axis: int, default: 0
+    time_axis : int, default: 0
         The axis of the time dimension
-    t_starts: None or list of float, default: None
+    t_starts : None or list of float, default: None
         Times in seconds of the first sample for each segment
-    channel_ids: list, default: None
+    channel_ids : list, default: None
         A list of channel ids
-    file_offset: int, default: 0
+    file_offset : int, default: 0
         Number of bytes in the file to offset by during memmap instantiation.
-    gain_to_uV: float or array-like, default: None
+    gain_to_uV : float or array-like, default: None
         The gain to apply to the traces
-    offset_to_uV: float or array-like, default: None
+    offset_to_uV : float or array-like, default: None
         The offset to apply to the traces
-    is_filtered: bool or None, default: None
+    is_filtered : bool or None, default: None
         If True, the recording is assumed to be filtered. If None, is_filtered is not set.
 
     Notes
@@ -48,7 +48,7 @@ class BinaryRecordingExtractor(BaseRecording):
 
     Returns
     -------
-    recording: BinaryRecordingExtractor
+    recording : BinaryRecordingExtractor
         The recording Extractor
     """
 
@@ -137,11 +137,11 @@ class BinaryRecordingExtractor(BaseRecording):
 
         Parameters
         ----------
-        recording: RecordingExtractor
+        recording : RecordingExtractor
             The recording extractor object to be saved in .dat format
-        file_paths: str
+        file_paths : str
             The path to the file.
-        dtype: dtype, default: None
+        dtype : dtype, default: None
             Type of the saved data
         {}
         """
@@ -191,7 +191,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         """Returns the number of samples in this signal block
 
         Returns:
-            SampleIndex: Number of samples in the signal block
+            SampleIndex : Number of samples in the signal block
         """
         return self.num_samples
 

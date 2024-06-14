@@ -1,17 +1,11 @@
 from __future__ import annotations
 
 import pytest
-from pathlib import Path
 import shutil
 
-from spikeinterface.extractors import toy_example
+from spikeinterface import generate_ground_truth_recording
 from spikeinterface.sorters import run_sorter
 from spikeinterface.core.snippets_tools import snippets_from_sorting
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sorters"
-else:
-    cache_folder = Path("cache_folder") / "sorters"
 
 
 class SorterCommonTestSuite:
@@ -23,12 +17,16 @@ class SorterCommonTestSuite:
 
     SorterClass = None
 
+    @pytest.fixture(autouse=True)
+    def create_cache_folder(self, tmp_path_factory):
+        self.cache_folder = tmp_path_factory.mktemp("cache_folder")
+
     def setUp(self):
-        recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
-        rec_folder = cache_folder / "rec"
+        recording, sorting_gt = generate_ground_truth_recording(num_channels=4, durations=[60], seed=0)
+        rec_folder = self.cache_folder / "rec"
         if rec_folder.is_dir():
             shutil.rmtree(rec_folder)
-        self.recording = recording.save(folder=cache_folder / "rec", verbose=False, format="binary")
+        self.recording = recording.save(folder=self.cache_folder / "rec", verbose=False, format="binary")
         print(self.recording)
 
     def test_with_run(self):
@@ -39,14 +37,14 @@ class SorterCommonTestSuite:
 
         sorter_name = self.SorterClass.sorter_name
 
-        output_folder = cache_folder / sorter_name
+        output_folder = self.cache_folder / sorter_name
 
         sorter_params = self.SorterClass.default_params()
 
         sorting = run_sorter(
             sorter_name,
             recording,
-            output_folder=output_folder,
+            folder=output_folder,
             remove_existing_folder=True,
             delete_output_folder=True,
             verbose=False,
@@ -77,11 +75,15 @@ class SnippetsSorterCommonTestSuite:
       * run once
     """
 
+    @pytest.fixture(autouse=True)
+    def create_cache_folder(self, tmp_path_factory):
+        self.cache_folder = tmp_path_factory.mktemp("cache_folder")
+
     SorterClass = None
 
     def setUp(self):
-        recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
-        snippets_folder = cache_folder / "snippets"
+        recording, sorting_gt = generate_ground_truth_recording(num_channels=4, durations=[60], seed=0)
+        snippets_folder = self.cache_folder / "snippets"
         if snippets_folder.is_dir():
             shutil.rmtree(snippets_folder)
 
@@ -98,14 +100,14 @@ class SnippetsSorterCommonTestSuite:
 
         sorter_name = self.SorterClass.sorter_name
 
-        output_folder = cache_folder / sorter_name
+        output_folder = self.cache_folder / sorter_name
 
         sorter_params = self.SorterClass.default_params()
 
         sorting = run_sorter(
             sorter_name,
             snippets,
-            output_folder=output_folder,
+            folder=output_folder,
             remove_existing_folder=True,
             delete_output_folder=False,
             verbose=False,
