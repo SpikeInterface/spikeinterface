@@ -3,10 +3,7 @@ from spikeinterface.core import NumpySorting
 from spikeinterface import SortingAnalyzer
 
 
-def remove_empty_units(
-    sorting_or_sorting_analyzer,
-    minimum_spikes = 10
-):
+def remove_empty_units(sorting_or_sorting_analyzer, minimum_spikes=10):
     if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
         sorting = sorting_or_sorting_analyzer.sorting
         counts = sorting.get_total_num_spikes()
@@ -22,6 +19,7 @@ def remove_empty_units(
             if num_spikes >= minimum_spikes:
                 ids_to_select += [id]
         return sorting_or_sorting_analyzer.select_units(ids_to_select)
+
 
 def resolve_merging_graph(sorting, potential_merges):
     """

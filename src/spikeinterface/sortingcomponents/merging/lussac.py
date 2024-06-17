@@ -238,7 +238,7 @@ class LussacMerging(BaseMergingEngine):
     default_params = {
         "templates": None,
         "verbose": True,
-        "remove_emtpy" : True,
+        "remove_emtpy": True,
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
         "lussac_kwargs": {
             "minimum_spikes": 50,
@@ -253,7 +253,7 @@ class LussacMerging(BaseMergingEngine):
         self.params.update(**kwargs)
         self.sorting = sorting
         self.verbose = self.params.pop("verbose")
-        self.remove_empty = self.params.get('remove_empty', True)
+        self.remove_empty = self.params.get("remove_empty", True)
         self.recording = recording
         self.templates = self.params.pop("templates", None)
         if self.templates is not None:
@@ -271,6 +271,7 @@ class LussacMerging(BaseMergingEngine):
 
         if self.remove_empty:
             from .tools import remove_empty_units
+
             self.analyzer = remove_empty_units(self.analyzer)
 
         self.analyzer.compute("template_similarity", **self.params["similarity_kwargs"])
