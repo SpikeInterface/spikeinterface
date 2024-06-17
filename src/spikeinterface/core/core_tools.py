@@ -87,7 +87,7 @@ class SIJsonEncoder(json.JSONEncoder):
         if isinstance(obj, np.dtype):
             return np.dtype(obj).name
 
-        # This will transform to a sring canonical representation of the dtype (e.g. np.int32 -> 'int32')
+        # This will transform to a string canonical representation of the dtype (e.g. np.int32 -> 'int32')
 
         if isinstance(obj, type) and issubclass(obj, np.generic):
             return np.dtype(obj).name
