@@ -20,7 +20,7 @@ classifiers = [
 
 
 dependencies = [
-    "numpy",
+    "numpy>=1.20, <2.0",  # Minimal needed for np.ptp
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.16,<2.18",

@@ -204,7 +204,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             wf = waveforms[idx][:, :, chan_inds]
 
             if self.feature == "ptp":
-                wf_data = wf.ptp(axis=1)
+                wf_data = np.ptp(wf, axis=1)
             elif self.feature == "mean":
                 wf_data = wf.mean(axis=1)
             elif self.feature == "energy":
@@ -293,7 +293,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 
             wf = waveforms[i, :][:, chan_inds]
             if self.feature == "ptp":
-                wf_data = wf.ptp(axis=0)
+                wf_data = np.ptp(wf, axis=0)
             elif self.feature == "energy":
                 wf_data = np.linalg.norm(wf, axis=0)
             elif self.feature == "peak_voltage":

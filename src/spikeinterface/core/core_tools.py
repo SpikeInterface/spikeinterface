@@ -83,7 +83,7 @@ class SIJsonEncoder(json.JSONEncoder):
         if isinstance(obj, np.generic):
             return obj.item()
 
-        if np.issctype(obj):  # Cast numpy datatypes to their names
+        if isinstance(obj, np.dtype):
             return np.dtype(obj).name
 
         if isinstance(obj, np.ndarray):
