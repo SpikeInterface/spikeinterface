@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-from pathlib import Path
 
 from spikeinterface.core import aggregate_units
 
@@ -8,13 +7,9 @@ from spikeinterface.core import NpzSortingExtractor
 from spikeinterface.core import create_sorting_npz
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
+def test_unitsaggregationsorting(create_cache_folder):
+    cache_folder = create_cache_folder
 
-
-def test_unitsaggregationsorting():
     num_seg = 2
     file_path = cache_folder / "test_BaseSorting.npz"
 
