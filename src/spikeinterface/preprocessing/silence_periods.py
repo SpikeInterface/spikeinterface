@@ -26,7 +26,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
     noise_levels : array
         Noise levels if already computed
     seed : int | None, default: None
-        Random seed for `get_noise_levels`
+        Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
+        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
     mode : "zeros" | "noise, default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
 

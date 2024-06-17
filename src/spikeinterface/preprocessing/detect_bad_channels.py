@@ -58,28 +58,28 @@ def detect_bad_channels(
     std_mad_threshold : float, default: 5
         The standard deviation/mad multiplier threshold
     psd_hf_threshold : float, default: 0.02
-        Coeherence+psd. An absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
+        For coherence+psd - an absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
         Channels with average power at >80% Nyquist larger than this threshold
         will be labeled as noise
     dead_channel_threshold : float, default: -0.5
-        Coeherence+psd. Threshold for channel coherence below which channels are labeled as dead
+        For coherence+psd - threshold for channel coherence below which channels are labeled as dead
     noisy_channel_threshold : float, default: 1
         Threshold for channel coherence above which channels are labeled as noisy (together with psd condition)
     outside_channel_threshold : float, default: -0.75
-        Coeherence+psd. Threshold for channel coherence above which channels at the edge of the recording are marked as outside
+        For coherence+psd - threshold for channel coherence above which channels at the edge of the recording are marked as outside
         of the brain
     outside_channels_location : "top" | "bottom" | "both", default: "top"
-        Coeherence+psd. Location of the outside channels. If "top", only the channels at the top of the probe can be
+        For coherence+psd - location of the outside channels. If "top", only the channels at the top of the probe can be
         marked as outside channels. If "bottom", only the channels at the bottom of the probe can be
         marked as outside channels. If "both", both the channels at the top and bottom of the probe can be
         marked as outside channels
     n_neighbors : int, default: 11
-        Coeherence+psd. Number of channel neighbors to compute median filter (needs to be odd)
+        For coeherence+psd - number of channel neighbors to compute median filter (needs to be odd)
     nyquist_threshold : float, default: 0.8
-        Coeherence+psd. Frequency with respect to Nyquist (Fn=1) above which the mean of the PSD is calculated and compared
+        For coherence+psd - frequency with respect to Nyquist (Fn=1) above which the mean of the PSD is calculated and compared
         with psd_hf_threshold
     direction : "x" | "y" | "z", default: "y"
-        Coeherence+psd. The depth dimension
+        For coherence+psd - the depth dimension
     highpass_filter_cutoff : float, default: 300
         If the recording is not filtered, the cutoff frequency of the highpass filter
     chunk_duration_s : float, default: 0.5

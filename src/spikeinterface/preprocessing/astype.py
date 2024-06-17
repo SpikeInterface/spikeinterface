@@ -17,12 +17,12 @@ class AstypeRecording(BasePreprocessor):
     Parameters
     ----------
     dtype : None | str | dtype, default: None
-        dtype of the output recording.
+        dtype of the output recording. If None, takes dtype from input `recording`.
     recording : Recording
         The recording extractor to be converted.
     round : Bool | None, default: None
-        If True, will round the values to the nearest integer.
-        If None, will round in the case of float to integer conversion.
+        If True, will round the values to the nearest integer using `numpy.round`.
+        If None and dtype is an integer, will round floats to nearest integer.
 
     Returns
     -------
