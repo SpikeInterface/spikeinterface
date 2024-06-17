@@ -252,6 +252,7 @@ class LussacMerging(BaseMergingEngine):
         self.params.update(**kwargs)
         self.sorting = sorting
         self.verbose = self.params.pop("verbose")
+        self.remove_empty = self.params.get('remove_empty', True)
         self.recording = recording
         self.templates = self.params.pop("templates", None)
         if self.templates is not None:
@@ -266,6 +267,10 @@ class LussacMerging(BaseMergingEngine):
             self.analyzer = create_sorting_analyzer(sorting, recording, format="memory")
             self.analyzer.compute(["random_spikes", "templates"])
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
+
+        if self.remove_empty:
+            from .tools import remove_empty_units
+            self.analyzer = remove_empty_units(self.analyzer)
 
         self.analyzer.compute("template_similarity", **self.params["similarity_kwargs"])
 
