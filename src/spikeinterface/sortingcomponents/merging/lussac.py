@@ -238,6 +238,7 @@ class LussacMerging(BaseMergingEngine):
     default_params = {
         "templates": None,
         "verbose": True,
+        "remove_emtpy" : True,
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
         "lussac_kwargs": {
             "minimum_spikes": 50,
