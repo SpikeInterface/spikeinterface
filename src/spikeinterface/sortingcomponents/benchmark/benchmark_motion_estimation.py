@@ -670,11 +670,8 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         peak_locations_corrected = correct_motion_on_peaks(
 #             self.selected_peaks,
 #             self.peak_locations,
-#             self.recording,
 #             self.motion,
-#             self.temporal_bins,
-#             self.spatial_bins,
-#             direction="y",
+#             self.recording,
 #         )
 #         if axes is None:
 #             if show_probe:

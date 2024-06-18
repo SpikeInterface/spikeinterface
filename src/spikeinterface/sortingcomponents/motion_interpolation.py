@@ -7,25 +7,23 @@ from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, Base
 from spikeinterface.preprocessing.filter import fix_dtype
 
 
-def correct_motion_on_peaks(
-    peaks,
-    peak_locations,
-    rec,
-    motion,
-):
+def correct_motion_on_peaks(peaks, peak_locations, motion, recording=None, sampling_frequency=None):
     """
     Given the output of estimate_motion(), apply inverse motion on peak locations.
 
     Parameters
     ----------
-    peaks: np.array
+    peaks : np.array
         peaks vector
-    peak_locations: np.array
+    peak_locations : np.array
         peaks location vector
-    sampling_frequency: np.array
-        sampling_frequency of the recording
-    motion: Motion
+    motion : Motion
         The motion object.
+    recording : Recording | None, default: None
+        The recording object. If given, this is used to convert sample indices to times.
+    sampling_frequency : float | None
+        Sampling_frequency of the recording, required if recording is None.
+
 
     Returns
     -------
@@ -33,7 +31,11 @@ def correct_motion_on_peaks(
         Motion-corrected peak locations
     """
     corrected_peak_locations = peak_locations.copy()
-    times_s = rec.sample_index_to_time(peaks["sample_index"])
+    assert recording is not None or sampling_frequency is not None, "recording or sampling_frequency must be provided"
+    if recording is not None:
+        times_s = recording.sample_index_to_time(peaks["sample_index"])
+    else:
+        times_s = peaks["sample_index"] / sampling_frequency
 
     for segment_index in range(motion.num_segments):
         i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])

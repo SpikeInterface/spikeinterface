@@ -11,10 +11,12 @@ class MotionWidget(BaseWidget):
 
     Parameters
     ----------
-    motion_info: dict
+    motion: dict
         The motion info return by correct_motion() or load back with load_motion_info()
     recording : RecordingExtractor, default: None
         The recording extractor object (only used to get "real" times)
+    segment_index : int, default: 0
+        The segment index to display.
     sampling_frequency : float, default: None
         The sampling frequency (needed if recording is None)
     depth_lim : tuple or None, default: None
@@ -36,6 +38,7 @@ class MotionWidget(BaseWidget):
     def __init__(
         self,
         motion_info,
+        segment_index=0,
         recording=None,
         depth_lim=None,
         motion_lim=None,
@@ -47,11 +50,12 @@ class MotionWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        times = recording.get_times() if recording is not None else None
+        times = recording.get_times(segment_index=segment_index) if recording is not None else None
 
         plot_data = dict(
             sampling_frequency=motion_info["parameters"]["sampling_frequency"],
             times=times,
+            segment_index=segment_index,
             depth_lim=depth_lim,
             motion_lim=motion_lim,
             color_amplitude=color_amplitude,
@@ -59,6 +63,7 @@ class MotionWidget(BaseWidget):
             amplitude_cmap=amplitude_cmap,
             amplitude_clim=amplitude_clim,
             amplitude_alpha=amplitude_alpha,
+            recording=recording,
             **motion_info,
         )
 
@@ -73,16 +78,20 @@ class MotionWidget(BaseWidget):
 
         dp = to_attr(data_plot)
 
-        assert backend_kwargs["axes"] is None
-        assert backend_kwargs["ax"] is None
+        assert backend_kwargs["axes"] is None, "axes argument is not allowed in MotionWidget"
+        assert backend_kwargs["ax"] is None, "ax argument is not allowed in MotionWidget"
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
         fig = self.figure
         fig.clear()
 
-        is_rigid = dp.motion.shape[1] == 1
+        motion_array = dp.motion.displacement[dp.segment_index]
+        temporal_bins_s = dp.motion.temporal_bins_s[dp.segment_index]
+        spatial_bins_um = dp.motion.spatial_bins_um
 
-        gs = fig.add_gridspec(2, 2, wspace=0.3, hspace=0.3)
+        is_rigid = motion_array.shape[1] == 1
+
+        gs = fig.add_gridspec(2, 2, wspace=0.3, hspace=0.5)
         ax0 = fig.add_subplot(gs[0, 0])
         ax1 = fig.add_subplot(gs[0, 1])
         ax2 = fig.add_subplot(gs[1, 0])
@@ -92,30 +101,29 @@ class MotionWidget(BaseWidget):
         ax1.sharey(ax0)
 
         if dp.motion_lim is None:
-            motion_lim = np.max(np.abs(dp.motion)) * 1.05
+            motion_lim = np.max(np.abs(motion_array)) * 1.05
         else:
             motion_lim = dp.motion_lim
 
         if dp.times is None:
-            temporal_bins_plot = dp.temporal_bins
+            temporal_bins_plot = temporal_bins_s
             x = dp.peaks["sample_index"] / dp.sampling_frequency
         else:
             # use real times and adjust temporal bins with t_start
-            temporal_bins_plot = dp.temporal_bins + dp.times[0]
+            temporal_bins_plot = temporal_bins_s + dp.times[0]
             x = dp.times[dp.peaks["sample_index"]]
 
         corrected_location = correct_motion_on_peaks(
             dp.peaks,
             dp.peak_locations,
-            dp.sampling_frequency,
             dp.motion,
-            dp.temporal_bins,
-            dp.spatial_bins,
-            direction="y",
+            dp.recording,
+            dp.sampling_frequency,
         )
+        dim = ["x", "y", "z"][dp.motion.dim]
 
-        y = dp.peak_locations["y"]
-        y2 = corrected_location["y"]
+        y = dp.peak_locations[dim]
+        y2 = corrected_location[dim]
         if dp.scatter_decimate is not None:
             x = x[:: dp.scatter_decimate]
             y = y[:: dp.scatter_decimate]
@@ -149,37 +157,38 @@ class MotionWidget(BaseWidget):
             ax0.set_ylim(*dp.depth_lim)
         ax0.set_title("Peak depth")
         ax0.set_xlabel("Times [s]")
-        ax0.set_ylabel("Depth [um]")
+        ax0.set_ylabel("Depth [$\\mu$m]")
 
         ax1.scatter(x, y2, s=1, **color_kwargs)
         ax1.set_xlabel("Times [s]")
-        ax1.set_ylabel("Depth [um]")
+        ax1.set_ylabel("Depth [$\\mu$m]")
         ax1.set_title("Corrected peak depth")
 
-        ax2.plot(temporal_bins_plot, dp.motion, alpha=0.2, color="black")
-        ax2.plot(temporal_bins_plot, np.mean(dp.motion, axis=1), color="C0")
+        ax2.plot(temporal_bins_plot, motion_array, alpha=0.2, color="black")
+        ax2.plot(temporal_bins_plot, np.mean(motion_array, axis=1), color="C0")
         ax2.set_ylim(-motion_lim, motion_lim)
-        ax2.set_ylabel("Motion [um]")
+        ax2.set_ylabel("Motion [$\\mu$m]")
+        ax2.set_xlabel("Times [s]")
         ax2.set_title("Motion vectors")
         axes = [ax0, ax1, ax2]
 
         if not is_rigid:
             im = ax3.imshow(
-                dp.motion.T,
+                motion_array.T,
                 aspect="auto",
                 origin="lower",
                 extent=(
                     temporal_bins_plot[0],
                     temporal_bins_plot[-1],
-                    dp.spatial_bins[0],
-                    dp.spatial_bins[-1],
+                    spatial_bins_um[0],
+                    spatial_bins_um[-1],
                 ),
             )
             im.set_clim(-motion_lim, motion_lim)
             cbar = fig.colorbar(im)
-            cbar.ax.set_xlabel("motion [um]")
+            cbar.ax.set_ylabel("Motion [$\\mu$m]")
             ax3.set_xlabel("Times [s]")
-            ax3.set_ylabel("Depth [um]")
+            ax3.set_ylabel("Depth [$\\mu$m]")
             ax3.set_title("Motion vectors")
             axes.append(ax3)
         self.axes = np.array(axes)

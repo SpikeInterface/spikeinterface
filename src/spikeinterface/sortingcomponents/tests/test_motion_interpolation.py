@@ -46,8 +46,8 @@ def test_correct_motion_on_peaks():
     corrected_peak_locations = correct_motion_on_peaks(
         peaks,
         peak_locations,
-        rec,
         motion,
+        recording=rec,
     )
     # print(corrected_peak_locations)
     assert np.any(corrected_peak_locations["y"] != 0)
