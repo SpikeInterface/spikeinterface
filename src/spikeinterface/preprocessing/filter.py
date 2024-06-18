@@ -8,14 +8,16 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import get_chunk_with_margin
 
 
-_common_filter_docs = """**filter_kwargs : keyword arguments for parallel processing:
-
-            * filter_order : order
-                The order of the filter
-            * filter_mode : "sos or "ba"
-                "sos" is bi quadratic and more stable than ab so thery are prefered.
-            * ftype : str
-                Filter type for iirdesign ("butter" / "cheby1" / ... all possible of scipy.signal.iirdesign)
+_common_filter_docs = """**filter_kwargs : dict
+        Certain keyword arguments for `scipy.signal` filters:
+        filter_order : order
+            The order of the filter
+        filter_mode :  "sos" | "ba", default: "sos"
+            Filter form of the filter coefficients:
+            - second-order sections ("sos")
+            - numerator/denominator : ("ba")
+        ftype : str, default: "butter"
+            Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
     """
 
 
@@ -39,20 +41,13 @@ class FilterRecording(BasePreprocessor):
         Type of the filter
     margin_ms : float, default: 5.0
         Margin in ms on border to avoid border effect
-    filter_mode : "sos" | "ba", default: "sos"
-        Filter form of the filter coefficients:
-        - second-order sections ("sos")
-        - numerator/denominator : ("ba")
     coeff : array | None, default: None
         Filter coefficients in the filter_mode form.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     add_reflect_padding : Bool, default False
         If True, uses a left and right margin during calculation.
-    ftype : str | None, default: "butter"
-        The type of IIR filter to design, used in `scipy.signal.iirfilter`.
-    filter_order : int, default: 5
-        The order of the filter, used in `scipy.signal.iirfilter`.
+    {}
 
     Returns
     -------
@@ -183,8 +178,7 @@ class BandpassFilterRecording(FilterRecording):
         Margin in ms on border to avoid border effect
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
-    **filter_kwargs : dict
-        Keyword arguments for `spikeinterface.preprocessing.FilterRecording` class.
+    {}
 
     Returns
     -------
@@ -219,8 +213,7 @@ class HighpassFilterRecording(FilterRecording):
         Margin in ms on border to avoid border effect
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
-    **filter_kwargs : dict
-        Keyword arguments for `spikeinterface.preprocessing.FilterRecording` class.
+    {}
 
     Returns
     -------
@@ -296,6 +289,10 @@ filter = define_function_from_class(source_class=FilterRecording, name="filter")
 bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
+
+filter.__doc__ = filter.__doc__.format(_common_filter_docs)
+bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
+highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
 
 
 def fix_dtype(recording, dtype):
