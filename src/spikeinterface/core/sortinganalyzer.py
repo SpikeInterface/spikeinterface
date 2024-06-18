@@ -204,7 +204,7 @@ class SortingAnalyzer:
         self.sparsity = sparsity
         self.return_scaled = return_scaled
         # this is used to store temporary recording
-        self._tmp_recording = None
+        self._temporary_recording = None
 
         # extensions are not loaded at init
         self.extensions = dict()
@@ -627,7 +627,7 @@ class SortingAnalyzer:
         ), "Recording channel locations do not match."
         if self._recording is not None:
             warnings.warn("SortingAnalyzer recording is already set. The current recording is temporarily replaced.")
-        self._tmp_recording = recording
+        self._temporary_recording = recording
 
     def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingAnalyzer":
         """
@@ -637,7 +637,7 @@ class SortingAnalyzer:
         if self.has_recording():
             recording = self._recording
         elif self.has_temporary_recording():
-            recording = self._tmp_recording
+            recording = self._temporary_recording
         else:
             recording = None
 
@@ -756,7 +756,7 @@ class SortingAnalyzer:
     def recording(self) -> BaseRecording:
         if not self.has_recording():
             raise ValueError("SortingAnalyzer could not load the recording")
-        return self._tmp_recording or self._recording
+        return self._temporary_recording or self._recording
 
     @property
     def channel_ids(self) -> np.ndarray:
@@ -774,7 +774,7 @@ class SortingAnalyzer:
         return self._recording is not None
 
     def has_temporary_recording(self) -> bool:
-        return self._tmp_recording is not None
+        return self._temporary_recording is not None
 
     def is_sparse(self) -> bool:
         return self.sparsity is not None
