@@ -76,6 +76,13 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_spike_mask])
         return new_data
 
+    def _merge_extension_data(self, merges):
+        random_spikes_indices = self.data["random_spikes_indices"]
+
+        new_data = dict()
+        new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
+        return new_data
+
     def _get_data(self):
         return self.data["random_spikes_indices"]
 
@@ -221,6 +228,13 @@ class ComputeWaveforms(AnalyzerExtension):
 
         new_data = dict()
         new_data["waveforms"] = self.data["waveforms"][keep_spike_mask, :, :]
+
+        return new_data
+
+    def _merge_extension_data(self, merges):
+        
+        new_data = dict()
+        new_data["waveforms"] = self.data["waveforms"]
 
         return new_data
 

@@ -209,3 +209,54 @@ def random_spikes_selection(
         raise ValueError(f"random_spikes_selection(): method must be 'all' or 'uniform'")
 
     return random_spikes_indices
+
+def apply_merges_to_sorting(sorting, merges, censor_ms=None):
+    """
+    Function to apply a resolved representation of the merges to a sorting object. If censor_ms is not None,
+    duplicated spikes violating the censor_ms refractory period are removed
+    """
+    spikes = sorting.to_spike_vector().copy()
+    to_keep = np.ones(len(spikes), dtype=bool)
+
+    new_unit_ids = set(sorting.unit_ids)
+    for unit_id, to_be_merged in merges.items():
+        assert unit_id in sorting.unit_ids, "Merged ids should be in the sorting"
+        for id in to_be_merged:
+            new_unit_ids.discard(id)
+
+    segment_slices = {}
+    for segment_index in range(sorting.get_num_segments()):
+        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
+        segment_slices[segment_index] = (s0, s1)
+
+    if censor_ms is not None:
+        rpv = int(sorting.sampling_frequency * censor_ms / 1000)
+
+    for unit_id, to_be_merged in merges.items():
+        mask = np.in1d(spikes["unit_index"], sorting.ids_to_indices(to_be_merged))
+        spikes["unit_index"][mask] = sorting.id_to_index(unit_id)
+
+        if censor_ms is not None:
+            for segment_index in range(sorting.get_num_segments()):
+                s0, s1 = segment_slices[segment_index]
+                (indices,) = s0 + np.nonzero(mask[s0:s1])
+                to_keep[indices[1:]] = np.logical_or(
+                    to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
+                )
+
+    from spikeinterface.core import NumpySorting
+    times_list = []
+    labels_list = []
+    for segment_index in range(sorting.get_num_segments()):
+        s0, s1 = segment_slices[segment_index]
+        if censor_ms is not None:
+            times_list += [spikes["sample_index"][s0:s1][to_keep[s0:s1]]]
+            labels = spikes["unit_index"][s0:s1][to_keep[s0:s1]]
+            labels_list += [sorting.unit_ids[labels]]
+        else:
+            times_list += [spikes["sample_index"][s0:s1]]
+            labels = spikes["unit_index"][s0:s1]
+            labels_list += [sorting.unit_ids[labels]]
+
+    sorting = NumpySorting.from_times_labels(times_list, labels_list, sorting.sampling_frequency)
+    return sorting

@@ -605,21 +605,37 @@ class SortingAnalyzer:
 
         return sorting_analyzer
 
-    def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingAnalyzer":
+    def _save_or_select_or_merge(self, format="binary_folder", folder=None, unit_ids=None, merges=None) -> "SortingAnalyzer":
         """
         Internal used by both save_as(), copy() and select_units() which are more or less the same.
         """
+
+        if unit_ids is not None:
+            assert merges is None, "Can not do simultaneously selection and merges"
+        elif merges is not None:
+            assert unit_ids is None, "Can not do simultaneously selection and merges"
+            new_unit_ids = set(self.unit_ids)
+            for key, to_be_merged in merges.items():
+                assert key in self.unit_ids, "Merged ids should be in the sorting"
+                for id in to_be_merged:
+                    new_unit_ids.discard(id)
 
         if self.has_recording():
             recording = self.recording
         else:
             recording = None
 
-        if self.sparsity is not None and unit_ids is None:
+        if self.sparsity is not None and unit_ids is None and merges is None:
             sparsity = self.sparsity
         elif self.sparsity is not None and unit_ids is not None:
             sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
             sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
+        elif self.sparsity is not None and merges is not None:
+            sparsity_mask = np.zeros((len(new_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
+            for unit_ind, unit_id in enumerate(new_unit_ids):
+                index = self.sorting.id_to_index(unit_id)
+                sparsity_mask[unit_ind] = self.sparsity.mask[index]
+            sparsity = ChannelSparsity(sparsity_mask, list(new_unit_ids), self.channel_ids)
         else:
             sparsity = None
 
@@ -666,9 +682,14 @@ class SortingAnalyzer:
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         for extension_name, extension in self.extensions.items():
-            new_ext = new_sorting_analyzer.extensions[extension_name] = extension.copy(
-                new_sorting_analyzer, unit_ids=unit_ids
-            )
+            if unit_ids is not None:
+                new_ext = new_sorting_analyzer.extensions[extension_name] = extension.copy(
+                    new_sorting_analyzer, unit_ids=unit_ids
+                )
+            elif merges is not None:
+                new_ext = new_sorting_analyzer.extensions[extension_name] = extension.merge(
+                    new_sorting_analyzer, merges=merges
+                )
 
         return new_sorting_analyzer
 
@@ -711,7 +732,31 @@ class SortingAnalyzer:
             The newly create sorting_analyzer with the selected units
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
-        return self._save_or_select(format=format, folder=folder, unit_ids=unit_ids)
+        return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
+
+    def merge_units(self, merges, format="memory", folder=None) -> "SortingAnalyzer":
+        """
+        This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
+        Merges units by creating a new sorting analyzer object in a new folder with appropriate merges
+
+        Extensions are also updated to display the merged unit ids.
+
+        Parameters
+        ----------
+        merges : dictionary of merges that needs to be achieved. dict should be structured as
+            {new_unit_id : list} with list being the unit_ids that should be merged
+
+        folder : Path or None
+            The new folder where selected waveforms are copied
+        format:
+        a
+        Returns
+        -------
+        we :  SortingAnalyzer
+            The newly create sorting_analyzer with the selected units
+        """
+        # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
+        return self._save_or_select_or_merge(format=format, folder=folder, merges=merges)
 
     def copy(self):
         """
@@ -1428,6 +1473,7 @@ class AnalyzerExtension:
       * _set_params()
       * _run()
       * _select_extension_data()
+      * _merge_extension_data()
       * _get_data()
 
     The subclass must also set an `extension_name` class attribute which is not None by default.
@@ -1467,6 +1513,10 @@ class AnalyzerExtension:
         raise NotImplementedError
 
     def _select_extension_data(self, unit_ids):
+        # must be implemented in subclass
+        raise NotImplementedError
+
+    def _merge_extension_data(self, merges):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -1628,6 +1678,18 @@ class AnalyzerExtension:
             new_extension.data = self.data
         else:
             new_extension.data = self._select_extension_data(unit_ids)
+        new_extension.save()
+        return new_extension
+
+    def merge(self, new_sorting_analyzer, merges=None):
+        new_extension = self.__class__(new_sorting_analyzer)
+        new_extension.params = self.params.copy()
+        if merges is None:
+            new_extension.data = self.data
+        else:
+            from spikeinterface.core.sorting_tools import apply_merges_to_sorting
+            new_spike_vector = apply_merges_to_sorting(new_sorting_analyzer.sorting, merges)
+            new_extension.data = self._merge_extension_data(merges)
         new_extension.save()
         return new_extension
 
