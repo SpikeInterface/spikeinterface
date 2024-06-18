@@ -77,8 +77,6 @@ class ComputeRandomSpikes(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(self, merges):
-        random_spikes_indices = self.data["random_spikes_indices"]
-
         new_data = dict()
         new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
         return new_data

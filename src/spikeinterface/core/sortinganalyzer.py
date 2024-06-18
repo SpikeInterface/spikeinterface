@@ -649,6 +649,9 @@ class SortingAnalyzer:
             # when only some unit_ids then the sorting must be sliced
             # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
             sorting_provenance = sorting_provenance.select_units(unit_ids)
+        elif merges is not None:
+            from spikeinterface.core.sorting_tools import apply_merges_to_sorting
+            sorting_provenance = apply_merges_to_sorting(sorting_provenance, merges)
 
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
@@ -1687,8 +1690,6 @@ class AnalyzerExtension:
         if merges is None:
             new_extension.data = self.data
         else:
-            from spikeinterface.core.sorting_tools import apply_merges_to_sorting
-            new_spike_vector = apply_merges_to_sorting(new_sorting_analyzer.sorting, merges)
             new_extension.data = self._merge_extension_data(merges)
         new_extension.save()
         return new_extension
