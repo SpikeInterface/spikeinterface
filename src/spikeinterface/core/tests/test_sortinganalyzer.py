@@ -19,7 +19,7 @@ from spikeinterface.core.sortinganalyzer import (
 import numpy as np
 
 
-def _get_dataset():
+def get_dataset():
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
         sampling_frequency=16000.0,
@@ -33,12 +33,12 @@ def _get_dataset():
 
 
 @pytest.fixture(scope="module")
-def get_dataset():
-    return _get_dataset()
+def dataset():
+    return get_dataset()
 
 
-def test_SortingAnalyzer_memory(tmp_path, get_dataset):
-    recording, sorting = get_dataset
+def test_SortingAnalyzer_memory(tmp_path, dataset):
+    recording, sorting = dataset
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
@@ -57,8 +57,8 @@ def test_SortingAnalyzer_memory(tmp_path, get_dataset):
     assert not sorting_analyzer.return_scaled
 
 
-def test_SortingAnalyzer_binary_folder(tmp_path, get_dataset):
-    recording, sorting = get_dataset
+def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
+    recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
@@ -87,8 +87,8 @@ def test_SortingAnalyzer_binary_folder(tmp_path, get_dataset):
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
 
-def test_SortingAnalyzer_zarr(tmp_path, get_dataset):
-    recording, sorting = get_dataset
+def test_SortingAnalyzer_zarr(tmp_path, dataset):
+    recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
@@ -108,12 +108,18 @@ def test_SortingAnalyzer_zarr(tmp_path, get_dataset):
     )
 
 
-def test_SortingAnalyzer_tmp_recording(get_dataset):
-    recording, sorting = get_dataset
+def test_SortingAnalyzer_tmp_recording(dataset):
+    recording, sorting = dataset
     recording_cached = recording.save(mode="memory")
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     sorting_analyzer.set_temporary_recording(recording_cached)
+    assert sorting_analyzer.has_temporary_recording()
+    # check that saving as uses the original recording
+    sorting_analyzer_saved = sorting_analyzer.save_as(format="memory")
+    assert sorting_analyzer_saved.has_recording()
+    assert not sorting_analyzer_saved.has_temporary_recording()
+    assert isinstance(sorting_analyzer_saved.recording, type(recording))
 
     recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
 

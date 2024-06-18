@@ -919,7 +919,7 @@ def get_rec_attributes(recording):
     return rec_attributes
 
 
-def check_recording_attributes_match(recording1, recording2_attributes, skip_properties=True) -> bool:
+def check_recording_attributes_match(recording1, recording2_attributes) -> bool:
     """
     Check if two recordings have the same attributes
 
@@ -937,9 +937,9 @@ def check_recording_attributes_match(recording1, recording2_attributes, skip_pro
     """
     recording1_attributes = get_rec_attributes(recording1)
     recording2_attributes = deepcopy(recording2_attributes)
-    if skip_properties:
-        recording1_attributes.pop("properties")
-        recording2_attributes.pop("properties")
+    recording1_attributes.pop("properties")
+    recording2_attributes.pop("properties")
+
     return (
         np.array_equal(recording1_attributes["channel_ids"], recording2_attributes["channel_ids"])
         and recording1_attributes["sampling_frequency"] == recording2_attributes["sampling_frequency"]
