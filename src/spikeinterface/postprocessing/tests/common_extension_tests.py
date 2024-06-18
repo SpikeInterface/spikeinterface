@@ -3,19 +3,10 @@ from __future__ import annotations
 import pytest
 import numpy as np
 import shutil
-from pathlib import Path
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core import estimate_sparsity
-
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "postprocessing"
-else:
-    cache_folder = Path("cache_folder") / "postprocessing"
-
-cache_folder.mkdir(exist_ok=True, parents=True)
 
 
 def get_dataset():
@@ -39,24 +30,6 @@ def get_dataset():
         seed=2205,
     )
     return recording, sorting
-
-
-def get_sorting_analyzer(recording, sorting, format="memory", sparsity=None, name=""):
-    sparse = sparsity is not None
-    if format == "memory":
-        folder = None
-    elif format == "binary_folder":
-        folder = cache_folder / f"test_{name}_sparse{sparse}_{format}"
-    elif format == "zarr":
-        folder = cache_folder / f"test_{name}_sparse{sparse}_{format}.zarr"
-    if folder and folder.exists():
-        shutil.rmtree(folder)
-
-    sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity
-    )
-
-    return sorting_analyzer
 
 
 class AnalyzerExtensionCommonTestSuite:
@@ -83,10 +56,31 @@ class AnalyzerExtensionCommonTestSuite:
     def extension_name(self):
         return self.extension_class.extension_name
 
+    @pytest.fixture(autouse=True)
+    def create_cache_folder(self, tmp_path_factory):
+        self.cache_folder = tmp_path_factory.mktemp("cache_folder")
+
+    def get_sorting_analyzer(self, recording, sorting, format="memory", sparsity=None, name=""):
+        sparse = sparsity is not None
+        if format == "memory":
+            folder = None
+        elif format == "binary_folder":
+            folder = self.cache_folder / f"test_{name}_sparse{sparse}_{format}"
+        elif format == "zarr":
+            folder = self.cache_folder / f"test_{name}_sparse{sparse}_{format}.zarr"
+        if folder and folder.exists():
+            shutil.rmtree(folder)
+
+        sorting_analyzer = create_sorting_analyzer(
+            sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity
+        )
+
+        return sorting_analyzer
+
     def _prepare_sorting_analyzer(self, format, sparse):
         # prepare a SortingAnalyzer object with depencies already computed
         sparsity_ = self.sparsity if sparse else None
-        sorting_analyzer = get_sorting_analyzer(
+        sorting_analyzer = self.get_sorting_analyzer(
             self.recording, self.sorting, format=format, sparsity=sparsity_, name=self.extension_class.extension_name
         )
         sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)

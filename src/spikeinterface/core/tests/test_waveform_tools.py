@@ -15,12 +15,6 @@ from spikeinterface.core.waveform_tools import (
 )
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-
-
 def _check_all_wf_equal(list_wfs_arrays):
     wfs_arrays0 = list_wfs_arrays[0]
     for i, wfs_arrays in enumerate(list_wfs_arrays):
@@ -41,7 +35,8 @@ def get_dataset():
     return recording, sorting
 
 
-def test_waveform_tools():
+def test_waveform_tools(create_cache_folder):
+    cache_folder = create_cache_folder
     # durations = [30, 40]
     # sampling_frequency = 30000.0
 

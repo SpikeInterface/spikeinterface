@@ -6,11 +6,6 @@ from spikeinterface import load_extractor, generate_ground_truth_recording
 from spikeinterface.sorters import Kilosort4Sorter, run_sorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sorters"
-else:
-    cache_folder = Path("cache_folder") / "sorters"
-
 
 # This run several tests
 @pytest.mark.skipif(not Kilosort4Sorter.is_installed(), reason="kilosort4 not installed")
@@ -19,11 +14,11 @@ class Kilosort4SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
     # 4 channels is to few for KS4
     def setUp(self):
-        if (cache_folder / "rec").is_dir():
-            recording = load_extractor(cache_folder / "rec")
+        if (self.cache_folder / "rec").is_dir():
+            recording = load_extractor(self.cache_folder / "rec")
         else:
             recording, _ = generate_ground_truth_recording(num_channels=32, durations=[60], seed=0)
-            recording = recording.save(folder=cache_folder / "rec", verbose=False, format="binary")
+            recording = recording.save(folder=self.cache_folder / "rec", verbose=False, format="binary")
         self.recording = recording
         print(self.recording)
 
@@ -32,7 +27,7 @@ class Kilosort4SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
         sorter_name = self.SorterClass.sorter_name
 
-        output_folder = cache_folder / sorter_name
+        output_folder = self.cache_folder / sorter_name
 
         sorter_params = self.SorterClass.default_params()
         sorter_params["do_correction"] = False
@@ -66,7 +61,7 @@ class Kilosort4SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
         sorter_name = self.SorterClass.sorter_name
 
-        output_folder = cache_folder / sorter_name
+        output_folder = self.cache_folder / sorter_name
 
         sorter_params = self.SorterClass.default_params()
         sorter_params["skip_kilosort_preprocessing"] = True
@@ -101,7 +96,7 @@ class Kilosort4SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
         sorter_name = self.SorterClass.sorter_name
 
-        output_folder = cache_folder / sorter_name
+        output_folder = self.cache_folder / sorter_name
 
         sorter_params = self.SorterClass.default_params()
         sorter_params["skip_kilosort_preprocessing"] = True

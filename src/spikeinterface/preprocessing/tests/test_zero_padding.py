@@ -9,13 +9,6 @@ from spikeinterface.core.numpyextractors import NumpyRecording
 from spikeinterface.preprocessing import zero_channel_pad, bandpass_filter, phase_shift
 from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
-
 
 def test_zero_padding_channel():
     num_original_channels = 4

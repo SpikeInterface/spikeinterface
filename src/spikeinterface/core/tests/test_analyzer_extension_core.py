@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 
 import shutil
 
@@ -11,13 +10,8 @@ from spikeinterface.core.sortinganalyzer import _extension_children, _get_childr
 
 import numpy as np
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
 
-
-def get_sorting_analyzer(format="memory", sparse=True):
+def get_sorting_analyzer(cache_folder, format="memory", sparse=True):
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
         sampling_frequency=16000.0,
@@ -53,7 +47,7 @@ def get_sorting_analyzer(format="memory", sparse=True):
     return sorting_analyzer
 
 
-def _check_result_extension(sorting_analyzer, extension_name):
+def _check_result_extension(sorting_analyzer, extension_name, cache_folder):
     # select unit_ids to several format
     for format in ("memory", "binary_folder", "zarr"):
         # for format in ("memory", ):
@@ -83,39 +77,42 @@ def _check_result_extension(sorting_analyzer, extension_name):
         False,
     ],
 )
-def test_ComputeRandomSpikes(format, sparse):
-    sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
+def test_ComputeRandomSpikes(format, sparse, create_cache_folder):
+    cache_folder = create_cache_folder
+    sorting_analyzer = get_sorting_analyzer(cache_folder, format=format, sparse=sparse)
 
     ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
     indices = ext.data["random_spikes_indices"]
     assert indices.size == 10 * sorting_analyzer.sorting.unit_ids.size
 
-    _check_result_extension(sorting_analyzer, "random_spikes")
+    _check_result_extension(sorting_analyzer, "random_spikes", cache_folder)
     sorting_analyzer.delete_extension("random_spikes")
 
     ext = sorting_analyzer.compute("random_spikes", method="all")
     indices = ext.data["random_spikes_indices"]
     assert indices.size == len(sorting_analyzer.sorting.to_spike_vector())
 
-    _check_result_extension(sorting_analyzer, "random_spikes")
+    _check_result_extension(sorting_analyzer, "random_spikes", cache_folder)
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
-def test_ComputeWaveforms(format, sparse):
-    sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
+def test_ComputeWaveforms(format, sparse, create_cache_folder):
+    cache_folder = create_cache_folder
+    sorting_analyzer = get_sorting_analyzer(cache_folder, format=format, sparse=sparse)
 
     job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
     sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
     ext = sorting_analyzer.compute("waveforms", **job_kwargs)
     wfs = ext.data["waveforms"]
-    _check_result_extension(sorting_analyzer, "waveforms")
+    _check_result_extension(sorting_analyzer, "waveforms", cache_folder)
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
-def test_ComputeTemplates(format, sparse):
-    sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
+def test_ComputeTemplates(format, sparse, create_cache_folder):
+    cache_folder = create_cache_folder
+    sorting_analyzer = get_sorting_analyzer(cache_folder, format=format, sparse=sparse)
 
     sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
 
@@ -187,13 +184,14 @@ def test_ComputeTemplates(format, sparse):
     #     ax.legend()
     # plt.show()
 
-    _check_result_extension(sorting_analyzer, "templates")
+    _check_result_extension(sorting_analyzer, "templates", cache_folder)
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
-def test_ComputeNoiseLevels(format, sparse):
-    sorting_analyzer = get_sorting_analyzer(format=format, sparse=sparse)
+def test_ComputeNoiseLevels(format, sparse, create_cache_folder):
+    cache_folder = create_cache_folder
+    sorting_analyzer = get_sorting_analyzer(cache_folder, format=format, sparse=sparse)
 
     sorting_analyzer.compute("noise_levels")
     print(sorting_analyzer)
@@ -212,8 +210,9 @@ def test_get_children_dependencies():
     assert rs_children.index("waveforms") < rs_children.index("templates")
 
 
-def test_delete_on_recompute():
-    sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
+def test_delete_on_recompute(create_cache_folder):
+    cache_folder = create_cache_folder
+    sorting_analyzer = get_sorting_analyzer(cache_folder, format="memory", sparse=False)
     sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute("waveforms")
     sorting_analyzer.compute("templates")
@@ -224,8 +223,9 @@ def test_delete_on_recompute():
     assert sorting_analyzer.get_extension("waveforms") is None
 
 
-def test_compute_several():
-    sorting_analyzer = get_sorting_analyzer(format="memory", sparse=False)
+def test_compute_several(create_cache_folder):
+    cache_folder = create_cache_folder
+    sorting_analyzer = get_sorting_analyzer(cache_folder, format="memory", sparse=False)
 
     # should raise an error since waveforms depends on random_spikes, which isn't calculated
     with pytest.raises(AssertionError):
