@@ -754,7 +754,7 @@ class SortingAnalyzer:
 
     @property
     def recording(self) -> BaseRecording:
-        if not self.has_recording():
+        if not self.has_recording() and not self.has_temporary_recording():
             raise ValueError("SortingAnalyzer could not load the recording")
         return self._temporary_recording or self._recording
 
