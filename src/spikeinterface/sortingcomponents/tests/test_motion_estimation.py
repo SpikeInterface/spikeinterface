@@ -1,12 +1,11 @@
 import pytest
-from pathlib import Path
+
 import shutil
 
 import numpy as np
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-
 
 from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
@@ -15,10 +14,6 @@ from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfM
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sortingcomponents"
-else:
-    cache_folder = Path("cache_folder") / "sortingcomponents"
 
 DEBUG = False
 
@@ -29,9 +24,10 @@ if DEBUG:
     plt.show()
 
 
-def setup_module():
+@pytest.fixture(scope="module")
+def setup_module(tmp_path_factory):
     recording, sorting = make_dataset()
-
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     cache_folder.mkdir(parents=True, exist_ok=True)
 
     # detect and localize
@@ -47,17 +43,21 @@ def setup_module():
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         chunk_size=10000,
-        verbose=1,
         progress_bar=True,
         pipeline_nodes=pipeline_nodes,
     )
-    np.save(cache_folder / "dataset_peaks.npy", peaks)
-    np.save(cache_folder / "dataset_peak_locations.npy", peak_locations)
+
+    peaks_path = cache_folder / "dataset_peaks.npy"
+    np.save(peaks_path, peaks)
+    peak_location_path = cache_folder / "dataset_peak_locations.npy"
+    np.save(peak_location_path, peak_locations)
+
+    return recording, sorting, cache_folder
 
 
-def test_estimate_motion():
-    recording, sorting = make_dataset()
-
+def test_estimate_motion(setup_module):
+    # recording, sorting = make_dataset()
+    recording, sorting, cache_folder = setup_module
     peaks = np.load(cache_folder / "dataset_peaks.npy")
     peak_locations = np.load(cache_folder / "dataset_peak_locations.npy")
 
@@ -156,12 +156,14 @@ def test_estimate_motion():
             bin_um=10.0,
             margin_um=5,
             output_extra_check=True,
-            progress_bar=False,
-            verbose=False,
         )
         kwargs.update(cases_kwargs)
 
-        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations, **kwargs)
+        job_kwargs = dict(progress_bar=False)
+
+        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(
+            recording, peaks, peak_locations, **kwargs, **job_kwargs
+        )
 
         motions[name] = motion
 

@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import json
 import time
 from pathlib import Path
-import pickle
 
 import numpy as np
-import scipy.interpolate
 
 from spikeinterface.core import get_noise_levels
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -16,7 +13,6 @@ from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
 
 
-import matplotlib.pyplot as plt
 from spikeinterface.widgets import plot_probe_map
 
 # import MEArec as mr
@@ -36,6 +32,7 @@ def get_gt_motion_from_unit_displacement(
     spatial_bins,
     direction_dim=1,
 ):
+    import scipy.interpolate
 
     unit_displacements = unit_displacements[:, :, direction_dim]
     times = np.arange(unit_displacements.shape[0]) / displacement_sampling_frequency
@@ -166,6 +163,7 @@ class MotionEstimationStudy(BenchmarkStudy):
         self.plot_drift(case_keys=case_keys, tested_drift=False, scaling_probe=scaling_probe, figsize=figsize)
 
     def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True, scaling_probe=1.0, figsize=(8, 6)):
+        import matplotlib.pyplot as plt
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -231,6 +229,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             # ax0.set_ylim()
 
     def plot_errors(self, case_keys=None, figsize=None, lim=None):
+        import matplotlib.pyplot as plt
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -289,12 +288,14 @@ class MotionEstimationStudy(BenchmarkStudy):
             if lim is not None:
                 ax.set_ylim(0, lim)
 
-    def plot_summary_errors(self, case_keys=None, show_legend=True, colors=None, figsize=(15, 5)):
+    def plot_summary_errors(self, case_keys=None, show_legend=True, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
         fig, axes = plt.subplots(1, 3, figsize=figsize)
+
+        colors = self.get_colors()
 
         for count, key in enumerate(case_keys):
 
@@ -306,7 +307,9 @@ class MotionEstimationStudy(BenchmarkStudy):
             temporal_bins = bench.result["temporal_bins"]
             spatial_bins = bench.result["spatial_bins"]
 
-            c = colors[count] if colors is not None else None
+            # c = colors[count] if colors is not None else None
+            c = colors[key]
+
             errors = gt_motion - motion
             mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
             depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
@@ -728,7 +731,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
 #         n = self.motion.shape[1]
 #         step = int(np.ceil(max(1, n / show_only)))
-#         colors = plt.cm.get_cmap("jet", n)
+#         colors = plt.colormaps["jet"].resampled(n)
 #         for i in range(0, n, step):
 #             ax = axs[0]
 #             ax.plot(self.temporal_bins, self.gt_motion[:, i], lw=1.5, ls="--", color=colors(i))

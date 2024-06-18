@@ -139,7 +139,7 @@ class IblRecordingExtractor(BaseRecording):
         pid: str | None = None,
         stream_name: str | None = None,
         load_sync_channel: bool = False,
-        cache_folder: Optional[Union[Path, str]] = None,
+        cache_folder: Optional[Path | str] = None,
         remove_cached: bool = True,
         stream: bool = True,
         one: "one.api.OneAlyx" = None,
@@ -165,7 +165,7 @@ class IblRecordingExtractor(BaseRecording):
                 stream_name is not None
             ), f"Multiple streams found for session. Please specify a stream name from {stream_names}."
             assert stream_name in stream_names, (
-                f"The `stream_name` '{stream_name}' was not found in the available listing for session '{session}'! "
+                f"The `stream_name` '{stream_name}' is not available for this experiment {eid}! "
                 f"Please choose one of {stream_names}."
             )
         else:

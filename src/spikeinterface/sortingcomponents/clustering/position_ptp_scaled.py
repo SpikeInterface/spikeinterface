@@ -26,7 +26,7 @@ class PositionPTPScaledClustering:
         "ptps": None,
         "scales": (1, 1, 10),
         "peak_localization_kwargs": {"method": "center_of_mass"},
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
             "min_samples": 20,
