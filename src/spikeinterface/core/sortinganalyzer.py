@@ -22,7 +22,7 @@ from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
 from .base import load_extractor
-from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, check_recording_attributes_match
+from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import check_json, retrieve_importing_provenance
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
@@ -621,7 +621,7 @@ class SortingAnalyzer:
             The recording object to set as temporary recording.
         """
         # check that recording is compatible
-        assert check_recording_attributes_match(recording, self.rec_attributes), "Recording attributes do not match."
+        assert do_recording_attributes_match(recording, self.rec_attributes), "Recording attributes do not match."
         assert np.array_equal(
             recording.get_channel_locations(), self.get_channel_locations()
         ), "Recording channel locations do not match."

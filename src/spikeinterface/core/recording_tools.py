@@ -919,7 +919,7 @@ def get_rec_attributes(recording):
     return rec_attributes
 
 
-def check_recording_attributes_match(recording1, recording2_attributes) -> bool:
+def do_recording_attributes_match(recording1, recording2_attributes) -> bool:
     """
     Check if two recordings have the same attributes
 
