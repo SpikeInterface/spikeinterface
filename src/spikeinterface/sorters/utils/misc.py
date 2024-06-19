@@ -96,7 +96,10 @@ def has_docker():
 
 
 def has_singularity():
-    return _run_subprocess_silently("singularity --version").returncode == 0 or _run_subprocess_silently("apptainer --version").returncode == 0
+    return (
+        _run_subprocess_silently("singularity --version").returncode == 0
+        or _run_subprocess_silently("apptainer --version").returncode == 0
+    )
 
 
 def has_docker_nvidia_installed():
