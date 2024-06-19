@@ -10,11 +10,11 @@ class MotionWidget(BaseWidget):
 
     Parameters
     ----------
-    motion: Motion
+    motion : Motion
         The motion object
-    segment_index: None | int
+    segment_index : None | int
         If Motion is multi segment, the must be not None
-    mode: "auto" | "line" | "map"
+    mode : "auto" | "line" | "map"
         How to plot map or lines.
         "auto" make it automatic if the number of depth is too high.
     """
@@ -35,7 +35,7 @@ class MotionWidget(BaseWidget):
             if len(motion.displacement) == 1:
                 segment_index = 0
             else:
-                raise ValueError("plot motion : teh Motion object is multi segment you must provide segmentindex=XX")
+                raise ValueError("plot motion : the Motion object is multi segment you must provide segment_index=XX")
 
         plot_data = dict(
             motion=motion,
@@ -106,7 +106,7 @@ class MotionInfoWidget(BaseWidget):
     ----------
     motion_info : dict
         The motion info return by correct_motion() or load back with load_motion_info()
-    segment_index: int, default: None
+    segment_index : int, default: None
         The segment index to display.
     recording : RecordingExtractor, default: None
         The recording extractor object (only used to get "real" times)
@@ -166,7 +166,6 @@ class MotionInfoWidget(BaseWidget):
             amplitude_cmap=amplitude_cmap,
             amplitude_clim=amplitude_clim,
             amplitude_alpha=amplitude_alpha,
-            segment_index=segment_index,
             recording=recording,
             **motion_info,
         )

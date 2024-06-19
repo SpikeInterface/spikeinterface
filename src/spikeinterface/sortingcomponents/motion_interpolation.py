@@ -28,13 +28,10 @@ def correct_motion_on_peaks(peaks, peak_locations, motion, recording):
         Motion-corrected peak locations
     """
     corrected_peak_locations = peak_locations.copy()
-    assert recording is not None or sampling_frequency is not None, "recording or sampling_frequency must be provided"
-    if recording is not None:
-        times_s = recording.sample_index_to_time(peaks["sample_index"])
-    else:
-        times_s = peaks["sample_index"] / sampling_frequency
+    
 
     for segment_index in range(motion.num_segments):
+        times_s = recording.sample_index_to_time(peaks["sample_index"], segment_index=segment_index)
         i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
 
         spike_times = times_s[i0:i1]
@@ -368,7 +365,7 @@ class InterpolateMotionRecording(BasePreprocessor):
             if interpolation_time_bin_centers_s is None:
                 # in this case, interpolation_time_bin_size_s is set.
                 s_end = parent_segment.get_num_samples()
-                t_start, t_end = parent_segment.sample_index_to_time(np.array([0, s_end]))
+                t_start, t_end = parent_segment.sample_index_to_time(np.array([0, s_end]), segment_index=segment_index)
                 halfbin = interpolation_time_bin_size_s / 2.0
                 segment_interpolation_time_bins_s = np.arange(t_start + halfbin, t_end, interpolation_time_bin_size_s)
             else:
@@ -441,11 +438,12 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
             times,
             self.channel_locations,
             self.motion,
+            segment_index=self.segment_index,
             channel_inds=self.channel_inds,
             spatial_interpolation_method=self.spatial_interpolation_method,
             spatial_interpolation_kwargs=self.spatial_interpolation_kwargs,
             interpolation_time_bin_centers_s=self.interpolation_time_bin_centers_s,
-            segment_index=self.segment_index,
+            
         )
 
         if channel_indices is not None:
