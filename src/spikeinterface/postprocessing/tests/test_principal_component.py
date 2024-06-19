@@ -138,7 +138,6 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
 
         np.testing.assert_almost_equal(all_pc1, all_pc2, decimal=3)
 
-
     def test_project_new(self):
         """
         `project_new` projects new (unseen) waveforms onto the PCA components.
