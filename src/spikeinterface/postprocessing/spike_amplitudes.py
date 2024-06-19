@@ -81,6 +81,11 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
 
         return new_data
 
+    def _merge_extension_data(self, merges, former_unit_ids):
+        new_data = dict()
+        new_data["amplitudes"] = self.data["amplitudes"]
+        return new_data
+
     def _get_pipeline_nodes(self):
 
         recording = self.sorting_analyzer.recording

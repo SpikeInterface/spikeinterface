@@ -101,6 +101,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 new_data[k] = v
         return new_data
 
+    def _merge_extension_data(self, merges, former_unit_ids):
+        pass
+
     def get_pca_model(self):
         """
         Returns the scikit-learn PCA model objects.

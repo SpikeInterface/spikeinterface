@@ -42,6 +42,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         new_similarity = self.data["similarity"][unit_indices][:, unit_indices]
         return dict(similarity=new_similarity)
 
+    def _merge_extension_data(self, merges, former_unit_ids):
+        pass
+
     def _run(self, verbose=False):
         templates_array = get_dense_templates_array(
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled

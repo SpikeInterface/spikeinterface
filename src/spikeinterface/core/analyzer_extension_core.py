@@ -448,7 +448,7 @@ class ComputeTemplates(AnalyzerExtension):
                 else:
                     unit_ids = [unit_id] + list(merges[unit_id])
                     keep_unit_indices = np.flatnonzero(np.isin(former_unit_ids, unit_ids))
-                    new_data[key][unit_ind] = arr[keep_unit_indices, :, :].mean()
+                    new_data[key][unit_ind] = arr[keep_unit_indices, :, :].mean(axis=0)
 
         return new_data
 
@@ -609,7 +609,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         # this do not depend on units
         return self.data
     
-    def _merge_extension_data(self, merges):
+    def _merge_extension_data(self, merges, former_unit_ids):
         # this do not depend on units
         return self.data
 

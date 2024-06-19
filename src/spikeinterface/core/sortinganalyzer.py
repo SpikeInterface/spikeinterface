@@ -716,7 +716,7 @@ class SortingAnalyzer:
         format : "binary_folder" | "zarr", default: "binary_folder"
             The backend to use for saving the waveforms
         """
-        return self._save_or_select(format=format, folder=folder, unit_ids=None)
+        return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=None)
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
@@ -769,7 +769,7 @@ class SortingAnalyzer:
         """
         Create a a copy of SortingAnalyzer with format "memory".
         """
-        return self._save_or_select(format="memory", folder=None, unit_ids=None)
+        return self._save_or_select_or_merge(format="memory", folder=None, unit_ids=None)
 
     def is_read_only(self) -> bool:
         if self.format == "memory":
