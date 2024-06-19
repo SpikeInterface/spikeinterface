@@ -613,7 +613,9 @@ class SortingAnalyzer:
                 new_unit_ids.discard(id)
         return list(new_unit_ids)
 
-    def _save_or_select_or_merge(self, format="binary_folder", folder=None, unit_ids=None, merges=None) -> "SortingAnalyzer":
+    def _save_or_select_or_merge(
+        self, format="binary_folder", folder=None, unit_ids=None, merges=None
+    ) -> "SortingAnalyzer":
         """
         Internal used by both save_as(), copy() and select_units() which are more or less the same.
         """
@@ -655,6 +657,7 @@ class SortingAnalyzer:
             sorting_provenance = sorting_provenance.select_units(unit_ids)
         elif merges is not None:
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
+
             sorting_provenance = apply_merges_to_sorting(sorting_provenance, merges)
 
         if format == "memory":

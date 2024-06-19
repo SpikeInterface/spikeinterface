@@ -113,7 +113,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         if self.params["handle_collisions"]:
             new_data["collision_mask"] = self.data["collision_mask"][keep_spike_mask]
         return new_data
-    
+
     def _merge_extension_data(self, merges):
         # keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 

@@ -210,6 +210,7 @@ def random_spikes_selection(
 
     return random_spikes_indices
 
+
 def apply_merges_to_sorting(sorting, merges, censor_ms=None):
     """
     Function to apply a resolved representation of the merges to a sorting object. If censor_ms is not None,
@@ -245,6 +246,7 @@ def apply_merges_to_sorting(sorting, merges, censor_ms=None):
                 )
 
     from spikeinterface.core import NumpySorting
+
     times_list = []
     labels_list = []
     for segment_index in range(sorting.get_num_segments()):
