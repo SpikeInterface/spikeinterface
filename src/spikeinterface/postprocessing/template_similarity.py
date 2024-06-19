@@ -49,7 +49,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         for unit_ind, unit_id in enumerate(new_unit_ids):
             keep_unit_index = np.flatnonzero(np.isin(former_unit_ids, unit_id))
             new_similarity[unit_ind] = arr[keep_unit_index]
-        
+
         keep_unit_indices = np.flatnonzero(np.isin(former_unit_ids, new_unit_ids))
         new_similarity = new_similarity[:, keep_unit_indices]
         return dict(similarity=new_similarity)
