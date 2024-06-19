@@ -206,6 +206,7 @@ def correct_motion(
     preset="nonrigid_accurate",
     folder=None,
     output_motion_info=False,
+    overwrite=False,
     detect_kwargs={},
     select_kwargs={},
     localize_peaks_kwargs={},
@@ -258,6 +259,8 @@ def correct_motion(
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
         This dictionary is the same when reloaded from the folder
+    overwrite : bool, default: False
+        If True and folder is given, overwrite the folder if it already exists
     detect_kwargs : dict
         Optional parameters to overwrite the ones in the preset for "detect" step.
     select_kwargs : dict
@@ -315,14 +318,6 @@ def correct_motion(
     job_kwargs = fix_job_kwargs(job_kwargs)
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
-    if folder is not None:
-        folder = Path(folder)
-        folder.mkdir(exist_ok=True, parents=True)
-
-        (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
-        if recording.check_serializability("json"):
-            recording.dump_to_json(folder / "recording.json")
-
     if not do_selection:
         # maybe do this directly in the folder when not None, but might be slow on external storage
         gather_mode = "memory"
@@ -372,9 +367,6 @@ def correct_motion(
             select_peaks=t2 - t1,
             localize_peaks=t3 - t2,
         )
-    if folder is not None:
-        np.save(folder / "peaks.npy", peaks)
-        np.save(folder / "peak_locations.npy", peak_locations)
 
     t0 = time.perf_counter()
     motion = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
@@ -383,18 +375,17 @@ def correct_motion(
 
     recording_corrected = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
 
+    motion_info = dict(
+        parameters=parameters,
+        run_times=run_times,
+        peaks=peaks,
+        peak_locations=peak_locations,
+        motion=motion,
+    )
     if folder is not None:
-        (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-        motion.save(folder / "motion")
+        save_motion_info(motion_info, folder, overwrite=overwrite)
 
     if output_motion_info:
-        motion_info = dict(
-            parameters=parameters,
-            run_times=run_times,
-            peaks=peaks,
-            peak_locations=peak_locations,
-            motion=motion,
-        )
         return recording_corrected, motion_info
     else:
         return recording_corrected
