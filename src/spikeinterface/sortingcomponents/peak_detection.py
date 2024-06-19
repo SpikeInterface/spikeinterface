@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 import copy
-from typing import Tuple, Union, List, Dict, Any, Optional, Callable
+from typing import Tuple, List, Optional
 
 import numpy as np
 
@@ -24,7 +24,6 @@ from spikeinterface.core.node_pipeline import (
 )
 
 from spikeinterface.postprocessing.unit_locations import get_convolution_weights
-from ..core import get_chunk_with_margin
 
 from .tools import make_multi_method_doc
 
@@ -43,11 +42,10 @@ try:
 except ImportError:
     HAVE_TORCH = False
 
+
 """
 TODO:
     * remove the wrapper class and move  all implementation to instance
-    *
-
 """
 
 

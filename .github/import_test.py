@@ -26,18 +26,17 @@ for import_statement in import_statement_list:
     time_taken_list = []
     for _ in range(n_samples):
         script_to_execute = (
-                f"import timeit \n"
-                f"import_statement = '{import_statement}' \n"
-                f"time_taken = timeit.timeit(import_statement, number=1) \n"
-                f"print(time_taken) \n"
-               )
+            f"import timeit \n"
+            f"import_statement = '{import_statement}' \n"
+            f"time_taken = timeit.timeit(import_statement, number=1) \n"
+            f"print(time_taken) \n"
+        )
 
         result = subprocess.run(["python", "-c", script_to_execute], capture_output=True, text=True)
 
         if result.returncode != 0:
-            error_message  = (
-                f"Error when running {import_statement} \n"
-                f"Error in subprocess: {result.stderr.strip()}\n"
+            error_message = (
+                f"Error when running {import_statement} \n" f"Error in subprocess: {result.stderr.strip()}\n"
             )
             exceptions.append(error_message)
             break
@@ -46,15 +45,25 @@ for import_statement in import_statement_list:
         time_taken_list.append(time_taken)
 
     for time in time_taken_list:
-        if time > 1.5:
-            exceptions.append(f"Importing {import_statement} took too long: {time:.2f} seconds")
+        import_time_threshold = 2.0  # Most of the times is sub-second but there outliers
+        if time >= import_time_threshold:
+            exceptions.append(
+                f"Importing {import_statement} took: {time:.2f} s. Should be <: {import_time_threshold} s."
+            )
             break
 
+
     if time_taken_list:
-        avg_time_taken = sum(time_taken_list) / len(time_taken_list)
-        std_dev_time_taken = math.sqrt(sum((x - avg_time_taken) ** 2 for x in time_taken_list) / len(time_taken_list))
+        avg_time = sum(time_taken_list) / len(time_taken_list)
+        std_time = math.sqrt(sum((x - avg_time) ** 2 for x in time_taken_list) / len(time_taken_list))
         times_list_str = ", ".join(f"{time:.2f}" for time in time_taken_list)
-        markdown_output += f"| `{import_statement}` | {avg_time_taken:.2f} | {std_dev_time_taken:.2f} | {times_list_str} |\n"
+        markdown_output += f"| `{import_statement}` | {avg_time:.2f} | {std_time:.2f} | {times_list_str} |\n"
+
+        import_time_threshold = 1.0
+        if avg_time > import_time_threshold:
+            exceptions.append(
+                f"Importing {import_statement} took: {avg_time:.2f} s in average. Should be <: {import_time_threshold} s."
+            )
 
 if exceptions:
     raise Exception("\n".join(exceptions))
