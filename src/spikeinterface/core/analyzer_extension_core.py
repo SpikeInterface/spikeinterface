@@ -76,7 +76,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_spike_mask])
         return new_data
 
-    def _merge_extension_data(self, merges):
+    def _merge_extension_data(self, merges, former_unit_ids):
         new_data = dict()
         new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
         return new_data
@@ -229,12 +229,9 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, merges):
-        
-        # new_data = dict()
-        # for key, value in self.sorting_analyzer.unit_ids:
-        #     new_data["waveforms"] = self.data["waveforms"]
-
+    def _merge_extension_data(self, merges, former_unit_ids):
+        new_data = dict()
+        new_data["waveforms"] = self.data["waveforms"]
         return new_data
 
     def get_waveforms_one_unit(
@@ -438,12 +435,20 @@ class ComputeTemplates(AnalyzerExtension):
 
         return new_data
     
-    def _merge_extension_data(self, merges):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
-
+    def _merge_extension_data(self, merges, former_unit_ids):
+        
+        new_unit_ids = self.sorting_analyzer._get_ids_after_merging(merges)
         new_data = dict()
         for key, arr in self.data.items():
-            new_data[key] = arr[keep_unit_indices, :, :]
+            new_data[key] = np.zeros((len(new_unit_ids), arr.shape[1], arr.shape[2]), dtype=arr.dtype)
+            for unit_ind, unit_id in enumerate(new_unit_ids):
+                if unit_id not in merges.keys():
+                    keep_unit_index = np.flatnonzero(np.isin(former_unit_ids, unit_id))
+                    new_data[key][unit_ind] = arr[keep_unit_index, :, :]
+                else:
+                    unit_ids = [unit_id] + list(merges[unit_id])
+                    keep_unit_indices = np.flatnonzero(np.isin(former_unit_ids, unit_ids))
+                    new_data[key][unit_ind] = arr[keep_unit_indices, :, :].mean()
 
         return new_data
 

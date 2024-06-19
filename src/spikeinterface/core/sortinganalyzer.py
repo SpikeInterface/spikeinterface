@@ -605,6 +605,14 @@ class SortingAnalyzer:
 
         return sorting_analyzer
 
+    def _get_ids_after_merging(self, merges):
+        new_unit_ids = set(self.unit_ids)
+        for key, to_be_merged in merges.items():
+            assert key in self.unit_ids, "Merged ids should be in the sorting"
+            for id in to_be_merged:
+                new_unit_ids.discard(id)
+        return list(new_unit_ids)
+
     def _save_or_select_or_merge(self, format="binary_folder", folder=None, unit_ids=None, merges=None) -> "SortingAnalyzer":
         """
         Internal used by both save_as(), copy() and select_units() which are more or less the same.
@@ -614,11 +622,7 @@ class SortingAnalyzer:
             assert merges is None, "Can not do simultaneously selection and merges"
         elif merges is not None:
             assert unit_ids is None, "Can not do simultaneously selection and merges"
-            new_unit_ids = set(self.unit_ids)
-            for key, to_be_merged in merges.items():
-                assert key in self.unit_ids, "Merged ids should be in the sorting"
-                for id in to_be_merged:
-                    new_unit_ids.discard(id)
+            new_unit_ids = self._get_ids_after_merging(merges)
 
         if self.has_recording():
             recording = self.recording
@@ -691,7 +695,7 @@ class SortingAnalyzer:
                 )
             elif merges is not None:
                 new_ext = new_sorting_analyzer.extensions[extension_name] = extension.merge(
-                    new_sorting_analyzer, merges=merges
+                    new_sorting_analyzer, merges=merges, former_unit_ids=self.unit_ids
                 )
 
         return new_sorting_analyzer
@@ -1519,7 +1523,7 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    def _merge_extension_data(self, merges):
+    def _merge_extension_data(self, merges, former_unit_ids):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -1684,13 +1688,13 @@ class AnalyzerExtension:
         new_extension.save()
         return new_extension
 
-    def merge(self, new_sorting_analyzer, merges=None):
+    def merge(self, new_sorting_analyzer, merges=None, former_unit_ids=None):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
         if merges is None:
             new_extension.data = self.data
         else:
-            new_extension.data = self._merge_extension_data(merges)
+            new_extension.data = self._merge_extension_data(merges, former_unit_ids)
         new_extension.save()
         return new_extension
 
