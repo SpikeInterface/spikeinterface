@@ -75,9 +75,6 @@ class BaseRecordingSnippets(BaseExtractor):
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         raise NotImplementedError
 
-    def _frame_slice(self, channel_ids, renamed_channel_ids=None):
-        raise NotImplementedError
-
     def set_probe(self, probe, group_mode="by_probe", in_place=False):
         """
         Attach a list of Probe object to a recording.
@@ -190,7 +187,7 @@ class BaseRecordingSnippets(BaseExtractor):
             if np.array_equal(new_channel_ids, self.get_channel_ids()):
                 sub_recording = self.clone()
             else:
-                sub_recording = self.channel_slice(new_channel_ids)
+                sub_recording = self.select_channels(new_channel_ids)
 
         # create a vector that handle all contacts in property
         sub_recording.set_property("contact_vector", probe_as_numpy_array, ids=None)
@@ -461,6 +458,22 @@ class BaseRecordingSnippets(BaseExtractor):
         """
         return self._channel_slice(channel_ids, renamed_channel_ids=renamed_channel_ids)
 
+    def select_channels(self, channel_ids):
+        """
+        Returns a new object with sliced channels.
+
+        Parameters
+        ----------
+        channel_ids : np.array or list
+            The list of channels to keep
+
+        Returns
+        -------
+        BaseRecordingSnippets
+            The object with sliced channels
+        """
+        raise NotImplementedError
+
     def remove_channels(self, remove_channel_ids):
         """
         Returns a new object with removed channels.
@@ -494,7 +507,7 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseRecordingSnippets
             The object with sliced frames
         """
-        return self._frame_slice(start_frame, end_frame)
+        raise NotImplementedError
 
     def select_segments(self, segment_indices):
         """
@@ -545,7 +558,7 @@ class BaseRecordingSnippets(BaseExtractor):
         for value in np.unique(values):
             (inds,) = np.nonzero(values == value)
             new_channel_ids = self.get_channel_ids()[inds]
-            subrec = self.channel_slice(new_channel_ids)
+            subrec = self.select_channels(new_channel_ids)
             if outputs == "list":
                 recordings.append(subrec)
             elif outputs == "dict":

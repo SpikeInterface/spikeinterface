@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import time
-from pathlib import Path
-
 import numpy as np
 import json
 import shutil
-
+from pathlib import Path
+import time
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.core_tools import SIJsonEncoder
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 
 motion_options_preset = {
     # This preset should be the most acccurate
@@ -70,7 +69,7 @@ motion_options_preset = {
             weight_with_amplitude=False,
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1, border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
+            border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     "nonrigid_fast_and_accurate": {
@@ -129,7 +128,7 @@ motion_options_preset = {
             weight_with_amplitude=False,
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1, border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
+            border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     # This preset is a super fast rigid estimation with center of mass
@@ -154,7 +153,7 @@ motion_options_preset = {
             rigid=True,
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1, border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
+            border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     # This preset try to mimic kilosort2.5 motion estimator
@@ -188,7 +187,7 @@ motion_options_preset = {
             win_shape="rect",
         ),
         "interpolate_motion_kwargs": dict(
-            direction=1, border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
+            border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
     # empty preset
@@ -278,9 +277,8 @@ def correct_motion(
     recording_corrected : Recording
         The motion corrected recording
     motion_info : dict
-        Optional output if `output_motion_info=True`
+        Optional output if `output_motion_info=True`. The key "motion" holds the Motion object.
     """
-
     # local import are important because "sortingcomponents" is not important by default
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
@@ -379,21 +377,15 @@ def correct_motion(
         np.save(folder / "peak_locations.npy", peak_locations)
 
     t0 = time.perf_counter()
-    motion, temporal_bins, spatial_bins = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
+    motion = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
     t1 = time.perf_counter()
     run_times["estimate_motion"] = t1 - t0
 
-    recording_corrected = InterpolateMotionRecording(
-        recording, motion, temporal_bins, spatial_bins, **interpolate_motion_kwargs
-    )
+    recording_corrected = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
 
     if folder is not None:
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-
-        np.save(folder / "temporal_bins.npy", temporal_bins)
-        np.save(folder / "motion.npy", motion)
-        if spatial_bins is not None:
-            np.save(folder / "spatial_bins.npy", spatial_bins)
+        motion.save(folder / "motion")
 
     if output_motion_info:
         motion_info = dict(
@@ -401,8 +393,6 @@ def correct_motion(
             run_times=run_times,
             peaks=peaks,
             peak_locations=peak_locations,
-            temporal_bins=temporal_bins,
-            spatial_bins=spatial_bins,
             motion=motion,
         )
         return recording_corrected, motion_info
@@ -443,6 +433,8 @@ def save_motion_info(motion_info, folder, overwrite=False):
 
 
 def load_motion_info(folder):
+    from spikeinterface.sortingcomponents.motion_utils import Motion
+
     folder = Path(folder)
 
     motion_info = {}
@@ -453,11 +445,13 @@ def load_motion_info(folder):
     with open(folder / "run_times.json") as f:
         motion_info["run_times"] = json.load(f)
 
-    array_names = ("peaks", "peak_locations", "temporal_bins", "spatial_bins", "motion")
+    array_names = ("peaks", "peak_locations")
     for name in array_names:
         if (folder / f"{name}.npy").exists():
             motion_info[name] = np.load(folder / f"{name}.npy")
         else:
             motion_info[name] = None
+
+    motion_info["motion"] = Motion.load(folder / "motion")
 
     return motion_info

@@ -18,7 +18,8 @@ def test_fetch_template_object_from_database():
     templates = fetch_template_object_from_database("test_templates.zarr")
     assert isinstance(templates, Templates)
 
-    assert templates.num_units == 100
+    assert templates.num_units == 89
+    assert templates.num_samples == 240
     assert templates.num_channels == 384
 
 
@@ -35,7 +36,7 @@ def test_fetch_templates_database_info():
 def test_query_templates_from_database():
     templates_info = fetch_templates_database_info()
 
-    templates_info = templates_info.iloc[::15]
+    templates_info = templates_info.iloc[[1, 3, 5]]
     num_selected = len(templates_info)
 
     templates = query_templates_from_database(templates_info)

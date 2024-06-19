@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 import copy
-from typing import Tuple, Union, List, Dict, Any, Optional, Callable
+from typing import Tuple, List, Optional
 
 import numpy as np
 
@@ -42,11 +42,10 @@ try:
 except ImportError:
     HAVE_TORCH = False
 
+
 """
 TODO:
     * remove the wrapper class and move  all implementation to instance
-    *
-
 """
 
 
