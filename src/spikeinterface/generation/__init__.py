@@ -10,8 +10,8 @@ from .hybrid_tools import (
     generate_hybrid_recording,
     estimate_templates_from_recording,
     select_templates,
-    scale_templates,
-    shift_templates,
+    scale_template_to_range,
+    relocate_templates,
 )
 from .noise_tools import generate_noise
 from .drifting_generator import (

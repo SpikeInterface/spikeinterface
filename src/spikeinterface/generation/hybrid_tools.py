@@ -316,9 +316,9 @@ def relocate_templates(
 
 def generate_hybrid_recording(
     recording: BaseRecording,
-    motion: Motion | None = None,
     sorting: BaseSorting | None = None,
     templates: Templates | None = None,
+    motion: Motion | None = None,
     templates_in_uV: bool = True,
     unit_locations: np.ndarray | None = None,
     upsample_factor: int | None = None,
@@ -332,17 +332,26 @@ def generate_hybrid_recording(
     """
     Generate an hybrid recording with spike given sorting+templates.
 
+    The function starts from an existing recording and injects hybrid units in it.
+    The templates can be provided or generated. If the templates are not provided,
+    they are generated (using the `spikeinterface.core.generate.generate_templates()` function
+    and with arguments provided in `generate_templates_kwargs`).
+    The sorting can be provided or generated. If the sorting is not provided, it is generated
+    (using the `spikeinterface.core.generate.generate_sorting` function and with arguments
+    provided in `generate_sorting_kwargs`).
+    The injected spikes can optionally follow a motion pattern provided by a Motion object.
+
     Parameters
     ----------
     recording : BaseRecording
         The recording to inject units in.
-    motion : Motion | None, default: None
-        The motion object to use for the drifting templates.
     sorting : Sorting | None, default: None
         An external sorting object. If not provide, one is generated.
     templates : Templates | None, default: None
         The templates of units.
         If None they are generated.
+    motion : Motion | None, default: None
+        The motion object to use for the drifting templates.
     templates_in_uV : bool, default: True
         If True, the templates are in uV, otherwise they are in the same unit as the recording.
         In case the recording has scaling, the templates are "unscaled" before injection.
