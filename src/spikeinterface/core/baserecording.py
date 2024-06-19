@@ -605,7 +605,7 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
-    def _select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
+    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
         """
         Returns a new recording object with a subset of channels.
 
@@ -657,11 +657,51 @@ class BaseRecording(BaseRecordingSnippets):
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 
-    def _frame_slice(self, start_frame, end_frame):
+    def frame_slice(self, start_frame: int, end_frame: int) -> BaseRecording:
+        """
+        Returns a new recording with sliced frames. Note that this operation is not in place.
+
+        Parameters
+        ----------
+        start_frame : int
+            The start frame
+        end_frame : int
+            The end frame
+
+        Returns
+        -------
+        BaseRecording
+            The object with sliced frames
+        """
+
         from .frameslicerecording import FrameSliceRecording
 
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
+
+    def time_slice(self, start_time: float, end_time: float) -> BaseRecording:
+        """
+        Returns a new recording with sliced time. Note that this operation is not in place.
+
+        Parameters
+        ----------
+        start_time : float
+            The start time in seconds.
+        end_time : float
+            The end time in seconds.
+
+        Returns
+        -------
+        BaseRecording
+            The object with sliced time.
+        """
+
+        assert self.get_num_segments() == 1, "Time slicing is only supported for single segment recordings."
+
+        start_frame = self.time_to_sample_index(start_time)
+        end_frame = self.time_to_sample_index(end_time)
+
+        return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
 
     def _select_segments(self, segment_indices):
         from .segmentutils import SelectSegmentRecording

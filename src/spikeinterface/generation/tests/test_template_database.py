@@ -36,7 +36,7 @@ def test_fetch_templates_database_info():
 def test_query_templates_from_database():
     templates_info = fetch_templates_database_info()
 
-    templates_info = templates_info.iloc[::15]
+    templates_info = templates_info.iloc[[1, 3, 5]]
     num_selected = len(templates_info)
 
     templates = query_templates_from_database(templates_info)

@@ -1,9 +1,7 @@
 from __future__ import annotations
-from operator import is_
 
 from .si_based import ComponentsBasedSorter
 
-import os
 import shutil
 import numpy as np
 
@@ -11,7 +9,6 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.template import Templates
-from spikeinterface.core.template_tools import get_template_extremum_amplitude
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
@@ -316,7 +313,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 from spikeinterface.preprocessing.motion import load_motion_info
 
                 motion_info = load_motion_info(motion_folder)
-                merging_params["maximum_distance_um"] = max(50, 2 * np.abs(motion_info["motion"]).max())
+                motion = motion_info["motion"]
+                max_motion = max(
+                    np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
+                )
+                merging_params["maximum_distance_um"] = max(50, 2 * max_motion)
 
             # peak_sign = params['detection'].get('peak_sign', 'neg')
             # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)
