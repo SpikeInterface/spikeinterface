@@ -238,8 +238,8 @@ class LussacMerging(BaseMergingEngine):
     default_params = {
         "templates": None,
         "verbose": True,
-        "remove_emtpy" : True,
-        "recursive" : False,
+        "remove_emtpy": True,
+        "recursive": False,
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
         "lussac_kwargs": {
             "minimum_spikes": 50,
@@ -282,7 +282,7 @@ class LussacMerging(BaseMergingEngine):
     def _get_new_sorting(self):
         lussac_kwargs = self.params.get("lussac_kwargs", None)
         merges = get_potential_auto_merge(self.analyzer, **lussac_kwargs, preset="lussac")
-                
+
         if self.verbose:
             print(f"{len(merges)} merges have been detected")
         merges = resolve_merging_graph(self.analyzer.sorting, merges)
@@ -290,16 +290,14 @@ class LussacMerging(BaseMergingEngine):
         return new_sorting, merges
 
     def run(self, extra_outputs=False):
-        
+
         sorting, merges = self._get_new_sorting()
         num_merges = len(merges)
         all_merges = [merges]
 
         if self.recursive:
             while num_merges > 0:
-                self.analyzer = create_sorting_analyzer(sorting, 
-                                                        self.recording, 
-                                                        format="memory")
+                self.analyzer = create_sorting_analyzer(sorting, self.recording, format="memory")
                 self.analyzer.compute(["random_spikes", "templates"])
                 self.analyzer.compute("unit_locations", method="monopolar_triangulation")
                 self.analyzer.compute("template_similarity", **self.params["similarity_kwargs"])

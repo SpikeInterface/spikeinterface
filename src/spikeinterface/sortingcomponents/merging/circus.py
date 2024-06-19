@@ -16,8 +16,8 @@ class CircusMerging(BaseMergingEngine):
     default_params = {
         "templates": None,
         "verbose": True,
-        "remove_emtpy" : True,
-        "recursive" : False,
+        "remove_emtpy": True,
+        "recursive": False,
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
         "curation_kwargs": {
             "minimum_spikes": 50,
@@ -92,9 +92,7 @@ class CircusMerging(BaseMergingEngine):
 
         if self.recursive:
             while num_merges > 0:
-                self.analyzer = create_sorting_analyzer(sorting, 
-                                                        self.recording, 
-                                                        format="memory")
+                self.analyzer = create_sorting_analyzer(sorting, self.recording, format="memory")
                 self.analyzer.compute(["random_spikes", "templates"])
                 self.analyzer.compute("unit_locations", method="monopolar_triangulation")
                 self.analyzer.compute("template_similarity", **self.params["similarity_kwargs"])
