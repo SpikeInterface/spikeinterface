@@ -406,8 +406,10 @@ def generate_hybrid_recording(
     # check num_units
     num_units = None
     if templates is not None:
+        assert isinstance(templates, Templates), "templates should be a Templates object"
         num_units = templates.num_units
     if sorting is not None:
+        assert isinstance(sorting, BaseSorting), "sorting should be a Sorting object"
         if num_units is not None:
             assert num_units == sorting.get_num_units(), "num_units should be the same in templates and sorting"
         else:
@@ -499,7 +501,7 @@ def generate_hybrid_recording(
     if motion is not None:
         assert num_segments == motion.num_segments, "recording and motion should have the same number of segments"
         dim = motion.dim
-        motion_array_concat = np.concatenat(motion.displacement)
+        motion_array_concat = np.concatenate(motion.displacement)
         if dim == 0:
             start = np.array([np.min(motion_array_concat), 0])
             stop = np.array([np.max(motion_array_concat), 0])
@@ -521,7 +523,7 @@ def generate_hybrid_recording(
         for segment_index in range(motion.num_segments):
             temporal_bins_segment = motion.temporal_bins_s[segment_index]
             displacement_segment = motion.displacement[segment_index]
-            displacement_vector = np.zeros((len(temporal_bins_segment, 2, len(spatial_bins_um))))
+            displacement_vector = np.zeros((len(temporal_bins_segment), 2, len(spatial_bins_um)))
             displacement_unit_factor = np.zeros((num_units, len(spatial_bins_um)))
 
             for count, i in enumerate(spatial_bins_um):

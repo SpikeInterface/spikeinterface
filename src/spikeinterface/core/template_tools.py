@@ -3,7 +3,6 @@ import numpy as np
 import warnings
 
 from .template import Templates
-from .sparsity import _sparsity_doc
 from .sortinganalyzer import SortingAnalyzer
 
 

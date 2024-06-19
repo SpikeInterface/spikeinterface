@@ -12,6 +12,291 @@ except ImportError:
     HAVE_NUMBA = False
 
 
+from spikeinterface.core import compute_sparsity, SortingAnalyzer, Templates
+from spikeinterface.core.template_tools import get_template_extremum_channel, _get_nbefore, get_dense_templates_array
+
+
+def compute_monopolar_triangulation(
+    sorting_analyzer_or_templates: SortingAnalyzer | Templates,
+    optimizer: str = "least_square",
+    radius_um: float = 75,
+    max_distance_um: float = 1000,
+    return_alpha: bool = False,
+    enforce_decrease: bool = False,
+    feature: str = "ptp",
+) -> np.ndarray:
+    """
+    Localize unit with monopolar triangulation.
+    This method is from Julien Boussard, Erdem Varol and Charlie Windolf
+    https://www.biorxiv.org/content/10.1101/2021.11.05.467503v1
+
+    There are 2 implementations of the 2 optimizer variants:
+      * https://github.com/int-brain-lab/spikes_localization_registration/blob/main/localization_pipeline/localizer.py
+      * https://github.com/cwindolf/spike-psvae/blob/main/spike_psvae/localization.py
+
+    Important note about axis:
+      * x/y are dimmension on the probe plane (dim0, dim1)
+      * y is the depth by convention
+      * z it the orthogonal axis to the probe plan (dim2)
+
+    Code from Erdem, Julien and Charlie do not use the same convention!!!
+
+
+    Parameters
+    ----------
+    sorting_analyzer_or_templates : SortingAnalyzer | Templates
+        A SortingAnalyzer or Templates object
+    method : "least_square" | "minimize_with_log_penality", default: "least_square"
+       The optimizer to use
+    radius_um : float, default: 75
+        For channel sparsity
+    max_distance_um : float, default: 1000
+        to make bounddary in x, y, z and also for alpha
+    return_alpha : bool, default: False
+        Return or not the alpha value
+    enforce_decrease : bool, default: False
+        Enforce spatial decreasingness for PTP vectors
+    feature : "ptp" | "energy" | "peak_voltage", default: "ptp"
+        The available features to consider for estimating the position via
+        monopolar triangulation are peak-to-peak amplitudes ("ptp", default),
+        energy ("energy", as L2 norm) or voltages at the center of the waveform
+        ("peak_voltage")
+
+    Returns
+    -------
+    unit_location: np.ndarray
+        3d or 4d, x, y, z, alpha
+        alpha is the amplitude at source estimation
+    """
+    assert optimizer in ("least_square", "minimize_with_log_penality")
+
+    assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
+    unit_ids = sorting_analyzer_or_templates.unit_ids
+
+    contact_locations = sorting_analyzer_or_templates.get_channel_locations()
+
+    sparsity = compute_sparsity(sorting_analyzer_or_templates, method="radius", radius_um=radius_um)
+    templates = get_dense_templates_array(
+        sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
+    )
+    nbefore = _get_nbefore(sorting_analyzer_or_templates)
+
+    if enforce_decrease:
+        neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
+        for i, unit_id in enumerate(unit_ids):
+            chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+            neighbours_mask[i, chan_inds] = True
+        enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
+        best_channels = get_template_extremum_channel(sorting_analyzer_or_templates, outputs="index")
+
+    unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
+    for i, unit_id in enumerate(unit_ids):
+        chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+        local_contact_locations = contact_locations[chan_inds, :]
+
+        # wf is (nsample, nchan) - chann is only nieghboor
+        wf = templates[i, :, :][:, chan_inds]
+        if feature == "ptp":
+            wf_data = wf.ptp(axis=0)
+        elif feature == "energy":
+            wf_data = np.linalg.norm(wf, axis=0)
+        elif feature == "peak_voltage":
+            wf_data = np.abs(wf[nbefore])
+
+        # if enforce_decrease:
+        #    enforce_decrease_shells_data(
+        #        wf_data, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
+        #    )
+
+        unit_location[i] = solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance_um, optimizer)
+
+    if not return_alpha:
+        unit_location = unit_location[:, :3]
+
+    return unit_location
+
+
+def compute_center_of_mass(
+    sorting_analyzer_or_templates: SortingAnalyzer | Templates,
+    peak_sign: str = "neg",
+    radius_um: float = 75,
+    feature: str = "ptp",
+) -> np.ndarray:
+    """
+    Computes the center of mass (COM) of a unit based on the template amplitudes.
+
+    Parameters
+    ----------
+    sorting_analyzer_or_templates : SortingAnalyzer | Templates
+        A SortingAnalyzer or Templates object
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute best channels
+    radius_um : float
+        Radius to consider in order to estimate the COM
+    feature : "ptp" | "mean" | "energy" | "peak_voltage", default: "ptp"
+        Feature to consider for computation
+
+    Returns
+    -------
+    unit_location: np.array
+    """
+    unit_ids = sorting_analyzer_or_templates.unit_ids
+
+    contact_locations = sorting_analyzer_or_templates.get_channel_locations()
+
+    assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
+
+    sparsity = compute_sparsity(
+        sorting_analyzer_or_templates, peak_sign=peak_sign, method="radius", radius_um=radius_um
+    )
+    templates = get_dense_templates_array(
+        sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
+    )
+    nbefore = _get_nbefore(sorting_analyzer_or_templates)
+
+    unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
+    for i, unit_id in enumerate(unit_ids):
+        chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+        local_contact_locations = contact_locations[chan_inds, :]
+
+        wf = templates[i, :, :]
+
+        if feature == "ptp":
+            wf_data = (wf[:, chan_inds]).ptp(axis=0)
+        elif feature == "mean":
+            wf_data = (wf[:, chan_inds]).mean(axis=0)
+        elif feature == "energy":
+            wf_data = np.linalg.norm(wf[:, chan_inds], axis=0)
+        elif feature == "peak_voltage":
+            wf_data = wf[nbefore, chan_inds]
+
+        # center of mass
+        com = np.sum(wf_data[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_data)
+        unit_location[i, :] = com
+
+    return unit_location
+
+
+def compute_grid_convolution(
+    sorting_analyzer_or_templates: SortingAnalyzer | Templates,
+    peak_sign: str = "neg",
+    radius_um: float = 40.0,
+    upsampling_um: float = 5,
+    sigma_ms: float = 0.25,
+    margin_um: float = 50,
+    prototype: np.ndarray | None = None,
+    percentile: float = 5,
+    weight_method: dict = {},
+) -> np.ndarray:
+    """
+    Estimate the positions of the templates from a large grid of fake templates
+
+    Parameters
+    ----------
+    sorting_analyzer_or_templates : SortingAnalyzer | Templates
+        A SortingAnalyzer or Templates object
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute best channels
+    radius_um : float, default: 40.0
+        Radius to consider for the fake templates
+    upsampling_um : float, default: 5
+        Upsampling resolution for the grid of templates
+    sigma_ms : float, default: 0.25
+        The temporal decay of the fake templates
+    margin_um : float, default: 50
+        The margin for the grid of fake templates
+    prototype : np.array or None, default: None
+        Fake waveforms for the templates. If None, generated as Gaussian
+    percentile : float, default: 5
+        The percentage  in [0, 100] of the best scalar products kept to
+        estimate the position
+    weight_method : dict
+        Parameter that should be provided to the get_convolution_weights() function
+        in order to know how to estimate the positions. One argument is mode that could
+        be either gaussian_2d (KS like) or exponential_3d (default)
+    Returns
+    -------
+    unit_location: np.array
+    """
+
+    contact_locations = sorting_analyzer_or_templates.get_channel_locations()
+    unit_ids = sorting_analyzer_or_templates.unit_ids
+
+    templates = get_dense_templates_array(
+        sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
+    )
+    nbefore = _get_nbefore(sorting_analyzer_or_templates)
+    nafter = templates.shape[1] - nbefore
+
+    fs = sorting_analyzer_or_templates.sampling_frequency
+    percentile = 100 - percentile
+    assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
+
+    time_axis = np.arange(-nbefore, nafter) * 1000 / fs
+    if prototype is None:
+        prototype = np.exp(-(time_axis**2) / (2 * (sigma_ms**2)))
+        if peak_sign == "neg":
+            prototype *= -1
+
+    prototype = prototype[:, np.newaxis]
+
+    template_positions, weights, nearest_template_mask, z_factors = get_grid_convolution_templates_and_weights(
+        contact_locations, radius_um, upsampling_um, margin_um, weight_method
+    )
+
+    peak_channels = get_template_extremum_channel(sorting_analyzer_or_templates, peak_sign, outputs="index")
+
+    weights_sparsity_mask = weights > 0
+
+    nb_weights = weights.shape[0]
+    unit_location = np.zeros((unit_ids.size, 3), dtype="float64")
+
+    for i, unit_id in enumerate(unit_ids):
+        main_chan = peak_channels[unit_id]
+        wf = templates[i, :, :]
+        nearest_mask = nearest_template_mask[main_chan, :]
+        channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_mask], axis=(0, 2)) > 0
+        num_templates = np.sum(nearest_mask)
+        sub_w = weights[:, channel_mask, :][:, :, nearest_mask]
+        global_products = (wf[:, channel_mask] * prototype).sum(axis=0)
+
+        dot_products = np.zeros((nb_weights, num_templates), dtype=np.float32)
+        for count in range(nb_weights):
+            dot_products[count] = np.dot(global_products, sub_w[count])
+
+        mask = dot_products < 0
+        if percentile > 0:
+            dot_products[mask] = np.nan
+            ## We need to catch warnings because some line can have only NaN, and
+            ## if so the nanpercentile function throws a warning
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                thresholds = np.nanpercentile(dot_products, percentile)
+            thresholds = np.nan_to_num(thresholds)
+            dot_products[dot_products < thresholds] = 0
+        dot_products[mask] = 0
+
+        nearest_templates = template_positions[nearest_mask]
+        for count in range(nb_weights):
+            unit_location[i, :2] += np.dot(dot_products[count], nearest_templates)
+
+        scalar_products = dot_products.sum(1)
+        unit_location[i, 2] = np.dot(z_factors, scalar_products)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            unit_location[i] /= scalar_products.sum()
+    unit_location = np.nan_to_num(unit_location)
+
+    return unit_location
+
+
+def get_return_scaled(sorting_analyzer_or_templates):
+    if isinstance(sorting_analyzer_or_templates, Templates):
+        return_scaled = sorting_analyzer_or_templates.is_scaled
+    else:
+        return_scaled = sorting_analyzer_or_templates.return_scaled
+    return return_scaled
+
+
 def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um, initial_z=20):
     # constant for initial guess and bounds
     ind_max = np.argmax(wf_data)
