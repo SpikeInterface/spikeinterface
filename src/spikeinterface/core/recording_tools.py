@@ -709,7 +709,7 @@ def get_chunk_with_margin(
     case zero padding is used, in the second case np.pad is called
     with mod="reflect".
     """
-    length = rec_segment.get_num_samples()
+    length = int(rec_segment.get_num_samples())
 
     if channel_indices is None:
         channel_indices = slice(None)
@@ -917,3 +917,34 @@ def get_rec_attributes(recording):
         dtype=recording.get_dtype(),
     )
     return rec_attributes
+
+
+def do_recording_attributes_match(recording1, recording2_attributes) -> bool:
+    """
+    Check if two recordings have the same attributes
+
+    Parameters
+    ----------
+    recording1 : BaseRecording
+        The first recording object
+    recording2_attributes : dict
+        The recording attributes to test against
+
+    Returns
+    -------
+    bool
+        True if the recordings have the same attributes
+    """
+    recording1_attributes = get_rec_attributes(recording1)
+    recording2_attributes = deepcopy(recording2_attributes)
+    recording1_attributes.pop("properties")
+    recording2_attributes.pop("properties")
+
+    return (
+        np.array_equal(recording1_attributes["channel_ids"], recording2_attributes["channel_ids"])
+        and recording1_attributes["sampling_frequency"] == recording2_attributes["sampling_frequency"]
+        and recording1_attributes["num_channels"] == recording2_attributes["num_channels"]
+        and recording1_attributes["num_samples"] == recording2_attributes["num_samples"]
+        and recording1_attributes["is_filtered"] == recording2_attributes["is_filtered"]
+        and recording1_attributes["dtype"] == recording2_attributes["dtype"]
+    )

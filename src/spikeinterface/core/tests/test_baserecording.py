@@ -361,5 +361,30 @@ def test_select_channels():
     assert np.array_equal(selected_channel_ids, ["a", "c"])
 
 
+def test_time_slice():
+    # Case with sampling frequency
+    sampling_frequency = 10_000.0
+    recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
+
+    sliced_recording_times = recording.time_slice(start_time=0.1, end_time=0.8)
+    sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
+
+    assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
+
+
+def test_time_slice_with_time_vector():
+
+    # Case with time vector
+    sampling_frequency = 10_000.0
+    recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
+    times = 1 + np.arange(0, 10_000) / sampling_frequency
+    recording.set_times(times=times, segment_index=0, with_warning=False)
+
+    sliced_recording_times = recording.time_slice(start_time=1.1, end_time=1.8)
+    sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
+
+    assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
+
+
 if __name__ == "__main__":
     test_BaseRecording()

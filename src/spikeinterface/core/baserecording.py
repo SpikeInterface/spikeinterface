@@ -679,6 +679,30 @@ class BaseRecording(BaseRecordingSnippets):
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
 
+    def time_slice(self, start_time: float, end_time: float) -> BaseRecording:
+        """
+        Returns a new recording with sliced time. Note that this operation is not in place.
+
+        Parameters
+        ----------
+        start_time : float
+            The start time in seconds.
+        end_time : float
+            The end time in seconds.
+
+        Returns
+        -------
+        BaseRecording
+            The object with sliced time.
+        """
+
+        assert self.get_num_segments() == 1, "Time slicing is only supported for single segment recordings."
+
+        start_frame = self.time_to_sample_index(start_time)
+        end_frame = self.time_to_sample_index(end_time)
+
+        return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
+
     def _select_segments(self, segment_indices):
         from .segmentutils import SelectSegmentRecording
 
