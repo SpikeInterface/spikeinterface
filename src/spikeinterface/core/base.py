@@ -138,7 +138,7 @@ class BaseExtractor:
                 raise ValueError(error_msg)
 
             _main_ids = self._main_ids.tolist()
-            indices = np.array([_main_ids.index(id) for id in ids], dtype=np.int)
+            indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
 
             if prefer_slice:
                 if np.all(np.diff(indices) == 1):
