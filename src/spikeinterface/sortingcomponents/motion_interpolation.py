@@ -28,7 +28,6 @@ def correct_motion_on_peaks(peaks, peak_locations, motion, recording):
         Motion-corrected peak locations
     """
     corrected_peak_locations = peak_locations.copy()
-    
 
     for segment_index in range(motion.num_segments):
         times_s = recording.sample_index_to_time(peaks["sample_index"], segment_index=segment_index)
@@ -443,7 +442,6 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
             spatial_interpolation_method=self.spatial_interpolation_method,
             spatial_interpolation_kwargs=self.spatial_interpolation_kwargs,
             interpolation_time_bin_centers_s=self.interpolation_time_bin_centers_s,
-            
         )
 
         if channel_indices is not None:
