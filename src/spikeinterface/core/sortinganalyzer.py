@@ -864,7 +864,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
-    def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs):
+    def compute(self, input, save=True, extension_params=None, verbose=False, force_recompute=False, **kwargs):
         """
         Compute one extension or several extensiosn.
         Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
@@ -883,6 +883,9 @@ class SortingAnalyzer:
         extension_params : dict or None, default: None
             If input is a list, this parameter can be used to specify parameters for each extension.
             The extension_params keys must be included in the input list.
+        force_recompute : bool, default: False
+            If True, the extension is recomputed even if it has already been computed with the provided parameters.
+            If False, the extension is not recomputed if it has already been computed with the provided parameters.
         **kwargs:
             All other kwargs are transmitted to extension.set_params() (if input is a string) or job_kwargs
 
@@ -912,11 +915,15 @@ class SortingAnalyzer:
         )
         """
         if isinstance(input, str):
-            return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
+            return self.compute_one_extension(
+                extension_name=input, save=save, verbose=verbose, force_recompute=force_recompute, **kwargs
+            )
         elif isinstance(input, dict):
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
-            self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
+            self.compute_several_extensions(
+                extensions=input, save=save, verbose=verbose, force_recompute=force_recompute, **job_kwargs
+            )
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
@@ -927,11 +934,13 @@ class SortingAnalyzer:
                         ext_name in input
                     ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
                     extensions[ext_name] = ext_params
-            self.compute_several_extensions(extensions=extensions, save=save, verbose=verbose, **job_kwargs)
+            self.compute_several_extensions(
+                extensions=extensions, save=save, verbose=verbose, force_recompute=force_recompute, **job_kwargs
+            )
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
 
-    def compute_one_extension(self, extension_name, save=True, verbose=False, **kwargs):
+    def compute_one_extension(self, extension_name, save=True, verbose=False, force_recompute=False, **kwargs):
         """
         Compute one extension.
 
@@ -967,18 +976,23 @@ class SortingAnalyzer:
         >>> wfs = compute_waveforms(sorting_analyzer, **some_params)
 
         """
-        extension_class = get_extension_class(extension_name)
+        if not force_recompute and not self.does_extension_need_recompute(extension_name, **kwargs):
+            return self.get_extension(extension_name)
 
+        # check dependencies
         for child in _get_children_dependencies(extension_name):
             self.delete_extension(child)
 
+        extension_class = get_extension_class(extension_name)
         if extension_class.need_job_kwargs:
             params, job_kwargs = split_job_kwargs(kwargs)
         else:
             params = kwargs
             job_kwargs = {}
 
-        # check dependencies
+        extension_instance = extension_class(self)
+        extension_instance.set_params(save=save, **params)
+
         if extension_class.need_recording:
             assert self.has_recording(), f"Extension {extension_name} requires the recording"
         for dependency_name in extension_class.depend_on:
@@ -988,8 +1002,6 @@ class SortingAnalyzer:
                 ok = self.get_extension(dependency_name) is not None
             assert ok, f"Extension {extension_name} requires {dependency_name} to be computed first"
 
-        extension_instance = extension_class(self)
-        extension_instance.set_params(save=save, **params)
         if extension_class.need_job_kwargs:
             extension_instance.run(save=save, verbose=verbose, **job_kwargs)
         else:
@@ -999,7 +1011,7 @@ class SortingAnalyzer:
 
         return extension_instance
 
-    def compute_several_extensions(self, extensions, save=True, verbose=False, **job_kwargs):
+    def compute_several_extensions(self, extensions, save=True, verbose=False, force_recompute=False, **job_kwargs):
         """
         Compute several extensions
 
@@ -1015,6 +1027,13 @@ class SortingAnalyzer:
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
+        verbose : bool, default: False
+            If True, print more information about the computation.
+        force_recompute : bool, default: False
+            If True, the extension is recomputed even if it has already been computed with the provided parameters.
+            If False, the extension is not recomputed if it has already been computed with the provided parameters.
+        **job_kwargs : keyword arguments
+            All other kwargs are transmitted to job_kwargs
 
         Returns
         -------
@@ -1027,9 +1046,15 @@ class SortingAnalyzer:
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
+        extensions_to_recompute = {}
+        if not force_recompute:
+            for extension_name, extension_params in extensions.items():
+                if self.does_extension_need_recompute(extension_name, **extension_params):
+                    extensions_to_recompute[extension_name] = extension_params
+        else:
+            extensions_to_recompute = extensions
 
-        sorted_extensions = _sort_extensions_by_dependency(extensions)
-
+        sorted_extensions = _sort_extensions_by_dependency(extensions_to_recompute)
         for extension_name in sorted_extensions.keys():
             for child in _get_children_dependencies(extension_name):
                 self.delete_extension(child)
@@ -1053,9 +1078,18 @@ class SortingAnalyzer:
         for extension_name, extension_params in extensions_without_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
-                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
+                self.compute_one_extension(
+                    extension_name,
+                    save=save,
+                    verbose=verbose,
+                    force_recompute=force_recompute,
+                    **extension_params,
+                    **job_kwargs,
+                )
             else:
-                self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params)
+                self.compute_one_extension(
+                    extension_name, save=save, verbose=verbose, force_recompute=force_recompute, **extension_params
+                )
         # then extensions with pipeline
         if len(extensions_with_pipeline) > 0:
             all_nodes = []
@@ -1107,6 +1141,25 @@ class SortingAnalyzer:
                 self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
             else:
                 self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params)
+
+    def does_extension_need_recompute(self, extension_name, **kwargs):
+        if not self.has_extension(extension_name):
+            return True
+        else:
+            extension_class = get_extension_class(extension_name)
+            if extension_class.need_job_kwargs:
+                params, job_kwargs = split_job_kwargs(kwargs)
+            else:
+                params = kwargs
+
+            extension_instance = extension_class(self)
+            extension_instance.set_params(**params)
+
+            loaded_extension = self.get_extension(extension_name)
+            if loaded_extension.params == extension_instance.params:
+                return False
+            else:
+                return True
 
     def get_saved_extension_names(self):
         """

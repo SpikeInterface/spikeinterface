@@ -108,6 +108,20 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     )
 
 
+def test_recompute(dataset):
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+
+    ext1 = sorting_analyzer.compute("dummy", param1=5.5)
+    ext2 = sorting_analyzer.compute("dummy", param1=5.5)
+    assert id(ext1) == id(ext2)
+
+    ext3 = sorting_analyzer.compute("dummy", param1=5.6)
+    assert id(ext1) != id(ext3)
+    ext4 = sorting_analyzer.compute("dummy", param1=5.6, force_recompute=True)
+    assert id(ext3) == id(ext4)
+
+
 def test_SortingAnalyzer_tmp_recording(dataset):
     recording, sorting = dataset
     recording_cached = recording.save(mode="memory")
