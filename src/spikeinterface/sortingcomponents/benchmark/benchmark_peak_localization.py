@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from spikeinterface.postprocessing.unit_localization import (
+from spikeinterface.postprocessing.unit_locations import (
     compute_center_of_mass,
     compute_monopolar_triangulation,
     compute_grid_convolution,
