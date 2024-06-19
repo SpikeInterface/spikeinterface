@@ -264,9 +264,9 @@ class InjectDriftingTemplatesRecording(BaseRecording):
     ):
         import scipy.spatial
 
-        # assert isinstance(
-        #     drifting_templates, DriftingTemplates
-        # ), "drifting_templates must be a DriftingTemplates object"
+        assert isinstance(
+            drifting_templates, DriftingTemplates
+        ), "drifting_templates must be a DriftingTemplates object"
         self.drifting_templates = drifting_templates
 
         if parent_recording is None:

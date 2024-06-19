@@ -4,20 +4,20 @@ import warnings
 from typing import Literal
 import numpy as np
 
-from ..core.template import Templates
+from spikeinterface.core import BaseRecording, BaseSorting, Templates
 
-from ..core.generate import (
+from spikeinterface.core.generate import (
     generate_templates,
     generate_unit_locations,
     generate_sorting,
     InjectTemplatesRecording,
     _ensure_seed,
 )
-from ..core.template_tools import get_template_extremum_channel
-from ..core.job_tools import split_job_kwargs
-from ..postprocessing.unit_localization import compute_monopolar_triangulation
+from spikeinterface.core.template_tools import get_template_extremum_channel
 
-from .drift_tools import (
+from spikeinterface.sortingcomponents.motion_utils import Motion
+
+from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,
     DriftingTemplates,
     make_linear_displacement,
@@ -27,10 +27,15 @@ from .drift_tools import (
 
 
 def estimate_templates_from_recording(
-    recording, ms_before=2, ms_after=2, sorter_name="spykingcircus2", **run_sorter_kwargs
+    recording: BaseRecording,
+    ms_before: float = 2,
+    ms_after: float = 2,
+    sorter_name: str = "spykingcircus2",
+    run_sorter_kwargs: dict | None = None,
+    job_kwargs: dict | None = None,
 ):
     """
-    Get templates from a recording. Internally, SpyKING CIRCUS 2 is used by default
+    Get dense templates from a recording. Internally, SpyKING CIRCUS 2 is used by default
     with the only twist that the template matching step is not launched. Instead, a Template
     object is returned based on the results of the clustering. Other sorters can be invoked
     with the `sorter_name` and `run_sorter_kwargs` parameters.
@@ -38,41 +43,38 @@ def estimate_templates_from_recording(
     Parameters
     ----------
     ms_before : float
-        The time before peaks of templates
+        The time before peaks of templates.
     ms_after : float
-        The time after peaks of templates
+        The time after peaks of templates.
     sorter_name : str
-        The sorter to be used in order to get some fast clustering
+        The sorter to be used in order to get some fast clustering.
     run_sorter_kwargs : dict
-        The parameters to provide to the run_sorter function of spikeinterface
-
-
-    sorter_params: keyword arguments for `spyking_circus2` function
+        The parameters to provide to the run_sorter function of spikeinterface.
+    job_kwargs : dict
+        The jobe keyword arguments to be used in the estimation of the templates.
 
     Returns
     -------
     templates: Templates
-        The found templates
+        The estimated templates
     """
-    from spikeinterface.sorters.runsorter import run_sorter
-    from spikeinterface.core.template import Templates
     from spikeinterface.core.waveform_tools import estimate_templates
+    from spikeinterface.sorters.runsorter import run_sorter
 
     if sorter_name == "spykingcircus2":
         if "matching" not in run_sorter_kwargs:
             run_sorter_kwargs["matching"] = {"method": None}
 
+    run_sorter_kwargs = run_sorter_kwargs or {}
     sorting = run_sorter(sorter_name, recording, **run_sorter_kwargs)
 
-    from spikeinterface.core.waveform_tools import estimate_templates
-
     spikes = sorting.to_spike_vector()
-    unit_ids = np.unique(spikes["unit_index"])
+    unit_ids = sorting.unit_ids
     sampling_frequency = recording.get_sampling_frequency()
     nbefore = int(ms_before * sampling_frequency / 1000.0)
     nafter = int(ms_after * sampling_frequency / 1000.0)
 
-    _, job_kwargs = split_job_kwargs(run_sorter_kwargs)
+    job_kwargs = job_kwargs or {}
     templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter, **job_kwargs)
 
     sparsity_mask = None
@@ -101,19 +103,19 @@ def select_templates(
     Parameters
     ----------
     templates : Templates
-        The input templates
+        The input templates.
     min_amplitude : float | None, default: None
-        The minimum amplitude of the templates
+        The minimum amplitude of the templates.
     max_amplitude : float | None, default: None
-        The maximum amplitude of the templates
+        The maximum amplitude of the templates.
     min_depth : float | None, default: None
-        The minimum depth of the templates
+        The minimum depth of the templates.
     max_depth : float | None, default: None
-        The maximum depth of the templates
+        The maximum depth of the templates.
     amplitude_function : "ptp" | "min" | "max", default: "ptp"
-        The function to use to compute the amplitude of the templates. Can be "ptp", "min" or "max"
+        The function to use to compute the amplitude of the templates. Can be "ptp", "min" or "max".
     depth_direction : "x" | "y", default: "y"
-        The direction in which to move the templates. Can be "x" or "y"
+        The direction in which to move the templates. Can be "x" or "y".
 
     Returns
     -------
@@ -162,28 +164,28 @@ def select_templates(
     return filtered_templates
 
 
-def scale_templates(
+def scale_template_to_range(
     templates: Templates,
     min_amplitude: float,
     max_amplitude: float,
     amplitude_function: Literal["ptp", "min", "max"] = "ptp",
 ):
     """
-    Scale templates to have a minimum and maximum amplitude.
+    Scale templates to have a range with the provided minimum and maximum amplitudes.
 
     Parameters
     ----------
     templates : Templates
-        The input templates
+        The input templates.
     min_amplitude : float
-        The minimum amplitude of the output templates after scaling
+        The minimum amplitude of the output templates after scaling.
     max_amplitude : float
-        The maximum amplitude of the output templates after scaling
+        The maximum amplitude of the output templates after scaling.
 
     Returns
     -------
     Templates
-        The scaled templates
+        The scaled templates.
     """
     extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
     extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
@@ -219,7 +221,7 @@ def scale_templates(
     )
 
 
-def shift_templates(
+def relocate_templates(
     templates: Templates,
     min_displacement: float,
     max_displacement: float,
@@ -229,7 +231,7 @@ def shift_templates(
     seed: int | None = None,
 ):
     """
-    Shift templates to have a minimum and maximum displacement.
+    Relocates templates to have a minimum and maximum displacement.
 
     Parameters
     ----------
@@ -255,7 +257,7 @@ def shift_templates(
     Returns
     -------
     Templates
-        The moved templates
+        The relocated templates.
     """
     seed = _ensure_seed(seed)
 
@@ -313,37 +315,32 @@ def shift_templates(
 
 
 def generate_hybrid_recording(
-    recording,
-    motion_info=None,
-    num_units=10,
-    sorting=None,
-    templates=None,
-    templates_in_uV=True,
-    ms_before=1.0,
-    ms_after=3.0,
-    unit_locations=None,
-    upsample_factor=None,
-    upsample_vector=None,
-    amplitude_std=0.05,
-    generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0, seed=2205),
-    generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
-    generate_templates_kwargs=dict(),
-    seed=None,
-):
+    recording: BaseRecording,
+    motion: Motion | None = None,
+    sorting: BaseSorting | None = None,
+    templates: Templates | None = None,
+    templates_in_uV: bool = True,
+    unit_locations: np.ndarray | None = None,
+    upsample_factor: int | None = None,
+    upsample_vector: np.ndarray | None = None,
+    amplitude_std: float = 0.05,
+    generate_sorting_kwargs: dict = dict(num_units=10, firing_rates=15, refractory_period_ms=4.0, seed=2205),
+    generate_unit_locations_kwargs: dict = dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
+    generate_templates_kwargs: dict = dict(ms_before=1.0, ms_after=3.0),
+    seed: int | None = None,
+) -> tuple[BaseRecording, BaseSorting]:
     """
     Generate an hybrid recording with spike given sorting+templates.
 
     Parameters
     ----------
     recording : BaseRecording
-        The recording to inject units in
-    motion_info : All the information about the motion
-        The motion datastructure of the recording
-    num_units : int, default: 10
-        Number of units,  not used when sorting is given.
-    sorting : Sorting or None
-        An external sorting object. If not provide, one is genrated.
-    templates : Templates or None, default: None
+        The recording to inject units in.
+    motion : Motion | None, default: None
+        The motion object to use for the drifting templates.
+    sorting : Sorting | None, default: None
+        An external sorting object. If not provide, one is generated.
+    templates : Templates | None, default: None
         The templates of units.
         If None they are generated.
     templates_in_uV : bool, default: True
@@ -376,7 +373,7 @@ def generate_hybrid_recording(
 
     Returns
     -------
-    recording: Recording
+    recording: BaseRecording
         The generated hybrid recording extractor.
     sorting: Sorting
         The generated sorting extractor for the injected units.
@@ -393,6 +390,23 @@ def generate_hybrid_recording(
     durations = np.array([recording.get_duration(segment_index) for segment_index in range(num_segments)])
     channel_locations = probe.contact_positions
 
+    assert (
+        templates is not None or sorting is not None or generate_sorting_kwargs is not None
+    ), "Provide templates or sorting or generate_sorting_kwargs"
+
+    # check num_units
+    num_units = None
+    if templates is not None:
+        num_units = templates.num_units
+    if sorting is not None:
+        if num_units is not None:
+            assert num_units == sorting.get_num_units(), "num_units should be the same in templates and sorting"
+        else:
+            num_units = sorting.get_num_units()
+    if num_units is None:
+        assert "num_units" in generate_sorting_kwargs, "num_units should be provided in generate_sorting_kwargs"
+        num_units = generate_sorting_kwargs["num_units"]
+
     if templates is None:
         if unit_locations is None:
             unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
@@ -402,22 +416,23 @@ def generate_hybrid_recording(
             channel_locations,
             unit_locations,
             sampling_frequency,
-            ms_before,
-            ms_after,
             upsample_factor=upsample_factor,
             seed=seed,
             dtype=dtype,
             **generate_templates_kwargs,
         )
+        ms_before = generate_templates_kwargs["ms_before"]
+        ms_after = generate_templates_kwargs["ms_after"]
         nbefore = int(ms_before * sampling_frequency / 1000.0)
         nafter = int(ms_after * sampling_frequency / 1000.0)
         templates_ = Templates(templates_array, sampling_frequency, nbefore, True, None, None, None, probe)
     else:
+        from spikeinterface.postprocessing.localization_tools import compute_monopolar_triangulation
+
         assert isinstance(templates, Templates), "templates should be a Templates object"
         assert (
             templates.num_channels == recording.get_num_channels()
         ), "templates and recording should have the same number of channels"
-        num_units = templates.num_units
         nbefore = templates.nbefore
         nafter = templates.nafter
         unit_locations = compute_monopolar_triangulation(templates)
@@ -449,10 +464,8 @@ def generate_hybrid_recording(
         generate_sorting_kwargs["durations"] = durations
         generate_sorting_kwargs["sampling_frequency"] = sampling_frequency
         generate_sorting_kwargs["seed"] = seed
-        generate_sorting_kwargs["num_units"] = num_units
         sorting = generate_sorting(**generate_sorting_kwargs)
     else:
-        num_units = sorting.get_num_units()
         assert sorting.sampling_frequency == sampling_frequency
 
     num_spikes = sorting.to_spike_vector().size
@@ -474,35 +487,53 @@ def generate_hybrid_recording(
     else:
         amplitude_factor = None
 
-    if motion_info is not None:
-        start = np.array([0, np.min(motion_info["motion"])])
-        stop = np.array([0, np.max(motion_info["motion"])])
-        displacements = make_linear_displacement(start, stop, num_step=int((stop - start)[1]))
+    if motion is not None:
+        assert num_segments == motion.num_segments, "recording and motion should have the same number of segments"
+        dim = motion.dim
+        motion_array_concat = np.concatenat(motion.displacement)
+        if dim == 0:
+            start = np.array([np.min(motion_array_concat), 0])
+            stop = np.array([np.max(motion_array_concat), 0])
+        elif dim == 1:
+            start = np.array([0, np.min(motion_array_concat)])
+            stop = np.array([0, np.max(motion_array_concat)])
+        elif dim == 2:
+            raise NotImplementedError("3D motion not implemented yet")
+        displacements = make_linear_displacement(start, stop, num_step=int((stop - start)[dim]))
 
         # use templates_, because templates_array might have been scaled
         drifting_templates = DriftingTemplates.from_static_templates(templates_)
         drifting_templates.precompute_displacements(displacements)
 
-        displacement_sampling_frequency = 1.0 / np.diff(motion_info["temporal_bins"])[0]
-        displacement_vectors = np.zeros((len(motion_info["temporal_bins"]), 2, len(motion_info["spatial_bins"])))
-        displacement_unit_factor = np.zeros((num_units, len(motion_info["spatial_bins"])))
+        # calculate displacement vectors for each segment
+        displacement_sampling_frequency = 1.0 / np.diff(motion.temporal_bins_s[0])[0]
+        displacement_vectors = []
+        spatial_bins_um = motion.spatial_bins_um
+        for segment_index in range(motion.num_segments):
+            temporal_bins_segment = motion.temporal_bins_s[segment_index]
+            displacement_segment = motion.displacement[segment_index]
+            displacement_vector = np.zeros((len(temporal_bins_segment, 2, len(spatial_bins_um))))
+            displacement_unit_factor = np.zeros((num_units, len(spatial_bins_um)))
 
-        for count, i in enumerate(motion_info["spatial_bins"]):
-            local_motion = motion_info["motion"][:, count]
-            displacement_vectors[:, 1, count] = local_motion
+            for count, i in enumerate(spatial_bins_um):
+                local_motion = displacement_segment[:, count]
+                displacement_vector[:, motion.dim, count] = local_motion
+            displacement_vectors.append(displacement_vector)
 
+        # calculate displacement unit factor
+        displacement_unit_factor = np.zeros((num_units, len(spatial_bins_um)))
         for count in range(num_units):
-            a = 1 / np.abs((unit_locations[count, 1] - motion_info["spatial_bins"]))
+            a = 1 / np.abs((unit_locations[count, motion.dim] - spatial_bins_um))
             displacement_unit_factor[count] = a / a.sum()
 
         hybrid_recording = InjectDriftingTemplatesRecording(
             sorting=sorting,
             parent_recording=recording,
             drifting_templates=drifting_templates,
-            displacement_vectors=[displacement_vectors],
+            displacement_vectors=displacement_vectors,
             displacement_sampling_frequency=displacement_sampling_frequency,
             displacement_unit_factor=displacement_unit_factor,
-            num_samples=durations * sampling_frequency,
+            num_samples=(np.array(durations) * sampling_frequency).astype("int64"),
             amplitude_factor=amplitude_factor,
         )
 
