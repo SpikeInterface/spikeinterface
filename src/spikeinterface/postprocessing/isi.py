@@ -72,8 +72,8 @@ class ComputeISIHistograms(AnalyzerExtension):
                 from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
                 new_sorting = apply_merges_to_sorting(sub_sorting, {unit_id: merges[unit_id]})
-                new_hist = _compute_isi_histograms(new_sorting, **self.params)
-                new_isi_hists[unit_ind], _ = new_hist
+                new_hist, _ = _compute_isi_histograms(new_sorting, **self.params)
+                new_isi_hists[unit_ind] = new_hist
 
         new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
         return new_extension_data

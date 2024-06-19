@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+import numpy as np
 
 import shutil
 
@@ -251,6 +252,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
         # and represent nothing (the trick is to use unit_index for testing slice)
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
         self.data["result_two"] = spikes["unit_index"].copy()
+        self.data["result_three"] = np.zeros((len(self.sorting_analyzer.unit_ids), 2))
 
     def _select_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
@@ -263,18 +265,29 @@ class DummyAnalyzerExtension(AnalyzerExtension):
         new_data["result_one"] = self.data["result_one"]
         new_data["result_two"] = self.data["result_two"][keep_spike_mask]
 
+        keep_spike_mask = np.isin(self.sorting_analyzer.unit_ids, unit_ids)
+        new_data["result_three"] = self.data["result_three"][keep_spike_mask]
+
         return new_data
 
-    def _merge_extension_data(self, merges):
-        # keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+    def _merge_extension_data(self, merges, former_unit_ids):
 
-        # spikes = self.sorting_analyzer.sorting.to_spike_vector()
-        # keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
-        # # here the first key do not depend on unit_id
-        # # but the second need to be sliced!!
-        # new_data = dict()
-        # new_data["result_one"] = self.data["result_one"]
-        # new_data["result_two"] = self.data["result_two"][keep_spike_mask]
+        new_data = dict()
+        new_data["result_one"] = self.data["result_one"]
+        new_data["result_two"] = self.data["result_two"]
+
+        new_unit_ids = self.sorting_analyzer._get_ids_after_merging(merges)
+        arr = self.data["result_three"]
+        num_dims = arr.shape[1]
+        new_data["result_three"] = np.zeros((len(new_unit_ids), num_dims), dtype=arr.dtype)
+        for unit_ind, unit_id in enumerate(new_unit_ids):
+            if unit_id not in merges.keys():
+                keep_unit_index = np.flatnonzero(np.isin(former_unit_ids, unit_id))
+                new_data["result_three"][unit_ind] = arr[keep_unit_index]
+            else:
+                unit_ids = [unit_id] + list(merges[unit_id])
+                keep_unit_indices = np.flatnonzero(np.isin(former_unit_ids, unit_ids))
+                new_data["result_three"][unit_ind] = arr[keep_unit_indices].mean(axis=0)
 
         return new_data
 
@@ -325,7 +338,7 @@ def test_extensions_sorting():
 
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
-    dataset = _get_dataset()
+    dataset = get_dataset()
     test_SortingAnalyzer_memory(tmp_path, dataset)
     test_SortingAnalyzer_binary_folder(tmp_path, dataset)
     test_SortingAnalyzer_zarr(tmp_path, dataset)
