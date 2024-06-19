@@ -5,7 +5,7 @@ import importlib.util
 
 @pytest.mark.skipif(
     importlib.util.find_spec("pooch") is None or importlib.util.find_spec("datalad") is None,
-    reason="Etither pooch or datalad is not installed",
+    reason="Either pooch or datalad is not installed",
 )
 def test_download_dataset():
     repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
