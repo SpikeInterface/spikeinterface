@@ -77,9 +77,9 @@ class ComputeCorrelograms(AnalyzerExtension):
         num_dims = arr.shape[2]
         fs = self.sorting_analyzer.sampling_frequency
 
-        window_size = int(round(fs * self.params['window_ms'] / 2 * 1e-3))
-        bin_size = int(round(fs * self.params['bin_ms'] * 1e-3))
-        
+        window_size = int(round(fs * self.params["window_ms"] / 2 * 1e-3))
+        bin_size = int(round(fs * self.params["bin_ms"] * 1e-3))
+
         new_ccgs = np.zeros((len(new_unit_ids), len(new_unit_ids), num_dims), dtype=arr.dtype)
         for unit_ind1, unit_id1 in enumerate(new_unit_ids):
             spiketrain1 = self.sorting_analyzer.sorting.get_unit_spike_train(unit_id1)
@@ -106,10 +106,9 @@ class ComputeCorrelograms(AnalyzerExtension):
                     j = np.flatnonzero(np.isin(former_unit_ids, unit_id2))
 
                 if new_spk1 or new_spk2:
-                    new_ccgs[unit_ind1, unit_ind2] = compute_crosscorrelogram_from_spiketrain(spiketrain1, 
-                                                                                              spiketrain2, 
-                                                                                              window_size,
-                                                                                              bin_size)
+                    new_ccgs[unit_ind1, unit_ind2] = compute_crosscorrelogram_from_spiketrain(
+                        spiketrain1, spiketrain2, window_size, bin_size
+                    )
                 else:
                     new_ccgs[unit_ind1, unit_ind2] = arr[i, j]
                 new_ccgs[unit_ind2, unit_ind1] = new_ccgs[unit_ind1, unit_ind2][::-1]
