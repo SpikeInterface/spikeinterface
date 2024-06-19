@@ -22,7 +22,7 @@ from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
 from .base import load_extractor
-from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
+from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import check_json, retrieve_importing_provenance
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
@@ -203,6 +203,8 @@ class SortingAnalyzer:
         self.format = format
         self.sparsity = sparsity
         self.return_scaled = return_scaled
+        # this is used to store temporary recording
+        self._temporary_recording = None
 
         # extensions are not loaded at init
         self.extensions = dict()
@@ -605,13 +607,37 @@ class SortingAnalyzer:
 
         return sorting_analyzer
 
+    def set_temporary_recording(self, recording: BaseRecording):
+        """
+        Sets a temporary recording object. This function can be useful to temporarily set
+        a "cached" recording object that is not saved in the SortingAnalyzer object to speed up
+        computations. Upon reloading, the SortingAnalyzer object will try to reload the recording
+        from the original location in a lazy way.
+
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording object to set as temporary recording.
+        """
+        # check that recording is compatible
+        assert do_recording_attributes_match(recording, self.rec_attributes), "Recording attributes do not match."
+        assert np.array_equal(
+            recording.get_channel_locations(), self.get_channel_locations()
+        ), "Recording channel locations do not match."
+        if self._recording is not None:
+            warnings.warn("SortingAnalyzer recording is already set. The current recording is temporarily replaced.")
+        self._temporary_recording = recording
+
     def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingAnalyzer":
         """
         Internal used by both save_as(), copy() and select_units() which are more or less the same.
         """
 
         if self.has_recording():
-            recording = self.recording
+            recording = self._recording
+        elif self.has_temporary_recording():
+            recording = self._temporary_recording
         else:
             recording = None
 
@@ -728,9 +754,9 @@ class SortingAnalyzer:
 
     @property
     def recording(self) -> BaseRecording:
-        if not self.has_recording():
+        if not self.has_recording() and not self.has_temporary_recording():
             raise ValueError("SortingAnalyzer could not load the recording")
-        return self._recording
+        return self._temporary_recording or self._recording
 
     @property
     def channel_ids(self) -> np.ndarray:
@@ -746,6 +772,9 @@ class SortingAnalyzer:
 
     def has_recording(self) -> bool:
         return self._recording is not None
+
+    def has_temporary_recording(self) -> bool:
+        return self._temporary_recording is not None
 
     def is_sparse(self) -> bool:
         return self.sparsity is not None
