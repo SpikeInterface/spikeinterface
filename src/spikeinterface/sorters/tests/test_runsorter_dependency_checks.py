@@ -13,7 +13,7 @@ import copy
 
 def _monkeypatch_return_false():
     """
-    A function to monkeypatch the `has_<dependecy>` functions,
+    A function to monkeypatch the `has_<dependency>` functions,
     ensuring the always return `False` at runtime.
     """
     return False
@@ -61,12 +61,12 @@ class TestRunersorterDependencyChecks:
     @pytest.fixture(scope="function")
     def uninstall_python_dependency(self, request):
         """
-        This python fixture mocks python modules not been importable
+        This python fixture mocks python modules not being importable
         by setting the relevant `sys.modules` dict entry to `None`.
-        It uses `yeild` so that the function can tear-down the test
+        It uses `yield` so that the function can tear-down the test
         (even if it failed) and replace the patched `sys.module` entry.
 
-        This function uses an `indirect` parameterisation, meaning the
+        This function uses an `indirect` parameterization, meaning the
         `request.param` is passed to the fixture at the start of the
         test function. This is used to reuse code for nearly identical
         `spython` and `docker` python dependency tests.
