@@ -119,7 +119,7 @@ def test_recompute(dataset):
     ext3 = sorting_analyzer.compute("dummy", param1=5.6)
     assert id(ext1) != id(ext3)
     ext4 = sorting_analyzer.compute("dummy", param1=5.6, force_recompute=True)
-    assert id(ext3) == id(ext4)
+    assert id(ext3) != id(ext4)
 
 
 def test_SortingAnalyzer_tmp_recording(dataset):
