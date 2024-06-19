@@ -314,7 +314,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
                 motion_info = load_motion_info(motion_folder)
                 motion = motion_info["motion"]
-                max_motion = max(np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement)))
+                max_motion = max(
+                    np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
+                )
                 merging_params["maximum_distance_um"] = max(50, 2 * max_motion)
 
             # peak_sign = params['detection'].get('peak_sign', 'neg')
