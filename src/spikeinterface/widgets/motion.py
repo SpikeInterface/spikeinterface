@@ -4,6 +4,7 @@ import numpy as np
 
 from .base import BaseWidget, to_attr
 
+
 class MotionWidget(BaseWidget):
     """
     Plot the Motion object
@@ -18,6 +19,7 @@ class MotionWidget(BaseWidget):
         How to plot map or lines.
         "auto" make it automatic if the number of depth is too high.
     """
+
     def __init__(
         self,
         motion,
@@ -26,10 +28,11 @@ class MotionWidget(BaseWidget):
         motion_lim=None,
         backend=None,
         **backend_kwargs,
-
-    ):  
+    ):
         if isinstance(motion, dict):
-            raise ValueError("The API has changed, plot_motion() used Motion object now, maybe you want plot_motion_info(motion_info)")
+            raise ValueError(
+                "The API has changed, plot_motion() used Motion object now, maybe you want plot_motion_info(motion_info)"
+            )
 
         if segment_index is None:
             if len(motion.displacement) == 1:
@@ -43,7 +46,7 @@ class MotionWidget(BaseWidget):
             mode=mode,
         )
 
-        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)        
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
@@ -59,7 +62,6 @@ class MotionWidget(BaseWidget):
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-
         displacement = motion.displacement[dp.segment_index]
         temporal_bins_s = motion.temporal_bins_s[dp.segment_index]
         depth = motion.spatial_bins_um
@@ -68,7 +70,6 @@ class MotionWidget(BaseWidget):
             motion_lim = np.max(np.abs(displacement)) * 1.05
         else:
             motion_lim = dp.motion_lim
-
 
         ax = self.ax
         fig = self.figure
@@ -84,10 +85,10 @@ class MotionWidget(BaseWidget):
                 aspect="auto",
                 origin="lower",
                 extent=(temporal_bins_s[0], temporal_bins_s[-1], depth[0], depth[-1]),
-                cmap="PiYG"
+                cmap="PiYG",
             )
             im.set_clim(-motion_lim, motion_lim)
-            
+
             cbar = fig.colorbar(im)
             cbar.ax.set_ylabel("motion [um]")
             ax.set_xlabel("Times [s]")
@@ -106,8 +107,13 @@ class MotionInfoWidget(BaseWidget):
     ----------
     motion_info : dict
         The motion info return by correct_motion() or load back with load_motion_info()
+<<<<<<< HEAD
     segment_index : int, default: None
         The segment index to display.
+=======
+    segment_index:
+
+>>>>>>> 257950d5859521730ed1da746b6fd32b7b6335bb
     recording : RecordingExtractor, default: None
         The recording extractor object (only used to get "real" times)
     segment_index : int, default: 0
@@ -145,7 +151,7 @@ class MotionInfoWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        
+
         motion = motion_info["motion"]
         if segment_index is None:
             if len(motion.displacement) == 1:
@@ -192,7 +198,6 @@ class MotionInfoWidget(BaseWidget):
 
         motion = dp.motion
 
-
         displacement = motion.displacement[dp.segment_index]
         temporal_bins_s = motion.temporal_bins_s[dp.segment_index]
         spatial_bins_um = motion.spatial_bins_um
@@ -201,7 +206,6 @@ class MotionInfoWidget(BaseWidget):
             motion_lim = np.max(np.abs(displacement)) * 1.05
         else:
             motion_lim = dp.motion_lim
-
 
         is_rigid = displacement.shape[1] == 1
 

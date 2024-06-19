@@ -134,6 +134,7 @@ def test_benchmark_motion_interpolation(create_cache_folder):
     study.plot_sorting_accuracy(mode="depth", mode_best_merge=True)
 
     import matplotlib.pyplot as plt
+
     plt.show()
 
 

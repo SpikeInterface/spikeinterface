@@ -55,13 +55,9 @@ def get_gt_motion_from_unit_displacement(
             gt_displacement[t, :] = f(spatial_bins_um)
 
     gt_motion = Motion(
-        gt_displacement,
-        temporal_bins_s,
-        spatial_bins_um,
-        direction="xyz"[direction_dim],
-        interpolation_method="linear"
+        gt_displacement, temporal_bins_s, spatial_bins_um, direction="xyz"[direction_dim], interpolation_method="linear"
     )
-    
+
     return gt_motion
 
 
@@ -102,9 +98,7 @@ class MotionEstimationBenchmark(Benchmark):
         t2 = time.perf_counter()
         peak_locations = localize_peaks(self.recording, selected_peaks, **p["localize_kwargs"], **job_kwargs)
         t3 = time.perf_counter()
-        motion = estimate_motion(
-            self.recording, selected_peaks, peak_locations, **p["estimate_motion_kwargs"]
-        )
+        motion = estimate_motion(self.recording, selected_peaks, peak_locations, **p["estimate_motion_kwargs"])
         t4 = time.perf_counter()
 
         step_run_times = dict(
@@ -263,8 +257,12 @@ class MotionEstimationStudy(BenchmarkStudy):
                 aspect="auto",
                 interpolation="nearest",
                 origin="lower",
-                extent=(motion.temporal_bins_s[0][0], motion.temporal_bins_s[0][-1],
-                        motion.spatial_bins_um[0], motion.spatial_bins_um[-1]),
+                extent=(
+                    motion.temporal_bins_s[0][0],
+                    motion.temporal_bins_s[0][-1],
+                    motion.spatial_bins_um[0],
+                    motion.spatial_bins_um[-1],
+                ),
             )
             plt.colorbar(im, ax=ax, label="error")
             ax.set_ylabel("depth (um)")

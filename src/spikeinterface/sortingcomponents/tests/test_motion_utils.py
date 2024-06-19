@@ -14,27 +14,26 @@ else:
 
 
 def make_fake_motion():
-    displacement_sampling_frequency = 5.
-    spatial_bins_um = np.array([100.0, 200.0, 300., 400.])    
+    displacement_sampling_frequency = 5.0
+    spatial_bins_um = np.array([100.0, 200.0, 300.0, 400.0])
 
     displacement_vector = make_one_displacement_vector(
         drift_mode="zigzag",
         duration=50.0,
         amplitude_factor=1.0,
         displacement_sampling_frequency=displacement_sampling_frequency,
-        period_s=25.,
+        period_s=25.0,
     )
     temporal_bins_s = np.arange(displacement_vector.size) / displacement_sampling_frequency
     displacement = np.zeros((temporal_bins_s.size, spatial_bins_um.size))
-    
+
     n = spatial_bins_um.size
     for i in range(n):
-        displacement[:, i] = displacement_vector * ((i +1 ) / n)
+        displacement[:, i] = displacement_vector * ((i + 1) / n)
 
     motion = Motion(displacement, temporal_bins_s, spatial_bins_um, direction="y")
 
     return motion
-
 
 
 def test_Motion():

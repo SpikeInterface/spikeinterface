@@ -70,6 +70,7 @@ def test_benchmark_motion_estimaton(create_cache_folder):
     study.plot_summary_errors()
 
     import matplotlib.pyplot as plt
+
     plt.show()
 
 
