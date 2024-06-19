@@ -602,7 +602,9 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
     Here by default we use gaussian window.
 
     """
+    # TODO remove bin_um
     bin_centers = spatial_bin_edges[:-1] + bin_um / 2.0
+    # bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
     n = bin_centers.size
 
     if rigid:
@@ -611,6 +613,7 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
         middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.0
         non_rigid_window_centers = np.array([middle])
     else:
+        # TODO put a warning
         assert win_sigma_um >= win_step_um, f"win_sigma_um too low {win_sigma_um} compared to win_step_um {win_step_um}"
 
         min_ = np.min(contact_pos) - margin_um
