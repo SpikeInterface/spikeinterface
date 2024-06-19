@@ -473,7 +473,6 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
             spike_labels.astype(np.int32, copy=False),
             window_size,
             bin_size,
-            num_bins,
             num_half_bins,
         )
 
@@ -488,7 +487,7 @@ if HAVE_NUMBA:
         cache=False,
     )
     def _compute_correlograms_one_segment_numba(
-        correlograms, spike_times, spike_labels, window_size, bin_size, num_bins, num_half_bins
+        correlograms, spike_times, spike_labels, window_size, bin_size, num_half_bins
     ):
         """
         Compute the correlograms using `numba` for speed.
@@ -517,12 +516,6 @@ if HAVE_NUMBA:
             The window size over which to perform the cross-correlation, in samples
         bin_size : int
             The size of which to bin lags, in samples.
-        num_bins : int
-            The total number of bins to span the window, in samples
-        half_num_bins : int
-            Half the number of bins. The bins are an equal number
-            of bins that look forward and backwards from zero, e.g.
-            [..., -10 to -5, -5 to 0, 0 to 5, 5 to 10, ...]
         """
         start_j = 0
         for i in range(spike_times.size):
@@ -536,7 +529,7 @@ if HAVE_NUMBA:
                 # if the time of spike i is more than window size later than
                 # spike j, then spike i + 1 will also be more than a window size
                 # later than spike j. Iterate the start_j and check the next spike.
-                if diff >= window_size:
+                if diff > window_size:
                     start_j += 1
                     continue
 
@@ -544,7 +537,7 @@ if HAVE_NUMBA:
                 # than spike j, then all following j spikes will be even later
                 # i spikes and so all more than a window size earlier. So move
                 # onto the next i.
-                if diff < -window_size:
+                if diff <= -window_size:
                     break
 
                 bin = diff // bin_size

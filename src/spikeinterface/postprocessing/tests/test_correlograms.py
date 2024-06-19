@@ -14,11 +14,11 @@ from spikeinterface.postprocessing import ComputeCorrelograms
 from spikeinterface.postprocessing.correlograms import (
     compute_correlograms_on_sorting,
     _make_bins,
-    _compute_correlograms_numba,
-    _compute_correlograms_numba_new,
-    correlogram_for_one_segment,
+    compute_correlograms,
 )
+from spikeinterface.core import NumpySorting
 import pytest
+
 
 class TestComputeCorrelograms(AnalyzerExtensionCommonTestSuite):
 
@@ -51,7 +51,11 @@ def test_make_bins():
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
     assert bins.size == np.floor(window_ms / bin_ms) + 1
 
+    breakpoint()
+    # TODO: add an exact test
 
+
+# TODO: remove in favour of below
 def _test_correlograms(sorting, window_ms, bin_ms, methods):
     for method in methods:
         correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -63,6 +67,7 @@ def _test_correlograms(sorting, window_ms, bin_ms, methods):
             assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
 
+# TODO: remove in favour of below
 def test_equal_results_correlograms():
     # compare that the 2 methods have same results
     methods = ["numpy"]
@@ -94,6 +99,8 @@ def test_flat_cross_correlogram():
         assert np.all(cc < (m * 1.10))
 
 
+# TODO: maybe deprecate in favour of the new test as it does test
+# similar thing, but check the border effects...
 def test_auto_equal_cross_correlograms():
     """
     check if cross correlogram is the same as autocorrelogram
@@ -123,6 +130,8 @@ def test_auto_equal_cross_correlograms():
         cc_corrected = cc.copy()
         cc_corrected[num_half_bins] -= num_spike
 
+        breakpoint()
+
         if method == "numpy":
             # numpy method have some border effect on left
             assert np.array_equal(cc_corrected[1:num_half_bins], ac[1:num_half_bins])
@@ -130,6 +139,8 @@ def test_auto_equal_cross_correlograms():
             assert np.array_equal(cc_corrected[num_half_bins + 1 :], ac[num_half_bins + 1 :])
         else:
             assert np.array_equal(cc_corrected, ac)
+
+        breakpoint()
 
 
 def test_detect_injected_correlation():
@@ -171,57 +182,58 @@ def test_detect_injected_correlation():
         assert abs(peak_location_01_ms) - injected_delta_ms < sampling_period_ms
         assert abs(peak_location_02_ms) - injected_delta_ms < sampling_period_ms
 
-# do numpy and numba
-# TOOD: also test the direct spiketrain functions
+
+# TODO: test one segment, test multi-segment with / without set_times
+# indeed, test with one segment here.
+
+
+# parameterize over:
+# 1) the multi-segment case (all counts should be doubled)
+# 2) mutli-segment with set_times
+# 3) some different window_ms and bin_ms. Instead, maybe core utils
+# can be factored out and segment stuff is handled in a new test.
+# otherwise, will be too much!
 def test_correlograms_unit():
+    """ """
+    sampling_frequency = 30000
 
-    sampling_rate = 30000
+    num_filled_bins = 20
 
-    spike_times = np.repeat(np.arange(50), 2) * 0.0051
-    spike_labels = np.zeros(100, dtype=int)
+    spike_times = np.repeat(np.arange(num_filled_bins), 2) * 0.0051
+    spike_labels = np.zeros(num_filled_bins * 2, dtype=int)
     spike_labels[::2] = 1
 
-    spike_times *= sampling_rate
+    spike_times *= sampling_frequency
     spike_times = spike_times.astype(int)
 
-    window_size = int(0.3 * sampling_rate)
-    bin_size = int(0.005 * sampling_rate)
+    window_ms = 300
+    bin_ms = 5
 
-    # TODO: so now the window is -100 to + 100? weird, check docs
-    # TODO: actually calculuate!
-    #  if method == "numba":
-    num_bins = 120
-    result_orig = np.zeros((2, 2, num_bins), dtype=np.int64)
-    _compute_correlograms_numba(result_orig, spike_times, spike_labels, window_size, bin_size)
+    num_bins, check_even_divide = np.divmod(window_ms, bin_ms)
+    assert check_even_divide == 0, "the test bin_ms must evenly divide the window_ms"
 
-    result_test = np.zeros((2, 2, num_bins), dtype=np.int64)
-    _compute_correlograms_numba_new(result_test, spike_times, spike_labels, window_size, bin_size)
+    sorting = NumpySorting.from_times_labels(
+        times_list=[spike_times], labels_list=[spike_labels], sampling_frequency=sampling_frequency
+    )
 
-    # TODO: need to handle the expected result issue. It is different for
-    # autocorrelogram and cross-correlogram case. Needs to be discussed!
-    result_numpy = correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size)
+    result_numba, bins_numba = compute_correlograms(  # TODO: handle the case with set_times!
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
+    )
+    result_numpy, bins_numpy = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numpy")
 
-    # they do not match for [1, 0] only so a backwards case issue!
-    # they shift slightly different to the left or right...
-    # tackle the 0.0051 case first, easier to interpret
-    for i in range(2):
-        for j in range(2):  # use num units
-            assert np.array_equal(result_[i, j, :], result_test[i, j, :]), f"{i}, {j} index failed."
+    expected_bins = np.linspace(-150, 150, num_bins + 1)
 
-    # Okay, the problem, occurs when there is two spikes in
-    # different units at exactly the same time. Then these are counted!
-    # but the policy of these algorithms is not to count in this instance.
-    # but this is only done for the autocorrelogram and NOT the cross-correlogram
+    assert np.array_equal(expected_bins, bins_numpy)
+    assert np.array_equal(expected_bins, bins_numba)
 
-    # It seems they are both somehow adding in an extra bin in the
-    # backwards case. All array should be equal but [1, 0] is different,
-    # a whole in, with 50! it's like the zero-offset bin is added back :S
+    expected_forward_bins = np.r_[np.zeros(int(num_bins / 2 - num_filled_bins - 1)), np.arange(num_filled_bins), 0]
+    expected_results = np.r_[expected_forward_bins, np.flip(expected_forward_bins)]
 
-    if False:
-        empty_bins = np.zeros(10, dtype=int)
-        filled_bins = np.arange(1, 50)
-        expected_output = np.r_[empty_bins, filled_bins, 0, 0, np.flip(filled_bins), empty_bins]
+    for auto_idx in [(0, 0), (1, 1)]:
+        assert np.array_equal(expected_results, result_numpy[auto_idx])  # TODO: CHECK!
+        assert np.array_equal(expected_results, result_numba[auto_idx])
 
-        # TODO: check over all dims
-        assert np.array_equal(result[0, 0, :], expected_output)
-
+    expected_results[int(num_bins / 2)] = num_filled_bins
+    for auto_idx in [(1, 0), (0, 1)]:
+        assert np.array_equal(expected_results, result_numpy[auto_idx])  # TODO: CHECK!
+        assert np.array_equal(expected_results, result_numba[auto_idx])
