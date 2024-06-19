@@ -426,10 +426,7 @@ def save_motion_info(motion_info, folder, overwrite=False):
 
     np.save(folder / "peaks.npy", motion_info["peaks"])
     np.save(folder / "peak_locations.npy", motion_info["peak_locations"])
-    np.save(folder / "motion.npy", motion_info["motion"])
-    np.save(folder / "temporal_bins.npy", motion_info["temporal_bins"])
-    if motion_info["spatial_bins"] is not None:
-        np.save(folder / "spatial_bins.npy", motion_info["spatial_bins"])
+    motion_info["motion"].save(folder / "motion")
 
 
 def load_motion_info(folder):
