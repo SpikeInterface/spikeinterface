@@ -78,10 +78,12 @@ def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
         s0, s1 = segment_slices[segment_index]
         if censor_ms is not None:
             times_list += [spikes["sample_index"][s0:s1][to_keep[s0:s1]]]
-            labels_list += [spikes["unit_index"][s0:s1][to_keep[s0:s1]]]
+            unit_indices = spikes["unit_index"][s0:s1][to_keep[s0:s1]]
+            labels_list += [sorting.unit_ids[unit_indices]]
         else:
             times_list += [spikes["sample_index"][s0:s1]]
-            labels_list += [spikes["unit_index"][s0:s1]]
+            unit_indices = spikes["unit_index"][s0:s1]
+            labels_list += [sorting.unit_ids[unit_indices]]
 
     sorting = NumpySorting.from_times_labels(times_list, labels_list, sorting.sampling_frequency)
     return sorting
