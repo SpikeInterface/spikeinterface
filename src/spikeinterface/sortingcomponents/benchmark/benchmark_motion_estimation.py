@@ -675,7 +675,6 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         peak_locations_corrected = correct_motion_on_peaks(
 #             self.selected_peaks,
 #             self.peak_locations,
-#             self.recording,
 #             self.motion,
 #             self.temporal_bins_s,
 #             self.spatial_bins_um,

@@ -13,11 +13,6 @@ from spikeinterface.sortingcomponents.motion_interpolation import (
 from spikeinterface.sortingcomponents.motion_utils import Motion
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sortingcomponents"
-else:
-    cache_folder = Path("cache_folder") / "sortingcomponents"
-
 
 def make_fake_motion(rec):
     # make a fake motion object
@@ -46,8 +41,8 @@ def test_correct_motion_on_peaks():
     corrected_peak_locations = correct_motion_on_peaks(
         peaks,
         peak_locations,
-        rec,
         motion,
+        recording=rec,
     )
     # print(corrected_peak_locations)
     assert np.any(corrected_peak_locations["y"] != 0)

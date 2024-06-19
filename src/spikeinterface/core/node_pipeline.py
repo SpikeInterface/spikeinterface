@@ -647,7 +647,7 @@ class GatherToNpy:
         self.shapes0 = []
         self.final_shapes = []
         for name in names:
-            filename = folder / (name + ".npy")
+            filename = self.folder / (name + ".npy")
             f = open(filename, "wb+")
             f.seek(npy_header_size)
             self.files.append(f)

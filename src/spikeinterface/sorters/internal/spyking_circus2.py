@@ -1,9 +1,7 @@
 from __future__ import annotations
-from operator import is_
 
 from .si_based import ComponentsBasedSorter
 
-import os
 import shutil
 import numpy as np
 
@@ -11,7 +9,6 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.template import Templates
-from spikeinterface.core.template_tools import get_template_extremum_amplitude
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
@@ -20,14 +17,6 @@ from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
-
-
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
@@ -100,6 +89,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        try:
+            import hdbscan
+
+            HAVE_HDBSCAN = True
+        except:
+            HAVE_HDBSCAN = False
+
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy

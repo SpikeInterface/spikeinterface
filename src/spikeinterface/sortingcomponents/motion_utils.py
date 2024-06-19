@@ -5,24 +5,6 @@ import numpy as np
 import spikeinterface
 from spikeinterface.core.core_tools import check_json
 
-# @charlie @sam
-# here TODO list for motion object
-#  * simple test for Motion: DONE
-#  * save/load Motion DONE
-#  * make simple test for Motion object with save/load DONE
-#  * propagate to estimate_motion : DONE
-#  * handle multi segment in estimate_motion(): maybe in another PR
-#  * propagate to motion_interpolation.py: DONE
-#  * propagate to preprocessing/correct_motion(): DONE
-#  * generate drifting signals for test estimate_motion and interpolate_motion: SIMPLE ONE DONE?
-#  * uncomment assert in test_estimate_motion (aka debug torch vs numpy diff): DONE
-#  * delegate times to recording object in
-#       * estimate motion: DONE
-#       * correct_motion_on_peaks(): DONE
-#       * interpolate_motion_on_traces(): DONE
-# propagate to benchmark estimate motion
-# update plot_motion() dans widget
-
 
 class Motion:
     """
@@ -30,19 +12,21 @@ class Motion:
 
     Parameters
     ----------
-    displacement: numpy array 2d or list of
+    displacement : numpy array 2d or list of
         Motion estimate in um.
         List is the number of segment.
         For each semgent :
             * shape (temporal bins, spatial bins)
             * motion.shape[0] = temporal_bins.shape[0]
             * motion.shape[1] = 1 (rigid) or spatial_bins.shape[1] (non rigid)
-    temporal_bins_s: numpy.array 1d or list of
+    temporal_bins_s : numpy.array 1d or list of
         temporal bins (bin center)
-    spatial_bins_um: numpy.array 1d
+    spatial_bins_um : numpy.array 1d
         Windows center.
         spatial_bins_um.shape[0] == displacement.shape[1]
         If rigid then spatial_bins_um.shape[0] == 1
+    direction : str, default: 'y'
+        Direction of the motion.
     interpolation_method : str
         How to determine the displacement between bin centers? See the docs
         for scipy.interpolate.RegularGridInterpolator for options.

@@ -104,12 +104,14 @@ class MotionInfoWidget(BaseWidget):
 
     Parameters
     ----------
-    motion_info: dict
+    motion_info : dict
         The motion info return by correct_motion() or load back with load_motion_info()
     segment_index: 
 
     recording : RecordingExtractor, default: None
         The recording extractor object (only used to get "real" times)
+    segment_index : int, default: 0
+        The segment index to display.
     sampling_frequency : float, default: None
         The sampling frequency (needed if recording is None)
     depth_lim : tuple or None, default: None
@@ -156,6 +158,7 @@ class MotionInfoWidget(BaseWidget):
         plot_data = dict(
             sampling_frequency=motion_info["parameters"]["sampling_frequency"],
             times=times,
+            segment_index=segment_index,
             depth_lim=depth_lim,
             motion_lim=motion_lim,
             color_amplitude=color_amplitude,
@@ -179,8 +182,8 @@ class MotionInfoWidget(BaseWidget):
 
         dp = to_attr(data_plot)
 
-        assert backend_kwargs["axes"] is None
-        assert backend_kwargs["ax"] is None
+        assert backend_kwargs["axes"] is None, "axes argument is not allowed in MotionWidget"
+        assert backend_kwargs["ax"] is None, "ax argument is not allowed in MotionWidget"
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
         fig = self.figure
@@ -201,7 +204,9 @@ class MotionInfoWidget(BaseWidget):
             motion_lim = dp.motion_lim
 
 
-        gs = fig.add_gridspec(2, 2, wspace=0.3, hspace=0.3)
+        is_rigid = displacement.shape[1] == 1
+
+        gs = fig.add_gridspec(2, 2, wspace=0.3, hspace=0.5)
         ax0 = fig.add_subplot(gs[0, 0])
         ax1 = fig.add_subplot(gs[0, 1])
         ax2 = fig.add_subplot(gs[1, 0])
@@ -224,6 +229,7 @@ class MotionInfoWidget(BaseWidget):
             dp.recording,
             dp.motion
         )
+        dim = ["x", "y", "z"][dp.motion.dim]
 
         y = dp.peak_locations[motion.direction]
         y2 = corrected_location[motion.direction]
@@ -260,17 +266,18 @@ class MotionInfoWidget(BaseWidget):
             ax0.set_ylim(*dp.depth_lim)
         ax0.set_title("Peak depth")
         ax0.set_xlabel("Times [s]")
-        ax0.set_ylabel("Depth [um]")
+        ax0.set_ylabel("Depth [$\\mu$m]")
 
         ax1.scatter(x, y2, s=1, **color_kwargs)
         ax1.set_xlabel("Times [s]")
-        ax1.set_ylabel("Depth [um]")
+        ax1.set_ylabel("Depth [$\\mu$m]")
         ax1.set_title("Corrected peak depth")
 
         ax2.plot(temporal_bins_s, displacement, alpha=0.2, color="black")
         ax2.plot(temporal_bins_s, np.mean(displacement, axis=1), color="C0")
         ax2.set_ylim(-motion_lim, motion_lim)
-        ax2.set_ylabel("Motion [um]")
+        ax2.set_ylabel("Motion [$\\mu$m]")
+        ax2.set_xlabel("Times [s]")
         ax2.set_title("Motion vectors")
         axes = [ax0, ax1, ax2]
 
@@ -288,9 +295,9 @@ class MotionInfoWidget(BaseWidget):
             )
             im.set_clim(-motion_lim, motion_lim)
             cbar = fig.colorbar(im)
-            cbar.ax.set_xlabel("motion [um]")
+            cbar.ax.set_ylabel("Motion [$\\mu$m]")
             ax3.set_xlabel("Times [s]")
-            ax3.set_ylabel("Depth [um]")
+            ax3.set_ylabel("Depth [$\\mu$m]")
             ax3.set_title("Motion vectors")
             axes.append(ax3)
         self.axes = np.array(axes)

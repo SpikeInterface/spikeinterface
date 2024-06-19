@@ -6,18 +6,10 @@ import pytest
 from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import correct_motion, load_motion_info
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
 
-print(cache_folder.absolute())
-
-
-def test_estimate_and_correct_motion():
-
+def test_estimate_and_correct_motion(create_cache_folder):
+    cache_folder = create_cache_folder
     rec = generate_recording(durations=[30.0], num_channels=12)
-
     print(rec)
 
     folder = cache_folder / "estimate_and_correct_motion"

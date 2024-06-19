@@ -13,6 +13,7 @@ from .isi_distribution import ISIDistributionWidget
 from .motion import MotionWidget, MotionInfoWidget
 from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
 from .peak_activity import PeakActivityMapWidget
+from .potential_merges import PotentialMergesWidget
 from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
 from .rasters import RasterWidget
@@ -49,6 +50,7 @@ widget_list = [
     MultiCompAgreementBySorterWidget,
     MultiCompGraphWidget,
     PeakActivityMapWidget,
+    PotentialMergesWidget,
     ProbeMapWidget,
     QualityMetricsWidget,
     RasterWidget,
@@ -121,6 +123,7 @@ plot_multicomparison_agreement = MultiCompGlobalAgreementWidget
 plot_multicomparison_agreement_by_sorter = MultiCompAgreementBySorterWidget
 plot_multicomparison_graph = MultiCompGraphWidget
 plot_peak_activity = PeakActivityMapWidget
+plot_potential_merges = PotentialMergesWidget
 plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget
 plot_rasters = RasterWidget

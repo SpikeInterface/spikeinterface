@@ -8,10 +8,6 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sortingcomponents"
-else:
-    cache_folder = Path("cache_folder") / "sortingcomponents"
 
 DEBUG = False
 
@@ -22,9 +18,10 @@ if DEBUG:
     plt.show()
 
 
-def setup_module():
+@pytest.fixture(scope="module")
+def setup_module(tmp_path_factory):
     recording, sorting = make_dataset()
-
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     cache_folder.mkdir(parents=True, exist_ok=True)
 
     # detect and localize
@@ -43,13 +40,18 @@ def setup_module():
         progress_bar=True,
         pipeline_nodes=pipeline_nodes,
     )
-    np.save(cache_folder / "dataset_peaks.npy", peaks)
-    np.save(cache_folder / "dataset_peak_locations.npy", peak_locations)
+
+    peaks_path = cache_folder / "dataset_peaks.npy"
+    np.save(peaks_path, peaks)
+    peak_location_path = cache_folder / "dataset_peak_locations.npy"
+    np.save(peak_location_path, peak_locations)
+
+    return recording, sorting, cache_folder
 
 
-def test_estimate_motion():
-    recording, sorting = make_dataset()
-
+def test_estimate_motion(setup_module):
+    # recording, sorting = make_dataset()
+    recording, sorting, cache_folder = setup_module
     peaks = np.load(cache_folder / "dataset_peaks.npy")
     peak_locations = np.load(cache_folder / "dataset_peak_locations.npy")
 
