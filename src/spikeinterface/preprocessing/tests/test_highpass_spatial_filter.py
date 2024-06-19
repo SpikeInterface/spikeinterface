@@ -8,14 +8,7 @@ import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core import generate_recording
 import spikeinterface.widgets as sw
-
-try:
-    import spikeglx
-    import neurodsp.voltage as voltage
-
-    HAVE_IBL_NPIX = True
-except ImportError:
-    HAVE_IBL_NPIX = False
+import importlib.util
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
@@ -31,7 +24,10 @@ if DEBUG:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install")
+@pytest.mark.skipif(
+    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") or ON_GITHUB,
+    reason="Only local. Requires ibl-neuropixel install",
+)
 @pytest.mark.parametrize("lagc", [False, 1, 300])
 def test_highpass_spatial_filter_real_data(lagc):
     """
@@ -56,6 +52,9 @@ def test_highpass_spatial_filter_real_data(lagc):
     use DEBUG = true to visualise.
 
     """
+    import spikeglx
+    import neurodsp.voltage as voltage
+
     options = dict(lagc=lagc, ntr_pad=25, ntr_tap=50, butter_kwargs=None)
     print(options)
 
@@ -146,6 +145,8 @@ def get_ibl_si_data():
     """
     Set fixture to session to ensure origional data is not changed.
     """
+    import spikeglx
+
     local_path = si.download_dataset(remote_path="spikeglx/Noise4Sam_g0")
     ibl_recording = spikeglx.Reader(
         local_path / "Noise4Sam_g0_imec0" / "Noise4Sam_g0_t0.imec0.ap.bin", ignore_warnings=True

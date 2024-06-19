@@ -28,7 +28,7 @@ class ResampleRecording(BasePreprocessor):
         The recording extractor to be re-referenced
     resample_rate : int
         The resampling frequency
-    margin : float, default: 100.0
+    margin_ms : float, default: 100.0
         Margin in ms for computations, will be used to decrease edge effects.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
