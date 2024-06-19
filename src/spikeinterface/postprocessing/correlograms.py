@@ -404,7 +404,7 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
             if sign == -1:
                 mask[:-shift][spike_diff_b < -num_half_bins] = False
             else:
-                #   spike_diff_b[np.where(spike_diff_b == num_half_bins)] -= 1
+                spike_diff_b[np.where(spike_diff_b == num_half_bins)] -= 1
                 mask[:-shift][spike_diff_b >= num_half_bins] = False
 
             m = mask[:-shift]
@@ -468,14 +468,23 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_labels = spikes[seg_index]["unit_index"]
 
-        _compute_correlograms_one_segment_numba(
+        _compute_correlograms_numba(
             correlograms,
             spike_times.astype(np.int64, copy=False),
             spike_labels.astype(np.int32, copy=False),
             window_size,
             bin_size,
-            num_half_bins,
         )
+
+        if False:
+            _compute_correlograms_one_segment_numba(
+                correlograms,
+                spike_times.astype(np.int64, copy=False),
+                spike_labels.astype(np.int32, copy=False),
+                window_size,
+                bin_size,
+                num_half_bins,
+            )
 
     return correlograms
 

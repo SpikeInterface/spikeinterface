@@ -237,7 +237,8 @@ def test_correlograms_unit():
     # basically in the edge case of actly on bin, what do we do? we can push left or push right.
     # this pushes right. But the new addition is definately a fix, previously it would
     # disregard many cases in which the bin was exactly the bottom bin because of
-    # fencepost error.
+    # fencepost error. OK both methods now have the same behaviour on the edges
+    # as the previous numba version.
 
     # TODO: tidy up this test, add multi-segment case. Decide which cases to test neatly.
     for auto_idx in [(0, 0), (1, 1)]:
