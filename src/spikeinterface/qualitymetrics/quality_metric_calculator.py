@@ -86,6 +86,12 @@ class ComputeQualityMetrics(AnalyzerExtension):
         new_data = dict(metrics=new_metrics)
         return new_data
 
+    def _merge_extension_data(self, merges, merged_sorting):
+        new_unit_ids = self.sorting_analyzer._get_ids_after_merging(merges)
+        new_metrics = self.data["metrics"].loc[np.array(new_unit_ids)]
+        new_data = dict(metrics=new_metrics)
+        return new_data
+
     def _run(self, verbose=False, **job_kwargs):
         """
         Compute quality metrics.
@@ -106,7 +112,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         empty_unit_ids = unit_ids[~np.isin(unit_ids, non_empty_unit_ids)]
         if len(empty_unit_ids) > 0:
             warnings.warn(
-                f"Units {empty_unit_ids} are empty. Quality metrcs will be set to NaN "
+                f"Units {empty_unit_ids} are empty. Quality metrics will be set to NaN "
                 f"for these units.\n To remove empty units, use `sorting.remove_empty_units()`."
             )
 

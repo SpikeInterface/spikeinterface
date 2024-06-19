@@ -64,18 +64,18 @@ class ComputeUnitLocations(AnalyzerExtension):
         new_unit_location = self.data["unit_locations"][unit_inds]
         return dict(unit_locations=new_unit_location)
 
-    def _merge_extension_data(self, merges, former_unit_ids):
-        new_unit_ids = self.sorting_analyzer._get_ids_after_merging(merges)
+    def _merge_extension_data(self, merges, merged_sorting):
         arr = self.data["unit_locations"]
         num_dims = arr.shape[1]
+        new_unit_ids = merged_sorting.unit_ids
         new_unit_location = np.zeros((len(new_unit_ids), num_dims), dtype=arr.dtype)
         for unit_ind, unit_id in enumerate(new_unit_ids):
             if unit_id not in merges.keys():
-                keep_unit_index = np.flatnonzero(np.isin(former_unit_ids, unit_id))
+                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                 new_unit_location[unit_ind] = arr[keep_unit_index]
             else:
                 unit_ids = [unit_id] + list(merges[unit_id])
-                keep_unit_indices = np.flatnonzero(np.isin(former_unit_ids, unit_ids))
+                keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
                 new_unit_location[unit_ind] = arr[keep_unit_indices].mean(axis=0)
 
         return dict(unit_locations=new_unit_location)

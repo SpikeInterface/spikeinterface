@@ -70,8 +70,9 @@ class ComputeCorrelograms(AnalyzerExtension):
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
-    def _merge_extension_data(self, merges, former_unit_ids):
-        new_unit_ids = self.sorting_analyzer._get_ids_after_merging(merges)
+    def _merge_extension_data(self, merges, merged_sorting):
+
+        new_unit_ids = merged_sorting.unit_ids
         new_bins = self.data["bins"]
         arr = self.data["ccgs"]
         num_dims = arr.shape[2]
@@ -82,28 +83,20 @@ class ComputeCorrelograms(AnalyzerExtension):
 
         new_ccgs = np.zeros((len(new_unit_ids), len(new_unit_ids), num_dims), dtype=arr.dtype)
         for unit_ind1, unit_id1 in enumerate(new_unit_ids):
-            spiketrain1 = self.sorting_analyzer.sorting.get_unit_spike_train(unit_id1)
+            spiketrain1 = merged_sorting.get_unit_spike_train(unit_id1)
             if unit_id1 in merges.keys():
-                for m in merges[unit_id1]:
-                    extra_spikes = self.sorting_analyzer.sorting.get_unit_spike_train(m)
-                    spiketrain1 = np.concatenate((spiketrain1, extra_spikes))
-                spiketrain1 = np.sort(spiketrain1)
                 new_spk1 = True
             else:
                 new_spk1 = False
-                i = np.flatnonzero(np.isin(former_unit_ids, unit_id1))
+                i = self.sorting_analyzer.sorting.id_to_index(unit_id1)
 
             for unit_ind2, unit_id2 in enumerate(new_unit_ids[unit_ind1:]):
-                spiketrain2 = self.sorting_analyzer.sorting.get_unit_spike_train(unit_id2)
+                spiketrain2 = merged_sorting.get_unit_spike_train(unit_id2)
                 if unit_id2 in merges.keys():
-                    for m in merges[unit_id2]:
-                        extra_spikes = self.sorting_analyzer.sorting.get_unit_spike_train(m)
-                        spiketrain2 = np.concatenate((spiketrain2, extra_spikes))
-                    spiketrain2 = np.sort(spiketrain2)
                     new_spk2 = True
                 else:
                     new_spk2 = False
-                    j = np.flatnonzero(np.isin(former_unit_ids, unit_id2))
+                    j = self.sorting_analyzer.sorting.id_to_index(unit_id2)
 
                 if new_spk1 or new_spk2:
                     new_ccgs[unit_ind1, unit_ind2] = compute_crosscorrelogram_from_spiketrain(

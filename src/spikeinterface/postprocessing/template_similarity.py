@@ -42,15 +42,15 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         new_similarity = self.data["similarity"][unit_indices][:, unit_indices]
         return dict(similarity=new_similarity)
 
-    def _merge_extension_data(self, merges, former_unit_ids):
-        new_unit_ids = self.sorting_analyzer._get_ids_after_merging(merges)
+    def _merge_extension_data(self, merges, merged_sorting):
         arr = self.data["similarity"]
+        new_unit_ids = merged_sorting.unit_ids
         new_similarity = np.zeros((len(new_unit_ids), arr.shape[1]), dtype=arr.dtype)
         for unit_ind, unit_id in enumerate(new_unit_ids):
-            keep_unit_index = np.flatnonzero(np.isin(former_unit_ids, unit_id))
+            keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
             new_similarity[unit_ind] = arr[keep_unit_index]
 
-        keep_unit_indices = np.flatnonzero(np.isin(former_unit_ids, new_unit_ids))
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.sorting.unit_ids, new_unit_ids))
         new_similarity = new_similarity[:, keep_unit_indices]
         return dict(similarity=new_similarity)
 

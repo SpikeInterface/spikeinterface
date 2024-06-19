@@ -270,23 +270,23 @@ class DummyAnalyzerExtension(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, merges, former_unit_ids):
+    def _merge_extension_data(self, merges, merged_sorting):
 
+        new_unit_ids = merged_sorting.unit_ids
         new_data = dict()
         new_data["result_one"] = self.data["result_one"]
         new_data["result_two"] = self.data["result_two"]
 
-        new_unit_ids = self.sorting_analyzer._get_ids_after_merging(merges)
         arr = self.data["result_three"]
         num_dims = arr.shape[1]
         new_data["result_three"] = np.zeros((len(new_unit_ids), num_dims), dtype=arr.dtype)
         for unit_ind, unit_id in enumerate(new_unit_ids):
             if unit_id not in merges.keys():
-                keep_unit_index = np.flatnonzero(np.isin(former_unit_ids, unit_id))
+                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                 new_data["result_three"][unit_ind] = arr[keep_unit_index]
             else:
                 unit_ids = [unit_id] + list(merges[unit_id])
-                keep_unit_indices = np.flatnonzero(np.isin(former_unit_ids, unit_ids))
+                keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
                 new_data["result_three"][unit_ind] = arr[keep_unit_indices].mean(axis=0)
 
         return new_data

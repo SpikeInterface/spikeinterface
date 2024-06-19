@@ -724,7 +724,7 @@ class SortingAnalyzer:
                 )
             elif merges is not None:
                 new_ext = new_sorting_analyzer.extensions[extension_name] = extension.merge(
-                    new_sorting_analyzer, merges=merges, former_unit_ids=self.unit_ids
+                    new_sorting_analyzer, merges=merges, merged_sorting=sorting_provenance
                 )
 
         return new_sorting_analyzer
@@ -1555,7 +1555,7 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    def _merge_extension_data(self, merges, former_unit_ids):
+    def _merge_extension_data(self, merges, former_unit_ids, merged_sorting):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -1720,13 +1720,13 @@ class AnalyzerExtension:
         new_extension.save()
         return new_extension
 
-    def merge(self, new_sorting_analyzer, merges=None, former_unit_ids=None):
+    def merge(self, new_sorting_analyzer, merges=None, merged_sorting=None):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
         if merges is None:
             new_extension.data = self.data
         else:
-            new_extension.data = self._merge_extension_data(merges, former_unit_ids)
+            new_extension.data = self._merge_extension_data(merges, merged_sorting)
         new_extension.save()
         return new_extension
 
