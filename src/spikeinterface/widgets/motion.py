@@ -98,11 +98,11 @@ class MotionWidget(BaseWidget):
 
 class MotionInfoWidget(BaseWidget):
     """
-    Plot motion information from the motion_info dict returned by correct_motion().
-    This plot:
-      * the motion iself
-      * the peak depth vs time before correction
-      * the peak depth vs time after correction
+        Plot motion information from the motion_info dict returned by correct_motion().
+        This plot:
+          * the motion iself
+          * the peak depth vs time before correction
+          * the peak depth vs time after correction
 
     Parameters
     ----------
