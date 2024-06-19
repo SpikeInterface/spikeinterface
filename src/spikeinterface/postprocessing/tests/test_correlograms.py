@@ -1,6 +1,4 @@
-import unittest
 import numpy as np
-from typing import List
 
 try:
     import numba
@@ -14,54 +12,47 @@ from spikeinterface import NumpySorting, generate_sorting
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.postprocessing import ComputeCorrelograms
 from spikeinterface.postprocessing.correlograms import compute_correlograms_on_sorting, _make_bins
+import pytest
 
 
-class ComputeCorrelogramsTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
-    extension_class = ComputeCorrelograms
-    extension_function_params_list = [
-        dict(method="numpy"),
-        dict(method="auto"),
-    ]
-    if HAVE_NUMBA:
-        extension_function_params_list.append(dict(method="numba"))
+class TestComputeCorrelograms(AnalyzerExtensionCommonTestSuite):
+
+    @pytest.mark.parametrize(
+        "params",
+        [
+            dict(method="numpy"),
+            dict(method="auto"),
+            pytest.param(dict(method="numba"), marks=pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")),
+        ],
+    )
+    def test_extension(self, params):
+        self.run_extension_tests(ComputeCorrelograms, params)
 
 
 def test_make_bins():
+    """
+    Check the `_make_bins()` function that generates time bins (lags) for
+    the correllogram creates the expected number of bins.
+    """
     sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     window_ms = 43.57
     bin_ms = 1.6421
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
     assert bins.size == np.floor(window_ms / bin_ms) + 1
-    # print(bins, window_size, bin_size)
 
     window_ms = 60.0
     bin_ms = 2.0
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
     assert bins.size == np.floor(window_ms / bin_ms) + 1
-    # print(bins, window_size, bin_size)
 
 
 def _test_correlograms(sorting, window_ms, bin_ms, methods):
     for method in methods:
         correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
         if method == "numpy":
-            ref_correlograms = correlograms
             ref_bins = bins
         else:
-            # ~ import matplotlib.pyplot as plt
-            # ~ for i in range(ref_correlograms.shape[1]):
-            # ~ for j in range(ref_correlograms.shape[1]):
-            # ~ fig, ax = plt.subplots()
-            # ~ ax.plot(bins[:-1], ref_correlograms[i, j, :], color='green', label='numpy')
-            # ~ ax.plot(bins[:-1], correlograms[i, j, :], color='red', label=method)
-            # ~ ax.legend()
-            # ~ ax.set_title(f'{i} {j}')
-            # ~ plt.show()
-
-            # numba and numyp do not have exactly the same output
-            # assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
-
             assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
 
@@ -78,14 +69,15 @@ def test_equal_results_correlograms():
 
 
 def test_flat_cross_correlogram():
+    """
+    Check that the correlogram (num_units x num_units x num_bins) does not
+    vary too much across time bins (lags), for entries representing two different units.
+    """
     sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0], seed=0)
 
     methods = ["numpy"]
     if HAVE_NUMBA:
         methods.append("numba")
-
-    # ~ import matplotlib.pyplot as plt
-    # ~ fig, ax = plt.subplots()
 
     for method in methods:
         correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=50.0, bin_ms=1.0, method=method)
@@ -93,11 +85,6 @@ def test_flat_cross_correlogram():
         m = np.mean(cc)
         assert np.all(cc > (m * 0.90))
         assert np.all(cc < (m * 1.10))
-
-        # ~ ax.plot(bins[:-1], cc, label=method)
-    # ~ ax.legend()
-    # ~ ax.set_ylim(0, np.max(correlograms) * 1.1)
-    # ~ plt.show()
 
 
 def test_auto_equal_cross_correlograms():
@@ -137,18 +124,13 @@ def test_auto_equal_cross_correlograms():
         else:
             assert np.array_equal(cc_corrected, ac)
 
-        # ~ import matplotlib.pyplot as plt
-        # ~ fig, ax = plt.subplots()
-        # ~ ax.plot(bins[:-1], cc, marker='*',  color='red', label='cross-corr')
-        # ~ ax.plot(bins[:-1], cc_corrected, marker='*', color='orange', label='cross-corr corrected')
-        # ~ ax.plot(bins[:-1], ac, marker='*', color='green', label='auto-corr')
-        # ~ ax.set_title(method)
-        # ~ ax.legend()
-        # ~ ax.set_ylim(0, np.max(correlograms) * 1.1)
-        # ~ plt.show()
-
 
 def test_detect_injected_correlation():
+    """
+    Inject 1.44 ms of correlation every 13 spikes and compute
+    cross-correlation. Check that the time bin lag with the peak
+    correlation lag is 1.44 ms (within tolerance of a sampling period).
+    """
     methods = ["numpy"]
     if HAVE_NUMBA:
         methods.append("numba")
@@ -181,24 +163,3 @@ def test_detect_injected_correlation():
         sampling_period_ms = 1000.0 / sampling_frequency
         assert abs(peak_location_01_ms) - injected_delta_ms < sampling_period_ms
         assert abs(peak_location_02_ms) - injected_delta_ms < sampling_period_ms
-
-    #     import matplotlib.pyplot as plt
-    #     fig, ax = plt.subplots()
-    #     half_bin_ms = np.mean(np.diff(bins)) / 2.
-    #     ax.plot(bins[:-1]+half_bin_ms, cc_01, marker='*',  color='red', label='cross-corr 0>1')
-    #     ax.plot(bins[:-1]+half_bin_ms, cc_10, marker='*',  color='orange', label='cross-corr 1>0')
-    #     ax.set_title(method)
-    #     ax.legend()
-    # plt.show()
-
-
-if __name__ == "__main__":
-    # test_make_bins()
-    # test_equal_results_correlograms()
-    # test_flat_cross_correlogram()
-    # test_auto_equal_cross_correlograms()
-    # test_detect_injected_correlation()
-
-    test = ComputeCorrelogramsTest()
-    test.setUpClass()
-    test.test_extension()
