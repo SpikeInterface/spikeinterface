@@ -42,7 +42,7 @@ def download_dataset(
     Notes
     -----
     The reason we use pooch is because have had problems with datalad not being able to download
-    data on windows machines. Specially in the CI.
+    data on windows machines. Especially in the CI.
 
     See https://handbook.datalad.org/en/latest/intro/windows.html
     """
