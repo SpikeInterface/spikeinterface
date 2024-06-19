@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-from packaging import version
-
-import numpy as np
 from pathlib import Path
 
-import neo
 import probeinterface
 
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts

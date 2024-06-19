@@ -21,7 +21,7 @@ from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
 
-from ..postprocessing.unit_localization import (
+from ..postprocessing.unit_locations import (
     dtype_localize_by_method,
     possible_localization_methods,
     solve_monopolar_triangulation,
@@ -163,7 +163,7 @@ class LocalizeCenterOfMass(LocalizeBase):
 
     Notes
     -----
-    See spikeinterface.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_locations.
     """
 
     need_waveforms = True
@@ -204,7 +204,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             wf = waveforms[idx][:, :, chan_inds]
 
             if self.feature == "ptp":
-                wf_data = wf.ptp(axis=1)
+                wf_data = np.ptp(wf, axis=1)
             elif self.feature == "mean":
                 wf_data = wf.mean(axis=1)
             elif self.feature == "energy":
@@ -225,7 +225,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     Notes
     -----
     This method is from  Julien Boussard, Erdem Varol and Charlie Windolf
-    See spikeinterface.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_locations.
     """
 
     need_waveforms = False
@@ -293,7 +293,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 
             wf = waveforms[i, :][:, chan_inds]
             if self.feature == "ptp":
-                wf_data = wf.ptp(axis=0)
+                wf_data = np.ptp(wf, axis=0)
             elif self.feature == "energy":
                 wf_data = np.linalg.norm(wf, axis=0)
             elif self.feature == "peak_voltage":
@@ -316,7 +316,7 @@ class LocalizeGridConvolution(PipelineNode):
 
     Notes
     -----
-    See spikeinterface.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_locations.
     """
 
     need_waveforms = True
