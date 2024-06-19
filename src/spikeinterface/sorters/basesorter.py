@@ -183,7 +183,7 @@ class BaseSorter:
         # custom check params
         params = cls._check_params(recording, output_folder, params)
         # common check : filter warning
-        if recording.is_filtered and cls._check_apply_filter_in_params(params) and verbose:
+        if recording.is_filtered() and cls._check_apply_filter_in_params(params) and verbose:
             print(f"Warning! The recording is already filtered, but {cls.sorter_name} filter is enabled")
 
         # dump parameters inside the folder with json

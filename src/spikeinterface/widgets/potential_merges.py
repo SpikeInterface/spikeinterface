@@ -237,7 +237,7 @@ class PotentialMergesWidget(BaseWidget):
         self.w_templates._plot_probe(self.ax_probe, channel_locations, plot_unit_ids)
         crosscorrelograms_data_plot = self.w_crosscorrelograms.data_plot.copy()
         crosscorrelograms_data_plot["unit_ids"] = plot_unit_ids
-        merge_unit_indices = np.flatnonzero(np.isin(self.unique_merge_units, plot_unit_ids))
+        merge_unit_indices = np.flatnonzero(np.isin(self.data_plot["unique_merge_units"], plot_unit_ids))
         updated_correlograms = crosscorrelograms_data_plot["correlograms"]
         updated_correlograms = updated_correlograms[merge_unit_indices][:, merge_unit_indices]
         crosscorrelograms_data_plot["correlograms"] = updated_correlograms
