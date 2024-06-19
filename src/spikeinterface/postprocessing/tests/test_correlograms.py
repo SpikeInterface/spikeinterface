@@ -130,17 +130,21 @@ def test_auto_equal_cross_correlograms():
         cc_corrected = cc.copy()
         cc_corrected[num_half_bins] -= num_spike
 
-        breakpoint()
+        # TODO: why is this bounds shifting behaviour changing now cc vs. ac are represented in
+        # negative max-lag time bin?
 
-        if method == "numpy":
-            # numpy method have some border effect on left
-            assert np.array_equal(cc_corrected[1:num_half_bins], ac[1:num_half_bins])
-            # numpy method have some problem on center
-            assert np.array_equal(cc_corrected[num_half_bins + 1 :], ac[num_half_bins + 1 :])
-        else:
-            assert np.array_equal(cc_corrected, ac)
+        # everything is the same, except
 
-        breakpoint()
+        assert np.array_equal(cc_corrected, ac)
+
+
+#      if method == "numpy":
+# numpy method have some border effect on left
+#   assert np.array_equal(cc_corrected[1:], ac[1:])  # ac[1:num_half_bins]
+# numpy method have some problem on center
+#   assert np.array_equal(cc_corrected[num_half_bins + 1 :], ac[num_half_bins + 1 :])
+#        else:
+#           assert np.array_equal(cc_corrected, ac)
 
 
 def test_detect_injected_correlation():
@@ -197,9 +201,9 @@ def test_correlograms_unit():
     """ """
     sampling_frequency = 30000
 
-    num_filled_bins = 20
+    num_filled_bins = 60
 
-    spike_times = np.repeat(np.arange(num_filled_bins), 2) * 0.0051
+    spike_times = np.repeat(np.arange(num_filled_bins), 2) * 0.005  # 0.005, 0.0051!!! test both critical for edge case
     spike_labels = np.zeros(num_filled_bins * 2, dtype=int)
     spike_labels[::2] = 1
 
@@ -226,10 +230,18 @@ def test_correlograms_unit():
     assert np.array_equal(expected_bins, bins_numpy)
     assert np.array_equal(expected_bins, bins_numba)
 
-    expected_forward_bins = np.r_[np.zeros(int(num_bins / 2 - num_filled_bins - 1)), np.arange(num_filled_bins), 0]
+    first_bin = np.abs(int(num_bins / 2 - num_filled_bins - 1))
+    expected_forward_bins = np.r_[np.zeros(np.max([0, -first_bin])), np.arange(first_bin, num_filled_bins), 0]
     expected_results = np.r_[expected_forward_bins, np.flip(expected_forward_bins)]
 
+    # basically in the edge case of actly on bin, what do we do? we can push left or push right.
+    # this pushes right. But the new addition is definately a fix, previously it would
+    # disregard many cases in which the bin was exactly the bottom bin because of
+    # fencepost error.
+
+    # TODO: tidy up this test, add multi-segment case. Decide which cases to test neatly.
     for auto_idx in [(0, 0), (1, 1)]:
+        breakpoint()
         assert np.array_equal(expected_results, result_numpy[auto_idx])  # TODO: CHECK!
         assert np.array_equal(expected_results, result_numba[auto_idx])
 

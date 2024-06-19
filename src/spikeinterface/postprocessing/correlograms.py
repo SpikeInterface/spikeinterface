@@ -404,6 +404,7 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
             if sign == -1:
                 mask[:-shift][spike_diff_b < -num_half_bins] = False
             else:
+                #   spike_diff_b[np.where(spike_diff_b == num_half_bins)] -= 1
                 mask[:-shift][spike_diff_b >= num_half_bins] = False
 
             m = mask[:-shift]
@@ -481,11 +482,11 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
 
 if HAVE_NUMBA:
 
-    @numba.jit(
-        nopython=True,
-        nogil=True,
-        cache=False,
-    )
+    #   @numba.jit(
+    #      nopython=True,
+    #     nogil=True,
+    #    cache=False,
+    # )
     def _compute_correlograms_one_segment_numba(
         correlograms, spike_times, spike_labels, window_size, bin_size, num_half_bins
     ):
@@ -529,6 +530,9 @@ if HAVE_NUMBA:
                 # if the time of spike i is more than window size later than
                 # spike j, then spike i + 1 will also be more than a window size
                 # later than spike j. Iterate the start_j and check the next spike.
+                if diff == window_size:
+                    continue
+
                 if diff > window_size:
                     start_j += 1
                     continue
@@ -537,7 +541,7 @@ if HAVE_NUMBA:
                 # than spike j, then all following j spikes will be even later
                 # i spikes and so all more than a window size earlier. So move
                 # onto the next i.
-                if diff <= -window_size:
+                if diff < -window_size:
                     break
 
                 bin = diff // bin_size
