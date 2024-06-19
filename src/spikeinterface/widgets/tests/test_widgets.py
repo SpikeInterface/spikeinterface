@@ -72,25 +72,25 @@ class TestWidgets(unittest.TestCase):
         )
         job_kwargs = dict(n_jobs=-1)
 
-        # # create dense
-        # cls.sorting_analyzer_dense = create_sorting_analyzer(cls.sorting, cls.recording, format="memory", sparse=False)
-        # cls.sorting_analyzer_dense.compute("random_spikes")
-        # cls.sorting_analyzer_dense.compute(extensions_to_compute, **job_kwargs)
+        # create dense
+        cls.sorting_analyzer_dense = create_sorting_analyzer(cls.sorting, cls.recording, format="memory", sparse=False)
+        cls.sorting_analyzer_dense.compute("random_spikes")
+        cls.sorting_analyzer_dense.compute(extensions_to_compute, **job_kwargs)
 
-        # sw.set_default_plotter_backend("matplotlib")
+        sw.set_default_plotter_backend("matplotlib")
 
-        # # make sparse waveforms
-        # cls.sparsity_radius = compute_sparsity(cls.sorting_analyzer_dense, method="radius", radius_um=50)
-        # cls.sparsity_strict = compute_sparsity(cls.sorting_analyzer_dense, method="radius", radius_um=20)
-        # cls.sparsity_large = compute_sparsity(cls.sorting_analyzer_dense, method="radius", radius_um=80)
-        # cls.sparsity_best = compute_sparsity(cls.sorting_analyzer_dense, method="best_channels", num_channels=5)
+        # make sparse waveforms
+        cls.sparsity_radius = compute_sparsity(cls.sorting_analyzer_dense, method="radius", radius_um=50)
+        cls.sparsity_strict = compute_sparsity(cls.sorting_analyzer_dense, method="radius", radius_um=20)
+        cls.sparsity_large = compute_sparsity(cls.sorting_analyzer_dense, method="radius", radius_um=80)
+        cls.sparsity_best = compute_sparsity(cls.sorting_analyzer_dense, method="best_channels", num_channels=5)
 
-        # # create sparse
-        # cls.sorting_analyzer_sparse = create_sorting_analyzer(
-        #     cls.sorting, cls.recording, format="memory", sparsity=cls.sparsity_radius
-        # )
-        # cls.sorting_analyzer_sparse.compute("random_spikes")
-        # cls.sorting_analyzer_sparse.compute(extensions_to_compute, **job_kwargs)
+        # create sparse
+        cls.sorting_analyzer_sparse = create_sorting_analyzer(
+            cls.sorting, cls.recording, format="memory", sparsity=cls.sparsity_radius
+        )
+        cls.sorting_analyzer_sparse.compute("random_spikes")
+        cls.sorting_analyzer_sparse.compute(extensions_to_compute, **job_kwargs)
 
         cls.skip_backends = ["ipywidgets", "ephyviewer", "spikeinterface_gui"]
         # cls.skip_backends = ["ipywidgets", "ephyviewer", "sortingview"]
@@ -107,7 +107,7 @@ class TestWidgets(unittest.TestCase):
             "spikeinterface_gui": {},
         }
 
-        # cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
+        cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
