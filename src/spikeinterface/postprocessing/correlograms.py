@@ -404,8 +404,13 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
             if sign == -1:
                 mask[:-shift][spike_diff_b < -num_half_bins] = False
             else:
-                spike_diff_b[np.where(spike_diff_b == num_half_bins)] -= 1
+                # spike_diff_b[np.where(spike_diff_b == num_half_bins)] -= 1  adds to the first AND last bin, which we dont want.
                 mask[:-shift][spike_diff_b >= num_half_bins] = False
+                # spike_diff_b[spike_diff_b == num_half_bins] = 0  # fills the central bin
+                # the problem is that we need to mask specific pairs of comparisons
+                # but this is just masking the entire spike time.
+                # I still don't understand why removing the bound is leading to error at all,
+                # it is leading to extra counting.
 
             m = mask[:-shift]
 

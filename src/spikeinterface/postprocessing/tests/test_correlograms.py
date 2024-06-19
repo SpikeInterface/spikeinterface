@@ -197,6 +197,9 @@ def test_detect_injected_correlation():
 # 3) some different window_ms and bin_ms. Instead, maybe core utils
 # can be factored out and segment stuff is handled in a new test.
 # otherwise, will be too much!
+
+
+# keep the window and bin fixed. test across num filled bins
 def test_correlograms_unit():
     """ """
     sampling_frequency = 30000
@@ -242,9 +245,11 @@ def test_correlograms_unit():
 
     # TODO: tidy up this test, add multi-segment case. Decide which cases to test neatly.
     for auto_idx in [(0, 0), (1, 1)]:
-        breakpoint()
-        assert np.array_equal(expected_results, result_numpy[auto_idx])  # TODO: CHECK!
-        assert np.array_equal(expected_results, result_numba[auto_idx])
+        try:
+            assert np.array_equal(expected_results, result_numpy[auto_idx])  # TODO: CHECK!
+            assert np.array_equal(expected_results, result_numba[auto_idx])
+        except:
+            breakpoint()
 
     expected_results[int(num_bins / 2)] = num_filled_bins
     for auto_idx in [(1, 0), (0, 1)]:
