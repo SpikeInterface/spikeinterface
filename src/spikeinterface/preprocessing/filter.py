@@ -47,13 +47,19 @@ class FilterRecording(BasePreprocessor):
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     add_reflect_padding : Bool, default False
         If True, uses a left and right margin during calculation.
-    {}
+    filter_order : order
+        The order of the filter for `scipy.signal.iirfilter`
+    filter_mode :  "sos" | "ba", default: "sos"
+        Filter form of the filter coefficients for `scipy.signal.iirfilter`:
+        - second-order sections ("sos")
+        - numerator/denominator : ("ba")
+    ftype : str, default: "butter"
+        Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
 
     Returns
     -------
     filter_recording : FilterRecording
         The filtered recording extractor object
-
     """
 
     name = "filter"
@@ -290,7 +296,6 @@ bandpass_filter = define_function_from_class(source_class=BandpassFilterRecordin
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
 
-filter.__doc__ = filter.__doc__.format(_common_filter_docs)
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
 
