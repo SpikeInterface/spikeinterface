@@ -957,8 +957,8 @@ class SortingAnalyzer:
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
 
-        **kwargs:
-            All other kwargs are transmitted to extension.set_params() or job_kwargs
+        **kwargs: keyword arguments
+            All other keyword arguments are transmitted to extension.set_params() or job_kwargs
 
         Returns
         -------
@@ -1033,7 +1033,7 @@ class SortingAnalyzer:
             If True, the extension is recomputed even if it has already been computed with the provided parameters.
             If False, the extension is not recomputed if it has already been computed with the provided parameters.
         **job_kwargs : keyword arguments
-            All other kwargs are transmitted to job_kwargs
+            All other keyword arguments are transmitted to job_kwargs
 
         Returns
         -------
