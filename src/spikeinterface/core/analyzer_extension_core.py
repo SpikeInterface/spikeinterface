@@ -608,7 +608,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
     def _select_extension_data(self, unit_ids):
         # this do not depend on units
         return self.data
-    
+
     def _merge_extension_data(self, merges, former_unit_ids):
         # this do not depend on units
         return self.data
