@@ -271,8 +271,6 @@ def compute_correlogram_diff(sorting, correlograms_smoothed, win_sizes, pair_mas
         The difference between the cross-correlogram and the auto-correlogram
         for each pair of units.
     """
-    # bin_ms = bins[1] - bins[0]
-
     unit_ids = sorting.unit_ids
     n = len(unit_ids)
 
