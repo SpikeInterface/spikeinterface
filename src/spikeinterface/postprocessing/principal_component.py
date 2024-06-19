@@ -102,7 +102,13 @@ class ComputePrincipalComponents(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(self, merges, former_unit_ids):
-        pass
+        new_data = dict()
+        new_data["pca_projection"] = self.data["pca_projection"]
+        # one or several model
+        for k, v in self.data.items():
+            if "model" in k:
+                new_data[k] = v
+        return new_data
 
     def get_pca_model(self):
         """
