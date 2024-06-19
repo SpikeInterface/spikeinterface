@@ -8,14 +8,16 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import get_chunk_with_margin
 
 
-_common_filter_docs = """**filter_kwargs : keyword arguments for parallel processing:
-
-            * filter_order : order
-                The order of the filter
-            * filter_mode : "sos or "ba"
-                "sos" is bi quadratic and more stable than ab so thery are prefered.
-            * ftype : str
-                Filter type for iirdesign ("butter" / "cheby1" / ... all possible of scipy.signal.iirdesign)
+_common_filter_docs = """**filter_kwargs : dict
+        Certain keyword arguments for `scipy.signal` filters:
+        filter_order : order
+            The order of the filter
+        filter_mode :  "sos" | "ba", default: "sos"
+            Filter form of the filter coefficients:
+            - second-order sections ("sos")
+            - numerator/denominator : ("ba")
+        ftype : str, default: "butter"
+            Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
     """
 
 
@@ -39,21 +41,25 @@ class FilterRecording(BasePreprocessor):
         Type of the filter
     margin_ms : float, default: 5.0
         Margin in ms on border to avoid border effect
-    filter_mode : "sos" | "ba", default: "sos"
-        Filter form of the filter coefficients:
-        - second-order sections ("sos")
-        - numerator/denominator : ("ba")
-    coef : array or None, default: None
+    coeff : array | None, default: None
         Filter coefficients in the filter_mode form.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
-    {}
+    add_reflect_padding : Bool, default False
+        If True, uses a left and right margin during calculation.
+    filter_order : order
+        The order of the filter for `scipy.signal.iirfilter`
+    filter_mode :  "sos" | "ba", default: "sos"
+        Filter form of the filter coefficients for `scipy.signal.iirfilter`:
+        - second-order sections ("sos")
+        - numerator/denominator : ("ba")
+    ftype : str, default: "butter"
+        Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
 
     Returns
     -------
     filter_recording : FilterRecording
         The filtered recording extractor object
-
     """
 
     name = "filter"
@@ -179,6 +185,7 @@ class BandpassFilterRecording(FilterRecording):
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
+
     Returns
     -------
     filter_recording : BandpassFilterRecording
@@ -213,6 +220,7 @@ class HighpassFilterRecording(FilterRecording):
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
+
     Returns
     -------
     filter_recording : HighpassFilterRecording
@@ -240,7 +248,11 @@ class NotchFilterRecording(BasePreprocessor):
         The target frequency in Hz of the notch filter
     q : int
         The quality factor of the notch filter
-    {}
+    dtype : None | dtype, default: None
+        dtype of recording. If None, will take from `recording`
+    margin_ms : float, default: 5.0
+        Margin in ms on border to avoid border effect
+
     Returns
     -------
     filter_recording : NotchFilterRecording
@@ -283,6 +295,9 @@ filter = define_function_from_class(source_class=FilterRecording, name="filter")
 bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
+
+bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
+highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
 
 
 def fix_dtype(recording, dtype):
