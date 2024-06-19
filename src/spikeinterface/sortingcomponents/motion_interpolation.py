@@ -364,7 +364,7 @@ class InterpolateMotionRecording(BasePreprocessor):
             if interpolation_time_bin_centers_s is None:
                 # in this case, interpolation_time_bin_size_s is set.
                 s_end = parent_segment.get_num_samples()
-                t_start, t_end = parent_segment.sample_index_to_time(np.array([0, s_end]), segment_index=segment_index)
+                t_start, t_end = parent_segment.sample_index_to_time(np.array([0, s_end]))
                 halfbin = interpolation_time_bin_size_s / 2.0
                 segment_interpolation_time_bins_s = np.arange(t_start + halfbin, t_end, interpolation_time_bin_size_s)
             else:
