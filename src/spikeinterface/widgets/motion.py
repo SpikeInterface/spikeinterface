@@ -106,8 +106,8 @@ class MotionInfoWidget(BaseWidget):
     ----------
     motion_info : dict
         The motion info return by correct_motion() or load back with load_motion_info()
-    segment_index: 
-
+    segment_index: int, default: None
+        The segment index to display.
     recording : RecordingExtractor, default: None
         The recording extractor object (only used to get "real" times)
     segment_index : int, default: 0
@@ -226,10 +226,9 @@ class MotionInfoWidget(BaseWidget):
         corrected_location = correct_motion_on_peaks(
             dp.peaks,
             dp.peak_locations,
+            dp.motion,
             dp.recording,
-            dp.motion
         )
-        dim = ["x", "y", "z"][dp.motion.dim]
 
         y = dp.peak_locations[motion.direction]
         y2 = corrected_location[motion.direction]

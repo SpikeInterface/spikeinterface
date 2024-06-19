@@ -7,7 +7,7 @@ from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, Base
 from spikeinterface.preprocessing.filter import fix_dtype
 
 
-def correct_motion_on_peaks(peaks, peak_locations, motion, recording=None, sampling_frequency=None):
+def correct_motion_on_peaks(peaks, peak_locations, motion, recording):
     """
     Given the output of estimate_motion(), apply inverse motion on peak locations.
 
@@ -19,11 +19,8 @@ def correct_motion_on_peaks(peaks, peak_locations, motion, recording=None, sampl
         peaks location vector
     motion : Motion
         The motion object.
-    recording : Recording | None, default: None
-        The recording object. If given, this is used to convert sample indices to times.
-    sampling_frequency : float | None
-        Sampling_frequency of the recording, required if recording is None.
-
+    recording : Recording
+        The recording object. This is used to convert sample indices to times.
 
     Returns
     -------
