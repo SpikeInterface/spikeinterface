@@ -718,13 +718,13 @@ class SortingAnalyzer:
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         for extension_name, extension in self.extensions.items():
-            if unit_ids is not None:
-                new_ext = new_sorting_analyzer.extensions[extension_name] = extension.copy(
-                    new_sorting_analyzer, unit_ids=unit_ids
-                )
-            elif merges is not None:
+            if merges is not None:
                 new_ext = new_sorting_analyzer.extensions[extension_name] = extension.merge(
                     new_sorting_analyzer, merges=merges, merged_sorting=sorting_provenance
+                )
+            else:
+                new_ext = new_sorting_analyzer.extensions[extension_name] = extension.copy(
+                    new_sorting_analyzer, unit_ids=unit_ids
                 )
 
         return new_sorting_analyzer
@@ -745,7 +745,7 @@ class SortingAnalyzer:
         format : "binary_folder" | "zarr", default: "binary_folder"
             The backend to use for saving the waveforms
         """
-        return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=None)
+        return self._save_or_select_or_merge(format=format, folder=folder)
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
@@ -798,7 +798,7 @@ class SortingAnalyzer:
         """
         Create a a copy of SortingAnalyzer with format "memory".
         """
-        return self._save_or_select_or_merge(format="memory", folder=None, unit_ids=None)
+        return self._save_or_select_or_merge(format="memory", folder=None)
 
     def is_read_only(self) -> bool:
         if self.format == "memory":
@@ -1051,7 +1051,6 @@ class SortingAnalyzer:
             extension_instance.run(save=save, verbose=verbose)
 
         self.extensions[extension_name] = extension_instance
-
         return extension_instance
 
     def compute_several_extensions(self, extensions, save=True, verbose=False, **job_kwargs):
