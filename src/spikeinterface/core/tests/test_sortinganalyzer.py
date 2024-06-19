@@ -32,8 +32,13 @@ def get_dataset():
     return recording, sorting
 
 
-def test_SortingAnalyzer_memory(tmp_path):
-    recording, sorting = get_dataset()
+@pytest.fixture(scope="module")
+def dataset():
+    return get_dataset()
+
+
+def test_SortingAnalyzer_memory(tmp_path, dataset):
+    recording, sorting = dataset
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
@@ -52,8 +57,8 @@ def test_SortingAnalyzer_memory(tmp_path):
     assert not sorting_analyzer.return_scaled
 
 
-def test_SortingAnalyzer_binary_folder(tmp_path):
-    recording, sorting = get_dataset()
+def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
+    recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
@@ -82,8 +87,8 @@ def test_SortingAnalyzer_binary_folder(tmp_path):
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
 
-def test_SortingAnalyzer_zarr(tmp_path):
-    recording, sorting = get_dataset()
+def test_SortingAnalyzer_zarr(tmp_path, dataset):
+    recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
@@ -103,10 +108,27 @@ def test_SortingAnalyzer_zarr(tmp_path):
     )
 
 
-def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
+def test_SortingAnalyzer_tmp_recording(dataset):
+    recording, sorting = dataset
+    recording_cached = recording.save(mode="memory")
 
-    print()
-    print(sorting_analyzer)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    sorting_analyzer.set_temporary_recording(recording_cached)
+    assert sorting_analyzer.has_temporary_recording()
+    # check that saving as uses the original recording
+    sorting_analyzer_saved = sorting_analyzer.save_as(format="memory")
+    assert sorting_analyzer_saved.has_recording()
+    assert not sorting_analyzer_saved.has_temporary_recording()
+    assert isinstance(sorting_analyzer_saved.recording, type(recording))
+
+    recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
+
+    # wrong channels
+    with pytest.raises(AssertionError):
+        sorting_analyzer.set_temporary_recording(recording_sliced)
+
+
+def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     register_result_extension(DummyAnalyzerExtension)
 
@@ -303,8 +325,10 @@ def test_extensions_sorting():
 
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
-    test_SortingAnalyzer_memory(tmp_path)
-    test_SortingAnalyzer_binary_folder(tmp_path)
-    test_SortingAnalyzer_zarr(tmp_path)
+    dataset = _get_dataset()
+    test_SortingAnalyzer_memory(tmp_path, dataset)
+    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    test_SortingAnalyzer_zarr(tmp_path, dataset)
+    test_SortingAnalyzer_tmp_recording(dataset)
     test_extension()
     test_extension_params()
