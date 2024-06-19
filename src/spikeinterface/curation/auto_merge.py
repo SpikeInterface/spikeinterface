@@ -191,9 +191,7 @@ def get_potential_auto_merge(
         correlogram_diff = compute_correlogram_diff(
             sorting,
             correlograms_smoothed,
-            bins,
             win_sizes,
-            adaptative_window_threshold=adaptative_window_threshold,
             pair_mask=pair_mask,
         )
         # print(correlogram_diff)
@@ -250,35 +248,29 @@ def get_potential_auto_merge(
         return potential_merges
 
 
-def compute_correlogram_diff(
-    sorting, correlograms_smoothed, bins, win_sizes, adaptative_window_threshold=0.5, pair_mask=None
-):
+def compute_correlogram_diff(sorting, correlograms_smoothed, win_sizes, pair_mask=None):
     """
     Original author: Aurelien Wyngaard (lussac)
 
     Parameters
     ----------
     sorting : BaseSorting
-        The sorting object
+        The sorting object.
     correlograms_smoothed : array 3d
         The 3d array containing all cross and auto correlograms
-        (smoothed by a convolution with a gaussian curve)
-    bins : array
-        Bins of the correlograms
-    win_sized:
-        TODO
-    adaptative_window_threshold : float
-        TODO
+        (smoothed by a convolution with a gaussian curve).
+    win_sizes : np.array[int]
+        Window size for each unit correlogram.
     pair_mask : None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
 
     Returns
     -------
-    corr_diff
+    corr_diff : 2D array
+        The difference between the cross-correlogram and the auto-correlogram
+        for each pair of units.
     """
-    # bin_ms = bins[1] - bins[0]
-
     unit_ids = sorting.unit_ids
     n = len(unit_ids)
 
@@ -372,7 +364,7 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
 
     Returns
     -------
-    unit_window (int):
+    unit_window : int
         Index at which the adaptive window has been calculated.
     """
     import scipy.signal
