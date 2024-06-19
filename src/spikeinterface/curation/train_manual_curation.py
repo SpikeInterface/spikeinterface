@@ -1,20 +1,7 @@
 import os
-import pandas as pd
 import logging
-from joblib import Parallel, delayed
 import pickle as pkl
 from enum import Enum
-from sklearn.neural_network import MLPClassifier
-from skopt import BayesSearchCV
-from sklearn.experimental import enable_hist_gradient_boosting
-from sklearn.ensemble import HistGradientBoostingRegressor
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
-from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression
-from lightgbm import LGBMClassifier
-from catboost import CatBoostClassifier
-from xgboost import XGBClassifier
-from sklearn.pipeline import Pipeline
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -31,7 +18,6 @@ class Objective(Enum):
 class CurationModelTrainer:
     def __init__(self, column_name, output_folder, imputation_strategies=None, scaling_techniques=None):
         from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-        from sklearn.experimental import enable_iterative_imputer
 
         if imputation_strategies is None:
             imputation_strategies = ["median", "most_frequent", "knn", "iterative"]
@@ -54,6 +40,8 @@ class CurationModelTrainer:
         self.process_test_data_for_classification()
 
     def load_data_file(self, path):
+        import pandas as pd
+
         self.testing_metrics = {0: pd.read_csv(path)}
 
     def process_test_data_for_classification(self):
@@ -84,7 +72,9 @@ class CurationModelTrainer:
                     raise ValueError("The target variable should be categorical with more than 2 classes")
 
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val):
+        from sklearn.experimental import enable_iterative_imputer
         from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
+        from sklearn.ensemble import HistGradientBoostingRegressor
 
         if imputation_strategy == "knn":
             imputer = KNNImputer(n_neighbors=5)
@@ -101,6 +91,14 @@ class CurationModelTrainer:
         return X_train_scaled, X_val_scaled, y_train, y_val, imputer, scaling_technique
 
     def get_classifier_search_space(self, classifier):
+        from sklearn.experimental import enable_hist_gradient_boosting
+        from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
+        from sklearn.svm import SVC
+        from sklearn.linear_model import LogisticRegression
+        from lightgbm import LGBMClassifier
+        from catboost import CatBoostClassifier
+        from xgboost import XGBClassifier
+        from sklearn.neural_network import MLPClassifier
 
         if classifier == RandomForestClassifier:
             param_space = {
@@ -228,6 +226,10 @@ class CurationModelTrainer:
         setting,
         objective,
     ):
+
+        from joblib import Parallel, delayed
+        from sklearn.pipeline import Pipeline
+
         results = Parallel(n_jobs=-1)(
             delayed(self._train_and_evaluate)(
                 imputation_strategy, scaler_name, scaler, classifier, X_train, X_test, y_train, y_test, idx
@@ -264,6 +266,7 @@ class CurationModelTrainer:
     def _train_and_evaluate(
         self, imputation_strategy, scaler_name, scaler, classifier, X_train, X_test, y_train, y_test, model_id
     ):
+        from skopt import BayesSearchCV
         from sklearn.metrics import balanced_accuracy_score, precision_score, recall_score
 
         X_train_scaled, X_test_scaled, y_train, y_test, imputer, scaler = self.apply_scaling_imputation(
