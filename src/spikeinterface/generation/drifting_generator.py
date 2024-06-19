@@ -407,7 +407,7 @@ def generate_drifting_recording(
         is_scaled=True,
     )
 
-    drifting_templates = DriftingTemplates.from_static(templates)
+    drifting_templates = DriftingTemplates.from_static_templates(templates)
 
     sorting = generate_sorting(
         num_units=num_units,

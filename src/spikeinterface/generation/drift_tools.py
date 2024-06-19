@@ -124,7 +124,7 @@ class DriftingTemplates(Templates):
         self.displacements = None
 
     @classmethod
-    def from_static(cls, templates):
+    def from_static_templates(cls, templates):
         drifting_templates = cls(
             templates_array=templates.templates_array,
             sampling_frequency=templates.sampling_frequency,

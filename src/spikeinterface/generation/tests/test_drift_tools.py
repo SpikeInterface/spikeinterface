@@ -94,7 +94,7 @@ def test_move_dense_templates():
 
 def test_DriftingTemplates():
     static_templates = make_some_templates()
-    drifting_templates = DriftingTemplates.from_static(static_templates)
+    drifting_templates = DriftingTemplates.from_static_templates(static_templates)
 
     displacement = np.array([[5.0, 10.0]])
     unit_index = 0
@@ -119,7 +119,7 @@ def test_InjectDriftingTemplatesRecording(create_cache_folder):
     probe = templates.probe
 
     # drifting templates
-    drifting_templates = DriftingTemplates.from_static(templates)
+    drifting_templates = DriftingTemplates.from_static_templates(templates)
     channel_locations = probe.contact_positions
 
     num_units = templates.unit_ids.size
