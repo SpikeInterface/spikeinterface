@@ -403,14 +403,20 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
             # Spikes with no matching spikes are masked.
             if sign == -1:
                 mask[:-shift][spike_diff_b < -num_half_bins] = False
+            #     mask[:-shift][spike_diff_b == -num_half_bins] = True
             else:
-                # spike_diff_b[np.where(spike_diff_b == num_half_bins)] -= 1  adds to the first AND last bin, which we dont want.
+                #   spike_diff_b[np.where(spike_diff_b == num_half_bins)] -= 1  # adds to the first AND last bin, which we dont want.
                 mask[:-shift][spike_diff_b >= num_half_bins] = False
-                # spike_diff_b[spike_diff_b == num_half_bins] = 0  # fills the central bin
-                # the problem is that we need to mask specific pairs of comparisons
-                # but this is just masking the entire spike time.
-                # I still don't understand why removing the bound is leading to error at all,
-                # it is leading to extra counting.
+
+            #      if np.any(spike_diff_b == num_half_bins):
+            #         breakpoint()
+            #    mask[:-shift][np.where(spike_labels[:-shift][spike_diff_b == num_half_bins] >= num_units - 1)] = False  # check indexing, and these are always indexed
+            #  breakpoint()
+            # spike_diff_b[spike_diff_b == num_half_bins] = 0  # fills the central bin
+            # the problem is that we need to mask specific pairs of comparisons
+            # but this is just masking the entire spike time.
+            # I still don't understand why removing the bound is leading to error at all,
+            # it is leading to extra counting.
 
             m = mask[:-shift]
 
@@ -430,6 +436,9 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
             # Increment the matching spikes in the correlograms array.
             bbins = np.bincount(indices)
             correlograms.ravel()[: len(bbins)] += bbins
+
+            if sign == 1:
+                mask[:-shift][spike_diff_b == num_half_bins] = True
 
         shift += 1
 
@@ -473,23 +482,23 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_labels = spikes[seg_index]["unit_index"]
 
-        _compute_correlograms_numba(
+        #   _compute_correlograms_numba(
+        #         correlograms,
+        #        spike_times.astype(np.int64, copy=False),
+        #         spike_labels.astype(np.int32, copy=False),
+        #         window_size,
+        #         bin_size,
+        #     )
+
+        #      if False:
+        _compute_correlograms_one_segment_numba(
             correlograms,
             spike_times.astype(np.int64, copy=False),
             spike_labels.astype(np.int32, copy=False),
             window_size,
             bin_size,
+            num_half_bins,
         )
-
-        if False:
-            _compute_correlograms_one_segment_numba(
-                correlograms,
-                spike_times.astype(np.int64, copy=False),
-                spike_labels.astype(np.int32, copy=False),
-                window_size,
-                bin_size,
-                num_half_bins,
-            )
 
     return correlograms
 
