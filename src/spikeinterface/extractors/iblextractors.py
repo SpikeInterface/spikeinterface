@@ -314,18 +314,16 @@ class IblSortingExtractor(BaseSorting):
     installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
 
     def __init__(self, pid, good_clusters_only=False, load_unit_properties=True, one=None):
-        try:
-            from one.api import ONE
-            from brainbox.io.one import SpikeSortingLoader
+        from one.api import ONE
+        from brainbox.io.one import SpikeSortingLoader
 
-            if one is None:
-                one = {}
-            if isinstance(one, dict):
-                one = ONE(**one)
-            else:
-                one = IblRecordingExtractor._get_default_one()
-        except ImportError:
-            raise ImportError(self.installation_mesg)
+        if one is None:
+            one = {}
+        if isinstance(one, dict):
+            one = ONE(**one)
+        else:
+            one = IblRecordingExtractor._get_default_one()
+
         self.ssl = SpikeSortingLoader(one=one, pid=pid)
         sr = self.ssl.raw_electrophysiology(band="ap", stream=True)
         self._folder_path = self.ssl.session_path
