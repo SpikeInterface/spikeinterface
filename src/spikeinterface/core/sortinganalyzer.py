@@ -887,7 +887,7 @@ class SortingAnalyzer:
             If True, the extension is recomputed even if it has already been computed with the provided parameters.
             If False, the extension is not recomputed if it has already been computed with the provided parameters.
         **kwargs:
-            All other kwargs are transmitted to extension.set_params() (if input is a string) or job_kwargs
+            All other keyword arguments are transmitted to extension.set_params() (if input is a string) or job_kwargs
 
         Returns
         -------
