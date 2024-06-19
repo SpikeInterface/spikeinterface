@@ -231,8 +231,9 @@ class ComputeWaveforms(AnalyzerExtension):
 
     def _merge_extension_data(self, merges):
         
-        new_data = dict()
-        new_data["waveforms"] = self.data["waveforms"]
+        # new_data = dict()
+        # for key, value in self.sorting_analyzer.unit_ids:
+        #     new_data["waveforms"] = self.data["waveforms"]
 
         return new_data
 
@@ -436,6 +437,15 @@ class ComputeTemplates(AnalyzerExtension):
             new_data[key] = arr[keep_unit_indices, :, :]
 
         return new_data
+    
+    def _merge_extension_data(self, merges):
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+
+        new_data = dict()
+        for key, arr in self.data.items():
+            new_data[key] = arr[keep_unit_indices, :, :]
+
+        return new_data
 
     def _get_data(self, operator="average", percentile=None, outputs="numpy"):
         if operator != "percentile":
@@ -591,6 +601,10 @@ class ComputeNoiseLevels(AnalyzerExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
+        # this do not depend on units
+        return self.data
+    
+    def _merge_extension_data(self, merges):
         # this do not depend on units
         return self.data
 

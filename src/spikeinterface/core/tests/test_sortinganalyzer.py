@@ -243,6 +243,19 @@ class DummyAnalyzerExtension(AnalyzerExtension):
 
         return new_data
 
+    def _merge_extension_data(self, merges):
+        # keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+
+        # spikes = self.sorting_analyzer.sorting.to_spike_vector()
+        # keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
+        # # here the first key do not depend on unit_id
+        # # but the second need to be sliced!!
+        # new_data = dict()
+        # new_data["result_one"] = self.data["result_one"]
+        # new_data["result_two"] = self.data["result_two"][keep_spike_mask]
+
+        return new_data
+
     def _get_data(self):
         return self.data["result_one"]
 
