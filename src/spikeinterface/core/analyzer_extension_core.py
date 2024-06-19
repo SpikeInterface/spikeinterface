@@ -434,9 +434,9 @@ class ComputeTemplates(AnalyzerExtension):
             new_data[key] = arr[keep_unit_indices, :, :]
 
         return new_data
-    
+
     def _merge_extension_data(self, merges, former_unit_ids):
-        
+
         new_unit_ids = self.sorting_analyzer._get_ids_after_merging(merges)
         new_data = dict()
         for key, arr in self.data.items():
