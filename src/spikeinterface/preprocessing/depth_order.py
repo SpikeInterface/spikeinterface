@@ -12,7 +12,7 @@ class DepthOrderRecording(ChannelSliceRecording):
 
     Parameters
     ----------
-    recording : BaseRecording
+    parent_recording : BaseRecording
         The recording to re-order.
     channel_ids : list/array or None
         If given, a subset of channels to order locations for
