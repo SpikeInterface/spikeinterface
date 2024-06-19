@@ -44,6 +44,7 @@ class MotionWidget(BaseWidget):
             motion=motion,
             segment_index=segment_index,
             mode=mode,
+            motion_lim=motion_lim,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -107,13 +108,8 @@ class MotionInfoWidget(BaseWidget):
     ----------
     motion_info : dict
         The motion info return by correct_motion() or load back with load_motion_info()
-<<<<<<< HEAD
     segment_index : int, default: None
         The segment index to display.
-=======
-    segment_index:
-
->>>>>>> 257950d5859521730ed1da746b6fd32b7b6335bb
     recording : RecordingExtractor, default: None
         The recording extractor object (only used to get "real" times)
     segment_index : int, default: 0
