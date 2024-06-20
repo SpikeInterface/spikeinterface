@@ -4,7 +4,7 @@ from spikeinterface.core import BaseRecording
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor
 
 
-class ScaleTouV(BasePreprocessor):
+class ScaleTouVRecording(BasePreprocessor):
     """
     Scale raw traces to microvolts (µV).
 
@@ -43,4 +43,4 @@ class ScaleTouV(BasePreprocessor):
         )
 
 
-scale_to_uV = ScaleTouV
+scale_to_uV = ScaleTouVRecording

@@ -24,7 +24,7 @@ from .normalize_scale import (
     CenterRecording,
     center,
 )
-from .scale import ScaleTouV, scale_to_uV
+from .scale import ScaleTouVRecording, scale_to_uV
 
 from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
@@ -56,7 +56,7 @@ preprocessers_full_list = [
     ScaleRecording,
     CenterRecording,
     ZScoreRecording,
-    ScaleTouV,
+    ScaleTouVRecording,
     # decorrelation stuff
     WhitenRecording,
     # re-reference

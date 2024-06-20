@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from spikeinterface.core.testing_tools import generate_recording
-from spikeinterface.preprocessing import ScaleTouV  # Replace 'your_module' with your actual module name
+from spikeinterface.preprocessing import ScaleTouVRecording  # Replace 'your_module' with your actual module name
 
 
 def test_scale_to_uv():
@@ -22,7 +22,7 @@ def test_scale_to_uv():
     recording.set_channel_offsets(offsets)
 
     # Apply the preprocessor
-    scaled_recording = ScaleTouV(recording=recording)
+    scaled_recording = ScaleTouVRecording(recording=recording)
 
     # Check if the traces are indeed scaled
     expected_traces = recording.get_traces(return_scaled=True)
@@ -33,4 +33,4 @@ def test_scale_to_uv():
     # Test for the error when recording doesn't have scaleable traces
     recording.set_channel_gains(None)  # Remove gains to make traces unscaleable
     with pytest.raises(AssertionError):
-        ScaleTouV(recording)
+        ScaleTouVRecording(recording)
