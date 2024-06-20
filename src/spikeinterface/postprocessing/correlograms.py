@@ -277,9 +277,9 @@ def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     ----------
     sorting : Sorting
         A SpikeInterface Sorting object
-    window_ms : int
+    window_ms : float
             The window size over which to perform the cross-correlation, in ms
-    bin_ms : int
+    bin_ms : float
         The size of which to bin lags, in ms.
     method : str
         To use "numpy" or "numba". "auto" will use numba if available,
@@ -388,8 +388,8 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
     # within the correlogram time window.
     mask = np.ones_like(spike_times, dtype="bool")
 
-    # The loop continues as long as there is at least one spike with
-    # a matching spike.
+    # The loop continues as long as there is at least one
+    # spike with a matching spike.
     shift = 1
     while mask[:-shift].any():
         # Number of time samples between spike i and spike i+shift.
@@ -501,11 +501,11 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
 
 if HAVE_NUMBA:
 
-    #   @numba.jit(
-    #      nopython=True,
-    #     nogil=True,
-    #    cache=False,
-    # )
+    @numba.jit(
+        nopython=True,
+        nogil=True,
+        cache=False,
+    )
     def _compute_correlograms_one_segment_numba(
         correlograms, spike_times, spike_labels, window_size, bin_size, num_half_bins
     ):
@@ -546,12 +546,15 @@ if HAVE_NUMBA:
 
                 diff = spike_times[i] - spike_times[j]
 
-                # if the time of spike i is more than window size later than
-                # spike j, then spike i + 1 will also be more than a window size
-                # later than spike j. Iterate the start_j and check the next spike.
+                # When the diff is exactly the window size, keep going
+                # without iterating start_j in case this spike also has
+                # other diffs with other units that == window size.
                 if diff == window_size:
                     continue
 
+                # if the time of spike i is more than window size later than
+                # spike j, then spike i + 1 will also be more than a window size
+                # later than spike j. Iterate the start_j and check the next spike.
                 if diff > window_size:
                     start_j += 1
                     continue
