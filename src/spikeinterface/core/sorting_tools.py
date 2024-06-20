@@ -47,7 +47,7 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
     return spike_trains
 
 
-def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, absolut_index=False):
+def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, absolute_index :  bool = False):
     """
     Similar to spike_vector_to_spike_trains but instead having the spike_trains (aka spike times) return
     spike indices by segment and units.
