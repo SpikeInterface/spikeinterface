@@ -13,19 +13,6 @@ try:
 except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
-# TODO: here the default is 50 ms but in the docs it says 100 ms?
-
-# _set_params, _select_extension_data, _run, _get_data I think are
-# sorting analyzer things. Docstrings can be added here and propagated to
-# all sorting analyer functions OR can be described in the class docstring.
-# otherwise these are quite hard to understand where they are called in the
-# code as not called internally on the class.
-
-# compute_autocorrelogram_from_spiketrain
-# TODO: in another PR, coerce this input into `correlogram_for_one_segment()`
-# to provide a numpy and numba version. Consider window_size and bin_size
-# being taken as ms to match general API.
-
 
 class ComputeCorrelograms(AnalyzerExtension):
     """
@@ -108,10 +95,6 @@ class ComputeCorrelograms(AnalyzerExtension):
 
 register_result_extension(ComputeCorrelograms)
 compute_correlograms_sorting_analyzer = ComputeCorrelograms.function_factory()
-
-# TODO: Question: what is the main entry functions for this module?
-# is it only the below? If so can all other functions be made private?
-# This would reduce some docstring duplication
 
 
 def compute_correlograms(
