@@ -478,15 +478,6 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_labels = spikes[seg_index]["unit_index"]
 
-        #   _compute_correlograms_numba(
-        #         correlograms,
-        #        spike_times.astype(np.int64, copy=False),
-        #         spike_labels.astype(np.int32, copy=False),
-        #         window_size,
-        #         bin_size,
-        #     )
-
-        #      if False:
         _compute_correlograms_one_segment_numba(
             correlograms,
             spike_times.astype(np.int64, copy=False),
@@ -569,80 +560,3 @@ if HAVE_NUMBA:
                 bin = diff // bin_size
 
                 correlograms[spike_labels[i], spike_labels[j], num_half_bins + bin] += 1
-
-    # -----------------------------------------------------------------------------
-    # To Deprecate
-    # -----------------------------------------------------------------------------
-
-    @numba.jit(nopython=True, nogil=True, cache=False)
-    def _compute_autocorr_numba(spike_times, window_size, bin_size):
-        num_half_bins = window_size // bin_size
-        num_bins = 2 * num_half_bins
-
-        auto_corr = np.zeros(num_bins, dtype=np.int64)
-
-        for i in range(len(spike_times)):
-            for j in range(i + 1, len(spike_times)):
-                diff = spike_times[j] - spike_times[i]
-
-                if diff > window_size:
-                    break
-
-                bin = int(math.floor(diff / bin_size))
-                # ~ auto_corr[num_bins//2 - bin - 1] += 1
-                auto_corr[num_half_bins + bin] += 1
-                # ~ print(diff, bin, num_half_bins + bin)
-
-                bin = int(math.floor(-diff / bin_size))
-                auto_corr[num_half_bins + bin] += 1
-                # ~ print(diff, bin, num_half_bins + bin)
-
-        return auto_corr
-
-    @numba.jit(nopython=True, nogil=True, cache=False)
-    def _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size):
-        num_half_bins = window_size // bin_size
-        num_bins = 2 * num_half_bins
-
-        cross_corr = np.zeros(num_bins, dtype=np.int64)
-
-        start_j = 0
-        for i in range(len(spike_times1)):
-            for j in range(start_j, len(spike_times2)):
-                diff = spike_times1[i] - spike_times2[j]
-
-                if diff >= window_size:
-                    start_j += 1
-                    continue
-                if diff < -window_size:
-                    break
-
-                bin = int(math.floor(diff / bin_size))
-                # ~ bin = diff // bin_size
-                cross_corr[num_half_bins + bin] += 1
-                # ~ print(diff, bin, num_half_bins + bin)
-
-        return cross_corr
-
-    @numba.jit(
-        nopython=True,
-        nogil=True,
-        cache=False,
-        parallel=True,
-    )
-    def _compute_correlograms_numba(correlograms, spike_times, spike_labels, window_size, bin_size):
-        n_units = correlograms.shape[0]
-
-        for i in numba.prange(n_units):
-            # ~ for i in range(n_units):
-            spike_times1 = spike_times[spike_labels == i]
-
-            for j in range(i, n_units):
-                spike_times2 = spike_times[spike_labels == j]
-
-                if i == j:
-                    correlograms[i, j, :] += _compute_autocorr_numba(spike_times1, window_size, bin_size)
-                else:
-                    cc = _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size)
-                    correlograms[i, j, :] += cc
-                    correlograms[j, i, :] += cc[::-1]
