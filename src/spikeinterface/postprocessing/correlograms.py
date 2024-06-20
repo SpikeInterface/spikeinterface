@@ -205,66 +205,6 @@ def _compute_num_bins(window_size, bin_size):
     return num_bins, num_half_bins
 
 
-# TODO: this can now be deprecated as there is no distinction at the Numba level.
-def compute_autocorrelogram_from_spiketrain(spike_times, window_size, bin_size):
-    """
-    Computes the auto-correlogram from a given spike train.
-
-    This implementation only works if you have numba installed, to accelerate the
-    computation time.
-
-    Parameters
-    ----------
-    spike_times : np.ndarray
-        The ordered spike train to compute the auto-correlogram.
-    window_size : int
-        Compute the auto-correlogram between -window_size and +window_size (in sampling time).
-    bin_size : int
-        Size of a bin (in sampling time).
-    Returns
-    -------
-    auto_corr : np.ndarray[int64]
-        The computed auto-correlogram.
-    bins :
-    """
-    assert HAVE_NUMBA
-    return _compute_correlograms_one_segment_numba(spike_times.astype(np.int64, copy=False), window_size, bin_size)
-
-
-# TODO: expose a numpy option also. UNless we want to force users to use `Sorting` or `SortingAnalyzer`.
-# I am not averse to this, is helps reduce the suface API and assist maintaince. If users
-# want to directly computer cross-correlograms they can use a private internal function.
-# Thoughts?
-def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_size, bin_size):
-    """
-    Computes the cros-correlogram between two given spike trains.
-
-    This implementation only works if you have numba installed, to accelerate the
-    computation time.
-
-    Parameters
-    ----------
-    spike_times1: np.ndarray
-        The ordered spike train to compare against the second one.
-    spike_times2: np.ndarray
-        The ordered spike train that serves as a reference for the cross-correlogram.
-    window_size: int
-        Compute the auto-correlogram between -window_size and +window_size (in sampling time).
-    bin_size: int
-        Size of a bin (in sampling time).
-
-    Returns
-    -------
-    tuple (auto_corr, bins)
-    auto_corr: np.ndarray[int64]
-        The computed auto-correlogram.
-    """
-    assert HAVE_NUMBA
-    return _compute_correlograms_one_segment_numba(
-        spike_times1.astype(np.int64), spike_times2.astype(np.int64, copy=False), window_size, bin_size
-    )
-
-
 def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
