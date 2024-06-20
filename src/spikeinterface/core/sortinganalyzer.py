@@ -638,8 +638,9 @@ class SortingAnalyzer:
 
         if units_to_merge is not None:
             from spikeinterface.core.sorting_tools import get_ids_after_merging
+
             new_unit_ids = get_ids_after_merging(self.sorting, units_to_merge, new_unit_ids=unit_ids)
-                
+
         if self.has_recording():
             recording = self._recording
         elif self.has_temporary_recording():
@@ -677,6 +678,7 @@ class SortingAnalyzer:
             sorting_provenance = sorting_provenance.select_units(unit_ids)
         else:
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
+
             sorting_provenance = apply_merges_to_sorting(sorting_provenance, units_to_merge, unit_ids)
 
         if format == "memory":
@@ -713,7 +715,10 @@ class SortingAnalyzer:
         for extension_name, extension in self.extensions.items():
             if units_to_merge is not None:
                 new_ext = new_sorting_analyzer.extensions[extension_name] = extension.merge(
-                    new_sorting_analyzer, units_to_merge=units_to_merge, new_unit_ids=unit_ids, merged_sorting=sorting_provenance
+                    new_sorting_analyzer,
+                    units_to_merge=units_to_merge,
+                    new_unit_ids=unit_ids,
+                    merged_sorting=sorting_provenance,
                 )
             else:
                 new_ext = new_sorting_analyzer.extensions[extension_name] = extension.copy(
@@ -794,7 +799,9 @@ class SortingAnalyzer:
         else:
             new_unit_ids = [i[0] for i in units_to_merge]
 
-        return self._save_or_select_or_merge(format=format, folder=folder, units_to_merge=units_to_merge, unit_ids=new_unit_ids)
+        return self._save_or_select_or_merge(
+            format=format, folder=folder, units_to_merge=units_to_merge, unit_ids=new_unit_ids
+        )
 
     def copy(self):
         """
