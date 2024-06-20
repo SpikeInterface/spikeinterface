@@ -77,7 +77,6 @@ class AnalyzerExtensionCommonTestSuite:
         )
         self.__class__.cache_folder = create_cache_folder
 
-    # TODO: can delete this!!!
     def _prepare_sorting_analyzer(self, format, sparse, extension_class):
         """
         Prepare a SortingAnalyzer object with dependencies already computed
