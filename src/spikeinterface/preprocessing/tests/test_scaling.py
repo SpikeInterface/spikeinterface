@@ -15,10 +15,11 @@ def test_scale_to_uv():
         sampling_frequency=sampling_frequency,
     )
 
-    gains = np.ones(shape=(num_channels))
-    offsets = np.zeros(shape=(num_channels))
-    recording.set_channel_gains(gains)  # Random gains
-    recording.set_channel_offsets(offsets)  # Random offsets
+    rng = np.random.default_rng(0)
+    gains = rng.random(size=(num_channels)).astype(np.float32)
+    offsets = rng.random(size=(num_channels)).astype(np.float32)
+    recording.set_channel_gains(gains)
+    recording.set_channel_offsets(offsets)
 
     # Apply the preprocessor
     scaled_recording = ScaleTouV(recording=recording)
