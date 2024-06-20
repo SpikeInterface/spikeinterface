@@ -205,10 +205,13 @@ def test_correlograms_unit():
     sampling_frequency = 30000
 
     num_filled_bins = 60
+    num_units = 3
 
-    spike_times = np.repeat(np.arange(num_filled_bins), 2) * 0.005  # 0.005, 0.0051!!! test both critical for edge case
-    spike_labels = np.zeros(num_filled_bins * 2, dtype=int)
-    spike_labels[::2] = 1
+    spike_times = (
+        np.repeat(np.arange(num_filled_bins), num_units) * 0.005
+    )  # 0.005, 0.0051!!! test both critical for edge case
+    # spike_labels = np.zeros(num_filled_bins * num_units, dtype=int)
+    spike_labels = np.tile(np.arange(num_units), int(spike_times.size / num_units))
 
     spike_times *= sampling_frequency
     spike_times = spike_times.astype(int)
