@@ -76,7 +76,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_spike_mask])
         return new_data
 
-    def _merge_extension_data(self, merges, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
         new_data = dict()
         new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
         return new_data
@@ -229,7 +229,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, merges, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
         new_data = dict()
         new_data["waveforms"] = self.data["waveforms"]
         return new_data
@@ -435,18 +435,18 @@ class ComputeTemplates(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, merges, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
 
-        new_unit_ids = merged_sorting.unit_ids
+        all_new_units = merged_sorting.unit_ids
         new_data = dict()
         for key, arr in self.data.items():
-            new_data[key] = np.zeros((len(new_unit_ids), arr.shape[1], arr.shape[2]), dtype=arr.dtype)
-            for unit_ind, unit_id in enumerate(new_unit_ids):
-                if unit_id not in merges.keys():
+            new_data[key] = np.zeros((len(all_new_units), arr.shape[1], arr.shape[2]), dtype=arr.dtype)
+            for unit_ind, unit_id in enumerate(all_new_units):
+                if unit_id not in new_unit_ids:
                     keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                     new_data[key][unit_ind] = arr[keep_unit_index, :, :]
                 else:
-                    unit_ids = [unit_id] + list(merges[unit_id])
+                    unit_ids = units_to_merge[np.flatnonzero(new_unit_ids == unit_id)[0]]
                     keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
                     new_data[key][unit_ind] = arr[keep_unit_indices, :, :].mean(axis=0)
 
@@ -609,7 +609,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         # this do not depend on units
         return self.data
 
-    def _merge_extension_data(self, merges, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
         # this do not depend on units
         return self.data
 

@@ -101,7 +101,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 new_data[k] = v
         return new_data
 
-    def _merge_extension_data(self, merges, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
         new_data = dict()
         new_data["pca_projection"] = self.data["pca_projection"]
         # one or several model

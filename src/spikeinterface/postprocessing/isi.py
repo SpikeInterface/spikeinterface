@@ -56,14 +56,14 @@ class ComputeISIHistograms(AnalyzerExtension):
         new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
         return new_extension_data
 
-    def _merge_extension_data(self, merges, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
         new_bins = self.data["bins"]
         arr = self.data["isi_histograms"]
         num_dims = arr.shape[1]
-        new_unit_ids = merged_sorting.unit_ids
-        new_isi_hists = np.zeros((len(new_unit_ids), num_dims), dtype=arr.dtype)
-        for unit_ind, unit_id in enumerate(new_unit_ids):
-            if unit_id not in merges.keys():
+        all_new_units = merged_sorting.unit_ids
+        new_isi_hists = np.zeros((len(all_new_units), num_dims), dtype=arr.dtype)
+        for unit_ind, unit_id in enumerate(all_new_units):
+            if unit_id not in new_unit_ids:
                 keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                 new_isi_hists[unit_ind] = arr[keep_unit_index]
             else:

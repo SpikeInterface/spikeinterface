@@ -42,17 +42,19 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         new_similarity = self.data["similarity"][unit_indices][:, unit_indices]
         return dict(similarity=new_similarity)
 
-    def _merge_extension_data(self, merges, merged_sorting):
-        arr = self.data["similarity"]
-        new_unit_ids = merged_sorting.unit_ids
-        new_similarity = np.zeros((len(new_unit_ids), arr.shape[1]), dtype=arr.dtype)
-        for unit_ind, unit_id in enumerate(new_unit_ids):
-            keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
-            new_similarity[unit_ind] = arr[keep_unit_index]
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
+        # arr = self.data["similarity"]
+        # all_new_unit_ids = merged_sorting.unit_ids
+        # new_similarity = np.zeros((len(all_new_unit_ids), arr.shape[1]), dtype=arr.dtype)
+        # # for unit_ind, unit_id in enumerate(all_new_unit_ids):
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.sorting.unit_ids, new_unit_ids))
-        new_similarity = new_similarity[:, keep_unit_indices]
-        return dict(similarity=new_similarity)
+        # #     keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+        # #     new_similarity[unit_ind] = arr[keep_unit_index]
+
+        # keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.sorting.unit_ids, all_new_unit_ids))
+        # new_similarity = new_similarity[:, keep_unit_indices]
+        # return dict(similarity=new_similarity)
+        pass
 
     def _run(self, verbose=False):
         templates_array = get_dense_templates_array(

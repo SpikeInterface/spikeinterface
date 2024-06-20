@@ -210,6 +210,9 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         # unit 1, 3, ... should be removed
         assert np.all(~np.isin(data["result_two"], [1, 3]))
 
+        #sorting_analyzer3 = sorting_analyzer.merge_units(units_to_merge=[[0, 1]], format=format, folder=folder)
+        #sorting_analyzer4 = sorting_analyzer.merge_units(units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder)
+
     # test compute with extension-specific params
     sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})
     dummy_ext = sorting_analyzer.get_extension("dummy")
@@ -270,23 +273,23 @@ class DummyAnalyzerExtension(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, merges, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
 
-        new_unit_ids = merged_sorting.unit_ids
+        all_new_unit_ids = merged_sorting.unit_ids
         new_data = dict()
         new_data["result_one"] = self.data["result_one"]
         new_data["result_two"] = self.data["result_two"]
 
         arr = self.data["result_three"]
         num_dims = arr.shape[1]
-        new_data["result_three"] = np.zeros((len(new_unit_ids), num_dims), dtype=arr.dtype)
-        for unit_ind, unit_id in enumerate(new_unit_ids):
-            if unit_id not in merges.keys():
+        new_data["result_three"] = np.zeros((len(all_new_unit_ids), num_dims), dtype=arr.dtype)
+        for unit_ind, unit_id in enumerate(all_new_unit_ids):
+            if unit_id not in new_unit_ids:
                 keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                 new_data["result_three"][unit_ind] = arr[keep_unit_index]
             else:
-                unit_ids = [unit_id] + list(merges[unit_id])
-                keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+                id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(units_to_merge[id])
                 new_data["result_three"][unit_ind] = arr[keep_unit_indices].mean(axis=0)
 
         return new_data
