@@ -262,7 +262,12 @@ class BaseSorter:
             has_error = True
             run_time = None
             log["error"] = True
-            log["error_trace"] = traceback.format_exc()
+            error_log_to_display = traceback.format_exc()
+            trace_lines = error_log_to_display.strip().split("\n")
+            error_to_json = ["Traceback (most recent call last):"] + [
+                f"  {line}" if not line.startswith(" ") else line for line in trace_lines[1:]
+            ]
+            log["error_trace"] = error_to_json
 
         log["error"] = has_error
         log["run_time"] = run_time
@@ -290,7 +295,7 @@ class BaseSorter:
 
         if has_error and raise_error:
             raise SpikeSortingError(
-                f"Spike sorting error trace:\n{log['error_trace']}\n"
+                f"Spike sorting error trace:\n{error_log_to_display}\n"
                 f"Spike sorting failed. You can inspect the runtime trace in {output_folder}/spikeinterface_log.json."
             )
 
