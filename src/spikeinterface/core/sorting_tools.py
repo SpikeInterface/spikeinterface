@@ -61,11 +61,11 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
         List of spike vectors optained with sorting.to_spike_vector(concatenated=False)
     unit_ids: np.array
         Unit ids
-    absolut_index: bool, default False
+    absolute_index: bool, default False
         Give spike indices absolut usefull when having a unique spike vector
         or relative to segment usefull with a list of spike vectors
-        When a unique spike vectors (or amplitudes) is used then absolut_index should be True.
-        When a list of spikes (or amplitudes) is used then absolut_index should be False.
+        When a unique spike vectors (or amplitudes) is used then absolute_index should be True.
+        When a list of spikes (or amplitudes) is used then absolute_index should be False.
     
     Returns
     -------
@@ -92,7 +92,7 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
     total_spikes = 0
     for segment_index, spikes in enumerate(spike_vector):
         indices = np.arange(spikes.size, dtype=np.int64)
-        if absolut_index:
+        if absolute_index:
             indices += total_spikes
             total_spikes += spikes.size
         unit_indices = np.array(spikes["unit_index"]).astype(np.int64, copy=False)
