@@ -59,8 +59,6 @@ class NewToOldSorting:
       * unique segment
     """
 
-    extractor_name = "NewToOldSorting"
-
     def __init__(self, sorting):
         assert sorting.get_num_segments() == 1
         self._sorting = sorting

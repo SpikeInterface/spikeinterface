@@ -24,7 +24,6 @@ class ALFSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "ALFSorting"
     installation_mesg = "To use the ALF extractors, install ONE-api: \n\n pip install ONE-api\n\n"
     name = "alf"
 

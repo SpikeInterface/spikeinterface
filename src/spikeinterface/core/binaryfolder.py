@@ -25,7 +25,6 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         The recording
     """
 
-    extractor_name = "BinaryFolder"
     mode = "folder"
     name = "binaryfolder"
 

@@ -103,7 +103,6 @@ class NeuroScopeSortingExtractor(BaseSorting):
         Path to the .xml file referenced by this sorting.
     """
 
-    extractor_name = "NeuroscopeSortingExtractor"
     name = "neuroscope"
 
     def __init__(

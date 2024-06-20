@@ -37,7 +37,6 @@ class CompressedBinaryIblExtractor(BaseRecording):
         The loaded data.
     """
 
-    extractor_name = "CompressedBinaryIbl"
     mode = "folder"
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
     name = "cbin_ibl"

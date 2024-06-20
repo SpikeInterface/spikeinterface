@@ -25,7 +25,6 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
         Loaded data.
     """
 
-    extractor_name = "WaveClusSortingExtractor"
     name = "waveclus"
 
     def __init__(self, file_path, keep_good_only=True):

@@ -30,7 +30,6 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         Loaded data.
     """
 
-    extractor_name = "SHYBRIDRecording"
     mode = "folder"
     installation_mesg = (
         "To use the SHYBRID extractors, install SHYBRID and pyyaml: " "\n\n pip install shybrid pyyaml\n\n"
@@ -159,7 +158,6 @@ class SHYBRIDSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = "SHYBRIDSorting"
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
     name = "shybrid"
 

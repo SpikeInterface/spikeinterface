@@ -29,7 +29,6 @@ class MClustSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = "MClustSortingExtractor"
     name = "mclust"
 
     def __init__(self, folder_path, sampling_frequency, sampling_frequency_raw=None):

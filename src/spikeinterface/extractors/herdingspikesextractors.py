@@ -31,7 +31,6 @@ class HerdingspikesSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "HS2Sorting"
     installed = HAVE_HS2SX  # check at class level if installed or not
     mode = "file"
     installation_mesg = (
