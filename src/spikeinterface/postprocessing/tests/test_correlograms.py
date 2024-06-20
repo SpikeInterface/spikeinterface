@@ -11,7 +11,7 @@ from spikeinterface import NumpySorting, generate_sorting
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.postprocessing import ComputeCorrelograms
 from spikeinterface.postprocessing.correlograms import (
-    compute_correlograms_on_sorting,
+    _compute_correlograms_on_sorting,
     _make_bins,
     compute_correlograms,
 )
@@ -85,10 +85,10 @@ def test_equal_results_correlograms(window_and_bin_ms):
     window_ms, bin_ms = window_and_bin_ms
     sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
-    result_numpy, bins_numpy = compute_correlograms_on_sorting(
+    result_numpy, bins_numpy = _compute_correlograms_on_sorting(
         sorting, window_ms=window_ms, bin_ms=bin_ms, method="numpy"
     )
-    result_numba, bins_numba = compute_correlograms_on_sorting(
+    result_numba, bins_numba = _compute_correlograms_on_sorting(
         sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
     )
 
@@ -104,7 +104,7 @@ def test_flat_cross_correlogram(method):
     """
     sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0], seed=0)
 
-    correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=50.0, bin_ms=1.0, method=method)
+    correlograms, bins = _compute_correlograms_on_sorting(sorting, window_ms=50.0, bin_ms=1.0, method=method)
     cc = correlograms[0, 1, :].copy()
     m = np.mean(cc)
 
@@ -124,7 +124,7 @@ def test_auto_equal_cross_correlograms(method):
     units_dict = {"1": spike_times, "2": spike_times}
     sorting = NumpySorting.from_unit_dict([units_dict], sampling_frequency=10000.0)
 
-    correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=10.0, bin_ms=0.1, method=method)
+    correlograms, bins = _compute_correlograms_on_sorting(sorting, window_ms=10.0, bin_ms=0.1, method=method)
 
     num_half_bins = correlograms.shape[2] // 2
 
@@ -160,7 +160,7 @@ def test_detect_injected_correlation(method):
     units_dict = {"1": spike_times1, "2": spike_times2}
     sorting = NumpySorting.from_unit_dict([units_dict], sampling_frequency=sampling_frequency)
 
-    correlograms, bins = compute_correlograms_on_sorting(sorting, window_ms=10.0, bin_ms=0.1, method=method)
+    correlograms, bins = _compute_correlograms_on_sorting(sorting, window_ms=10.0, bin_ms=0.1, method=method)
 
     cc_01 = correlograms[0, 1, :]
     cc_10 = correlograms[1, 0, :]

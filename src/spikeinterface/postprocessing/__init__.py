@@ -21,9 +21,6 @@ from .spike_amplitudes import compute_spike_amplitudes, ComputeSpikeAmplitudes
 from .correlograms import (
     ComputeCorrelograms,
     compute_correlograms,
-    correlogram_for_one_segment,
-    compute_correlograms_numba,
-    compute_correlograms_numpy,
 )
 
 from .isi import (

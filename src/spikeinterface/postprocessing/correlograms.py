@@ -98,7 +98,7 @@ class ComputeCorrelograms(AnalyzerExtension):
         return new_data
 
     def _run(self, verbose=False):
-        ccgs, bins = compute_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
+        ccgs, bins = _compute_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
         self.data["ccgs"] = ccgs
         self.data["bins"] = bins
 
@@ -132,7 +132,7 @@ def compute_correlograms(
             sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
         )
     else:
-        return compute_correlograms_on_sorting(
+        return _compute_correlograms_on_sorting(
             sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
         )
 
@@ -205,7 +205,7 @@ def _compute_num_bins(window_size, bin_size):
     return num_bins, num_half_bins
 
 
-def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
+def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
 
@@ -242,15 +242,15 @@ def compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
 
     if method == "numpy":
-        correlograms = compute_correlograms_numpy(sorting, window_size, bin_size)
+        correlograms = _compute_correlograms_numpy(sorting, window_size, bin_size)
     if method == "numba":
-        correlograms = compute_correlograms_numba(sorting, window_size, bin_size)
+        correlograms = _compute_correlograms_numba(sorting, window_size, bin_size)
 
     return correlograms, bins
 
 
 # LOW-LEVEL IMPLEMENTATIONS
-def compute_correlograms_numpy(sorting, window_size, bin_size):
+def _compute_correlograms_numpy(sorting, window_size, bin_size):
     """
     Computes cross-correlograms for all units in a sorting object.
 
@@ -381,7 +381,7 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
     return correlograms
 
 
-def compute_correlograms_numba(sorting, window_size, bin_size):
+def _compute_correlograms_numba(sorting, window_size, bin_size):
     """
     Computes cross-correlograms between all units in `sorting`.
 
