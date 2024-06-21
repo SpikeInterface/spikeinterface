@@ -230,7 +230,9 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
                 shutil.rmtree(folder)
         else:
             folder = None
-        sorting_analyzer4 = sorting_analyzer.merge_units(units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder)
+        sorting_analyzer4 = sorting_analyzer.merge_units(
+            units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder
+        )
 
     # test compute with extension-specific params
     sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})
