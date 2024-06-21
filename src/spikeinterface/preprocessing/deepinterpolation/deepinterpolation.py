@@ -148,14 +148,6 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         from .generators import SpikeInterfaceRecordingSegmentGenerator
 
-        n_frames = self.parent_recording_segment.get_num_samples()
-
-        if start_frame == None:
-            start_frame = 0
-
-        if end_frame == None:
-            end_frame = n_frames
-
         # for frames that lack full training data (i.e. pre and post frames including omissinos),
         # just return uninterpolated
         if start_frame < self.pre_frame + self.pre_post_omission:
