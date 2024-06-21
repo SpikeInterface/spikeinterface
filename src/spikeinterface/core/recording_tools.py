@@ -862,7 +862,17 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), 
 def check_probe_do_not_overlap(probes):
     """
     When several probes this check that that they do not overlap in space
-    and so channel positions can be safly concatenated.
+    and so channel positions can be safely concatenated.
+
+    Raises
+    ------
+    Exception :
+        If probes are overlapping
+
+    Returns
+    -------
+    None : None
+        If the check is successful
     """
     for i in range(len(probes)):
         probe_i = probes[i]

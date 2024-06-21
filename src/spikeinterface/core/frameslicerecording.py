@@ -82,7 +82,7 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
         self.start_frame = start_frame
         self.end_frame = end_frame
 
-    def get_num_samples(self):
+    def get_num_samples(self) -> int:
         return self.end_frame - self.start_frame
 
     def get_traces(self, start_frame, end_frame, channel_indices):
