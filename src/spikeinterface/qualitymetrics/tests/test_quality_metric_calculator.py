@@ -35,9 +35,6 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "qualitymetrics"
 
-# needed to suppress warnings
-set_global_job_kwargs(n_jobs=1)
-
 
 class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
     extension_class = QualityMetricCalculator
@@ -92,6 +89,9 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         self.sparsity_long = compute_sparsity(we_long, method="radius", radius_um=50)
         self.we_long = we_long
         self.we_short = we_short
+
+        # needed to suppress warnings
+        set_global_job_kwargs(n_jobs=1)
 
     def tearDown(self):
         super().tearDown()
