@@ -41,6 +41,7 @@ def test_model_based_classification_init(sorting_analyzer_for_curation, pipeline
     assert model_based_classification.sorting_analyzer == sorting_analyzer_for_curation
     assert model_based_classification.pipeline == pipeline
 
+
 def test_model_based_classification_get_metrics_for_classification(
     sorting_analyzer_for_curation, pipeline, required_metrics
 ):
