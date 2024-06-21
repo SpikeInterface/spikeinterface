@@ -27,26 +27,26 @@ class ComputeCorrelograms(AnalyzerExtension):
     implementation, the y-axis result is the 'counts' of spike matches per
     time bin (rather than a computer correlation or covariance).
 
-    Correlograms are often used to determine whether a unit has
-    ISI violations. In this context, a 'window' around spikes is first
+    In the present implementation, a 'window' around spikes is first
     specified. For example, if a window of 100 ms is taken, we will
-    take the correlation at lags from -100 ms to +100 ms around the spike peak.
+    take the correlation at lags from -50 ms to +50 ms around the spike peak.
     In theory, we can have as many lags as we have samples. Often, this
     visualisation is too high resolution and instead the lags are binned
-    (e.g. 0-5 ms, 5-10 ms, ..., 95-100 ms bins). When using counts as output,
-    binning the lags involves adding up all counts across a range of lags.
+    (e.g. -50 to -45 ms, ..., -5 to 0 ms, 0 to 5 ms, ...., 45 to 50 ms).
+    When using counts as output, binning the lags involves adding up all counts across
+    a range of lags.
 
     Parameters
     ----------
     sorting_analyzer: SortingAnalyzer
         A SortingAnalyzer object
     window_ms : float, default: 50.0
-        The window around the spike to compute the correlation in ms. For example,  TODO: check this!
-         if 50 ms, the correlations will be computed at tags -25 ms ... 25 ms.
+        The window around the spike to compute the correlation in ms. For example,
+         if 50 ms, the correlations will be computed at lags -25 ms ... 25 ms.
     bin_ms : float, default: 1.0
         The bin size in ms. This determines the bin size over which to
-         combine lags. For example, with a window size of -25 ms to 25 ms, and
-         bin size 1 ms, the correlation will be binned as -25 ms, -24 ms, ...
+        combine lags. For example, with a window size of -25 ms to 25 ms, and
+        bin size 1 ms, the correlation will be binned as -25 ms, -24 ms, ...
     method : "auto" | "numpy" | "numba", default: "auto"
          If "auto" and numba is installed, numba is used, otherwise numpy is used.
 
@@ -56,7 +56,7 @@ class ComputeCorrelograms(AnalyzerExtension):
         Correlograms with shape (num_units, num_units, num_bins)
         The diagonal of correlogram is the auto correlogram. The output
         is in bin counts.
-        correlogram[A, B, :] is the symetrie of correlogram[B, A, :]
+        correlogram[A, B, :] is the symmetry of correlogram[B, A, :]
         correlogram[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
     bins :  np.array
         The bin edges in ms
@@ -125,18 +125,16 @@ compute_correlograms.__doc__ = compute_correlograms_sorting_analyzer.__doc__
 
 def _make_bins(sorting, window_ms, bin_ms):
     """
-    Create the bins for the autocorrelogram, in samples.
+    Create the bins for the correlogram, in samples.
 
-    The autocorrelogram bins are centered around zero but do not
-    include the results from zero lag. Each bin increases in
-    a positive / negative direction starting at zero.
+    The autocorrelogram bins are centered around zero. Each bin
+    increases in a positive / negative direction starting at zero.
 
     For example, given a window_ms of 50 ms and a bin_ms of
     5 ms, the bins in unit ms will be:
     [-25 to -20, ..., -5 to 0, 0 to 5, ..., 20 to 25].
 
     The window size will be clipped if not divisible by the bin size.
-    The bins are output in sample units, not seconds.
 
     Parameters
     ----------
@@ -169,7 +167,7 @@ def _make_bins(sorting, window_ms, bin_ms):
 def _compute_num_bins(window_size, bin_size):
     """
     Internal function to compute number of bins, expects
-    window_size and bin_size are already divisible and
+    window_size and bin_size are already divisible. These are
     typically generated in `_make_bins()`.
 
     Returns
@@ -235,13 +233,13 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
 # LOW-LEVEL IMPLEMENTATIONS
 def _compute_correlograms_numpy(sorting, window_size, bin_size):
     """
-    Computes cross-correlograms for all units in a sorting object.
+    Computes correlograms for all units in a sorting object.
 
     This very elegant implementation is copied from phy package written by Cyrille Rossant.
     https://github.com/cortex-lab/phylib/blob/master/phylib/stats/ccg.py
 
-    The main modification is way the positive and negative are handled explicitly
-    for rounding reasons.
+    The main modification is way the positive and negative are handled
+    explicitly for rounding reasons.
 
     Other slight modifications have been made to fit the SpikeInterface
     data model (e.g. adding the ability to handle multiple segments).
@@ -277,14 +275,14 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
     and stored as a count in the relevant lag time bin.
 
     Initially, the spike_times array is shifted by 1 position, and the difference
-    computed. This gives the time differences betwen the closest spikes
+    computed. This gives the time differences between the closest spikes
     (skipping the zero-lag case). Next, the differences between
     spikes times in samples are converted into units relative to
     bin_size ('binarized'). Spikes in which the binarized difference to
     their closest neighbouring spike is greater than half the bin-size are
-    masked and not compared in future.
+    masked.
 
-    Finally, the indicies of the (num_units, num_units, num_bins) correlogram
+    Finally, the indices of the (num_units, num_units, num_bins) correlogram
     that need incrementing are done so with `ravel_multi_index()`. This repeats
     for all shifts along the spike_train until no spikes have a corresponding
     match within the window size.
@@ -433,7 +431,7 @@ if HAVE_NUMBA:
         correlogram. The correlogram must be passed as an
         argument and is filled in-place.
 
-        Paramters
+        Parameters
         ---------
 
         correlograms: np.array

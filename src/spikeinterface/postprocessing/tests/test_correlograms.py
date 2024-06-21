@@ -175,13 +175,13 @@ def test_detect_injected_correlation(method):
 
 # Functional Tests
 ###################
-@pytest.mark.parametrize("overflow_edges", [True, False])
+@pytest.mark.parametrize("fill_all_bins", [True, False])
 @pytest.mark.parametrize("on_time_bin", [True, False])
 @pytest.mark.parametrize("multi_segment", [True, False])
-def test_compute_correlograms(overflow_edges, on_time_bin, multi_segment):
+def test_compute_correlograms(fill_all_bins, on_time_bin, multi_segment):
     """
     Test the entry function `compute_correlograms` under a variety of conditions.
-    For specifics of `overflow_edges` and `on_time_bin` see `generate_correlogram_test_dataset()`.
+    For specifics of `fill_all_bins` and `on_time_bin` see `generate_correlogram_test_dataset()`.
 
     This function tests numpy and numba in one go, to avoid over-parameterising the method.
     It tests both a single-segment and multi-segment dataset. The way that segments are
@@ -190,7 +190,7 @@ def test_compute_correlograms(overflow_edges, on_time_bin, multi_segment):
     """
     sampling_frequency = 30000
     window_ms, bin_ms, spike_times, spike_labels, expected_bins, expected_result_auto, expected_result_corr = (
-        generate_correlogram_test_dataset(sampling_frequency, overflow_edges, on_time_bin)
+        generate_correlogram_test_dataset(sampling_frequency, fill_all_bins, on_time_bin)
     )
 
     if multi_segment:
@@ -255,30 +255,33 @@ def test_compute_correlograms_different_units(method):
     assert np.array_equal(result[0, 1], np.array([1, 0, 1, 1, 1, 0, 0, 0]))
 
 
-def generate_correlogram_test_dataset(sampling_frequency, overflow_edges, on_time_bin):
+def generate_correlogram_test_dataset(sampling_frequency, fill_all_bins, hit_bin_edge):
     """
     This generates a detailed correlogram test and expected outputs, for a number of
     test cases:
 
     overflow edges : when there are counts expected in every measured bins, otherwise
                      counts are expected only in a (central) subset of bins.
-    on_time_bin : if `True`, the difference in spike times are created to land
+    hit_bin_edge : if `True`, the difference in spike times are created to land
                   exactly as multiples of the bin size, an edge case that caused
                   some problems in previous iterations of the algorithm.
 
     The approach used is to create a set of spike times which are
-    multiples of a 'base_diff_time'. When `on_time_bin` is `False` this is
+    multiples of a 'base_diff_time'. When `hit_bin_edge` is `False` this is
     set to 5.1 ms. So, we have spikes at:
         5.1 ms, 10.2 ms, 15.3 ms, ..., base_diff_time * num_filled_bins
 
     This means consecutive spike times are 5.1 ms apart. Then every two
     spike times are 10.2 ms apart. This gives predictable bin counts,
     that are maximal at the smaller bins (e.g. 5-10 s) and minimal at
-    the later bins (e.g. 100-105 s). When `on_time_bin` is `False`,
-    we expect that bin counts will increase from the edge of the bins
-    to the middle, maximum in the middle, 0 in the exact center (-5 to 0, 0 to 5)
-    and then decreasing until the end of the bin. For the autocorrelation, the zero-lag
-    case  is not included and the two central bins will be zero.
+    the later bins (e.g. 100-105 s). Note at more than num_filled_bins the
+    the times will overflow to the next bin and test wont work. None of these
+    parameters should be changed.
+
+    When `hit_bin_edge` is `False`, we expect that bin counts will increase from the
+    edge of the bins to the middle, maximum in the middle, 0 in the exact center
+    (-5 to 0, 0 to 5) and then decreasing until the end of the bin. For the autocorrelation,
+    the zero-lag case  is not included and the two central bins will be zero.
 
     Different units are tested by repeating the spike times. This means all
     results for all units autocorrelation and cross-correlation will be
@@ -294,7 +297,7 @@ def generate_correlogram_test_dataset(sampling_frequency, overflow_edges, on_tim
     with all diffs 5 and the `bin_ms` set to 5. By convention, when spike
     diffs hit the bin edge they are set into the 'right' (i.e. positive)
     bin. For positive bins this does not change, but for negative bins
-    all entires are shifted one place to the right.
+    all entries are shifted one place to the right.
     """
     num_units = 3
 
@@ -305,14 +308,14 @@ def generate_correlogram_test_dataset(sampling_frequency, overflow_edges, on_tim
     # If overflow edges, we will have a diff at every possible
     # bin e.g. the counts will be [31, 30, ..., 30, 31]. If not,
     # test the case where there are zero bins e.g. [0, 0, 9, 8, ..., 8, 9, 0, 0].
-    if overflow_edges:
+    if fill_all_bins:
         num_filled_bins = 60
     else:
         num_filled_bins = 10
 
     # If we are on a time bin, make the time delays exactly
     # the same as a time bin, testing this tricky edge case.
-    if on_time_bin:
+    if hit_bin_edge:
         base_diff_time = bin_ms / 1000
     else:
         base_diff_time = bin_ms / 1000 + 0.0001  # i.e. 0.0051 s
@@ -337,29 +340,31 @@ def generate_correlogram_test_dataset(sampling_frequency, overflow_edges, on_tim
     # In this case, all time bins are shifted to the right for the
     # negative shift due to the diffs lying on the bin edge.
     # [30, 31, ..., 59, 0, 59, ..., 30, 31]
-    if overflow_edges and on_time_bin:
+    if fill_all_bins and hit_bin_edge:
         expected_result_auto = np.r_[np.arange(30, 60), 0, np.flip(np.arange(31, 60))]
 
     # In this case there are no edge effects and the bin counts
     # [31, 30, ..., 59, 0, 0, 59, ..., 30, 31]
     # are symmetrical
-    elif overflow_edges and not on_time_bin:
+    elif fill_all_bins and not hit_bin_edge:
         forward = np.r_[np.arange(31, 60), 0]
         expected_result_auto = np.r_[forward, np.flip(forward)]
 
     # Here we have many zero bins, but the existing bins are
     # shifted left in the negative-bin base
     # [0, 0, ..., 1, 2, 3, ..., 10, 0, 10, ..., 3, 2, 1, ..., 0]
-    elif not overflow_edges and on_time_bin:
+    elif not fill_all_bins and hit_bin_edge:
         forward = np.r_[np.zeros(19), np.arange(10)]
         expected_result_auto = np.r_[0, forward, 0, np.flip(forward)]
 
     # Here we have many zero bins and they are symmetrical
     # [0, 0, ..., 1, 2, 3, ..., 10, 0, 10, ..., 3, 2, 1, ..., 0, 0]
-    elif not overflow_edges and not on_time_bin:
+    elif not fill_all_bins and not hit_bin_edge:
         forward = np.r_[np.zeros(19), np.arange(10), 0]
         expected_result_auto = np.r_[forward, np.flip(forward)]
 
+    # The zero-lag bins are only skipped in the autocorrelogram
+    # case.
     expected_result_corr = expected_result_auto.copy()
     expected_result_corr[int(num_bins / 2)] = num_filled_bins
 
