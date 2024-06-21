@@ -767,7 +767,7 @@ class SortingAnalyzer:
             The new folder where selected waveforms are copied
         format : "auto" | "binary_folder" | "zarr"
             The format of the folder.
-    
+
         Returns
         -------
         analyzer :  SortingAnalyzer

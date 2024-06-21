@@ -93,13 +93,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
             if unit_id in new_unit_ids:
                 should_be_recomputed += [unit_id]
 
-        
-
-
         # + if some PC metrics recompute
 
         pass
-
 
     def _run(self, verbose=False, **job_kwargs):
         """
