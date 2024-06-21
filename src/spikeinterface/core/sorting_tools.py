@@ -47,7 +47,7 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
     return spike_trains
 
 
-def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, absolute_index :  bool = False):
+def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, absolute_index: bool = False):
     """
     Similar to spike_vector_to_spike_trains but instead having the spike_trains (aka spike times) return
     spike indices by segment and units.
@@ -66,7 +66,7 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
         or relative to segment usefull with a list of spike vectors
         When a unique spike vectors (or amplitudes) is used then absolute_index should be True.
         When a list of spikes (or amplitudes) is used then absolute_index should be False.
-    
+
     Returns
     -------
     spike_indices: dict[dict]:
@@ -88,7 +88,7 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
 
     num_units = unit_ids.size
     spike_indices = {}
-    
+
     total_spikes = 0
     for segment_index, spikes in enumerate(spike_vector):
         indices = np.arange(spikes.size, dtype=np.int64)
@@ -99,7 +99,6 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
         list_of_spike_indices = vector_to_list_of_spiketrain(indices, unit_indices, num_units)
 
         spike_indices[segment_index] = dict(zip(unit_ids, list_of_spike_indices))
-
 
     return spike_indices
 
