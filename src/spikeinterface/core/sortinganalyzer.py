@@ -797,7 +797,7 @@ class SortingAnalyzer:
         a
         Returns
         -------
-        we :  SortingAnalyzer
+        analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
 
