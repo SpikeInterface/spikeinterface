@@ -86,18 +86,12 @@ class ComputeQualityMetrics(AnalyzerExtension):
         new_data = dict(metrics=new_metrics)
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
-        new_unit_ids = merged_sorting.unit_ids
-        should_be_recomputed = []
-        for unit_id in new_unit_ids:
-            if unit_id in new_unit_ids:
-                should_be_recomputed += [unit_id]
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
+        metrics = self._compute_metrics(new_sorting_analyzer)
+        new_data = dict(metrics=metrics)
+        return new_data
 
-        # + if some PC metrics recompute
-
-        pass
-
-    def _run(self, verbose=False, **job_kwargs):
+    def _compute_metrics(self, sorting_analyzer, verbose=False, **job_kwargs):
         """
         Compute quality metrics.
         """
@@ -111,7 +105,10 @@ class ComputeQualityMetrics(AnalyzerExtension):
         n_jobs = job_kwargs["n_jobs"]
         progress_bar = job_kwargs["progress_bar"]
 
-        sorting = self.sorting_analyzer.sorting
+        if sorting_analyzer is None:
+            sorting_analyzer = self.sorting_analyzer
+
+        sorting = sorting_analyzer.sorting
         unit_ids = sorting.unit_ids
         non_empty_unit_ids = sorting.get_non_empty_unit_ids()
         empty_unit_ids = unit_ids[~np.isin(unit_ids, non_empty_unit_ids)]
@@ -137,7 +134,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
             func = _misc_metric_name_to_func[metric_name]
 
             params = qm_params[metric_name] if metric_name in qm_params else {}
-            res = func(self.sorting_analyzer, unit_ids=non_empty_unit_ids, **params)
+            res = func(sorting_analyzer, unit_ids=non_empty_unit_ids, **params)
             # QM with uninstall dependencies might return None
             if res is not None:
                 if isinstance(res, dict):
@@ -152,10 +149,10 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
         if len(pc_metric_names) > 0 and not self.params["skip_pc_metrics"]:
-            if not self.sorting_analyzer.has_extension("principal_components"):
+            if not sorting_analyzer.has_extension("principal_components"):
                 raise ValueError("waveform_principal_component must be provied")
             pc_metrics = compute_pc_metrics(
-                self.sorting_analyzer,
+                sorting_analyzer,
                 unit_ids=non_empty_unit_ids,
                 metric_names=pc_metric_names,
                 # sparsity=sparsity,
@@ -170,8 +167,11 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # add NaN for empty units
         if len(empty_unit_ids) > 0:
             metrics.loc[empty_unit_ids] = np.nan
+        
+        return metrics
 
-        self.data["metrics"] = metrics
+    def _run(self, verbose=False, **job_kwargs):
+        self.data["metrics"] = self._compute_metrics(None, verbose, **job_kwargs)
 
     def _get_data(self):
         return self.data["metrics"]

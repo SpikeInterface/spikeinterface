@@ -70,9 +70,9 @@ class ComputeCorrelograms(AnalyzerExtension):
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
 
-        all_new_units = merged_sorting.unit_ids
+        all_new_units = new_sorting_analyzer.unit_ids
         new_bins = self.data["bins"]
         arr = self.data["ccgs"]
         num_dims = arr.shape[2]
@@ -83,7 +83,7 @@ class ComputeCorrelograms(AnalyzerExtension):
 
         new_ccgs = np.zeros((len(all_new_units), len(all_new_units), num_dims), dtype=arr.dtype)
         for unit_ind1, unit_id1 in enumerate(all_new_units):
-            spiketrain1 = merged_sorting.get_unit_spike_train(unit_id1)
+            spiketrain1 = new_sorting_analyzer.sorting.get_unit_spike_train(unit_id1)
             if unit_id1 in new_unit_ids:
                 new_spk1 = True
             else:
@@ -91,7 +91,7 @@ class ComputeCorrelograms(AnalyzerExtension):
                 i = self.sorting_analyzer.sorting.id_to_index(unit_id1)
 
             for unit_ind2, unit_id2 in enumerate(all_new_units[unit_ind1:]):
-                spiketrain2 = merged_sorting.get_unit_spike_train(unit_id2)
+                spiketrain2 = new_sorting_analyzer.sorting.get_unit_spike_train(unit_id2)
                 if unit_id2 in new_unit_ids:
                     new_spk2 = True
                 else:

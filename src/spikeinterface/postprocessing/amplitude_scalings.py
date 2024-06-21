@@ -114,7 +114,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             new_data["collision_mask"] = self.data["collision_mask"][keep_spike_mask]
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
         new_data = dict()
         new_data["amplitude_scalings"] = self.data["amplitude_scalings"]
         if self.params["handle_collisions"]:

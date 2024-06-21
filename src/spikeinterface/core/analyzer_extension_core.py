@@ -76,7 +76,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_spike_mask])
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
         new_data = dict()
         new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
         return new_data
@@ -229,7 +229,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
         new_data = dict()
         new_data["waveforms"] = self.data["waveforms"]
         return new_data
@@ -435,9 +435,9 @@ class ComputeTemplates(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
 
-        all_new_units = merged_sorting.unit_ids
+        all_new_units = new_sorting_analyzer.unit_ids
         new_data = dict()
         counts = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
         for key, arr in self.data.items():
@@ -616,7 +616,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         # this do not depend on units
         return self.data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
         # this do not depend on units
         return self.data
 

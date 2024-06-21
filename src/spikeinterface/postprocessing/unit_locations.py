@@ -64,10 +64,10 @@ class ComputeUnitLocations(AnalyzerExtension):
         new_unit_location = self.data["unit_locations"][unit_inds]
         return dict(unit_locations=new_unit_location)
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
         arr = self.data["unit_locations"]
         num_dims = arr.shape[1]
-        all_new_unit_ids = merged_sorting.unit_ids
+        all_new_unit_ids = new_sorting_analyzer.unit_ids
         counts = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
         new_unit_location = np.zeros((len(all_new_unit_ids), num_dims), dtype=arr.dtype)
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
