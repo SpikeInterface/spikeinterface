@@ -97,7 +97,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # new_data = dict(metrics=new_metrics)
         # return new_data
 
-        #+ if some PC metrics recompute
+        # + if some PC metrics recompute
 
         pass
 

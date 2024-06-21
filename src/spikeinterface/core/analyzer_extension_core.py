@@ -454,8 +454,8 @@ class ComputeTemplates(AnalyzerExtension):
                     weights = np.zeros(len(unit_ids), dtype=np.float32)
                     for count, id in enumerate(unit_ids):
                         weights[count] = counts[id]
-                    weights /= weights.sum()                    
-                    new_data[key][unit_ind] = (arr[keep_unit_indices, :, :]*weights).sum(0)
+                    weights /= weights.sum()
+                    new_data[key][unit_ind] = (arr[keep_unit_indices, :, :] * weights).sum(0)
 
         return new_data
 

@@ -43,11 +43,11 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         return dict(similarity=new_similarity)
 
     def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
-        templates_array = self.sorting_analyzer.get_extension('templates')._get_data('average')
+        templates_array = self.sorting_analyzer.get_extension("templates")._get_data("average")
         arr = self.data["similarity"]
         all_new_unit_ids = merged_sorting.unit_ids
         new_similarity = np.zeros((len(all_new_unit_ids), len(all_new_unit_ids)), dtype=arr.dtype)
-        
+
         for unit_ind1, unit_id1 in enumerate(all_new_unit_ids):
             template1 = templates_array[unit_ind1][np.newaxis, :]
             if unit_id1 in new_unit_ids:
@@ -65,17 +65,15 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                     new_spk2 = False
                     j = self.sorting_analyzer.sorting.id_to_index(unit_id2)
 
-                
                 if new_spk1 or new_spk2:
-                    new_similarity[unit_ind1, position] = compute_similarity_with_templates_array(template1,
-                                                                                                  template2, 
-                                                                                                  **self.params)
+                    new_similarity[unit_ind1, position] = compute_similarity_with_templates_array(
+                        template1, template2, **self.params
+                    )
                 else:
                     new_similarity[unit_ind1, position] = arr[i, j]
-                
+
                 new_similarity[position, unit_ind1] = new_similarity[unit_ind1, position]
-        
-        
+
         return dict(similarity=new_similarity)
 
     def _run(self, verbose=False):
