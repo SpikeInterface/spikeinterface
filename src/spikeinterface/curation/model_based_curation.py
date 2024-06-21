@@ -16,17 +16,15 @@ class ModelBasedClassification:
         The sorting analyzer object containing the spike sorting data.
     pipeline : Pipeline
         The pipeline object representing the trained classification model.
-    required_metrics : Sequence[str]
-        The list of required metrics for classification.
 
     Attributes
     ----------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting data.
-    required_metrics : Sequence[str]
-        The list of required metrics for classification.
     pipeline : Pipeline
         The pipeline object representing the trained classification model.
+    required_metrics : Sequence[str]
+        The list of required metrics for classification, extracted from the pipeline.
 
     Methods
     -------
@@ -38,15 +36,16 @@ class ModelBasedClassification:
         Checks if the parameters for classification match the training parameters.
     """
 
-    def __init__(self, sorting_analyzer: SortingAnalyzer, pipeline, required_metrics: Sequence[str]):
+    def __init__(self, sorting_analyzer: SortingAnalyzer, pipeline):
         from sklearn.pipeline import Pipeline
 
         if not isinstance(pipeline, Pipeline):
             raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
 
         self.sorting_analyzer = sorting_analyzer
-        self.required_metrics = required_metrics
         self.pipeline = pipeline
+        self.required_metrics = pipeline.feature_names_in_
+
 
     def predict_labels(self):
         """
@@ -72,8 +71,6 @@ class ModelBasedClassification:
         # Apply classifier
         predictions = self.pipeline.predict(input_data)
         probabilities = self.pipeline.predict_proba(input_data)
-
-        # TODO: add feature importance?
 
         # Make output dict with {unit_id: (prediction, probability)}
         classified_units = {
@@ -134,7 +131,7 @@ class ModelBasedClassification:
         # This would need to account for the fact that these extensions may no longer exist
 
 
-def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, required_metrics: Sequence[str]):
+def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline):
     """
     Automatically labels units based on a model-based classification.
 
@@ -144,8 +141,6 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, required_metri
         The sorting analyzer object containing the spike sorting results.
     pipeline : Pipeline
         The pipeline object containing the model-based classification pipeline.
-    required_metrics : Sequence[str]
-        The list of required metrics used for classification.
 
     Returns
     -------
@@ -159,7 +154,7 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, required_metri
     if not isinstance(pipeline, Pipeline):
         raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
 
-    model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline, required_metrics)
+    model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline)
 
     classified_units = model_based_classification.predict_labels()
 

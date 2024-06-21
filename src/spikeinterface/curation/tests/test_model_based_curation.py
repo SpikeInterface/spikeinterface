@@ -35,19 +35,17 @@ def required_metrics():
     return ["num_spikes", "half_width"]
 
 
-def test_model_based_classification_init(sorting_analyzer_for_curation, pipeline, required_metrics):
+def test_model_based_classification_init(sorting_analyzer_for_curation, pipeline):
     # Test the initialization of ModelBasedClassification
-    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline, required_metrics)
+    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
     assert model_based_classification.sorting_analyzer == sorting_analyzer_for_curation
     assert model_based_classification.pipeline == pipeline
-    assert model_based_classification.required_metrics == required_metrics
-
 
 def test_model_based_classification_get_metrics_for_classification(
     sorting_analyzer_for_curation, pipeline, required_metrics
 ):
     # Test the _get_metrics_for_classification() method of ModelBasedClassification
-    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline, required_metrics)
+    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
 
     # Check that ValueError is returned when quality_metrics are not present in sorting_analyzer
     with pytest.raises(ValueError):
@@ -74,7 +72,7 @@ def test_model_based_classification_check_params_for_classification(
     sorting_analyzer_for_curation = make_sorting_analyzer()
 
     # Test the _check_params_for_classification() method of ModelBasedClassification
-    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline, required_metrics)
+    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
     # Check that ValueError is raised when required_metrics are not computed
     with pytest.raises(ValueError):
         model_based_classification._check_params_for_classification()
@@ -87,9 +85,9 @@ def test_model_based_classification_check_params_for_classification(
 
 
 # TODO: fix this test
-def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, pipeline, required_metrics):
+def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, pipeline):
     # Test the predict_labels() method of ModelBasedClassification
-    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline, required_metrics)
+    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
     classified_units = model_based_classification.predict_labels()
     # TODO: check that classifications match some known set of outputs
     predictions = [classified_units[i][0] for i in classified_units]
