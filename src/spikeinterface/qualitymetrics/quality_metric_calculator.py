@@ -167,7 +167,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # add NaN for empty units
         if len(empty_unit_ids) > 0:
             metrics.loc[empty_unit_ids] = np.nan
-        
+
         return metrics
 
     def _run(self, verbose=False, **job_kwargs):
