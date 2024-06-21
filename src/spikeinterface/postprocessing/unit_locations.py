@@ -82,7 +82,7 @@ class ComputeUnitLocations(AnalyzerExtension):
                 for count, id in enumerate(unit_ids):
                     weights[count] = counts[id]
                 weights /= weights.sum()
-                new_unit_location[unit_ind] = (arr[keep_unit_indices]*weights[:, np.newaxis]).sum(0)
+                new_unit_location[unit_ind] = (arr[keep_unit_indices] * weights[:, np.newaxis]).sum(0)
 
         return dict(unit_locations=new_unit_location)
 
