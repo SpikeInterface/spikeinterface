@@ -62,7 +62,7 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
     unit_ids: np.array
         Unit ids
     absolute_index: bool, default False
-        It True, return absolute spike indices, else spike indices are relative to the segment.
+        It True, return absolute spike indices. If False, spike indices are relative to the segment.
         When a unique spike vector is used,  then absolute_index should be True.
         When a list of spikes per segment is used, then absolute_index should be False.
 
