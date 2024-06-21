@@ -656,12 +656,17 @@ class SortingAnalyzer:
         elif self.sparsity is not None and units_to_merge is not None:
             sparsity_mask = np.zeros((len(new_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
             for unit_ind, unit_id in enumerate(new_unit_ids):
-                if unit_id in self.sorting.unit_ids:
-                    index = self.sorting.id_to_index(unit_id)
-                else:
+                if unit_id in unit_ids:
+                    # This is a new unit, and the sparsity mask will be the intersection of the
+                    # ones of all merges
                     id = np.flatnonzero(unit_ids == unit_id)[0]
-                    index = self.sorting.id_to_index(units_to_merge[id][0])
-                sparsity_mask[unit_ind] = self.sparsity.mask[index]
+                    to_be_merged = units_to_merge[id]
+                    indices = self.sorting.ids_to_indices(to_be_merged)
+                    sparsity_mask[unit_ind] = np.sum(self.sparsity.mask[indices], axis=1) > 0
+                else:
+                    # This means that the unit is already in the previous sorting
+                    index = self.sorting.id_to_index(unit_id)
+                    sparsity_mask[unit_ind] = self.sparsity.mask[index]
             sparsity = ChannelSparsity(sparsity_mask, list(new_unit_ids), self.channel_ids)
         else:
             sparsity = None

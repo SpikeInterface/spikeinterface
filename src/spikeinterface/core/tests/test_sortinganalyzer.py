@@ -210,8 +210,27 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         # unit 1, 3, ... should be removed
         assert np.all(~np.isin(data["result_two"], [1, 3]))
 
-        # sorting_analyzer3 = sorting_analyzer.merge_units(units_to_merge=[[0, 1]], format=format, folder=folder)
-        # sorting_analyzer4 = sorting_analyzer.merge_units(units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder)
+        if format != "memory":
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}"
+            if folder.exists():
+                shutil.rmtree(folder)
+        else:
+            folder = None
+        sorting_analyzer3 = sorting_analyzer.merge_units(units_to_merge=[[0, 1]], format=format, folder=folder)
+
+        if format != "memory":
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}"
+            if folder.exists():
+                shutil.rmtree(folder)
+        else:
+            folder = None
+        sorting_analyzer4 = sorting_analyzer.merge_units(units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder)
 
     # test compute with extension-specific params
     sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})
