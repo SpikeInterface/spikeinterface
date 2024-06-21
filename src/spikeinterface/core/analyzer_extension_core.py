@@ -446,7 +446,8 @@ class ComputeTemplates(AnalyzerExtension):
                     keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                     new_data[key][unit_ind] = arr[keep_unit_index, :, :]
                 else:
-                    unit_ids = units_to_merge[np.flatnonzero(new_unit_ids == unit_id)[0]]
+                    id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                    unit_ids = units_to_merge[id]
                     keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
                     new_data[key][unit_ind] = arr[keep_unit_indices, :, :].mean(axis=0)
 

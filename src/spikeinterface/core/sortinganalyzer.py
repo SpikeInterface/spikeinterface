@@ -793,6 +793,11 @@ class SortingAnalyzer:
         we :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
+
+        if not isinstance(units_to_merge[0], (list, tuple)):
+            # keep backward compatibility : the previous behavior was only one merge
+            units_to_merge = [units_to_merge]
+
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         if new_unit_ids is not None:
             assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
