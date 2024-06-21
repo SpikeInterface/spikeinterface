@@ -77,19 +77,6 @@ class AnalyzerExtensionCommonTestSuite:
         )
         self.__class__.cache_folder = create_cache_folder
 
-    def _prepare_sorting_analyzer(self, format, sparse, extension_class):
-        """
-        Prepare a SortingAnalyzer object with dependencies already computed
-        according to format (e.g. "memory", "binary_folder", "zarr")
-        and sparsity (e.g. True, False).
-        """
-        sparsity_ = self.sparsity if sparse else None
-
-        sorting_analyzer = self.get_sorting_analyzer(
-            self.recording, self.sorting, format=format, sparsity=sparsity_, name=extension_class.extension_name
-        )
-        return sorting_analyzer
-
     def get_sorting_analyzer(self, recording, sorting, format="memory", sparsity=None, name=""):
         sparse = sparsity is not None
 

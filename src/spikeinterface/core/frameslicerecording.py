@@ -30,7 +30,7 @@ class FrameSliceRecording(BaseRecording):
 
         assert parent_recording.get_num_segments() == 1, "FrameSliceRecording only works with one segment"
 
-        parent_size = parent_recording.get_num_samples(0)
+        parent_size = parent_recording.get_num_samples(segment_index=0)
         if start_frame is None:
             start_frame = 0
         else:
