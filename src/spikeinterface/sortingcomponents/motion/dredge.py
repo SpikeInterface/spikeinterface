@@ -92,10 +92,8 @@ def dredge_online_lfp(
 
     Returns
     -------
-    me : motion_util.MotionEstimate
-        A motion estimate object. me.displacement is the displacement trace, but this object
-        includes methods for getting the displacement at different times and depths; see
-        the documentation in the motion_util.py file.
+    motion : Motion
+        A motion object.
     extra : dict
         Dict containing extra info for debugging
     """
@@ -126,7 +124,7 @@ def dredge_online_lfp(
     )
 
     # in LFP bin center are contact position
-    # TODO check dim and direction and assert unique
+    # TODO sam check dim and direction and assert unique
     spatial_bin_centers = geom[:, 1]
 
     windows, window_centers = get_windows(
