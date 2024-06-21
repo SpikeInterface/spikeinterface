@@ -54,16 +54,15 @@ plot_probe(recording_2_shanks.get_probe())
 # or as a list of recordings with :code:`outputs='list'`.
 
 print(recording_2_shanks)
-print(f'/nGroup Property: {recording_2_shanks.get_property("group")}/n')
+print(f'\nGroup Property: {recording_2_shanks.get_property("group")}\n')
 
 # Here we split as a dict
 sub_recording_dict = recording_2_shanks.split_by(property="group", outputs='dict')
-print(sub_recording_dict, '/n')
 
 # Then we can pull out the individual sub-recordings
 sub_rec0 = sub_recording_dict[0]
 sub_rec1 = sub_recording_dict[1]
-print(sub_rec0, '/n')
+print(sub_rec0, '\n')
 print(sub_rec1)
 
 ###############################################################################
