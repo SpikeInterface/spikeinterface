@@ -67,7 +67,7 @@ class ComputeISIHistograms(AnalyzerExtension):
                 keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                 new_isi_hists[unit_ind] = arr[keep_unit_index]
             else:
-                new_sorting = merged_sorting.select_units(unit_id)
+                new_sorting = merged_sorting.select_units([unit_id])
                 new_hist, _ = _compute_isi_histograms(new_sorting, **self.params)
                 new_isi_hists[unit_ind] = new_hist
 

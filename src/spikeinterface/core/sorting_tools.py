@@ -253,7 +253,6 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
         new_unit_ids = [i[0] for i in units_to_merge]
 
     all_unit_ids = get_ids_after_merging(sorting, units_to_merge, new_unit_ids)
-    print(all_unit_ids)
 
     segment_slices = {}
     for segment_index in range(sorting.get_num_segments()):

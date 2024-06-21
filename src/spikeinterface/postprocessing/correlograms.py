@@ -98,13 +98,14 @@ class ComputeCorrelograms(AnalyzerExtension):
                     new_spk2 = False
                     j = self.sorting_analyzer.sorting.id_to_index(unit_id2)
 
+                position = unit_ind1 + unit_ind2
                 if new_spk1 or new_spk2:
-                    new_ccgs[unit_ind1, unit_ind2] = compute_crosscorrelogram_from_spiketrain(
+                    new_ccgs[unit_ind1, position] = compute_crosscorrelogram_from_spiketrain(
                         spiketrain1, spiketrain2, window_size, bin_size
                     )
                 else:
-                    new_ccgs[unit_ind1, unit_ind2] = arr[i, j]
-                new_ccgs[unit_ind2, unit_ind1] = new_ccgs[unit_ind1, unit_ind2][::-1]
+                    new_ccgs[unit_ind1, position] = arr[i, j]
+                new_ccgs[position, unit_ind1] = new_ccgs[unit_ind1, position][::-1]
 
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data

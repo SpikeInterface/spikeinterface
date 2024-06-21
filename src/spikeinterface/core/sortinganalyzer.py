@@ -656,12 +656,17 @@ class SortingAnalyzer:
         elif self.sparsity is not None and units_to_merge is not None:
             sparsity_mask = np.zeros((len(new_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
             for unit_ind, unit_id in enumerate(new_unit_ids):
-                if unit_id in self.sorting.unit_ids:
-                    index = self.sorting.id_to_index(unit_id)
-                else:
+                if unit_id in unit_ids:
+                    # This is a new unit, and the sparsity mask will be the intersection of the
+                    # ones of all merges
                     id = np.flatnonzero(unit_ids == unit_id)[0]
-                    index = self.sorting.id_to_index(units_to_merge[id][0])
-                sparsity_mask[unit_ind] = self.sparsity.mask[index]
+                    to_be_merged = units_to_merge[id]
+                    indices = self.sorting.ids_to_indices(to_be_merged)
+                    sparsity_mask[unit_ind] = np.sum(self.sparsity.mask[indices], axis=1) > 0
+                else:
+                    # This means that the unit is already in the previous sorting
+                    index = self.sorting.id_to_index(unit_id)
+                    sparsity_mask[unit_ind] = self.sparsity.mask[index]
             sparsity = ChannelSparsity(sparsity_mask, list(new_unit_ids), self.channel_ids)
         else:
             sparsity = None
@@ -712,7 +717,9 @@ class SortingAnalyzer:
 
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
-        for extension_name, extension in self.extensions.items():
+        sorted_extensions = _sort_extensions_by_dependency(self.extensions)
+
+        for extension_name, extension in sorted_extensions.items():
             if units_to_merge is not None:
                 new_ext = new_sorting_analyzer.extensions[extension_name] = extension.merge(
                     new_sorting_analyzer,
@@ -758,11 +765,12 @@ class SortingAnalyzer:
             The unit ids to keep in the new SortingAnalyzer object
         folder : Path or None
             The new folder where selected waveforms are copied
-        format:
-        a
+        format : "auto" | "binary_folder" | "zarr"
+            The format of the folder.
+
         Returns
         -------
-        we :  SortingAnalyzer
+        analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
@@ -783,16 +791,21 @@ class SortingAnalyzer:
         new_unit_ids : None or list
             A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
             merged units will have the first unit_id of every lists of merges
-
         folder : Path or None
             The new folder where selected waveforms are copied
-        format:
-        a
+        format : "auto" | "binary_folder" | "zarr"
+            The format of the folder.
+
         Returns
         -------
-        we :  SortingAnalyzer
+        analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
+
+        if not isinstance(units_to_merge[0], (list, tuple)):
+            # keep backward compatibility : the previous behavior was only one merge
+            units_to_merge = [units_to_merge]
+
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         if new_unit_ids is not None:
             assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
@@ -1676,7 +1689,9 @@ class AnalyzerExtension:
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             for ext_data_file in extension_folder.iterdir():
-                if ext_data_file.name == "params.json":
+                # patch for https://github.com/SpikeInterface/spikeinterface/issues/3041
+                # maybe add a check for version number from the info.json during loading only
+                if ext_data_file.name == "params.json" or ext_data_file.name == "info.json":
                     continue
                 ext_data_name = ext_data_file.stem
                 if ext_data_file.suffix == ".json":

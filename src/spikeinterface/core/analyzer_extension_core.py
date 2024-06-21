@@ -439,6 +439,7 @@ class ComputeTemplates(AnalyzerExtension):
 
         all_new_units = merged_sorting.unit_ids
         new_data = dict()
+        counts = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
         for key, arr in self.data.items():
             new_data[key] = np.zeros((len(all_new_units), arr.shape[1], arr.shape[2]), dtype=arr.dtype)
             for unit_ind, unit_id in enumerate(all_new_units):
@@ -446,9 +447,15 @@ class ComputeTemplates(AnalyzerExtension):
                     keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                     new_data[key][unit_ind] = arr[keep_unit_index, :, :]
                 else:
-                    unit_ids = units_to_merge[np.flatnonzero(new_unit_ids == unit_id)[0]]
+                    id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                    unit_ids = units_to_merge[id]
                     keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-                    new_data[key][unit_ind] = arr[keep_unit_indices, :, :].mean(axis=0)
+                    # We do a weighted sum of the templates
+                    weights = np.zeros(len(unit_ids), dtype=np.float32)
+                    for count, id in enumerate(unit_ids):
+                        weights[count] = counts[id]
+                    weights /= weights.sum()
+                    new_data[key][unit_ind] = (arr[keep_unit_indices, :, :] * weights[:, np.newaxis, np.newaxis]).sum(0)
 
         return new_data
 

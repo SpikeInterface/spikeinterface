@@ -68,15 +68,21 @@ class ComputeUnitLocations(AnalyzerExtension):
         arr = self.data["unit_locations"]
         num_dims = arr.shape[1]
         all_new_unit_ids = merged_sorting.unit_ids
+        counts = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
         new_unit_location = np.zeros((len(all_new_unit_ids), num_dims), dtype=arr.dtype)
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
             if unit_id not in new_unit_ids:
                 keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                 new_unit_location[unit_ind] = arr[keep_unit_index]
             else:
-                unit_ids = units_to_merge[np.flatnonzero(new_unit_ids == unit_id)[0]]
+                id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                unit_ids = units_to_merge[id]
                 keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-                new_unit_location[unit_ind] = arr[keep_unit_indices].mean(axis=0)
+                weights = np.zeros(len(unit_ids), dtype=np.float32)
+                for count, id in enumerate(unit_ids):
+                    weights[count] = counts[id]
+                weights /= weights.sum()
+                new_unit_location[unit_ind] = (arr[keep_unit_indices] * weights[:, np.newaxis]).sum(0)
 
         return dict(unit_locations=new_unit_location)
 
