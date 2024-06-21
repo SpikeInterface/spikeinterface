@@ -331,7 +331,7 @@ class BaseRecording(BaseRecordingSnippets):
         segment_index = self._check_segment_index(segment_index)
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
         rs = self._recording_segments[segment_index]
-        start_frame = int(start_frame) if start_frame is not None else 0
+        start_frame = int(max(0, start_frame)) if start_frame is not None else 0
         end_frame = int(min(end_frame, rs.get_num_samples())) if end_frame is not None else rs.get_num_samples()
         traces = rs.get_traces(start_frame=start_frame, end_frame=end_frame, channel_indices=channel_indices)
         if order is not None:
