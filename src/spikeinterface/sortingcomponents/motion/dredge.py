@@ -127,15 +127,17 @@ def dredge_online_lfp(
 
     # get windows
     windows, window_centers = get_windows(
-        geom,
-        win_step_um,
-        win_scale_um,
-        spatial_bin_centers=geom[:, 1],
+        rigid=rigid, 
+        contact_pos=geom,
+        # TODO check dim and direction and assert unique
+        spatial_bin_edges=geom[:, 1],
         margin_um=win_margin_um,
+        win_step_um=win_step_um,
+        win_sigma_um=win_scale_um,
         win_shape=win_shape,
         zero_threshold=1e-5,
-        rigid=rigid,
     )
+
     B = len(windows)
 
     if extra_outputs:
