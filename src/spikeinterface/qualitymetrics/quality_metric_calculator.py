@@ -87,19 +87,19 @@ class ComputeQualityMetrics(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
-        # new_unit_ids = merged_sorting.unit_ids
-        # should_be_recomputed = []
-        # for unit_id in new_unit_ids:
-        #     if unit_id in new_unit_ids:
-        #         should_be_recomputed += [unit_id]
+        new_unit_ids = merged_sorting.unit_ids
+        should_be_recomputed = []
+        for unit_id in new_unit_ids:
+            if unit_id in new_unit_ids:
+                should_be_recomputed += [unit_id]
 
-        # new_metrics = self.data["metrics"].loc[np.array(new_unit_ids)]
-        # new_data = dict(metrics=new_metrics)
-        # return new_data
+        
+
 
         # + if some PC metrics recompute
 
         pass
+
 
     def _run(self, verbose=False, **job_kwargs):
         """

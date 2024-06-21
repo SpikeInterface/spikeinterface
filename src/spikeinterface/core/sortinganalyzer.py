@@ -765,11 +765,12 @@ class SortingAnalyzer:
             The unit ids to keep in the new SortingAnalyzer object
         folder : Path or None
             The new folder where selected waveforms are copied
-        format:
-        a
+        format : "auto" | "binary_folder" | "zarr"
+            The format of the folder.
+    
         Returns
         -------
-        we :  SortingAnalyzer
+        analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
@@ -790,11 +791,11 @@ class SortingAnalyzer:
         new_unit_ids : None or list
             A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
             merged units will have the first unit_id of every lists of merges
-
         folder : Path or None
             The new folder where selected waveforms are copied
-        format:
-        a
+        format : "auto" | "binary_folder" | "zarr"
+            The format of the folder.
+
         Returns
         -------
         analyzer :  SortingAnalyzer
