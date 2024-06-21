@@ -457,6 +457,11 @@ class ProxyConcatenateSortingSegment(BaseSortingSegment):
         start_frame,
         end_frame,
     ):
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
         i0, i1 = np.searchsorted(self.cumsum_length, [start_frame, end_frame], side="right") - 1
 
         # several case:
