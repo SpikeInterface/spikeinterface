@@ -15,6 +15,7 @@ from spikeinterface import (
     select_segment_sorting,
     load_waveforms,
     aggregate_units,
+    set_global_job_kwargs,
 )
 from spikeinterface.extractors import toy_example
 
@@ -29,11 +30,13 @@ from spikeinterface.qualitymetrics import QualityMetricCalculator, get_default_q
 
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
-
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "qualitymetrics"
 else:
     cache_folder = Path("cache_folder") / "qualitymetrics"
+
+# needed to suppress warnings
+set_global_job_kwargs(n_jobs=1)
 
 
 class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
@@ -144,6 +147,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # print(metrics_sparse)
 
     def test_amplitude_cutoff(self):
+
         we = self.we_short
         _ = compute_spike_amplitudes(we, peak_sign="neg")
 
