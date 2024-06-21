@@ -1608,7 +1608,9 @@ class AnalyzerExtension:
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             for ext_data_file in extension_folder.iterdir():
-                if ext_data_file.name == "params.json":
+                # patch for https://github.com/SpikeInterface/spikeinterface/issues/3041
+                # maybe add a check for version number from the info.json during loading only
+                if ext_data_file.name == "params.json" or ext_data_file.name == "info.json":
                     continue
                 ext_data_name = ext_data_file.stem
                 if ext_data_file.suffix == ".json":
