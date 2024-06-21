@@ -43,18 +43,40 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         return dict(similarity=new_similarity)
 
     def _merge_extension_data(self, units_to_merge, new_unit_ids, merged_sorting):
-        # arr = self.data["similarity"]
-        # all_new_unit_ids = merged_sorting.unit_ids
-        # new_similarity = np.zeros((len(all_new_unit_ids), arr.shape[1]), dtype=arr.dtype)
-        # # for unit_ind, unit_id in enumerate(all_new_unit_ids):
+        templates_array = self.sorting_analyzer.get_extension('templates')._get_data('average')
+        arr = self.data["similarity"]
+        all_new_unit_ids = merged_sorting.unit_ids
+        new_similarity = np.zeros((len(all_new_unit_ids), len(all_new_unit_ids)), dtype=arr.dtype)
+        
+        for unit_ind1, unit_id1 in enumerate(all_new_unit_ids):
+            template1 = templates_array[unit_ind1][np.newaxis, :]
+            if unit_id1 in new_unit_ids:
+                new_spk1 = True
+            else:
+                new_spk1 = False
+                i = self.sorting_analyzer.sorting.id_to_index(unit_id1)
 
-        # #     keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
-        # #     new_similarity[unit_ind] = arr[keep_unit_index]
+            for unit_ind2, unit_id2 in enumerate(all_new_unit_ids[unit_ind1:]):
+                position = unit_ind1 + unit_ind2
+                template2 = templates_array[position][np.newaxis, :]
+                if unit_id2 in new_unit_ids:
+                    new_spk2 = True
+                else:
+                    new_spk2 = False
+                    j = self.sorting_analyzer.sorting.id_to_index(unit_id2)
 
-        # keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.sorting.unit_ids, all_new_unit_ids))
-        # new_similarity = new_similarity[:, keep_unit_indices]
-        # return dict(similarity=new_similarity)
-        pass
+                
+                if new_spk1 or new_spk2:
+                    new_similarity[unit_ind1, position] = compute_similarity_with_templates_array(template1,
+                                                                                                  template2, 
+                                                                                                  **self.params)
+                else:
+                    new_similarity[unit_ind1, position] = arr[i, j]
+                
+                new_similarity[position, unit_ind1] = new_similarity[unit_ind1, position]
+        
+        
+        return dict(similarity=new_similarity)
 
     def _run(self, verbose=False):
         templates_array = get_dense_templates_array(

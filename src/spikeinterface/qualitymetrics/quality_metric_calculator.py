@@ -96,6 +96,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # new_metrics = self.data["metrics"].loc[np.array(new_unit_ids)]
         # new_data = dict(metrics=new_metrics)
         # return new_data
+
+        #+ if some PC metrics recompute
+
         pass
 
     def _run(self, verbose=False, **job_kwargs):

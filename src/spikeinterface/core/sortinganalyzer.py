@@ -717,7 +717,9 @@ class SortingAnalyzer:
 
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
-        for extension_name, extension in self.extensions.items():
+        sorted_extensions = _sort_extensions_by_dependency(self.extensions)
+        
+        for extension_name, extension in sorted_extensions.items():
             if units_to_merge is not None:
                 new_ext = new_sorting_analyzer.extensions[extension_name] = extension.merge(
                     new_sorting_analyzer,
