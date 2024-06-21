@@ -232,7 +232,7 @@ class Motion:
 
 
 
-def get_windows(rigid, contact_pos, spatial_bin_edges, margin_um, win_step_um, win_sigma_um, win_shape,
+def get_windows(rigid, contact_pos, spatial_bin_centers, margin_um, win_step_um, win_sigma_um, win_shape,
                 zero_threshold=None):
     """
     Generate spatial windows (taper) for non-rigid motion.
@@ -245,8 +245,8 @@ def get_windows(rigid, contact_pos, spatial_bin_edges, margin_um, win_step_um, w
         If True, returns a single rectangular window
     contact_pos : np.ndarray
         Position of electrodes (num_channels, 2)
-    spatial_bin_edges : np.array
-        The pre-computed spatial bin edges
+    spatial_bin_centers : np.array
+        The pre-computed spatial bin centers
     margin_um : float
         The margin to extend (if positive) or shrink (if negative) the probe dimension to compute windows.=
     win_step_um : float
@@ -270,13 +270,12 @@ def get_windows(rigid, contact_pos, spatial_bin_edges, margin_um, win_step_um, w
     Here by default we use gaussian window.
 
     """
-    bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
-    n = bin_centers.size
+    n = spatial_bin_centers.size
 
     if rigid:
         # win_shape = 'rect' is forced
         windows = [np.ones(n, dtype="float64")]
-        middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.0
+        middle = (spatial_bin_centers[0] + spatial_bin_centers[-1]) / 2.0
         window_centers = np.array([middle])
     else:
         if win_sigma_um <= win_step_um/5.:
@@ -293,12 +292,12 @@ def get_windows(rigid, contact_pos, spatial_bin_edges, margin_um, win_step_um, w
 
         for win_center in window_centers:
             if win_shape == "gaussian":
-                win = np.exp(-((bin_centers - win_center) ** 2) / (2 * win_sigma_um**2))
+                win = np.exp(-((spatial_bin_centers - win_center) ** 2) / (2 * win_sigma_um**2))
             elif win_shape == "rect":
-                win = np.abs(bin_centers - win_center) < (win_sigma_um / 2.0)
+                win = np.abs(spatial_bin_centers - win_center) < (win_sigma_um / 2.0)
                 win = win.astype("float64")
             elif win_shape == "triangle":
-                center_dist = np.abs(bin_centers - win_center)
+                center_dist = np.abs(spatial_bin_centers - win_center)
                 in_window = center_dist <= (win_sigma_um / 2.0)
                 win = -center_dist
                 win[~in_window] = 0

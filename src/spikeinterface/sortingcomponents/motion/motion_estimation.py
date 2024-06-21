@@ -128,10 +128,11 @@ def estimate_motion(
 
     # spatial bins
     spatial_bin_edges = get_spatial_bin_edges(recording, direction, margin_um, bin_um)
+    spatial_bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
 
     # get windows
     non_rigid_windows, non_rigid_window_centers = get_windows(
-        rigid, contact_pos, spatial_bin_edges, margin_um, win_step_um, win_sigma_um, win_shape
+        rigid, contact_pos, spatial_bin_centers, margin_um, win_step_um, win_sigma_um, win_shape
     )
 
     if extra_outputs:

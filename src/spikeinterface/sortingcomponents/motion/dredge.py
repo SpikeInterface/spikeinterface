@@ -125,12 +125,14 @@ def dredge_online_lfp(
         bin_s=1 / fs,  # only relevant for time_horizon_s
     )
 
-    # get windows
+    # in LFP bin center are contact position
+    # TODO check dim and direction and assert unique
+    spatial_bin_centers = geom[:, 1]
+
     windows, window_centers = get_windows(
         rigid=rigid, 
         contact_pos=geom,
-        # TODO check dim and direction and assert unique
-        spatial_bin_edges=geom[:, 1],
+        spatial_bin_centers=spatial_bin_centers,
         margin_um=win_margin_um,
         win_step_um=win_step_um,
         win_sigma_um=win_scale_um,
@@ -165,8 +167,9 @@ def dredge_online_lfp(
         extra["D01"] = []
         extra["C01"] = []
         extra["S01"] = []
-    extra["mincorrs"] = [mincorr0]
-    extra["max_disp_um"] = max_disp_um
+        extra["mincorrs"] = [mincorr0]
+        extra["max_disp_um"] = max_disp_um
+
     P_online[:, t0:t1], _ = thomas_solve(Ds0, Ss0, **thomas_kw)
 
     # -- loop through chunks
@@ -206,9 +209,10 @@ def dredge_online_lfp(
         Ss10, _ = threshold_correlation_matrix(
             Cs10, mincorr=mincorr1, t_offset_bins=T_chunk, **threshold_kw
         )
-        extra["mincorrs"].append(mincorr1)
+        
 
         if extra_outputs:
+            extra["mincorrs"].append(mincorr1)
             extra["D"].append(Ds1)
             extra["C"].append(Cs1)
             extra["S"].append(Ss1)
@@ -232,12 +236,7 @@ def dredge_online_lfp(
         t0, t1 = t1, t2
         traces0 = traces1
 
-    # -- convert to motion estimate and return
-    motion = Motion(
-        displacement=[P_online],
-        temporal_bins_s=[lfp_recording.get_times(0)],
-        spatial_bin_um=[window_centers]
-    )
+    motion = Motion([P_online.T], [lfp_recording.get_times(0)], window_centers, direction="y")
 
     if extra_outputs:
         return motion, extra
