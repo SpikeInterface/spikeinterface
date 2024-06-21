@@ -1,22 +1,16 @@
 import os
-import logging
 import pickle as pkl
-from enum import Enum
+import warnings
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+
+from spikeinterface.qualitymetrics import get_quality_metric_list, get_quality_pca_metric_list
+from spikeinterface.postprocessing import get_template_metric_names
 
 seed = 42
-
-
-class Objective(Enum):
-    Noise = 1
-    SUA = 2
-
+warnings.filterwarnings("ignore")
 
 class CurationModelTrainer:
-    def __init__(self, column_name, output_folder, imputation_strategies=None, scaling_techniques=None):
+    def __init__(self, target_column, output_folder, imputation_strategies=None, scaling_techniques=None, metrics_list=None):
         from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 
         if imputation_strategies is None:
@@ -28,12 +22,21 @@ class CurationModelTrainer:
                 ("robust_scaler", RobustScaler()),
             ]
         self.output_folder = output_folder
-        self.curator_column = column_name
+        self.target_column = target_column
         self.imputation_strategies = imputation_strategies
         self.scaling_techniques = scaling_techniques
+
+        if metrics_list is None:
+            self.metrics_list = self.get_default_metrics_list()
+            print("No metrics list provided, using default metrics list (all)")
+
+        self.X = None
+        self.y = None
         self.testing_metrics = None
-        self.noise_test = None
-        self.sua_mua_test = None
+
+    def get_default_metrics_list(self):
+
+        return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_names()
 
     def load_and_preprocess_full(self, path):
         self.load_data_file(path)
@@ -42,34 +45,28 @@ class CurationModelTrainer:
     def load_data_file(self, path):
         import pandas as pd
 
-        self.testing_metrics = {0: pd.read_csv(path)}
+        self.testing_metrics = {0: pd.read_csv(path, index_col=0)}
 
     def process_test_data_for_classification(self):
-        self.noise_test = {}
-        self.sua_mua_test = {}
-        for test_key in self.testing_metrics.keys():
-            testing_metrics = self.testing_metrics[test_key]
-            if "is_noise" in testing_metrics.columns:
-                testing_metrics.dropna(subset=[self.curator_column], inplace=True)
-                self.noise_test[test_key] = testing_metrics.copy()
-            if "is_sua" in testing_metrics.columns:
-                testing_metrics.dropna(subset=[self.curator_column], inplace=True)
-                self.sua_mua_test[test_key] = testing_metrics.copy()
-            else:
-                testing_metrics.dropna(subset=[self.curator_column], inplace=True)
-                unique_values = testing_metrics[self.curator_column].unique()
-                if len(unique_values) > 2:
-                    testing_metrics["is_noise"] = [
-                        1 if l == "noise" else 0 for l in testing_metrics[self.curator_column]
-                    ]
-                    self.noise_test[test_key] = testing_metrics.copy()
-                    self.sua_mua_test[test_key] = self.noise_test[test_key][self.noise_test[test_key]["is_noise"] != 1]
-                    self.sua_mua_test[test_key]["is_sua"] = [
-                        1 if l == "good" else 0 for l in self.sua_mua_test[test_key]["majority_vote"]
-                    ]
-                    self.sua_mua_test[test_key].drop(columns=["is_noise"], inplace=True)
-                else:
-                    raise ValueError("The target variable should be categorical with more than 2 classes")
+        import pandas as pd
+        
+        if self.target_column in self.testing_metrics[0].columns:
+            self.y = self.testing_metrics[0][self.target_column]
+
+            self.X = self.testing_metrics[0].dropna(subset=[self.target_column])
+            self.X.drop(columns = self.target_column, inplace=True)
+
+            self.metrics_list = self.X.columns
+
+            # Reorder columns to match metric list
+            try:
+                self.X = self.X[self.metrics_list]
+            except KeyError:
+                # Work out and print which metrics are missing
+                missing_metrics = [metric for metric in self.metrics_list if metric not in self.testing_metrics[0].columns]
+                raise ValueError(f"Metrics list contains uncomputed metrics: {missing_metrics}")
+        else:
+            raise ValueError(f"Target column {self.target_column} not found in testing metrics file")
 
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val):
         from sklearn.experimental import enable_iterative_imputer
@@ -149,70 +146,38 @@ class CurationModelTrainer:
             model = CatBoostClassifier(silent=True, random_state=seed)
         elif classifier == LGBMClassifier:
             param_space = {"learning_rate": [0.05, 0.15], "n_estimators": [100, 150]}
-            model = LGBMClassifier(random_state=seed)
+            model = LGBMClassifier(random_state=seed, verbose=0)
         elif classifier == MLPClassifier:
             param_space = {
                 "activation": ["tanh", "relu"],
                 "solver": ["adam"],
                 "alpha": [1e-7, 1e-1],
                 "learning_rate": ["constant", "adaptive"],
-                "n_iter_no_change": [32],
+                "n_iter_no_change": [32]
             }
             model = MLPClassifier(random_state=seed)
         else:
             raise ValueError(f"Unknown classifier: {classifier}")
         return model, param_space
 
+    # TODO: sort out function naming so things are actually clear
+    # E.g. evaluate_model_config, _evaluate, _train_and_evaluate - what do they all actually do?
     def evaluate_model_config(
-        self, metrics_list, imputation_strategies, scaling_techniques, classifiers, X, y, setting, objective
-    ):
-        from sklearn.model_selection import train_test_split
+        self, imputation_strategies, scaling_techniques, classifiers):
 
-        X = X[metrics_list]
-        if self.testing_metrics is None:
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed, stratify=y)
-            self._evaluate(
-                imputation_strategies,
-                scaling_techniques,
-                classifiers,
-                X_train,
-                X_test,
-                y_train,
-                y_test,
-                setting,
-                objective,
-            )
-        else:
-            for test_key in self.testing_metrics.keys():
-                if objective == Objective.Noise and test_key in self.noise_test:
-                    X_train, X_test, y_train, y_test = (
-                        X,
-                        self.noise_test[test_key].drop(columns=["is_noise"])[metrics_list],
-                        y,
-                        self.noise_test[test_key]["is_noise"],
-                    )
-                elif objective == Objective.SUA and test_key in self.sua_mua_test:
-                    X_train, X_test, y_train, y_test = (
-                        X,
-                        self.sua_mua_test[test_key].drop(columns=["is_sua"])[metrics_list],
-                        y,
-                        self.sua_mua_test[test_key]["is_sua"],
-                    )
-                else:
-                    X_train, X_test, y_train, y_test = train_test_split(
-                        X, y, test_size=0.2, random_state=seed, stratify=y
-                    )
-                self._evaluate(
-                    imputation_strategies,
-                    scaling_techniques,
-                    classifiers,
-                    X_train,
-                    X_test,
-                    y_train,
-                    y_test,
-                    setting,
-                    objective,
-                )
+        from sklearn.model_selection import train_test_split
+    
+        X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=seed, stratify=self.y)
+        self._evaluate(
+            imputation_strategies,
+            scaling_techniques,
+            classifiers,
+            X_train,
+            X_test,
+            y_train,
+            y_test
+        )
+
 
     def _evaluate(
         self,
@@ -222,13 +187,12 @@ class CurationModelTrainer:
         X_train,
         X_test,
         y_train,
-        y_test,
-        setting,
-        objective,
+        y_test
     ):
 
         from joblib import Parallel, delayed
         from sklearn.pipeline import Pipeline
+        import pandas as pd
 
         results = Parallel(n_jobs=-1)(
             delayed(self._train_and_evaluate)(
@@ -245,7 +209,7 @@ class CurationModelTrainer:
         test_accuracies, models = zip(*results)
 
         test_accuracies_df = pd.DataFrame(test_accuracies).sort_values("accuracy", ascending=False)
-        logger.debug(test_accuracies_df)
+        print(test_accuracies_df)
         best_model_id = test_accuracies_df.iloc[0]["model_id"]
         best_model, best_imputer, best_scaler = models[best_model_id]
 
@@ -254,13 +218,14 @@ class CurationModelTrainer:
             [("imputer", best_imputer), ("scaler", best_scaler), ("classifier", best_model.best_estimator_)]
         )
 
-        model_name = "noise" if objective == Objective.Noise else "sua"
+        model_name = self.target_column
 
         # Save the pipeline with pickle
-        pkl.dump(best_pipeline, open(os.path.join(self.output_folder, setting, f"best_model_{model_name}.pkl"), "wb"))
+        pkl.dump(best_pipeline, open(os.path.join(self.output_folder, f"best_model_{model_name}.pkl"), "wb"))
 
+        # Save all accuracies to CSV
         test_accuracies_df.to_csv(
-            os.path.join(self.output_folder, setting, f"model_{model_name}_accuracies.csv"), float_format="%.4f"
+            os.path.join(self.output_folder, f"model_{model_name}_accuracies.csv"), float_format="%.4f"
         )
 
     def _train_and_evaluate(
@@ -272,7 +237,7 @@ class CurationModelTrainer:
         X_train_scaled, X_test_scaled, y_train, y_test, imputer, scaler = self.apply_scaling_imputation(
             imputation_strategy, scaler, X_train, X_test, y_train, y_test
         )
-        logger.debug(f"Running {classifier} with imputation {imputation_strategy} and scaling {scaler_name}")
+        print(f"Running {classifier} with imputation {imputation_strategy} and scaling {scaler_name}")
         model, param_space = self.get_classifier_search_space(classifier)
         model = BayesSearchCV(
             model, param_space, cv=3, scoring="balanced_accuracy", n_iter=25, random_state=seed, n_jobs=-1
@@ -294,20 +259,19 @@ class CurationModelTrainer:
         }, (model, imputer, scaler)
 
 
-def train_model(metrics_path, output_folder, objective_label):
+def train_model(metrics_path, output_folder, target_label):
 
     from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+    from sklearn.experimental import enable_hist_gradient_boosting
+    from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
+    from sklearn.svm import SVC
+    from sklearn.linear_model import LogisticRegression
+    from lightgbm import LGBMClassifier
+    from catboost import CatBoostClassifier
+    from xgboost import XGBClassifier
+    from sklearn.neural_network import MLPClassifier
 
-    if objective_label == "is_noise":
-        objective = Objective.Noise
-    elif objective_label == "is_sua":
-        objective = Objective.SUA
-    else:
-        raise ValueError("Unknown objective label")
-
-    trainer = CurationModelTrainer(objective_label, output_folder)
-    trainer.load_and_preprocess_full(metrics_path)
-
+    # TODO: align syntax for passing imputers, scalers, classifiers
     imputation_strategies = ["median", "most_frequent", "knn", "iterative"]
     scaling_techniques = [
         ("standard_scaler", StandardScaler()),
@@ -327,49 +291,18 @@ def train_model(metrics_path, output_folder, objective_label):
         MLPClassifier,
     ]
 
-    metrics_list = [
-        "num_spikes",
-        "firing_rate",
-        "presence_ratio",
-        "isi_violations_ratio",
-        "amplitude_cutoff",
-        "amplitude_median",
-        "amplitude_cv_median",
-        "amplitude_cv_range",
-        "sync_spike_2",
-        "sync_spike_4",
-        "sync_spike_8",
-        "firing_range",
-        "drift_ptp",
-        "drift_std",
-        "drift_mad",
-        "isolation_distance",
-        "l_ratio",
-        "d_prime",
-        "silhouette",
-        "nn_hit_rate",
-        "nn_miss_rate",
-        "peak_to_valley",
-        "peak_trough_ratio",
-        "half_width",
-        "repolarization_slope",
-        "recovery_slope",
-        "num_positive_peaks",
-        "num_negative_peaks",
-        "velocity_above",
-        "velocity_below",
-        "exp_decay",
-        "spread",
-    ]
+    trainer = CurationModelTrainer(target_label, 
+                                output_folder,
+                                imputation_strategies=imputation_strategies,
+                                scaling_techniques=scaling_techniques,
+                                metrics_list=None
+                                )
+    
+    trainer.load_and_preprocess_full(metrics_path)
 
     trainer.evaluate_model_config(
-        metrics_list,
         imputation_strategies,
         scaling_techniques,
-        classifiers,
-        trainer.testing_metrics[0],
-        trainer.testing_metrics[0][objective_label],
-        "full",
-        objective,
+        classifiers
     )
     return trainer
