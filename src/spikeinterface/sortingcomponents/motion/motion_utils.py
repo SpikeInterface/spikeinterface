@@ -1,3 +1,4 @@
+import warnings
 import json
 from pathlib import Path
 
@@ -228,3 +229,125 @@ class Motion:
             self.spatial_bins_um.copy(),
             interpolation_method=self.interpolation_method,
         )
+
+
+
+def get_windows(rigid, contact_pos, spatial_bin_edges, margin_um, win_step_um, win_sigma_um, win_shape,
+                zero_threshold=None):
+    """
+    Generate spatial windows (taper) for non-rigid motion.
+    For rigid motion, this is equivalent to have one unique rectangular window that covers the entire probe.
+    The windowing can be gaussian or rectangular.
+
+    Parameters
+    ----------
+    rigid : bool
+        If True, returns a single rectangular window
+    contact_pos : np.ndarray
+        Position of electrodes (num_channels, 2)
+    spatial_bin_edges : np.array
+        The pre-computed spatial bin edges
+    margin_um : float
+        The margin to extend (if positive) or shrink (if negative) the probe dimension to compute windows.=
+    win_step_um : float
+        The steps at which windows are defined
+    win_sigma_um : float
+        Sigma of gaussian window (if win_shape is gaussian)
+    win_shape : float
+        "gaussian" | "rect"
+
+    Returns
+    -------
+    windows : 2D arrays
+        The scaling for each window. Each element has num_spatial_bins values
+        shape: (num_window, spatial_bins)
+    window_centers: 1D np.array
+        The center of each window
+
+    Notes
+    -----
+    Note that kilosort2.5 uses overlaping rectangular windows.
+    Here by default we use gaussian window.
+
+    """
+    bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
+    n = bin_centers.size
+
+    if rigid:
+        # win_shape = 'rect' is forced
+        windows = [np.ones(n, dtype="float64")]
+        middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.0
+        window_centers = np.array([middle])
+    else:
+        if win_sigma_um <= win_step_um/5.:
+            warnings.warn(
+                f"get_windows(): spatial windows are probably not overlaping because {win_sigma_um=} and {win_step_um=}"
+            )
+
+        min_ = np.min(contact_pos) - margin_um
+        max_ = np.max(contact_pos) + margin_um
+        num_windows = int((max_ - min_) // win_step_um)
+        border = ((max_ - min_) % win_step_um) / 2
+        window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
+        windows = []
+
+        for win_center in window_centers:
+            if win_shape == "gaussian":
+                win = np.exp(-((bin_centers - win_center) ** 2) / (2 * win_sigma_um**2))
+            elif win_shape == "rect":
+                win = np.abs(bin_centers - win_center) < (win_sigma_um / 2.0)
+                win = win.astype("float64")
+            elif win_shape == "triangle":
+                center_dist = np.abs(bin_centers - win_center)
+                in_window = center_dist <= (win_sigma_um / 2.0)
+                win = -center_dist
+                win[~in_window] = 0
+                win[in_window] -= win[in_window].min()
+                win[in_window] /= win[in_window].max()
+            windows.append(win)
+
+    windows = np.array(windows)
+
+    if zero_threshold is not None:
+        windows[windows < zero_threshold] = 0
+        windows /= windows.sum(axis=1, keepdims=True)
+
+    return windows, window_centers
+
+
+def get_window_domains(windows):
+    """Array of windows -> list of slices where window > 0."""
+    slices = []
+    for w in windows:
+        in_window = np.flatnonzero(w)
+        slices.append(slice(in_window[0], in_window[-1] + 1))
+    return slices
+
+
+def scipy_conv1d(input, weights, padding="valid"):
+    """SciPy translation of torch F.conv1d"""
+    from scipy.signal import correlate
+
+    n, c_in, length = input.shape
+    c_out, in_by_groups, kernel_size = weights.shape
+    assert in_by_groups == c_in == 1
+
+    if padding == "same":
+        mode = "same"
+        length_out = length
+    elif padding == "valid":
+        mode = "valid"
+        length_out = length - 2 * (kernel_size // 2)
+    elif isinstance(padding, int):
+        mode = "valid"
+        input = np.pad(input, [*[(0, 0)] * (input.ndim - 1), (padding, padding)])
+        length_out = length - (kernel_size - 1) + 2 * padding
+    else:
+        raise ValueError(f"Unknown 'padding' value of {padding}, 'padding' must be 'same', 'valid' or an integer")
+
+    output = np.zeros((n, c_out, length_out), dtype=input.dtype)
+    for m in range(n):
+        for c in range(c_out):
+            output[m, c] = correlate(input[m, 0], weights[c, 0], mode=mode)
+
+    return output

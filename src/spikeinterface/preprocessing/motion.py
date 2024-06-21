@@ -239,8 +239,8 @@ def correct_motion(
       * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks`
       * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks`
       * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks`
-      * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion`
-      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion.motion_estimation.estimate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion.motion_interpolation.interpolate_motion`
 
 
     Possible presets : {}
@@ -282,8 +282,7 @@ def correct_motion(
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
-    from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-    from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+    from spikeinterface.sortingcomponents.motion import estimate_motion, InterpolateMotionRecording
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 
     # get preset params and update if necessary

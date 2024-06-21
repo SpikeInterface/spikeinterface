@@ -4,8 +4,8 @@ from tqdm.auto import tqdm, trange
 import numpy as np
 
 
-from .motion_utils import Motion
-from .tools import make_multi_method_doc
+from .motion_utils import Motion, get_windows, scipy_conv1d
+from spikeinterface.sortingcomponents.tools import make_multi_method_doc
 
 try:
     import torch
@@ -32,7 +32,7 @@ def estimate_motion(
     speed_threshold=30,
     sigma_smooth_s=None,
     method="decentralized",
-    output_extra_check=False,
+    extra_outputs=False,
     progress_bar=False,
     upsample_to_histogram_bin=False,
     verbose=False,
@@ -90,7 +90,7 @@ def estimate_motion(
     sigma_smooth_s: None or float
         Optional smooting gaussian kernel when not None
 
-    output_extra_check: bool, default: False
+    extra_outputs: bool, default: False
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
     upsample_to_histogram_bin: bool or None, default: False
@@ -109,17 +109,17 @@ def estimate_motion(
     -------
     motion: Motion object
         The motion object.
-    extra_check: dict
-        Optional output if `output_extra_check=True`
+    extra: dict
+        Optional output if `extra_outputs=True`
         This dict contain histogram, pairwise_displacement usefull for ploting.
     """
     # TODO handle multi segment one day
     assert recording.get_num_segments() == 1
 
-    if output_extra_check:
-        extra_check = {}
+    if extra_outputs:
+        extra = {}
     else:
-        extra_check = None
+        extra = None
 
     # contact positions
     probe = recording.get_probe()
@@ -131,11 +131,11 @@ def estimate_motion(
 
     # get windows
     non_rigid_windows, non_rigid_window_centers = get_windows(
-        rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_step_um, win_sigma_um, win_shape
+        rigid, contact_pos, spatial_bin_edges, margin_um, win_step_um, win_sigma_um, win_shape
     )
 
-    if output_extra_check:
-        extra_check["non_rigid_windows"] = non_rigid_windows
+    if extra_outputs:
+        extra["non_rigid_windows"] = non_rigid_windows
 
     # run method
     method_class = estimate_motion_methods[method]
@@ -150,7 +150,7 @@ def estimate_motion(
         non_rigid_windows,
         verbose,
         progress_bar,
-        extra_check,
+        extra,
         **method_kwargs,
     )
 
@@ -165,8 +165,8 @@ def estimate_motion(
     if upsample_to_histogram_bin is None:
         upsample_to_histogram_bin = not rigid
     if upsample_to_histogram_bin:
-        extra_check["motion_array"] = motion_array
-        extra_check["non_rigid_window_centers"] = non_rigid_window_centers
+        extra["motion_array"] = motion_array
+        extra["non_rigid_window_centers"] = non_rigid_window_centers
         non_rigid_windows = np.array(non_rigid_windows)
         non_rigid_windows /= non_rigid_windows.sum(axis=0, keepdims=True)
         non_rigid_window_centers = spatial_bin_edges[:-1] + bin_um / 2
@@ -175,8 +175,8 @@ def estimate_motion(
     # TODO handle multi segment
     motion = Motion([motion_array], [temporal_bins], non_rigid_window_centers, direction=direction)
 
-    if output_extra_check:
-        return motion, extra_check
+    if extra_outputs:
+        return motion, extra
     else:
         return motion
 
@@ -270,7 +270,7 @@ class DecentralizedRegistration:
         non_rigid_windows,
         verbose,
         progress_bar,
-        extra_check,
+        extra,
         histogram_depth_smooth_um=None,
         histogram_time_smooth_s=None,
         pairwise_displacement_method="conv",
@@ -329,11 +329,11 @@ class DecentralizedRegistration:
             smooth_kernel /= np.sum(smooth_kernel)
             motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[:, None], mode="same", axes=0)
 
-        if extra_check is not None:
-            extra_check["motion_histogram"] = motion_histogram
-            extra_check["pairwise_displacement_list"] = []
-            extra_check["temporal_hist_bin_edges"] = temporal_hist_bin_edges
-            extra_check["spatial_hist_bin_edges"] = spatial_hist_bin_edges
+        if extra is not None:
+            extra["motion_histogram"] = motion_histogram
+            extra["pairwise_displacement_list"] = []
+            extra["temporal_hist_bin_edges"] = temporal_hist_bin_edges
+            extra["spatial_hist_bin_edges"] = spatial_hist_bin_edges
 
         # temporal bins are bin center
         temporal_bins = 0.5 * (temporal_hist_bin_edges[1:] + temporal_hist_bin_edges[:-1])
@@ -378,8 +378,8 @@ class DecentralizedRegistration:
                 all_pairwise_displacements[i] = pairwise_displacement
                 all_pairwise_displacement_weights[i] = pairwise_displacement_weight
 
-            if extra_check is not None:
-                extra_check["pairwise_displacement_list"].append(pairwise_displacement)
+            if extra is not None:
+                extra["pairwise_displacement_list"].append(pairwise_displacement)
 
             if verbose:
                 print(f"Computing global displacement: {i + 1} / {len(non_rigid_windows)}")
@@ -496,7 +496,7 @@ class IterativeTemplateRegistration:
         non_rigid_windows,
         verbose,
         progress_bar,
-        extra_check,
+        extra,
         num_amp_bins=20,
         num_shifts_global=15,
         num_iterations=10,
@@ -535,12 +535,12 @@ class IterativeTemplateRegistration:
         # convert to um
         motion = -(shift_indices * bin_um)
 
-        if extra_check:
-            extra_check["motion_histograms"] = motion_histograms
-            extra_check["target_histogram"] = target_histogram
-            extra_check["shift_covs_block"] = shift_covs_block
-            extra_check["temporal_hist_bin_edges"] = temporal_hist_bin_edges
-            extra_check["spatial_hist_bin_edges"] = spatial_hist_bin_edges
+        if extra:
+            extra["motion_histograms"] = motion_histograms
+            extra["target_histogram"] = target_histogram
+            extra["shift_covs_block"] = shift_covs_block
+            extra["temporal_hist_bin_edges"] = temporal_hist_bin_edges
+            extra["spatial_hist_bin_edges"] = spatial_hist_bin_edges
 
         return motion, temporal_bins
 
@@ -564,82 +564,7 @@ def get_spatial_bin_edges(recording, direction, margin_um, bin_um):
     return spatial_bins
 
 
-def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_step_um, win_sigma_um, win_shape):
-    """
-    Generate spatial windows (taper) for non-rigid motion.
-    For rigid motion, this is equivalent to have one unique rectangular window that covers the entire probe.
-    The windowing can be gaussian or rectangular.
 
-    Parameters
-    ----------
-    rigid : bool
-        If True, returns a single rectangular window
-    bin_um : float
-        Spatial bin size in um
-    contact_pos : np.ndarray
-        Position of electrodes (num_channels, 2)
-    spatial_bin_edges : np.array
-        The pre-computed spatial bin edges
-    margin_um : float
-        The margin to extend (if positive) or shrink (if negative) the probe dimension to compute windows.=
-    win_step_um : float
-        The steps at which windows are defined
-    win_sigma_um : float
-        Sigma of gaussian window (if win_shape is gaussian)
-    win_shape : float
-        "gaussian" | "rect"
-
-    Returns
-    -------
-    non_rigid_windows : list of 1D arrays
-        The scaling for each window. Each element has num_spatial_bins values
-    non_rigid_window_centers: 1D np.array
-        The center of each window
-
-    Notes
-    -----
-    Note that kilosort2.5 uses overlaping rectangular windows.
-    Here by default we use gaussian window.
-
-    """
-    # TODO remove bin_um
-    bin_centers = spatial_bin_edges[:-1] + bin_um / 2.0
-    # bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
-    n = bin_centers.size
-
-    if rigid:
-        # win_shape = 'rect' is forced
-        non_rigid_windows = [np.ones(n, dtype="float64")]
-        middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.0
-        non_rigid_window_centers = np.array([middle])
-    else:
-        # TODO put a warning
-        assert win_sigma_um >= win_step_um, f"win_sigma_um too low {win_sigma_um} compared to win_step_um {win_step_um}"
-
-        min_ = np.min(contact_pos) - margin_um
-        max_ = np.max(contact_pos) + margin_um
-        num_non_rigid_windows = int((max_ - min_) // win_step_um)
-        border = ((max_ - min_) % win_step_um) / 2
-        non_rigid_window_centers = np.arange(num_non_rigid_windows + 1) * win_step_um + min_ + border
-        non_rigid_windows = []
-
-        for win_center in non_rigid_window_centers:
-            if win_shape == "gaussian":
-                win = np.exp(-((bin_centers - win_center) ** 2) / (2 * win_sigma_um**2))
-            elif win_shape == "rect":
-                win = np.abs(bin_centers - win_center) < (win_sigma_um / 2.0)
-                win = win.astype("float64")
-            elif win_shape == "triangle":
-                center_dist = np.abs(bin_centers - win_center)
-                in_window = center_dist <= (win_sigma_um / 2.0)
-                win = -center_dist
-                win[~in_window] = 0
-                win[in_window] -= win[in_window].min()
-                win[in_window] /= win[in_window].max()
-
-            non_rigid_windows.append(win)
-
-    return non_rigid_windows, non_rigid_window_centers
 
 
 def make_2d_motion_histogram(
@@ -1325,6 +1250,9 @@ def iterative_template_registration(
     return optimal_shift_indices, target_spikecount_hist, shift_covs_block
 
 
+# TODO charlie sam : make a unique function for this
+# at the moment this is the legacy one ported in spikeinterface
+# the one in deredge.py is more recent
 def normxcorr1d(
     template,
     x,
@@ -1444,33 +1372,7 @@ def normxcorr1d(
     return corr
 
 
-def scipy_conv1d(input, weights, padding="valid"):
-    """SciPy translation of torch F.conv1d"""
-    from scipy.signal import correlate
 
-    n, c_in, length = input.shape
-    c_out, in_by_groups, kernel_size = weights.shape
-    assert in_by_groups == c_in == 1
-
-    if padding == "same":
-        mode = "same"
-        length_out = length
-    elif padding == "valid":
-        mode = "valid"
-        length_out = length - 2 * (kernel_size // 2)
-    elif isinstance(padding, int):
-        mode = "valid"
-        input = np.pad(input, [*[(0, 0)] * (input.ndim - 1), (padding, padding)])
-        length_out = length - (kernel_size - 1) + 2 * padding
-    else:
-        raise ValueError(f"Unknown 'padding' value of {padding}, 'padding' must be 'same', 'valid' or an integer")
-
-    output = np.zeros((n, c_out, length_out), dtype=input.dtype)
-    for m in range(n):
-        for c in range(c_out):
-            output[m, c] = correlate(input[m, 0], weights[c, 0], mode=mode)
-
-    return output
 
 
 def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=30, sigma_smooth_s=None):

@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
-from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
+from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
@@ -18,12 +18,10 @@ if DEBUG:
     plt.show()
 
 
-@pytest.fixture(scope="module")
-def setup_module(tmp_path_factory):
-    recording, sorting = make_dataset()
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
+def setup_module(cache_folder):
     cache_folder.mkdir(parents=True, exist_ok=True)
 
+    recording, sorting = make_dataset()
     # detect and localize
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3, return_output=False)
     pipeline_nodes = [
@@ -47,6 +45,12 @@ def setup_module(tmp_path_factory):
     np.save(peak_location_path, peak_locations)
 
     return recording, sorting, cache_folder
+
+
+@pytest.fixture(scope="module", name="setup_module")
+def setup_module_fixture(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
+    return setup_module(cache_folder)
 
 
 def test_estimate_motion(setup_module):
@@ -215,5 +219,8 @@ def test_estimate_motion(setup_module):
 
 
 if __name__ == "__main__":
-    setup_module()
-    test_estimate_motion()
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        cache_folder = Path(tmpdirname)
+    args = setup_module(cache_folder)
+    test_estimate_motion(args)

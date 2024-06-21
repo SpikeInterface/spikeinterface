@@ -15,14 +15,13 @@ The main entry for this function are still:
 but here the original functions from Charlie, Julien and Erdem have been ported for an
 easier maintenance instead of making DREDge a dependency of spikeinterface.
 """
+import warnings
 
-# TODO
-# discuss the get_windows in dredge
-# remove get_motion_estimate() ???
-
-
+from tqdm.auto import trange
 import numpy as np
 
+
+from .motion_utils import Motion, get_windows, get_window_domains, scipy_conv1d
 
 def dredge_online_lfp(
     lfp_recording,
@@ -34,7 +33,7 @@ def dredge_online_lfp(
     win_step_um=800,
     win_scale_um=850,
     win_margin_um=None,
-    max_dt_s=None,
+    time_horizon_s=None,
     # weighting arguments
     mincorr=0.8,
     mincorr_percentile=None,
@@ -44,7 +43,7 @@ def dredge_online_lfp(
     thomas_kw=None,
     xcorr_kw=None,
     # misc
-    save_full=False,
+    extra_outputs=False,
     device=None,
     pbar=True,
 ):
@@ -67,7 +66,7 @@ def dredge_online_lfp(
         But, it can't be set too low or the algorithm doesn't have enough data
         to work with. The default is set assuming sampling rate of 250Hz, leading
         to 2500 samples per chunk.
-    max_dt_s : float
+    time_horizon_s : float
         Time-bins farther apart than this value in seconds will not be cross-correlated.
         Set this to at least `chunk_len_s`.
     max_disp_um : number, optional
@@ -121,9 +120,9 @@ def dredge_online_lfp(
         mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
         in_place=True,
         soft=soft,
-        # max_dt_s=weights_kw["max_dt_s"],  # max_dt not implemented for lfp at this point
-        max_dt_s=max_dt_s,
-        bin_s=1 / fs,  # only relevant for max_dt_s
+        # time_horizon_s=weights_kw["time_horizon_s"],  # max_dt not implemented for lfp at this point
+        time_horizon_s=time_horizon_s,
+        bin_s=1 / fs,  # only relevant for time_horizon_s
     )
 
     # get windows
@@ -138,7 +137,9 @@ def dredge_online_lfp(
         rigid=rigid,
     )
     B = len(windows)
-    extra = dict(window_centers=window_centers, windows=windows)
+
+    if extra_outputs:
+        extra = dict(window_centers=window_centers, windows=windows)
 
     # -- allocate output and initialize first chunk
     P_online = np.empty((B, T_total), dtype=np.float32)
@@ -155,7 +156,7 @@ def dredge_online_lfp(
         mincorr_percentile=mincorr_percentile,
         **threshold_kw,
     )
-    if save_full:
+    if extra_outputs:
         extra["D"] = [Ds0]
         extra["C"] = [Cs0]
         extra["S"] = [Ss0]
@@ -205,7 +206,7 @@ def dredge_online_lfp(
         )
         extra["mincorrs"].append(mincorr1)
 
-        if save_full:
+        if extra_outputs:
             extra["D"].append(Ds1)
             extra["C"].append(Cs1)
             extra["S"].append(Ss1)
@@ -230,17 +231,131 @@ def dredge_online_lfp(
         traces0 = traces1
 
     # -- convert to motion estimate and return
-    me = get_motion_estimate(
-        P_online,
-        time_bin_centers_s=lfp_recording.get_times(0),
-        spatial_bin_centers_um=window_centers,
+    motion = Motion(
+        displacement=[P_online],
+        temporal_bins_s=[lfp_recording.get_times(0)],
+        spatial_bin_um=[window_centers]
     )
-    return me, extra
+
+    if extra_outputs:
+        return motion, extra
+    else:
+        return motion
 
 
 
 # -- functions from dredgelib
 
+DEFAULT_LAMBDA_T = 1.0
+DEFAULT_EPS = 1e-3
+
+# -- linear algebra, Newton method solver, block tridiagonal (Thomas) solver
+
+
+def laplacian(n, wink=True, eps=DEFAULT_EPS, lambd=1.0, ridge_mask=None):
+    """Construct a discrete Laplacian operator (plus eps*identity)."""
+    lap = np.zeros((n, n))
+    if ridge_mask is None:
+        diag = lambd + eps
+    else:
+        diag = lambd + eps * ridge_mask
+    np.fill_diagonal(lap, diag)
+    if wink:
+        lap[0, 0] -= 0.5 * lambd
+        lap[-1, -1] -= 0.5 * lambd
+    # fill diagonal using a for loop for space reasons when this is large
+    for i in range(n - 1):
+        lap[i, i + 1] -= 0.5 * lambd
+        lap[i + 1, i] -= 0.5 * lambd
+    return lap
+
+
+
+def neg_hessian_likelihood_term(Ub, Ub_prevcur=None, Ub_curprev=None):
+    """Newton step coefficients
+
+    The negative Hessian of the non-regularized cost function inside a nonrigid block.
+    Together with the term arising from the regularization, this constructs the
+    coefficients matrix in our linear problem.
+    """
+    negHUb = -Ub - Ub.T
+    diagonal_terms = np.diagonal(negHUb) + Ub.sum(1) + Ub.sum(0)
+    if Ub_prevcur is None:
+        np.fill_diagonal(negHUb, diagonal_terms)
+    else:
+        diagonal_terms += Ub_prevcur.sum(0) + Ub_curprev.sum(1)
+        np.fill_diagonal(negHUb, diagonal_terms)
+    return negHUb
+
+
+def newton_rhs(
+    Db,
+    Ub,
+    Pb_prev=None,
+    Db_prevcur=None,
+    Ub_prevcur=None,
+    Db_curprev=None,
+    Ub_curprev=None,
+):
+    """Newton step right hand side
+
+    The gradient at P=0 of the cost function, which is the right hand side of Newton's method.
+    """
+    UDb = Ub * Db
+    grad_at_0 = UDb.sum(1) - UDb.sum(0)
+
+    # batch case
+    if Pb_prev is None:
+        return grad_at_0
+
+    # online case
+    align_term = (Ub_prevcur.T + Ub_curprev) @ Pb_prev
+    rhs = (
+        align_term
+        + grad_at_0
+        + (Ub_curprev * Db_curprev).sum(1)
+        - (Ub_prevcur * Db_prevcur).sum(0)
+    )
+
+    return rhs
+
+
+def newton_solve_rigid(
+    D,
+    U,
+    Sigma0inv,
+    Pb_prev=None,
+    Db_prevcur=None,
+    Ub_prevcur=None,
+    Db_curprev=None,
+    Ub_curprev=None,
+):
+    """Solve the rigid Newton step
+
+    D is TxT displacement, U is TxT subsampling or soft weights matrix.
+    """
+    from scipy.linalg import solve, lstsq
+
+    negHU = neg_hessian_likelihood_term(
+        U,
+        Ub_prevcur=Ub_prevcur,
+        Ub_curprev=Ub_curprev,
+    )
+    targ = newton_rhs(
+        D,
+        U,
+        Pb_prev=Pb_prev,
+        Db_prevcur=Db_prevcur,
+        Ub_prevcur=Ub_prevcur,
+        Db_curprev=Db_curprev,
+        Ub_curprev=Ub_curprev,
+    )
+    try:
+        p = solve(Sigma0inv + negHU, targ, assume_a="pos")
+    except np.linalg.LinAlgError:
+        warnings.warn("Singular problem, using least squares.")
+        p, *_ = lstsq(Sigma0inv + negHU, targ)
+    return p, negHU
 
 
 def thomas_solve(
@@ -274,6 +389,8 @@ def thomas_solve(
     online case. The return value will be the new chunk's displacement estimate,
     solving the online registration problem.
     """
+    from scipy.linalg import solve
+
     Ds = np.asarray(Ds, dtype=np.float64)
     Us = np.asarray(Us, dtype=np.float64)
     online = P_prev is not None
@@ -376,7 +493,7 @@ def threshold_correlation_matrix(
     mincorr=0.0,
     mincorr_percentile=None,
     mincorr_percentile_nneighbs=20,
-    max_dt_s=0,
+    time_horizon_s=0,
     in_place=False,
     bin_s=1,
     t_offset_bins=None,
@@ -407,17 +524,17 @@ def threshold_correlation_matrix(
         else:
             Ss = (Cs >= mincorr).astype(Cs.dtype)
     if (
-        max_dt_s is not None
-        and max_dt_s > 0
+        time_horizon_s is not None
+        and time_horizon_s > 0
         and T is not None
-        and max_dt_s < T
+        and time_horizon_s < T
     ):
         tt0 = bin_s * np.arange(T)
         tt1 = tt0
         if t_offset_bins:
             tt1 = tt0 + t_offset_bins
         dt = tt1[:, None] - tt0[None, :]
-        mask = (np.abs(dt) <= max_dt_s).astype(Ss.dtype)
+        mask = (np.abs(dt) <= time_horizon_s).astype(Ss.dtype)
         Ss *= mask[None]
     return Ss, mincorr
 
@@ -443,6 +560,8 @@ def xcorr_windows(
     Compute pairwise (time x time) maximum cross-correlation and displacement
     matrices in each nonrigid window.
     """
+    import torch
+
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -546,6 +665,8 @@ def calc_corr_decent_pair(
     device : torch device
     Returns: D, C: TxT arrays
     """
+    import torch
+
     D, Ta = raster_a.shape
     D_, Tb = raster_b.shape
 
@@ -602,3 +723,147 @@ def calc_corr_decent_pair(
             C[i : i + batch_size, j : j + batch_size] = max_corr.cpu().T
 
     return D, C
+
+
+# TODO charlie sam : at the moment this is a duplicate with small differences see motion_estimate.py same function
+def normxcorr1d(
+    template,
+    x,
+    weights=None,
+    xmasks=None,
+    centered=True,
+    normalized=True,
+    padding="same",
+    conv_engine="torch",
+):
+    """normxcorr1d: Normalized cross-correlation, optionally weighted
+
+    The API is like torch's F.conv1d, except I have accidentally
+    changed the position of input/weights -- template acts like weights,
+    and x acts like input.
+
+    Returns the cross-correlation of `template` and `x` at spatial lags
+    determined by `mode`. Useful for estimating the location of `template`
+    within `x`.
+
+    This might not be the most efficient implementation -- ideas welcome.
+    It uses a direct convolutional translation of the formula
+        corr = (E[XY] - EX EY) / sqrt(var X * var Y)
+
+    This also supports weights! In that case, the usual adaptation of
+    the above formula is made to the weighted case -- and all of the
+    normalizations are done per block in the same way.
+
+    Arguments
+    ---------
+    template : tensor, shape (num_templates, length)
+        The reference template signal
+    x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
+        The signal in which to find `template`
+    weights : tensor, shape (length,)
+        Will use weighted means, variances, covariances if supplied.
+    centered : bool
+        If true, means will be subtracted (per weighted patch).
+    normalized : bool
+        If true, normalize by the variance (per weighted patch).
+    padding : int, optional
+        How far to look? if unset, we'll use half the length
+    conv_engine : string, one of "torch", "numpy"
+        What library to use for computing cross-correlations.
+        If numpy, falls back to the scipy correlate function.
+
+    Returns
+    -------
+    corr : tensor
+    """
+
+
+    if conv_engine == "torch":
+        import torch
+        import torch.nn.functional as F
+        conv1d = F.conv1d
+        npx = torch
+    elif conv_engine == "numpy":
+        conv1d = scipy_conv1d
+        npx = np
+    else:
+        raise ValueError(f"Unknown conv_engine {conv_engine}")
+
+    x = npx.atleast_2d(x)
+    num_templates, lengtht = template.shape
+    num_inputs, lengthx = x.shape
+
+    # generalize over weighted / unweighted case
+    device_kw = {} if conv_engine == "numpy" else dict(device=x.device)
+    if xmasks is None:
+        onesx = npx.ones((1, 1, lengthx), dtype=x.dtype, **device_kw)
+        wx = x[:, None, :]
+    else:
+        assert xmasks.shape == x.shape
+        onesx = xmasks[:, None, :]
+        wx = x[:, None, :] * onesx
+    no_weights = weights is None
+    if no_weights:
+        weights = npx.ones((1, 1, lengtht), dtype=x.dtype, **device_kw)
+        wt = template[:, None, :]
+    else:
+        if weights.shape == (lengtht,):
+            weights = weights[None, None]
+        elif weights.shape == (num_templates, lengtht):
+            weights = weights[:, None, :]
+        else:
+            assert False
+        wt = template[:, None, :] * weights
+    x = x[:, None, :]
+    template = template[:, None, :]
+
+    # conv1d valid rule:
+    # (B,1,L),(O,1,L)->(B,O,L)
+    # below, we always put x on the LHS, templates on the RHS, so this reads
+    # (num_inputs, 1, lengthx), (num_templates, 1, lengtht) -> (num_inputs, num_templates, length_out)
+
+    # compute expectations
+    # how many points in each window? seems necessary to normalize
+    # for numerical stability.
+    Nx = conv1d(onesx, weights, padding=padding)  # 1,nt,l
+    empty = Nx == 0
+    Nx[empty] = 1
+    if centered:
+        Et = conv1d(onesx, wt, padding=padding)  # 1,nt,l
+        Et /= Nx
+        Ex = conv1d(wx, weights, padding=padding)  # nx,nt,l
+        Ex /= Nx
+
+    # compute (weighted) covariance
+    # important: the formula E[XY] - EX EY is well-suited here,
+    # because the means are naturally subtracted correctly
+    # patch-wise. you couldn't pre-subtract them!
+    cov = conv1d(wx, wt, padding=padding)
+    cov /= Nx
+    if centered:
+        cov -= Ex * Et
+
+    # compute variances for denominator, using var X = E[X^2] - (EX)^2
+    if normalized:
+        var_template = conv1d(
+            onesx, wt * template, padding=padding
+        )
+        var_template /= Nx
+        var_x = conv1d(wx * x, weights, padding=padding)
+        var_x /= Nx
+        if centered:
+            var_template -= npx.square(Et)
+            var_x -= npx.square(Ex)
+
+        # fill in zeros to avoid problems when dividing
+        var_template[var_template <= 0] = 1
+        var_x[var_x <= 0] = 1
+
+    # now find the final normxcorr
+    corr = cov  # renaming for clarity
+    if normalized:
+        corr[torch.broadcast_to(empty, corr.shape)] = 0
+        corr /= npx.sqrt(var_x)
+        corr /= npx.sqrt(var_template)
+
+    return corr
