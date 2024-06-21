@@ -2,16 +2,51 @@
 Handle motion/drift with spikeinterface NEW
 ===========================================
 
-Spikeinterface offers a very flexible framework to handle drift as a preprocessing step.
-If you want to know more, please read the
-:ref:`motion_correction` section of the documentation.
+When running *in vivo* electrophysiology recordings, movement of the probe is
+an inevitability, especially when the subjects are not head-fixed. SpikeInterface
+includes a number of popular methods to compensate for probe motion during the
+preprocessing step.
 
-Here is a short demo on how to handle drift using the high-level function
-:py:func:`~spikeinterface.preprocessing.correct_motion()`.
+### What is drift and where does it come from?
 
+Movement of the probe means that the spikes recorded on the probe 'drift' along it.
+Typically, this motion is vertical along the probe (along the 'y' axis) which
+manifests as the units moving long the probe in space.
+
+All common motion-correction methods address this vertical drift. Horizontal ('x')
+or forward/backwards ('z') motion, that would appear as the amplitude of a unit
+changing over time, are much harder to model and not handled in available motion-correction algorithms.
+Fortunately, vertical drift is the most common form of motion as the probe is
+more likely to move along the path it was inserted, rather than in other directions
+where it is buffeted against the brain.
+
+Vertical drift can come in two forms, 'rigid' and 'non-rigid'. Rigid drift
+is drift caused by movement of the entire probe and the motion is the
+same for all points along the probe. Non-rigid drift is instead caused by
+local movement of parts of the brain along the probe, and can affect
+the recording at only certain points along the probe.
+
+### How SpikeInterface handles drift
+
+Spikeinterface offers a very flexible framework to handle drift as a
+preprocessing step. In this tutorial we will cover the three main
+drift-correction algorithms implemented in SpikeInterface with
+a focus on running the methods and interpreting the output. For
+more information on the theory and implementation of these methods,
+see the :ref:`motion_correction` section of the documentation.
+
+### The drift correction steps
+
+The easiest way to run drift correction in SpikeInterface is with the
+high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` function.
 This function takes a preprocessed recording as input and then internally runs
-several steps (it can be slow!) and returns a lazy
-recording that interpolates the traces on-the-fly to compensate for the motion.
+several steps and returns a lazy recording that interpolates the traces on-the-fly
+to compensate for the motion.
+
+The
+:py:func:`~spikeinterface.preprocessing.correct_motion()`
+function provides a convenient wrapper around a number of sub-functions
+that together implement the full drift correction algorithm.
 
 Internally this function runs the following steps:
 
@@ -20,12 +55,25 @@ Internally this function runs the following steps:
 | **3.** ``estimate_motion()``
 | **4.** ``interpolate_motion()``
 
-All these sub-steps can be run with different methods and have many parameters.
-The high-level function suggests 3 pre-difined "presets".
+All these sub-steps have many parameters which dictate the
+speed and effectiveness of motion correction. As such, `correct_motion`
+provides three setting 'presets' which configure the motion correct
+to proceed either as:
+
+* `rigid_fast` - a fast, not particularly accurate correction assuming ridigt drift.
+* `kilosort-like` - Mimics what is done in Kilosort (REF)
+* `nonrigid_accurate` - A decentralised drift correction, introduced by the Paninski group (REF)
+
+**Now, let's dive into running motion correction with these three
+methods on a simulated dataset and interpreting the output.
+
 """
 
+
+
 # %%
-# FIRST WE IMPORT AND # We will use GENERATE RECORDINGS
+#.. seealso::
+#    hello world
 
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -157,30 +205,15 @@ for preset in some_presets:
 # Case 1 is used before running a spike sorter and the case 2 is used here to display the results.
 
 from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
+from spikeinterface.widgets import plot_peaks_on_probe
 
 for preset in some_presets:
 
-    fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
-
-    ax = axs[0]
-    si.plot_probe_map(rec, ax=ax)
-
     motion_info = results[preset]["motion_info"]
 
-    peaks = motion_info["peaks"]
-    sr = rec.get_sampling_frequency()
-    time_lim0 = 0
-    time_lim1 = 50
-    mask = (peaks["sample_index"] > int(sr * time_lim0)) & (peaks["sample_index"] < int(sr * time_lim1))
-    sl = slice(None, None, 5)
-    amps = np.abs(peaks["amplitude"][mask][sl])
-    amps /= np.quantile(amps, 0.95)
-    c = plt.get_cmap("inferno")(amps)
-
-    color_kargs = dict(alpha=0.2, s=2, c=c)
+    peaks = motion_info["peak"]
 
     loc = motion_info["peak_locations"]
-    ax.scatter(loc["x"][mask][sl], loc["y"][mask][sl], **color_kargs)
 
     loc2 = correct_motion_on_peaks(
         motion_info["peaks"],
@@ -192,12 +225,50 @@ for preset in some_presets:
         direction="y",
     )
 
-    ax = axs[1]
-    si.plot_probe_map(rec, ax=ax)
-    ax.scatter(loc2["x"][mask][sl], loc2["y"][mask][sl], **color_kargs)
+    widget = plot_peaks_on_probe(
+        rec, [peaks, peaks], [loc, loc2]
+    )
 
-    ax.set_ylim(400, 600)
-    fig.suptitle(f"{preset=}")
+
+    if False:
+        fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
+
+        ax = axs[0]
+        si.plot_probe_map(rec, ax=ax)
+
+        motion_info = results[preset]["motion_info"]
+
+        peaks = motion_info["peaks"]
+        sr = rec.get_sampling_frequency()
+        time_lim0 = 0
+        time_lim1 = 50
+        mask = (peaks["sample_index"] > int(sr * time_lim0)) & (peaks["sample_index"] < int(sr * time_lim1))
+        sl = slice(None, None, 5)
+        amps = np.abs(peaks["amplitude"][mask][sl])
+        amps /= np.quantile(amps, 0.95)
+        c = plt.get_cmap("inferno")(amps)
+
+        color_kargs = dict(alpha=0.2, s=2, c=c)
+
+        loc = motion_info["peak_locations"]
+        ax.scatter(loc["x"][mask][sl], loc["y"][mask][sl], **color_kargs)
+
+        loc2 = correct_motion_on_peaks(
+            motion_info["peaks"],
+            motion_info["peak_locations"],
+            rec.sampling_frequency,
+            motion_info["motion"],
+            motion_info["temporal_bins"],
+            motion_info["spatial_bins"],
+            direction="y",
+        )
+
+        ax = axs[1]
+        si.plot_probe_map(rec, ax=ax)
+        ax.scatter(loc2["x"][mask][sl], loc2["y"][mask][sl], **color_kargs)
+
+        ax.set_ylim(400, 600)
+        fig.suptitle(f"{preset=}")
 
 # %%
 # Accuracy and Run Times

@@ -15,6 +15,7 @@ rst (TODO: fill in filename) that
 sphinx-gallery generates.
 
 
+
 .. raw:: html
 
     <div class="sphx-glr-thumbnails">
@@ -23,7 +24,7 @@ sphinx-gallery generates.
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="Spikeinterface offers a very flexible framework to handle drift as a preprocessing step. If you...">
+    <div class="sphx-glr-thumbcontainer" tooltip="When running in vivo electrophysiology recordings, movement of the probe is an inevitability, e...">
 
 .. only:: html
 

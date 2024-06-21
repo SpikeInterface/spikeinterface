@@ -205,30 +205,15 @@ for preset in some_presets:
 # Case 1 is used before running a spike sorter and the case 2 is used here to display the results.
 
 from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
+from spikeinterface.widgets import plot_peaks_on_probe
 
 for preset in some_presets:
 
-    fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
-
-    ax = axs[0]
-    si.plot_probe_map(rec, ax=ax)
-
     motion_info = results[preset]["motion_info"]
 
-    peaks = motion_info["peaks"]
-    sr = rec.get_sampling_frequency()
-    time_lim0 = 0
-    time_lim1 = 50
-    mask = (peaks["sample_index"] > int(sr * time_lim0)) & (peaks["sample_index"] < int(sr * time_lim1))
-    sl = slice(None, None, 5)
-    amps = np.abs(peaks["amplitude"][mask][sl])
-    amps /= np.quantile(amps, 0.95)
-    c = plt.get_cmap("inferno")(amps)
-
-    color_kargs = dict(alpha=0.2, s=2, c=c)
+    peaks = motion_info["peak"]
 
     loc = motion_info["peak_locations"]
-    ax.scatter(loc["x"][mask][sl], loc["y"][mask][sl], **color_kargs)
 
     loc2 = correct_motion_on_peaks(
         motion_info["peaks"],
@@ -240,12 +225,50 @@ for preset in some_presets:
         direction="y",
     )
 
-    ax = axs[1]
-    si.plot_probe_map(rec, ax=ax)
-    ax.scatter(loc2["x"][mask][sl], loc2["y"][mask][sl], **color_kargs)
+    widget = plot_peaks_on_probe(
+        rec, [peaks, peaks], [loc, loc2]
+    )
 
-    ax.set_ylim(400, 600)
-    fig.suptitle(f"{preset=}")
+
+    if False:
+        fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
+
+        ax = axs[0]
+        si.plot_probe_map(rec, ax=ax)
+
+        motion_info = results[preset]["motion_info"]
+
+        peaks = motion_info["peaks"]
+        sr = rec.get_sampling_frequency()
+        time_lim0 = 0
+        time_lim1 = 50
+        mask = (peaks["sample_index"] > int(sr * time_lim0)) & (peaks["sample_index"] < int(sr * time_lim1))
+        sl = slice(None, None, 5)
+        amps = np.abs(peaks["amplitude"][mask][sl])
+        amps /= np.quantile(amps, 0.95)
+        c = plt.get_cmap("inferno")(amps)
+
+        color_kargs = dict(alpha=0.2, s=2, c=c)
+
+        loc = motion_info["peak_locations"]
+        ax.scatter(loc["x"][mask][sl], loc["y"][mask][sl], **color_kargs)
+
+        loc2 = correct_motion_on_peaks(
+            motion_info["peaks"],
+            motion_info["peak_locations"],
+            rec.sampling_frequency,
+            motion_info["motion"],
+            motion_info["temporal_bins"],
+            motion_info["spatial_bins"],
+            direction="y",
+        )
+
+        ax = axs[1]
+        si.plot_probe_map(rec, ax=ax)
+        ax.scatter(loc2["x"][mask][sl], loc2["y"][mask][sl], **color_kargs)
+
+        ax.set_ylim(400, 600)
+        fig.suptitle(f"{preset=}")
 
 # %%
 # Accuracy and Run Times
