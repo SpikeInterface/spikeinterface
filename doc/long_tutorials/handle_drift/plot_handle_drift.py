@@ -90,8 +90,8 @@ from spikeinterface.generation.drifting_generator import generate_drifting_recor
 # drift-corrected vs. original static recording?
 
 _, raw_rec, _ = generate_drifting_recording(
-    num_units=300,
-    duration=1000,
+    num_units=50, # 300,
+    duration=100, # 1000
     generate_sorting_kwargs=dict(firing_rates=(15, 25), refractory_period_ms=4.0),
     seed=42,
 )
@@ -173,9 +173,10 @@ for preset in some_presets:
 #     The method defined by this preset is able to capture this.
 
 for preset in some_presets:
-    fig = plt.figure(figsize=(14, 8))
-    si.plot_motion(
+    fig = plt.figure(figsize=(7, 7))
+    si.plot_motion_info(
         results[preset]["motion_info"],
+        recording=rec,
         figure=fig,
         depth_lim=(400, 600),
         color_amplitude=True,
@@ -207,69 +208,17 @@ for preset in some_presets:
 from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 from spikeinterface.widgets import plot_peaks_on_probe
 
+peaks = []
+peak_locations = []
 for preset in some_presets:
 
     motion_info = results[preset]["motion_info"]
 
-    peaks = motion_info["peak"]
+    peaks.append(motion_info["peaks"])
+    peak_locations.append(motion_info["peak_locations"])
 
-    loc = motion_info["peak_locations"]
-
-    loc2 = correct_motion_on_peaks(
-        motion_info["peaks"],
-        motion_info["peak_locations"],
-        rec.sampling_frequency,
-        motion_info["motion"],
-        motion_info["temporal_bins"],
-        motion_info["spatial_bins"],
-        direction="y",
-    )
-
-    widget = plot_peaks_on_probe(
-        rec, [peaks, peaks], [loc, loc2]
-    )
-
-
-    if False:
-        fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
-
-        ax = axs[0]
-        si.plot_probe_map(rec, ax=ax)
-
-        motion_info = results[preset]["motion_info"]
-
-        peaks = motion_info["peaks"]
-        sr = rec.get_sampling_frequency()
-        time_lim0 = 0
-        time_lim1 = 50
-        mask = (peaks["sample_index"] > int(sr * time_lim0)) & (peaks["sample_index"] < int(sr * time_lim1))
-        sl = slice(None, None, 5)
-        amps = np.abs(peaks["amplitude"][mask][sl])
-        amps /= np.quantile(amps, 0.95)
-        c = plt.get_cmap("inferno")(amps)
-
-        color_kargs = dict(alpha=0.2, s=2, c=c)
-
-        loc = motion_info["peak_locations"]
-        ax.scatter(loc["x"][mask][sl], loc["y"][mask][sl], **color_kargs)
-
-        loc2 = correct_motion_on_peaks(
-            motion_info["peaks"],
-            motion_info["peak_locations"],
-            rec.sampling_frequency,
-            motion_info["motion"],
-            motion_info["temporal_bins"],
-            motion_info["spatial_bins"],
-            direction="y",
-        )
-
-        ax = axs[1]
-        si.plot_probe_map(rec, ax=ax)
-        ax.scatter(loc2["x"][mask][sl], loc2["y"][mask][sl], **color_kargs)
-
-        ax.set_ylim(400, 600)
-        fig.suptitle(f"{preset=}")
-
+widget = plot_peaks_on_probe(rec, peaks, peak_locations, ylim=(200,800))
+[widget.axes[idx].set_title(subtitle) for idx, subtitle in enumerate(some_presets)]
 # %%
 # Accuracy and Run Times
 # ----------------------
@@ -277,16 +226,20 @@ for preset in some_presets:
 # Presets and related methods have differents accuracies but also computation speeds.
 # It is good to have this in mind!
 
-run_times = []
+# run_times = []
 for preset in some_presets:
-    run_times.append(results[preset]["motion_info"]["run_times"])
-keys = run_times[0].keys()
 
-bottom = np.zeros(len(run_times))
-fig, ax = plt.subplots()
-for k in keys:
-    rtimes = np.array([rt[k] for rt in run_times])
-    if np.any(rtimes > 0.0):
-        ax.bar(some_presets, rtimes, bottom=bottom, label=k)
-    bottom += rtimes
-ax.legend()
+    # run_times.append(results[preset]["motion_info"]["run_times"])
+    print(preset)
+    print(results[preset]["motion_info"]["run_times"])
+if False:
+    keys = run_times[0].keys()
+
+    bottom = np.zeros(len(run_times))
+    fig, ax = plt.subplots()
+    for k in keys:
+        rtimes = np.array([rt[k] for rt in run_times])
+        if np.any(rtimes > 0.0):
+            ax.bar(some_presets, rtimes, bottom=bottom, label=k)
+        bottom += rtimes
+    ax.legend()
