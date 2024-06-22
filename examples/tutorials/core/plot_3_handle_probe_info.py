@@ -50,7 +50,7 @@ plot_probe(recording_2_shanks.get_probe())
 # Now let's check what we have loaded. The :code:`group_mode='by_shank'` automatically
 # sets the 'group' property depending on the shank id.
 # We can use this information to split the recording into two sub-recordings.
-# We can acccess this information either as a dict with :code:`outputs='dict'` (default)
+# We can access this information either as a dict with :code:`outputs='dict'` (default)
 # or as a list of recordings with :code:`outputs='list'`.
 
 print(recording_2_shanks)
