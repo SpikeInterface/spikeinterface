@@ -87,8 +87,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
-        old_metrics = self.data['metrics']
+        old_metrics = self.data["metrics"]
         import pandas as pd
+
         metrics = pd.DataFrame(index=new_sorting_analyzer.unit_ids)
         new_metrics = self._compute_metrics(new_sorting_analyzer, new_unit_ids)
         for unit_id in new_sorting_analyzer.unit_ids:
