@@ -87,11 +87,21 @@ class ComputeQualityMetrics(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
-        metrics = self._compute_metrics(new_sorting_analyzer)
+        old_metrics = self.data['metrics']
+        import pandas as pd
+        metrics = pd.DataFrame(index=new_sorting_analyzer.unit_ids)
+        new_metrics = self._compute_metrics(new_sorting_analyzer, new_unit_ids)
+        for unit_id in new_sorting_analyzer.unit_ids:
+            if unit_id in new_unit_ids:
+                source = new_metrics
+            else:
+                source = old_metrics
+            for k in source.loc[unit_id].keys():
+                metrics.loc[unit_id, k] = source.loc[unit_id, k]
         new_data = dict(metrics=metrics)
         return new_data
 
-    def _compute_metrics(self, sorting_analyzer, verbose=False, **job_kwargs):
+    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, **job_kwargs):
         """
         Compute quality metrics.
         """
@@ -108,15 +118,19 @@ class ComputeQualityMetrics(AnalyzerExtension):
         if sorting_analyzer is None:
             sorting_analyzer = self.sorting_analyzer
 
-        sorting = sorting_analyzer.sorting
-        unit_ids = sorting.unit_ids
-        non_empty_unit_ids = sorting.get_non_empty_unit_ids()
-        empty_unit_ids = unit_ids[~np.isin(unit_ids, non_empty_unit_ids)]
-        if len(empty_unit_ids) > 0:
-            warnings.warn(
-                f"Units {empty_unit_ids} are empty. Quality metrics will be set to NaN "
-                f"for these units.\n To remove empty units, use `sorting.remove_empty_units()`."
-            )
+        if unit_ids is None:
+            sorting = sorting_analyzer.sorting
+            unit_ids = sorting.unit_ids
+            non_empty_unit_ids = sorting.get_non_empty_unit_ids()
+            empty_unit_ids = unit_ids[~np.isin(unit_ids, non_empty_unit_ids)]
+            if len(empty_unit_ids) > 0:
+                warnings.warn(
+                    f"Units {empty_unit_ids} are empty. Quality metrics will be set to NaN "
+                    f"for these units.\n To remove empty units, use `sorting.remove_empty_units()`."
+                )
+        else:
+            non_empty_unit_ids = unit_ids
+            empty_unit_ids = []
 
         import pandas as pd
 
@@ -171,7 +185,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         return metrics
 
     def _run(self, verbose=False, **job_kwargs):
-        self.data["metrics"] = self._compute_metrics(None, verbose, **job_kwargs)
+        self.data["metrics"] = self._compute_metrics(None, None, verbose=verbose, **job_kwargs)
 
     def _get_data(self):
         return self.data["metrics"]
