@@ -156,7 +156,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
-        
+
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
@@ -238,22 +238,24 @@ class ComputeWaveforms(AnalyzerExtension):
 
     def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_data = dict()
-        
+
         if new_sorting_analyzer.sparsity is not None:
             sparsity_mask = new_sorting_analyzer.sparsity.mask
             num_chans = int(max(np.sum(sparsity_mask, axis=1)))
-            old_num_chans = self.data['waveforms'].shape[2]
+            old_num_chans = self.data["waveforms"].shape[2]
             if num_chans > old_num_chans:
-                new_data['waveforms'] = self.data['waveforms']
+                new_data["waveforms"] = self.data["waveforms"]
             else:
-                num_waveforms = len(self.data['waveforms'])
-                num_samples = self.data['waveforms'][1]
-                new_data['waveforms'] = np.zeros((num_waveforms, num_samples, num_chans), dtype=self.data['waveforms'].dtype)
+                num_waveforms = len(self.data["waveforms"])
+                num_samples = self.data["waveforms"][1]
+                new_data["waveforms"] = np.zeros(
+                    (num_waveforms, num_samples, num_chans), dtype=self.data["waveforms"].dtype
+                )
                 keep_unit_indices = np.flatnonzero(~np.isin(new_sorting_analyzer, new_unit_ids))
-                new_data['waveforms'][keep_unit_indices, :, :old_num_chans] = self.data['waveforms'][keep_unit_indices]
+                new_data["waveforms"][keep_unit_indices, :, :old_num_chans] = self.data["waveforms"][keep_unit_indices]
                 updated_unit_indices = np.flatnonzero(np.isin(new_sorting_analyzer, new_unit_ids))
                 new_waveforms = self._get_waveforms(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
-                new_data['waveforms'][updated_unit_indices] = new_waveforms
+                new_data["waveforms"][updated_unit_indices] = new_waveforms
         return new_data
 
     def get_waveforms_one_unit(
