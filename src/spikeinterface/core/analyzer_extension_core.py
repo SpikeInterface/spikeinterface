@@ -76,7 +76,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_spike_mask])
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_data = dict()
         new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
         return new_data
@@ -149,15 +149,19 @@ class ComputeWaveforms(AnalyzerExtension):
     def nafter(self):
         return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
 
-    def _run(self, verbose=False, **job_kwargs):
-        self.data.clear()
+    def _get_waveforms(self, sorting_analyzer=None, unit_ids=None, verbose=False, **job_kwargs):
+
+        if sorting_analyzer is None:
+            sorting_analyzer = self.sorting_analyzer
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
-        unit_ids = sorting.unit_ids
+        
+        if unit_ids is None:
+            unit_ids = sorting.unit_ids
 
         # retrieve spike vector and the sampling
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        some_spikes = sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         if self.format == "binary_folder":
             # in that case waveforms are extacted directly in files
@@ -169,10 +173,10 @@ class ComputeWaveforms(AnalyzerExtension):
             mode = "shared_memory"
             copy = True
 
-        if self.sparsity is None:
+        if sorting_analyzer.sparsity is None:
             sparsity_mask = None
         else:
-            sparsity_mask = self.sparsity.mask
+            sparsity_mask = sorting_analyzer.sparsity.mask
 
         all_waveforms = extract_waveforms_to_single_buffer(
             recording,
@@ -181,7 +185,7 @@ class ComputeWaveforms(AnalyzerExtension):
             self.nbefore,
             self.nafter,
             mode=mode,
-            return_scaled=self.sorting_analyzer.return_scaled,
+            return_scaled=sorting_analyzer.return_scaled,
             file_path=file_path,
             dtype=self.params["dtype"],
             sparsity_mask=sparsity_mask,
@@ -191,7 +195,10 @@ class ComputeWaveforms(AnalyzerExtension):
             **job_kwargs,
         )
 
-        self.data["waveforms"] = all_waveforms
+        return all_waveforms
+
+    def _run(self, verbose=False, **job_kwargs):
+        self.data["waveforms"] = self._get_waveforms(self.sorting_analyzer, None, verbose, **job_kwargs)
 
     def _set_params(
         self,
@@ -229,9 +236,24 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_data = dict()
-        new_data["waveforms"] = self.data["waveforms"]
+        
+        if new_sorting_analyzer.sparsity is not None:
+            sparsity_mask = new_sorting_analyzer.sparsity.mask
+            num_chans = int(max(np.sum(sparsity_mask, axis=1)))
+            old_num_chans = self.data['waveforms'].shape[2]
+            if num_chans > old_num_chans:
+                new_data['waveforms'] = self.data['waveforms']
+            else:
+                num_waveforms = len(self.data['waveforms'])
+                num_samples = self.data['waveforms'][1]
+                new_data['waveforms'] = np.zeros((num_waveforms, num_samples, num_chans), dtype=self.data['waveforms'].dtype)
+                keep_unit_indices = np.flatnonzero(~np.isin(new_sorting_analyzer, new_unit_ids))
+                new_data['waveforms'][keep_unit_indices, :, :old_num_chans] = self.data['waveforms'][keep_unit_indices]
+                updated_unit_indices = np.flatnonzero(np.isin(new_sorting_analyzer, new_unit_ids))
+                new_waveforms = self._get_waveforms(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
+                new_data['waveforms'][updated_unit_indices] = new_waveforms
         return new_data
 
     def get_waveforms_one_unit(
@@ -435,7 +457,7 @@ class ComputeTemplates(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
 
         all_new_units = new_sorting_analyzer.unit_ids
         new_data = dict()
@@ -616,7 +638,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         # this do not depend on units
         return self.data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # this do not depend on units
         return self.data
 

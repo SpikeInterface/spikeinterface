@@ -56,7 +56,7 @@ class ComputeISIHistograms(AnalyzerExtension):
         new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
         return new_extension_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_bins = self.data["bins"]
         arr = self.data["isi_histograms"]
         num_dims = arr.shape[1]

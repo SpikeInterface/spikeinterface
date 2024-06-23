@@ -630,7 +630,7 @@ class SortingAnalyzer:
         self._temporary_recording = recording
 
     def _save_or_select_or_merge(
-        self, format="binary_folder", folder=None, unit_ids=None, units_to_merge=None
+        self, format="binary_folder", folder=None, unit_ids=None, units_to_merge=None, verbose=False, **job_kwargs
     ) -> "SortingAnalyzer":
         """
         Internal used by both save_as(), copy() and select_units() which are more or less the same.
@@ -725,6 +725,8 @@ class SortingAnalyzer:
                     new_sorting_analyzer,
                     units_to_merge=units_to_merge,
                     new_unit_ids=unit_ids,
+                    verbose=verbose, 
+                    **job_kwargs
                 )
             else:
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
@@ -775,7 +777,7 @@ class SortingAnalyzer:
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
 
-    def merge_units(self, units_to_merge, new_unit_ids=None, format="memory", folder=None) -> "SortingAnalyzer":
+    def merge_units(self, units_to_merge, new_unit_ids=None, format="memory", folder=None, verbose=False, **job_kwargs) -> "SortingAnalyzer":
         """
         This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
         Merges units by creating a new sorting analyzer object in a new folder with appropriate merges
@@ -794,6 +796,8 @@ class SortingAnalyzer:
             The new folder where selected waveforms are copied
         format : "auto" | "binary_folder" | "zarr"
             The format of the folder.
+        verbose:
+
 
         Returns
         -------
@@ -812,7 +816,7 @@ class SortingAnalyzer:
             new_unit_ids = [i[0] for i in units_to_merge]
 
         return self._save_or_select_or_merge(
-            format=format, folder=folder, units_to_merge=units_to_merge, unit_ids=new_unit_ids
+            format=format, folder=folder, units_to_merge=units_to_merge, unit_ids=new_unit_ids, verbose=verbose, **job_kwargs
         )
 
     def copy(self):
@@ -1575,7 +1579,7 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -1742,13 +1746,13 @@ class AnalyzerExtension:
         new_extension.save()
         return new_extension
 
-    def merge(self, new_sorting_analyzer, units_to_merge=None, new_unit_ids=None):
+    def merge(self, new_sorting_analyzer, units_to_merge=None, new_unit_ids=None, verbose=False, **job_kwargs):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
         if units_to_merge is None:
             new_extension.data = self.data
         else:
-            new_extension.data = self._merge_extension_data(units_to_merge, new_unit_ids, new_sorting_analyzer)
+            new_extension.data = self._merge_extension_data(units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=verbose, **job_kwargs)
         new_extension.save()
         return new_extension
 
