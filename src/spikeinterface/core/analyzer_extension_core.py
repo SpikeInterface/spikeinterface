@@ -242,7 +242,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
     def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_data = dict()
-        
+
         if new_sorting_analyzer.sparsity is not None:
             sparsity_mask = new_sorting_analyzer.sparsity.mask
             num_chans = int(max(np.sum(sparsity_mask, axis=1)))
