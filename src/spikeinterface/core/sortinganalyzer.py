@@ -630,7 +630,7 @@ class SortingAnalyzer:
         self._temporary_recording = recording
 
     def _save_or_select_or_merge(
-        self, format="binary_folder", folder=None, unit_ids=None, units_to_merge=None, verbose=False, **job_kwargs
+        self, format="binary_folder", folder=None, unit_ids=None, units_to_merge=None, censor_ms=None, verbose=False, **job_kwargs
     ) -> "SortingAnalyzer":
         """
         Internal used by both save_as(), copy() and select_units() which are more or less the same.
@@ -684,7 +684,7 @@ class SortingAnalyzer:
         else:
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
-            sorting_provenance = apply_merges_to_sorting(sorting_provenance, units_to_merge, unit_ids)
+            sorting_provenance = apply_merges_to_sorting(sorting_provenance, units_to_merge, unit_ids, censor_ms)
 
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
@@ -778,7 +778,7 @@ class SortingAnalyzer:
         return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
 
     def merge_units(
-        self, units_to_merge, new_unit_ids=None, format="memory", folder=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids=None, censor_ms=None, format="memory", folder=None, verbose=False, **job_kwargs
     ) -> "SortingAnalyzer":
         """
         This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
@@ -794,6 +794,8 @@ class SortingAnalyzer:
         new_unit_ids : None or list
             A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
             merged units will have the first unit_id of every lists of merges
+        censor_ms : None or float
+            When merging units, any spikes violating this refractory period will be discarded. Default is None
         folder : Path or None
             The new folder where selected waveforms are copied
         format : "auto" | "binary_folder" | "zarr"
@@ -822,6 +824,7 @@ class SortingAnalyzer:
             folder=folder,
             units_to_merge=units_to_merge,
             unit_ids=new_unit_ids,
+            censor_ms=censor_ms,
             verbose=verbose,
             **job_kwargs,
         )
