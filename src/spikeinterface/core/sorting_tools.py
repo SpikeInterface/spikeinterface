@@ -256,12 +256,12 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
         When applying the merges, should be discard consecutive spikes violating a given refractory per
     """
     spikes = sorting.to_spike_vector().copy()
-    
+
     if censor_ms is None:
         to_keep = None
     else:
         to_keep = np.ones(len(spikes), dtype=bool)
-        
+
     if new_unit_ids is not None:
         assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
     else:
