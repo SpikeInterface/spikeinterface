@@ -1,6 +1,7 @@
 import os
 import pickle as pkl
 import warnings
+import numpy as np
 
 
 from spikeinterface.qualitymetrics import get_quality_metric_list, get_quality_pca_metric_list
@@ -52,6 +53,10 @@ class CurationModelTrainer:
 
     def process_test_data_for_classification(self):
         import pandas as pd
+
+        # Remove infinite values from the metrics and convert to float32
+        self.testing_metrics = self.testing_metrics.map(lambda x: np.nan if np.isinf(x) else x)
+        self.testing_metrics = self.testing_metrics.astype("float32")
 
         if self.target_column in self.testing_metrics[0].columns:
             # Extract the target variable
