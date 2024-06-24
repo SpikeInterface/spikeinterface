@@ -92,7 +92,9 @@ class ComputeSpikeLocations(AnalyzerExtension):
         new_spike_locations = self.data["spike_locations"][spike_mask]
         return dict(spike_locations=new_spike_locations)
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs):
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+    ):
         new_spike_locations = self.data["spike_locations"]
         if censor_ms is not None:
             valid_spikes = new_sorting_analyzer.get_extension("random_spikes").get_non_censored_spikes_indices()

@@ -630,7 +630,14 @@ class SortingAnalyzer:
         self._temporary_recording = recording
 
     def _save_or_select_or_merge(
-        self, format="binary_folder", folder=None, unit_ids=None, units_to_merge=None, censor_ms=None, verbose=False, **job_kwargs
+        self,
+        format="binary_folder",
+        folder=None,
+        unit_ids=None,
+        units_to_merge=None,
+        censor_ms=None,
+        verbose=False,
+        **job_kwargs,
     ) -> "SortingAnalyzer":
         """
         Internal used by both save_as(), copy() and select_units() which are more or less the same.
@@ -779,7 +786,14 @@ class SortingAnalyzer:
         return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
 
     def merge_units(
-        self, units_to_merge, new_unit_ids=None, censor_ms=None, format="memory", folder=None, verbose=False, **job_kwargs
+        self,
+        units_to_merge,
+        new_unit_ids=None,
+        censor_ms=None,
+        format="memory",
+        folder=None,
+        verbose=False,
+        **job_kwargs,
     ) -> "SortingAnalyzer":
         """
         This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
@@ -1590,7 +1604,9 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs):
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+    ):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -1757,7 +1773,9 @@ class AnalyzerExtension:
         new_extension.save()
         return new_extension
 
-    def merge(self, new_sorting_analyzer, units_to_merge=None, new_unit_ids=None, censor_ms=None, verbose=False, **job_kwargs):
+    def merge(
+        self, new_sorting_analyzer, units_to_merge=None, new_unit_ids=None, censor_ms=None, verbose=False, **job_kwargs
+    ):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
         if units_to_merge is None:

@@ -114,15 +114,17 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             new_data["collision_mask"] = self.data["collision_mask"][keep_spike_mask]
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs):
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+    ):
         new_data = dict()
         new_data["amplitude_scalings"] = self.data["amplitude_scalings"]
         if self.params["handle_collisions"]:
             new_data["collision_mask"] = self.data["collision_mask"]
-        
+
         if censor_ms is not None:
             valid_spikes = new_sorting_analyzer.get_extension("random_spikes").get_non_censored_spikes_indices()
-            new_data["amplitude_scalings"] = new_data['amplitude_scalings'][valid_spikes]
+            new_data["amplitude_scalings"] = new_data["amplitude_scalings"][valid_spikes]
             if self.params["handle_collisions"]:
                 new_data["collision_mask"] = new_data["collision_mask"][valid_spikes]
 

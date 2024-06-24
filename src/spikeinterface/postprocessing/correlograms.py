@@ -70,7 +70,9 @@ class ComputeCorrelograms(AnalyzerExtension):
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs):
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+    ):
 
         all_new_units = new_sorting_analyzer.unit_ids
         new_bins = self.data["bins"]
