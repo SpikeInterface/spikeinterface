@@ -80,12 +80,11 @@ class ComputeRandomSpikes(AnalyzerExtension):
         self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
-        new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
-
         if kept_indices is not None:
-            valid = kept_indices[self.data["random_spikes_indices"]]
-            new_data["random_spikes_indices"] = new_data["random_spikes_indices"][valid]
-
+            valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
+            new_data["random_spikes_indices"] = np.flatnonzero(valid)
+        else:
+            new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
         return new_data
 
     def _get_data(self):
