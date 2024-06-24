@@ -19,7 +19,7 @@ class CircusMerging(BaseMergingEngine):
         "verbose": True,
         "remove_emtpy": True,
         "recursive": False,
-        "censor_ms" : 3,
+        "censor_ms": 3,
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
         "curation_kwargs": {
             "minimum_spikes": 50,
@@ -84,7 +84,9 @@ class CircusMerging(BaseMergingEngine):
             if self.verbose:
                 print(f"{len(merges)} merges have been detected via additional temporal splits")
         units_to_merge = resolve_merging_graph(self.analyzer.sorting, merges)
-        new_sorting, _ = apply_merges_to_sorting(self.analyzer.sorting, units_to_merge, censor_ms=self.params['censor_ms'])
+        new_sorting, _ = apply_merges_to_sorting(
+            self.analyzer.sorting, units_to_merge, censor_ms=self.params["censor_ms"]
+        )
         return new_sorting
 
     def run(self, extra_outputs=False):
