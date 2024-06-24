@@ -111,8 +111,10 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
         self.extra_requirements.append("h5py")
 
         recording_segment = SiNAPSH5RecordingSegment(
-            self._rf, sinaps_info["num_frames"], sampling_frequency=sinaps_info["sampling_frequency"],
-            num_bits = sinaps_info["num_bits"]
+            self._rf,
+            sinaps_info["num_frames"],
+            sampling_frequency=sinaps_info["sampling_frequency"],
+            num_bits=sinaps_info["num_bits"],
         )
         self.add_recording_segment(recording_segment)
 
