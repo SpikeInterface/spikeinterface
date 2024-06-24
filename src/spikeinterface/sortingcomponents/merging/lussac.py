@@ -288,7 +288,7 @@ class LussacMerging(BaseMergingEngine):
         if self.verbose:
             print(f"{len(merges)} merges have been detected")
         units_to_merge = resolve_merging_graph(self.analyzer.sorting, merges)
-        new_sorting = apply_merges_to_sorting(self.analyzer.sorting, units_to_merge, censor_ms=self.params['censor_ms'])
+        new_sorting, _ = apply_merges_to_sorting(self.analyzer.sorting, units_to_merge, censor_ms=self.params['censor_ms'])
         return new_sorting, merges
 
     def run(self, extra_outputs=False):
