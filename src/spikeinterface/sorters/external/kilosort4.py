@@ -282,14 +282,28 @@ class Kilosort4Sorter(BaseSorter):
         )
 
         # Sort spikes and save results
-        st, tF, _, _ = detect_spikes(ops, device, bfile, tic0=tic0, progress_bar=progress_bar)
-        clu, Wall = cluster_spikes(st, tF, ops, device, bfile, tic0=tic0, progress_bar=progress_bar)
+        st, tF, _, _ = detect_spikes(ops=ops, device=device, bfile=bfile, tic0=tic0, progress_bar=progress_bar)
+
+        clu, Wall = cluster_spikes(
+            st=st, tF=tF, ops=ops, device=device, bfile=bfile, tic0=tic0, progress_bar=progress_bar
+        )
+
         if params["skip_kilosort_preprocessing"]:
             ops["preprocessing"] = dict(
                 hp_filter=torch.as_tensor(np.zeros(1)), whiten_mat=torch.as_tensor(np.eye(recording.get_num_channels()))
             )
 
-        _ = save_sorting(ops, results_dir, st, clu, tF, Wall, bfile.imin, tic0, save_extra_vars=save_extra_vars)
+        _ = save_sorting(
+            ops=ops,
+            results_dir=results_dir,
+            st=st,
+            clu=clu,
+            tF=tF,
+            Wall=Wall,
+            imin=bfile.imin,
+            tic0=tic0,
+            save_extra_vars=save_extra_vars,
+        )
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
