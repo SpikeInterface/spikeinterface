@@ -734,7 +734,7 @@ class SortingAnalyzer:
 
         for extension_name, extension in sorted_extensions.items():
             if units_to_merge is not None:
-                if merging_mode == 'soft':
+                if merging_mode == "soft":
                     new_sorting_analyzer.extensions[extension_name] = extension.merge(
                         new_sorting_analyzer,
                         units_to_merge=units_to_merge,
@@ -743,13 +743,11 @@ class SortingAnalyzer:
                         verbose=verbose,
                         **job_kwargs,
                     )
-                elif merging_mode == 'hard':
+                elif merging_mode == "hard":
                     params = extension.params
-                    new_sorting_analyzer.compute(extension_name, 
-                                                 save=True, 
-                                                 extension_params=params, 
-                                                 verbose=verbose, 
-                                                 **job_kwargs)
+                    new_sorting_analyzer.compute(
+                        extension_name, save=True, extension_params=params, verbose=verbose, **job_kwargs
+                    )
             else:
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
                     new_sorting_analyzer, unit_ids=unit_ids
@@ -812,48 +810,48 @@ class SortingAnalyzer:
         **job_kwargs,
     ) -> "SortingAnalyzer":
         """
-        This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
-        Merges units by creating a new sorting analyzer object in a new folder with appropriate merges
+                This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
+                Merges units by creating a new sorting analyzer object in a new folder with appropriate merges
 
-        Extensions are also updated to display the merged unit ids.
+                Extensions are also updated to display the merged unit ids.
 
-        Parameters
-        ----------
-        units_to_merge : list/tuple of lists/tuples
-            A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
-            but it can also have more (merge multiple units at once).
-        new_unit_ids : None or list
-            A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
-            merged units will have the first unit_id of every lists of merges
-        censor_ms : None or float
-            When merging units, any spikes violating this refractory period will be discarded. Default is None
-<<<<<<< HEAD
-        merging_mode : "soft" can be in ["soft", "hard"]
-            How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the 
-            waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed, 
-=======
-        merging_mode : "soft" can be in ["soft", "hard", "recompute"]
-            How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the
-            waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed,
->>>>>>> dfcc8a1251e417d30bb5111af8a509f75af8054e
-            reloading waveforms if needed
-        sparsity_overlap : float, default 0.75
-            The percentage of overlap that units should share in order to accept merges. If this criteria is not
-            achieved, soft merging will not be possible
-        folder : Path or None
-            The new folder where selected waveforms are copied
-        format : "auto" | "binary_folder" | "zarr"
-            The format of the folder.
-        verbose:
+                Parameters
+                ----------
+                units_to_merge : list/tuple of lists/tuples
+                    A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
+                    but it can also have more (merge multiple units at once).
+                new_unit_ids : None or list
+                    A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
+                    merged units will have the first unit_id of every lists of merges
+                censor_ms : None or float
+                    When merging units, any spikes violating this refractory period will be discarded. Default is None
+        <<<<<<< HEAD
+                merging_mode : "soft" can be in ["soft", "hard"]
+                    How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the
+                    waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed,
+        =======
+                merging_mode : "soft" can be in ["soft", "hard", "recompute"]
+                    How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the
+                    waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed,
+        >>>>>>> dfcc8a1251e417d30bb5111af8a509f75af8054e
+                    reloading waveforms if needed
+                sparsity_overlap : float, default 0.75
+                    The percentage of overlap that units should share in order to accept merges. If this criteria is not
+                    achieved, soft merging will not be possible
+                folder : Path or None
+                    The new folder where selected waveforms are copied
+                format : "auto" | "binary_folder" | "zarr"
+                    The format of the folder.
+                verbose:
 
 
-        Returns
-        -------
-        analyzer :  SortingAnalyzer
-            The newly create sorting_analyzer with the selected units
+                Returns
+                -------
+                analyzer :  SortingAnalyzer
+                    The newly create sorting_analyzer with the selected units
         """
 
-        assert merging_mode in ['soft', 'hard'], "Merging mode should be either soft or hard"
+        assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
         if not isinstance(units_to_merge[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge
