@@ -725,6 +725,7 @@ class SortingAnalyzer:
                     new_sorting_analyzer,
                     units_to_merge=units_to_merge,
                     new_unit_ids=unit_ids,
+                    censor_ms=censor_ms,
                     verbose=verbose,
                     **job_kwargs,
                 )
@@ -1589,7 +1590,7 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -1756,14 +1757,14 @@ class AnalyzerExtension:
         new_extension.save()
         return new_extension
 
-    def merge(self, new_sorting_analyzer, units_to_merge=None, new_unit_ids=None, verbose=False, **job_kwargs):
+    def merge(self, new_sorting_analyzer, units_to_merge=None, new_unit_ids=None, censor_ms=None, verbose=False, **job_kwargs):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
         if units_to_merge is None:
             new_extension.data = self.data
         else:
             new_extension.data = self._merge_extension_data(
-                units_to_merge, new_unit_ids, new_sorting_analyzer, verbose=verbose, **job_kwargs
+                units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=censor_ms, verbose=verbose, **job_kwargs
             )
         new_extension.save()
         return new_extension
