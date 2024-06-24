@@ -82,13 +82,15 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
         new_data["amplitudes"] = self.data["amplitudes"]
-        if censor_ms is not None:
-            valid_spikes = new_sorting_analyzer.get_extension("random_spikes").get_non_censored_spikes_indices()
-            new_data["amplitudes"] = new_data["amplitudes"][valid_spikes]
+
+        if kept_indices is not None:
+            valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
+            new_data["amplitudes"] = new_data["amplitudes"][valid]
+
         return new_data
 
     def _get_pipeline_nodes(self):

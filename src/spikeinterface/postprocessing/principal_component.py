@@ -102,10 +102,15 @@ class ComputePrincipalComponents(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
         new_data["pca_projection"] = self.data["pca_projection"]
+
+        if kept_indices is not None:
+            valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
+            new_data["pca_projection"] = new_data["pca_projection"][valid]
+        
         # one or several model
         for k, v in self.data.items():
             if "model" in k:

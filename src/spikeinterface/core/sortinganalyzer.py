@@ -636,6 +636,8 @@ class SortingAnalyzer:
         unit_ids=None,
         units_to_merge=None,
         censor_ms=None,
+        merging_mode='soft',
+        sparsity_overlap=0.75,
         verbose=False,
         **job_kwargs,
     ) -> "SortingAnalyzer":
@@ -670,6 +672,8 @@ class SortingAnalyzer:
                     to_be_merged = units_to_merge[id]
                     indices = self.sorting.ids_to_indices(to_be_merged)
                     sparsity_mask[unit_ind] = np.sum(self.sparsity.mask[indices], axis=0) > 0
+                    if merging_mode == 'soft':
+                        pass
                 else:
                     # This means that the unit is already in the previous sorting
                     index = self.sorting.id_to_index(unit_id)
@@ -690,8 +694,7 @@ class SortingAnalyzer:
             sorting_provenance = sorting_provenance.select_units(unit_ids)
         else:
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
-
-            sorting_provenance = apply_merges_to_sorting(sorting_provenance, units_to_merge, unit_ids, censor_ms)
+            sorting_provenance, kept_indices = apply_merges_to_sorting(sorting_provenance, units_to_merge, unit_ids, censor_ms)
 
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
@@ -728,14 +731,17 @@ class SortingAnalyzer:
 
         for extension_name, extension in sorted_extensions.items():
             if units_to_merge is not None:
-                new_sorting_analyzer.extensions[extension_name] = extension.merge(
-                    new_sorting_analyzer,
-                    units_to_merge=units_to_merge,
-                    new_unit_ids=unit_ids,
-                    censor_ms=censor_ms,
-                    verbose=verbose,
-                    **job_kwargs,
-                )
+                if merging_mode in ['soft', 'hard']:
+                    new_sorting_analyzer.extensions[extension_name] = extension.merge(
+                        new_sorting_analyzer,
+                        units_to_merge=units_to_merge,
+                        new_unit_ids=unit_ids,
+                        kept_indices=kept_indices,
+                        verbose=verbose,
+                        **job_kwargs,
+                    )
+                elif merging_mode == 'recompute':
+                    pass
             else:
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
                     new_sorting_analyzer, unit_ids=unit_ids
@@ -790,6 +796,8 @@ class SortingAnalyzer:
         units_to_merge,
         new_unit_ids=None,
         censor_ms=None,
+        merging_mode='soft',
+        sparsity_overlap=0.75,
         format="memory",
         folder=None,
         verbose=False,
@@ -811,6 +819,13 @@ class SortingAnalyzer:
             merged units will have the first unit_id of every lists of merges
         censor_ms : None or float
             When merging units, any spikes violating this refractory period will be discarded. Default is None
+        merging_mode : "soft" can be in ["soft", "hard", "recompute"]
+            How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the 
+            waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed, 
+            reloading waveforms if needed
+        sparsity_overlap : float, default 0.75
+            The percentage of overlap that units should share in order to accept merges. If this criteria is not
+            achieved, soft merging will not be possible
         folder : Path or None
             The new folder where selected waveforms are copied
         format : "auto" | "binary_folder" | "zarr"
@@ -840,6 +855,8 @@ class SortingAnalyzer:
             units_to_merge=units_to_merge,
             unit_ids=new_unit_ids,
             censor_ms=censor_ms,
+            merging_mode=merging_mode,
+            sparsity_overlap=sparsity_overlap,
             verbose=verbose,
             **job_kwargs,
         )
@@ -1604,9 +1621,7 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
-    ):
+    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices, verbose=False, **job_kwargs):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -1773,16 +1788,14 @@ class AnalyzerExtension:
         new_extension.save()
         return new_extension
 
-    def merge(
-        self, new_sorting_analyzer, units_to_merge=None, new_unit_ids=None, censor_ms=None, verbose=False, **job_kwargs
-    ):
+    def merge(self, new_sorting_analyzer, units_to_merge=None, new_unit_ids=None, kept_indices=None, verbose=False, **job_kwargs):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
         if units_to_merge is None:
             new_extension.data = self.data
         else:
             new_extension.data = self._merge_extension_data(
-                units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=censor_ms, verbose=verbose, **job_kwargs
+                units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices, verbose=verbose, **job_kwargs
             )
         new_extension.save()
         return new_extension

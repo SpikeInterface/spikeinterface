@@ -77,30 +77,14 @@ class ComputeRandomSpikes(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
         new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
 
-        if censor_ms is not None:
-            sorting = self.sorting_analyzer.sorting
-            rpv = int(sorting.sampling_frequency * censor_ms / 1000)
-            spikes = self.get_random_spikes()
-            valid_spikes_indices = np.ones(len(spikes), dtype=bool)
-            segment_slices = {}
-            for segment_index in range(sorting.get_num_segments()):
-                s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
-                segment_slices[segment_index] = (s0, s1)
-
-            for to_be_merged in units_to_merge:
-                mask = np.in1d(spikes["unit_index"], sorting.ids_to_indices(to_be_merged))
-                for segment_index in range(sorting.get_num_segments()):
-                    s0, s1 = segment_slices[segment_index]
-                    (indices,) = s0 + np.nonzero(mask[s0:s1])
-                    valid_spikes_indices[indices[1:]] = np.diff(spikes[indices]["sample_index"]) > rpv
-
-            new_data["valid_spikes_indices"] = valid_spikes_indices
-            new_data["random_spikes_indices"] = new_data["random_spikes_indices"][valid_spikes_indices]
+        if kept_indices is not None:
+            valid = kept_indices[self.data["random_spikes_indices"]]
+            new_data["random_spikes_indices"] = new_data["random_spikes_indices"][valid]
 
         return new_data
 
@@ -114,12 +98,6 @@ class ComputeRandomSpikes(AnalyzerExtension):
             spikes = self.sorting_analyzer.sorting.to_spike_vector()
             self._some_spikes = spikes[self.data["random_spikes_indices"]]
         return self._some_spikes
-
-    def get_non_censored_spikes_indices(self):
-        if "valid_spikes_indices" in self.data:
-            return self.data["valid_spikes_indices"]
-        else:
-            return np.ones(len(self.data["random_spikes_indices"]), dtype=bool)
 
     def get_selected_indices_in_spike_train(self, unit_id, segment_index):
         # usefull for Waveforms extractor backwars compatibility
@@ -271,9 +249,12 @@ class ComputeWaveforms(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
+
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
 
         if new_sorting_analyzer.sparsity is not None:
             sparsity_mask = new_sorting_analyzer.sparsity.mask
@@ -281,14 +262,17 @@ class ComputeWaveforms(AnalyzerExtension):
             old_num_chans = self.data["waveforms"].shape[2]
             if num_chans == old_num_chans:
                 new_data["waveforms"] = self.data["waveforms"]
+                if kept_indices is not None:
+                    valid = kept_indices[spike_indices]
+                    some_spikes = some_spikes[valid]
+                    new_data["waveforms"] = self.data["waveforms"][valid]
             else:
                 some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-                if censor_ms is not None:
-                    valid_spikes = new_sorting_analyzer.get_extension("random_spikes").get_non_censored_spikes_indices()
-                    some_spikes = some_spikes[valid_spikes]
-                    waveforms = self.data["waveforms"][valid_spikes]
-                else:
-                    waveforms = self.data["waveforms"]
+                spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
+                if kept_indices is not None:
+                    valid = kept_indices[spike_indices]
+                    some_spikes = some_spikes[valid]
+                    waveforms = self.data["waveforms"][valid]
 
                 num_waveforms = len(some_spikes)
                 num_samples = waveforms.shape[1]
@@ -307,6 +291,10 @@ class ComputeWaveforms(AnalyzerExtension):
                 new_data["waveforms"][updated_spike_mask] = new_waveforms
         else:
             new_data["waveforms"] = self.data["waveforms"]
+            if kept_indices is not None:
+                valid = kept_indices[spike_indices]
+                some_spikes = some_spikes[valid]
+                new_data["waveforms"] = self.data["waveforms"][valid]
 
         return new_data
 
@@ -512,7 +500,7 @@ class ComputeTemplates(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
 
         all_new_units = new_sorting_analyzer.unit_ids
@@ -695,7 +683,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         return self.data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
         # this do not depend on units
         return self.data
