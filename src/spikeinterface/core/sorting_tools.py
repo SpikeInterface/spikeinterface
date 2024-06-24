@@ -287,7 +287,7 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
             for segment_index in range(sorting.get_num_segments()):
                 s0, s1 = segment_slices[segment_index]
                 (indices,) = s0 + np.nonzero(mask[s0:s1])
-                to_keep[indices[1:]] = np.logical_or(
+                to_keep[indices[1:]] = np.logical_and(
                     to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
                 )
 
