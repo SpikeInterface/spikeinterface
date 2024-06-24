@@ -14,7 +14,7 @@ def make_mpl_figure(figure=None, ax=None, axes=None, ncols=None, num_axes=None, 
             ax = figure.add_subplot(111)
             axes = np.array([[ax]])
         else:
-            assert ncols is not None
+            assert ncols is not None, "ncols must be provided when num_axes is provided"
             axes = []
             nrows = int(np.ceil(num_axes / ncols))
             axes = np.full((nrows, ncols), fill_value=None, dtype=object)

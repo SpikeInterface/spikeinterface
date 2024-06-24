@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .si_based import ComponentsBasedSorter
 
-import os
 import shutil
 import numpy as np
 
@@ -10,7 +9,6 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.template import Templates
-from spikeinterface.core.template_tools import get_template_extremum_amplitude
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
@@ -19,14 +17,6 @@ from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
-
-
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
@@ -44,18 +34,19 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "select_per_channel": False,
             "seed": 42,
         },
-        "drift_correction": {"preset": "nonrigid_fast_and_accurate"},
+        "apply_motion_correction": True,
+        "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
         "merging": {
             "minimum_spikes": 10,
             "corr_diff_thresh": 0.5,
             "template_metric": "cosine",
             "censor_correlograms_ms": 0.4,
-            "num_channels": 5,
+            "num_channels": None,
         },
         "clustering": {"legacy": True},
-        "matching": {"method": "circus-omp-svd"},
+        "matching": {"method": "wobble"},
         "apply_preprocessing": True,
-        "matched_filtering": False,
+        "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
@@ -98,6 +89,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        try:
+            import hdbscan
+
+            HAVE_HDBSCAN = True
+        except:
+            HAVE_HDBSCAN = False
+
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy
@@ -111,7 +109,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         job_kwargs = params["job_kwargs"]
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs.update({"verbose": verbose, "progress_bar": verbose})
+        job_kwargs.update({"progress_bar": verbose})
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -120,6 +118,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 100)
+        exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after) / 2)
 
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
@@ -132,15 +131,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_f.annotate(is_filtered=True)
 
         valid_geometry = check_probe_for_drift_correction(recording_f)
-        if params["drift_correction"] is not None:
+        if params["apply_motion_correction"]:
             if not valid_geometry:
-                print("Geometry of the probe does not allow 1D drift correction")
+                if verbose:
+                    print("Geometry of the probe does not allow 1D drift correction")
                 motion_folder = None
             else:
-                print("Motion correction activated (probe geometry compatible)")
+                if verbose:
+                    print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
-                params["drift_correction"].update({"folder": motion_folder})
-                recording_f = correct_motion(recording_f, **params["drift_correction"])
+                params["motion_correction"].update({"folder": motion_folder})
+                recording_f = correct_motion(recording_f, **params["motion_correction"])
         else:
             motion_folder = None
 
@@ -162,7 +163,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         detection_params.update(job_kwargs)
 
         detection_params["radius_um"] = detection_params.get("radius_um", 50)
-        detection_params["exclude_sweep_ms"] = detection_params.get("exclude_sweep_ms", 0.5)
+        detection_params["exclude_sweep_ms"] = exclude_sweep_ms
         detection_params["noise_levels"] = noise_levels
 
         fs = recording_w.get_sampling_frequency()
@@ -174,6 +175,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if params["matched_filtering"]:
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
+            detection_params["ms_before"] = ms_before
 
             for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
                 if value in detection_params:
@@ -211,6 +213,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["waveforms"]["ms_after"] = ms_after
             clustering_params["job_kwargs"] = job_kwargs
             clustering_params["noise_levels"] = noise_levels
+            clustering_params["ms_before"] = exclude_sweep_ms
+            clustering_params["ms_after"] = exclude_sweep_ms
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
 
             legacy = clustering_params.get("legacy", True)
@@ -250,13 +254,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             )
 
             templates = Templates(
-                templates_array,
-                sampling_frequency,
-                nbefore,
-                None,
-                recording_w.channel_ids,
-                unit_ids,
-                recording_w.get_probe(),
+                templates_array=templates_array,
+                sampling_frequency=sampling_frequency,
+                nbefore=nbefore,
+                sparsity_mask=None,
+                channel_ids=recording_w.channel_ids,
+                unit_ids=unit_ids,
+                probe=recording_w.get_probe(),
+                is_scaled=False,
             )
 
             sparsity = compute_sparsity(templates, noise_levels, **params["sparsity"])
@@ -273,12 +278,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_params["templates"] = templates
             matching_job_params = job_kwargs.copy()
 
-            if matching_method == "circus-omp-svd":
-
-                for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                    if value in matching_job_params:
-                        matching_job_params[value] = None
-                matching_job_params["chunk_duration"] = "100ms"
+            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+                if value in matching_job_params:
+                    matching_job_params[value] = None
+            matching_job_params["chunk_duration"] = "100ms"
 
             spikes = find_spikes_from_templates(
                 recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
@@ -306,11 +309,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         merging_params = params["merging"].copy()
 
         if len(merging_params) > 0:
-            if params["drift_correction"] and motion_folder is not None:
+            if params["motion_correction"] and motion_folder is not None:
                 from spikeinterface.preprocessing.motion import load_motion_info
 
                 motion_info = load_motion_info(motion_folder)
-                merging_params["maximum_distance_um"] = max(50, 2 * np.abs(motion_info["motion"]).max())
+                motion = motion_info["motion"]
+                max_motion = max(
+                    np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
+                )
+                merging_params["maximum_distance_um"] = max(50, 2 * max_motion)
 
             # peak_sign = params['detection'].get('peak_sign', 'neg')
             # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)

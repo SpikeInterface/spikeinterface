@@ -1,25 +1,20 @@
 import shutil
-import pytest
-from pathlib import Path
 
 import pytest
 import numpy as np
 
-from spikeinterface.extractors import NumpySorting, toy_example
+from spikeinterface.core import generate_sorting
+from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComparison
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "comparison"
-else:
-    cache_folder = Path("cache_folder") / "comparison"
 
-
-multicomparison_folder = cache_folder / "saved_multisorting_comparison"
-
-
-def setup_module():
+@pytest.fixture(scope="module")
+def setup_module(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
+    multicomparison_folder = cache_folder / "saved_multisorting_comparison"
     if multicomparison_folder.is_dir():
         shutil.rmtree(multicomparison_folder)
+    return multicomparison_folder
 
 
 def make_sorting(times1, labels1, times2, labels2, times3, labels3):
@@ -33,7 +28,8 @@ def make_sorting(times1, labels1, times2, labels2, times3, labels3):
     return sorting1, sorting2, sorting3
 
 
-def test_compare_multiple_sorters():
+def test_compare_multiple_sorters(setup_module):
+    multicomparison_folder = setup_module
     # simple match
     sorting1, sorting2, sorting3 = make_sorting(
         [100, 200, 300, 400, 500, 600, 700, 800, 900],
@@ -72,7 +68,7 @@ def test_compare_multiple_sorters():
 
 def test_compare_multi_segment():
     num_segments = 3
-    _, sort = toy_example(num_segments=num_segments)
+    sort = generate_sorting(durations=[10] * num_segments)
 
     cmp_multi = compare_multiple_sorters([sort, sort, sort])
 

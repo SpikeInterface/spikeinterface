@@ -21,7 +21,6 @@ from spikeinterface.core.recording_tools import get_noise_levels, get_channel_di
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
-from sklearn.decomposition import TruncatedSVD, PCA
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
@@ -31,6 +30,7 @@ from spikeinterface.core.node_pipeline import (
     ExtractSparseWaveforms,
     PeakRetriever,
 )
+
 
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
@@ -58,11 +58,13 @@ class CircusClustering:
         },
         "radius_um": 100,
         "n_svd": [5, 2],
-        "ms_before": 2,
-        "ms_after": 2,
+        "ms_before": 0.5,
+        "ms_after": 0.5,
+        "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
         "job_kwargs": {},
+        "verbose": True,
     }
 
     @classmethod
@@ -72,7 +74,7 @@ class CircusClustering:
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
-        verbose = job_kwargs.get("verbose", True)
+        verbose = d["verbose"]
 
         fs = recording.get_sampling_frequency()
         ms_before = params["ms_before"]
@@ -94,6 +96,8 @@ class CircusClustering:
         )
 
         wfs = few_wfs[:, :, 0]
+        from sklearn.decomposition import TruncatedSVD
+
         tsvd = TruncatedSVD(params["n_svd"][0])
         tsvd.fit(wfs)
 
@@ -207,16 +211,17 @@ class CircusClustering:
                 **job_kwargs,
             )
 
-        labels, inverse = np.unique(peak_labels[peak_labels > -1], return_inverse=True)
-        labels = np.arange(len(labels))
+        non_noise = peak_labels > -1
+        labels, inverse = np.unique(peak_labels[non_noise], return_inverse=True)
+        peak_labels[non_noise] = inverse
+        labels = np.unique(inverse)
 
-        spikes = np.zeros(np.sum(peak_labels > -1), dtype=minimum_spike_dtype)
-        mask = peak_labels > -1
-        spikes["sample_index"] = peaks[mask]["sample_index"]
-        spikes["segment_index"] = peaks[mask]["segment_index"]
-        spikes["unit_index"] = inverse
+        spikes = np.zeros(non_noise.sum(), dtype=minimum_spike_dtype)
+        spikes["sample_index"] = peaks[non_noise]["sample_index"]
+        spikes["segment_index"] = peaks[non_noise]["segment_index"]
+        spikes["unit_index"] = peak_labels[non_noise]
 
-        unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
+        unit_ids = labels
 
         nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
@@ -225,14 +230,29 @@ class CircusClustering:
             recording, spikes, unit_ids, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
         )
 
+        if d["rank"] is not None:
+            from spikeinterface.sortingcomponents.matching.circus import compress_templates
+
+            _, _, _, templates_array = compress_templates(templates_array, 5)
+
         templates = Templates(
-            templates_array, fs, nbefore, None, recording.channel_ids, unit_ids, recording.get_probe()
+            templates_array=templates_array,
+            sampling_frequency=fs,
+            nbefore=nbefore,
+            sparsity_mask=None,
+            channel_ids=recording.channel_ids,
+            unit_ids=unit_ids,
+            probe=recording.get_probe(),
+            is_scaled=False,
         )
         if params["noise_levels"] is None:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
-        sparsity = compute_sparsity(templates, params["noise_levels"], **params["sparsity"])
+        sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
+        empty_templates = templates.sparsity_mask.sum(axis=1) == 0
         templates = remove_empty_templates(templates)
+        mask = np.isin(peak_labels, np.where(empty_templates)[0])
+        peak_labels[mask] = -1
 
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
@@ -243,7 +263,6 @@ class CircusClustering:
                 cleaning_matching_params.pop(value)
         cleaning_matching_params["chunk_duration"] = "100ms"
         cleaning_matching_params["n_jobs"] = 1
-        cleaning_matching_params["verbose"] = False
         cleaning_matching_params["progress_bar"] = False
 
         cleaning_params = params["cleaning_kwargs"].copy()

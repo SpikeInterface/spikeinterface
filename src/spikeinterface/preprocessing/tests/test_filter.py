@@ -1,21 +1,10 @@
 import pytest
-from pathlib import Path
-import shutil
 
 import numpy as np
-from numpy.testing import assert_array_almost_equal
 from spikeinterface.core import generate_recording
 from spikeinterface import NumpyRecording, set_global_tmp_folder
 
 from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter
-from scipy.signal import iirfilter
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
 
 
 def test_filter():
@@ -41,6 +30,8 @@ def test_filter():
     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
 
     # filter from coefficients
+    from scipy.signal import iirfilter
+
     coeff = iirfilter(8, [0.02, 0.4], rs=30, btype="band", analog=False, ftype="cheby2", output="sos")
     rec5 = filter(rec, coeff=coeff, filter_mode="sos")
 

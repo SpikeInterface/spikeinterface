@@ -22,12 +22,12 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to ibl folder.
-    load_sync_channel: bool, default: False
+    load_sync_channel : bool, default: False
         Load or not the last channel (sync).
         If not then the probe is loaded.
-    stream_name: str, default: "ap".
+    stream_name : str, default: "ap".
         Whether to load AP or LFP band, one
         of "ap" or "lp".
 
@@ -134,10 +134,6 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
         return self._cbuffer.shape[0]
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
         if channel_indices is None:
             channel_indices = slice(None)
 

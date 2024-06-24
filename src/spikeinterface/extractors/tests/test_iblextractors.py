@@ -1,15 +1,11 @@
 from re import escape
-from tkinter import ON
 from unittest import TestCase
 
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
-import requests
 
 from spikeinterface.extractors import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
-from spikeinterface.extractors import read_ibl_sorting
-from spikeinterface.core import generate_sorting
 
 EID = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
 PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
@@ -19,6 +15,7 @@ PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 class TestDefaultIblRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
+        import requests
         from one.api import ONE
 
         cls.eid = EID

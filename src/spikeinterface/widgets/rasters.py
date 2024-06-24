@@ -12,15 +12,15 @@ class RasterWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting: SortingExtractor
+    sorting : SortingExtractor
         The sorting extractor object
-    segment_index: None or int
+    segment_index : None or int
         The segment index.
-    unit_ids: list
+    unit_ids : list
         List of unit ids
-    time_range: list
+    time_range : list
         List with start time and end time
-    color: matplotlib color
+    color : matplotlib color
         The color to be used
     """
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..core import SortingAnalyzer
 from .unit_waveforms import UnitWaveformsWidget
 from .base import to_attr
 
@@ -16,6 +17,9 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
         dp = to_attr(data_plot)
+
+        sorting_analyzer = dp.sorting_analyzer_or_templates
+        assert isinstance(sorting_analyzer, SortingAnalyzer), "This widget requires a SortingAnalyzer as input"
 
         assert len(dp.templates_shading) <= 4, "Only 2 ans 4 templates shading are supported in sortingview"
 
@@ -50,7 +54,7 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         v_average_waveforms = vv.AverageWaveforms(average_waveforms=aw_items, channel_locations=locations)
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(dp.sorting_analyzer.sorting)
+            v_units_table = generate_unit_table_view(sorting_analyzer.sorting)
 
             self.view = vv.Box(
                 direction="horizontal",

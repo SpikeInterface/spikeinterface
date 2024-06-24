@@ -1,9 +1,10 @@
 from __future__ import annotations
-
 from pathlib import Path
 
-import probeinterface
+import packaging
 
+import packaging.version
+import probeinterface
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
@@ -17,13 +18,13 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    stream_id: str or None, default: None
+    stream_id : str or None, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str or None, default: None
+    stream_name : str or None, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     """
 
@@ -38,10 +39,12 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         )
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
 
-        probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
+        probegroup = None  # TODO remove once probeinterface is updated to 0.2.22 in the pyproject.toml
+        if packaging.version.parse(probeinterface.__version__) > packaging.version.parse("0.2.21"):
+            probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
 
         if probegroup is not None:
-            self.set_probes(probegroup, in_place=True)
+            self.set_probegroup(probegroup, in_place=True)
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
