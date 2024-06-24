@@ -180,7 +180,7 @@ Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *s
 Sparsity defines the channels on which waveforms and templates are calculated using, for example,  a
 physical distance from the channel with the largest peak amplitude (see the :ref:`Sparsity` section). Scaling, set by
 the :code:`return_scaled` argument, determines whether the data is converted from integer values to :math:`\mu V` or not.
-By default, it is converted and all traces have units of :math:`\mu V`.
+By default, :code:`return_scaled` is true and all processed data voltage values are in :math:`\mu V` (e.g., waveforms, templates, spike amplitudes, etc.).
 
 Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 
