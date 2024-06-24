@@ -18,6 +18,7 @@
 .. _sphx_glr_long_tutorials_handle_drift_plot_handle_drift.py:
 
 
+===========================================
 Handle motion/drift with spikeinterface NEW
 ===========================================
 
@@ -26,7 +27,9 @@ an inevitability, especially when the subjects are not head-fixed. SpikeInterfac
 includes a number of popular methods to compensate for probe motion during the
 preprocessing step.
 
-### What is drift and where does it come from?
+------------------------------------------
+What is drift and where does it come from?
+------------------------------------------
 
 Movement of the probe means that the spikes recorded on the probe 'drift' along it.
 Typically, this motion is vertical along the probe (along the 'y' axis) which
@@ -45,7 +48,9 @@ same for all points along the probe. Non-rigid drift is instead caused by
 local movement of parts of the brain along the probe, and can affect
 the recording at only certain points along the probe.
 
-### How SpikeInterface handles drift
+------------------------------------------
+How SpikeInterface handles drift
+------------------------------------------
 
 Spikeinterface offers a very flexible framework to handle drift as a
 preprocessing step. In this tutorial we will cover the three main
@@ -54,7 +59,9 @@ a focus on running the methods and interpreting the output. For
 more information on the theory and implementation of these methods,
 see the :ref:`motion_correction` section of the documentation.
 
-### The drift correction steps
+------------------------------------------
+The drift correction steps
+------------------------------------------
 
 The easiest way to run drift correction in SpikeInterface is with the
 high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` function.
@@ -75,32 +82,42 @@ Internally this function runs the following steps:
 | **4.** ``interpolate_motion()``
 
 All these sub-steps have many parameters which dictate the
-speed and effectiveness of motion correction. As such, `correct_motion`
+speed and effectiveness of motion correction. As such, ``correct_motion``
 provides three setting 'presets' which configure the motion correct
 to proceed either as:
 
-* `rigid_fast` - a fast, not particularly accurate correction assuming ridigt drift.
-* `kilosort-like` - Mimics what is done in Kilosort (REF)
-* `nonrigid_accurate` - A decentralised drift correction, introduced by the Paninski group (REF)
+* **rigid_fast** - a fast, not particularly accurate correction assuming ridigt drift.
+* **kilosort-like** - Mimics what is done in Kilosort (REF)
+* **nonrigid_accurate** - A decentralised drift correction, introduced by the Paninski group (REF)
 
 **Now, let's dive into running motion correction with these three
-methods on a simulated dataset and interpreting the output.
+methods on a simulated dataset and interpreting the output.**
 
-.. GENERATED FROM PYTHON SOURCE LINES 75-77
+.. GENERATED FROM PYTHON SOURCE LINES 79-82
 
-.. seealso::
-    hello world
+.. warning::
+    The below code uses multiprocessing. If you are on Windows, you may
+    need to place the code within a  ``if __name__ == "__main__":`` block.
 
-.. GENERATED FROM PYTHON SOURCE LINES 77-84
+.. GENERATED FROM PYTHON SOURCE LINES 84-89
+
+-------------------------------------------
+Setting up and preprocessing the recording
+-------------------------------------------
+
+First, we will import the modules we will need for this tutorial:
+
+.. GENERATED FROM PYTHON SOURCE LINES 89-97
 
 .. code-block:: Python
 
 
-    from pathlib import Path
     import matplotlib.pyplot as plt
-    import numpy as np
-    import shutil
     import spikeinterface.full as si
+    from spikeinterface.generation.drifting_generator import generate_drifting_recording
+    from spikeinterface.preprocessing.motion import motion_options_preset
+    from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
+    from spikeinterface.widgets import plot_peaks_on_probe
 
 
 
@@ -109,24 +126,42 @@ methods on a simulated dataset and interpreting the output.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 85-100
+.. GENERATED FROM PYTHON SOURCE LINES 98-101
+
+Next, we will generate a synthetic drifting recording. This recording will
+have 500 separate units with firing rates randomly distributed between
+15 and 25 Hz. The recording will be in total 1000 seconds long.
+
+.. GENERATED FROM PYTHON SOURCE LINES 101-128
 
 .. code-block:: Python
 
-    from spikeinterface.extractors import toy_example
-    from spikeinterface.generation.drifting_generator import generate_drifting_recording
 
-    # TODO: add a note that it must be run in a if __name__ == "__main__" block.
-    # TODO: is there currently any way to compute accuracy of method based on
-    # drift-corrected vs. original static recording?
+    # We will create a zigzag drift pattern on the recording, starting at
+    # 100 seconds and with a peak-to-peak period of 100 seconds (so we will
+    # have 9 zigzags through our recording). We also add some nonlinear
+    # drift in to the motion (i.e. is not the same across the entire probe).
 
-    _, raw_rec, _ = generate_drifting_recording(
-        num_units=50, # 300,
-        duration=100, # 1000
+    num_units = 50 # 500,
+    duration = 100  # 1000,
+
+    _, raw_recording, _ = generate_drifting_recording(
+        num_units=num_units,
+        duration=duration,
         generate_sorting_kwargs=dict(firing_rates=(15, 25), refractory_period_ms=4.0),
         seed=42,
+        generate_displacement_vector_kwargs=dict(motion_list=[
+                dict(
+                    drift_mode="zigzag",
+                    non_rigid_gradient=None, # 0.1,
+                    t_start_drift=10.0,  # 100.0
+                    t_end_drift=None,
+                    period_s=10,  # 100
+                ),
+            ],
+        )
     )
-    print(raw_rec)
+    print(raw_recording)
 
 
 
@@ -142,26 +177,18 @@ methods on a simulated dataset and interpreting the output.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 101-104
+.. GENERATED FROM PYTHON SOURCE LINES 129-131
 
-We preprocess the recording with bandpass filter and a common median reference.
-Note, that it is better to not whiten the recording before motion estimation
-to get a better estimate of peak locations!
+Before performing motion correction, we will **preprocess** the recording
+with a bandpass filter and a common median reference.
 
-.. GENERATED FROM PYTHON SOURCE LINES 104-115
+.. GENERATED FROM PYTHON SOURCE LINES 131-135
 
 .. code-block:: Python
 
 
-    def preprocess_chain(rec):
-        rec = si.bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)
-        rec = si.common_reference(rec, reference="global", operator="median")
-        return rec
-
-
-    rec = preprocess_chain(raw_rec)
-
-    job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
+    filtered_recording = si.bandpass_filter(raw_recording, freq_min=300.0, freq_max=6000.0)
+    preprocessed_recording = si.common_reference(filtered_recording, reference="global", operator="median")
 
 
 
@@ -170,26 +197,33 @@ to get a better estimate of peak locations!
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 116-125
+.. GENERATED FROM PYTHON SOURCE LINES 136-140
 
+.. warning::
+    It is better to not whiten the recording before motion estimation, as this
+    will give a better estimate of the peak locations. Whitening should
+    be performed after motion correction.
+
+.. GENERATED FROM PYTHON SOURCE LINES 142-156
+
+----------------------------------------
 Run motion correction with one function!
 ----------------------------------------
 
 Correcting for drift is easy! You just need to run a single function.
-We will try this function with 3 presets.
+We will now run motion correction on our recording using the three
+presets described above - **rigid_fast**, **kilosort_like** and
+**nonrigid_accurate**.
 
-Internally a preset is a dictionary of dictionaries containing all parameters for every steps.
+Under the hood, each step, peak localisation, selection, motion estimation
+and interpolation expose a lot of options, making them highly flexible.
+The presets are simply a set of configurations which sets the motion
+correction steps to perform as described in the original methods.
+For example, we can print the full set of **kilosort_like** preset options:
 
-Here we also save the motion correction results into a folder to be able to load them later.
-
-.. GENERATED FROM PYTHON SOURCE LINES 125-132
+.. GENERATED FROM PYTHON SOURCE LINES 156-158
 
 .. code-block:: Python
-
-
-    # internally, we can explore a preset like this
-    # every parameter can be overwritten at runtime
-    from spikeinterface.preprocessing.motion import motion_options_preset
 
     print(motion_options_preset["kilosort_like"])
 
@@ -206,38 +240,27 @@ Here we also save the motion correction results into a folder to be able to load
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 133-134
+.. GENERATED FROM PYTHON SOURCE LINES 159-163
 
-lets try theses 3 presets
+Now, lets run motion correction with our three presets. We will
+set the ``job_kwargs`` to parallelize the job over a number of CPU cores.
+Motion correction is quite computationally intensive and so it is
+very useful to run it across a high numer of jobs to speed it up.
 
-.. GENERATED FROM PYTHON SOURCE LINES 134-137
-
-.. code-block:: Python
-
-    some_presets = ("rigid_fast", "kilosort_like", "nonrigid_accurate")
-    results = {preset: {} for preset in some_presets}  # TODO: RENAME VAR
-
-
-
-
-
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 138-139
-
-and compute motion with 3 presets
-
-.. GENERATED FROM PYTHON SOURCE LINES 139-148
+.. GENERATED FROM PYTHON SOURCE LINES 163-176
 
 .. code-block:: Python
 
 
-    for preset in some_presets:
-        print("Computing with", preset)
+    presets_to_run = ("rigid_fast", "kilosort_like", "nonrigid_accurate")
 
-        recording_corrected, motion_info = si.correct_motion(  # TODO: RECORDING_CORRECTED UNUSED
-            rec, preset=preset,  output_motion_info=True, **job_kwargs
+    job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
+
+    results = {preset: {} for preset in presets_to_run}
+    for preset in presets_to_run:
+
+        recording_corrected, motion_info = si.correct_motion(
+            preprocessed_recording, preset=preset,  output_motion_info=True, **job_kwargs
         )
         results[preset]["motion_info"] = motion_info
 
@@ -249,54 +272,57 @@ and compute motion with 3 presets
 
  .. code-block:: none
 
-    Computing with rigid_fast
-    detect and localize:   0%|          | 0/100 [00:00<?, ?it/s]    detect and localize:  12%|█▏        | 12/100 [00:00<00:04, 20.07it/s]    detect and localize:  15%|█▌        | 15/100 [00:00<00:06, 14.13it/s]    detect and localize:  21%|██        | 21/100 [00:01<00:03, 19.85it/s]    detect and localize:  25%|██▌       | 25/100 [00:01<00:04, 17.16it/s]    detect and localize:  30%|███       | 30/100 [00:01<00:03, 20.38it/s]    detect and localize:  33%|███▎      | 33/100 [00:01<00:03, 16.88it/s]    detect and localize:  38%|███▊      | 38/100 [00:02<00:03, 19.99it/s]    detect and localize:  41%|████      | 41/100 [00:02<00:03, 16.23it/s]    detect and localize:  46%|████▌     | 46/100 [00:02<00:02, 19.89it/s]    detect and localize:  49%|████▉     | 49/100 [00:02<00:03, 15.71it/s]    detect and localize:  54%|█████▍    | 54/100 [00:02<00:02, 19.33it/s]    detect and localize:  57%|█████▋    | 57/100 [00:03<00:02, 16.25it/s]    detect and localize:  61%|██████    | 61/100 [00:03<00:02, 19.26it/s]    detect and localize:  64%|██████▍   | 64/100 [00:03<00:01, 20.26it/s]    detect and localize:  67%|██████▋   | 67/100 [00:03<00:02, 16.11it/s]    detect and localize:  70%|███████   | 70/100 [00:03<00:01, 17.32it/s]    detect and localize:  73%|███████▎  | 73/100 [00:04<00:01, 17.65it/s]    detect and localize:  75%|███████▌  | 75/100 [00:04<00:01, 15.38it/s]    detect and localize:  79%|███████▉  | 79/100 [00:04<00:01, 18.90it/s]    detect and localize:  82%|████████▏ | 82/100 [00:04<00:01, 16.51it/s]    detect and localize:  86%|████████▌ | 86/100 [00:04<00:00, 18.13it/s]    detect and localize:  89%|████████▉ | 89/100 [00:04<00:00, 19.54it/s]    detect and localize:  92%|█████████▏| 92/100 [00:05<00:00, 16.91it/s]    detect and localize:  95%|█████████▌| 95/100 [00:05<00:00, 18.83it/s]    detect and localize:  98%|█████████▊| 98/100 [00:05<00:00, 18.06it/s]    detect and localize: 100%|██████████| 100/100 [00:05<00:00, 15.62it/s]    detect and localize: 100%|██████████| 100/100 [00:05<00:00, 17.62it/s]
-    Computing with kilosort_like
-    detect and localize:   0%|          | 0/100 [00:00<?, ?it/s]    detect and localize:  12%|█▏        | 12/100 [00:00<00:04, 17.80it/s]    detect and localize:  14%|█▍        | 14/100 [00:01<00:06, 12.77it/s]    detect and localize:  20%|██        | 20/100 [00:01<00:04, 19.46it/s]    detect and localize:  24%|██▍       | 24/100 [00:01<00:03, 20.39it/s]    detect and localize:  27%|██▋       | 27/100 [00:01<00:04, 17.29it/s]    detect and localize:  30%|███       | 30/100 [00:01<00:04, 17.27it/s]    detect and localize:  33%|███▎      | 33/100 [00:02<00:04, 14.75it/s]    detect and localize:  36%|███▌      | 36/100 [00:02<00:04, 15.76it/s]    detect and localize:  41%|████      | 41/100 [00:02<00:03, 15.03it/s]    detect and localize:  43%|████▎     | 43/100 [00:02<00:03, 15.16it/s]    detect and localize:  48%|████▊     | 48/100 [00:02<00:02, 20.06it/s]    detect and localize:  51%|█████     | 51/100 [00:03<00:03, 14.32it/s]    detect and localize:  56%|█████▌    | 56/100 [00:03<00:02, 19.26it/s]    detect and localize:  59%|█████▉    | 59/100 [00:03<00:02, 14.52it/s]    detect and localize:  63%|██████▎   | 63/100 [00:03<00:02, 18.10it/s]    detect and localize:  66%|██████▌   | 66/100 [00:04<00:02, 13.52it/s]    detect and localize:  71%|███████   | 71/100 [00:04<00:01, 18.03it/s]    detect and localize:  74%|███████▍  | 74/100 [00:04<00:01, 13.87it/s]    detect and localize:  78%|███████▊  | 78/100 [00:04<00:01, 17.36it/s]    detect and localize:  81%|████████  | 81/100 [00:05<00:01, 12.93it/s]    detect and localize:  86%|████████▌ | 86/100 [00:05<00:00, 17.89it/s]    detect and localize:  89%|████████▉ | 89/100 [00:05<00:00, 13.39it/s]    detect and localize:  93%|█████████▎| 93/100 [00:05<00:00, 16.40it/s]    detect and localize:  97%|█████████▋| 97/100 [00:06<00:00, 15.69it/s]    detect and localize: 100%|██████████| 100/100 [00:06<00:00, 15.80it/s]    detect and localize: 100%|██████████| 100/100 [00:06<00:00, 16.04it/s]
-    Computing with nonrigid_accurate
-    detect and localize:   0%|          | 0/100 [00:00<?, ?it/s]    detect and localize:  10%|█         | 10/100 [00:00<00:06, 14.91it/s]    detect and localize:  12%|█▏        | 12/100 [00:01<00:17,  5.06it/s]    detect and localize:  13%|█▎        | 13/100 [00:02<00:20,  4.29it/s]    detect and localize:  20%|██        | 20/100 [00:03<00:15,  5.14it/s]    detect and localize:  23%|██▎       | 23/100 [00:03<00:12,  6.03it/s]    detect and localize:  24%|██▍       | 24/100 [00:04<00:12,  6.11it/s]    detect and localize:  25%|██▌       | 25/100 [00:04<00:12,  5.98it/s]    detect and localize:  26%|██▌       | 26/100 [00:04<00:11,  6.36it/s]    detect and localize:  28%|██▊       | 28/100 [00:05<00:18,  3.90it/s]    detect and localize:  31%|███       | 31/100 [00:05<00:15,  4.50it/s]    detect and localize:  33%|███▎      | 33/100 [00:05<00:12,  5.28it/s]    detect and localize:  36%|███▌      | 36/100 [00:06<00:15,  4.03it/s]    detect and localize:  39%|███▉      | 39/100 [00:07<00:12,  4.87it/s]    detect and localize:  40%|████      | 40/100 [00:07<00:11,  5.21it/s]    detect and localize:  41%|████      | 41/100 [00:07<00:10,  5.43it/s]    detect and localize:  43%|████▎     | 43/100 [00:07<00:08,  6.89it/s]    detect and localize:  44%|████▍     | 44/100 [00:08<00:16,  3.49it/s]    detect and localize:  45%|████▌     | 45/100 [00:08<00:13,  4.01it/s]    detect and localize:  47%|████▋     | 47/100 [00:09<00:11,  4.44it/s]    detect and localize:  48%|████▊     | 48/100 [00:09<00:11,  4.42it/s]    detect and localize:  49%|████▉     | 49/100 [00:09<00:10,  4.67it/s]    detect and localize:  52%|█████▏    | 52/100 [00:10<00:11,  4.32it/s]    detect and localize:  53%|█████▎    | 53/100 [00:10<00:10,  4.39it/s]    detect and localize:  55%|█████▌    | 55/100 [00:10<00:10,  4.41it/s]    detect and localize:  56%|█████▌    | 56/100 [00:11<00:08,  4.90it/s]    detect and localize:  59%|█████▉    | 59/100 [00:11<00:05,  6.85it/s]    detect and localize:  60%|██████    | 60/100 [00:12<00:10,  3.74it/s]    detect and localize:  61%|██████    | 61/100 [00:12<00:09,  4.24it/s]    detect and localize:  63%|██████▎   | 63/100 [00:12<00:09,  3.73it/s]    detect and localize:  67%|██████▋   | 67/100 [00:13<00:05,  6.45it/s]    detect and localize:  69%|██████▉   | 69/100 [00:14<00:07,  4.01it/s]    detect and localize:  71%|███████   | 71/100 [00:14<00:06,  4.15it/s]    detect and localize:  72%|███████▏  | 72/100 [00:14<00:07,  3.90it/s]    detect and localize:  75%|███████▌  | 75/100 [00:14<00:04,  6.01it/s]    detect and localize:  77%|███████▋  | 77/100 [00:15<00:04,  5.25it/s]    detect and localize:  78%|███████▊  | 78/100 [00:15<00:04,  5.40it/s]    detect and localize:  79%|███████▉  | 79/100 [00:15<00:04,  4.76it/s]    detect and localize:  80%|████████  | 80/100 [00:16<00:04,  4.90it/s]    detect and localize:  83%|████████▎ | 83/100 [00:16<00:02,  7.51it/s]    detect and localize:  84%|████████▍ | 84/100 [00:16<00:03,  5.00it/s]    detect and localize:  85%|████████▌ | 85/100 [00:16<00:02,  5.41it/s]    detect and localize:  87%|████████▋ | 87/100 [00:17<00:02,  4.95it/s]    detect and localize:  89%|████████▉ | 89/100 [00:17<00:01,  6.10it/s]    detect and localize:  91%|█████████ | 91/100 [00:17<00:01,  6.83it/s]    detect and localize:  92%|█████████▏| 92/100 [00:18<00:01,  4.40it/s]    detect and localize:  95%|█████████▌| 95/100 [00:18<00:00,  5.41it/s]    detect and localize:  97%|█████████▋| 97/100 [00:19<00:00,  5.96it/s]    detect and localize: 100%|██████████| 100/100 [00:19<00:00,  6.27it/s]    detect and localize: 100%|██████████| 100/100 [00:19<00:00,  5.14it/s]
+    detect and localize:   0%|          | 0/100 [00:00<?, ?it/s]    detect and localize:  12%|█▏        | 12/100 [00:00<00:03, 22.15it/s]    detect and localize:  15%|█▌        | 15/100 [00:00<00:06, 13.76it/s]    detect and localize:  21%|██        | 21/100 [00:01<00:04, 18.82it/s]    detect and localize:  25%|██▌       | 25/100 [00:01<00:04, 17.15it/s]    detect and localize:  28%|██▊       | 28/100 [00:01<00:03, 18.90it/s]    detect and localize:  32%|███▏      | 32/100 [00:01<00:03, 20.83it/s]    detect and localize:  35%|███▌      | 35/100 [00:01<00:03, 16.42it/s]    detect and localize:  38%|███▊      | 38/100 [00:02<00:03, 18.08it/s]    detect and localize:  41%|████      | 41/100 [00:02<00:03, 15.16it/s]    detect and localize:  44%|████▍     | 44/100 [00:02<00:03, 16.27it/s]    detect and localize:  49%|████▉     | 49/100 [00:02<00:03, 15.49it/s]    detect and localize:  52%|█████▏    | 52/100 [00:03<00:03, 15.34it/s]    detect and localize:  57%|█████▋    | 57/100 [00:03<00:02, 15.92it/s]    detect and localize:  60%|██████    | 60/100 [00:03<00:02, 16.37it/s]    detect and localize:  65%|██████▌   | 65/100 [00:03<00:01, 17.71it/s]    detect and localize:  67%|██████▋   | 67/100 [00:03<00:01, 17.90it/s]    detect and localize:  69%|██████▉   | 69/100 [00:04<00:01, 16.45it/s]    detect and localize:  73%|███████▎  | 73/100 [00:04<00:01, 16.61it/s]    detect and localize:  75%|███████▌  | 75/100 [00:04<00:01, 17.18it/s]    detect and localize:  77%|███████▋  | 77/100 [00:04<00:01, 16.08it/s]    detect and localize:  80%|████████  | 80/100 [00:04<00:01, 18.25it/s]    detect and localize:  82%|████████▏ | 82/100 [00:04<00:01, 16.40it/s]    detect and localize:  84%|████████▍ | 84/100 [00:04<00:00, 16.18it/s]    detect and localize:  86%|████████▌ | 86/100 [00:05<00:00, 15.41it/s]    detect and localize:  89%|████████▉ | 89/100 [00:05<00:00, 16.66it/s]    detect and localize:  92%|█████████▏| 92/100 [00:05<00:00, 17.47it/s]    detect and localize:  94%|█████████▍| 94/100 [00:05<00:00, 17.30it/s]    detect and localize:  97%|█████████▋| 97/100 [00:05<00:00, 18.52it/s]    detect and localize: 100%|██████████| 100/100 [00:05<00:00, 17.43it/s]    detect and localize: 100%|██████████| 100/100 [00:05<00:00, 17.04it/s]
+    detect and localize:   0%|          | 0/100 [00:00<?, ?it/s]    detect and localize:  12%|█▏        | 12/100 [00:00<00:04, 21.73it/s]    detect and localize:  15%|█▌        | 15/100 [00:00<00:06, 13.80it/s]    detect and localize:  20%|██        | 20/100 [00:01<00:04, 17.75it/s]    detect and localize:  25%|██▌       | 25/100 [00:01<00:04, 15.80it/s]    detect and localize:  28%|██▊       | 28/100 [00:01<00:04, 16.93it/s]    detect and localize:  33%|███▎      | 33/100 [00:02<00:04, 14.82it/s]    detect and localize:  36%|███▌      | 36/100 [00:02<00:03, 16.13it/s]    detect and localize:  41%|████      | 41/100 [00:02<00:04, 14.73it/s]    detect and localize:  45%|████▌     | 45/100 [00:02<00:03, 17.25it/s]    detect and localize:  49%|████▉     | 49/100 [00:03<00:03, 14.71it/s]    detect and localize:  52%|█████▏    | 52/100 [00:03<00:02, 16.58it/s]    detect and localize:  56%|█████▌    | 56/100 [00:03<00:02, 20.19it/s]    detect and localize:  59%|█████▉    | 59/100 [00:03<00:02, 14.44it/s]    detect and localize:  62%|██████▏   | 62/100 [00:03<00:02, 15.70it/s]    detect and localize:  65%|██████▌   | 65/100 [00:04<00:02, 12.64it/s]    detect and localize:  69%|██████▉   | 69/100 [00:04<00:02, 15.19it/s]    detect and localize:  73%|███████▎  | 73/100 [00:04<00:02, 13.18it/s]    detect and localize:  77%|███████▋  | 77/100 [00:04<00:01, 15.12it/s]    detect and localize:  81%|████████  | 81/100 [00:05<00:01, 13.67it/s]    detect and localize:  85%|████████▌ | 85/100 [00:05<00:00, 15.18it/s]    detect and localize:  89%|████████▉ | 89/100 [00:05<00:00, 14.21it/s]    detect and localize:  91%|█████████ | 91/100 [00:05<00:00, 14.81it/s]    detect and localize:  94%|█████████▍| 94/100 [00:06<00:00, 16.74it/s]    detect and localize:  97%|█████████▋| 97/100 [00:06<00:00, 15.89it/s]    detect and localize: 100%|██████████| 100/100 [00:06<00:00, 15.97it/s]    detect and localize: 100%|██████████| 100/100 [00:06<00:00, 15.55it/s]
+    detect and localize:   0%|          | 0/100 [00:00<?, ?it/s]    detect and localize:  10%|█         | 10/100 [00:00<00:04, 18.18it/s]    detect and localize:  12%|█▏        | 12/100 [00:01<00:12,  6.79it/s]    detect and localize:  13%|█▎        | 13/100 [00:01<00:15,  5.59it/s]    detect and localize:  17%|█▋        | 17/100 [00:01<00:09,  8.98it/s]    detect and localize:  19%|█▉        | 19/100 [00:02<00:16,  4.86it/s]    detect and localize:  21%|██        | 21/100 [00:03<00:14,  5.47it/s]    detect and localize:  23%|██▎       | 23/100 [00:03<00:13,  5.61it/s]    detect and localize:  24%|██▍       | 24/100 [00:03<00:12,  5.86it/s]    detect and localize:  26%|██▌       | 26/100 [00:03<00:12,  6.12it/s]    detect and localize:  27%|██▋       | 27/100 [00:04<00:22,  3.31it/s]    detect and localize:  31%|███       | 31/100 [00:05<00:13,  5.19it/s]    detect and localize:  34%|███▍      | 34/100 [00:05<00:10,  6.08it/s]    detect and localize:  35%|███▌      | 35/100 [00:06<00:16,  4.01it/s]    detect and localize:  36%|███▌      | 36/100 [00:06<00:14,  4.31it/s]    detect and localize:  39%|███▉      | 39/100 [00:06<00:10,  5.77it/s]    detect and localize:  40%|████      | 40/100 [00:06<00:10,  5.58it/s]    detect and localize:  42%|████▏     | 42/100 [00:07<00:08,  6.96it/s]    detect and localize:  43%|████▎     | 43/100 [00:08<00:16,  3.52it/s]    detect and localize:  45%|████▌     | 45/100 [00:08<00:11,  4.86it/s]    detect and localize:  47%|████▋     | 47/100 [00:08<00:09,  5.85it/s]    detect and localize:  48%|████▊     | 48/100 [00:08<00:09,  5.53it/s]    detect and localize:  49%|████▉     | 49/100 [00:08<00:08,  5.94it/s]    detect and localize:  50%|█████     | 50/100 [00:09<00:10,  4.79it/s]    detect and localize:  51%|█████     | 51/100 [00:09<00:12,  3.78it/s]    detect and localize:  53%|█████▎    | 53/100 [00:09<00:10,  4.51it/s]    detect and localize:  55%|█████▌    | 55/100 [00:10<00:08,  5.29it/s]    detect and localize:  56%|█████▌    | 56/100 [00:10<00:09,  4.59it/s]    detect and localize:  58%|█████▊    | 58/100 [00:10<00:08,  5.19it/s]    detect and localize:  59%|█████▉    | 59/100 [00:11<00:09,  4.42it/s]    detect and localize:  60%|██████    | 60/100 [00:11<00:09,  4.19it/s]    detect and localize:  63%|██████▎   | 63/100 [00:11<00:06,  5.49it/s]    detect and localize:  64%|██████▍   | 64/100 [00:11<00:06,  5.76it/s]    detect and localize:  65%|██████▌   | 65/100 [00:11<00:05,  6.24it/s]    detect and localize:  66%|██████▌   | 66/100 [00:12<00:07,  4.35it/s]    detect and localize:  67%|██████▋   | 67/100 [00:12<00:08,  4.00it/s]    detect and localize:  68%|██████▊   | 68/100 [00:12<00:07,  4.13it/s]    detect and localize:  69%|██████▉   | 69/100 [00:13<00:06,  4.67it/s]    detect and localize:  71%|███████   | 71/100 [00:13<00:06,  4.61it/s]    detect and localize:  73%|███████▎  | 73/100 [00:13<00:04,  6.10it/s]    detect and localize:  74%|███████▍  | 74/100 [00:13<00:04,  5.69it/s]    detect and localize:  75%|███████▌  | 75/100 [00:14<00:06,  3.90it/s]    detect and localize:  76%|███████▌  | 76/100 [00:14<00:05,  4.04it/s]    detect and localize:  78%|███████▊  | 78/100 [00:14<00:04,  5.12it/s]    detect and localize:  79%|███████▉  | 79/100 [00:15<00:04,  4.66it/s]    detect and localize:  80%|████████  | 80/100 [00:15<00:03,  5.11it/s]    detect and localize:  83%|████████▎ | 83/100 [00:16<00:03,  4.43it/s]    detect and localize:  84%|████████▍ | 84/100 [00:16<00:03,  4.00it/s]    detect and localize:  87%|████████▋ | 87/100 [00:16<00:02,  4.38it/s]    detect and localize:  91%|█████████ | 91/100 [00:17<00:01,  4.77it/s]    detect and localize:  93%|█████████▎| 93/100 [00:17<00:01,  5.61it/s]    detect and localize:  95%|█████████▌| 95/100 [00:18<00:00,  5.69it/s]    detect and localize:  96%|█████████▌| 96/100 [00:18<00:00,  5.83it/s]    detect and localize:  98%|█████████▊| 98/100 [00:18<00:00,  6.74it/s]    detect and localize:  99%|█████████▉| 99/100 [00:18<00:00,  7.10it/s]    detect and localize: 100%|██████████| 100/100 [00:19<00:00,  5.10it/s]    detect and localize: 100%|██████████| 100/100 [00:19<00:00,  5.24it/s]
 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 149-174
+.. GENERATED FROM PYTHON SOURCE LINES 177-182
 
-Plot the results
-----------------
+.. seealso::
+   It is often very useful to save the output of motion correction to
+   file, so they can be loaded later. This can be done by setting
+   the ``folder`` argument of ``correct_motion`` to a path to save in.
+   The ``motion_info`` can be loaded back with ``si.load_motion_info``.
 
-We load back the results and use the widgets module to explore the estimated drift motion.
+.. GENERATED FROM PYTHON SOURCE LINES 184-207
 
-For all methods we have 4 plots:
-  * **top left:** time vs estimated peak depth
-  * **top right:** time vs peak depth after motion correction
-  * **bottom left:** the average motion vector across depths and all motion across spatial depths for non-rigid estimation)
+-------------------
+Plotting the results
+-------------------
+
+For all methods we have 4 plots. On the x-axis of all plots we have
+the (binned time). The plots display:
+  * **top left:** The estimated peak depth for every detected peaks.
+  * **top right:** The estimated peak depths after motion correction.
+  * **bottom left:** The average motion vector across depths and all motion across spatial depths (for non-rigid estimation).
   * **bottom right:** if motion correction is non rigid, the motion vector across depths is plotted as a map, with the color code representing the motion in micrometers.
 
-A few comments on the figures:
-  * The preset **'rigid_fast'** has only one motion vector for the entire probe because it is a "rigid" case.
-    The motion amplitude is globally underestimated because it averages across depths.
-    However, the corrected peaks are flatter than the non-corrected ones, so the job is partially done.
-    The big jump at=600s when the probe start moving is recovered quite well.
-  * The preset **kilosort_like** gives better results because it is a non-rigid case.
-    The motion vector is computed for different depths.
-    The corrected peak locations are flatter than the rigid case.
-    The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
-  * The preset **nonrigid_accurate** seems to give the best results on this recording.
-    The motion vector seems less noisy globally, but it is not "perfect" (see at the top of the probe 3200um to 3800um).
-    Also note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
-    the upper part of the probe (2000-3000um) experience some drifts, but the lower part (0-1000um) is relatively stable.
-    The method defined by this preset is able to capture this.
+These plots are quite complicated, so it is worth covering them in detail.
+For every detected action potential in our recording, we first estimate
+its depth (first panel) using a method from :py:func:`~spikeinterface.postprocessing.compute_unit_locations()`.
+Then, the probe motion is estimated the location of the detected peaks are
+adjusted to account for this (second panel). The motion estimation produces
+a measure of how much and in what direction the probe is moving at any given
+time bin (third panel). For non-rigid motion correction, the probe is divided
+into subsections - the motion vectors displayed are per subsection (i.e. per
+'binned spatial depth') as well as the average. On the fourth panel, we see a
+more detailed representation of the motion vectors. We can see the motion plotted
+as a heatmap at each binned spatial depth across all time bins. We see it captures
+the zigzag pattern (alternating light and dark colors).
 
-.. GENERATED FROM PYTHON SOURCE LINES 174-188
+.. GENERATED FROM PYTHON SOURCE LINES 207-221
 
 .. code-block:: Python
 
 
-    for preset in some_presets:
+    for preset in presets_to_run:
         fig = plt.figure(figsize=(7, 7))
         si.plot_motion_info(
             results[preset]["motion_info"],
-            recording=rec,
+            recording=recording_corrected,  # recording only used to get the real times
             figure=fig,
             depth_lim=(400, 600),
             color_amplitude=True,
@@ -333,97 +359,153 @@ A few comments on the figures:
          :class: sphx-glr-multi-img
 
 
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 189-207
-
-Plot peak localization
-----------------------
-
-We can also use the internal extra results (peaks and peaks location) to check if putative
-clusters have a lower spatial spread after the motion correction.
-
-Here we plot the estimated peak locations (left) and the corrected peak locations
-(on right) on top of the probe.
-The color codes for the peak amplitudes.
-
-We can see here that some clusters seem to be more compact on the 'y' axis, especially
-for the preset "nonrigid_accurate".
-
-Be aware that there are two ways to correct for the motion:
-  1. Interpolate traces and detect/localize peaks again  (`interpolate_recording()`)
-  2. Compensate for drifts directly on peak locations (`correct_motion_on_peaks()`)
-
-Case 1 is used before running a spike sorter and the case 2 is used here to display the results.
-
-.. GENERATED FROM PYTHON SOURCE LINES 207-222
-
-.. code-block:: Python
-
-
-    from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
-    from spikeinterface.widgets import plot_peaks_on_probe
-
-    peaks = []
-    peak_locations = []
-    for preset in some_presets:
-
-        motion_info = results[preset]["motion_info"]
-
-        peaks.append(motion_info["peaks"])
-        peak_locations.append(motion_info["peak_locations"])
-
-    widget = plot_peaks_on_probe(rec, peaks, peak_locations, ylim=(200,800))
-    [widget.axes[idx].set_title(subtitle) for idx, subtitle in enumerate(some_presets)]
-
-
-
-.. image-sg:: /long_tutorials/handle_drift/images/sphx_glr_plot_handle_drift_004.png
-   :alt: Peaks on Probe Plot, rigid_fast, kilosort_like, nonrigid_accurate
-   :srcset: /long_tutorials/handle_drift/images/sphx_glr_plot_handle_drift_004.png
-   :class: sphx-glr-single-img
-
-
 .. rst-class:: sphx-glr-script-out
 
  .. code-block:: none
 
+    /Users/joeziminski/git_repos/forks_/spikeinterface/src/spikeinterface/widgets/motion.py:276: UserWarning: Attempting to set identical low and high ylims makes transformation singular; automatically expanding.
+      ax2.set_ylim(-motion_lim, motion_lim)
 
-    [Text(0.5, 1.0, 'rigid_fast'), Text(0.5, 1.0, 'kilosort_like'), Text(0.5, 1.0, 'nonrigid_accurate')]
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 223-228
+.. GENERATED FROM PYTHON SOURCE LINES 222-236
 
-Accuracy and Run Times
-----------------------
+A few comments on the figures:
+  * The preset **'rigid_fast'** has only one motion vector for the entire probe because it is a "rigid" case.
+    The motion amplitude is globally underestimated because it averages across depths.
+    However, the corrected peaks are flatter than the non-corrected ones, so the job is partially done.
+    The big jump at=600s when the probe start moving is recovered quite well.
+  * The preset **kilosort_like** gives better results because it is a non-rigid case.
+    The motion vector is computed for different depths.
+    The corrected peak locations are flatter than the rigid case.
+    The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
+  * The preset **nonrigid_accurate** seems to give the best results on this recording.
+    The motion vector seems less noisy globally, but it is not "perfect" (see at the top of the probe 3200um to 3800um).
+    Also note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
+    the upper part of the probe (2000-3000um) experience some drifts, but the lower part (0-1000um) is relatively stable.
+    The method defined by this preset is able to capture this.
 
-Presets and related methods have differents accuracies but also computation speeds.
-It is good to have this in mind!
+.. GENERATED FROM PYTHON SOURCE LINES 238-246
 
-.. GENERATED FROM PYTHON SOURCE LINES 228-246
+-------------------------------------------------
+Correcting Peak Locations after Motion Correction
+-------------------------------------------------
+
+To understand how motion correction is applied to our data, it is
+important to understand the spikeinterface `peak` and `peak_locations`
+objects, explored further in the below dropdown.
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 248-262
+
+.. dropdown:: Dropdown title
+
+  Information about detected action potentials is represented in
+  SpikeInterface is ``peaks`` and ``peak_locations`` objects. The
+  ``peaks`` object is an array for every detected action potential in th
+   the dataset, containing its XXX, XX, XX, XX. it is created by the
+   XXXX function.
+
+  The ``peak_locations`` is a partner object to the ``peaks`` object
+  containing XXX. For every peak in ``peak`` there is a corresponding
+  location in ``peak_locations``. The peak locations is estimated
+  using the XXXX function. One way of correcting for motion is to
+  correct these peak locations directly, using the output of
+  ``si.correct_motion`` or ``si.estimate_motion``.
+
+.. GENERATED FROM PYTHON SOURCE LINES 264-278
+
+The result of motion correction can be applied by interpolating the
+raw data to correct for the drift. Essentially, this shifts the signal
+across the probe depth by, at each channel, interpolating other channels
+XXXX. This is performed on the `corrected_recording` output from the
+`correct_motion` channel. This is useful for continuing with
+preprocessing and sorting with the corrected recording.
+
+The other way to apply the motion correction is to the ``peaks`` and
+``peaks_location`` objects directly. This is done using the function
+``correct_motion_on_peaks()``. Given a set of peaks, peak locations and
+the ``motion`` object output from ``correct_motion``, it will shift the
+location of the peaks according to the motion estimate, outputting a new
+``peak_locations`` object. This is done to plot the peak locations in
+the next section.
+
+.. GENERATED FROM PYTHON SOURCE LINES 280-284
+
+.. warning::
+   Note that the `peak_locations` output by `correct_motion`'s
+   `motion_info` is the ORIGINAL (uncorrected) peak locations. To get the corrected
+   peak locations, `correct_motion_on_peaks()` must be used!
+
+.. GENERATED FROM PYTHON SOURCE LINES 284-298
 
 .. code-block:: Python
 
 
-    # run_times = []
-    for preset in some_presets:
+    for preset in presets_to_run:
 
-        # run_times.append(results[preset]["motion_info"]["run_times"])
+        motion_info = results[preset]["motion_info"]
+
+        peaks = motion_info["peaks"]
+
+        original_peak_locations = motion_info["peak_locations"]
+
+        corrected_peak_locations = correct_motion_on_peaks(peaks, original_peak_locations, motion_info['motion'], recording_corrected)  # TODO: what recording to use.
+
+        widget = plot_peaks_on_probe(recording_corrected, [peaks, peaks], [original_peak_locations, corrected_peak_locations], ylim=(300,600))
+        widget.figure.suptitle(preset)
+
+
+
+
+.. rst-class:: sphx-glr-horizontal
+
+
+    *
+
+      .. image-sg:: /long_tutorials/handle_drift/images/sphx_glr_plot_handle_drift_004.png
+         :alt: rigid_fast
+         :srcset: /long_tutorials/handle_drift/images/sphx_glr_plot_handle_drift_004.png
+         :class: sphx-glr-multi-img
+
+    *
+
+      .. image-sg:: /long_tutorials/handle_drift/images/sphx_glr_plot_handle_drift_005.png
+         :alt: kilosort_like
+         :srcset: /long_tutorials/handle_drift/images/sphx_glr_plot_handle_drift_005.png
+         :class: sphx-glr-multi-img
+
+    *
+
+      .. image-sg:: /long_tutorials/handle_drift/images/sphx_glr_plot_handle_drift_006.png
+         :alt: nonrigid_accurate
+         :srcset: /long_tutorials/handle_drift/images/sphx_glr_plot_handle_drift_006.png
+         :class: sphx-glr-multi-img
+
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 299-306
+
+-------------------------
+Comparing the  Run Times
+-------------------------
+
+The different methods also have different speeds, the 'nonrigid_accurate'
+requires more computation time, particulary at the ``estimate_motion`` phase,
+as seen in the run times:
+
+.. GENERATED FROM PYTHON SOURCE LINES 306-311
+
+.. code-block:: Python
+
+
+    for preset in presets_to_run:
         print(preset)
         print(results[preset]["motion_info"]["run_times"])
-    if False:
-        keys = run_times[0].keys()
 
-        bottom = np.zeros(len(run_times))
-        fig, ax = plt.subplots()
-        for k in keys:
-            rtimes = np.array([rt[k] for rt in run_times])
-            if np.any(rtimes > 0.0):
-                ax.bar(some_presets, rtimes, bottom=bottom, label=k)
-            bottom += rtimes
-        ax.legend()
 
 
 
@@ -433,19 +515,32 @@ It is good to have this in mind!
  .. code-block:: none
 
     rigid_fast
-    {'detect_and_localize': 15.972179249976762, 'estimate_motion': 0.0345750420819968}
+    {'detect_and_localize': 15.370884667150676, 'estimate_motion': 0.014450875110924244}
     kilosort_like
-    {'detect_and_localize': 16.28575074998662, 'estimate_motion': 0.05235712497960776}
+    {'detect_and_localize': 15.728250083047897, 'estimate_motion': 0.051764374831691384}
     nonrigid_accurate
-    {'detect_and_localize': 29.989600916975178, 'estimate_motion': 52.08806195796933}
+    {'detect_and_localize': 28.611334583954886, 'estimate_motion': 55.025963000021875}
 
 
 
+
+.. GENERATED FROM PYTHON SOURCE LINES 312-322
+
+------------------------
+Summary
+------------------------
+
+That's it for our overall tour of correcting motion in
+SpikeInterface. If you'd like to explore more, see the API docs
+for `estimate_motion()`, `interpolate_motion`() (ay others?). Remember
+that correcting motion makes some assumptions on your datatype - always
+output and plot the motion correction information for your recordings,
+to make sure they are acting as expected!
 
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (1 minutes 59.534 seconds)
+   **Total running time of the script:** (2 minutes 0.428 seconds)
 
 
 .. _sphx_glr_download_long_tutorials_handle_drift_plot_handle_drift.py:
