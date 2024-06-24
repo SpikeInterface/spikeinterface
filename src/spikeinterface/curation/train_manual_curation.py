@@ -55,8 +55,8 @@ class CurationModelTrainer:
         import pandas as pd
 
         # Remove infinite values from the metrics and convert to float32
-        self.testing_metrics[0] = self.testing_metrics[0].map(lambda x: np.nan if np.isinf(x) else x)
         self.testing_metrics[0] = self.testing_metrics[0].astype("float32")
+        self.testing_metrics[0] = self.testing_metrics[0].map(lambda x: np.nan if np.isinf(x) else x)
 
         if self.target_column in self.testing_metrics[0].columns:
             # Extract the target variable
