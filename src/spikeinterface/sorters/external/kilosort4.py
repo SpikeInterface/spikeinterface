@@ -18,6 +18,8 @@ class Kilosort4Sorter(BaseSorter):
     gpu_capability = "nvidia-optional"
 
     # Q: Should we take these directly from the KS defaults? https://github.com/MouseLand/Kilosort/blob/59c03b060cc8e8ac75a7f1a972a8b5c5af3f41a6/kilosort/parameters.py#L164
+    # I see these overwrite the `DEFAULT_SETTINGS`. Do we want to do this? There is benefit to fixing on the SI side, but users switching KS version would expect
+    # the defaults to represent the KS version. This could lead to divergence in result between users running KS directly vs. the SI wrapper.
     _default_params = {
         "batch_size": 60000,
         "nblocks": 1,
