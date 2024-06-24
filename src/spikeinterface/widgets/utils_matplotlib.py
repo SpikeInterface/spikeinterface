@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -12,13 +11,10 @@ def make_mpl_figure(figure=None, ax=None, axes=None, ncols=None, num_axes=None, 
     if figure is not None:
         assert ax is None and axes is None, "figure/ax/axes : only one of then can be not None"
         if num_axes is None:
-            if "ipympl" not in matplotlib.get_backend():
-                ax = figure.add_subplot(111)
-            else:
-                ax = figure.add_subplot(111)
+            ax = figure.add_subplot(111)
             axes = np.array([[ax]])
         else:
-            assert ncols is not None
+            assert ncols is not None, "ncols must be provided when num_axes is provided"
             axes = []
             nrows = int(np.ceil(num_axes / ncols))
             axes = np.full((nrows, ncols), fill_value=None, dtype=object)

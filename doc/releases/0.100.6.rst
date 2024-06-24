@@ -1,0 +1,13 @@
+.. _release0.100.6:
+
+SpikeInterface 0.100.6 release notes
+------------------------------------
+
+30th April 2024
+
+Minor release with bug fixes
+
+* Avoid np.prod in make_shared_array (#2621)
+* Improve caching of MS5 sorter (#2690)
+* Allow for remove_excess_spikes to remove negative spike times (#2716)
+* Update ks4 wrapper for newer version>=4.0.3 (#2701, #2774)

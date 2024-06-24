@@ -1,7 +1,8 @@
 import unittest
 import pytest
 import os
-from pathlib import Path
+
+import numpy as np
 
 if __name__ != "__main__":
     try:
@@ -24,14 +25,9 @@ import spikeinterface.comparison as sc
 from spikeinterface.preprocessing import scale
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "widgets"
-else:
-    cache_folder = Path("cache_folder") / "widgets"
-
-
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
+SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW"))
 
 
 class TestWidgets(unittest.TestCase):
@@ -99,7 +95,7 @@ class TestWidgets(unittest.TestCase):
         cls.skip_backends = ["ipywidgets", "ephyviewer", "spikeinterface_gui"]
         # cls.skip_backends = ["ipywidgets", "ephyviewer", "sortingview"]
 
-        if ON_GITHUB and not KACHERY_CLOUD_SET:
+        if (ON_GITHUB and not KACHERY_CLOUD_SET) or (SKIP_SORTINGVIEW):
             cls.skip_backends.append("sortingview")
 
         print(f"Widgets tests: skipping backends - {cls.skip_backends}")
@@ -584,6 +580,38 @@ class TestWidgets(unittest.TestCase):
                 _, axes = plt.subplots(len(mcmp.object_list), 1)
                 sw.plot_multicomparison_agreement_by_sorter(mcmp, axes=axes)
 
+    def test_plot_motion(self):
+        from spikeinterface.sortingcomponents.tests.test_motion_utils import make_fake_motion
+
+        motion = make_fake_motion()
+
+        possible_backends = list(sw.MotionWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_motion(motion, backend=backend, mode="line")
+                sw.plot_motion(motion, backend=backend, mode="map")
+
+    def test_plot_motion_info(self):
+        from spikeinterface.sortingcomponents.tests.test_motion_utils import make_fake_motion
+
+        motion = make_fake_motion()
+        rng = np.random.default_rng(seed=2205)
+        peak_locations = np.zeros(self.peaks.size, dtype=[("x", "float64"), ("y", "float64")])
+        peak_locations["y"] = rng.uniform(motion.spatial_bins_um[0], motion.spatial_bins_um[-1], size=self.peaks.size)
+
+        motion_info = dict(
+            motion=motion,
+            parameters=dict(sampling_frequency=30000.0),
+            run_times=dict(),
+            peaks=self.peaks,
+            peak_locations=peak_locations,
+        )
+
+        possible_backends = list(sw.MotionWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_motion_info(motion_info, recording=self.recording, backend=backend)
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -598,7 +626,7 @@ if __name__ == "__main__":
     # mytest.test_plot_traces()
     # mytest.test_plot_spikes_on_traces()
     # mytest.test_plot_unit_waveforms()
-    mytest.test_plot_spikes_on_traces()
+    # mytest.test_plot_spikes_on_traces()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_autocorrelograms()
     # mytest.test_plot_crosscorrelograms()
@@ -618,6 +646,8 @@ if __name__ == "__main__":
     # mytest.test_plot_peak_activity()
     # mytest.test_plot_multicomparison()
     # mytest.test_plot_sorting_summary()
+    # mytest.test_plot_motion()
+    mytest.test_plot_motion_info()
     plt.show()
 
     # TestWidgets.tearDownClass()

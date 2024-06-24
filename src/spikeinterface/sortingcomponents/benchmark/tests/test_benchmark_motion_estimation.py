@@ -5,15 +5,14 @@ import shutil
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import (
     make_drifting_dataset,
-    cache_folder,
 )
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_motion_estimation import MotionEstimationStudy
 
 
 @pytest.mark.skip()
-def test_benchmark_motion_estimaton():
-
+def test_benchmark_motion_estimaton(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
     data = make_drifting_dataset()
@@ -66,8 +65,10 @@ def test_benchmark_motion_estimaton():
 
     # plots
     study.plot_true_drift()
+    study.plot_drift()
     study.plot_errors()
     study.plot_summary_errors()
+
     import matplotlib.pyplot as plt
 
     plt.show()

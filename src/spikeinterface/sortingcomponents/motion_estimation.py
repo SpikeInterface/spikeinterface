@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-import numpy as np
 from tqdm.auto import tqdm, trange
+import numpy as np
+
+
+from .motion_utils import Motion
+from .tools import make_multi_method_doc
 
 try:
     import torch
@@ -10,8 +14,6 @@ try:
     HAVE_TORCH = True
 except ImportError:
     HAVE_TORCH = False
-
-from .tools import make_multi_method_doc
 
 
 def estimate_motion(
@@ -55,7 +57,7 @@ def estimate_motion(
     **histogram section**
 
     direction: "x" | "y" | "z", default: "y"
-        Dimension on which the motion is estimated
+        Dimension on which the motion is estimated. "y" is depth along the probe.
     bin_duration_s: float, default: 10
         Bin duration in second
     bin_um: float, default: 10
@@ -105,19 +107,8 @@ def estimate_motion(
 
     Returns
     -------
-    motion: numpy array 2d
-        Motion estimate in um.
-        Shape (temporal bins, spatial bins)
-        motion.shape[0] = temporal_bins.shape[0]
-        motion.shape[1] = 1 (rigid) or spatial_bins.shape[1] (non rigid)
-        If upsample_to_histogram_bin, motion.shape[1] corresponds to spatial
-        bins given by bin_um.
-    temporal_bins: numpy.array 1d
-        temporal bins (bin center)
-    spatial_bins: numpy.array 1d
-        Windows center.
-        spatial_bins.shape[0] == motion.shape[1]
-        If rigid then spatial_bins.shape[0] == 1
+    motion: Motion object
+        The motion object.
     extra_check: dict
         Optional output if `output_extra_check=True`
         This dict contain histogram, pairwise_displacement usefull for ploting.
@@ -148,7 +139,7 @@ def estimate_motion(
 
     # run method
     method_class = estimate_motion_methods[method]
-    motion, temporal_bins = method_class.run(
+    motion_array, temporal_bins = method_class.run(
         recording,
         peaks,
         peak_locations,
@@ -164,27 +155,30 @@ def estimate_motion(
     )
 
     # replace nan by zeros
-    motion[np.isnan(motion)] = 0
+    np.nan_to_num(motion_array, copy=False)
 
     if post_clean:
-        motion = clean_motion_vector(
-            motion, temporal_bins, bin_duration_s, speed_threshold=speed_threshold, sigma_smooth_s=sigma_smooth_s
+        motion_array = clean_motion_vector(
+            motion_array, temporal_bins, bin_duration_s, speed_threshold=speed_threshold, sigma_smooth_s=sigma_smooth_s
         )
 
     if upsample_to_histogram_bin is None:
         upsample_to_histogram_bin = not rigid
     if upsample_to_histogram_bin:
-        extra_check["motion"] = motion
+        extra_check["motion_array"] = motion_array
         extra_check["non_rigid_window_centers"] = non_rigid_window_centers
         non_rigid_windows = np.array(non_rigid_windows)
         non_rigid_windows /= non_rigid_windows.sum(axis=0, keepdims=True)
         non_rigid_window_centers = spatial_bin_edges[:-1] + bin_um / 2
-        motion = motion @ non_rigid_windows
+        motion_array = motion_array @ non_rigid_windows
+
+    # TODO handle multi segment
+    motion = Motion([motion_array], [temporal_bins], non_rigid_window_centers, direction=direction)
 
     if output_extra_check:
-        return motion, temporal_bins, non_rigid_window_centers, extra_check
+        return motion, extra_check
     else:
-        return motion, temporal_bins, non_rigid_window_centers
+        return motion
 
 
 class DecentralizedRegistration:
@@ -342,7 +336,7 @@ class DecentralizedRegistration:
             extra_check["spatial_hist_bin_edges"] = spatial_hist_bin_edges
 
         # temporal bins are bin center
-        temporal_bins = temporal_hist_bin_edges[:-1] + bin_duration_s // 2.0
+        temporal_bins = 0.5 * (temporal_hist_bin_edges[1:] + temporal_hist_bin_edges[:-1])
 
         motion = np.zeros((temporal_bins.size, len(non_rigid_windows)), dtype=np.float64)
         windows_iter = non_rigid_windows
@@ -690,16 +684,15 @@ def make_2d_motion_histogram(
     spatial_bin_edges
         1d array with spatial bin edges
     """
-    fs = recording.get_sampling_frequency()
-    num_samples = recording.get_num_samples(segment_index=0)
-    bin_sample_size = int(bin_duration_s * fs)
-    sample_bin_edges = np.arange(0, num_samples + bin_sample_size, bin_sample_size)
-    temporal_bin_edges = sample_bin_edges / fs
+    n_samples = recording.get_num_samples()
+    mint_s = recording.sample_index_to_time(0)
+    maxt_s = recording.sample_index_to_time(n_samples)
+    temporal_bin_edges = np.arange(mint_s, maxt_s + bin_duration_s, bin_duration_s)
     if spatial_bin_edges is None:
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, margin_um, bin_um)
 
     arr = np.zeros((peaks.size, 2), dtype="float64")
-    arr[:, 0] = peaks["sample_index"]
+    arr[:, 0] = recording.sample_index_to_time(peaks["sample_index"])
     arr[:, 1] = peak_locations[direction]
 
     if weight_with_amplitude:
@@ -707,11 +700,11 @@ def make_2d_motion_histogram(
     else:
         weights = None
 
-    motion_histogram, edges = np.histogramdd(arr, bins=(sample_bin_edges, spatial_bin_edges), weights=weights)
+    motion_histogram, edges = np.histogramdd(arr, bins=(temporal_bin_edges, spatial_bin_edges), weights=weights)
 
     # average amplitude in each bin
     if weight_with_amplitude:
-        bin_counts, _ = np.histogramdd(arr, bins=(sample_bin_edges, spatial_bin_edges))
+        bin_counts, _ = np.histogramdd(arr, bins=(temporal_bin_edges, spatial_bin_edges))
         bin_counts[bin_counts == 0] = 1
         motion_histogram = motion_histogram / bin_counts
 
@@ -766,11 +759,10 @@ def make_3d_motion_histograms(
     spatial_bin_edges
         1d array with spatial bin edges
     """
-    fs = recording.get_sampling_frequency()
-    num_samples = recording.get_num_samples(segment_index=0)
-    bin_sample_size = int(bin_duration_s * fs)
-    sample_bin_edges = np.arange(0, num_samples + bin_sample_size, bin_sample_size)
-    temporal_bin_edges = sample_bin_edges / fs
+    n_samples = recording.get_num_samples()
+    mint_s = recording.sample_index_to_time(0)
+    maxt_s = recording.sample_index_to_time(n_samples)
+    temporal_bin_edges = np.arange(mint_s, maxt_s + bin_duration_s, bin_duration_s)
     if spatial_bin_edges is None:
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, margin_um, bin_um)
 
@@ -785,14 +777,14 @@ def make_3d_motion_histograms(
     )
 
     arr = np.zeros((peaks.size, 3), dtype="float64")
-    arr[:, 0] = peaks["sample_index"]
+    arr[:, 0] = recording.sample_index_to_time(peaks["sample_index"])
     arr[:, 1] = peak_locations[direction]
     arr[:, 2] = abs_peaks_log_norm
 
     motion_histograms, edges = np.histogramdd(
         arr,
         bins=(
-            sample_bin_edges,
+            temporal_bin_edges,
             spatial_bin_edges,
             amplitude_bin_edges,
         ),
@@ -825,7 +817,6 @@ def compute_pairwise_displacement(
     """
     Compute pairwise displacement
     """
-    from scipy import sparse
     from scipy import linalg
 
     assert conv_engine in ("torch", "numpy"), f"'conv_engine' must be 'torch' or 'numpy'"

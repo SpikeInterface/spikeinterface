@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-from packaging import version
-
-import numpy as np
 from pathlib import Path
 
-import neo
 import probeinterface
 
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
@@ -30,17 +26,17 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
         The folder path to load the recordings from.
-    load_sync_channel: bool default: False
+    load_sync_channel : bool default: False
         Whether or not to load the last channel in the stream, which is typically used for synchronization.
         If True, then the probe is not loaded.
-    stream_id: str or None, default: None
+    stream_id : str or None, default: None
         If there are several streams, specify the stream id you want to load.
         For example, "imec0.ap", "nidq", or "imec0.lf".
-    stream_name: str or None, default: None
+    stream_name : str or None, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     """
 

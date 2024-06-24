@@ -37,7 +37,7 @@ from .isi import (
 
 from .spike_locations import compute_spike_locations, ComputeSpikeLocations
 
-from .unit_localization import (
+from .unit_locations import (
     compute_unit_locations,
     ComputeUnitLocations,
     compute_center_of_mass,

@@ -15,12 +15,6 @@ from spikeinterface.core.core_tools import (
 )
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-
-
 def test_add_suffix():
     # first case - no dot provided before extension
     file_path = "testpath"
