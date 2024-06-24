@@ -168,9 +168,14 @@ def make_shared_array(shape, dtype):
     return arr, shm
 
 
-def is_dict_extractor(d):
+def is_dict_extractor(d: dict) -> bool:
     """
-    Check if a dict describe an extractor.
+    Check if a dict describes an extractor.
+
+    Returns
+    -------
+    is_extractor : bool
+        Whether the dict describes an extractor
     """
     if not isinstance(d, dict):
         return False
@@ -283,6 +288,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     Returns
     -------
     relative_possible: bool
+        Whether the given input can be made relative to the relative_folder
     """
     path_list = _get_paths_list(input_dict)
     relative_folder = Path(relative_folder).resolve().absolute()
@@ -513,7 +519,8 @@ def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
 
 def retrieve_importing_provenance(a_class):
     """
-    Retrieve the import provenance of a class, including its import name (that consists of the class name and the module), the top-level module, and the module version.
+    Retrieve the import provenance of a class, including its import name (that consists of the class name and the module),
+    the top-level module, and the module version.
 
     Parameters
     ----------

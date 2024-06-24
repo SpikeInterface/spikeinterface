@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -73,7 +73,7 @@ class BaseSorting(BaseExtractor):
     def sampling_frequency(self):
         return self._sampling_frequency
 
-    def get_unit_ids(self) -> List:
+    def get_unit_ids(self) -> list:
         return self._main_ids
 
     def get_num_units(self) -> int:
@@ -121,7 +121,7 @@ class BaseSorting(BaseExtractor):
             s += self.get_num_samples(segment_index)
         return s
 
-    def get_total_duration(self):
+    def get_total_duration(self) -> float:
         """Returns the total duration in s of the associated recording.
 
         Returns
@@ -219,7 +219,7 @@ class BaseSorting(BaseExtractor):
     def has_recording(self):
         return self._recording is not None
 
-    def has_time_vector(self, segment_index=None):
+    def has_time_vector(self, segment_index=None) -> bool:
         """
         Check if the segment of the registered recording has a time vector.
         """
@@ -514,8 +514,6 @@ class BaseSorting(BaseExtractor):
     def precompute_spike_trains(self, from_spike_vector=None):
         """
         Pre-computes and caches all spike trains for this sorting
-
-
 
         Parameters
         ----------
