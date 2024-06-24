@@ -269,10 +269,6 @@ class IblRecordingSegment(BaseRecordingSegment):
         return self._file_streamer.ns
 
     def get_traces(self, start_frame: int, end_frame: int, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
         if channel_indices is None:
             channel_indices = slice(None)
         traces = self._file_streamer.read(nsel=slice(start_frame, end_frame), volts=False)
