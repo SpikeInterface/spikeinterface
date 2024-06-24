@@ -53,6 +53,8 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         )
 
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
+        if "ignore_integrity_checks" in neo_kwargs:
+            self._kwargs["ignore_integrity_checks"] = neo_kwargs["ignore_integrity_checks"]
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, ignore_integrity_checks: bool = False):
