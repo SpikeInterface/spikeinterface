@@ -25,12 +25,18 @@ from .noise_tools import generate_noise
 
 # this should be moved in probeinterface but later
 _toy_probes = {
+    "Neuropixel-384": dict(
+        num_columns=4,
+        num_contact_per_column=[96] * 4,
+        xpitch=16,
+        ypitch=40,
+        y_shift_per_column=[20, 0, 20, 0],
+        contact_shapes="square",
+        contact_shape_params={"width": 12},
+    ),
     "Neuropixel-128": dict(
         num_columns=4,
-        num_contact_per_column=[
-            32,
-        ]
-        * 4,
+        num_contact_per_column=[32] * 4,
         xpitch=16,
         ypitch=40,
         y_shift_per_column=[20, 0, 20, 0],
