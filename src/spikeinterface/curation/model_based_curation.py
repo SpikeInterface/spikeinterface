@@ -46,7 +46,6 @@ class ModelBasedClassification:
         self.pipeline = pipeline
         self.required_metrics = pipeline.feature_names_in_
 
-
     def predict_labels(self):
         """
         Predicts the labels for the spike sorting data using the trained model.
