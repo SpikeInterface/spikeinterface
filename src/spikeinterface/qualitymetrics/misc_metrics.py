@@ -241,7 +241,7 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
 
     It computes several metrics related to isi violations:
         * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are
-                                generating the ISI violations. Described in [Hill]_. See Notes.
+                                generating the ISI violations. See Notes.
         * isi_violation_count: number of ISI violations
 
     Parameters
@@ -261,22 +261,23 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
     Returns
     -------
     isi_violations_ratio : dict
-        The isi violation ratio described in [Hill]_.
+        The isi violation ratio.
     isi_violation_count : dict
         Number of violations.
 
     Notes
     -----
-    You can interpret an ISI violations ratio value of 0.5 as meaning that contaminating spikes are
-    occurring at roughly half the rate of "true" spikes for that unit.
-    In cases of highly contaminated units, the ISI violations ratio can sometimes be greater than 1.
+    The returned ISI violations ratio measures the approximate fraction of spikes in each
+    unit which are contaminted. This interpretation is good when the ratio is small, and
+    becomes worse as it grows. In cases of highly contaminated units, the ISI  violations
+    ratio can sometimes be greater than 1.
 
     References
     ----------
-    Based on metrics described in [Hill]_
+    Based on metrics originally implemented in [UMS]_
 
-    Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality)
-    and converted to Python by Daniel Denman.
+    This implementation is based on one written in Matlab by Nick Steinmetz
+    (https://github.com/cortex-lab/sortingQuality) and converted to Python by Daniel Denman.
     """
     res = namedtuple("isi_violation", ["isi_violations_ratio", "isi_violations_count"])
 
@@ -324,7 +325,7 @@ def compute_refrac_period_violations(
     Calculate the number of refractory period violations.
 
     This is similar (but slightly different) to the ISI violations.
-    The key difference being that the violations are not only computed on consecutive spikes.
+    The key differences being that the violations are not only computed on consecutive spikes.
 
     This is required for some formulas (e.g. the ones from Llobet & Wyngaard 2022).
 
