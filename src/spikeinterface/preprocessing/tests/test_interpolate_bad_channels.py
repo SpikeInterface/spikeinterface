@@ -6,14 +6,8 @@ import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core.generate import generate_recording
+import importlib.util
 
-try:
-    import spikeglx
-    import neurodsp.voltage as voltage
-
-    HAVE_IBL_NPIX = True
-except ImportError:
-    HAVE_IBL_NPIX = False
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
@@ -30,7 +24,10 @@ if DEBUG:
 # -------------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install")
+@pytest.mark.skipif(
+    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") or ON_GITHUB,
+    reason="Only local. Requires ibl-neuropixel install",
+)
 def test_compare_real_data_with_ibl():
     """
     Test SI implementation of bad channel interpolation against native IBL.
@@ -42,6 +39,9 @@ def test_compare_real_data_with_ibl():
     voltage.interpolate_bad_channel() with ibl_channel geometry  to
     si_scaled_recordin.get_traces(0) is also close to 1e-2.
     """
+    import spikeglx
+    import neurodsp.voltage as voltage
+
     # Download and load data
     local_path = si.download_dataset(remote_path="spikeglx/Noise4Sam_g0")
     si_recording = se.read_spikeglx(local_path, stream_id="imec0.ap")
@@ -80,7 +80,10 @@ def test_compare_real_data_with_ibl():
     assert np.mean(is_close) > 0.999
 
 
-@pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
+@pytest.mark.skipif(
+    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") is not None,
+    reason="Requires ibl-neuropixel install",
+)
 @pytest.mark.parametrize("num_channels", [32, 64])
 @pytest.mark.parametrize("sigma_um", [1.25, 40])
 @pytest.mark.parametrize("p", [0, -0.5, 1, 5])
@@ -90,6 +93,8 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
     Perform an extended test across a range of function inputs to check
     IBL and SI interpolation results match.
     """
+    import neurodsp.voltage as voltage
+
     recording = generate_recording(num_channels=num_channels, durations=[1])
 
     # distribute default probe locations across 4 shanks if set

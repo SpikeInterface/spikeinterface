@@ -15,6 +15,7 @@ from spikeinterface import (
     select_segment_sorting,
     load_waveforms,
     aggregate_units,
+    set_global_job_kwargs,
 )
 from spikeinterface.extractors import toy_example
 
@@ -28,7 +29,6 @@ from spikeinterface.preprocessing import scale
 from spikeinterface.qualitymetrics import QualityMetricCalculator, get_default_qm_params
 
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
-
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "qualitymetrics"
@@ -90,6 +90,9 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         self.we_long = we_long
         self.we_short = we_short
 
+        # needed to suppress warnings
+        set_global_job_kwargs(n_jobs=1)
+
     def tearDown(self):
         super().tearDown()
         # delete object to release memmap
@@ -144,6 +147,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # print(metrics_sparse)
 
     def test_amplitude_cutoff(self):
+
         we = self.we_short
         _ = compute_spike_amplitudes(we, peak_sign="neg")
 

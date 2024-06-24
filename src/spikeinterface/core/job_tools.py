@@ -10,7 +10,6 @@ import os
 import warnings
 
 import sys
-import contextlib
 from tqdm.auto import tqdm
 
 from concurrent.futures import ProcessPoolExecutor
@@ -28,8 +27,9 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
                     Total memory usage (e.g. "500M", "2G")
                 - chunk_duration : str or float or None
                     Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
-            * n_jobs: int
-                Number of jobs to use. With -1 the number of jobs is the same as number of cores
+            * n_jobs: int | float
+                Number of jobs to use. With -1 the number of jobs is the same as number of cores.
+                Using a float between 0 and 1 will use that fraction of the total cores.
             * progress_bar: bool
                 If True, a progress bar is printed
             * mp_context: "fork" | "spawn" | None, default: None
@@ -60,7 +60,7 @@ _mutually_exclusive = (
 
 
 def fix_job_kwargs(runtime_job_kwargs):
-    from .globals import get_global_job_kwargs
+    from .globals import get_global_job_kwargs, is_set_global_job_kwargs_set
 
     job_kwargs = get_global_job_kwargs()
 
@@ -68,29 +68,41 @@ def fix_job_kwargs(runtime_job_kwargs):
         assert k in job_keys, (
             f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
         )
-
     # remove mutually exclusive from global job kwargs
     for k, v in runtime_job_kwargs.items():
         if k in _mutually_exclusive and v is not None:
             for key_to_remove in _mutually_exclusive:
                 if key_to_remove in job_kwargs:
                     job_kwargs.pop(key_to_remove)
-
     # remove None
     runtime_job_kwargs_exclude_none = runtime_job_kwargs.copy()
     for job_key, job_value in runtime_job_kwargs.items():
         if job_value is None:
             del runtime_job_kwargs_exclude_none[job_key]
     job_kwargs.update(runtime_job_kwargs_exclude_none)
-
     # if n_jobs is -1, set to os.cpu_count() (n_jobs is always in global job_kwargs)
     n_jobs = job_kwargs["n_jobs"]
-    assert isinstance(n_jobs, (float, np.integer, int))
-    if isinstance(n_jobs, float):
+    assert isinstance(n_jobs, (float, np.integer, int)) and n_jobs != 0, "n_jobs must be a non-zero int or float"
+    # for a fraction we do fraction of total cores
+    if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
         n_jobs = int(n_jobs * os.cpu_count())
+    # for negative numbers we count down from total cores (with -1 being all)
     elif n_jobs < 0:
-        n_jobs = os.cpu_count() + 1 + n_jobs
+        n_jobs = int(os.cpu_count() + 1 + n_jobs)
+    # otherwise we just take the value given
+    else:
+        n_jobs = int(n_jobs)
+
     job_kwargs["n_jobs"] = max(n_jobs, 1)
+
+    if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_set_global_job_kwargs_set():
+        warnings.warn(
+            "`n_jobs` is not set so parallel processing is disabled! "
+            "To speed up computations, it is recommended to set n_jobs either "
+            "globally (with the `spikeinterface.set_global_job_kwargs()` function) or "
+            "locally (with the `n_jobs` argument). Use `spikeinterface.set_global_job_kwargs?` "
+            "for more information about job_kwargs."
+        )
 
     return job_kwargs
 

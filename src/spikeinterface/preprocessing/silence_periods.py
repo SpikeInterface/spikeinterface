@@ -99,11 +99,6 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
         traces = traces.copy()
         num_channels = traces.shape[1]
 
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
         if len(self.periods) > 0:
             new_interval = np.array([start_frame, end_frame])
             lower_index = np.searchsorted(self.periods[:, 1], new_interval[0])

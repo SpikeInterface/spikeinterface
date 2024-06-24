@@ -120,7 +120,6 @@ class Mountainsort5Sorter(BaseSorter):
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import mountainsort5 as ms5
-        from mountainsort5.util import create_cached_recording
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
         if recording is None:

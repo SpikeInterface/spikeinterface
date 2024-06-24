@@ -1092,9 +1092,6 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        start_frame = 0 if start_frame is None else max(start_frame, 0)
-        end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
-
         start_frame_within_block = start_frame % self.noise_block_size
         end_frame_within_block = end_frame % self.noise_block_size
         num_samples = end_frame - start_frame
@@ -1650,9 +1647,6 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        start_frame = 0 if start_frame is None else start_frame
-        end_frame = self.num_samples if end_frame is None else end_frame
-
         if channel_indices is None:
             n_channels = self.templates.shape[2]
         elif isinstance(channel_indices, slice):
@@ -1688,6 +1682,8 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
             end_traces = start_traces + template.shape[0]
             if start_traces >= end_frame - start_frame or end_traces <= 0:
                 continue
+            start_traces = int(start_traces)
+            end_traces = int(end_traces)
 
             start_template = 0
             end_template = template.shape[0]
