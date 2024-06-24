@@ -243,7 +243,7 @@ class Kilosort4Sorter(BaseSorter):
 
         # Set preprocessing and drift correction parameters
         if not params["skip_kilosort_preprocessing"]:
-            ops = compute_preprocessing(ops, device, tic0=tic0, file_object=file_object)
+            ops = compute_preprocessing(ops=ops, device=device, tic0=tic0, file_object=file_object)
         else:
             print("Skipping kilosort preprocessing.")
             bfile = BinaryFiltered(
