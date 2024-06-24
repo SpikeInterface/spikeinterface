@@ -20,14 +20,14 @@ class UnitProbeMapWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-    unit_ids: list
+    sorting_analyzer : SortingAnalyzer
+    unit_ids : list
         List of unit ids.
-    channel_ids: list
+    channel_ids : list
         The channel ids to display
-    animated: bool, default: False
+    animated : bool, default: False
         Animation for amplitude on time
-    with_channel_ids: bool, default: False
+    with_channel_ids : bool, default: False
         add channel ids text on the probe
     """
 

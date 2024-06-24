@@ -194,7 +194,7 @@ def compute_snrs(
         A SortingAnalyzer object.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the template to compute best channels.
-    peak_mode : "extremum" | "at_index", default: "extremum"
+    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
         How to compute the amplitude.
         Extremum takes the maxima/minima
         At_index takes the value at t=sorting_analyzer.nbefore.
@@ -210,7 +210,7 @@ def compute_snrs(
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     assert peak_sign in ("neg", "pos", "both")
-    assert peak_mode in ("extremum", "at_index")
+    assert peak_mode in ("extremum", "at_index", "peak_to_peak")
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
@@ -1530,7 +1530,7 @@ def compute_sd_ratio(
                 # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
                 # TODO: Take into account that templates for different segments might differ.
                 p = nsamples * n_spikes[unit_id] / sorting_analyzer.get_total_samples()
-                total_variance = p * np.mean(template**2) - p**2 * np.mean(template)
+                total_variance = p * np.mean(template**2) - p**2 * np.mean(template) ** 2
 
                 std_noise = np.sqrt(std_noise**2 - total_variance)
 

@@ -45,7 +45,6 @@ class BaseRecording(BaseRecordingSnippets):
         self.annotate(is_filtered=False)
 
     def __repr__(self):
-
         extractor_name = self.__class__.__name__
         num_segments = self.get_num_segments()
 
@@ -182,7 +181,7 @@ class BaseRecording(BaseRecordingSnippets):
         self._recording_segments.append(recording_segment)
         recording_segment.set_parent_extractor(self)
 
-    def get_num_samples(self, segment_index=None) -> int:
+    def get_num_samples(self, segment_index: int | None = None) -> int:
         """
         Returns the number of samples for a segment.
 
@@ -355,7 +354,7 @@ class BaseRecording(BaseRecordingSnippets):
                     )
                     warnings.warn(message)
 
-            if not self.has_scaled():
+            if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
                     # this helps a lot for simulated data
@@ -399,9 +398,9 @@ class BaseRecording(BaseRecordingSnippets):
         dict
             A dictionary containing the following key-value pairs:
 
-            - "sampling_frequency": The sampling frequency of the RecordingSegment.
-            - "t_start": The start time of the RecordingSegment.
-            - "time_vector": The time vector of the RecordingSegment.
+            - "sampling_frequency" : The sampling frequency of the RecordingSegment.
+            - "t_start" : The start time of the RecordingSegment.
+            - "time_vector" : The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -643,7 +642,7 @@ class BaseRecording(BaseRecordingSnippets):
         from .channelslice import ChannelSliceRecording
 
         warnings.warn(
-            "This method will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
+            "Recording.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -657,11 +656,51 @@ class BaseRecording(BaseRecordingSnippets):
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 
-    def _frame_slice(self, start_frame, end_frame):
+    def frame_slice(self, start_frame: int | None, end_frame: int | None) -> BaseRecording:
+        """
+        Returns a new recording with sliced frames. Note that this operation is not in place.
+
+        Parameters
+        ----------
+        start_frame : int, optional
+            The start frame, if not provided it is set to 0
+        end_frame : int, optional
+            The end frame, it not provided it is set to the total number of samples
+
+        Returns
+        -------
+        BaseRecording
+            A new recording object with only samples between start_frame and end_frame
+        """
+
         from .frameslicerecording import FrameSliceRecording
 
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
+
+    def time_slice(self, start_time: float | None, end_time: float) -> BaseRecording:
+        """
+        Returns a new recording with sliced time. Note that this operation is not in place.
+
+        Parameters
+        ----------
+        start_time : float, optional
+            The start time in seconds. If not provided it is set to 0.
+        end_time : float, optional
+            The end time in seconds. If not provided it is set to the total duration.
+
+        Returns
+        -------
+        BaseRecording
+            A new recording object with only samples between start_time and end_time
+        """
+
+        assert self.get_num_segments() == 1, "Time slicing is only supported for single segment recordings."
+
+        start_frame = self.time_to_sample_index(start_time) if start_time else None
+        end_frame = self.time_to_sample_index(end_time) if end_time else None
+
+        return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
 
     def _select_segments(self, segment_indices):
         from .segmentutils import SelectSegmentRecording
@@ -772,9 +811,9 @@ class BaseRecordingSegment(BaseSegment):
         dict
             A dictionary containing the following key-value pairs:
 
-            - "sampling_frequency": The sampling frequency of the RecordingSegment.
-            - "t_start": The start time of the RecordingSegment.
-            - "time_vector": The time vector of the RecordingSegment.
+            - "sampling_frequency" : The sampling frequency of the RecordingSegment.
+            - "t_start" : The start time of the RecordingSegment.
+            - "time_vector" : The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -814,7 +853,7 @@ class BaseRecordingSegment(BaseSegment):
         """Returns the number of samples in this signal segment
 
         Returns:
-            SampleIndex: Number of samples in the signal segment
+            SampleIndex : Number of samples in the signal segment
         """
         # must be implemented in subclass
         raise NotImplementedError
@@ -830,16 +869,16 @@ class BaseRecordingSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame: int | None, default: None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame: int | None, default: None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
-        channel_indices: list | np.array | tuple | None, default: None
+        channel_indices : list | np.array | tuple | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
         -------
-        traces: np.ndarray
+        traces : np.ndarray
             Array of traces, num_samples x num_channels
         """
         # must be implemented in subclass

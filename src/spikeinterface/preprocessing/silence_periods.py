@@ -19,14 +19,16 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to silance periods
-    list_periods: list of lists/arrays
+    list_periods : list of lists/arrays
         One list per segment of tuples (start_frame, end_frame) to silence
-    noise_levels: array
+    noise_levels : array
         Noise levels if already computed
-
-    mode: "zeros" | "noise, default: "zeros"
+    seed : int | None, default: None
+        Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
+        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
+    mode : "zeros" | "noise, default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
 
         - "zeros": Artifacts are replaced by zeros.
@@ -34,11 +36,11 @@ class SilencedPeriodsRecording(BasePreprocessor):
         - "noise": The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
-    **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
+    **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
-    silence_recording: SilencedPeriodsRecording
+    silence_recording : SilencedPeriodsRecording
         The recording extractor after silencing some periods
     """
 

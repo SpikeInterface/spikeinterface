@@ -11,11 +11,11 @@ class ConfusionMatrixWidget(BaseWidget):
 
     Parameters
     ----------
-    gt_comparison: GroundTruthComparison
+    gt_comparison : GroundTruthComparison
         The ground truth sorting comparison object
-    count_text: bool
+    count_text : bool
         If True counts are displayed as text
-    unit_ticks: bool
+    unit_ticks : bool
         If True unit tick labels are displayed
 
     """
@@ -85,15 +85,15 @@ class AgreementMatrixWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_comparison: GroundTruthComparison or SymmetricSortingComparison
+    sorting_comparison : GroundTruthComparison or SymmetricSortingComparison
         The sorting comparison object.
         Can optionally be symmetric if given a SymmetricSortingComparison
-    ordered: bool, default: True
+    ordered : bool, default: True
         Order units with best agreement scores.
         If True, agreement scores can be seen along a diagonal
-    count_text: bool, default: True
+    count_text : bool, default: True
         If True counts are displayed as text
-    unit_ticks: bool, default: True
+    unit_ticks : bool, default: True
         If True unit tick labels are displayed
 
     """

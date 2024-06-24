@@ -5,11 +5,6 @@ from pathlib import Path
 
 from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer, compute_sparsity
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "exporters"
-else:
-    cache_folder = Path("cache_folder") / "exporters"
-
 
 def make_sorting_analyzer(sparse=True, with_group=False):
     recording, sorting = generate_ground_truth_recording(

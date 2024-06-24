@@ -102,7 +102,7 @@ class BaseSorter:
         # installed ?
         if not cls.is_installed():
             raise Exception(
-                f"The sorter {cls.sorter_name} is not installed." f"Please install it with:  \n{cls.installation_mesg} "
+                f"The sorter {cls.sorter_name} is not installed. Please install it with:\n{cls.installation_mesg}"
             )
 
         if not isinstance(recording, BaseRecordingSnippets):
@@ -183,7 +183,7 @@ class BaseSorter:
         # custom check params
         params = cls._check_params(recording, output_folder, params)
         # common check : filter warning
-        if recording.is_filtered and cls._check_apply_filter_in_params(params) and verbose:
+        if recording.is_filtered() and cls._check_apply_filter_in_params(params) and verbose:
             print(f"Warning! The recording is already filtered, but {cls.sorter_name} filter is enabled")
 
         # dump parameters inside the folder with json
@@ -343,13 +343,13 @@ class BaseSorter:
         return sorting
 
     @classmethod
-    def check_compiled(cls):
+    def check_compiled(cls) -> bool:
         """
         Checks if the sorter is running inside an image with matlab-compiled version
 
         Returns
         -------
-        is_compiled: bool
+        is_compiled : bool
             Boolean indicating if a bash command for cls.compiled_name exists or not
         """
         if cls.compiled_name is None:
@@ -370,7 +370,7 @@ class BaseSorter:
         return True
 
     @classmethod
-    def use_gpu(cls, params):
+    def use_gpu(cls, params) -> bool:
         return cls.gpu_capability != "not-supported"
 
     #############################################
@@ -436,7 +436,7 @@ def get_job_kwargs(params, verbose):
     return job_kwargs
 
 
-def is_log_ok(output_folder):
+def is_log_ok(output_folder) -> bool:
     # log is OK when run_time is not None
     if (output_folder / "spikeinterface_log.json").is_file():
         with open(output_folder / "spikeinterface_log.json", mode="r", encoding="utf8") as logfile:
