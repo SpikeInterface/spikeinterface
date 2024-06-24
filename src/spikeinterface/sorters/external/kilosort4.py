@@ -278,7 +278,7 @@ class Kilosort4Sorter(BaseSorter):
 
         # this function applies both preprocessing and drift correction
         ops, bfile, st0 = compute_drift_correction(
-            ops, device, tic0=tic0, progress_bar=progress_bar, file_object=file_object
+            ops=ops, device=device, tic0=tic0, progress_bar=progress_bar, file_object=file_object
         )
 
         # Sort spikes and save results
