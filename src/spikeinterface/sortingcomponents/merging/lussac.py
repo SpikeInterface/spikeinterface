@@ -13,7 +13,7 @@ from .main import BaseMergingEngine
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
-from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph
+from spikeinterface.curation.curation_tools import resolve_merging_graph
 from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
 
@@ -275,7 +275,7 @@ class LussacMerging(BaseMergingEngine):
             self.analyzer.compute("unit_locations", method="monopolar_triangulation")
 
         if self.remove_empty:
-            from .tools import remove_empty_units
+            from spikeinterface.curation.curation_tools import remove_empty_units
 
             self.analyzer = remove_empty_units(self.analyzer)
 
