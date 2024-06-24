@@ -13,7 +13,8 @@ from .main import BaseMergingEngine
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
-from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph, apply_merges_to_sorting
+from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph
+from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
 
 def binom_sf(x: int, n: float, p: float) -> float:
@@ -238,6 +239,7 @@ class LussacMerging(BaseMergingEngine):
     default_params = {
         "templates": None,
         "verbose": True,
+        "censor_ms" : 3,
         "remove_emtpy": True,
         "recursive": False,
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
@@ -285,8 +287,8 @@ class LussacMerging(BaseMergingEngine):
 
         if self.verbose:
             print(f"{len(merges)} merges have been detected")
-        merges = resolve_merging_graph(self.analyzer.sorting, merges)
-        new_sorting = apply_merges_to_sorting(self.analyzer.sorting, merges)
+        units_to_merge = resolve_merging_graph(self.analyzer.sorting, merges)
+        new_sorting = apply_merges_to_sorting(self.analyzer.sorting, units_to_merge, censor_ms=self.params['censor_ms'])
         return new_sorting, merges
 
     def run(self, extra_outputs=False):

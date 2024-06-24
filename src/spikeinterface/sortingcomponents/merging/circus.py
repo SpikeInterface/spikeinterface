@@ -5,7 +5,8 @@ from .main import BaseMergingEngine
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
-from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph, apply_merges_to_sorting
+from spikeinterface.sortingcomponents.merging.tools import resolve_merging_graph
+from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
 
 class CircusMerging(BaseMergingEngine):
@@ -18,6 +19,7 @@ class CircusMerging(BaseMergingEngine):
         "verbose": True,
         "remove_emtpy": True,
         "recursive": False,
+        "censor_ms" : 3,
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
         "curation_kwargs": {
             "minimum_spikes": 50,
@@ -81,8 +83,8 @@ class CircusMerging(BaseMergingEngine):
             merges += get_potential_auto_merge(self.analyzer, **temporal_splits_kwargs, preset="temporal_splits")
             if self.verbose:
                 print(f"{len(merges)} merges have been detected via additional temporal splits")
-        merges = resolve_merging_graph(self.analyzer.sorting, merges)
-        new_sorting = apply_merges_to_sorting(self.analyzer.sorting, merges)
+        units_to_merge = resolve_merging_graph(self.analyzer.sorting, merges)
+        new_sorting, _ = apply_merges_to_sorting(self.analyzer.sorting, units_to_merge, censor_ms=self.params['censor_ms'])
         return new_sorting
 
     def run(self, extra_outputs=False):

@@ -182,7 +182,7 @@ def get_potential_auto_merge(
             ]
 
     n = unit_ids.size
-    pair_mask = np.ones((n, n), dtype="bool")
+    pair_mask = np.triu(np.arange(n)) > 0
     outs = dict()
 
     for step in steps:
