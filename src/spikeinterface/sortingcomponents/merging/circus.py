@@ -85,7 +85,7 @@ class CircusMerging(BaseMergingEngine):
                 print(f"{len(merges)} merges have been detected via additional temporal splits")
         units_to_merge = resolve_merging_graph(self.analyzer.sorting, merges)
         new_sorting, _ = apply_merges_to_sorting(self.analyzer.sorting, units_to_merge, censor_ms=self.params['censor_ms'])
-        return new_sorting
+        return new_sorting, merges
 
     def run(self, extra_outputs=False):
         sorting, merges = self._get_new_sorting()
