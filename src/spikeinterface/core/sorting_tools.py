@@ -254,6 +254,13 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
         merged units will have the first unit_id of every lists of merges
     censor_ms: None or float
         When applying the merges, should be discard consecutive spikes violating a given refractory per
+    
+    Returns
+    -------
+    sorting :  The new Sorting object
+        The newly create sorting with the merged units
+    kept_indices : A boolean mask, if censor_ms is not None, telling which spike from the original spike vector
+        has been kept, given the refractory period violations (None if censor_ms is None)
     """
     spikes = sorting.to_spike_vector().copy()
 

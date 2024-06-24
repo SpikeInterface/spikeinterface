@@ -531,7 +531,7 @@ class ComputeTemplates(AnalyzerExtension):
             key = operator
         else:
             assert percentile is not None, "You must provide percentile=..."
-            key = f"pencentile_{percentile}"
+            key = f"percentile_{percentile}"
 
         templates_array = self.data[key]
 
