@@ -135,6 +135,7 @@ def find_duplicated_spikes(
     else:
         raise ValueError(f"Method '{method}' isn't a valid method for find_duplicated_spikes. Use one of {_methods}")
 
+
 def remove_empty_units(sorting_or_sorting_analyzer, minimum_spikes=10):
     if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
         sorting = sorting_or_sorting_analyzer.sorting
