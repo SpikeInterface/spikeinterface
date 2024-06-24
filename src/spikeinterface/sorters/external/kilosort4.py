@@ -205,7 +205,16 @@ class Kilosort4Sorter(BaseSorter):
         # NOTE: Also modifies settings in-place
         data_dir = ""
         results_dir = sorter_output_folder
-        filename, data_dir, results_dir, probe = set_files(settings, filename, probe, probe_name, data_dir, results_dir)
+
+        filename, data_dir, results_dir, probe = set_files(
+            settings=settings,
+            filename=filename,
+            probe=probe,
+            probe_name=probe_name,
+            data_dir=data_dir,
+            results_dir=results_dir,
+        )
+
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
             ops = initialize_ops(settings, probe, recording.get_dtype(), do_CAR, invert_sign, device, False)
             n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
