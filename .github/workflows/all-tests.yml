@@ -39,7 +39,7 @@ jobs:
         run: |
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-
+        shell: bash
       - name: Cache datasets
         id: cache-datasets
         uses: actions/cache@v4
