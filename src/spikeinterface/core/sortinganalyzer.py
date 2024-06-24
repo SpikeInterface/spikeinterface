@@ -827,15 +827,9 @@ class SortingAnalyzer:
             merged units will have the first unit_id of every lists of merges
         censor_ms : None or float
             When merging units, any spikes violating this refractory period will be discarded. Default is None
-<<<<<<< HEAD
         merging_mode : "soft" can be in ["soft", "hard"]
             How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the 
             waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed, 
-=======
-        merging_mode : "soft" can be in ["soft", "hard", "recompute"]
-            How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the
-            waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed,
->>>>>>> dfcc8a1251e417d30bb5111af8a509f75af8054e
             reloading waveforms if needed
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
