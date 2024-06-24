@@ -102,6 +102,11 @@ class ModelBasedClassification:
         calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
         calculated_metrics = calculated_metrics[self.required_metrics]
 
+        # Remove any metrics for non-existent units, raise error if no units are present
+        calculated_metrics = calculated_metrics.loc[calculated_metrics.index.isin(self.sorting_analyzer.sorting.get_unit_ids())]
+        if calculated_metrics.shape[0] == 0:
+            raise ValueError("No units present in sorting data")
+
         return calculated_metrics
 
     def _check_params_for_classification(self):

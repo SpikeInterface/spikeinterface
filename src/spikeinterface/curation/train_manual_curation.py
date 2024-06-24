@@ -54,24 +54,25 @@ class CurationModelTrainer:
         import pandas as pd
 
         if self.target_column in self.testing_metrics[0].columns:
+            # Extract the target variable
             self.y = self.testing_metrics[0][self.target_column]
 
+            # Handle missing values in the target column
             self.X = self.testing_metrics[0].dropna(subset=[self.target_column])
             self.X.drop(columns=self.target_column, inplace=True)
 
-            self.metrics_list = self.X.columns
+            # Store the initial list of metrics
+            self.metrics_list = list(self.testing_metrics[0].columns)
+            self.metrics_list.remove(self.target_column)
 
-            # Reorder columns to match metric list
-            try:
-                self.X = self.X[self.metrics_list]
-            except KeyError:
-                # Work out and print which metrics are missing
-                missing_metrics = [
-                    metric for metric in self.metrics_list if metric not in self.testing_metrics[0].columns
-                ]
-                raise ValueError(f"Metrics list contains uncomputed metrics: {missing_metrics}")
+            # Reorder columns to match the initial metrics list
+            self.X = self.X.reindex(columns=self.metrics_list)
+
+            # Ensure that no features are dropped by filling missing values with a placeholder
+            self.X.fillna(0, inplace=True)  # or use a different strategy if appropriate
         else:
             raise ValueError(f"Target column {self.target_column} not found in testing metrics file")
+
 
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val):
         from sklearn.experimental import enable_iterative_imputer
@@ -181,6 +182,7 @@ class CurationModelTrainer:
         from joblib import Parallel, delayed
         from sklearn.pipeline import Pipeline
         import pandas as pd
+        #TODO: make parallelising in line with spikeinterface kwarg method, and not default to all cores
 
         results = Parallel(n_jobs=-1)(
             delayed(self._train_and_evaluate)(
