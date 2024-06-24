@@ -734,7 +734,7 @@ class SortingAnalyzer:
 
         for extension_name, extension in sorted_extensions.items():
             if units_to_merge is not None:
-                if merging_mode == 'soft':
+                if merging_mode == "soft":
                     new_sorting_analyzer.extensions[extension_name] = extension.merge(
                         new_sorting_analyzer,
                         units_to_merge=units_to_merge,
@@ -743,13 +743,11 @@ class SortingAnalyzer:
                         verbose=verbose,
                         **job_kwargs,
                     )
-                elif merging_mode == 'hard':
+                elif merging_mode == "hard":
                     params = extension.params
-                    new_sorting_analyzer.compute(extension_name, 
-                                                 save=True, 
-                                                 extension_params=params, 
-                                                 verbose=verbose, 
-                                                 **job_kwargs)
+                    new_sorting_analyzer.compute(
+                        extension_name, save=True, extension_params=params, verbose=verbose, **job_kwargs
+                    )
             else:
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
                     new_sorting_analyzer, unit_ids=unit_ids
@@ -847,7 +845,7 @@ class SortingAnalyzer:
             The newly create sorting_analyzer with the selected units
         """
 
-        assert merging_mode in ['soft', 'hard'], "Merging mode should be either soft or hard"
+        assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
         if not isinstance(units_to_merge[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge
