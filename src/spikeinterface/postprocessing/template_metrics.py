@@ -411,7 +411,9 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     After reaching it's maximum polarization, the neuron potential will
     recover. The repolarization slope is defined as the dV/dT of the action potential
     between trough and baseline. The returned slope is in units of (unit of template)
-    per second.
+    per second. By default traces are scaled to units of uV, controlled
+    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    in uV/s.
 
     Parameters
     ----------
@@ -456,8 +458,9 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
     the neuron hyperpolarizes until it peaks. The recovery slope is the
     slope of the action potential after the peak, returning to the baseline
     in dV/dT. The returned slope is in units of (unit of template)
-    per second. The slope is computed within a user-defined window after
-    the peak.
+    per second. By default traces are scaled to units of uV, controlled
+    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    in uV/s. The slope is computed within a user-defined window after the peak.
 
     Parameters
     ----------
@@ -618,7 +621,7 @@ def fit_velocity(peak_times, channel_dist):
 
 def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute the velocity above the max channel of the template in units (unit of channel locations) per second, usually um/s.
+    Compute the velocity above the max channel of the template in units um/s.
 
     Parameters
     ----------
@@ -696,7 +699,7 @@ def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs
 
 def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute the velocity below the max channel of the template in units (unit of channel locations) per second, usually um/s.
+    Compute the velocity below the max channel of the template in units um/s.
 
     Parameters
     ----------
@@ -774,8 +777,7 @@ def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs
 
 def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs):
     """
-    Compute the exponential decay of the template amplitude over distance. The returned value
-    is in the same units as `channel_locations`, usually um.
+    Compute the exponential decay of the template amplitude over distance in units um/s.
 
     Parameters
     ----------
@@ -858,8 +860,7 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
 
 def get_spread(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute the spread of the template amplitude over distance. The returned value
-    is in the same units as `channel_locations`, usually um.
+    Compute the spread of the template amplitude over distance in units um/s.
 
     Parameters
     ----------
