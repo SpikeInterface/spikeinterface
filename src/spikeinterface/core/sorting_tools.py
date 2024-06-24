@@ -210,6 +210,7 @@ def random_spikes_selection(
 
     return random_spikes_indices
 
+
 def get_ids_after_merging(sorting, units_to_merge, new_unit_ids=None):
     merged_unit_ids = set(sorting.unit_ids)
     for count in range(len(units_to_merge)):
@@ -224,6 +225,7 @@ def get_ids_after_merging(sorting, units_to_merge, new_unit_ids=None):
                 merged_unit_ids.discard(unit_id)
             merged_unit_ids = merged_unit_ids.union([new_unit_ids[count]])
     return np.array(list(merged_unit_ids))
+
 
 def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_ms=None):
     """
@@ -241,7 +243,7 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
         merged units will have the first unit_id of every lists of merges
     censor_ms: None or float
         When applying the merges, should be discard consecutive spikes violating a given refractory per
-    
+
     Returns
     -------
     sorting :  The new Sorting object

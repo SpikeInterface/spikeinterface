@@ -239,7 +239,7 @@ class LussacMerging(BaseMergingEngine):
     default_params = {
         "templates": None,
         "verbose": True,
-        "censor_ms" : 3,
+        "censor_ms": 3,
         "remove_emtpy": True,
         "recursive": False,
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
@@ -288,7 +288,9 @@ class LussacMerging(BaseMergingEngine):
         if self.verbose:
             print(f"{len(merges)} merges have been detected")
         units_to_merge = resolve_merging_graph(self.analyzer.sorting, merges)
-        new_sorting, _ = apply_merges_to_sorting(self.analyzer.sorting, units_to_merge, censor_ms=self.params['censor_ms'])
+        new_sorting, _ = apply_merges_to_sorting(
+            self.analyzer.sorting, units_to_merge, censor_ms=self.params["censor_ms"]
+        )
         return new_sorting, merges
 
     def run(self, extra_outputs=False):
