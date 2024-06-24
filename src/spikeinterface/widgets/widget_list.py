@@ -9,6 +9,7 @@ from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
+from .driftmap import DriftMapWidget
 from .isi_distribution import ISIDistributionWidget
 from .motion import MotionWidget, MotionInfoWidget
 from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
@@ -44,6 +45,7 @@ widget_list = [
     ConfusionMatrixWidget,
     ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,
+    DriftMapWidget,
     ISIDistributionWidget,
     MotionWidget,
     MotionInfoWidget,
@@ -118,6 +120,7 @@ plot_autocorrelograms = AutoCorrelogramsWidget
 plot_confusion_matrix = ConfusionMatrixWidget
 plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
+plot_drift_map = DriftMapWidget
 plot_isi_distribution = ISIDistributionWidget
 plot_motion = MotionWidget
 plot_motion_info = MotionInfoWidget

@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from .base import BaseWidget, to_attr
+from .driftmap import DriftMapWidget
 
 
 class MotionWidget(BaseWidget):
@@ -107,7 +108,7 @@ class MotionInfoWidget(BaseWidget):
     Parameters
     ----------
     motion_info : dict
-        The motion info return by correct_motion() or load back with load_motion_info()
+        The motion info returned by correct_motion() or loaded back with load_motion_info()
     segment_index : int, default: None
         The segment index to display.
     recording : RecordingExtractor, default: None
@@ -153,7 +154,9 @@ class MotionInfoWidget(BaseWidget):
             if len(motion.displacement) == 1:
                 segment_index = 0
             else:
-                raise ValueError("plot motion : teh Motion object is multi segment you must provide segmentindex=XX")
+                raise ValueError(
+                    "plot drift map : the Motion object is multi-segment you must provide segment_index=XX"
+                )
 
         times = recording.get_times() if recording is not None else None
 
@@ -214,14 +217,6 @@ class MotionInfoWidget(BaseWidget):
         ax1.sharex(ax0)
         ax1.sharey(ax0)
 
-        if dp.times is None:
-            # temporal_bins_plot = dp.temporal_bins
-            x = dp.peaks["sample_index"] / dp.sampling_frequency
-        else:
-            # use real times and adjust temporal bins with t_start
-            # temporal_bins_plot = dp.temporal_bins + dp.times[0]
-            x = dp.times[dp.peaks["sample_index"]]
-
         corrected_location = correct_motion_on_peaks(
             dp.peaks,
             dp.peak_locations,
@@ -229,47 +224,34 @@ class MotionInfoWidget(BaseWidget):
             dp.recording,
         )
 
-        y = dp.peak_locations[motion.direction]
-        y2 = corrected_location[motion.direction]
-        if dp.scatter_decimate is not None:
-            x = x[:: dp.scatter_decimate]
-            y = y[:: dp.scatter_decimate]
-            y2 = y2[:: dp.scatter_decimate]
+        commpon_drift_map_kwargs = dict(
+            direction=dp.motion.direction,
+            recording=dp.recording,
+            segment_index=dp.segment_index,
+            depth_lim=dp.depth_lim,
+            color_amplitude=dp.color_amplitude,
+            scatter_decimate=dp.scatter_decimate,
+            cmap=dp.amplitude_cmap,
+            clim=dp.amplitude_clim,
+            alpha=dp.amplitude_alpha,
+            backend="matplotlib",
+        )
 
-        if dp.color_amplitude:
-            amps = dp.peaks["amplitude"]
-            amps_abs = np.abs(amps)
-            q_95 = np.quantile(amps_abs, 0.95)
-            if dp.scatter_decimate is not None:
-                amps = amps[:: dp.scatter_decimate]
-                amps_abs = amps_abs[:: dp.scatter_decimate]
-            cmap = plt.colormaps[dp.amplitude_cmap]
-            if dp.amplitude_clim is None:
-                amps = amps_abs
-                amps /= q_95
-                c = cmap(amps)
-            else:
-                norm_function = Normalize(vmin=dp.amplitude_clim[0], vmax=dp.amplitude_clim[1], clip=True)
-                c = cmap(norm_function(amps))
-            color_kwargs = dict(
-                color=None,
-                c=c,
-                alpha=dp.amplitude_alpha,
-            )
-        else:
-            color_kwargs = dict(color="k", c=None, alpha=dp.amplitude_alpha)
+        drift_map = DriftMapWidget(
+            dp.peaks,
+            dp.peak_locations,
+            ax=ax0,
+            immediate_plot=True,
+            **commpon_drift_map_kwargs,
+        )
 
-        ax0.scatter(x, y, s=1, **color_kwargs)
-        if dp.depth_lim is not None:
-            ax0.set_ylim(*dp.depth_lim)
-        ax0.set_title("Peak depth")
-        ax0.set_xlabel("Times [s]")
-        ax0.set_ylabel("Depth [$\\mu$m]")
-
-        ax1.scatter(x, y2, s=1, **color_kwargs)
-        ax1.set_xlabel("Times [s]")
-        ax1.set_ylabel("Depth [$\\mu$m]")
-        ax1.set_title("Corrected peak depth")
+        drift_map_corrected = DriftMapWidget(
+            dp.peaks,
+            corrected_location,
+            ax=ax1,
+            immediate_plot=True,
+            **commpon_drift_map_kwargs,
+        )
 
         ax2.plot(temporal_bins_s, displacement, alpha=0.2, color="black")
         ax2.plot(temporal_bins_s, np.mean(displacement, axis=1), color="C0")
