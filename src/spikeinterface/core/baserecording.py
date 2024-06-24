@@ -288,8 +288,6 @@ class BaseRecording(BaseRecordingSnippets):
         start_frame = int(start_frame) if start_frame is not None else 0
         num_samples = rs.get_num_samples()
         end_frame = int(min(end_frame, num_samples)) if end_frame is not None else num_samples
-        if start_frame < 0:
-            raise ValueError("start_frame cannot be negative")
         traces = rs.get_traces(start_frame=start_frame, end_frame=end_frame, channel_indices=channel_indices)
         if order is not None:
             assert order in ["C", "F"]
