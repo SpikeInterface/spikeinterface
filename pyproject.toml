@@ -20,7 +20,7 @@ classifiers = [
 
 
 dependencies = [
-    "numpy>=1.26, <2.0",  # 1.20 np.ptp, 1.26 for avoiding pickling errors when numpy >2.0
+    "numpy>=1.20, <2.0",  # 1.20 np.ptp, 1.26 might be necessary for avoiding pickling errors when numpy >2.0
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.16,<2.18",

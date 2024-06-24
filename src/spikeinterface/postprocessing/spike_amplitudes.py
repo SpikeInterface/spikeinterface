@@ -127,7 +127,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
             spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
+            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
             amplitudes_by_units = {}
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 amplitudes_by_units[segment_index] = {}
