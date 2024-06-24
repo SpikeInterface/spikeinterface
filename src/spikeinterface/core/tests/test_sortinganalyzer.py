@@ -307,7 +307,9 @@ class DummyAnalyzerExtension(AnalyzerExtension):
 
         return new_data
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs):
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+    ):
 
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         new_data = dict()

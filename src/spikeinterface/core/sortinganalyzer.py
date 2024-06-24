@@ -636,7 +636,7 @@ class SortingAnalyzer:
         unit_ids=None,
         units_to_merge=None,
         censor_ms=None,
-        merging_mode='soft',
+        merging_mode="soft",
         sparsity_overlap=0.75,
         verbose=False,
         **job_kwargs,
@@ -672,7 +672,7 @@ class SortingAnalyzer:
                     to_be_merged = units_to_merge[id]
                     indices = self.sorting.ids_to_indices(to_be_merged)
                     sparsity_mask[unit_ind] = np.sum(self.sparsity.mask[indices], axis=0) > 0
-                    if merging_mode == 'soft':
+                    if merging_mode == "soft":
                         pass
                 else:
                     # This means that the unit is already in the previous sorting
@@ -694,7 +694,10 @@ class SortingAnalyzer:
             sorting_provenance = sorting_provenance.select_units(unit_ids)
         else:
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
-            sorting_provenance, kept_indices = apply_merges_to_sorting(sorting_provenance, units_to_merge, unit_ids, censor_ms)
+
+            sorting_provenance, kept_indices = apply_merges_to_sorting(
+                sorting_provenance, units_to_merge, unit_ids, censor_ms
+            )
 
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
@@ -801,7 +804,7 @@ class SortingAnalyzer:
         units_to_merge,
         new_unit_ids=None,
         censor_ms=None,
-        merging_mode='soft',
+        merging_mode="soft",
         sparsity_overlap=0.75,
         format="memory",
         folder=None,
@@ -824,9 +827,15 @@ class SortingAnalyzer:
             merged units will have the first unit_id of every lists of merges
         censor_ms : None or float
             When merging units, any spikes violating this refractory period will be discarded. Default is None
+<<<<<<< HEAD
         merging_mode : "soft" can be in ["soft", "hard"]
             How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the 
             waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed, 
+=======
+        merging_mode : "soft" can be in ["soft", "hard", "recompute"]
+            How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the
+            waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed,
+>>>>>>> dfcc8a1251e417d30bb5111af8a509f75af8054e
             reloading waveforms if needed
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
@@ -1628,7 +1637,9 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    def _merge_extension_data(self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices, verbose=False, **job_kwargs):
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices, verbose=False, **job_kwargs
+    ):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -1795,7 +1806,15 @@ class AnalyzerExtension:
         new_extension.save()
         return new_extension
 
-    def merge(self, new_sorting_analyzer, units_to_merge=None, new_unit_ids=None, kept_indices=None, verbose=False, **job_kwargs):
+    def merge(
+        self,
+        new_sorting_analyzer,
+        units_to_merge=None,
+        new_unit_ids=None,
+        kept_indices=None,
+        verbose=False,
+        **job_kwargs,
+    ):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
         if units_to_merge is None:

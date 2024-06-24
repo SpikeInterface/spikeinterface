@@ -110,7 +110,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         if kept_indices is not None:
             valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
             new_data["pca_projection"] = new_data["pca_projection"][valid]
-        
+
         # one or several model
         for k, v in self.data.items():
             if "model" in k:
