@@ -17,6 +17,7 @@ class Kilosort4Sorter(BaseSorter):
     requires_locations = True
     gpu_capability = "nvidia-optional"
 
+    # Q: Should we take these directly from the KS defaults? https://github.com/MouseLand/Kilosort/blob/59c03b060cc8e8ac75a7f1a972a8b5c5af3f41a6/kilosort/parameters.py#L164
     _default_params = {
         "batch_size": 60000,
         "nblocks": 1,
@@ -25,8 +26,8 @@ class Kilosort4Sorter(BaseSorter):
         "do_CAR": True,
         "invert_sign": False,
         "nt": 61,
-        "shift": None,
-        "scale": None,
+        "shift": None,  # TODO: I don't think these are passed to BinaryFiltered when preprocessing skipped. Need to distinguish version +/ 4.0.9
+        "scale": None,  # TODO: I don't think these are passed to BinaryFiltered when preprocessing skipped. Need to distinguish version +/ 4.0.9
         "artifact_threshold": None,
         "nskip": 25,
         "whitening_range": 32,
@@ -247,16 +248,16 @@ class Kilosort4Sorter(BaseSorter):
         else:
             print("Skipping kilosort preprocessing.")
             bfile = BinaryFiltered(
-                ops["filename"],
-                n_chan_bin,
-                fs,
-                NT,
-                nt,
-                twav_min,
-                chan_map,
+                filename=ops["filename"],
+                n_chan_bin=n_chan_bin,
+                fs=fs,
+                nT=NT,
+                nt=nt,
+                nt0min=twav_min,
+                chan_map=chan_map,
                 hp_filter=None,
                 device=device,
-                do_CAR=do_CAR,
+                do_CAR=do_CAR,  # TODO: should this always be False if we are in skipping KS preprocessing land?
                 invert_sign=invert,
                 dtype=dtype,
                 tmin=tmin,
