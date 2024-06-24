@@ -1134,7 +1134,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         elif self.strategy == "on_the_fly":
             pass
 
-    def get_num_samples(self):
+    def get_num_samples(self) -> int:
         return self.num_samples
 
     def get_traces(

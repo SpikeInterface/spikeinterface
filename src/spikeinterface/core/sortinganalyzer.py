@@ -1358,7 +1358,7 @@ class SortingAnalyzer:
         """
         return get_available_analyzer_extensions()
 
-    def get_default_extension_params(self, extension_name: str):
+    def get_default_extension_params(self, extension_name: str) -> dict:
         """
         Get the default params for an extension.
 
