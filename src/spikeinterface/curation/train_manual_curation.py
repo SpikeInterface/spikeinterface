@@ -152,7 +152,7 @@ class CurationModelTrainer:
             model = CatBoostClassifier(silent=True, random_state=seed)
         elif classifier == LGBMClassifier:
             param_space = {"learning_rate": [0.05, 0.15], "n_estimators": [100, 150]}
-            model = LGBMClassifier(random_state=seed, verbose=0)
+            model = LGBMClassifier(random_state=seed, verbose=-1)
         elif classifier == MLPClassifier:
             param_space = {
                 "activation": ["tanh", "relu"],
