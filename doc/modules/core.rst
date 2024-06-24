@@ -21,7 +21,7 @@ All classes support:
   * data on-demand (lazy loading)
   * multiple segments, where each segment is a contiguous piece of data (recording, sorting, events).
 
-
+.. _core-recording:
 Recording
 ---------
 

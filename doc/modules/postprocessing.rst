@@ -304,10 +304,18 @@ By default, the following metrics are computed:
 * "peak_to_valley": duration between negative and positive peaks
 * "halfwidth": duration in s at 50% of the amplitude
 * "peak_to_trough_ratio": ratio between negative and positive peaks
-* "recovery_slope": speed in V/s to recover from the negative peak to 0
-* "repolarization_slope": speed in V/s to repolarize from the positive peak to 0
+* "recovery_slope": speed to recover from the negative peak to 0
+* "repolarization_slope": speed to repolarize from the positive peak to 0
 * "num_positive_peaks": the number of positive peaks
 * "num_negative_peaks": the number of negative peaks
+
+The units of the results depend on the input. Voltages are based on the units of the
+template, usually :math:`\mu V` (this depends on the :code:`return_scaled`
+parameter, read more here: :ref:`core-recording`). Distances are based on the unit of the
+underlying recording's probe's :code:`channel_locations`, usually :math:`\mu m`.
+Times are always in seconds. E.g. if the templates are in units of :math:`mV` and channel
+locations in :math:`\mu m` then: :code:`repolarization_slope` is in :math:`mV / s`;
+:code:`peak_to_trough_ratio` is in :math:`\mu m` and the :code:`halfwidth` is in :math:`s`.
 
 Optionally, the following multi-channel metrics can be computed by setting:
 :code:`include_multi_channel_metrics=True`
