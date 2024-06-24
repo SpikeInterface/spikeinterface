@@ -176,12 +176,12 @@ class Kilosort4Sorter(BaseSorter):
 
         # load probe
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
-        probe = load_probe(probe_filename)
+        probe = load_probe(probe_path=probe_filename)
         probe_name = ""
         filename = ""
 
         # this internally concatenates the recording
-        file_object = RecordingExtractorAsArray(recording)
+        file_object = RecordingExtractorAsArray(recording_extractor=recording)
 
         do_CAR = params["do_CAR"]
         invert_sign = params["invert_sign"]
