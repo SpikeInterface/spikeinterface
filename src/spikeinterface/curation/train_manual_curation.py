@@ -73,7 +73,6 @@ class CurationModelTrainer:
         else:
             raise ValueError(f"Target column {self.target_column} not found in testing metrics file")
 
-
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val):
         from sklearn.experimental import enable_iterative_imputer
         from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
@@ -182,7 +181,8 @@ class CurationModelTrainer:
         from joblib import Parallel, delayed
         from sklearn.pipeline import Pipeline
         import pandas as pd
-        #TODO: make parallelising in line with spikeinterface kwarg method, and not default to all cores
+
+        # TODO: make parallelising in line with spikeinterface kwarg method, and not default to all cores
 
         results = Parallel(n_jobs=-1)(
             delayed(self._train_and_evaluate)(
