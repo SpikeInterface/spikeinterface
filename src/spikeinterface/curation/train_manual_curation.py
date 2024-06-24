@@ -249,7 +249,7 @@ class CurationModelTrainer:
         }, (model, imputer, scaler)
 
 
-def train_model(metrics_path, output_folder, target_label, metrics_list = None):
+def train_model(metrics_path, output_folder, target_label, metrics_list=None):
 
     from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
     from sklearn.experimental import enable_hist_gradient_boosting
