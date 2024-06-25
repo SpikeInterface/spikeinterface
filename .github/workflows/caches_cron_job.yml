@@ -25,7 +25,7 @@ jobs:
           python-version: '3.11'
       - name: Create the directory to store the data
         run: |
-          mkdir -p  ~/spikeinterface_datasets/behavior_testing_data/
+          mkdir -p  ~/spikeinterface_datasets/ephy_testing_data/
           ls -l ~/spikeinterface_datasets
         shell: bash
       - name: Get current hash (SHA) of the ephy_testing_data repo
@@ -63,12 +63,12 @@ jobs:
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          datalad install --recursive --get-data https://gin.g-node.org/CatalystNeuro/behavior_testing_data
+          datalad install --recursive --get-data https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
         shell: bash
       - name: Move the downloaded data to the right directory
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          mv ./behavior_testing_data ~/spikeinterface_datasets/
+          mv ./ephy_testing_data ~/spikeinterface_datasets/
         shell: bash
       - name: Show size of the cache to assert data is downloaded
         run: |
@@ -78,6 +78,6 @@ jobs:
           cd spikeinterface_datasets
           pwd
           ls -lh  # Should show ephy_testing_data
-          cd behavior_testing_data
+          cd ephy_testing_data
           ls -lh
         shell: bash
