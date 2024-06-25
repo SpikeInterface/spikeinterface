@@ -671,9 +671,15 @@ class SortingAnalyzer:
                     id = np.flatnonzero(unit_ids == unit_id)[0]
                     to_be_merged = units_to_merge[id]
                     indices = self.sorting.ids_to_indices(to_be_merged)
-                    sparsity_mask[unit_ind] = np.sum(self.sparsity.mask[indices], axis=0) > 0
+                    union_mask = np.sum(self.sparsity.mask[indices], axis=0) > 0
+                    intersection_mask = np.prod(self.sparsity.mask[indices], axis=0) > 0
                     if merging_mode == "soft":
-                        pass
+                        thr =  np.sum(intersection_mask)/np.sum(union_mask)
+                        assert thr > sparsity_overlap, f"A sparsity threshold of {thr} has been found, can not use soft mode"
+                        sparsity_mask[unit_ind] = intersection_mask
+                    elif merging_mode == 'hard':
+                        sparsity_mask[unit_ind] = union_mask
+
                 else:
                     # This means that the unit is already in the previous sorting
                     index = self.sorting.id_to_index(unit_id)
