@@ -300,7 +300,7 @@ def _get_paths_list(d):
     def append_to_path(p):
         path_list.append(p)
 
-    recursive_path_modifier(d, append_to_path, target="path", copy=True)
+    recursive_path_modifier(d, append_to_path, target="path", copy=True, check_if_exists=False)
     return path_list
 
 
