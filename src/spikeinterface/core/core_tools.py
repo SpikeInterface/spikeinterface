@@ -292,7 +292,7 @@ def recursive_path_modifier(
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
 
-def _get_paths_list(d):
+def _get_paths_list(d, check_if_exists=True):
     # this explore a dict and get all paths flatten in a list
     # the trick is to use a closure func called by recursive_path_modifier()
     path_list = []
@@ -300,7 +300,7 @@ def _get_paths_list(d):
     def append_to_path(p):
         path_list.append(p)
 
-    recursive_path_modifier(d, append_to_path, target="path", copy=True, check_if_exists=False)
+    recursive_path_modifier(d, append_to_path, target="path", copy=True, check_if_exists=check_if_exists)
     return path_list
 
 
@@ -320,7 +320,7 @@ def _make_absolute(p, base_folder):
     return (base_folder / p).resolve().absolute().as_posix()
 
 
-def check_paths_relative(input_dict, relative_folder) -> bool:
+def check_paths_relative(input_dict, relative_folder, check_if_exists=True) -> bool:
     """
     Check if relative path is possible to be applied on a dict describing an BaseExtractor.
 
@@ -332,13 +332,15 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
         A dict describing an extactor obtained by BaseExtractor.to_dict()
     relative_folder : str or Path
         The folder to be relative to.
+    check_if_exists : bool, default: True
+        If True, the function will only check paths that exist.
 
     Returns
     -------
     relative_possible : bool
         Whether the given input can be made relative to the relative_folder
     """
-    path_list = _get_paths_list(input_dict)
+    path_list = _get_paths_list(input_dict, check_if_exists=check_if_exists)
     relative_folder = Path(relative_folder).resolve().absolute()
     not_possible = []
     for p in path_list:
