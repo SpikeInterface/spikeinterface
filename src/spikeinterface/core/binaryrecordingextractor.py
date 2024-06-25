@@ -195,7 +195,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         """
         return self.num_samples
 
-    def get_traces(
+    def _get_traces(
         self,
         start_frame: int | None = None,
         end_frame: int | None = None,

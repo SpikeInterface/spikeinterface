@@ -447,7 +447,7 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         self.displacement_indices = displacement_indices
         self.templates_array_moved = templates_array_moved
 
-    def get_traces(
+    def _get_traces(
         self,
         start_frame: Optional[int] = None,
         end_frame: Optional[int] = None,

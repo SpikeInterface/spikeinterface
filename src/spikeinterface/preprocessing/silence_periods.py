@@ -108,7 +108,7 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
         self.seg_index = seg_index
         self.noise_generator = noise_generator
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
 

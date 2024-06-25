@@ -133,7 +133,7 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self):
         return self._cbuffer.shape[0]
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
             channel_indices = slice(None)
 

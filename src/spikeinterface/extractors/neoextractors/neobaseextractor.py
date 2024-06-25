@@ -329,7 +329,7 @@ class NeoRecordingSegment(BaseRecordingSegment):
 
         return int(num_samples)
 
-    def get_traces(
+    def _get_traces(
         self,
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,

@@ -77,7 +77,7 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
             sigmas.append(sf / (2 * np.pi * freq_max))
         self.margin = 1 + int(max(sigmas) * margin_sd)
 
-    def get_traces(
+    def _get_traces(
         self,
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,

@@ -175,7 +175,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.dtype = dtype
         self.operator_func = operator = np.mean if self.operator == "average" else np.median
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         # Let's do the case with group_indices equal None as that is easy
         if self.group_indices is None:
             # We need all the channels to calculate the reference

@@ -145,7 +145,7 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         self.desired_shape = desired_shape
         self.predict_workers = predict_workers
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         from .generators import SpikeInterfaceRecordingSegmentGenerator
 
         n_frames = self.parent_recording_segment.get_num_samples()

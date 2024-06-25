@@ -113,7 +113,7 @@ class NumpyRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self) -> int:
         return self.num_samples
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         traces = self._traces[start_frame:end_frame, :]
         if channel_indices is not None:
             traces = traces[:, channel_indices]

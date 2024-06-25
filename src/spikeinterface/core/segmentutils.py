@@ -162,7 +162,7 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self):
         return self.total_length
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         # # Ensures that we won't request invalid segment indices
         if (start_frame >= self.get_num_samples()) or (end_frame <= start_frame):
             # Return (0 * num_channels) array of correct dtype

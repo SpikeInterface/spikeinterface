@@ -256,7 +256,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         self.time_pad = time_pad
         self.sparsity = sparsity
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         if self.mode in ["average", "median"]:
             traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         else:

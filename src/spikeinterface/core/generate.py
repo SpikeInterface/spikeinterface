@@ -1137,7 +1137,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self) -> int:
         return self.num_samples
 
-    def get_traces(
+    def _get_traces(
         self,
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,
@@ -1801,7 +1801,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         self.parent_recording = parent_recording_segment
         self.num_samples = parent_recording_segment.get_num_frames() if num_samples is None else num_samples
 
-    def get_traces(
+    def _get_traces(
         self,
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,

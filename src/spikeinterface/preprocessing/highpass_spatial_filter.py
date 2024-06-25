@@ -188,7 +188,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         self.sos_filter = sos_filter
         self.dtype = dtype
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
             channel_indices = slice(None)
         if self.window is not None:

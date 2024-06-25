@@ -36,5 +36,5 @@ class BasePreprocessorSegment(BaseRecordingSegment):
     def get_num_samples(self):
         return self.parent_recording_segment.get_num_samples()
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         raise NotImplementedError

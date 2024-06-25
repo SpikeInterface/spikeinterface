@@ -134,7 +134,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         self.add_reflect_padding = add_reflect_padding
         self.dtype = dtype
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,

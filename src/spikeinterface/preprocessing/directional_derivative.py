@@ -102,7 +102,7 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
         # so that geom_other_dims[i] == unique_pos_other_dims[column_inds[i]]
         self.unique_pos_other_dims, self.column_inds = np.unique(geom_other_dims, axis=0, return_inverse=True)
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         parent_traces = self.parent_recording_segment.get_traces(
             start_frame=start_frame,
             end_frame=end_frame,

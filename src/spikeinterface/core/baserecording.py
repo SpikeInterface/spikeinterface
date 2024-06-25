@@ -861,6 +861,7 @@ class BaseRecordingSegment(BaseSegment):
         # must be implemented in subclass
         raise NotImplementedError
 
+
     def get_traces(
         self,
         start_frame: int | None = None,
@@ -884,5 +885,28 @@ class BaseRecordingSegment(BaseSegment):
         traces : np.ndarray
             Array of traces, num_samples x num_channels
         """
+        # @alessio 
+        start_frame = int(start_frame) if start_frame is not None else 0
+        num_samples = self.get_num_samples()
+        end_frame = int(min(end_frame, num_samples)) if end_frame is not None else num_samples
+
+        # @ramon @alessio @zach @joe @paul
+        # https://github.com/SpikeInterface/spikeinterface/issues/1989
+        # here we can implement the strick mode
+        # now it is not activate yet
+        strict_mode = False
+        if strict_mode:
+            if start_frame < 0:
+                raise ValueError(f"get_traces() : wrong start_frame {start_frame}, must be positive. You should stop doing this otherwise you will be excommunicated")
+            if end_frame > num_samples:
+                raise ValueError(f"get_traces() : wrong end_frame {end_frame}, must be maximumnum samples {num_samples}. You should stop doing this otherwise you will be excommunicated")
+            if end_frame >= start_frame:
+                raise ValueError(f"get_traces() : wrong end_frame/start_frame : {start_frame} < {end_frame}. You should stop doing this otherwise you will be excommunicated")
+
+        self._get_traces(start_frame, end_frame, channel_indices)
+
+
+
+    def _get_traces(self, start_frame, end_frame, channel_indices) -> np.ndarray:
         # must be implemented in subclass
         raise NotImplementedError
