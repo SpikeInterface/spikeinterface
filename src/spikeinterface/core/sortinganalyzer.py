@@ -856,6 +856,7 @@ class SortingAnalyzer:
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
         from spikeinterface.curation.curation_tools import get_new_unit_ids_for_merges
+
         new_unit_ids = get_new_unit_ids_for_merges(self.sorting, units_to_merge, new_unit_ids)
 
         if not isinstance(units_to_merge[0], (list, tuple)):

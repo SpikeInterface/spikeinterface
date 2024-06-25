@@ -50,8 +50,8 @@ class MergeUnitsSorting(BaseSorting):
         keep_unit_ids = [u for u in parents_unit_ids if u not in all_removed_ids]
 
         from .curation_tools import get_new_unit_ids_for_merges
-        new_unit_ids = get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids)
 
+        new_unit_ids = get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids)
 
         assert len(new_unit_ids) == num_merge, "new_unit_ids must have the same size as units_to_merge"
 
