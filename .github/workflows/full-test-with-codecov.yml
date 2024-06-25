@@ -23,15 +23,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Get current year-month
-        id: date
-        run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-      - name: Restore cached virtual environment with dependencies
-        uses: actions/cache/restore@v4
-        id: cache-venv
-        with:
-          path: ${{ github.workspace }}/test_env
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
       - name: Get ephy_testing_data current head hash
         # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: vars
@@ -49,8 +40,6 @@ jobs:
           restore-keys: ${{ runner.os }}-datasets
       - name: Install packages
         uses: ./.github/actions/build-test-environment
-      - name: Shows installed packages by pip, git-annex and cached testing files
-        uses: ./.github/actions/show-test-environment
       - name: run tests
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
