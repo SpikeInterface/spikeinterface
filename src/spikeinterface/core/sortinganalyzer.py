@@ -855,15 +855,12 @@ class SortingAnalyzer:
 
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
+        from spikeinterface.curation.curation_tools import get_new_unit_ids_for_merges
+        new_unit_ids = get_new_unit_ids_for_merges(self.sorting, units_to_merge, new_unit_ids)
+
         if not isinstance(units_to_merge[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge
             units_to_merge = [units_to_merge]
-
-        # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
-        if new_unit_ids is not None:
-            assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
-        else:
-            new_unit_ids = [i[0] for i in units_to_merge]
 
         return self._save_or_select_or_merge(
             format=format,
