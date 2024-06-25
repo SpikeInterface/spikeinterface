@@ -33,6 +33,48 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+
+      - name: Set environment variables based on changed files
+        shell: bash
+        run: python .github/detect_module_changes.py
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+
+      - name: List all changed files
+        shell: bash
+        env:
+            ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+          done
+
+
+
+      - name: Print module changes
+        shell: bash
+        run: |
+          cat $GITHUB_OUTPUT
+          echo "CORE_CHANGED=${{ env.CORE_CHANGED }}"
+          echo "EXTRACTORS_CHANGED=${{ env.EXTRACTORS_CHANGED }}"
+          echo "PLEXON2_CHANGED=${{ env.PLEXON2_CHANGED }}"
+          echo "PREPROCESSING_CHANGED=${{ env.PREPROCESSING_CHANGED }}"
+          echo "POSTPROCESSING_CHANGED=${{ env.POSTPROCESSING_CHANGED }}"
+          echo "QUALITYMETRICS_CHANGED=${{ env.QUALITYMETRICS_CHANGED }}"
+          echo "SORTERS_CHANGED=${{ env.SORTERS_CHANGED }}"
+          echo "SORTERS_EXTERNAL_CHANGED=${{ env.SORTERS_EXTERNAL_CHANGED }}"
+          echo "SORTERS_INTERNAL_CHANGED=${{ env.SORTERS_INTERNAL_CHANGED }}"
+          echo "COMPARISON_CHANGED=${{ env.COMPARISON_CHANGED }}"
+          echo "CURATION_CHANGED=${{ env.CURATION_CHANGED }}"
+          echo "WIDGETS_CHANGED=${{ env.WIDGETS_CHANGED }}"
+          echo "EXPORTERS_CHANGED=${{ env.EXPORTERS_CHANGED }}"
+          echo "SORTINGCOMPONENTS_CHANGED=${{ env.SORTINGCOMPONENTS_CHANGED }}"
+          echo "GENERATION_CHANGED=${{ env.GENERATION_CHANGED }}"
+
+
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
         run: echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
@@ -67,44 +109,6 @@ jobs:
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
         shell: bash
 
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v41
-
-      - name: Set environment variables based on changed files
-        shell: bash
-        run: python .github/detect_module_changes.py
-        env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-
-      - name: List all changed files
-        shell: bash
-        env:
-            ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        run: |
-          for file in ${ALL_CHANGED_FILES}; do
-            echo "$file was changed"
-          done
-
-
-      - name: Print module changes
-        shell: bash
-        run: |
-          echo "CORE_CHANGED=${{ env.CORE_CHANGED }}"
-          echo "EXTRACTORS_CHANGED=${{ env.EXTRACTORS_CHANGED }}"
-          echo "PLEXON2_CHANGED=${{ env.PLEXON2_CHANGED }}"
-          echo "PREPROCESSING_CHANGED=${{ env.PREPROCESSING_CHANGED }}"
-          echo "POSTPROCESSING_CHANGED=${{ env.POSTPROCESSING_CHANGED }}"
-          echo "QUALITYMETRICS_CHANGED=${{ env.QUALITYMETRICS_CHANGED }}"
-          echo "SORTERS_CHANGED=${{ env.SORTERS_CHANGED }}"
-          echo "SORTERS_EXTERNAL_CHANGED=${{ env.SORTERS_EXTERNAL_CHANGED }}"
-          echo "SORTERS_INTERNAL_CHANGED=${{ env.SORTERS_INTERNAL_CHANGED }}"
-          echo "COMPARISON_CHANGED=${{ env.COMPARISON_CHANGED }}"
-          echo "CURATION_CHANGED=${{ env.CURATION_CHANGED }}"
-          echo "WIDGETS_CHANGED=${{ env.WIDGETS_CHANGED }}"
-          echo "EXPORTERS_CHANGED=${{ env.EXPORTERS_CHANGED }}"
-          echo "SORTINGCOMPONENTS_CHANGED=${{ env.SORTINGCOMPONENTS_CHANGED }}"
-          echo "GENERATION_CHANGED=${{ env.GENERATION_CHANGED }}"
 
 
       - name: Set execute permissions on run_tests.sh
