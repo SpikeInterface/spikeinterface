@@ -32,7 +32,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          # cache: 'pip' # caching pip dependencies
+          cache: 'pip' # caching pip dependencies
 
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
@@ -73,36 +73,10 @@ jobs:
         uses: tj-actions/changed-files@v41
 
       - name: Set environment variables based on changed files
-        shell: bash
-        run: |
-          declare -A changes
-          changes=(
-            ["pyproject.toml"]="CORE_CHANGED"
-            ["/core/"]="CORE_CHANGED"
-            ["/extractors/neoextractors/neobaseextractor.py"]="CORE_CHANGED"
-            ["/extractors/"]="EXTRACTORS_CHANGED"
-            ["plexon2"]="PLEXON2_CHANGED"
-            ["/preprocessing/"]="PREPROCESSING_CHANGED"
-            ["/postprocessing/"]="POSTPROCESSING_CHANGED"
-            ["/qualitymetrics/"]="QUALITYMETRICS_CHANGED"
-            ["/sorters/"]="SORTERS_CHANGED"
-            ["/sorters/external"]="SORTERS_EXTERNAL_CHANGED"
-            ["/sorters/internal"]="SORTERS_INTERNAL_CHANGED"
-            ["/comparison/"]="COMPARISON_CHANGED"
-            ["/curation/"]="CURATION_CHANGED"
-            ["/widgets/"]="WIDGETS_CHANGED"
-            ["/exporters/"]="EXPORTERS_CHANGED"
-            ["/sortingcomponents/"]="SORTINGCOMPONENTS_CHANGED"
-            ["/generation/"]="GENERATION_CHANGED"
-          )
+        run: python ./.github/set_env_vars.py
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
 
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            for pattern in "${!changes[@]}"; do
-              if [[ $file == *$pattern* ]]; then
-                echo "${changes[$pattern]}=true" >> $GITHUB_ENV
-              fi
-            done
-          done
       - name: Print environment variables
         shell: bash
         run: |
