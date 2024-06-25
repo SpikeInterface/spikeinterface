@@ -72,9 +72,20 @@ jobs:
         uses: tj-actions/changed-files@v41
 
       - name: Set environment variables based on changed files
+        shell: bash
         run: python .github/detect_module_changes.py
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+
+      - name: List all changed files
+        shell: bash
+        env:
+            ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+          done
+
 
       - name: Print module changes
         shell: bash
