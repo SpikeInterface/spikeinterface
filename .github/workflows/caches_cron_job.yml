@@ -25,9 +25,9 @@ jobs:
           python-version: '3.11'
       - name: Create the directory to store the data
         run: |
-          mkdir -p  $HOME/spikeinterface_datasets/behavior_testing_data/
-          chmod -R 777 $HOME/spikeinterface_datasets
-          ls -l $HOME/spikeinterface_datasets
+          mkdir -p  ~/spikeinterface_datasets/behavior_testing_data/
+          chmod -R 777 ~/spikeinterface_datasets
+          ls -l ~/spikeinterface_datasets
         shell: bash
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/cache@v4
         id: cache-datasets
         with:
-          path: $HOME/spikeinterface_datasets
+          path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
           lookup-only: 'true'   # Avoids downloading the data, saving behavior is not affected.
       - name: Cache found?
@@ -69,11 +69,11 @@ jobs:
       - name: Move the downloaded data to the right directory
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          mv ./behavior_testing_data $HOME/spikeinterface_datasets/
+          mv ./behavior_testing_data ~/spikeinterface_datasets/
         shell: bash
       - name: Show size of the cache to assert data is downloaded
         run: |
-          cd $HOME
+          cd ~
           pwd
           du -hs spikeinterface_datasets  # Should show the size of ephy_testing_data
           cd spikeinterface_datasets
