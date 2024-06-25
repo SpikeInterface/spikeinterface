@@ -40,22 +40,43 @@ jobs:
       - name: Set environment variables based on changed files
         id: modules-changed
         shell: bash
-        run: python .github/detect_module_changes.py
-        env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          declare -A changes
+          changes=(
+            ["pyproject.toml"]="CORE_CHANGED"
+            ["/core/"]="CORE_CHANGED"
+            ["/extractors/neoextractors/neobaseextractor.py"]="CORE_CHANGED"
+            ["/extractors/"]="EXTRACTORS_CHANGED"
+            ["plexon2"]="PLEXON2_CHANGED"
+            ["/preprocessing/"]="PREPROCESSING_CHANGED"
+            ["/postprocessing/"]="POSTPROCESSING_CHANGED"
+            ["/qualitymetrics/"]="QUALITYMETRICS_CHANGED"
+            ["/sorters/"]="SORTERS_CHANGED"
+            ["/sorters/external"]="SORTERS_EXTERNAL_CHANGED"
+            ["/sorters/internal"]="SORTERS_INTERNAL_CHANGED"
+            ["/comparison/"]="COMPARISON_CHANGED"
+            ["/curation/"]="CURATION_CHANGED"
+            ["/widgets/"]="WIDGETS_CHANGED"
+            ["/exporters/"]="EXPORTERS_CHANGED"
+            ["/sortingcomponents/"]="SORTINGCOMPONENTS_CHANGED"
+            ["/generation/"]="GENERATION_CHANGED"
+          )
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            for pattern in "${!changes[@]}"; do
+              if [[ $file == *$pattern* ]]; then
+                echo "${changes[$pattern]}=true" >> $GITHUB_ENV
+              fi
+            done
+          done
 
       - name: List all changed files
         shell: bash
         env:
-            ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           for file in ${ALL_CHANGED_FILES}; do
             echo "$file was changed"
           done
-
-      - name: Print the GITHUB_OUTPUT  file content
-        run: cat $GITHUB_OUTPUT
-        shell: bash
 
       - name: Print module changes
         shell: bash
@@ -74,8 +95,7 @@ jobs:
           echo "WIDGETS_CHANGED=${{ steps.modules-changed.outputs.WIDGETS_CHANGED }}"
           echo "EXPORTERS_CHANGED=${{ steps.modules-changed.outputs.EXPORTERS_CHANGED }}"
           echo "SORTINGCOMPONENTS_CHANGED=${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED }}"
-          echo "GENERATION_CHANGED=${{ steps.modules-changed.outputs.GENERATION_CHANGED }}"
-
+          echo "GENERATION_CHANGED
 
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
