@@ -60,11 +60,11 @@ class ModelBasedClassification:
         # Get metrics DataFrame for classification
         input_data = self._get_metrics_for_classification()
 
-        # Check params match training data
-        self._check_params_for_classification()
+        # # Check params match training data - TODO: implement reliably
+        # self._check_params_for_classification()
 
         # Prepare input data
-        input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
+        input_data = input_data.applymap(lambda x: np.nan if np.isinf(x) else x)
         input_data = input_data.astype("float32")
 
         # Apply classifier

@@ -34,6 +34,11 @@ class CurationModelTrainer:
             self.metrics_list = self.get_default_metrics_list()
             print("No metrics list provided, using default metrics list (all)")
 
+        # Check if the output folder exists, and create it if it doesn't
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+            print(f"Created output folder: {output_folder}")
+
         self.X = None
         self.y = None
         self.testing_metrics = None
@@ -57,14 +62,12 @@ class CurationModelTrainer:
         # Remove infinite values from the metrics and convert to float32
         self.testing_metrics[0] = self.testing_metrics[0].astype("float32")
         self.testing_metrics[0] = self.testing_metrics[0].map(lambda x: np.nan if np.isinf(x) else x)
+        self.testing_metrics[0] = self.testing_metrics[0].dropna(subset=[self.target_column])
 
         if self.target_column in self.testing_metrics[0].columns:
-            # Extract the target variable
+            # Extract the target variable and features
             self.y = self.testing_metrics[0][self.target_column]
-
-            # Handle missing values in the target column
-            self.X = self.testing_metrics[0].dropna(subset=[self.target_column])
-            self.X.drop(columns=self.target_column, inplace=True)
+            self.X = self.testing_metrics[0].drop(columns=self.target_column)
 
             # Store the initial list of metrics
             self.metrics_list = list(self.testing_metrics[0].columns)
