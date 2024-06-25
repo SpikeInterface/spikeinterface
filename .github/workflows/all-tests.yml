@@ -32,7 +32,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip' # caching pip dependencies
 
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
@@ -77,7 +76,7 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
 
-      - name: Print environment variables
+      - name: Print module changes
         shell: bash
         run: |
           echo "CORE_CHANGED=${{ env.CORE_CHANGED }}"
