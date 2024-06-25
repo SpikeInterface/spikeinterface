@@ -48,7 +48,7 @@ class BaseRecordingSnippets(BaseExtractor):
     def get_dtype(self):
         return self._dtype
 
-    def has_scaleable_traces(self):
+    def has_scaleable_traces(self) -> bool:
         if self.get_property("gain_to_uV") is None or self.get_property("offset_to_uV") is None:
             return False
         else:
@@ -62,10 +62,10 @@ class BaseRecordingSnippets(BaseExtractor):
         )
         return self.has_scaleable_traces()
 
-    def has_probe(self):
+    def has_probe(self) -> bool:
         return "contact_vector" in self.get_property_keys()
 
-    def has_channel_location(self):
+    def has_channel_location(self) -> bool:
         return self.has_probe() or "location" in self.get_property_keys()
 
     def is_filtered(self):
@@ -366,7 +366,7 @@ class BaseRecordingSnippets(BaseExtractor):
             locations = np.asarray(locations)[channel_indices]
             return select_axes(locations, axes)
 
-    def has_3d_locations(self):
+    def has_3d_locations(self) -> bool:
         return self.get_property("location").shape[1] == 3
 
     def clear_channel_locations(self, channel_ids=None):

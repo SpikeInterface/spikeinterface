@@ -343,7 +343,7 @@ class BaseSorter:
         return sorting
 
     @classmethod
-    def check_compiled(cls):
+    def check_compiled(cls) -> bool:
         """
         Checks if the sorter is running inside an image with matlab-compiled version
 
@@ -370,7 +370,7 @@ class BaseSorter:
         return True
 
     @classmethod
-    def use_gpu(cls, params):
+    def use_gpu(cls, params) -> bool:
         return cls.gpu_capability != "not-supported"
 
     #############################################
@@ -436,7 +436,7 @@ def get_job_kwargs(params, verbose):
     return job_kwargs
 
 
-def is_log_ok(output_folder):
+def is_log_ok(output_folder) -> bool:
     # log is OK when run_time is not None
     if (output_folder / "spikeinterface_log.json").is_file():
         with open(output_folder / "spikeinterface_log.json", mode="r", encoding="utf8") as logfile:
