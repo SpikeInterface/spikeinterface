@@ -1408,6 +1408,7 @@ default_unit_params_range = dict(
 def _ensure_unit_params(unit_params, num_units, seed):
     rng = np.random.default_rng(seed=seed)
     # check or generate params per units
+
     params = dict()
     for k, default_lims in default_unit_params_range.items():
         v = unit_params.get(k, default_lims)
@@ -1525,7 +1526,7 @@ def generate_templates(
         templates = np.zeros((num_units, width, num_channels), dtype=dtype)
         fs = sampling_frequency
 
-    params = _ensure_unit_params(unit_params, num_units, seed)
+    params = _ensure_unit_params(unit_params, num_units, seed)  # TODO: sort this out
 
     for u in range(num_units):
         wf = generate_single_fake_waveform(

@@ -7,6 +7,49 @@ from spikeinterface.sorters import Kilosort4Sorter, run_sorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
 
+_default_params = {
+    "batch_size": 60000,
+    "nblocks": 1,
+    "Th_universal": 9,
+    "Th_learned": 8,
+    "do_CAR": True,
+    "invert_sign": False,
+    "nt": 61,
+    "shift": None,
+    "scale": None,
+    "artifact_threshold": None,
+    "nskip": 25,
+    "whitening_range": 32,
+    "binning_depth": 5,
+    "sig_interp": 20,
+    "drift_smoothing": [0.5, 0.5, 0.5],
+    "nt0min": None,
+    "dmin": None,
+    "dminx": 32,
+    "min_template_size": 10,
+    "template_sizes": 5,
+    "nearest_chans": 10,
+    "nearest_templates": 100,
+    "max_channel_distance": None,
+    "templates_from_data": True,
+    "n_templates": 6,
+    "n_pcs": 6,
+    "Th_single_ch": 6,
+    "acg_threshold": 0.2,
+    "ccg_threshold": 0.25,
+    "cluster_downsampling": 20,
+    "cluster_pcs": 64,
+    "x_centers": None,
+    "duplicate_spike_bins": 7,
+    "do_correction": True,
+    "keep_good_only": False,
+    "save_extra_kwargs": False,
+    "skip_kilosort_preprocessing": False,
+    "scaleproc": None,
+    "torch_device": "auto",
+}
+
+
 # This run several tests
 @pytest.mark.skipif(not Kilosort4Sorter.is_installed(), reason="kilosort4 not installed")
 class Kilosort4SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
@@ -32,6 +75,7 @@ class Kilosort4SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
         sorter_params = self.SorterClass.default_params()
         sorter_params["do_correction"] = False
 
+        breakpoint()
         sorting = run_sorter(
             sorter_name,
             recording,
@@ -42,6 +86,7 @@ class Kilosort4SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
             raise_error=True,
             **sorter_params,
         )
+        breakpoint()
         assert sorting.sorting_info is not None
         assert "recording" in sorting.sorting_info.keys()
         assert "params" in sorting.sorting_info.keys()
