@@ -254,7 +254,7 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
         merged units will have the first unit_id of every lists of merges
     censor_ms: None or float
         When applying the merges, should be discard consecutive spikes violating a given refractory per
-    
+
     Returns
     -------
     sorting :  The new Sorting object
