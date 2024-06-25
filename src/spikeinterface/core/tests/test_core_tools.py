@@ -94,7 +94,7 @@ def test_path_utils_functions(create_cache_folder):
                     "class": "mock_class",
                     "version": "1.2",
                     "annotations": {},
-                    "kwargs": {"path": rf"{test_path1}", "non_existing_path": test_path_non_existing},
+                    "kwargs": {"path": rf"{test_path2}", "non_existing_path": test_path_non_existing},
                 },
             }
         }
