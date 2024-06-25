@@ -38,7 +38,7 @@ jobs:
       - uses: actions/cache@v4
         id: cache-datasets
         with:
-          path: $HOME/spikeinterface_datasets/*
+          path: ~/spikeinterface_datasets/
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
           lookup-only: 'true'   # Avoids downloading the data, saving behavior is not affected.
       - name: Cache found?
