@@ -25,7 +25,7 @@ jobs:
           python-version: '3.11'
       - name: Create the directory to store the data
         run: |
-          mkdir -p $HOME/spikeinterface_datasets/behavior_testing_data/
+          mkdir --parents --verbose $HOME/spikeinterface_datasets/behavior_testing_data/
           chmod -R 777 $HOME/spikeinterface_datasets
           ls -l $HOME/spikeinterface_datasets
         shell: bash
