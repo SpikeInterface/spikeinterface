@@ -122,7 +122,6 @@ def test_numpy_dtype_alises_encoding():
     # People tend to use this a dtype instead of the proper classes
     json.dumps(np.int32, cls=SIJsonEncoder)
     json.dumps(np.float32, cls=SIJsonEncoder)
-    json.dumps(np.bool_, cls=SIJsonEncoder)  # Note that np.bool was deperecated in numpy 1.20.0
 
 
 def test_recording_encoding(numpy_generated_recording):

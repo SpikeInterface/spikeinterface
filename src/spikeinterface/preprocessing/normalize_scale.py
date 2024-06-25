@@ -54,7 +54,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         Median for the output distribution
     q1 : float, default: 0.01
         Lower quantile used for measuring the scale
-    q1 : float, default: 0.99
+    q2 : float, default: 0.99
         Upper quantile used for measuring the
     mode : "by_channel" | "pool_channel", default: "by_channel"
         If "by_channel" each channel is rescaled independently.

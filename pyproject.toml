@@ -20,7 +20,7 @@ classifiers = [
 
 
 dependencies = [
-    "numpy",
+    "numpy>=1.20, <2.0",  # 1.20 np.ptp, 1.26 might be necessary for avoiding pickling errors when numpy >2.0
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.16,<2.18",
@@ -65,18 +65,16 @@ extractors = [
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
-    "scipy<1.13",
+    "scipy",
     "ONE-api>=2.7.0", # alf sorter and streaming IBL
-    "ibllib>=2.32.5", # streaming IBL
+    "ibllib>=2.36.0", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
     "ONE-api>=2.7.0", # alf sorter and streaming IBL
-    "ibllib>=2.32.5", # streaming IBL
-    "scipy<1.13", # ibl has a dependency on scipy but it does not have an upper bound
-    # Remove this once https://github.com/int-brain-lab/ibllib/issues/753
+    "ibllib>=2.36.0", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",

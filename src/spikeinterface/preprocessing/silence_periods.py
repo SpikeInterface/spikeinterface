@@ -25,7 +25,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
         One list per segment of tuples (start_frame, end_frame) to silence
     noise_levels : array
         Noise levels if already computed
-
+    seed : int | None, default: None
+        Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
+        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
     mode : "zeros" | "noise, default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
 
@@ -109,12 +111,6 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
-        num_channels = traces.shape[1]
-
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
 
         if len(self.periods) > 0:
             new_interval = np.array([start_frame, end_frame])
