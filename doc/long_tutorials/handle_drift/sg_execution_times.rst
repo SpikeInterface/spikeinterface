@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**02:00.428** total execution time for 1 file **from long_tutorials/handle_drift**:
+**17:42.989** total execution time for 1 file **from long_tutorials/handle_drift**:
 
 .. container::
 
@@ -33,5 +33,5 @@ Computation times
      - Time
      - Mem (MB)
    * - :ref:`sphx_glr_long_tutorials_handle_drift_plot_handle_drift.py` (``plot_handle_drift.py``)
-     - 02:00.428
+     - 17:42.989
      - 0.0

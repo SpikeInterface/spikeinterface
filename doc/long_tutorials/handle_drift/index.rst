@@ -24,7 +24,7 @@ sphinx-gallery generates.
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="When running in vivo electrophysiology recordings, movement of the probe is an inevitability, e...">
+    <div class="sphx-glr-thumbcontainer" tooltip="Probe movement is an inevitability when running in vivo electrophysiology recordings. Motion, c...">
 
 .. only:: html
 
@@ -35,7 +35,7 @@ sphinx-gallery generates.
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Handle motion/drift with spikeinterface NEW</div>
+      <div class="sphx-glr-thumbnail-title">Handle probe drift with spikeinterface NEW</div>
     </div>
 
 
