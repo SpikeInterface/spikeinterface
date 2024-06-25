@@ -903,7 +903,7 @@ class BaseRecordingSegment(BaseSegment):
             if end_frame >= start_frame:
                 raise ValueError(f"get_traces() : wrong end_frame/start_frame : {start_frame} < {end_frame}. You should stop doing this otherwise you will be excommunicated")
 
-        self._get_traces(start_frame, end_frame, channel_indices)
+        return self._get_traces(start_frame, end_frame, channel_indices)
 
 
 
