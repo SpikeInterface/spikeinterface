@@ -38,6 +38,7 @@ jobs:
         uses: tj-actions/changed-files@v41
 
       - name: Set environment variables based on changed files
+        id: modules-changed
         shell: bash
         run: python .github/detect_module_changes.py
         env:
@@ -52,27 +53,28 @@ jobs:
             echo "$file was changed"
           done
 
-
+      - name: Print the GITHUB_OUTPUT  file content
+        run: cat $GITHUB_OUTPUT
+        shell: bash
 
       - name: Print module changes
         shell: bash
         run: |
-          cat $GITHUB_OUTPUT
-          echo "CORE_CHANGED=${{ env.CORE_CHANGED }}"
-          echo "EXTRACTORS_CHANGED=${{ env.EXTRACTORS_CHANGED }}"
-          echo "PLEXON2_CHANGED=${{ env.PLEXON2_CHANGED }}"
-          echo "PREPROCESSING_CHANGED=${{ env.PREPROCESSING_CHANGED }}"
-          echo "POSTPROCESSING_CHANGED=${{ env.POSTPROCESSING_CHANGED }}"
-          echo "QUALITYMETRICS_CHANGED=${{ env.QUALITYMETRICS_CHANGED }}"
-          echo "SORTERS_CHANGED=${{ env.SORTERS_CHANGED }}"
-          echo "SORTERS_EXTERNAL_CHANGED=${{ env.SORTERS_EXTERNAL_CHANGED }}"
-          echo "SORTERS_INTERNAL_CHANGED=${{ env.SORTERS_INTERNAL_CHANGED }}"
-          echo "COMPARISON_CHANGED=${{ env.COMPARISON_CHANGED }}"
-          echo "CURATION_CHANGED=${{ env.CURATION_CHANGED }}"
-          echo "WIDGETS_CHANGED=${{ env.WIDGETS_CHANGED }}"
-          echo "EXPORTERS_CHANGED=${{ env.EXPORTERS_CHANGED }}"
-          echo "SORTINGCOMPONENTS_CHANGED=${{ env.SORTINGCOMPONENTS_CHANGED }}"
-          echo "GENERATION_CHANGED=${{ env.GENERATION_CHANGED }}"
+          echo "CORE_CHANGED=${{ steps.modules-changed.outputs.CORE_CHANGED }}"
+          echo "EXTRACTORS_CHANGED=${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED }}"
+          echo "PLEXON2_CHANGED=${{ steps.modules-changed.outputs.PLEXON2_CHANGED }}"
+          echo "PREPROCESSING_CHANGED=${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED }}"
+          echo "POSTPROCESSING_CHANGED=${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED }}"
+          echo "QUALITYMETRICS_CHANGED=${{ steps.modules-changed.outputs.QUALITYMETRICS_CHANGED }}"
+          echo "SORTERS_CHANGED=${{ steps.modules-changed.outputs.SORTERS_CHANGED }}"
+          echo "SORTERS_EXTERNAL_CHANGED=${{ steps.modules-changed.outputs.SORTERS_EXTERNAL_CHANGED }}"
+          echo "SORTERS_INTERNAL_CHANGED=${{ steps.modules-changed.outputs.SORTERS_INTERNAL_CHANGED }}"
+          echo "COMPARISON_CHANGED=${{ steps.modules-changed.outputs.COMPARISON_CHANGED }}"
+          echo "CURATION_CHANGED=${{ steps.modules-changed.outputs.CURATION_CHANGED }}"
+          echo "WIDGETS_CHANGED=${{ steps.modules-changed.outputs.WIDGETS_CHANGED }}"
+          echo "EXPORTERS_CHANGED=${{ steps.modules-changed.outputs.EXPORTERS_CHANGED }}"
+          echo "SORTINGCOMPONENTS_CHANGED=${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED }}"
+          echo "GENERATION_CHANGED=${{ steps.modules-changed.outputs.GENERATION_CHANGED }}"
 
 
       - name: Get current hash (SHA) of the ephy_testing_data repo
@@ -122,61 +124,61 @@ jobs:
       - name: Test extractors
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
-        if: env.EXTRACTORS_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: pytest -m "extractors"
         shell: bash
 
       - name: Test preprocessing
-        if: env.PREPROCESSING_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
         shell: bash
 
       - name: Test postprocessing
-        if: env.POSTPROCESSING_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: ./.github/run_tests.sh postprocessing --no-virtual-env
         shell: bash
 
       - name: Test quality metrics
-        if: env.QUALITYMETRICS_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: ./.github/run_tests.sh qualitymetrics --no-virtual-env
         shell: bash
 
       - name: Test comparison
-        if: env.COMPARISON_CHANGED == 'true' || env.GENERATION_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.GENERATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: ./.github/run_tests.sh comparison --no-virtual-env
         shell: bash
 
       - name: Test core sorters
-        if: env.SORTERS_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: ./.github/run_tests.sh sorters --no-virtual-env
         shell: bash
 
       - name: Test internal sorters
-        if: env.SORTERS_INTERNAL_CHANGED == 'true' || env.SORTINGCOMPONENTS_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.SORTERS_INTERNAL_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: ./.github/run_tests.sh sorters_internal --no-virtual-env
         shell: bash
 
       - name: Test curation
-        if: env.CURATION_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: ./.github/run_tests.sh curation --no-virtual-env
         shell: bash
 
       - name: Test widgets
-        if: env.WIDGETS_CHANGED == 'true' || env.CORE_CHANGED == 'true' || env.QUALITYMETRICS_CHANGED == 'true' || env.PREPROCESSING_CHANGED == 'true'
+        if: steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true'
         run: ./.github/run_tests.sh widgets --no-virtual-env
         shell: bash
 
       - name: Test exporters
-        if: env.EXPORTERS_CHANGED == 'true' || env.CORE_CHANGED == 'true' || env.WIDGETS_CHANGED == 'true'
+        if: steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true'
         run: ./.github/run_tests.sh exporters --no-virtual-env
         shell: bash
 
       - name: Test sortingcomponents
-        if: env.SORTINGCOMPONENTS_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: ./.github/run_tests.sh sortingcomponents --no-virtual-env
         shell: bash
 
       - name: Test generation
-        if: env.GENERATION_CHANGED == 'true' || env.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.GENERATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: ./.github/run_tests.sh generation --no-virtual-env
         shell: bash
