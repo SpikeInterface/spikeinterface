@@ -25,7 +25,7 @@ jobs:
           python-version: '3.11'
       - name: Create the directory to store the data
         run: |
-          mkdir --parents --verbose $HOME/spikeinterface_datasets/behavior_testing_data/
+          mkdir -p  $HOME/spikeinterface_datasets/behavior_testing_data/
           chmod -R 777 $HOME/spikeinterface_datasets
           ls -l $HOME/spikeinterface_datasets
         shell: bash
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/cache@v4
         id: cache-datasets
         with:
-          path: ~/spikeinterface_datasets
+          path: $HOME/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
           lookup-only: 'true'   # Avoids downloading the data, saving behavior is not affected.
       - name: Cache found?
