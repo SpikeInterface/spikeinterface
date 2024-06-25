@@ -20,7 +20,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         The method to compute the similarity. Can be in ["cosine", "l2", "l1"]
     max_lag_ms : float, default: 0
         If specified, the best distance for all given lag within max_lag_ms is kept, for every template
-    support : str, default "union"
+    support : "dense" | "union" | "intersection", default: "union"
         Support that should be considered to compute the distances between the templates, given their sparsities.
         Can be either ["dense", "union", "intersection"]
 
