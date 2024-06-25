@@ -932,11 +932,6 @@ class NwbRecordingSegment(BaseRecordingSegment):
         return self._num_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
         electrical_series_data = self.electrical_series_data
         if electrical_series_data.ndim == 1:
             traces = electrical_series_data[start_frame:end_frame][:, np.newaxis]
