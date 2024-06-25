@@ -18,9 +18,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         The SortingAnalyzer object
     method : str, default: "cosine"
         The method to compute the similarity. Can be in ["cosine", "l2", "l1"]
-    max_lag_ms : float, default 0
+    max_lag_ms : float, default: 0
         If specified, the best distance for all given lag within max_lag_ms is kept, for every template
-    support : str, default "union"
+    support : "dense" | "union" | "intersection", default: "union"
         Support that should be considered to compute the distances between the templates, given their sparsities.
         Can be either ["dense", "union", "intersection"]
 
@@ -46,6 +46,8 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, method="cosine", max_lag_ms=0, support="union"):
+        if method == "cosine_similarity":
+            method = "cosine"
         params = dict(method=method, max_lag_ms=max_lag_ms, support=support)
         return params
 
@@ -61,18 +63,14 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
         )
         sparsity = self.sorting_analyzer.sparsity
-        mask = None
-        if sparsity is not None:
-            if self.params["support"] == "intersection":
-                mask = np.logical_and(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
-            elif self.params["support"] == "union":
-                mask = np.logical_and(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
-                units_overlaps = np.sum(mask, axis=2) > 0
-                mask = np.logical_or(sparsity.mask[:, np.newaxis, :], sparsity.mask[np.newaxis, :, :])
-                mask[~units_overlaps] = False
-
         similarity = compute_similarity_with_templates_array(
-            templates_array, templates_array, method=self.params["method"], n_shifts=n_shifts, mask=mask
+            templates_array,
+            templates_array,
+            method=self.params["method"],
+            n_shifts=n_shifts,
+            support=self.params["support"],
+            sparsity=sparsity,
+            other_sparsity=sparsity,
         )
         self.data["similarity"] = similarity
 
@@ -85,7 +83,9 @@ register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 
-def compute_similarity_with_templates_array(templates_array, other_templates_array, method, n_shifts, mask=None):
+def compute_similarity_with_templates_array(
+    templates_array, other_templates_array, method, support="union", n_shifts=0, sparsity=None, other_sparsity=None
+):
 
     import sklearn.metrics.pairwise
 
@@ -94,96 +94,98 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
 
     all_metrics = ["cosine", "l1", "l2"]
 
-    if method in all_metrics:
-        nb_templates = templates_array.shape[0]
-        assert templates_array.shape[0] == other_templates_array.shape[0]
-        n = templates_array.shape[1]
-        nb_templates = templates_array.shape[0]
-        assert n_shifts < n, "max_lag is too large"
-        num_shifts = 2 * n_shifts + 1
-        distances = np.ones((num_shifts, nb_templates, nb_templates), dtype=np.float32)
-        if mask is not None:
-            units_overlaps = np.sum(mask, axis=2) > 0
-            overlapping_templates = {}
-            for i in range(nb_templates):
-                overlapping_templates[i] = np.flatnonzero(units_overlaps[i])
-
-        # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t
-        # So the matrix can be computed only for negative lags and be transposed
-
-        for count, shift in enumerate(range(-n_shifts, 1)):
-            if mask is None:
-                src_templates = templates_array[:, n_shifts : n - n_shifts].reshape(nb_templates, -1)
-                tgt_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift].reshape(nb_templates, -1)
-                if method == "l1":
-                    norms_1 = np.linalg.norm(src_templates, ord=1, axis=1)
-                    norms_2 = np.linalg.norm(tgt_templates, ord=1, axis=1)
-                    denominator = norms_1[:, None] + norms_2[None, :]
-                    distances[count] = sklearn.metrics.pairwise.pairwise_distances(
-                        src_templates, tgt_templates, metric="l1"
-                    )
-                    distances[count] /= denominator
-                elif method == "l2":
-                    norms_1 = np.linalg.norm(src_templates, ord=2, axis=1)
-                    norms_2 = np.linalg.norm(tgt_templates, ord=2, axis=1)
-                    denominator = norms_1[:, None] + norms_2[None, :]
-                    distances[count] = sklearn.metrics.pairwise.pairwise_distances(
-                        src_templates, tgt_templates, metric="l2"
-                    )
-                    distances[count] /= denominator
-                else:
-                    distances[count] = sklearn.metrics.pairwise.pairwise_distances(
-                        src_templates, tgt_templates, metric=method
-                    )
-
-                if n_shifts != 0:
-                    distances[num_shifts - count - 1] = distances[count].T
-
-            else:
-                src_sliced_templates = templates_array[:, n_shifts : n - n_shifts]
-                tgt_sliced_templates = templates_array[:, n_shifts + shift : n - n_shifts + shift]
-                for i in range(nb_templates):
-                    src_template = src_sliced_templates[i]
-                    tgt_templates = tgt_sliced_templates[overlapping_templates[i]]
-                    for gcount, j in enumerate(overlapping_templates[i]):
-                        if j < i:
-                            continue
-                        src = src_template[:, mask[i, j]].reshape(1, -1)
-                        tgt = (tgt_templates[gcount][:, mask[i, j]]).reshape(1, -1)
-
-                        if method == "l1":
-                            norm_i = np.sum(np.abs(src))
-                            norm_j = np.sum(np.abs(tgt))
-                            distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1")
-                            distances[count, i, j] /= norm_i + norm_j
-                        elif method == "l2":
-                            norm_i = np.linalg.norm(src, ord=2)
-                            norm_j = np.linalg.norm(tgt, ord=2)
-                            distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2")
-                            distances[count, i, j] /= norm_i + norm_j
-                        else:
-                            distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(
-                                src, tgt, metric=method
-                            )
-
-                        distances[count, j, i] = distances[count, i, j]
-
-                if n_shifts != 0:
-                    distances[num_shifts - count - 1] = distances[count].T
-
-        distances = np.min(distances, axis=0)
-        similarity = 1 - distances
-
-    else:
+    if method not in all_metrics:
         raise ValueError(f"compute_template_similarity (method {method}) not exists")
+
+    assert (
+        templates_array.shape[1] == other_templates_array.shape[1]
+    ), "The number of samples in the templates should be the same for both arrays"
+    assert (
+        templates_array.shape[2] == other_templates_array.shape[2]
+    ), "The number of channels in the templates should be the same for both arrays"
+    num_templates = templates_array.shape[0]
+    num_samples = templates_array.shape[1]
+    num_channels = templates_array.shape[2]
+    other_num_templates = other_templates_array.shape[0]
+
+    mask = None
+    if sparsity is not None and other_sparsity is not None:
+        if support == "intersection":
+            mask = np.logical_and(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
+        elif support == "union":
+            mask = np.logical_and(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
+            units_overlaps = np.sum(mask, axis=2) > 0
+            mask = np.logical_or(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
+            mask[~units_overlaps] = False
+    if mask is not None:
+        units_overlaps = np.sum(mask, axis=2) > 0
+        overlapping_templates = {}
+        for i in range(num_templates):
+            overlapping_templates[i] = np.flatnonzero(units_overlaps[i])
+    else:
+        # here we make a dense mask and overlapping templates
+        overlapping_templates = {i: np.arange(other_num_templates) for i in range(num_templates)}
+        mask = np.ones((num_templates, other_num_templates, num_channels), dtype=bool)
+
+    assert n_shifts < num_samples, "max_lag is too large"
+    num_shifts = 2 * n_shifts + 1
+    distances = np.ones((num_shifts, num_templates, other_num_templates), dtype=np.float32)
+
+    # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t
+    # So the matrix can be computed only for negative lags and be transposed
+    for count, shift in enumerate(range(-n_shifts, 1)):
+        src_sliced_templates = templates_array[:, n_shifts : num_samples - n_shifts]
+        tgt_sliced_templates = other_templates_array[:, n_shifts + shift : num_samples - n_shifts + shift]
+        for i in range(num_templates):
+            src_template = src_sliced_templates[i]
+            tgt_templates = tgt_sliced_templates[overlapping_templates[i]]
+            for gcount, j in enumerate(overlapping_templates[i]):
+                # symmetric values are handled later
+                if num_templates == other_num_templates and j < i:
+                    continue
+                src = src_template[:, mask[i, j]].reshape(1, -1)
+                tgt = (tgt_templates[gcount][:, mask[i, j]]).reshape(1, -1)
+
+                if method == "l1":
+                    norm_i = np.sum(np.abs(src))
+                    norm_j = np.sum(np.abs(tgt))
+                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1")
+                    distances[count, i, j] /= norm_i + norm_j
+                elif method == "l2":
+                    norm_i = np.linalg.norm(src, ord=2)
+                    norm_j = np.linalg.norm(tgt, ord=2)
+                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2")
+                    distances[count, i, j] /= norm_i + norm_j
+                else:
+                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")
+                if num_templates == other_num_templates:
+                    distances[count, j, i] = distances[count, i, j]
+
+            if n_shifts != 0:
+                distances[num_shifts - count - 1] = distances[count].T
+
+    distances = np.min(distances, axis=0)
+    similarity = 1 - distances
 
     return similarity
 
 
-def compute_template_similarity_by_pair(sorting_analyzer_1, sorting_analyzer_2, method="cosine", **kwargs):
+def compute_template_similarity_by_pair(
+    sorting_analyzer_1, sorting_analyzer_2, method="cosine", support="union", n_shifts=0
+):
     templates_array_1 = get_dense_templates_array(sorting_analyzer_1, return_scaled=True)
     templates_array_2 = get_dense_templates_array(sorting_analyzer_2, return_scaled=True)
-    similarity = compute_similarity_with_templates_array(templates_array_1, templates_array_2, method, **kwargs)
+    sparsity_1 = sorting_analyzer_1.sparsity
+    sparsity_2 = sorting_analyzer_2.sparsity
+    similarity = compute_similarity_with_templates_array(
+        templates_array_1,
+        templates_array_2,
+        method=method,
+        support=support,
+        n_shifts=n_shifts,
+        sparsity=sparsity_1,
+        other_sparsity=sparsity_2,
+    )
     return similarity
 
 
