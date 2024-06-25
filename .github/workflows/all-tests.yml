@@ -42,7 +42,7 @@ jobs:
         shell: bash
       - name: Cache datasets
         id: cache-datasets
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
