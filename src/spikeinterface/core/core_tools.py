@@ -23,12 +23,12 @@ def read_python(path):
 
     Parameters
     ----------
-    path: str or Path
+    path : str or Path
         Path to file to parse
 
     Returns
     -------
-    metadata:
+    metadata : dict
         dictionary containing parsed file
 
     """
@@ -51,9 +51,9 @@ def write_python(path, dict):
 
     Parameters
     ----------
-    path: str or Path
+    path : str or Path
         Path to save file
-    dict: dict
+    dict : dict
         dictionary to save
     """
     with Path(path).open("w") as f:
@@ -183,7 +183,9 @@ def is_dict_extractor(d: dict) -> bool:
     return is_extractor
 
 
-def recursive_path_modifier(d, func, target="path", copy=True, check_existance_after_func=False) -> dict:
+def recursive_path_modifier(
+    d, func, target="path", copy=True, check_if_exists=True, check_existance_after_func=False
+) -> dict:
     """
     Generic function for recursive modification of paths in an extractor dict.
     A recording can be nested and this function explores the dictionary recursively
@@ -206,6 +208,8 @@ def recursive_path_modifier(d, func, target="path", copy=True, check_existance_a
         String to match to dictionary key.
     copy : bool, default: True (at first call)
         If True the original dictionary is deep copied.
+    check_if_exists : bool, default: True
+        If True, the function will check if the path exists before or after the modification.
     check_existance_after_func : bool, default: False
         If True, the function will check if the path exists after the modification.
 
@@ -223,7 +227,13 @@ def recursive_path_modifier(d, func, target="path", copy=True, check_existance_a
         kwargs = dc["kwargs"]
 
         # change in place (copy=False)
-        recursive_path_modifier(kwargs, func, copy=False, check_existance_after_func=check_existance_after_func)
+        recursive_path_modifier(
+            kwargs,
+            func,
+            copy=False,
+            check_if_exists=check_if_exists,
+            check_existance_after_func=check_existance_after_func,
+        )
 
         # find nested and also change inplace (copy=False)
         nested_extractor_dict = None
@@ -231,7 +241,11 @@ def recursive_path_modifier(d, func, target="path", copy=True, check_existance_a
             if isinstance(v, dict) and is_dict_extractor(v):
                 nested_extractor_dict = v
                 recursive_path_modifier(
-                    nested_extractor_dict, func, copy=False, check_existance_after_func=check_existance_after_func
+                    nested_extractor_dict,
+                    func,
+                    copy=False,
+                    check_if_exists=check_if_exists,
+                    check_existance_after_func=check_existance_after_func,
                 )
             # deal with list of extractor objects (e.g. concatenate_recordings)
             elif isinstance(v, list):
@@ -242,6 +256,7 @@ def recursive_path_modifier(d, func, target="path", copy=True, check_existance_a
                             nested_extractor_dict,
                             func,
                             copy=False,
+                            check_if_exists=check_if_exists,
                             check_existance_after_func=check_existance_after_func,
                         )
 
@@ -253,20 +268,26 @@ def recursive_path_modifier(d, func, target="path", copy=True, check_existance_a
                 if v is None:
                     continue
                 if isinstance(v, (str, Path)):
-                    if check_existance_after_func:
-                        path_to_check = Path(func(v))
+                    if check_if_exists:
+                        if check_existance_after_func:
+                            path_to_check = Path(func(v))
+                        else:
+                            path_to_check = Path(v)
+                        if path_to_check.exists():
+                            dc[k] = func(v)
                     else:
-                        path_to_check = Path(v)
-                    if path_to_check.exists():
                         dc[k] = func(v)
                 elif isinstance(v, list):
-                    for i, e in enumerate(v):
-                        if check_existance_after_func:
-                            path_to_check = Path(func(e))
-                        else:
-                            path_to_check = Path(e)
-                        if path_to_check.exists():
-                            dc[k][i] = func(e)
+                    if check_if_exists:
+                        for i, e in enumerate(v):
+                            if check_existance_after_func:
+                                path_to_check = Path(func(e))
+                            else:
+                                path_to_check = Path(e)
+                            if path_to_check.exists():
+                                dc[k][i] = func(e)
+                    else:
+                        dc[k] = [func(e) for e in v]
                 else:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
@@ -307,14 +328,14 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
 
     Parameters
     ----------
-    input_dict: dict
+    input_dict : dict
         A dict describing an extactor obtained by BaseExtractor.to_dict()
-    relative_folder: str or Path
+    relative_folder : str or Path
         The folder to be relative to.
 
     Returns
     -------
-    relative_possible: bool
+    relative_possible : bool
         Whether the given input can be made relative to the relative_folder
     """
     path_list = _get_paths_list(input_dict)
