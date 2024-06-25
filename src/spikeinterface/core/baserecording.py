@@ -887,7 +887,7 @@ class BaseRecordingSegment(BaseSegment):
         """
         # @alessio 
         start_frame = int(start_frame) if start_frame is not None else 0
-        num_samples = self.get_num_samples()
+        num_samples = int(self.get_num_samples())
         end_frame = int(min(end_frame, num_samples)) if end_frame is not None else num_samples
 
         # @ramon @alessio @zach @joe @paul
