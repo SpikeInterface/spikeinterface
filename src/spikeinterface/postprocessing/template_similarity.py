@@ -102,7 +102,7 @@ def compute_similarity_with_templates_array(templates_array, other_templates_arr
     if method == "cosine_similarity":
         assert templates_array.shape[0] == other_templates_array.shape[0]
         templates_flat = templates_array.reshape(templates_array.shape[0], -1)
-        other_templates_flat = templates_array.reshape(other_templates_array.shape[0], -1)
+        other_templates_flat = other_templates_array.reshape(other_templates_array.shape[0], -1)
         similarity = sklearn.metrics.pairwise.cosine_similarity(templates_flat, other_templates_flat)
 
     else:

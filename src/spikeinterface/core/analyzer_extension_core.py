@@ -259,8 +259,10 @@ class ComputeWaveforms(AnalyzerExtension):
 
         if new_sorting_analyzer.sparsity is not None:
             sparsity_mask = new_sorting_analyzer.sparsity.mask
+            # We check if the number of max channels has increased because of changes in sparsity mask
             num_chans = int(max(np.sum(sparsity_mask, axis=1)))
             old_num_chans = self.data["waveforms"].shape[2]
+
             if num_chans == old_num_chans:
                 new_data["waveforms"] = self.data["waveforms"]
                 if kept_indices is not None:
@@ -268,6 +270,8 @@ class ComputeWaveforms(AnalyzerExtension):
                     some_spikes = some_spikes[valid]
                     new_data["waveforms"] = self.data["waveforms"][valid]
             else:
+                # If yes, this is because we made some union of sparsity mask during the merges, and
+                # thus we need to recompute the waveforms of the merges units only
                 some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
                 spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
                 if kept_indices is not None:
@@ -275,16 +279,17 @@ class ComputeWaveforms(AnalyzerExtension):
                     some_spikes = some_spikes[valid]
                     waveforms = self.data["waveforms"][valid]
 
+                former_unit_ids = list(set(new_sorting_analyzer.unit_ids).difference(new_unit_ids))
                 num_waveforms = len(some_spikes)
                 num_samples = waveforms.shape[1]
                 new_data["waveforms"] = np.zeros((num_waveforms, num_samples, num_chans), dtype=waveforms.dtype)
-                keep_unit_indices = np.flatnonzero(~np.isin(new_sorting_analyzer.unit_ids, new_unit_ids))
+                keep_unit_indices = new_sorting_analyzer.ids_to_indices(former_unit_ids)
                 keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
                 new_data["waveforms"][keep_spike_mask, :, :old_num_chans] = waveforms[keep_spike_mask]
 
                 # We only recompute waveforms for new units that might have a new sparsity mask. Could be
                 # slightly optimized by checking exactly which merged units have a different mask
-                updated_unit_indices = np.flatnonzero(np.isin(new_sorting_analyzer.unit_ids, new_unit_ids))
+                updated_unit_indices = new_sorting_analyzer.sorting.ids_to_indices(new_unit_ids)
                 updated_spike_mask = np.isin(some_spikes["unit_index"], updated_unit_indices)
                 new_waveforms = self._get_waveforms(
                     new_sorting_analyzer, new_unit_ids, some_spikes, verbose, **job_kwargs
