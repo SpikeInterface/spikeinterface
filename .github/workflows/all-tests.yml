@@ -73,7 +73,7 @@ jobs:
         uses: tj-actions/changed-files@v41
 
       - name: Set environment variables based on changed files
-        run: python ./.github/set_env_vars.py
+        run: python .github/detect_module_changes.py
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
 
