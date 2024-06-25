@@ -41,8 +41,7 @@ jobs:
         id: modules-changed
         shell: bash
         run: |
-          declare -A changes
-          changes=(
+          declare -A changes=(
             ["pyproject.toml"]="CORE_CHANGED"
             ["/core/"]="CORE_CHANGED"
             ["/extractors/neoextractors/neobaseextractor.py"]="CORE_CHANGED"
@@ -61,6 +60,7 @@ jobs:
             ["/sortingcomponents/"]="SORTINGCOMPONENTS_CHANGED"
             ["/generation/"]="GENERATION_CHANGED"
           )
+
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
             for pattern in "${!changes[@]}"; do
               if [[ $file == *$pattern* ]]; then
