@@ -64,7 +64,7 @@ class ModelBasedClassification:
         # self._check_params_for_classification()
 
         # Prepare input data
-        input_data = input_data.applymap(lambda x: np.nan if np.isinf(x) else x)
+        input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
         input_data = input_data.astype("float32")
 
         # Apply classifier
