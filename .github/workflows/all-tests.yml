@@ -61,9 +61,11 @@ jobs:
             ["/generation/"]="GENERATION_CHANGED"
           )
 
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
+
+          for file in $changed_files; do
             for pattern in "${!changes[@]}"; do
-              if [[ $file == *$pattern* ]]; then
+              if [[ $file == *"$pattern"* ]]; then
                 echo "${changes[$pattern]}=true"
                 echo "${changes[$pattern]}=true" >> $GITHUB_ENV
               fi
