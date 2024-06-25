@@ -50,6 +50,11 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
 class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
     """
     Class for reading events from AlphaOmega MPX file format
+
+    Parameters
+    ----------
+    folder_path : str or Path-like
+        The folder path to the AlphaOmega events.
     """
 
     mode = "folder"

@@ -10,15 +10,14 @@ from ..core import get_chunk_with_margin
 
 _common_filter_docs = """**filter_kwargs : dict
         Certain keyword arguments for `scipy.signal` filters:
-        filter_order : order
-            The order of the filter
-        filter_mode :  "sos" | "ba", default: "sos"
-            Filter form of the filter coefficients:
-            - second-order sections ("sos")
-            - numerator/denominator : ("ba")
-        ftype : str, default: "butter"
-            Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
-    """
+            filter_order : order
+                The order of the filter
+            filter_mode :  "sos" | "ba", default: "sos"
+                Filter form of the filter coefficients:
+                - second-order sections ("sos")
+                - numerator/denominator : ("ba")
+            ftype : str, default: "butter"
+                Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1"."""
 
 
 class FilterRecording(BasePreprocessor):
