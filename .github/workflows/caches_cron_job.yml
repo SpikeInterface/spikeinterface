@@ -26,6 +26,7 @@ jobs:
       - name: Create the directory to store the data
         run: |
           mkdir -p $HOME/spikeinterface_datasets/behavior_testing_data/
+          chmod -R 777 $HOME/spikeinterface_datasets
           ls -l $HOME/spikeinterface_datasets
         shell: bash
       - name: Get current hash (SHA) of the ephy_testing_data repo
