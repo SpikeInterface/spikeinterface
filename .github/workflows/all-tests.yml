@@ -84,12 +84,10 @@ jobs:
 
       - name: Install packages
         run: |
-          pip install -e .[test,test_core]
+          pip install .[test_core]
           pip install tabulate
           pip install pandas
         shell: bash
-
-
 
       - name: Set execute permissions on run_tests.sh
         run: chmod +x .github/run_tests.sh
@@ -117,9 +115,9 @@ jobs:
       - name: Test extractors
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
-        if: ${{ env.RUN_EXTRACTORS_TESTS == 'true' }}
+        if: env.RUN_EXTRACTORS_TESTS == 'true'
         run: |
-          pip install .[extractors, streaming_extractors]
+          pip install .[extractors,streaming_extractors]
           ./.github/run_tests.sh "extractors and not streaming_extractors"
         shell: bash
 
@@ -131,28 +129,28 @@ jobs:
         shell: bash
 
       - name: Test postprocessing
-        if: ${{ env.RUN_POSTPROCESSING_TESTS == 'true' }}
+        if: env.RUN_POSTPROCESSING_TESTS == 'true'
         run:
           pip install .[full]
           ./.github/run_tests.sh postprocessing --no-virtual-env
         shell: bash
 
       - name: Test quality metrics
-        if: ${{ env.RUN_QUALITYMETRICS_TESTS == 'true' }}
+        if: env.RUN_QUALITYMETRICS_TESTS == 'true'
         run:
           pip install .[full]
           ./.github/run_tests.sh qualitymetrics --no-virtual-env
         shell: bash
 
       - name: Test comparison
-        if: ${{ env.RUN_COMPARISON_TESTS == 'true' }}
+        if: env.RUN_COMPARISON_TESTS == 'true'
         run:
           pip install .[full]
           ./.github/run_tests.sh comparison --no-virtual-env
         shell: bash
 
       - name: Test core sorters
-        if: ${{ env.RUN_SORTERS_TESTS == 'true' }}
+        if: env.RUN_SORTERS_TESTS == 'true'
         shell: bash
         run:
           pip install .[full]
@@ -160,40 +158,40 @@ jobs:
 
       - name: Test internal sorters
           pip install .[full]
-        if: ${{ env.RUN_INTERNAL_SORTERS_TESTS == 'true' }}
+        if: env.RUN_INTERNAL_SORTERS_TESTS == 'true'
         run: ./.github/run_tests.sh sorters_internal --no-virtual-env
         shell: bash
 
       - name: Test curation
-        if: ${{ env.RUN_CURATION_TESTS == 'true' }}
+        if: env.RUN_CURATION_TESTS == 'true'
         run:
           pip install .[full]
           ./.github/run_tests.sh curation --no-virtual-env
         shell: bash
 
       - name: Test widgets
-        if: ${{ env.RUN_WIDGETS_TESTS == 'true' }}
+        if: env.RUN_WIDGETS_TESTS == 'true'
         run:
           pip install .[full]
           ./.github/run_tests.sh widgets --no-virtual-env
         shell: bash
 
       - name: Test exporters
-        if: ${{ env.RUN_EXPORTERS_TESTS == 'true' }}
+        if: env.RUN_EXPORTERS_TESTS == 'true'
         run:
           pip install .[full]
           ./.github/run_tests.sh exporters --no-virtual-env
         shell: bash
 
       - name: Test sortingcomponents
-        if: ${{ env.RUN_SORTINGCOMPONENTS_TESTS == 'true' }}
+        if: env.RUN_SORTINGCOMPONENTS_TESTS == 'true'
         shell: bash
         run:
           pip install .[full]
           ./.github/run_tests.sh sortingcomponents --no-virtual-env
 
       - name: Test generation
-        if: ${{ env.RUN_GENERATION_TESTS == 'true' }}
+        if: env.RUN_GENERATION_TESTS == 'true'
         shell: bash
         run:
           pip install .[full]
