@@ -296,7 +296,10 @@ def _relative_to(p, relative_folder):
     relative_folder = Path(relative_folder).resolve()
     p_resolved = Path(p).resolve()
     # the as_posix transform \\ to / on window which make better json files
-    rel_to = os.path.relpath(p_resolved.as_posix(), start=relative_folder.as_posix())
+    try:
+        rel_to = os.path.relpath(p_resolved.as_posix(), start=relative_folder.as_posix())
+    except:
+        rel_to = p_resolved
     return Path(rel_to).as_posix()
 
 
