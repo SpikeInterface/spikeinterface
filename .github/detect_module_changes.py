@@ -1,30 +1,84 @@
+from pathlib import Path
+import argparse
 import os
-import pathlib
 
-changes = {
-    "CORE_CHANGED": ["pyproject.toml", "/core/", "/extractors/neoextractors/neobaseextractor.py"],
-    "EXTRACTORS_CHANGED": ["/extractors/"],
-    "PLEXON2_CHANGED": ["plexon2"],
-    "PREPROCESSING_CHANGED": ["/preprocessing/"],
-    "POSTPROCESSING_CHANGED": ["/postprocessing/"],
-    "QUALITYMETRICS_CHANGED": ["/qualitymetrics/"],
-    "SORTERS_CHANGED": ["/sorters/"],
-    "SORTERS_EXTERNAL_CHANGED": ["/sorters/external"],
-    "SORTERS_INTERNAL_CHANGED": ["/sorters/internal"],
-    "COMPARISON_CHANGED": ["/comparison/"],
-    "CURATION_CHANGED": ["/curation/"],
-    "WIDGETS_CHANGED": ["/widgets/"],
-    "EXPORTERS_CHANGED": ["/exporters/"],
-    "SORTINGCOMPONENTS_CHANGED": ["/sortingcomponents/"],
-    "GENERATION_CHANGED": ["/generation/"],
+
+# We get the list of files change as an input
+parser = argparse.ArgumentParser()
+parser.add_argument("changed_files", nargs="*", help="List of changed files")
+args = parser.parse_args()
+
+changed_files = args.changed_files
+changed_files_paths = [Path(file) for file in changed_files]
+
+# We assume nothing has been changed
+conditions_changed = {
+    "CORE_CHANGED": False,
+    "PYPROJECT_TOML_CHANGED": False,
+    "NEOBASEEXTRACTOR_CHANGED": False,
+    "EXTRACTORS_CHANGED": False,
+    "PLEXON2_CHANGED": False,
+    "PREPROCESSING_CHANGED": False,
+    "POSTPROCESSING_CHANGED": False,
+    "QUALITYMETRICS_CHANGED": False,
+    "SORTERS_CHANGED": False,
+    "SORTERS_EXTERNAL_CHANGED": False,
+    "SORTERS_INTERNAL_CHANGED": False,
+    "COMPARISON_CHANGED": False,
+    "CURATION_CHANGED": False,
+    "WIDGETS_CHANGED": False,
+    "EXPORTERS_CHANGED": False,
+    "SORTINGCOMPONENTS_CHANGED": False,
+    "GENERATION_CHANGED": False,
 }
 
-changed_files = os.getenv("CHANGED_FILES", "").split()
 
-for change, patterns in changes.items():
-    for file in changed_files:
-        if any(pathlib.PurePath(file).match(pattern) for pattern in patterns):
-            print(f"{change}=true")
-            with open(os.getenv("GITHUB_OUTPUT"), "a") as env_file:
-                env_file.write(f"{change}=true\n")
-            break
+for changed_file in changed_files_paths:
+
+    file_is_in_src = changed_file.parts[0] == "src"
+
+    if not file_is_in_src:
+
+        if changed_file.name == "pyproject.toml":
+            conditions_changed["PYPROJECT_TOML_CHANGED"] = True
+
+    else:
+        if changed_file.name == "neobaseextractor.py":
+            conditions_changed["NEOBASEEXTRACTOR_CHANGED"] = True
+        elif changed_file.name == "plexon2.py":
+            conditions_changed["PLEXON2_CHANGED"] = True
+        elif "core" in changed_file.parts:
+            conditions_changed["CORE_CHANGED"] = True
+        elif "extractors" in changed_file.parts:
+            conditions_changed["EXTRACTORS_CHANGED"] = True
+        elif "preprocessing" in changed_file.parts:
+            conditions_changed["PREPROCESSING_CHANGED"] = True
+        elif "postprocessing" in changed_file.parts:
+            conditions_changed["POSTPROCESSING_CHANGED"] = True
+        elif "qualitymetrics" in changed_file.parts:
+            conditions_changed["QUALITYMETRICS_CHANGED"] = True
+        elif "comparison" in changed_file.parts:
+            conditions_changed["COMPARISON_CHANGED"] = True
+        elif "curation" in changed_file.parts:
+            conditions_changed["CURATION_CHANGED"] = True
+        elif "widgets" in changed_file.parts:
+            conditions_changed["WIDGETS_CHANGED"] = True
+        elif "exporters" in changed_file.parts:
+            conditions_changed["EXPORTERS_CHANGED"] = True
+        elif "sortingcomponents" in changed_file.parts:
+            conditions_changed["SORTINGCOMPONENTS_CHANGED"] = True
+        elif "generation" in changed_file.parts:
+            conditions_changed["GENERATION_CHANGED"] = True
+        elif "sorters" in changed_file.parts:
+            conditions_changed["SORTERS_CHANGED"] = True
+            if "external" in changed_file.parts:
+                conditions_changed["SORTERS_EXTERNAL_CHANGED"] = True
+            elif "internal" in changed_file.parts:
+                conditions_changed["SORTERS_INTERNAL_CHANGED"] = True
+
+
+# Write the conditions to the GITHUB_ENV file
+env_file = os.getenv('GITHUB_ENV')
+with open(env_file, 'a') as f:
+    for key, value in conditions_changed.items():
+        f.write(f"{key}={value}\n")
