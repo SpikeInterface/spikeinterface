@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path, WindowsPath
-from typing import Union
+from typing import Union, Generator
 import os
 import sys
 import datetime
@@ -8,6 +8,7 @@ import json
 from copy import deepcopy
 import importlib
 from math import prod
+from collections import namedtuple
 
 import numpy as np
 
@@ -183,6 +184,50 @@ def is_dict_extractor(d: dict) -> bool:
     return is_extractor
 
 
+recording_dict_element = namedtuple(typename="recording_dict_element", field_names=["value", "name", "access_path"])
+
+
+def recording_dict_iterator(extractor_dict: dict) -> Generator[recording_dict_element]:
+    """
+    Iterator for recursive traversal of a dictionary.
+    This function explores the dictionary recursively and yields the path to each value along with the value itself.
+
+    By path here we mean the keys that lead to the value in the dictionary:
+    e.g. for the dictionary {'a': {'b': 1}}, the path to the value 1 is ('a', 'b').
+
+    See `BaseExtractor.to_dict()` for a description of `extractor_dict` structure.
+
+    Parameters
+    ----------
+    extractor_dict : dict
+        Input dictionary
+
+    Yields
+    ------
+    recording_dict_element
+        Named tuple containing the value, the name, and the access_path to the value in the dictionary.
+
+    """
+
+    def _recording_dict_iterator(dict_list_or_value, access_path=(), name=""):
+        if isinstance(dict_list_or_value, dict):
+            for k, v in dict_list_or_value.items():
+                yield from _recording_dict_iterator(v, access_path + (k,), name=k)
+        elif isinstance(dict_list_or_value, list):
+            for i, v in enumerate(dict_list_or_value):
+                yield from _recording_dict_iterator(
+                    v, access_path + (i,), name=name
+                )  # Propagate name of list to children
+        else:
+            yield recording_dict_element(
+                value=dict_list_or_value,
+                name=name,
+                access_path=access_path,
+            )
+
+    yield from _recording_dict_iterator(extractor_dict)
+
+
 def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
     """
     Generic function for recursive modification of paths in an extractor dict.
@@ -250,15 +295,16 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
 
-def _get_paths_list(d):
+def _get_paths_list(d: dict) -> list[str | Path]:
     # this explore a dict and get all paths flatten in a list
     # the trick is to use a closure func called by recursive_path_modifier()
-    path_list = []
 
-    def append_to_path(p):
-        path_list.append(p)
+    element_is_path = lambda element: "path" in element.name and isinstance(element.value, (str, Path))
+    path_list = [e.value for e in recording_dict_iterator(d) if element_is_path(e)]
 
-    recursive_path_modifier(d, append_to_path, target="path", copy=True)
+    # if check_if_exists: TODO: Enable this once container_tools test uses proper mocks
+    #     path_list = [p for p in path_list if Path(p).exists()]
+
     return path_list
 
 
