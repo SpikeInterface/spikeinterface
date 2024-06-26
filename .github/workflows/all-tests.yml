@@ -46,20 +46,28 @@ jobs:
             echo "$file was changed"
           done
 
-      - name: Detect changed modules
+      - name: Set testing environment  # This decides which tests are run and whether to install especial dependencies
         shell: bash
         run: |
           changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
-          python .github/detect_module_changes.py $changed_files
+          python .github/determine_testing_environment.py $changed_files
 
-      - name: Print module changes
+      - name: Display testing environment
         shell: bash
         run: |
           echo "RUN_EXTRACTORS_TESTS=${RUN_EXTRACTORS_TESTS}"
           echo "RUN_PREPROCESSING_TESTS=${RUN_PREPROCESSING_TESTS}"
           echo "RUN_POSTPROCESSING_TESTS=${RUN_POSTPROCESSING_TESTS}"
           echo "RUN_QUALITYMETRICS_TESTS=${RUN_QUALITYMETRICS_TESTS}"
-          echo "INSTALL_PLEXON_DEPENDENCIES=${INSTALL_PLEXON_DEPENDENCIES}"
+          echo "RUN_CURATION_TESTS=${RUN_CURATION_TESTS}"
+          echo "RUN_SORTINGCOMPONENTS_TESTS=${RUN_SORTINGCOMPONENTS_TESTS}"
+          echo "RUN_GENERATION_TESTS=${RUN_GENERATION_TESTS}"
+          echo "RUN_COMPARISON_TESTS=${RUN_COMPARISON_TESTS}"
+          echo "RUN_WIDGETS_TESTS=${RUN_WIDGETS_TESTS}"
+          echo "RUN_EXPORTERS_TESTS=${RUN_EXPORTERS_TESTS}"
+          echo "RUN_SORTERS_TESTS=${RUN_SORTERS_TESTS}"
+          echo "RUN_INTERNAL_SORTERS_TESTS=${RUN_INTERNAL_SORTERS_TESTS}"
+          echo "INSTALL_PLEXON_DEPENDENCIES=${INSTALL_PLEXON_DEPENDENCIES}"ENCIES}"
 
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
@@ -76,9 +84,7 @@ jobs:
 
       - name: Install packages
         run: |
-          git config --global user.email "CI@example.com"
-          git config --global user.name "CI Almighty"
-          pip install -e .[test,extractors,streaming_extractors,full]
+          pip install -e .[test, test_core]
           pip install tabulate
         shell: bash
 
@@ -108,60 +114,83 @@ jobs:
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         if: ${{ env.RUN_EXTRACTORS_TESTS == 'true' }}
-        run: pytest -m "extractors"
+        run: |
+          pip install .[extractors, streaming_extractors]
+          ./.github/run_tests.sh "extractors and not streaming_extractors"
         shell: bash
 
       - name: Test preprocessing
-        if: ${{ env.RUN_PREPROCESSING_TESTS == 'true' }}
-        run: ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
+        if: env.RUN_PREPROCESSING_TESTS == 'true'
+        run: |
+          pip install .[preprocessing]
+          ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
         shell: bash
 
       - name: Test postprocessing
         if: ${{ env.RUN_POSTPROCESSING_TESTS == 'true' }}
-        run: ./.github/run_tests.sh postprocessing --no-virtual-env
+        run:
+          pip install .[full]
+          ./.github/run_tests.sh postprocessing --no-virtual-env
         shell: bash
 
       - name: Test quality metrics
         if: ${{ env.RUN_QUALITYMETRICS_TESTS == 'true' }}
-        run: ./.github/run_tests.sh qualitymetrics --no-virtual-env
+        run:
+          pip install .[full]
+          ./.github/run_tests.sh qualitymetrics --no-virtual-env
         shell: bash
 
       - name: Test comparison
         if: ${{ env.RUN_COMPARISON_TESTS == 'true' }}
-        run: ./.github/run_tests.sh comparison --no-virtual-env
+        run:
+          pip install .[full]
+          ./.github/run_tests.sh comparison --no-virtual-env
         shell: bash
 
       - name: Test core sorters
         if: ${{ env.RUN_SORTERS_TESTS == 'true' }}
-        run: ./.github/run_tests.sh sorters --no-virtual-env
         shell: bash
+        run:
+          pip install .[full]
+          ./.github/run_tests.sh sorters --no-virtual-env
 
       - name: Test internal sorters
+          pip install .[full]
         if: ${{ env.RUN_INTERNAL_SORTERS_TESTS == 'true' }}
         run: ./.github/run_tests.sh sorters_internal --no-virtual-env
         shell: bash
 
       - name: Test curation
         if: ${{ env.RUN_CURATION_TESTS == 'true' }}
-        run: ./.github/run_tests.sh curation --no-virtual-env
+        run:
+          pip install .[full]
+          ./.github/run_tests.sh curation --no-virtual-env
         shell: bash
 
       - name: Test widgets
         if: ${{ env.RUN_WIDGETS_TESTS == 'true' }}
-        run: ./.github/run_tests.sh widgets --no-virtual-env
+        run:
+          pip install .[full]
+          ./.github/run_tests.sh widgets --no-virtual-env
         shell: bash
 
       - name: Test exporters
         if: ${{ env.RUN_EXPORTERS_TESTS == 'true' }}
-        run: ./.github/run_tests.sh exporters --no-virtual-env
+        run:
+          pip install .[full]
+          ./.github/run_tests.sh exporters --no-virtual-env
         shell: bash
 
       - name: Test sortingcomponents
         if: ${{ env.RUN_SORTINGCOMPONENTS_TESTS == 'true' }}
-        run: ./.github/run_tests.sh sortingcomponents --no-virtual-env
         shell: bash
+        run:
+          pip install .[full]
+          ./.github/run_tests.sh sortingcomponents --no-virtual-env
 
       - name: Test generation
         if: ${{ env.RUN_GENERATION_TESTS == 'true' }}
-        run: ./.github/run_tests.sh generation --no-virtual-env
         shell: bash
+        run:
+          pip install .[full]
+          ./.github/run_tests.sh generation --no-virtual-env

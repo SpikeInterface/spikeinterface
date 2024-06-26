@@ -87,8 +87,8 @@ streaming_extractors = [
 
 preprocessing = [
     "scipy",
-    "scikit-learn",
 ]
+
 
 full = [
     "h5py",
