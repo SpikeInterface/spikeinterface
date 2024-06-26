@@ -91,7 +91,7 @@ run_widgets_test = run_everything or run_qualitymetrics_tests or run_preprocessi
 run_exporters_test = run_everything or run_widgets_test or exporters_changed
 
 run_sorters_test = run_everything or sorters_changed
-run_internal_sorters_test = run_everything or run_sortingcomponents_tests or sorters_internal_changed"
+run_internal_sorters_test = run_everything or run_sortingcomponents_tests or sorters_internal_changed
 
 install_plexon_dependencies = conditions_changed["PLEXON2_CHANGED"]
 
