@@ -68,7 +68,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
         num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
-        templates_array = get_dense_templates_array(new_sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled)
+        templates_array = get_dense_templates_array(
+            new_sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
+        )
         arr = self.data["similarity"]
         sparsity = new_sorting_analyzer.sparsity
         all_new_unit_ids = new_sorting_analyzer.unit_ids
@@ -213,7 +215,7 @@ def compute_similarity_with_templates_array(
                     distances[count, i, j] /= norm_i + norm_j
                 else:
                     distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")
-                
+
                 distances[count, j, i] = distances[count, i, j]
 
         if num_shifts != 0:
