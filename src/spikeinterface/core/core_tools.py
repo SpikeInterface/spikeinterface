@@ -228,7 +228,7 @@ def extractor_dict_iterator(extractor_dict: dict) -> Generator[recording_dict_el
     yield from _extractor_dict_iterator(extractor_dict)
 
 
-def set_value_in_recording_dict(extractor_dict: dict, access_path: tuple, new_value):
+def set_value_in_extractor_dict(extractor_dict: dict, access_path: tuple, new_value):
     """
     In place modification of a value in a nested dictionary given its access path.
 
@@ -416,7 +416,7 @@ def make_paths_relative(input_dict: dict, relative_folder: str | Path) -> dict:
     output_dict = deepcopy(input_dict)
     for element in path_elements_in_dict:
         new_value = _relative_to(element.value, relative_folder)
-        set_value_in_recording_dict(
+        set_value_in_extractor_dict(
             extractor_dict=output_dict,
             access_path=element.access_path,
             new_value=new_value,
@@ -453,7 +453,7 @@ def make_paths_absolute(input_dict, base_folder):
         absolute_path = (base_folder / element.value).resolve()
         if Path(absolute_path).exists():
             new_value = absolute_path.as_posix()  # Not so sure about this, Sam
-            set_value_in_recording_dict(
+            set_value_in_extractor_dict(
                 extractor_dict=output_dict,
                 access_path=element.access_path,
                 new_value=new_value,
