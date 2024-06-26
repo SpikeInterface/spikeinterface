@@ -12,6 +12,14 @@ from probeinterface.io import write_prb
 from kilosort.parameters import DEFAULT_SETTINGS
 from packaging.version import parse
 from importlib.metadata import version
+from inspect import signature
+from kilosort.run_kilosort import (set_files, initialize_ops,
+                                   compute_preprocessing,
+                                   compute_drift_correction, detect_spikes,
+                                   cluster_spikes, save_sorting,
+                                   get_run_parameters, )
+from kilosort.io import load_probe, RecordingExtractorAsArray, BinaryFiltered
+from kilosort.parameters import DEFAULT_SETTINGS
 
 # TODO: save_preprocesed_copy is misspelled in KS4.
 # TODO: duplicate_spike_bins to duplicate_spike_ms
@@ -189,6 +197,102 @@ class TestKilosort4Long:
 
             if param_key not in ["n_chan_bin", "fs", "tmin", "tmax"]:
                 assert param_key in tested_keys, f"param: {param_key} in DEFAULT SETTINGS but not tested."
+
+    def test_set_files_arguments(self):
+        self._check_arguments(
+            set_files,
+            ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir"]
+        )
+
+    def test_initialize_ops_arguments(self):
+
+        expected_arguments = ["settings", "probe", "data_dtype", "do_CAR", "invert_sign", "device"]
+
+        if parse(version("kilosort")) >= parse("4.0.12"):
+            expected_arguments.append("save_preprocesed_copy")
+
+        self._check_arguments(
+            initialize_ops,
+            expected_arguments,
+        )
+
+    def test_compute_preprocessing_arguments(self):
+        self._check_arguments(
+            compute_preprocessing,
+                ["ops", "device", "tic0", "file_object"]
+        )
+
+    def test_compute_drift_location_arguments(self):
+        self._check_arguments(
+            compute_drift_correction,
+                ["ops", "device", "tic0", "progress_bar", "file_object"]
+        )
+
+    def test_detect_spikes_arguments(self):
+        self._check_arguments(
+            detect_spikes,
+                ["ops", "device", "bfile", "tic0", "progress_bar"]
+        )
+
+
+    def test_cluster_spikes_arguments(self):
+        self._check_arguments(
+            cluster_spikes,
+                ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar"]
+        )
+
+    def test_save_sorting_arguments(self):
+
+        expected_arguments = ["ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars"]
+
+        if parse(version("kilosort")) > parse("4.0.11"):
+            expected_arguments.append("save_preprocessed_copy")
+
+        self._check_arguments(
+            save_sorting,
+                expected_arguments
+        )
+
+    def test_get_run_parameters(self):
+        self._check_arguments(
+            get_run_parameters,
+                ["ops"]
+        )
+
+    def test_load_probe_parameters(self):
+        self._check_arguments(
+            load_probe,
+                ["probe_path"]
+        )
+
+    def test_recording_extractor_as_array_arguments(self):
+        self._check_arguments(
+            RecordingExtractorAsArray,
+                ["recording_extractor"]
+        )
+
+    def test_binary_filtered_arguments(self):
+
+        expected_arguments = [
+            "filename", "n_chan_bin", "fs", "NT", "nt", "nt0min",
+            "chan_map", "hp_filter", "whiten_mat", "dshift",
+            "device", "do_CAR", "artifact_threshold", "invert_sign",
+            "dtype", "tmin", "tmax", "file_object"
+        ]
+
+        if parse(version("kilosort")) >= parse("4.0.11"):
+            expected_arguments.pop(-1)
+            expected_arguments.extend(["shift", "scale", "file_object"])
+
+        self._check_arguments(
+            BinaryFiltered,
+            expected_arguments
+        )
+
+    def _check_arguments(self, object_, expected_arguments):
+        sig = signature(object_)
+        obj_arguments = list(sig.parameters.keys())
+        assert expected_arguments == obj_arguments
 
     @pytest.mark.parametrize("parameter", PARAMS_TO_TEST)
     def test_kilosort4(self, recording_and_paths, default_results, tmp_path, parameter):
@@ -381,7 +485,7 @@ class TestKilosort4Long:
     # Helpers ######
     def _check_test_parameters_are_actually_changing_the_output(self, results, default_results, param_key):
         """ """
-        if param_key not in ["artifact_threshold", "ccg_threshold", "cluster_downsampling"]:
+        if param_key not in ["artifact_threshold", "ccg_threshold", "cluster_downsampling", "cluster_pcs"]:
             num_clus = np.unique(results["si"]["clus"].iloc[:, 0]).size
             num_clus_default = np.unique(default_results["ks"]["clus"].iloc[:, 0]).size
 
