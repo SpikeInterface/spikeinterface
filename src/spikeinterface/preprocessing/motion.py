@@ -204,6 +204,7 @@ def correct_motion(
     recording,
     preset="nonrigid_accurate",
     folder=None,
+    overwrite=False,
     output_motion_info=False,
     detect_kwargs={},
     select_kwargs={},
@@ -253,6 +254,8 @@ def correct_motion(
         The preset name
     folder : Path str or None, default: None
         If not None then intermediate motion info are saved into a folder
+    overwrite : bool, default False
+        If folder is not None and already existing, should we overwrite
     output_motion_info : bool, default: False
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
@@ -316,6 +319,13 @@ def correct_motion(
 
     if folder is not None:
         folder = Path(folder)
+        if overwrite:
+            if folder.exists():        
+                import shutil
+                shutil.rmtree(folder)
+        else:
+            assert not folder.exists(), f"Folder {folder} already exists"
+
         folder.mkdir(exist_ok=True, parents=True)
 
         (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
