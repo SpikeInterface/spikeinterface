@@ -263,8 +263,6 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
         has been kept, given the refractory period violations (None if censor_ms is None)
     """
 
-    from spikeinterface.curation.curation_tools import get_new_unit_ids_for_merges
-
     spikes = sorting.to_spike_vector().copy()
 
     if censor_ms is None:
@@ -323,3 +321,38 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
     sorting = sorting.select_units(all_unit_ids)
 
     return sorting, to_keep
+
+def get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids):
+
+    all_removed_ids = []
+    for ids in units_to_merge:
+        all_removed_ids.extend(ids)
+    keep_unit_ids = [u for u in sorting.unit_ids if u not in all_removed_ids]
+
+    if new_unit_ids is not None:
+        assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
+        if np.any(np.isin(new_unit_ids, keep_unit_ids)):
+            raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
+    else:
+        dtype = sorting.unit_ids.dtype
+        num_merge = len(units_to_merge)
+        # select new_unit_ids greater that the max id, event greater than the numerical str ids
+        if np.issubdtype(dtype, np.character):
+            # dtype str
+            if all(p.isdigit() for p in sorting.unit_ids):
+                # All str are digit : we can generate a max
+                m = max(int(p) for p in sorting.unit_ids) + 1
+                new_unit_ids = [str(m + i) for i in range(num_merge)]
+            else:
+                # we cannot automatically find new names
+                new_unit_ids = [f"merge{i}" for i in range(num_merge)]
+                if np.any(np.isin(new_unit_ids, keep_unit_ids)):
+                    raise ValueError(
+                        "Unable to find 'new_unit_ids' because it is a string and parents "
+                        "already contain merges. Pass a list of 'new_unit_ids' as an argument."
+                    )
+        else:
+            # dtype int
+            new_unit_ids = list(max(sorting.unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
+
+    return new_unit_ids
