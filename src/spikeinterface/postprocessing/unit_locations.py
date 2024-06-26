@@ -55,7 +55,7 @@ class ComputeUnitLocations(AnalyzerExtension):
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, method="monopolar_triangulation", **method_kwargs):
+    def _set_params(self, method="monopolar_triangulation", method_kwargs=None):
         params = dict(method=method, method_kwargs=method_kwargs)
         return params
 
@@ -91,6 +91,8 @@ class ComputeUnitLocations(AnalyzerExtension):
     def _run(self, verbose=False):
         method = self.params["method"]
         method_kwargs = self.params["method_kwargs"]
+        if method_kwargs is None:
+            method_kwargs = dict()
 
         assert method in possible_localization_methods
 

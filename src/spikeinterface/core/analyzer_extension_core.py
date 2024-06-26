@@ -443,18 +443,10 @@ class ComputeTemplates(AnalyzerExtension):
                 assert len(operator) == 2
                 assert operator[0] == "percentile"
 
-        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
-        if waveforms_extension is not None:
-            nbefore = waveforms_extension.nbefore
-            nafter = waveforms_extension.nafter
-        else:
-            nbefore = int(ms_before * self.sorting_analyzer.sampling_frequency / 1000.0)
-            nafter = int(ms_after * self.sorting_analyzer.sampling_frequency / 1000.0)
-
         params = dict(
             operators=operators,
-            nbefore=nbefore,
-            nafter=nafter,
+            ms_before=ms_before,
+            ms_after=ms_after,
         )
         return params
 
@@ -557,11 +549,21 @@ class ComputeTemplates(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        return self.params["nbefore"]
+        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
+        if waveforms_extension is not None:
+            nbefore = waveforms_extension.nbefore
+        else:
+            nbefore = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return nbefore
 
     @property
     def nafter(self):
-        return self.params["nafter"]
+        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
+        if waveforms_extension is not None:
+            nafter = waveforms_extension.nafter
+        else:
+            nafter = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return nafter
 
     def _select_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))

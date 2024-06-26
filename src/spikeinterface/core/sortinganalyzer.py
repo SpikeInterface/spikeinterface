@@ -740,6 +740,7 @@ class SortingAnalyzer:
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         sorted_extensions = _sort_extensions_by_dependency(self.extensions)
+        recompute_dict = {}
 
         for extension_name, extension in sorted_extensions.items():
             if units_to_merge is not None:
@@ -753,14 +754,16 @@ class SortingAnalyzer:
                         **job_kwargs,
                     )
                 elif merging_mode == "hard":
-                    params = extension.params
-                    new_sorting_analyzer.compute(
-                        extension_name, save=True, extension_params=params, verbose=verbose, **job_kwargs
-                    )
+                    recompute_dict[extension_name] = extension.params
             else:
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
                     new_sorting_analyzer, unit_ids=unit_ids
                 )
+            
+        if units_to_merge is not None and merging_mode == 'hard':
+            new_sorting_analyzer.compute(
+                recompute_dict, save=True, verbose=verbose, **job_kwargs
+            )
 
         return new_sorting_analyzer
 
@@ -1010,7 +1013,7 @@ class SortingAnalyzer:
             The extensions to compute, which can be passed as:
 
             * a string: compute one extension. Additional parameters can be passed as key word arguments.
-            * a dict: compute several extensions. The keys are the extension names and the values are dictiopnaries with the extension parameters.
+            * a dict: compute several extensions. The keys are the extension names and the values are dictionaries with the extension parameters.
             * a list: compute several extensions. The list contains the extension names. Additional parameters can be passed with the extension_params
               argument.
         save : bool, default: True
