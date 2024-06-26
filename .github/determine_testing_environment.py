@@ -86,7 +86,7 @@ run_qualitymetrics_tests = run_everything or qualitymetrics_changed
 run_curation_tests = run_everything or curation_changed
 run_sortingcomponents_tests = run_everything or sortingcomponents_changed
 
-run_comparison_test = run_everything or  run_generation_tests or comparison_changed
+run_comparison_test = run_everything or run_generation_tests or comparison_changed
 run_widgets_test = run_everything or run_qualitymetrics_tests or run_preprocessing_tests or widgets_changed
 run_exporters_test = run_everything or run_widgets_test or exporters_changed
 
