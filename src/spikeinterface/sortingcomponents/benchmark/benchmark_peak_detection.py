@@ -196,6 +196,8 @@ class PeakDetectionStudy(BenchmarkStudy):
                 abs_threshold = -detect_threshold * noise_levels
                 ax.plot([abs_threshold, abs_threshold], [ymin, ymax], "k--")
 
+        return fig
+
     def plot_deltas_per_cells(self, case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
