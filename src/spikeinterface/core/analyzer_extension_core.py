@@ -82,7 +82,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data = dict()
         if kept_indices is not None:
             valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
-            nb_skipped = np.cumsum(kept_indices)
+            nb_skipped = np.cumsum(~kept_indices)
             new_data["random_spikes_indices"] = np.flatnonzero(valid)
             new_data["random_spikes_indices"] -= nb_skipped[valid]
         else:
@@ -162,11 +162,9 @@ class ComputeWaveforms(AnalyzerExtension):
         if sorting_analyzer is None:
             sorting_analyzer = self.sorting_analyzer
 
-        recording = self.sorting_analyzer.recording
-        sorting = self.sorting_analyzer.sorting
-
-        if some_spikes is None:
-            some_spikes = sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        recording = sorting_analyzer.recording
+        sorting = sorting_analyzer.sorting
+        some_spikes = sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
@@ -249,58 +247,131 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
+    def _rearange_waveforms(self, new_sorting_analyzer, units_to_merge, unit_ids, kept_indices=None, verbose=False, **job_kwarg):
+        
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        sorting = self.sorting_analyzer.sorting
+        waveforms = self.data["waveforms"]
+
+        if kept_indices is not None:
+            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
+            valid = kept_indices[spike_indices]
+            some_spikes = some_spikes[valid]
+            waveforms = waveforms[valid]
+        
+        if unit_ids is None:
+            unit_ids = sorting.unit_ids
+            # retrieve spike vector and the sampling
+        else:
+            all_unit_ids = sum(units_to_merge, [])
+            keep_unit_indices = np.flatnonzero(np.isin(sorting.unit_ids, all_unit_ids))
+            keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
+            some_spikes = some_spikes[keep_spike_mask]
+            waveforms = waveforms[keep_spike_mask]
+        
+        num_waveforms = len(some_spikes)
+        num_samples = waveforms.shape[1]
+        old_num_chans = waveforms.shape[2]
+        new_waveforms = np.zeros((num_waveforms, num_samples, old_num_chans), dtype=waveforms.dtype)
+        
+        for unit_id1, to_be_merged in zip(unit_ids, units_to_merge):
+
+            chan_inds_new = new_sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id1]
+            print(chan_inds_new.size)
+            
+            for unit_id2 in to_be_merged:
+                unit_ind2 = self.sorting_analyzer.sorting.id_to_index(unit_id2)
+                keep_spike_mask = some_spikes['unit_index'] == unit_ind2
+                chan_inds_old = self.sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id2]
+                wfs = waveforms[keep_spike_mask][:, :, :chan_inds_old.size]
+                mapping = []
+                for i in chan_inds_old:
+                    pos = np.flatnonzero(chan_inds_new == i)
+                    if len(pos) > 0:
+                        mapping += [pos[0]]
+                mapping = np.array(mapping)
+                new_waveforms[keep_spike_mask, :, :chan_inds_new.size] = wfs[:, :, mapping]
+                
+        return new_waveforms
+
+
     def _merge_extension_data(
         self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
 
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-        spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
+        
+        waveforms = self.data["waveforms"]
+
+        if kept_indices is not None:
+            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
+            valid = kept_indices[spike_indices]
+            some_spikes = some_spikes[valid]
+            waveforms = waveforms[valid]
 
         if new_sorting_analyzer.sparsity is not None:
             sparsity_mask = new_sorting_analyzer.sparsity.mask
+            old_num_chans = waveforms.shape[2]
+            
             # We check if the number of max channels has increased because of changes in sparsity mask
             num_chans = int(max(np.sum(sparsity_mask, axis=1)))
-            old_num_chans = self.data["waveforms"].shape[2]
+            num_waveforms = len(some_spikes)
+            num_samples = waveforms.shape[1]
+            new_data["waveforms"] = np.zeros((num_waveforms, num_samples, num_chans), dtype=waveforms.dtype)
 
-            if num_chans == old_num_chans:
-                new_data["waveforms"] = self.data["waveforms"]
-                if kept_indices is not None:
-                    valid = kept_indices[spike_indices]
-                    some_spikes = some_spikes[valid]
-                    new_data["waveforms"] = self.data["waveforms"][valid]
-            else:
-                # If yes, this is because we made some union of sparsity mask during the merges, and
-                # thus we need to recompute the waveforms of the merges units only
-                some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-                spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
-                if kept_indices is not None:
-                    valid = kept_indices[spike_indices]
-                    some_spikes = some_spikes[valid]
-                    waveforms = self.data["waveforms"][valid]
+            # If yes, this is because we made some union of sparsity mask during the merges, and
+            # thus we need to recompute the waveforms of the merges units only
 
-                former_unit_ids = list(set(new_sorting_analyzer.unit_ids).difference(new_unit_ids))
-                num_waveforms = len(some_spikes)
-                num_samples = waveforms.shape[1]
-                new_data["waveforms"] = np.zeros((num_waveforms, num_samples, num_chans), dtype=waveforms.dtype)
-                keep_unit_indices = new_sorting_analyzer.ids_to_indices(former_unit_ids)
-                keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
-                new_data["waveforms"][keep_spike_mask, :, :old_num_chans] = waveforms[keep_spike_mask]
+            all_removed_ids = sum(units_to_merge, [])
+            keep_unit_ids = list(set(self.sorting_analyzer.unit_ids).difference(all_removed_ids))
 
-                # We only recompute waveforms for new units that might have a new sparsity mask. Could be
-                # slightly optimized by checking exactly which merged units have a different mask
-                updated_unit_indices = new_sorting_analyzer.sorting.ids_to_indices(new_unit_ids)
-                updated_spike_mask = np.isin(some_spikes["unit_index"], updated_unit_indices)
-                new_waveforms = self._get_waveforms(
-                    new_sorting_analyzer, new_unit_ids, some_spikes, verbose, **job_kwargs
-                )
-                new_data["waveforms"][updated_spike_mask] = new_waveforms
+            keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(keep_unit_ids)
+            keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
+            print(new_data['waveforms'].shape, np.where(keep_spike_mask)[-1], len(keep_spike_mask), np.sum(keep_spike_mask))
+            new_data["waveforms"][keep_spike_mask, :, :old_num_chans] = waveforms[keep_spike_mask]
+                
+            # We only recompute waveforms for new units that might have a new sparsity mask. Could be
+            # slightly optimized by checking exactly which merged units have a different mask
+            updated_unit_indices = new_sorting_analyzer.sorting.ids_to_indices(new_unit_ids)
+                
+            new_unit_ids_large = []
+            new_unit_ids_small = []
+            old_units_to_merge_small = []
+            old_units_to_merge_large = []
+
+            for unit_ind, unit_id, to_be_merge in zip(updated_unit_indices, new_unit_ids, units_to_merge):
+                num_chans = np.sum(sparsity_mask[unit_ind])
+                if num_chans > old_num_chans:
+                    new_unit_ids_large += [unit_id]
+                    old_units_to_merge_large += [to_be_merge]
+                else:
+                    new_unit_ids_small += [unit_id]
+                    old_units_to_merge_small += [to_be_merge]
+
+            all_unit_ids_large = sum(old_units_to_merge_large, [])
+            ## For the units with larger masks, we need to recompute
+            updated_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(all_unit_ids_large)
+            updated_spike_mask = np.isin(some_spikes["unit_index"], updated_unit_indices)
+            new_waveforms = self._get_waveforms(
+                new_sorting_analyzer, new_unit_ids_large, verbose, **job_kwargs
+            )
+            print(new_waveforms.shape, np.where(updated_spike_mask)[-1], len(updated_spike_mask), np.sum(updated_spike_mask))
+            new_data["waveforms"][updated_spike_mask] = new_waveforms
+
+            ## For the units with smaller masks, we need to rearrange the waveforms
+            all_unit_ids_small = sum(old_units_to_merge_small, [])
+            updated_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(all_unit_ids_small)
+            updated_spike_mask = np.isin(some_spikes["unit_index"], updated_unit_indices)
+            
+            new_waveforms = self._rearange_waveforms(
+                new_sorting_analyzer, old_units_to_merge_small, new_unit_ids_small, kept_indices, verbose, **job_kwargs
+            )
+            print(new_waveforms.shape, np.where(updated_spike_mask)[-1], len(updated_spike_mask), np.sum(updated_spike_mask))
+            new_data["waveforms"][updated_spike_mask] = new_waveforms
+
         else:
-            new_data["waveforms"] = self.data["waveforms"]
-            if kept_indices is not None:
-                valid = kept_indices[spike_indices]
-                some_spikes = some_spikes[valid]
-                new_data["waveforms"] = self.data["waveforms"][valid]
+            new_data["waveforms"] = waveforms
 
         return new_data
 
@@ -314,6 +385,7 @@ class ComputeWaveforms(AnalyzerExtension):
         # spikes = sorting.to_spike_vector()
         # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = self.data["waveforms"][spike_mask, :, :]
 
