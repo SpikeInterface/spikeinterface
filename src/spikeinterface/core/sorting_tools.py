@@ -2,6 +2,8 @@ from __future__ import annotations
 from .basesorting import BaseSorting
 import numpy as np
 from spikeinterface.core import NumpySorting
+from spikeinterface.core import NumpySorting
+
 
 
 def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.array) -> dict[dict[str, np.array]]:
@@ -264,12 +266,8 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
     """
 
     spikes = sorting.to_spike_vector().copy()
-
-    if censor_ms is None:
-        to_keep = None
-    else:
-        to_keep = np.ones(len(spikes), dtype=bool)
-
+    to_keep = np.ones(len(spikes), dtype=bool)
+    
     new_unit_ids = get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids)
 
     all_unit_ids = get_ids_after_merging(sorting, units_to_merge, new_unit_ids)
@@ -298,28 +296,9 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
                 (indices,) = s0 + np.nonzero(mask[s0:s1])
                 to_keep[indices[1:]] = np.diff(spikes[indices]["sample_index"]) > rpv
 
-    from spikeinterface.core import NumpySorting
-
-    # times_list = []
-    # labels_list = []
-    # for segment_index in range(sorting.get_num_segments()):
-    #     s0, s1 = segment_slices[segment_index]
-    #     if censor_ms is not None:
-    #         times_list += [spikes["sample_index"][s0:s1][to_keep[s0:s1]]]
-    #         labels = spikes["unit_index"][s0:s1][to_keep[s0:s1]]
-    #         labels_list += [labels]
-    #     else:
-    #         times_list += [spikes["sample_index"][s0:s1]]
-    #         labels = spikes["unit_index"][s0:s1]
-    #         labels_list += [labels]
-
-    # sorting = NumpySorting.from_times_labels(times_list, labels_list, sorting.sampling_frequency)
-    # sorting = sorting.rename_units(all_unit_ids)
-
     combined_ids = np.array(list(sorting.unit_ids) + list(new_unit_ids))
     sorting = NumpySorting(spikes[to_keep], unit_ids=combined_ids, sampling_frequency=sorting.sampling_frequency)
     sorting = sorting.select_units(all_unit_ids)
-
     return sorting, to_keep
 
 

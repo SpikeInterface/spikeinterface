@@ -244,7 +244,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer4 = sorting_analyzer.merge_units(
-            units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder
+            units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, mode='hard'
         )
 
     # test compute with extension-specific params
@@ -279,7 +279,6 @@ class DummyAnalyzerExtension(AnalyzerExtension):
 
     def _set_params(self, param0="yep", param1=1.2, param2=[1, 2, 3.0]):
         params = dict(param0=param0, param1=param1, param2=param2)
-        params["more_option"] = "yep"
         return params
 
     def _run(self, **kwargs):
