@@ -183,14 +183,13 @@ def is_dict_extractor(d: dict) -> bool:
     return is_extractor
 
 
-def recursive_path_modifier(
-    d, func, target="path", copy=True, check_if_exists=True, check_existance_after_func=False
-) -> dict:
+def recursive_path_modifier(d, func, target="path", copy=True, check_if_exists=True) -> dict:
     """
     Generic function for recursive modification of paths in an extractor dict.
     A recording can be nested and this function explores the dictionary recursively
     to find the parent file or folder paths.
-    Importantly, only paths that exist and have `target` in the key are modified.
+    Importantly, only paths that exist (either before or after the application of func)
+    and have `target` in the key are modified.
 
     Useful for :
       * relative/absolute path change
@@ -210,8 +209,6 @@ def recursive_path_modifier(
         If True the original dictionary is deep copied.
     check_if_exists : bool, default: True
         If True, the function will check if the path exists before or after the modification.
-    check_existance_after_func : bool, default: False
-        If True, the function will check if the path exists after the modification.
 
     Returns
     -------
@@ -232,7 +229,6 @@ def recursive_path_modifier(
             func,
             copy=False,
             check_if_exists=check_if_exists,
-            check_existance_after_func=check_existance_after_func,
         )
 
         # find nested and also change inplace (copy=False)
@@ -245,7 +241,6 @@ def recursive_path_modifier(
                     func,
                     copy=False,
                     check_if_exists=check_if_exists,
-                    check_existance_after_func=check_existance_after_func,
                 )
             # deal with list of extractor objects (e.g. concatenate_recordings)
             elif isinstance(v, list):
@@ -257,7 +252,6 @@ def recursive_path_modifier(
                             func,
                             copy=False,
                             check_if_exists=check_if_exists,
-                            check_existance_after_func=check_existance_after_func,
                         )
 
         return dc
@@ -269,22 +263,14 @@ def recursive_path_modifier(
                     continue
                 if isinstance(v, (str, Path)):
                     if check_if_exists:
-                        if check_existance_after_func:
-                            path_to_check = Path(func(v))
-                        else:
-                            path_to_check = Path(v)
-                        if path_to_check.exists():
+                        if Path(v).exists() or Path(func(v)):
                             dc[k] = func(v)
                     else:
                         dc[k] = func(v)
                 elif isinstance(v, list):
                     if check_if_exists:
                         for i, e in enumerate(v):
-                            if check_existance_after_func:
-                                path_to_check = Path(func(e))
-                            else:
-                                path_to_check = Path(e)
-                            if path_to_check.exists():
+                            if Path(e).exists() or Path(func(e)):
                                 dc[k][i] = func(e)
                     else:
                         dc[k] = [func(e) for e in v]
@@ -386,7 +372,7 @@ def make_paths_relative(input_dict, relative_folder) -> dict:
     """
     relative_folder = Path(relative_folder).resolve().absolute()
     func = lambda p: _relative_to(p, relative_folder)
-    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True, check_existance_after_func=False)
+    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
     return output_dict
 
 
@@ -409,7 +395,7 @@ def make_paths_absolute(input_dict, base_folder) -> dict:
     base_folder = Path(base_folder)
     # use as_posix instead of str to make the path unix like even on window
     func = lambda p: _make_absolute(p, base_folder)
-    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True, check_existance_after_func=True)
+    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
     return output_dict
 
 
