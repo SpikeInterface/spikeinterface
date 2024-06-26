@@ -225,7 +225,7 @@ def random_spikes_selection(
 def get_ids_after_merging(sorting, units_to_merge, new_unit_ids):
 
     assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
-    
+
     merged_unit_ids = set(sorting.unit_ids)
     for count in range(len(units_to_merge)):
         assert len(units_to_merge[count]) > 1, "A merge should have at least two units"
@@ -269,6 +269,7 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
         to_keep = np.ones(len(spikes), dtype=bool)
 
     from spikeinterface.curation.curation_tools import get_new_unit_ids_for_merges
+
     new_unit_ids = get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids)
 
     all_unit_ids = get_ids_after_merging(sorting, units_to_merge, new_unit_ids)

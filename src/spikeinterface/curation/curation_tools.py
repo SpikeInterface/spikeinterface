@@ -134,6 +134,7 @@ def find_duplicated_spikes(
     else:
         raise ValueError(f"Method '{method}' isn't a valid method for find_duplicated_spikes. Use one of {_methods}")
 
+
 def get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids):
 
     all_removed_ids = []
@@ -166,5 +167,5 @@ def get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids):
         else:
             # dtype int
             new_unit_ids = list(max(sorting.unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
-    
+
     return new_unit_ids

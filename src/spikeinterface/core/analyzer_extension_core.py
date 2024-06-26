@@ -277,7 +277,6 @@ class ComputeWaveforms(AnalyzerExtension):
         for unit_id1, to_be_merged in zip(unit_ids, units_to_merge):
 
             chan_inds_new = new_sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id1]
-            print(chan_inds_new.size)
             
             for unit_id2 in to_be_merged:
                 unit_ind2 = self.sorting_analyzer.sorting.id_to_index(unit_id2)
@@ -328,7 +327,6 @@ class ComputeWaveforms(AnalyzerExtension):
 
             keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(keep_unit_ids)
             keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
-            print(new_data['waveforms'].shape, np.where(keep_spike_mask)[-1], len(keep_spike_mask), np.sum(keep_spike_mask))
             new_data["waveforms"][keep_spike_mask, :, :old_num_chans] = waveforms[keep_spike_mask]
                 
             # We only recompute waveforms for new units that might have a new sparsity mask. Could be
@@ -356,7 +354,6 @@ class ComputeWaveforms(AnalyzerExtension):
             new_waveforms = self._get_waveforms(
                 new_sorting_analyzer, new_unit_ids_large, verbose, **job_kwargs
             )
-            print(new_waveforms.shape, np.where(updated_spike_mask)[-1], len(updated_spike_mask), np.sum(updated_spike_mask))
             new_data["waveforms"][updated_spike_mask] = new_waveforms
 
             ## For the units with smaller masks, we need to rearrange the waveforms
@@ -367,7 +364,6 @@ class ComputeWaveforms(AnalyzerExtension):
             new_waveforms = self._rearange_waveforms(
                 new_sorting_analyzer, old_units_to_merge_small, new_unit_ids_small, kept_indices, verbose, **job_kwargs
             )
-            print(new_waveforms.shape, np.where(updated_spike_mask)[-1], len(updated_spike_mask), np.sum(updated_spike_mask))
             new_data["waveforms"][updated_spike_mask] = new_waveforms
 
         else:
