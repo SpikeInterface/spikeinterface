@@ -320,8 +320,9 @@ def correct_motion(
     if folder is not None:
         folder = Path(folder)
         if overwrite:
-            if folder.exists():        
+            if folder.exists():
                 import shutil
+
                 shutil.rmtree(folder)
         else:
             assert not folder.exists(), f"Folder {folder} already exists"
