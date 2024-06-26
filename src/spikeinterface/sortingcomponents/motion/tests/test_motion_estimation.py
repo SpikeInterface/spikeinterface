@@ -153,11 +153,11 @@ def test_estimate_motion(setup_module):
             bin_duration_s=1.0,
             bin_um=10.0,
             margin_um=5,
-            output_extra_check=True,
+            extra_outputs=True,
         )
         kwargs.update(cases_kwargs)
 
-        motion, extra_check = estimate_motion(recording, peaks, peak_locations, **kwargs)
+        motion, extra = estimate_motion(recording, peaks, peak_locations, **kwargs)
         motions[name] = motion
 
         if cases_kwargs["rigid"]:

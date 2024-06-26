@@ -1,5 +1,5 @@
 """
-Re-implementation or copy-paste of DREDge
+Copy-paste and then refactoring of DREDge
 https://github.com/evarol/dredge
 
 For historical reason, some function from the DREDge package where implemeneted 
@@ -10,7 +10,7 @@ Here a copy/paste (and small rewriting) of some functions from DREDge.
 The main entry for this function are still:
 
   * motion = estimate_motion((recording, ..., method='dredge_lfp')
-  * motion = estimate_motion((recording, ..., method='dredge_ap')
+  * motion = estimate_motion((recording, ..., method='dredge_ap') < not Done yet
 
 but here the original functions from Charlie, Julien and Erdem have been ported for an
 easier maintenance instead of making DREDge a dependency of spikeinterface.
@@ -23,16 +23,77 @@ import numpy as np
 
 from .motion_utils import Motion, get_windows, get_window_domains, scipy_conv1d
 
+
+# TODO add direction
+
+# simple class wrapper to be compliant with estimate_motion
+class DredgeLfpRegistration:
+    """
+
+    """
+    name = "dredge_lfp"
+    need_peak_location = False
+    params_doc = """
+
+    """
+    @classmethod
+    def run(
+        cls,
+        recording,
+        peaks,
+        peak_locations,
+        direction,
+        rigid,
+        win_shape,
+        win_step_um,
+        win_scale_um,
+        win_margin_um,
+        verbose,
+        progress_bar,
+        extra,
+
+        **method_kwargs,
+    ):
+        # Note peaks and peak_locations are not used and can be None
+
+        outs = dredge_online_lfp(
+            recording,
+            direction=direction,
+            rigid=rigid,
+            win_shape=win_shape,
+            win_step_um=win_step_um,
+            win_scale_um=win_scale_um,
+            win_margin_um=win_margin_um,
+            extra_outputs=(extra is not None),
+            progress_bar=progress_bar,
+            **method_kwargs,
+        )
+
+        if extra is not None:
+            motion, extra_ = outs
+            extra.update(extra_)
+
+        else:
+            motion = outs
+
+
+
+
+
 def dredge_online_lfp(
     lfp_recording,
-    rigid=True,
-    chunk_len_s=10.0,
-    max_disp_um=500,
+    direction='y',
     # nonrigid window construction arguments
+    rigid=True,
     win_shape="gaussian",
     win_step_um=800,
     win_scale_um=850,
     win_margin_um=None,
+    
+    chunk_len_s=10.0,
+    max_disp_um=500,
+    
+    
     time_horizon_s=None,
     # weighting arguments
     mincorr=0.8,
@@ -45,7 +106,7 @@ def dredge_online_lfp(
     # misc
     extra_outputs=False,
     device=None,
-    pbar=True,
+    progress_bar=True,
 ):
     """Online registration of a preprocessed LFP recording
 
@@ -58,6 +119,11 @@ def dredge_online_lfp(
         estimating motion at the original frequency (which may be high).
     rigid : boolean, optional
         If True, window-related arguments are ignored and we do rigid registration
+    win_shape, win_step_um, win_scale_um, win_margin_um : float
+        Nonrigid window-related arguments
+        The depth domain will be broken up into windows with shape controlled by win_shape,
+        spaced by win_step_um at a margin of win_margin_um from the boundary, and with
+        width controlled by win_scale_um.
     chunk_len_s : float
         Length of chunks (in seconds) that the recording is broken into for online
         registration. The computational speed of the method is a function of the
@@ -75,11 +141,6 @@ def dredge_online_lfp(
         chunk. Setting it as small as possible (while following that rule) can speed
         things up and improve the result by making it impossible to estimate motion
         which is too big.
-    win_shape, win_step_um, win_scale_um, win_margin_um : float
-        Nonrigid window-related arguments
-        The depth domain will be broken up into windows with shape controlled by win_shape,
-        spaced by win_step_um at a margin of win_margin_um from the boundary, and with
-        width controlled by win_scale_um.
     mincorr : float in [0,1]
         Minimum correlation between pairs of frames such that they will be included
         in the optimization of the displacement estimates.
@@ -97,7 +158,11 @@ def dredge_online_lfp(
     extra : dict
         Dict containing extra info for debugging
     """
-    geom = lfp_recording.get_channel_locations()
+    dim = ["x", "y", "z"].index(direction)
+    # contact pos is the only on the direction
+    contact_pos = lfp_recording.get_channel_locations()[:, dim]
+
+
     fs = lfp_recording.get_sampling_frequency()
     T_total = lfp_recording.get_num_samples()
     T_chunk = min(int(np.floor(fs * chunk_len_s)), T_total)
@@ -108,9 +173,9 @@ def dredge_online_lfp(
     thomas_kw = thomas_kw if thomas_kw is not None else {}
     full_xcorr_kw = dict(
         rigid=rigid,
-        bin_um=np.median(np.diff(geom[:, 1])),
+        bin_um=np.median(np.diff(contact_pos)),
         max_disp_um=max_disp_um,
-        pbar=False,
+        progress_bar=False,
         device=device,
         **xcorr_kw,
     )
@@ -123,17 +188,28 @@ def dredge_online_lfp(
         bin_s=1 / fs,  # only relevant for time_horizon_s
     )
 
-    # in LFP bin center are contact position
-    # TODO sam check dim and direction and assert unique
-    spatial_bin_centers = geom[:, 1]
+    
+    # here we check that contact positons are unique on the direction
+    if contact_pos.size != np.unique(contact_pos).size:
+        raise ValueError(
+            f"estimate motion with 'dredge_lfp' need channel_positions to be unique in the direction='{direction}'"
+        )
+    if np.any(np.diff(contact_pos) < 0):
+        raise ValueError(
+            f"estimate motion with 'dredge_lfp' need channel_positions to be ordered direction='{direction}'"
+            "please use spikeinterface.preprocessing.depth_order(recording)"
+        )
+
+    # Important detail : in LFP bin center are contact position in the direction
+    spatial_bin_centers = contact_pos
 
     windows, window_centers = get_windows(
         rigid=rigid, 
-        contact_pos=geom,
+        contact_pos=contact_pos,
         spatial_bin_centers=spatial_bin_centers,
-        margin_um=win_margin_um,
+        win_margin_um=win_margin_um,
         win_step_um=win_step_um,
-        win_sigma_um=win_scale_um,
+        win_scale_um=win_scale_um,
         win_shape=win_shape,
         zero_threshold=1e-5,
     )
@@ -149,7 +225,7 @@ def dredge_online_lfp(
     t0, t1 = 0, T_chunk
     traces0 = lfp_recording.get_traces(start_frame=t0, end_frame=t1)
     Ds0, Cs0, max_disp_um = xcorr_windows(
-        traces0.T, windows, geom[:, 1], win_scale_um, **full_xcorr_kw
+        traces0.T, windows, contact_pos, win_scale_um, **full_xcorr_kw
     )
     full_xcorr_kw["max_disp_um"] = max_disp_um
     Ss0, mincorr0 = threshold_correlation_matrix(
@@ -172,7 +248,7 @@ def dredge_online_lfp(
 
     # -- loop through chunks
     chunk_starts = range(T_chunk, T_total, T_chunk)
-    if pbar:
+    if progress_bar:
         chunk_starts = trange(
             T_chunk,
             T_total,
@@ -188,7 +264,7 @@ def dredge_online_lfp(
         Ds10, Cs10, _ = xcorr_windows(
             traces1.T,
             windows,
-            geom[:, 1],
+            contact_pos,
             win_scale_um,
             raster_b=traces0.T,
             **full_xcorr_kw,
@@ -196,7 +272,7 @@ def dredge_online_lfp(
 
         # cross-correlation in current chunk
         Ds1, Cs1, _ = xcorr_windows(
-            traces1.T, windows, geom[:, 1], win_scale_um, **full_xcorr_kw
+            traces1.T, windows, contact_pos, win_scale_um, **full_xcorr_kw
         )
         Ss1, mincorr1 = threshold_correlation_matrix(
             Cs1,
@@ -368,7 +444,7 @@ def thomas_solve(
     Us_prevcur=None,
     Ds_curprev=None,
     Us_curprev=None,
-    pbar=False,
+    progress_bar=False,
     bandwidth=None,
 ):
     """Block tridiagonal algorithm, special cased to our setting
@@ -455,7 +531,7 @@ def thomas_solve(
     ys = [res[:, T]]
 
     # forward pass
-    for b in (trange(1, B, desc="Solve") if pbar else range(1, B)):
+    for b in (trange(1, B, desc="Solve") if progress_bar else range(1, B)):
         if b < B - 1:
             Lambda_s_diagb = laplacian(T, eps=eps, lambd=lambda_s, ridge_mask=had_weights[b])
         else:
@@ -548,7 +624,7 @@ def xcorr_windows(
     bin_um=1,
     max_disp_um=None,
     max_dt_bins=None,
-    pbar=True,
+    progress_bar=True,
     centered=True,
     normalized=True,
     masks=None,
@@ -592,7 +668,7 @@ def xcorr_windows(
     # estimate each window's displacement
     Ds = np.zeros((B, T0, T1), dtype=np.float32)
     Cs = np.zeros((B, T0, T1), dtype=np.float32)
-    block_iter = trange(B, desc="Cross correlation") if pbar else range(B)
+    block_iter = trange(B, desc="Cross correlation") if progress_bar else range(B)
     for b in block_iter:
         window = windows_[b]
 
