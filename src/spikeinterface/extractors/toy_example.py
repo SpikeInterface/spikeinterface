@@ -62,13 +62,13 @@ def toy_example(
     seed : int or None, default: None
         Seed for random initialization.
     upsample_factor : None or int, default: None
-        A upsampling factor used only when templates are not provided.
+        An upsampling factor, used only when templates are not provided.
     num_columns : int, default:  1
         Number of columns in probe.
     average_peak_amplitude : float, default: -100
-        Average peak amplitude of generated templates
+        Average peak amplitude of generated templates.
     contact_spacing_um : float, default: 40.0
-        Spacing between probe contacts.
+        Spacing between probe contacts in micrometers.
 
     Returns
     -------
