@@ -299,7 +299,7 @@ def _relative_to(p, relative_folder):
     try:
         rel_to = os.path.relpath(p_resolved.as_posix(), start=relative_folder.as_posix())
     except:
-        rel_to = p_resolved
+        rel_to = p
     return Path(rel_to).as_posix()
 
 
