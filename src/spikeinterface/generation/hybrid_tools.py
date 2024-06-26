@@ -417,6 +417,8 @@ def generate_hybrid_recording(
     if num_units is None:
         assert "num_units" in generate_sorting_kwargs, "num_units should be provided in generate_sorting_kwargs"
         num_units = generate_sorting_kwargs["num_units"]
+    else:
+        generate_sorting_kwargs["num_units"] = num_units
 
     if templates is None:
         if unit_locations is None:
