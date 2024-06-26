@@ -1,0 +1,61 @@
+name: Testing Kilosort4
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 0"  # Weekly on Sunday at noon UTC
+  pull_request:
+    types: [synchronize, opened, reopened]
+    branches:
+      - main
+
+# env:
+#   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+#   KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+
+# concurrency:  # Cancel previous workflows on the same pull request
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#  cancel-in-progress: true
+
+jobs:
+  run:
+    name: ${{ matrix.os }} Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]  # TODO: "3.9",  # Lower and higher versions we support
+        os: [ubuntu-latest]  # TODO: macos-13, windows-latest,
+        ks_version: ["4.0.12"] # TODO: add / build from pypi based on Christians PR
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install packages
+        # TODO: maybe dont need full?
+        run: |
+          pip install -e .[test]
+     #     git config --global user.email "CI@example.com"
+      #    git config --global user.name "CI Almighty"
+       #   pip install tabulate
+        shell: bash
+
+      - name: Install Kilosort
+        run: |
+          pip install kilosort==${{ matrix.ks_version }}
+        shell: bash
+
+      - name: Run new kilosort4 tests
+        # run: chmod +x .github/test_kilosort4.sh
+         # TODO: figure out the paths to be able to run this by calling the file directly
+        run: |
+          pytest -k test_kilosort4_new --durations=0
+        shell: bash
+
+# TODO: pip install -e .[full,dev] is failing #
+#The conflict is caused by:
+#    spikeinterface[docs] 0.101.0rc0 depends on datalad==0.16.2; extra == "docs"
+#    spikeinterface[test] 0.101.0rc0 depends on datalad>=1.0.2; extra == "test"
