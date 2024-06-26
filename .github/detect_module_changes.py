@@ -93,7 +93,7 @@ run_exporters_test = run_everything or run_widgets_test or exporters_changed
 run_sorters_test = run_everything or sorters_changed
 run_internal_sorters_test = run_everything or run_sortingcomponents_tests or sorters_internal_changed
 
-install_plexon_dependencies = conditions_changed["PLEXON2_CHANGED"]
+install_plexon_dependencies = plexon2_changed
 
 environment_varaiables_to_add = {
     "RUN_EXTRACTORS_TESTS": run_extractor_tests,
