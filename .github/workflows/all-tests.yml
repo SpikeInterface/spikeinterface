@@ -98,7 +98,7 @@ jobs:
           echo "WIDGETS_CHANGED=${{ steps.modules-changed.outputs.WIDGETS_CHANGED }}"
           echo "EXPORTERS_CHANGED=${{ steps.modules-changed.outputs.EXPORTERS_CHANGED }}"
           echo "SORTINGCOMPONENTS_CHANGED=${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED }}"
-          echo "GENERATION_CHANGED
+          echo "GENERATION_CHANGED=${{ steps.modules-changed.outputs.GENERATION_CHANGED }}"
 
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
