@@ -1,0 +1,129 @@
+name: Complete tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 0"  # Weekly on Sunday at noon UTC
+  pull_request:
+    types: [synchronize, opened, reopened]
+    branches:
+      - main
+
+env:
+  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run:
+    name: ${{ matrix.os }} Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]  # Lower and higher versions we support
+        os: [macos-13, windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          # cache: 'pip' # caching pip dependencies
+
+      - name: Get current hash (SHA) of the ephy_testing_data repo
+        id: repo_hash
+        run: |
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+        shell: bash
+      - name: Cache datasets
+        id: cache-datasets
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/spikeinterface_datasets
+          key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
+          restore-keys: ${{ runner.os }}-datasets
+
+      - name: Install packages
+        run: |
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
+          pip install -e .[test,extractors,streaming_extractors,full]
+          pip install tabulate
+        shell: bash
+
+      - name: Installad datalad
+        run: |
+          pip install datalad-installer
+          if [ ${{ runner.os }} = 'Linux' ]; then
+            datalad-installer --sudo ok git-annex --method datalad/packages
+          elif [ ${{ runner.os }} = 'macOS' ]; then
+            datalad-installer --sudo ok git-annex --method brew
+          elif [ ${{ runner.os }} = 'Windows' ]; then
+            datalad-installer --sudo ok git-annex --method datalad/git-annex:release
+          fi
+          pip install datalad
+          git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
+        shell: bash
+
+      - name: Set execute permissions on run_tests.sh
+        run: chmod +x .github/run_tests.sh
+        shell: bash
+
+      - name: Test core
+        run: pytest -m "core"
+        shell: bash
+
+      - name: Test extractors
+        env:
+          HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
+        run: pytest -m "extractors"
+        shell: bash
+
+      - name: Test preprocessing
+        run: ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
+        shell: bash
+
+      - name: Test postprocessing
+        run: ./.github/run_tests.sh postprocessing --no-virtual-env
+        shell: bash
+
+      - name: Test quality metrics
+        run: ./.github/run_tests.sh qualitymetrics --no-virtual-env
+        shell: bash
+
+      - name: Test comparison
+        run: ./.github/run_tests.sh comparison --no-virtual-env
+        shell: bash
+
+      - name: Test core sorters
+        run: ./.github/run_tests.sh sorters --no-virtual-env
+        shell: bash
+
+      - name: Test internal sorters
+        run: ./.github/run_tests.sh sorters_internal --no-virtual-env
+        shell: bash
+
+      - name: Test curation
+        run: ./.github/run_tests.sh curation --no-virtual-env
+        shell: bash
+
+      - name: Test widgets
+        run: ./.github/run_tests.sh widgets --no-virtual-env
+        shell: bash
+
+      - name: Test exporters
+        run: ./.github/run_tests.sh exporters --no-virtual-env
+        shell: bash
+
+      - name: Test sortingcomponents
+        run: ./.github/run_tests.sh sortingcomponents --no-virtual-env
+        shell: bash
+
+      - name: Test generation
+        run: ./.github/run_tests.sh generation --no-virtual-env
+        shell: bash

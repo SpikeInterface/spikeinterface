@@ -8,6 +8,7 @@ import spikeinterface as si
 from spikeinterface import generate_ground_truth_recording
 
 from spikeinterface.sorters.container_tools import find_recording_folders, ContainerClient, install_package_in_container
+import platform
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
