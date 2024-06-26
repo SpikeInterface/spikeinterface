@@ -322,6 +322,7 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
 
     return sorting, to_keep
 
+
 def get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids):
 
     all_removed_ids = []
