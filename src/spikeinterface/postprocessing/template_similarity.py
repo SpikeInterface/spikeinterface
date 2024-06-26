@@ -5,6 +5,7 @@ import warnings
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core.template_tools import get_dense_templates_array
+from ..core.sparsity import ChannelSparsity
 
 
 class ComputeTemplateSimilarity(AnalyzerExtension):
@@ -66,13 +67,17 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     def _merge_extension_data(
         self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
+        num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
         templates_array = get_dense_templates_array(new_sorting_analyzer)
         arr = self.data["similarity"]
+        sparsity = new_sorting_analyzer.sparsity
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         new_similarity = np.zeros((len(all_new_unit_ids), len(all_new_unit_ids)), dtype=arr.dtype)
 
         for unit_ind1, unit_id1 in enumerate(all_new_unit_ids):
             template1 = templates_array[unit_ind1][np.newaxis, :]
+            sparsity1 = ChannelSparsity(sparsity.mask[unit_ind1][np.newaxis, :], [unit_id1], sparsity.channel_ids)
+
             if unit_id1 in new_unit_ids:
                 new_spk1 = True
             else:
@@ -82,6 +87,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             for unit_ind2, unit_id2 in enumerate(all_new_unit_ids[unit_ind1:]):
                 position = unit_ind1 + unit_ind2
                 template2 = templates_array[position][np.newaxis, :]
+                sparsity2 = ChannelSparsity(sparsity.mask[unit_ind2][np.newaxis, :], [unit_id2], sparsity.channel_ids)
                 if unit_id2 in new_unit_ids:
                     new_spk2 = True
                 else:
@@ -90,8 +96,13 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
                 if new_spk1 or new_spk2:
                     new_similarity[unit_ind1, position] = compute_similarity_with_templates_array(
-                        template1, template2, **self.params
-                    )
+                        template1, 
+                        template2, 
+                        method=self.params["method"],
+                        num_shifts=num_shifts,
+                        support=self.params["support"],
+                        sparsity=sparsity1,
+                        other_sparsity=sparsity2)
                 else:
                     new_similarity[unit_ind1, position] = arr[i, j]
 
