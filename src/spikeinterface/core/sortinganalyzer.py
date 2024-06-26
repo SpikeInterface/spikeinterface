@@ -24,6 +24,7 @@ from .basesorting import BaseSorting
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import check_json, retrieve_importing_provenance
+from .sorting_tools import get_new_unit_ids_for_merges
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
@@ -854,8 +855,6 @@ class SortingAnalyzer:
         """
 
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
-
-        from spikeinterface.curation.curation_tools import get_new_unit_ids_for_merges
 
         new_unit_ids = get_new_unit_ids_for_merges(self.sorting, units_to_merge, new_unit_ids)
 
