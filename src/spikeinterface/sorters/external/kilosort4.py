@@ -6,6 +6,7 @@ from packaging import version
 
 from ..basesorter import BaseSorter
 from .kilosortbase import KilosortBase
+from importlib.metadata import version
 
 PathType = Union[str, Path]
 
@@ -129,9 +130,8 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        import kilosort as ks
-
-        return ks.__version__
+        """kilosort version <0.0.10 is always '4' z"""
+        return version("kilosort")
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
@@ -216,6 +216,7 @@ class Kilosort4Sorter(BaseSorter):
         )
 
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
+            # TODO: save_preprocessed_copy added
             ops = initialize_ops(
                 settings=settings,
                 probe=probe,
@@ -224,9 +225,6 @@ class Kilosort4Sorter(BaseSorter):
                 invert_sign=invert_sign,
                 device=device,
                 save_preprocessed_copy=False,
-            )
-            n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
-                get_run_parameters(ops)
             )
         else:
             ops = initialize_ops(
@@ -237,6 +235,13 @@ class Kilosort4Sorter(BaseSorter):
                 invert_sign=invert_sign,
                 device=device,
             )
+
+        if version.parse(cls.get_sorter_version()) >= version.parse("4.0.11"):
+            # TODO: shift, scaled added
+            n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
+                get_run_parameters(ops)
+            )
+        else:
             n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact = (
                 get_run_parameters(ops)
             )
@@ -259,10 +264,10 @@ class Kilosort4Sorter(BaseSorter):
                 do_CAR=do_CAR,  # TODO: should this always be False if we are in skipping KS preprocessing land?
                 invert_sign=invert,
                 dtype=dtype,
-                tmin=tmin,
+                tmin=tmin,  # TODO: exposing tmin, max?
                 tmax=tmax,
                 artifact_threshold=artifact,
-                file_object=file_object,
+                file_object=file_object,  # TODO: exposing shift, scale when skipping preprocessing?
             )
             ops["preprocessing"] = dict(hp_filter=None, whiten_mat=None)
             ops["Wrot"] = torch.as_tensor(np.eye(recording.get_num_channels()))
