@@ -96,13 +96,14 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
                 if new_spk1 or new_spk2:
                     new_similarity[unit_ind1, position] = compute_similarity_with_templates_array(
-                        template1, 
-                        template2, 
+                        template1,
+                        template2,
                         method=self.params["method"],
                         num_shifts=num_shifts,
                         support=self.params["support"],
                         sparsity=sparsity1,
-                        other_sparsity=sparsity2)
+                        other_sparsity=sparsity2,
+                    )
                 else:
                     new_similarity[unit_ind1, position] = arr[i, j]
 
