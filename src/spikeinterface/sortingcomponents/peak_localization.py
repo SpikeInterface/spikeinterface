@@ -69,6 +69,8 @@ def get_localization_pipeline_nodes(
     elif method == "grid_convolution":
         if "prototype" not in method_kwargs:
             assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
+            # extract prototypes silently
+            job_kwargs["progress_bar"] = False
             method_kwargs["prototype"] = get_prototype_spike(
                 recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
