@@ -54,21 +54,11 @@ jobs:
       - name: Print module changes
         shell: bash
         run: |
-          echo "CORE_CHANGED=${CORE_CHANGED}"
-          echo "EXTRACTORS_CHANGED=${EXTRACTORS_CHANGED}"
-          echo "PLEXON2_CHANGED=${PLEXON2_CHANGED}"
-          echo "PREPROCESSING_CHANGED=${PREPROCESSING_CHANGED}"
-          echo "POSTPROCESSING_CHANGED=${POSTPROCESSING_CHANGED}"
-          echo "QUALITYMETRICS_CHANGED=${QUALITYMETRICS_CHANGED}"
-          echo "SORTERS_CHANGED=${SORTERS_CHANGED}"
-          echo "SORTERS_EXTERNAL_CHANGED=${SORTERS_EXTERNAL_CHANGED}"
-          echo "SORTERS_INTERNAL_CHANGED=${SORTERS_INTERNAL_CHANGED}"
-          echo "COMPARISON_CHANGED=${COMPARISON_CHANGED}"
-          echo "CURATION_CHANGED=${CURATION_CHANGED}"
-          echo "WIDGETS_CHANGED=${WIDGETS_CHANGED}"
-          echo "EXPORTERS_CHANGED=${EXPORTERS_CHANGED}"
-          echo "SORTINGCOMPONENTS_CHANGED=${SORTINGCOMPONENTS_CHANGED}"
-          echo "GENERATION_CHANGED=${GENERATION_CHANGED}"
+          echo "RUN_EXTRACTORS_TESTS=${RUN_EXTRACTORS_TESTS}"
+          echo "RUN_PREPROCESSING_TESTS=${RUN_PREPROCESSING_TESTS}"
+          echo "RUN_POSTPROCESSING_TESTS=${RUN_POSTPROCESSING_TESTS}"
+          echo "RUN_QUALITYMETRICS_TESTS=${RUN_QUALITYMETRICS_TESTS}"
+          echo "INSTALL_PLEXON_DEPENDENCIES=${INSTALL_PLEXON_DEPENDENCIES}"
       - name: Get current hash (SHA) of the ephy_testing_data repo
 
         id: repo_hash
@@ -117,12 +107,12 @@ jobs:
       - name: Test extractors
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
-        if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ env.RUN_EXTRACTOR_TEST == 'true' }}
         run: pytest -m "extractors"
         shell: bash
 
       - name: Test preprocessing
-        if: steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: env.RUN_PREPROCESSING_TESTS == 'true'
         run: ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
         shell: bash
 
