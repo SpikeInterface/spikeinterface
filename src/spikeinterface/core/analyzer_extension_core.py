@@ -597,6 +597,9 @@ class ComputeTemplates(AnalyzerExtension):
                         weights[count] = counts[id]
                     weights /= weights.sum()
                     new_data[key][unit_ind] = (arr[keep_unit_indices, :, :] * weights[:, np.newaxis, np.newaxis]).sum(0)
+                    chan_ids = new_sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
+                    mask = ~np.isin(np.arange(arr.shape[2]), chan_ids)
+                    new_data[key][unit_ind][:, mask] = 0
 
         return new_data
 

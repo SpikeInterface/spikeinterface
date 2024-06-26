@@ -68,13 +68,14 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
         num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
-        templates_array = get_dense_templates_array(new_sorting_analyzer)
+        templates_array = get_dense_templates_array(new_sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled)
         arr = self.data["similarity"]
         sparsity = new_sorting_analyzer.sparsity
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         new_similarity = np.zeros((len(all_new_unit_ids), len(all_new_unit_ids)), dtype=arr.dtype)
 
-        for unit_ind1, unit_id1 in enumerate(all_new_unit_ids):
+        for unit_id1 in all_new_unit_ids:
+            unit_ind1 = new_sorting_analyzer.sorting.id_to_index(unit_id1)
             template1 = templates_array[unit_ind1][np.newaxis, :]
             sparsity1 = ChannelSparsity(sparsity.mask[unit_ind1][np.newaxis, :], [unit_id1], sparsity.channel_ids)
 
@@ -84,9 +85,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_spk1 = False
                 i = self.sorting_analyzer.sorting.id_to_index(unit_id1)
 
-            for unit_ind2, unit_id2 in enumerate(all_new_unit_ids[unit_ind1:]):
-                position = unit_ind1 + unit_ind2
-                template2 = templates_array[position][np.newaxis, :]
+            for unit_id2 in all_new_unit_ids[unit_ind1:]:
+                unit_ind2 = new_sorting_analyzer.sorting.id_to_index(unit_id2)
+                template2 = templates_array[unit_ind2][np.newaxis, :]
                 sparsity2 = ChannelSparsity(sparsity.mask[unit_ind2][np.newaxis, :], [unit_id2], sparsity.channel_ids)
                 if unit_id2 in new_unit_ids:
                     new_spk2 = True
@@ -95,7 +96,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                     j = self.sorting_analyzer.sorting.id_to_index(unit_id2)
 
                 if new_spk1 or new_spk2:
-                    new_similarity[unit_ind1, position] = compute_similarity_with_templates_array(
+                    new_similarity[unit_ind1, unit_ind2] = compute_similarity_with_templates_array(
                         template1,
                         template2,
                         method=self.params["method"],
@@ -105,9 +106,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                         other_sparsity=sparsity2,
                     )
                 else:
-                    new_similarity[unit_ind1, position] = arr[i, j]
+                    new_similarity[unit_ind1, unit_ind2] = arr[i, j]
 
-                new_similarity[position, unit_ind1] = new_similarity[unit_ind1, position]
+                new_similarity[unit_ind2, unit_ind1] = new_similarity[unit_ind1, unit_ind2]
 
         return dict(similarity=new_similarity)
 
@@ -195,7 +196,7 @@ def compute_similarity_with_templates_array(
             tgt_templates = tgt_sliced_templates[overlapping_templates[i]]
             for gcount, j in enumerate(overlapping_templates[i]):
                 # symmetric values are handled later
-                if num_templates == other_num_templates and j < i:
+                if j < i:
                     continue
                 src = src_template[:, mask[i, j]].reshape(1, -1)
                 tgt = (tgt_templates[gcount][:, mask[i, j]]).reshape(1, -1)
@@ -212,11 +213,11 @@ def compute_similarity_with_templates_array(
                     distances[count, i, j] /= norm_i + norm_j
                 else:
                     distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")
-                if num_templates == other_num_templates:
-                    distances[count, j, i] = distances[count, i, j]
+                
+                distances[count, j, i] = distances[count, i, j]
 
-            if num_shifts != 0:
-                distances[num_shifts_both_sides - count - 1] = distances[count].T
+        if num_shifts != 0:
+            distances[num_shifts_both_sides - count - 1] = distances[count].T
 
     distances = np.min(distances, axis=0)
     similarity = 1 - distances

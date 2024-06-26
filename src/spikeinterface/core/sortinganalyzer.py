@@ -650,7 +650,7 @@ class SortingAnalyzer:
             from spikeinterface.core.sorting_tools import get_ids_after_merging
 
             new_unit_ids = get_ids_after_merging(self.sorting, units_to_merge, new_unit_ids=unit_ids)
-
+        
         if self.has_recording():
             recording = self._recording
         elif self.has_temporary_recording():
