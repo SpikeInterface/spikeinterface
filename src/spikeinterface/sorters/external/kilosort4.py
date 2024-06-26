@@ -255,7 +255,7 @@ class Kilosort4Sorter(BaseSorter):
                 filename=ops["filename"],
                 n_chan_bin=n_chan_bin,
                 fs=fs,
-                nT=NT,
+                NT=NT,
                 nt=nt,
                 nt0min=twav_min,
                 chan_map=chan_map,
