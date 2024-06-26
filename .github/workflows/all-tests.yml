@@ -137,7 +137,7 @@ jobs:
       - name: Test postprocessing
         shell: bash
         if: env.RUN_POSTPROCESSING_TESTS == 'true'
-        run:
+        run: |
           pip install -e .[full]
           ./.github/run_tests.sh postprocessing --no-virtual-env
 
@@ -151,54 +151,55 @@ jobs:
       - name: Test comparison
         shell: bash
         if: env.RUN_COMPARISON_TESTS == 'true'
-        run:
+        run: |
           pip install -e .[full]
           ./.github/run_tests.sh comparison --no-virtual-env
 
       - name: Test core sorters
         shell: bash
         if: env.RUN_SORTERS_TESTS == 'true'
-        run:
+        run: |
           pip install -e .[full]
           ./.github/run_tests.sh sorters --no-virtual-env
 
       - name: Test internal sorters
         shell: bash
-          pip install -e .[full]
         if: env.RUN_INTERNAL_SORTERS_TESTS == 'true'
-        run: ./.github/run_tests.sh sorters_internal --no-virtual-env
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh sorters_internal --no-virtual-env
 
       - name: Test curation
         shell: bash
         if: env.RUN_CURATION_TESTS == 'true'
-        run:
+        run: |
           pip install .[full]
           ./.github/run_tests.sh curation --no-virtual-env
 
       - name: Test widgets
         shell: bash
         if: env.RUN_WIDGETS_TESTS == 'true'
-        run:
+        run: |
           pip install .[full]
           ./.github/run_tests.sh widgets --no-virtual-env
 
       - name: Test exporters
         shell: bash
         if: env.RUN_EXPORTERS_TESTS == 'true'
-        run:
+        run: |
           pip install .[full]
           ./.github/run_tests.sh exporters --no-virtual-env
 
       - name: Test sortingcomponents
         shell: bash
         if: env.RUN_SORTINGCOMPONENTS_TESTS == 'true'
-        run:
+        run: |
           pip install .[full]
           ./.github/run_tests.sh sortingcomponents --no-virtual-env
 
       - name: Test generation
         shell: bash
         if: env.RUN_GENERATION_TESTS == 'true'
-        run:
+        run: |
           pip install .[full]
           ./.github/run_tests.sh generation --no-virtual-env
