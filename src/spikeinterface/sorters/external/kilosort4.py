@@ -6,7 +6,6 @@ from packaging import version
 
 from ..basesorter import BaseSorter
 from .kilosortbase import KilosortBase
-from importlib.metadata import version
 
 PathType = Union[str, Path]
 
@@ -129,7 +128,10 @@ class Kilosort4Sorter(BaseSorter):
     @classmethod
     def get_sorter_version(cls):
         """kilosort version <0.0.10 is always '4' z"""
-        return version("kilosort")
+        # Note this import clashes with version!
+        from importlib.metadata import version as importlib_version
+
+        return importlib_version("kilosort")
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
