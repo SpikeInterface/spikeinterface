@@ -314,10 +314,10 @@ class MixinTemplateComparison:
     Mixin for template comparisons to define:
        * similarity method
        * support
-       * n_shifts
+       * num_shifts
     """
 
-    def __init__(self, similarity_method="cosine", support="union", n_shifts=0):
+    def __init__(self, similarity_method="cosine", support="union", num_shifts=0):
         self.similarity_method = similarity_method
         self.support = support
-        self.n_shifts = n_shifts
+        self.num_shifts = num_shifts

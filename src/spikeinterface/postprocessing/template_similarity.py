@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import warnings
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core.template_tools import get_dense_templates_array
@@ -47,6 +48,11 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
     def _set_params(self, method="cosine", max_lag_ms=0, support="union"):
         if method == "cosine_similarity":
+            warnings.warn(
+                "The method 'cosine_similarity' is deprecated and will be removed in the next version. Use 'cosine' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             method = "cosine"
         params = dict(method=method, max_lag_ms=max_lag_ms, support=support)
         return params
@@ -58,7 +64,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         return dict(similarity=new_similarity)
 
     def _run(self, verbose=False):
-        n_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
+        num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
         templates_array = get_dense_templates_array(
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
         )
@@ -67,7 +73,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             templates_array,
             templates_array,
             method=self.params["method"],
-            n_shifts=n_shifts,
+            num_shifts=num_shifts,
             support=self.params["support"],
             sparsity=sparsity,
             other_sparsity=sparsity,
@@ -84,7 +90,7 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 
 def compute_similarity_with_templates_array(
-    templates_array, other_templates_array, method, support="union", n_shifts=0, sparsity=None, other_sparsity=None
+    templates_array, other_templates_array, method, support="union", num_shifts=0, sparsity=None, other_sparsity=None
 ):
 
     import sklearn.metrics.pairwise
@@ -127,15 +133,15 @@ def compute_similarity_with_templates_array(
         overlapping_templates = {i: np.arange(other_num_templates) for i in range(num_templates)}
         mask = np.ones((num_templates, other_num_templates, num_channels), dtype=bool)
 
-    assert n_shifts < num_samples, "max_lag is too large"
-    num_shifts = 2 * n_shifts + 1
-    distances = np.ones((num_shifts, num_templates, other_num_templates), dtype=np.float32)
+    assert num_shifts < num_samples, "max_lag is too large"
+    num_shifts_both_sides = 2 * num_shifts + 1
+    distances = np.ones((num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32)
 
     # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t
     # So the matrix can be computed only for negative lags and be transposed
-    for count, shift in enumerate(range(-n_shifts, 1)):
-        src_sliced_templates = templates_array[:, n_shifts : num_samples - n_shifts]
-        tgt_sliced_templates = other_templates_array[:, n_shifts + shift : num_samples - n_shifts + shift]
+    for count, shift in enumerate(range(-num_shifts, 1)):
+        src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
+        tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
         for i in range(num_templates):
             src_template = src_sliced_templates[i]
             tgt_templates = tgt_sliced_templates[overlapping_templates[i]]
@@ -161,8 +167,8 @@ def compute_similarity_with_templates_array(
                 if num_templates == other_num_templates:
                     distances[count, j, i] = distances[count, i, j]
 
-            if n_shifts != 0:
-                distances[num_shifts - count - 1] = distances[count].T
+            if num_shifts != 0:
+                distances[num_shifts_both_sides - count - 1] = distances[count].T
 
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
@@ -171,7 +177,7 @@ def compute_similarity_with_templates_array(
 
 
 def compute_template_similarity_by_pair(
-    sorting_analyzer_1, sorting_analyzer_2, method="cosine", support="union", n_shifts=0
+    sorting_analyzer_1, sorting_analyzer_2, method="cosine", support="union", num_shifts=0
 ):
     templates_array_1 = get_dense_templates_array(sorting_analyzer_1, return_scaled=True)
     templates_array_2 = get_dense_templates_array(sorting_analyzer_2, return_scaled=True)
@@ -182,7 +188,7 @@ def compute_template_similarity_by_pair(
         templates_array_2,
         method=method,
         support=support,
-        n_shifts=n_shifts,
+        num_shifts=num_shifts,
         sparsity=sparsity_1,
         other_sparsity=sparsity_2,
     )

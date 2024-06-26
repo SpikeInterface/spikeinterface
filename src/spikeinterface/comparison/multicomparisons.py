@@ -335,7 +335,7 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
         verbose=False,
         similarity_method="cosine",
         support="union",
-        n_shifts=0,
+        num_shifts=0,
         do_matching=True,
     ):
         if name_list is None:
@@ -348,7 +348,9 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinTemplateComparison.__init__(self, similarity_method=similarity_method, support=support, n_shifts=n_shifts)
+        MixinTemplateComparison.__init__(
+            self, similarity_method=similarity_method, support=support, num_shifts=num_shifts
+        )
 
         if do_matching:
             self._compute_all()

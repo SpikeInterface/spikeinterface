@@ -708,7 +708,7 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         Method for the similarity matrix.
     support : "dense" | "union" | "intersection", default: "union"
         The support to compute the similarity matrix.
-    n_shifts : int, default: 0
+    num_shifts : int, default: 0
         Number of shifts to use to shift templates to maximize similarity.
     verbose : bool, default: False
         If True, output is verbose.
@@ -731,7 +731,7 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         chance_score=0.3,
         similarity_method="cosine",
         support="union",
-        n_shifts=0,
+        num_shifts=0,
         verbose=False,
     ):
         if name1 is None:
@@ -748,7 +748,9 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinTemplateComparison.__init__(self, similarity_method=similarity_method, support=support, n_shifts=n_shifts)
+        MixinTemplateComparison.__init__(
+            self, similarity_method=similarity_method, support=support, num_shifts=num_shifts
+        )
 
         self.sorting_analyzer_1 = sorting_analyzer_1
         self.sorting_analyzer_2 = sorting_analyzer_2
@@ -782,7 +784,7 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             self.sorting_analyzer_2,
             method=self.similarity_method,
             support=self.support,
-            n_shifts=self.n_shifts,
+            num_shifts=self.num_shifts,
         )
         import pandas as pd
 

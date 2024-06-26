@@ -1,3 +1,5 @@
+import pytest
+
 from spikeinterface.postprocessing.tests.common_extension_tests import (
     AnalyzerExtensionCommonTestSuite,
 )
@@ -7,10 +9,19 @@ from spikeinterface.postprocessing import check_equal_template_with_distribution
 
 class TestSimilarityExtension(AnalyzerExtensionCommonTestSuite):
 
-    def test_extension(self):
-        self.run_extension_tests(ComputeTemplateSimilarity, params=dict(method="cosine"))
-        self.run_extension_tests(ComputeTemplateSimilarity, params=dict(method="l2"))
-        self.run_extension_tests(ComputeTemplateSimilarity, params=dict(method="l1", max_lag_ms=0.2))
+    @pytest.mark.parametrize(
+        "params",
+        [
+            dict(method="cosine"),
+            dict(method="l2"),
+            dict(method="l1", max_lag_ms=0.2),
+            dict(method="l1", support="intersection"),
+            dict(method="l2", support="union"),
+            dict(method="cosine", support="dense"),
+        ],
+    )
+    def test_extension(self, params):
+        self.run_extension_tests(ComputeTemplateSimilarity, params=params)
 
     def test_check_equal_template_with_distribution_overlap(self):
         """
