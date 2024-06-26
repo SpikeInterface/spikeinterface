@@ -144,7 +144,7 @@ jobs:
       - name: Test quality metrics
         shell: bash
         if: env.RUN_QUALITYMETRICS_TESTS == 'true'
-        run:
+        run: |
           pip install -e .[qualitymetrics]
           ./.github/run_tests.sh qualitymetrics --no-virtual-env
 
