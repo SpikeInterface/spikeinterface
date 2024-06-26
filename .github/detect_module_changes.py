@@ -78,7 +78,27 @@ for changed_file in changed_files_paths:
 
 
 # Write the conditions to the GITHUB_ENV file
-env_file = os.getenv('GITHUB_ENV')
-with open(env_file, 'a') as f:
+env_file = os.getenv("GITHUB_ENV")
+with open(env_file, "a") as f:
     for key, value in conditions_changed.items():
         f.write(f"{key}={value}\n")
+
+
+# test_to_run = {
+#     "RUN_EVERYTHING": conditions_changed["CORE_CHANGED"]
+#     or conditions_changed["PYPROJECT_TOML_CHANGED"]
+#     or conditions_changed["NEOBASEEXTRACTOR_CHANGED"],
+#     "RUN_EXTRACTOR_TEST": conditions_changed["Extractors_CHANGED"],
+#     "RUN_PREPROCESSING_TEST": conditions_changed["PREPROCESSING_CHANGED"],
+#     "RUN_POSTPROCESSING_TEST": conditions_changed["POSTPROCESSING_CHANGED"],
+#     "RUN_QUALITYMETRICS_TEST": conditions_changed["QUALITYMETRICS_CHANGED"],
+#     "RUN_SORTERS_TEST": conditions_changed["SORTERS_CHANGED"],
+#     "RUN_SORTERS_EXTERNAL_TEST": conditions_changed["SORTERS_EXTERNAL_CHANGED"],
+#     "RUN_SORTERS_INTERNAL_TEST": conditions_changed["SORTERS_INTERNAL_CHANGED"],
+#     "RUN_COMPARISON_TEST": conditions_changed["COMPARISON_CHANGED"],
+#     "RUN_CURATION_TEST": conditions_changed["CURATION_CHANGED"],
+#     "RUN_WIDGETS_TEST": conditions_changed["WIDGETS_CHANGED"],
+#     "RUN_EXPORTERS_TEST": conditions_changed["EXPORTERS_CHANGED"],
+#     "RUN_SORTINGCOMPONENTS_TEST": conditions_changed["SORTINGCOMPONENTS_CHANGED"],
+#     "RUN_GENERATION_TEST": conditions_changed["GENERATION_CHANGED"],
+# }
