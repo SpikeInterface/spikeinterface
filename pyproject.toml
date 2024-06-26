@@ -137,10 +137,9 @@ test = [
 
     # for sortingview backend
     "sortingview",
-
-    # recent datalad need a too recent version for git-annex
-    # so we use an old one here
-    "datalad==0.16.2",
+    # Download data
+    "pooch>=1.8.2",
+    "datalad>=1.0.2",
 
     ## install tridesclous for testing ##
     "tridesclous>=1.6.8",
