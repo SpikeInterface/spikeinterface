@@ -216,7 +216,7 @@ class Kilosort4Sorter(BaseSorter):
         )
 
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
-            # TODO: save_preprocessed_copy added
+            # TODO: save_preprocesed_copy added
             ops = initialize_ops(
                 settings=settings,
                 probe=probe,
@@ -224,7 +224,7 @@ class Kilosort4Sorter(BaseSorter):
                 do_CAR=do_CAR,
                 invert_sign=invert_sign,
                 device=device,
-                save_preprocessed_copy=False,
+                save_preprocesed_copy=False,
             )
         else:
             ops = initialize_ops(

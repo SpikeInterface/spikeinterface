@@ -13,6 +13,7 @@ from kilosort.parameters import DEFAULT_SETTINGS
 from packaging.version import parse
 from importlib.metadata import version
 
+# TODO: save_preprocesed_copy is misspelled in KS4.
 # TODO: duplicate_spike_bins to duplicate_spike_ms
 # TODO: write an issue on KS about bin! vs bin_ms!
 # TODO: expose tmin and tmax
