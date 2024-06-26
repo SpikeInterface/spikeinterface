@@ -245,6 +245,8 @@ def dredge_ap(
         raster, spatial_bin_edges_um, time_bin_edges_s, counts = raster_res
     else:
         raster, spatial_bin_edges_um, time_bin_edges_s = raster_res
+    
+    # TODO Sam I did not yet change parameters here with the get_windows API
     windows, window_centers = get_windows(
         # pseudo geom to fool spikeinterface
         np.c_[np.zeros_like(spatial_bin_edges_um), spatial_bin_edges_um],
