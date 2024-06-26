@@ -759,11 +759,9 @@ class SortingAnalyzer:
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
                     new_sorting_analyzer, unit_ids=unit_ids
                 )
-            
-        if units_to_merge is not None and merging_mode == 'hard':
-            new_sorting_analyzer.compute(
-                recompute_dict, save=True, verbose=verbose, **job_kwargs
-            )
+
+        if units_to_merge is not None and merging_mode == "hard":
+            new_sorting_analyzer.compute(recompute_dict, save=True, verbose=verbose, **job_kwargs)
 
         return new_sorting_analyzer
 
