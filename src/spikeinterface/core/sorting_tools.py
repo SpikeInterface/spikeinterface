@@ -5,7 +5,6 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core import NumpySorting
 
 
-
 def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.array) -> dict[dict[str, np.array]]:
     """
     Computes all spike trains for all units/segments from a spike vector list.
@@ -267,7 +266,7 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
 
     spikes = sorting.to_spike_vector().copy()
     to_keep = np.ones(len(spikes), dtype=bool)
-    
+
     new_unit_ids = get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids)
 
     all_unit_ids = get_ids_after_merging(sorting, units_to_merge, new_unit_ids)

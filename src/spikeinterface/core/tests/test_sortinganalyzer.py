@@ -244,7 +244,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer4 = sorting_analyzer.merge_units(
-            units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, mode='hard'
+            units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, mode="hard"
         )
 
     # test compute with extension-specific params
