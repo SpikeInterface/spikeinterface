@@ -49,7 +49,7 @@ jobs:
         shell: bash
         run: |
           changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
-          python ./github/detect_changed_modules.py $changed_files
+          python .github/detect_changed_modules.py $changed_files
 
       - name: Print module changes
         shell: bash
