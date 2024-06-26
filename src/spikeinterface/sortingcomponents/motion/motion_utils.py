@@ -376,6 +376,8 @@ def make_2d_motion_histogram(
     bin_um=2.0,
     hist_margin_um=50,
     spatial_bin_edges=None,
+    depth_smooth_um=None,
+    time_smooth_s=None,
 ):
     """
     Generate 2d motion histogram in depth and time.
@@ -401,6 +403,12 @@ def make_2d_motion_histogram(
         Ignored if spatial_bin_edges is given.
     spatial_bin_edges : np.array, default: None
         The pre-computed spatial bin edges
+    depth_smooth_um: None or float
+        Optional gaussian smoother on histogram on depth axis.
+        This is given as the sigma of the gaussian in micrometers.
+    time_smooth_s: None or float
+        Optional gaussian smoother on histogram on time axis.
+        This is given as the sigma of the gaussian in seconds.
 
     Returns
     -------
@@ -434,6 +442,14 @@ def make_2d_motion_histogram(
         bin_counts, _ = np.histogramdd(arr, bins=(temporal_bin_edges, spatial_bin_edges))
         bin_counts[bin_counts == 0] = 1
         motion_histogram = motion_histogram / bin_counts
+
+    from scipy.ndimage import gaussian_filter1d
+
+    if depth_smooth_um is not None:
+        motion_histogram = gaussian_filter1d(motion_histogram, depth_smooth_um / bin_um, axis=1, mode="constant")
+
+    if time_smooth_s is not None:
+        motion_histogram = gaussian_filter1d(motion_histogram, time_smooth_s / bin_duration_s, axis=0, mode="constant")
 
     return motion_histogram, temporal_bin_edges, spatial_bin_edges
 

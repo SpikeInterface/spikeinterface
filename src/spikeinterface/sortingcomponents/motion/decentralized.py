@@ -168,23 +168,9 @@ class DecentralizedRegistration:
             bin_duration_s=bin_duration_s,
             spatial_bin_edges=spatial_bin_edges,
             weight_with_amplitude=weight_with_amplitude,
+            depth_smooth_um=histogram_depth_smooth_um,
+            time_smooth_s=histogram_time_smooth_s,
         )
-        import scipy.signal
-
-        if histogram_depth_smooth_um is not None:
-            bins = np.arange(motion_histogram.shape[1]) * bin_um
-            bins = bins - np.mean(bins)
-            smooth_kernel = np.exp(-(bins**2) / (2 * histogram_depth_smooth_um**2))
-            smooth_kernel /= np.sum(smooth_kernel)
-
-            motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[None, :], mode="same", axes=1)
-
-        if histogram_time_smooth_s is not None:
-            bins = np.arange(motion_histogram.shape[0]) * bin_duration_s
-            bins = bins - np.mean(bins)
-            smooth_kernel = np.exp(-(bins**2) / (2 * histogram_time_smooth_s**2))
-            smooth_kernel /= np.sum(smooth_kernel)
-            motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[:, None], mode="same", axes=0)
 
         if extra is not None:
             extra["motion_histogram"] = motion_histogram

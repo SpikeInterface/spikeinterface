@@ -11,7 +11,7 @@ from spikeinterface.sortingcomponents.tools import make_multi_method_doc
 from .motion_utils import Motion, get_windows, get_spatial_bin_edges
 from .decentralized import DecentralizedRegistration
 from .iterative_template import IterativeTemplateRegistration
-from .dredge import DredgeLfpRegistration
+from .dredge import DredgeLfpRegistration, DredgeApRegistration
 
 
 def estimate_motion(
@@ -162,7 +162,7 @@ def estimate_motion(
         return motion
 
 
-_methods_list = [DecentralizedRegistration, IterativeTemplateRegistration, DredgeLfpRegistration]
+_methods_list = [DecentralizedRegistration, IterativeTemplateRegistration, DredgeLfpRegistration, DredgeApRegistration]
 estimate_motion_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
 estimate_motion.__doc__ = estimate_motion.__doc__.format(method_doc=method_doc)
