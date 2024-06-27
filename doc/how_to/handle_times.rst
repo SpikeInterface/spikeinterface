@@ -1,7 +1,7 @@
 How SpikeInterface handles Time
 =================================
 
-Extracellula electrophysiology commonly involves synchronisation of events
+Extracellular electrophysiology commonly involves synchronisation of events
 across many timestreams. For example, an experiment may involve
 displaying a stimuli to an animal and recording the stimuli-evoked
 neuronal responses. It is critical that timings is represented in
@@ -85,9 +85,16 @@ segment one and index in the peak at index 300 in segment two, both
 segments action potential peaks will be given a spike time of 0.1 s,
 and their segment tracked to distinguish them. TODO: CHECK
 
+# TODO: yes follow a code example!
+```sorting.get_unit_spike_train(0, return_times=True, segment_index=1)```
+
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 Providing the start time
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+### TODO :::: This section make no sense because you can't set
+`t_start` directly as far as I can tell, it is only available on
+a few extractors.
 
 Alternatively, the start-time of each segment can be provided to
 spikeinterface. The same method (index * (1 / sampling_frequency))
@@ -114,15 +121,27 @@ Alternatively, if you wanted to ignore the 10 minute gap, you could do:
 ```
 recording.select_segment(1).set_times(XXXX)
 ```
+``` print spike times```
+sorting.get_unit_spike_train(0, return_times=True, segment_index=1)
+# TODO: it says use time vector but this doesn't return times.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Providing the full time array
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Finally, may want to get full time array. Where do you get this from?
+Loaded - some more information on where from
 
-Note that for some extractors, e.g. read_openephys you can load the syncrhonized timestamps directly (load_sync_timestamps param). It would be important to mention!
+`recording.has_time_vector()`.
 
+we can set times e.g. as above.
+
+1) set the times
+2) print the times. Note how they are different to the above case!
+
+Note that for some extractors, e.g. read_openephys you can load the
+syncrhonized timestamps directly (load_sync_timestamps param). It would be
+important to mention! Section on when files are loaded autoamticaly!
 
 --------------------------
 Accessing time information
@@ -130,5 +149,4 @@ Accessing time information
 
 Cover the The two time array functions.
 
-`time_to_sample_index`
 `sample_index_to_time`
