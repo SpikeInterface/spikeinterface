@@ -54,7 +54,7 @@ def test_path_utils_functions():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Runs only on Windows")
 def test_relative_path_on_windows():
-        
+
     d = {
         "kwargs": {
             "path": r"c:\yep\sub\path1",
