@@ -78,9 +78,8 @@ jobs:
         run: pytest -m "core"
         shell: bash
 
-      - name: Install Other Testing Dependencies
+      - name: Install Dependencies for Timing Display
         run: |
-          pip install -e .[test]
           pip install tabulate
           pip install pandas
         shell: bash
@@ -143,6 +142,11 @@ jobs:
         run: |
           pip install -e .[preprocessing]
           ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
+
+      - name: Install remaining testing dependencies # TODO: Remove this step once we have better modularization
+        shell: bash
+        run: |
+          pip install -e .[test]
 
       - name: Test postprocessing
         shell: bash

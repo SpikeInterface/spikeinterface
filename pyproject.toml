@@ -87,6 +87,7 @@ streaming_extractors = [
 
 preprocessing = [
     "scipy",
+    "ibllib>=2.36.0", # for IBL
 ]
 
 
