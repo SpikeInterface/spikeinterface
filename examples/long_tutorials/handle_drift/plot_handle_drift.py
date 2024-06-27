@@ -33,7 +33,7 @@ Vertical drift can come in two forms, *'rigid'* and *'non-rigid'*. Rigid drift
 is drift caused by movement of the entire probe, and the motion is
 similar across all channels along the probe depth. In contrast,
 non-rigid drift is instead caused by local movements of neuronal tissue along the
-probe, and can selectively affect subsets of channels..
+probe, and can selectively affect subsets of channels.
 
 --------------------------
 The drift correction steps
