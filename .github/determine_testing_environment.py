@@ -76,7 +76,7 @@ for changed_file in changed_files_in_the_pull_request_paths:
 
 run_everything = core_changed or pyproject_toml_changed or neobaseextractor_changed
 run_generation_tests = run_everything or generation_changed
-run_extractor_tests = run_everything or extractors_changed
+run_extractor_tests = run_everything or extractors_changed or plexon2_changed
 run_preprocessing_tests = run_everything or preprocessing_changed
 run_postprocessing_tests = run_everything or postprocessing_changed
 run_qualitymetrics_tests = run_everything or qualitymetrics_changed
