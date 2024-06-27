@@ -601,7 +601,7 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.MotionWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                # with recoridng
+                # with recording
                 sw.plot_drift_raster_map(
                     peaks=peaks, peak_locations=peak_locations, recording=recording, color_amplitude=True
                 )
