@@ -29,7 +29,7 @@ def pytest_collection_modifyitems(config, items):
     rootdir = Path(config.rootdir)
     modules_location = rootdir / "src" / "spikeinterface"
     for item in items:
-        try:  # TODO: make a note on this, check with Herberto its okay.
+        try:
             rel_path = Path(item.fspath).relative_to(modules_location)
         except:
             continue

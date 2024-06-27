@@ -127,8 +127,7 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        """kilosort version <0.0.10 is always '4' z"""
-        # Note this import clashes with version!
+        """kilosort version <0.0.10 is always '4'"""
         from importlib.metadata import version as importlib_version
 
         return importlib_version("kilosort")
@@ -216,7 +215,6 @@ class Kilosort4Sorter(BaseSorter):
         )
 
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
-            # TODO: save_preprocesed_copy added
             ops = initialize_ops(
                 settings=settings,
                 probe=probe,
@@ -237,7 +235,6 @@ class Kilosort4Sorter(BaseSorter):
             )
 
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.11"):
-            # TODO: shift, scaled added
             n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
                 get_run_parameters(ops)
             )
@@ -261,22 +258,23 @@ class Kilosort4Sorter(BaseSorter):
                 chan_map=chan_map,
                 hp_filter=None,
                 device=device,
-                do_CAR=do_CAR,  # TODO: should this always be False if we are in skipping KS preprocessing land?
+                do_CAR=do_CAR,
                 invert_sign=invert,
                 dtype=dtype,
-                tmin=tmin,  # TODO: exposing tmin, max?
+                tmin=tmin,
                 tmax=tmax,
                 artifact_threshold=artifact,
-                file_object=file_object,  # TODO: exposing shift, scale when skipping preprocessing?
+                file_object=file_object,
             )
             ops["preprocessing"] = dict(hp_filter=None, whiten_mat=None)
             ops["Wrot"] = torch.as_tensor(np.eye(recording.get_num_channels()))
             ops["Nbatches"] = bfile.n_batches
+        #            bfile.close()  # TODO: KS do this after preprocessing?
 
         np.random.seed(1)
         torch.cuda.manual_seed_all(1)
         torch.random.manual_seed(1)
-        # if not params["skip_kilosort_preprocessing"]:
+
         if not params["do_correction"]:
             print("Skipping drift correction.")
             ops["nblocks"] = 0
