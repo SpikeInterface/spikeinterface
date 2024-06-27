@@ -184,10 +184,10 @@ def is_dict_extractor(d: dict) -> bool:
     return is_extractor
 
 
-recording_dict_element = namedtuple(typename="recording_dict_element", field_names=["value", "name", "access_path"])
+extractor_dict_element = namedtuple(typename="extractor_dict_element", field_names=["value", "name", "access_path"])
 
 
-def extractor_dict_iterator(extractor_dict: dict) -> Generator[recording_dict_element]:
+def extractor_dict_iterator(extractor_dict: dict) -> Generator[extractor_dict_element]:
     """
     Iterator for recursive traversal of a dictionary.
     This function explores the dictionary recursively and yields the path to each value along with the value itself.
@@ -204,7 +204,7 @@ def extractor_dict_iterator(extractor_dict: dict) -> Generator[recording_dict_el
 
     Yields
     ------
-    recording_dict_element
+    extractor_dict_element
         Named tuple containing the value, the name, and the access_path to the value in the dictionary.
 
     """
@@ -219,7 +219,7 @@ def extractor_dict_iterator(extractor_dict: dict) -> Generator[recording_dict_el
                     v, access_path + (i,), name=name
                 )  # Propagate name of list to children
         else:
-            yield recording_dict_element(
+            yield extractor_dict_element(
                 value=dict_list_or_value,
                 name=name,
                 access_path=access_path,
@@ -320,7 +320,7 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
 
-# This is the current definition that an element in a recording_dict is a path
+# This is the current definition that an element in a extractor_dict is a path
 # This is shared across a couple of definition so it is here for DNRY
 element_is_path = lambda element: "path" in element.name and isinstance(element.value, (str, Path))
 
