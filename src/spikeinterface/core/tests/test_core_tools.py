@@ -54,25 +54,24 @@ def test_path_utils_functions():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Runs only on Windows")
 def test_relative_path_on_windows():
-    if platform.system() == "Windows":
-        # test for windows Path
-        d = {
-            "kwargs": {
-                "path": r"c:\yep\sub\path1",
-                "recording": {
-                    "module": "mock_module",
-                    "class": "mock_class",
-                    "version": "1.2",
-                    "annotations": {},
-                    "kwargs": {"path": r"c:\yep\sub\path2"},
-                },
-            }
-        }
 
-        # same drive
-        assert check_paths_relative(d, r"c:\yep")
-        # not the same drive
-        assert not check_paths_relative(d, r"d:\yep")
+    d = {
+        "kwargs": {
+            "path": r"c:\yep\sub\path1",
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": r"c:\yep\sub\path2"},
+            },
+        }
+    }
+
+    # same drive
+    assert check_paths_relative(d, r"c:\yep")
+    # not the same drive
+    assert not check_paths_relative(d, r"d:\yep")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Runs only on Windows")
@@ -139,8 +138,8 @@ def test_make_paths_absolute(tmp_path):
     }
 
     modified_extractor_dict = make_paths_absolute(extractor_dict, tmp_path)
-    assert modified_extractor_dict["kwargs"]["path"].startswith(str(tmp_path))
-    assert modified_extractor_dict["kwargs"]["recording"]["kwargs"]["path"].startswith(str(tmp_path))
+    assert modified_extractor_dict["kwargs"]["path"].startswith(str(tmp_path.as_posix()))
+    assert modified_extractor_dict["kwargs"]["recording"]["kwargs"]["path"].startswith(str(tmp_path.as_posix()))
     assert modified_extractor_dict["kwargs"]["electrical_series_path"] == "/acquisition/timeseries"
 
 
