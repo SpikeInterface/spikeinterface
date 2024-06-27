@@ -1,14 +1,14 @@
 import pytest
 import numpy as np
 from spikeinterface.core.testing_tools import generate_recording
-from spikeinterface.preprocessing import ScaleTouVRecording  # Replace 'your_module' with your actual module name
+from spikeinterface.preprocessing import ScaleTouVRecording
 
 
 def test_scale_to_uv():
     # Create a sample recording extractor with fake gains and offsets
     num_channels = 4
     sampling_frequency = 30_000.0
-    durations = [1]  # seconds
+    durations = [1.0, 1.0]  # seconds
     recording = generate_recording(
         num_channels=num_channels,
         durations=durations,
@@ -25,12 +25,12 @@ def test_scale_to_uv():
     scaled_recording = ScaleTouVRecording(recording=recording)
 
     # Check if the traces are indeed scaled
-    expected_traces = recording.get_traces(return_scaled=True)
-    scaled_traces = scaled_recording.get_traces()
+    expected_traces = recording.get_traces(return_scaled=True, segment_index=0)
+    scaled_traces = scaled_recording.get_traces(segment_index=0)
 
     np.testing.assert_allclose(scaled_traces, expected_traces)
 
     # Test for the error when recording doesn't have scaleable traces
     recording.set_channel_gains(None)  # Remove gains to make traces unscaleable
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         ScaleTouVRecording(recording)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 from spikeinterface.core import BaseRecording
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor
 
@@ -26,11 +28,15 @@ class ScaleTouVRecording(BasePreprocessor):
     name = "scale_to_uV"
 
     def __init__(self, recording: BaseRecording):
-        assert recording.has_scaleable_traces(), "Recording must have scaleable traces"
+        # Importing inside to avoid a circular import
         from spikeinterface.preprocessing.normalize_scale import ScaleRecordingSegment
 
-        dtype = recording.get_dtype()
+        dtype = np.dtype("float32")
         BasePreprocessor.__init__(self, recording, dtype=dtype)
+
+        if not recording.has_scaleable_traces():
+            error_msg = "Recording must have gains and offsets set to be scaled to µV"
+            raise RuntimeError(error_msg)
 
         gain = recording.get_channel_gains()[None, :]
         offset = recording.get_channel_offsets()[None, :]
