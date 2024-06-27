@@ -16,7 +16,6 @@ def get_pypi_versions(package_name):
     data = response.json()
     versions = list(sorted(data["releases"].keys()))
     versions = [ver for ver in versions if parse(ver) >= parse("4.0.5")]
-    versions.pop(versions.index("4.0.4"))
     return versions
 
 

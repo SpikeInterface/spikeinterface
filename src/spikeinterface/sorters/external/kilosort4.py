@@ -163,7 +163,7 @@ class Kilosort4Sorter(BaseSorter):
 
             logging.basicConfig(level=logging.INFO)
 
-        if cls.get_sorter_version() < version.parse("4.0.5"):
+        if version.parse(cls.get_sorter_version()) < version.parse("4.0.5"):
             raise RuntimeError(
                 "Kilosort versions before 4.0.5 are not supported"
                 "in SpikeInterface. "

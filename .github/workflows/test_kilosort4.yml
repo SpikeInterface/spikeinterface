@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests
+          pip install requests packaging
 
       - name: Fetch package versions from PyPI
         run: |
