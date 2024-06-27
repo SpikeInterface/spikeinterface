@@ -245,9 +245,9 @@ class LussacMerging(BaseMergingEngine):
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
         "lussac_kwargs": {
             "minimum_spikes": 50,
-            "maximum_distance_um": 20,
+            "maximum_distance_um": 50,
             "refractory_period": (0.3, 1.0),
-            "template_diff_thresh": 0.3,
+            "template_diff_thresh": 0.5,
         },
     }
 

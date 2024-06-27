@@ -24,19 +24,15 @@ class CircusMerging(BaseMergingEngine):
         "curation_kwargs": {
             "minimum_spikes": 50,
             "corr_diff_thresh": 0.5,
-            "maximum_distance_um": 20,
+            "maximum_distance_um": 50,
             "presence_distance_thresh": 100,
-            "template_diff_thresh": 0.3,
-            "bin_ms": 1,
-            "window_ms": 250,
+            "template_diff_thresh": 0.5,
         },
         "temporal_splits_kwargs": {
             "minimum_spikes": 50,
-            "maximum_distance_um": 20,
+            "maximum_distance_um": 50,
             "presence_distance_thresh": 100,
-            "template_diff_thresh": 0.3,
-            "bin_ms": 1,
-            "window_ms": 250,
+            "template_diff_thresh": 0.5,
         },
     }
 
