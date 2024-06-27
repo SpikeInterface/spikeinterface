@@ -70,7 +70,7 @@ class CurationModelTrainer:
             # Extract the target variable and features
             self.y = self.testing_metrics[0][self.target_column]
 
-            # Reorder columns to match the initial metrics list, 
+            # Reorder columns to match the initial metrics list,
             # Drops any columns not in the metrics list, fills any missing columns with NaN
             self.X = self.testing_metrics[0].reindex(columns=self.metrics_list)
 
