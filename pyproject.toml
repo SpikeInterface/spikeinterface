@@ -85,6 +85,12 @@ streaming_extractors = [
     "s3fs"
 ]
 
+test_extractors = [
+    # Functions to download data in neo test suite
+    "pooch>=1.8.2",
+    "datalad>=1.0.2",
+]
+
 preprocessing = [
     "scipy",
     "ibllib>=2.36.0", # for IBL
@@ -146,9 +152,7 @@ test = [
 
     # for sortingview backend
     "sortingview",
-    # Download data
-    "pooch>=1.8.2",
-    "datalad>=1.0.2",
+
 
     ## install tridesclous for testing ##
     "tridesclous>=1.6.8",
