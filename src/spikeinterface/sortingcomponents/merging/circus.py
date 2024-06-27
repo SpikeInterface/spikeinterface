@@ -76,7 +76,7 @@ class CircusMerging(BaseMergingEngine):
             print(f"{len(merges)} merges have been detected via auto merges")
         temporal_splits_kwargs = self.params.get("temporal_splits_kwargs", None)
         if temporal_splits_kwargs is not None:
-            more_merges += get_potential_auto_merge(self.analyzer, **temporal_splits_kwargs, preset="temporal_splits")
+            more_merges = get_potential_auto_merge(self.analyzer, **temporal_splits_kwargs, preset="temporal_splits")
             if self.verbose:
                 print(f"{len(more_merges)} merges have been detected via additional temporal splits")
             merges += more_merges
