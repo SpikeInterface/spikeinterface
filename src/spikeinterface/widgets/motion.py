@@ -19,7 +19,10 @@ class MotionWidget(BaseWidget):
     segment_index : int | None, default: None
         If Motion is multi segment, the must be not None.
     mode : "auto" | "line" | "map", default: "line"
-        How to plot map or lines. "auto" makes it automatic if the number of motion depths is too high.
+        How to plot the motion.
+        "line" plots estimated motion at different depths as lines.
+        "map" plots estimated motion at different depths as a heatmap.
+        "auto" makes it automatic depending on the number of motion depths.
     """
 
     def __init__(
