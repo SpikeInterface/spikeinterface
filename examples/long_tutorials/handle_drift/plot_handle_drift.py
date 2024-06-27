@@ -196,7 +196,7 @@ for preset in presets_to_run:
 #   * **top left:** The estimated peak depth for every detected peak.
 #   * **top right:** The estimated peak depths after motion correction.
 #   * **bottom left:** The average motion vector across depths and all motion across spatial depths (for non-rigid estimation).
-#   * **bottom right:** if motion correction is non rigid, the motion vector across depths is plotted as a map, with the color code representing the motion in micrometers.
+#   * **bottom right:** if motion correction is non-rigid, the motion vector across depths is plotted as a map, with the color code representing the motion in micrometers.
 
 for preset in presets_to_run:
 
