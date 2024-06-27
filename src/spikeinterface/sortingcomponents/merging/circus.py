@@ -76,9 +76,10 @@ class CircusMerging(BaseMergingEngine):
             print(f"{len(merges)} merges have been detected via auto merges")
         temporal_splits_kwargs = self.params.get("temporal_splits_kwargs", None)
         if temporal_splits_kwargs is not None:
-            merges += get_potential_auto_merge(self.analyzer, **temporal_splits_kwargs, preset="temporal_splits")
+            more_merges += get_potential_auto_merge(self.analyzer, **temporal_splits_kwargs, preset="temporal_splits")
             if self.verbose:
-                print(f"{len(merges)} merges have been detected via additional temporal splits")
+                print(f"{len(more_merges)} merges have been detected via additional temporal splits")
+            merges += more_merges
         units_to_merge = resolve_merging_graph(self.analyzer.sorting, merges)
         new_sorting, _ = apply_merges_to_sorting(
             self.analyzer.sorting, units_to_merge, censor_ms=self.params["censor_ms"]

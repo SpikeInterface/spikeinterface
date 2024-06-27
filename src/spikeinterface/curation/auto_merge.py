@@ -157,8 +157,8 @@ def get_potential_auto_merge(
                 "min_spikes",
                 "remove_contaminated",
                 "unit_positions",
-                "correlogram",
                 "template_similarity",
+                "correlogram",
                 "check_increase_score",
             ]
         elif preset == "temporal_splits":
@@ -166,8 +166,8 @@ def get_potential_auto_merge(
                 "min_spikes",
                 "remove_contaminated",
                 "unit_positions",
-                "correlogram",
                 "template_similarity",
+                "correlogram",
                 "presence_distance",
                 "check_increase_score",
             ]
