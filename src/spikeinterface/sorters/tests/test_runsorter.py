@@ -22,7 +22,7 @@ def generate_recording():
 
 
 @pytest.mark.xfail(
-    platform.system() == "Windows" and parse(platform.python_version()) > parse("3.12"),
+    platform.system() == "Windows" and parse(platform.python_version()) >= parse("3.12"),
     reason="3rd parth threadpoolctl issue: OSError('GetModuleFileNameEx failed')",
 )
 def test_run_sorter_local(generate_recording, create_cache_folder):
