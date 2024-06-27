@@ -26,12 +26,9 @@ from pathlib import Path
 
 # %matplotlib inline
 
-si.set_global_job_kwargs(n_jobs=4)
+si.set_global_job_kwargs(n_jobs=16)
 
 # To make this notebook self-contained, we will simulate a drifting recording similar to the one acquired by Nick Steinmetz and available [here](https://doi.org/10.6084/m9.figshare.14024495.v1), where an triangular motion was imposed to the recording by moving the probe up and down with a micro-manipulator.
-
-# +
-# sgen.generate_displacement_vector?
 
 # +
 generate_displacement_vector_kwargs = {
@@ -44,8 +41,8 @@ generate_displacement_vector_kwargs = {
             "period_s": 60,
         }
     ],
-    "drift_start_um": [0, 100],
-    "drift_stop_um": [0, -100],
+    "drift_start_um": [0, 60],
+    "drift_stop_um": [0, -60],
 }
 
 # this generates a "static" and "drifting" recording version
@@ -67,9 +64,8 @@ _, motion_info = spre.correct_motion(
     drifting_recording, preset="nonrigid_fast_and_accurate", n_jobs=4, progress_bar=True, output_motion_info=True
 )
 
-sw.plot_motion_info(motion_info, recording=drifting_recording)
 
-
+# substitute with "official" plot_drift map
 def plot_drift_map(
     peaks=None,
     peak_locations=None,
@@ -168,12 +164,6 @@ ax = plot_drift_map(
     cmap="Greys_r",
 )
 
-# +
-#
-# sw.plot_drift_map(...)
-#
-# -
-
 # ## Retrieve templates from database
 
 templates_info = sgen.fetch_templates_database_info()
@@ -187,9 +177,9 @@ print(f"Available brain areas: {available_brain_areas}")
 
 # let's perform a query: templates from brain region VISp5 and at the "top" of the probe
 target_area = ["VISa5", "VISa6a", "VISp5", "VISp6a", "VISrl6b"]
-minimum_depth = 1000
+minimum_depth = 1500
 templates_selected_info = templates_info.query(f"brain_area in {target_area} and depth_along_probe > {minimum_depth}")
-display(templates_selected_info)
+len(templates_selected_info)
 
 # We can now retrieve the selected templates as a `Templates` object
 #
@@ -199,20 +189,29 @@ print(templates_selected)
 
 # While we selected templates from a target aread and at certain depths, we can see that the template amplitudes are quite large. This will make spike sorting easy... we can further manipulate the `Templates` by rescaling, relocating, or further selections with the `sgen.scale_template_to_range`, `sgen.relocate_templates`, and `sgen.select_templates` functions.
 #
-# In our case, let's rescale the amplitudes between 30 and 50 $\mu$V.
+# In our case, let's rescale the amplitudes between 50 and 150 $\mu$V and relocate them throughout the entire depth of the probe.
 
-templates_scaled = sgen.scale_template_to_range(templates=templates_selected, min_amplitude=30, max_amplitude=50)
+min_amplitude = 50
+max_amplitude = 150
+templates_scaled = sgen.scale_template_to_range(
+    templates=templates_selected,
+    min_amplitude=min_amplitude,
+    max_amplitude=max_amplitude
+)
 
-# +
-# sgen.relocate_templates?
-# -
-
-templates_relocated = sgen.relocate_templates(templates=templates_scaled, min_displacement=200, max_displacement=2000)
+min_displacement = 200
+max_displacement = 4000
+templates_relocated = sgen.relocate_templates(
+    templates=templates_scaled,
+    min_displacement=min_displacement,
+    max_displacement=max_displacement
+)
 
 # Let's plot the selected templates:
 
 sparsity_plot = si.compute_sparsity(templates_relocated)
-w = sw.plot_unit_templates(templates_relocated, sparsity=sparsity_plot, ncols=4)
+fig = plt.figure(figsize=(10, 10))
+w = sw.plot_unit_templates(templates_relocated, sparsity=sparsity_plot, ncols=4, figure=fig)
 w.figure.subplots_adjust(wspace=0.5, hspace=0.7)
 
 # ## Constructing hybrid recordings
@@ -220,7 +219,6 @@ w.figure.subplots_adjust(wspace=0.5, hspace=0.7)
 recording_hybrid_no_drift, sorting_hybrid = sgen.generate_hybrid_recording(
     recording=drifting_recording, templates=templates_relocated, seed=2308
 )
-
 recording_hybrid_no_drift
 
 recording_hybrid, sorting_hybrid = sgen.generate_hybrid_recording(
@@ -230,11 +228,9 @@ recording_hybrid, sorting_hybrid = sgen.generate_hybrid_recording(
     sorting=sorting_hybrid,
     seed=2308,
 )
-
 recording_hybrid
 
-# show spike locations on top of original rastermap
-# construct hybrid analyzer for spike locations
+# construct analyzers and compute spike locations
 analyzer_hybrid = si.create_sorting_analyzer(sorting_hybrid, recording_hybrid)
 analyzer_hybrid.compute(["random_spikes", "templates"])
 analyzer_hybrid.compute("spike_locations", method="grid_convolution")
@@ -243,6 +239,8 @@ analyzer_hybrid.compute("spike_locations", method="grid_convolution")
 analyzer_hybrid_no_drift = si.create_sorting_analyzer(sorting_hybrid, recording_hybrid_no_drift)
 analyzer_hybrid_no_drift.compute(["random_spikes", "templates"])
 analyzer_hybrid_no_drift.compute("spike_locations", method="grid_convolution")
+
+# Let's plot the added hybrid spikes using the drift maps:
 
 fig, axs = plt.subplots(ncols=2, figsize=(10, 7))
 _ = plot_drift_map(
@@ -264,13 +262,30 @@ _ = plot_drift_map(analyzer=analyzer_hybrid, color_amplitude=False, color="b", a
 axs[0].set_title("Ignoring drift")
 axs[1].set_title("Accounting for drift")
 
+# We can see that clearly following drift is essential in order to properly blend the hybrid spikes into the recording!
+
 # ## Ground-truth study
 #
-# In this section ...
+# In this section we will use the hybrid recording to benchmark a few spike sorters:
+# - `Kilosort2.5`
+# - `Kilosort3`
+# - `Kilosort4`
+# - `Spyking-CIRCUS 2`
+
+# +
+# import shutil
+# shutil.rmtree(study_folder)
+# -
+
+workdir = Path("/ssd980/working/hybrid/drift")
+workdir.mkdir(exist_ok=True)
+
+# to speed up computations, let's first dump the recording to binary
+recording_hybrid_bin = recording_hybrid.save(folder=workdir / "hybrid_bin", overwrite=True)
 
 # +
 datasets = {
-    "hybrid": (recording_hybrid, sorting_hybrid),
+    "hybrid": (recording_hybrid_bin, sorting_hybrid),
 }
 
 cases = {
@@ -309,7 +324,7 @@ if (workdir / "gt_study").is_dir():
 else:
     gtstudy = sc.GroundTruthStudy.create(study_folder=study_folder, datasets=datasets, cases=cases)
 
-gtstudy.run_sorters(verbose=True, keep=True)
+gtstudy.run_sorters(verbose=True, keep=False)
 
 gtstudy.run_comparisons(exhaustive_gt=False)
 

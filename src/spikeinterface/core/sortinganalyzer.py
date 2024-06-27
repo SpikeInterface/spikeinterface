@@ -967,7 +967,6 @@ class SortingAnalyzer:
         >>> wfs = compute_waveforms(sorting_analyzer, **some_params)
 
         """
-        print(extension_name)
         extension_class = get_extension_class(extension_name)
 
         for child in _get_children_dependencies(extension_name):

@@ -148,13 +148,26 @@ class Motion:
 
         return displacement
 
+    @staticmethod
+    def from_dict(d):
+        return Motion(**d)
+
     def to_dict(self):
         return dict(
             displacement=self.displacement,
             temporal_bins_s=self.temporal_bins_s,
             spatial_bins_um=self.spatial_bins_um,
+            direction=self.direction,
             interpolation_method=self.interpolation_method,
         )
+
+    def __reduce__(self):
+        """
+        This function is used by pickle to serialize the object.
+        """
+        instance_constructor = self.from_dict
+        intialization_args = (self.to_dict(),)
+        return (instance_constructor, intialization_args)
 
     def save(self, folder):
         folder = Path(folder)
@@ -223,8 +236,9 @@ class Motion:
 
     def copy(self):
         return Motion(
-            self.displacement.copy(),
-            self.temporal_bins_s.copy(),
-            self.spatial_bins_um.copy(),
+            [d.copy() for d in self.displacement],
+            [t.copy() for t in self.temporal_bins_s],
+            [s.copy() for s in self.spatial_bins_um],
+            direction=self.direction,
             interpolation_method=self.interpolation_method,
         )
