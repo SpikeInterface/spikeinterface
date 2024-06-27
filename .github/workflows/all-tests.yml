@@ -98,20 +98,25 @@ jobs:
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
           restore-keys: ${{ runner.os }}-datasets
 
-      - name: Install datalad
+      - name: Install git-annex
         shell: bash
         if: env.RUN_EXTRACTORS_TESTS == 'true'
         run: |
           pip install datalad-installer
           if [ ${{ runner.os }} = 'Linux' ]; then
-            sudo apt-get update
-            sudo apt-get install -y datalad
+            wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
+            mkdir /home/runner/work/installation
+            mv git-annex-standalone-amd64.tar.gz /home/runner/work/installation/
+            workdir=$(pwd)
+            cd /home/runner/work/installation
+            tar xvzf git-annex-standalone-amd64.tar.gz
+            echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
+            cd $workdir
           elif [ ${{ runner.os }} = 'macOS' ]; then
             datalad-installer --sudo ok git-annex --method brew
           elif [ ${{ runner.os }} = 'Windows' ]; then
             datalad-installer --sudo ok git-annex --method datalad/git-annex:release
           fi
-          pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
 
 
