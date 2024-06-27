@@ -685,10 +685,10 @@ def has_exceeding_spikes(sorting, recording) -> bool:
 
     Parameters
     ----------
-    recording : BaseRecording
-        The recording object
     sorting : BaseSorting
         The sorting object
+    recording : BaseRecording
+        The recording object
 
     Returns
     -------
