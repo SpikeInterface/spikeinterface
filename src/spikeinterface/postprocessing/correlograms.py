@@ -16,25 +16,7 @@ except ModuleNotFoundError as err:
 
 class ComputeCorrelograms(AnalyzerExtension):
     """
-    Compute auto and cross correlograms.
-
-    In the extracellular electrophysiology context, a correlogram
-    is a visualisation of the results of a cross-correlation
-    between two spike trains. The cross-correlation slides one spike train
-    along another sample-by-sample, taking the correlation at each 'lag'. This results
-    in a plot with 'lag' (i.e. time offset) on the x-axis and 'correlation'
-    (i.e. how similar to two spike trains are) on the y-axis. In this
-    implementation, the y-axis result is the 'counts' of spike matches per
-    time bin (rather than a computer correlation or covariance).
-
-    In the present implementation, a 'window' around spikes is first
-    specified. For example, if a window of 100 ms is taken, we will
-    take the correlation at lags from -50 ms to +50 ms around the spike peak.
-    In theory, we can have as many lags as we have samples. Often, this
-    visualisation is too high resolution and instead the lags are binned
-    (e.g. -50 to -45 ms, ..., -5 to 0 ms, 0 to 5 ms, ...., 45 to 50 ms).
-    When using counts as output, binning the lags involves adding up all counts across
-    a range of lags.
+    Compute auto and cross correlograms of unit spike times.
 
     Parameters
     ----------
@@ -60,6 +42,28 @@ class ComputeCorrelograms(AnalyzerExtension):
         correlogram[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
     bins :  np.array
         The bin edges in ms
+
+    Notes
+    -----
+    In the extracellular electrophysiology context, a correlogram
+    is a visualisation of the results of a cross-correlation
+    between two spike trains. The cross-correlation slides one spike train
+    along another sample-by-sample, taking the correlation at each 'lag'. This results
+    in a plot with 'lag' (i.e. time offset) on the x-axis and 'correlation'
+    (i.e. how similar to two spike trains are) on the y-axis. In this
+    implementation, the y-axis result is the 'counts' of spike matches per
+    time bin (rather than a computer correlation or covariance).
+
+    In the present implementation, a 'window' around spikes is first
+    specified. For example, if a window of 100 ms is taken, we will
+    take the correlation at lags from -50 ms to +50 ms around the spike peak.
+    In theory, we can have as many lags as we have samples. Often, this
+    visualisation is too high resolution and instead the lags are binned
+    (e.g. -50 to -45 ms, ..., -5 to 0 ms, 0 to 5 ms, ...., 45 to 50 ms).
+    When using counts as output, binning the lags involves adding up all counts across
+    a range of lags.
+
+
     """
 
     extension_name = "correlograms"
@@ -270,6 +274,27 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
     A very well optimized algorithm for the cross-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
 
+    Parameters
+    ----------
+    spike_times : np.ndarray
+        An array of spike times (in samples, not seconds).
+        This contains spikes from all units.
+    spike_labels : np.ndarray
+        An array of labels indicating the unit of the corresponding
+        spike in `spike_times`.
+    window_size : int
+        The window size over which to perform the cross-correlation, in samples
+    bin_size : int
+        The size of which to bin lags, in samples.
+
+    Returns
+    -------
+    correlograms : np.array
+        A (num_units, num_units, num_bins) array of correlograms
+        between all units at each lag time bin.
+
+    Notes
+    -----
     For all spikes, time difference between this spike and
     every other spike within the window is directly computed
     and stored as a count in the relevant lag time bin.
@@ -286,19 +311,6 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
     that need incrementing are done so with `ravel_multi_index()`. This repeats
     for all shifts along the spike_train until no spikes have a corresponding
     match within the window size.
-
-    Parameters
-    ----------
-    spike_times : np.ndarray
-        An array of spike times (in samples, not seconds).
-        This contains spikes from all units.
-    spike_labels : np.ndarray
-        An array of labels indicating the unit of the corresponding
-        spike in `spike_times`.
-    window_size : int
-        The window size over which to perform the cross-correlation, in samples
-    bin_size : int
-        The size of which to bin lags, in samples.
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
     num_units = len(np.unique(spike_labels))
