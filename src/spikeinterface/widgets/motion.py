@@ -187,7 +187,6 @@ class DriftRasterMapWidget(BaseWidget):
                 peak_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
             else:
                 peak_amplitudes = None
-        times = recording.get_times(segment_index=segment_index) if recording is not None else None
 
         if segment_index is None:
             assert (
