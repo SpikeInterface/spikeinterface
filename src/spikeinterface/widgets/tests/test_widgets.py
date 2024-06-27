@@ -613,7 +613,7 @@ class TestWidgets(unittest.TestCase):
                     color_amplitude=False,
                 )
                 # with analyzer
-                sw.plot_drift_raster_map(sorting_analyzer=analyzer, color_amplitude=True)
+                sw.plot_drift_raster_map(sorting_analyzer=analyzer, color_amplitude=True, scatter_decimate=2)
 
     def test_plot_motion_info(self):
         motion_info = self.motion_info
