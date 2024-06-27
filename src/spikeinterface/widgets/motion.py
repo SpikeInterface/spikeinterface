@@ -112,7 +112,7 @@ class DriftRasterMapWidget(BaseWidget):
         The sorting analyzer object. To use this function, the `SortingAnalyzer` must have the
         "spike_locations" extension computed.
     direction : "x" or "y", default: "y"
-        The direction to display.
+        The direction to display. "y" is the depth direction.
     segment_index : int, default: None
         The segment index to display.
     recording : RecordingExtractor | None, default: None
