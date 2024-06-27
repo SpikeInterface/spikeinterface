@@ -679,7 +679,7 @@ def split_waveforms_by_units(unit_ids, spikes, all_waveforms, sparsity_mask=None
     return waveforms_by_units
 
 
-def has_exceeding_spikes(recording, sorting) -> bool:
+def has_exceeding_spikes(sorting, recording) -> bool:
     """
     Check if the sorting objects has spikes exceeding the recording number of samples, for all segments
 
