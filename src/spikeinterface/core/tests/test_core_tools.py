@@ -31,25 +31,25 @@ def test_add_suffix():
     assert str(file_path_with_suffix) == expected_path
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Runs on posix only")
 def test_path_utils_functions():
-    if platform.system() != "Windows":
-        # posix path
-        d = {
-            "kwargs": {
-                "path": "/yep/sub/path1",
-                "recording": {
-                    "module": "mock_module",
-                    "class": "mock_class",
-                    "version": "1.2",
-                    "annotations": {},
-                    "kwargs": {"path": "/yep/sub/path2"},
-                },
-            }
+    # posix path
+    d = {
+        "kwargs": {
+            "path": "/yep/sub/path1",
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": "/yep/sub/path2"},
+            },
         }
+    }
 
-        d2 = recursive_path_modifier(d, lambda p: p.replace("/yep", "/yop"))
-        assert d2["kwargs"]["path"].startswith("/yop")
-        assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
+    d2 = recursive_path_modifier(d, lambda p: p.replace("/yep", "/yop"))
+    assert d2["kwargs"]["path"].startswith("/yop")
+    assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Runs only on Windows")
