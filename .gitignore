@@ -180,6 +180,7 @@ examples/tutorials/*.svg
 doc/_build/*
 doc/tutorials/*
 doc/sources/*
+*sg_execution_times.rst
 
 examples/getting_started/tmp_*
 examples/getting_started/phy
