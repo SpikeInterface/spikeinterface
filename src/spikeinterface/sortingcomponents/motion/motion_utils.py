@@ -232,7 +232,7 @@ class Motion:
 
 
 
-def get_windows(rigid, contact_pos, spatial_bin_centers, win_margin_um, win_step_um, win_scale_um, win_shape,
+def get_windows(rigid, contact_depth, spatial_bin_centers, win_margin_um, win_step_um, win_scale_um, win_shape,
                 zero_threshold=None):
     """
     Generate spatial windows (taper) for non-rigid motion.
@@ -243,7 +243,7 @@ def get_windows(rigid, contact_pos, spatial_bin_centers, win_margin_um, win_step
     ----------
     rigid : bool
         If True, returns a single rectangular window
-    contact_pos : np.ndarray
+    contact_depth : np.ndarray
         Position of electrodes of the corection direction shape=(num_channels, )
     spatial_bin_centers : np.array
         The pre-computed spatial bin centers
@@ -283,8 +283,8 @@ def get_windows(rigid, contact_pos, spatial_bin_centers, win_margin_um, win_step
                 f"get_windows(): spatial windows are probably not overlaping because {win_scale_um=} and {win_step_um=}"
             )
 
-        min_ = np.min(contact_pos) - win_margin_um
-        max_ = np.max(contact_pos) + win_margin_um
+        min_ = np.min(contact_depth) - win_margin_um
+        max_ = np.max(contact_depth) + win_margin_um
         num_windows = int((max_ - min_) // win_step_um)
         border = ((max_ - min_) % win_step_um) / 2
         window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
@@ -356,10 +356,10 @@ def get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um):
     # contact along one axis
     probe = recording.get_probe()
     dim = ["x", "y", "z"].index(direction)
-    contact_pos = probe.contact_positions[:, dim]
+    contact_depth = probe.contact_positions[:, dim]
 
-    min_ = np.min(contact_pos) - hist_margin_um
-    max_ = np.max(contact_pos) + hist_margin_um
+    min_ = np.min(contact_depth) - hist_margin_um
+    max_ = np.max(contact_depth) + hist_margin_um
     spatial_bins = np.arange(min_, max_ + bin_um, bin_um)
 
     return spatial_bins

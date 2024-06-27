@@ -145,7 +145,7 @@ class DecentralizedRegistration:
             conv_engine = "torch" if HAVE_TORCH else "numpy"
 
         dim = ["x", "y", "z"].index(direction)
-        contact_pos = recording.get_channel_locations()[:, dim]
+        contact_depth = recording.get_channel_locations()[:, dim]
 
         # spatial histogram bins
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
@@ -153,7 +153,7 @@ class DecentralizedRegistration:
 
         # get spatial windows
         non_rigid_windows, non_rigid_window_centers = get_windows(
-            rigid, contact_pos, spatial_bin_centers, win_margin_um, win_step_um, win_scale_um, win_shape
+            rigid, contact_depth, spatial_bin_centers, win_margin_um, win_step_um, win_scale_um, win_shape
         )
 
         # make 2D histogram raster
