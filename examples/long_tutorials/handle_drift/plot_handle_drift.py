@@ -24,7 +24,7 @@ What is probe drift?
 
 The inserted probe can move from side-to-side (*'x' direction*),
 up-or-down (*'y' direction*) or forwards-or-backwards (*'z' direction*).
-Movement in the 'x' and 'y' direction is harder to model than vertical
+Movement in the 'x' and 'z' direction is harder to model than vertical
 drift (i.e. along the probe depth), and are not handled by most motion
 correction algorithms. Fortunately, vertical drift which is most easily
 handled is most pronounced as the probe is most likely to move along the path of insertion.
