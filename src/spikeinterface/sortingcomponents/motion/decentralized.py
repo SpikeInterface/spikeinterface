@@ -10,7 +10,7 @@ try:
 except ImportError:
     HAVE_TORCH = False
 
-from .motion_utils import Motion, get_windows, get_spatial_bin_edges, make_2d_motion_histogram, scipy_conv1d
+from .motion_utils import Motion, get_spatial_windows, get_spatial_bin_edges, make_2d_motion_histogram, scipy_conv1d
 
 
 class DecentralizedRegistration:
@@ -113,11 +113,11 @@ class DecentralizedRegistration:
         verbose,
         progress_bar,
         extra,
-        bin_um=10.0,
-        hist_margin_um=0.0,
-        bin_duration_s=2.0,
-        histogram_depth_smooth_um=None,
-        histogram_time_smooth_s=None,
+        bin_um=1.0,
+        hist_margin_um=20.0,
+        bin_duration_s=1.0,
+        histogram_depth_smooth_um=1.,
+        histogram_time_smooth_s=1.,
         pairwise_displacement_method="conv",
         max_displacement_um=100.0,
         weight_scale="linear",
@@ -152,8 +152,15 @@ class DecentralizedRegistration:
         spatial_bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
 
         # get spatial windows
-        non_rigid_windows, non_rigid_window_centers = get_windows(
-            rigid, contact_depth, spatial_bin_centers, win_margin_um, win_step_um, win_scale_um, win_shape
+        non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
+            contact_depth,
+            spatial_bin_centers,
+            rigid=rigid,
+            win_shape=win_shape,
+            win_step_um=win_step_um,
+            win_scale_um=win_scale_um,
+            win_margin_um=win_margin_um,
+            zero_threshold=None
         )
 
         # make 2D histogram raster

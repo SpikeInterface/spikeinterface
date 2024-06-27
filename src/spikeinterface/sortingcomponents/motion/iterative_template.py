@@ -1,6 +1,6 @@
 import numpy as np
 
-from .motion_utils import Motion, get_windows, get_spatial_bin_edges, make_3d_motion_histograms
+from .motion_utils import Motion, get_spatial_windows, get_spatial_bin_edges, make_3d_motion_histograms
 
 
 class IterativeTemplateRegistration:
@@ -78,16 +78,24 @@ class IterativeTemplateRegistration:
     ):
 
         dim = ["x", "y", "z"].index(direction)
-        contact_pos = recording.get_channel_locations()[:, dim]
+        contact_depth = recording.get_channel_locations()[:, dim]
 
         # spatial histogram bins
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
         spatial_bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
 
         # get spatial windows
-        non_rigid_windows, non_rigid_window_centers = get_windows(
-            rigid, contact_pos, spatial_bin_centers, win_margin_um, win_step_um, win_scale_um, win_shape
+        non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
+            contact_depth=contact_depth,
+            spatial_bin_centers=spatial_bin_centers,
+            rigid=rigid,
+            win_margin_um=win_margin_um,
+            win_step_um=win_step_um,
+            win_scale_um=win_scale_um,
+            win_shape=win_shape,
+            zero_threshold=None,
         )
+
 
 
         # make a 3D histogram

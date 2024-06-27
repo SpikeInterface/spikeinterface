@@ -8,7 +8,7 @@ import numpy as np
 from spikeinterface.sortingcomponents.tools import make_multi_method_doc
 
 
-from .motion_utils import Motion, get_windows, get_spatial_bin_edges
+from .motion_utils import Motion, get_spatial_windows, get_spatial_bin_edges
 from .decentralized import DecentralizedRegistration
 from .iterative_template import IterativeTemplateRegistration
 from .dredge import DredgeLfpRegistration, DredgeApRegistration
@@ -19,13 +19,11 @@ def estimate_motion(
     peaks=None,
     peak_locations=None,
     direction="y",
-    # bin_um=10.0,
-    # hist_margin_um=0.0,
     rigid=False,
     win_shape="gaussian",
     win_step_um=50.0,
     win_scale_um=150.0,
-    win_margin_um=0.,
+    win_margin_um=None,
     method="decentralized",
     extra_outputs=False,
     progress_bar=False,
@@ -36,7 +34,8 @@ def estimate_motion(
     """
     Estimate motion for given peaks and after their localization.
 
-    Note that the way you detect peak locations (center of mass/monopolar triangulation) have an impact on the result.
+    Note that the way you detect peak locations (center of mass/monopolar triangulation)
+    have an impact on the result.
 
     Parameters
     ----------
@@ -70,14 +69,14 @@ def estimate_motion(
         The depth domain will be broken up into windows with shape controlled by win_shape,
         spaced by win_step_um at a margin of win_margin_um from the boundary, and with
         width controlled by win_scale_um.
+        When win_margin_um is None the margin is automatically set to -win_scale_um/2.
+        See get_spatial_windows.
     win_step_um : float, default: 50
         See win_shape
     win_scale_um : float, default: 150
         See win_shape
-    win_margin_um : float, default: 0.
-    See win_shape
-        
-        
+    win_margin_um : None | float, default: None
+        See win_shape
     extra_outputs: bool, default: False
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
@@ -114,25 +113,7 @@ def estimate_motion(
     else:
         extra = None
 
-    # contact positions
-    # probe = recording.get_probe()
-    # dim = ["x", "y", "z"].index(direction)
-    # contact_pos = probe.contact_positions[:, dim]
-
-    # # spatial histogram bins
-    # spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
-    # spatial_bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
-
-    # # get spatial windows
-    # non_rigid_windows, non_rigid_window_centers = get_windows(
-    #     rigid, contact_pos, spatial_bin_centers, win_margin_um, win_step_um, win_scale_um, win_shape
-    # )
-
-    # if extra_outputs:
-    #     extra["non_rigid_windows"] = non_rigid_windows
-
     # run method
-    
     motion = method_class.run(
         recording,
         peaks,

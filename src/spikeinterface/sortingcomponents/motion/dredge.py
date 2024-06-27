@@ -28,7 +28,7 @@ import numpy as np
 
 import gc
 
-from .motion_utils import Motion, get_windows, get_window_domains, scipy_conv1d, make_2d_motion_histogram
+from .motion_utils import Motion, get_spatial_windows, get_window_domains, scipy_conv1d, make_2d_motion_histogram
 
 
 # to discuss
@@ -41,6 +41,8 @@ from .motion_utils import Motion, get_windows, get_window_domains, scipy_conv1d,
 # todo use gaussian_filter1d in historgam 2d
 # put smotthing inside the histogram function
 # put the log for weight inhitstogram
+
+# TODO maybe change everywhere bin_duration_s to bin_s
 
 
 # simple class wrapper to be compliant with estimate_motion
@@ -221,6 +223,9 @@ def dredge_ap(
     if time_horizon_s:
         xcorr_kw["max_dt_bins"] = np.ceil(time_horizon_s / bin_s)
     
+    #TODO @charlie I think this is a bad to have the dict which is transported to every function
+    # this should be used only in histogram function but not in weight_correlation_matrix()
+    # only important kwargs should be explicitly reported
     raster_kw = dict(
         amp_scale_fn=amp_scale_fn,
         post_transform=post_transform,
@@ -277,7 +282,7 @@ def dredge_ap(
 
 
     # TODO @charlie check that we are doing the same thing
-    # windows, window_centers = get_windows(
+    # windows, window_centers = get_spatial_windows(
     #     np.c_[np.zeros_like(spatial_bin_edges_um), spatial_bin_edges_um],
     #     win_step_um,
     #     win_scale_um,
@@ -292,16 +297,18 @@ def dredge_ap(
     contact_depth = recording.get_channel_locations()[:, dim]
     spatial_bin_centers = 0.5 * (spatial_bin_edges_um[1:] + spatial_bin_edges_um[:-1])
     
-    windows, window_centers = get_windows(
-        rigid,
+    windows, window_centers = get_spatial_windows(
         contact_depth,
         spatial_bin_centers,
-        win_margin_um,
-        win_step_um,
-        win_scale_um,
-        win_shape,
-        zero_threshold=1e-5,
-    )
+        rigid=rigid,
+        win_shape=win_shape,
+        win_step_um=win_step_um,
+        win_scale_um=win_scale_um,
+        win_margin_um=win_margin_um,
+        zero_threshold=1e-5
+        )
+
+
 
     # TODO charlie : put back the count
     # if extra_outputs and count_masked_correlation:
@@ -553,10 +560,10 @@ def dredge_online_lfp(
     # Important detail : in LFP bin center are contact position in the direction
     spatial_bin_centers = contact_depth
 
-    windows, window_centers = get_windows(
-        rigid=rigid, 
+    windows, window_centers = get_spatial_windows(
         contact_depth=contact_depth,
         spatial_bin_centers=spatial_bin_centers,
+        rigid=rigid,
         win_margin_um=win_margin_um,
         win_step_um=win_step_um,
         win_scale_um=win_scale_um,

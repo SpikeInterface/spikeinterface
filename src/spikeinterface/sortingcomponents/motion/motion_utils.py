@@ -232,29 +232,45 @@ class Motion:
 
 
 
-def get_windows(rigid, contact_depth, spatial_bin_centers, win_margin_um, win_step_um, win_scale_um, win_shape,
-                zero_threshold=None):
+def get_spatial_windows(
+        contact_depth,
+        spatial_bin_centers,
+        rigid=False,
+        win_shape="gaussian",
+        win_step_um=50.0,
+        win_scale_um=150.0,
+        win_margin_um=None,
+        zero_threshold=None
+    ):
     """
     Generate spatial windows (taper) for non-rigid motion.
     For rigid motion, this is equivalent to have one unique rectangular window that covers the entire probe.
     The windowing can be gaussian or rectangular.
+    Windows are centered between the min/max of contact_depth.
+    We can ensure window to not be to close from border with win_margin_um.
+
 
     Parameters
     ----------
-    rigid : bool
-        If True, returns a single rectangular window
     contact_depth : np.ndarray
         Position of electrodes of the corection direction shape=(num_channels, )
     spatial_bin_centers : np.array
         The pre-computed spatial bin centers
-    win_margin_um : float
-        The margin to extend (if positive) or shrink (if negative) the probe dimension to compute windows.=
+    rigid : bool, default False
+        If True, returns a single rectangular window
+    win_shape : str, default "gaussian"
+        Shape of the window
+        "gaussian" | "rect" | "triangle"
     win_step_um : float
         The steps at which windows are defined
-    win_scale_um : float
-        Sigma of gaussian window (if win_shape is gaussian)
-    win_shape : float
-        "gaussian" | "rect"
+    win_scale_um : float, default 150.
+        Sigma of gaussian window if win_shape is gaussian
+        Width of the rectangle if win_shape is rect
+    win_margin_um : None | float, default None
+        The margin to extend (if positive) or shrink (if negative) the probe dimension to compute windows.
+        When None, then the margin is set to -win_scale_um./2
+    zero_threshold: None | float
+        Lower value for thresholding to set zeros.
 
     Returns
     -------
@@ -280,8 +296,13 @@ def get_windows(rigid, contact_depth, spatial_bin_centers, win_margin_um, win_st
     else:
         if win_scale_um <= win_step_um/5.:
             warnings.warn(
-                f"get_windows(): spatial windows are probably not overlaping because {win_scale_um=} and {win_step_um=}"
+                f"get_spatial_windows(): spatial windows are probably not overlaping because {win_scale_um=} and {win_step_um=}"
             )
+
+        # @charlie: I am pretty sure this is the best option
+        if win_margin_um is None:
+            # this ensure that first/last windows do not overflow outside the probe
+            win_margin_um = -win_scale_um / 2.
 
         min_ = np.min(contact_depth) - win_margin_um
         max_ = np.max(contact_depth) + win_margin_um

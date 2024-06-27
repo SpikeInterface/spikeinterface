@@ -1,6 +1,6 @@
 import numpy as np
 
-
+# TODO this need a full rewrite with motion object
 
 def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=30, sigma_smooth_s=None):
     """
