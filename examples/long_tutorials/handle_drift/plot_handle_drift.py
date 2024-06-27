@@ -186,7 +186,7 @@ for preset in presets_to_run:
 #   ``si.load_motion_info``.
 
 # %%
-# -------------------
+# --------------------
 # Plotting the results
 # -------------------
 #
