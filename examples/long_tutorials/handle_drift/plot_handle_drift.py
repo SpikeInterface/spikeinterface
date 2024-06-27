@@ -219,8 +219,8 @@ for preset in presets_to_run:
 # its depth (first panel) using a method from
 # :py:func:`~spikeinterface.postprocessing.compute_unit_locations()`.
 #
-# Then, the probe motion is estimated the location of the detected peaks are
-# adjusted to account for this (second panel).
+# Then, the probe motion is estimated and the location of the
+# spikes are adjusted to account for the motion (second panel).
 #
 # The motion estimation produces
 # a measure of how much and in what direction the probe is moving at any given
