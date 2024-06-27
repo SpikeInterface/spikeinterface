@@ -23,8 +23,6 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream id you want to load.
     stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    block_index : int, default: None
-        If there are several blocks, specify the block index you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     """

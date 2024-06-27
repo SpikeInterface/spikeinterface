@@ -125,7 +125,7 @@ For raw recording formats, we currently support:
 * **Biocam HDF5** :py:func:`~spikeinterface.extractors.read_biocam()`
 * **CED** :py:func:`~spikeinterface.extractors.read_ced()`
 * **EDF** :py:func:`~spikeinterface.extractors.read_edf()`
-* **IBL streaming** :py:func:`~spikeinterface.extractors.read_ibl_streaming_recording()`
+* **IBL streaming** :py:func:`~spikeinterface.extractors.read_ibl_recording()`
 * **Intan** :py:func:`~spikeinterface.extractors.read_intan()`
 * **MaxWell** :py:func:`~spikeinterface.extractors.read_maxwell()`
 * **MCS H5** :py:func:`~spikeinterface.extractors.read_mcsh5()`
