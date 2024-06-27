@@ -189,7 +189,7 @@ class DriftRasterMapWidget(BaseWidget):
         if segment_index is None:
             assert (
                 len(np.unique(peaks["segment_index"])) == 1
-            ), "segment_index must be specified if there is only one segment in the peaks array"
+            ), "segment_index must be specified if there are multiple segments"
             segment_index = 0
         else:
             peak_mask = peaks["segment_index"] == segment_index
