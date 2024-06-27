@@ -139,6 +139,9 @@ test = [
     # preprocessing
     "ibllib>=2.36.0", # for IBL
 
+    # streaming templates
+    "s3fs",
+
     # tridesclous
     "numba",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
