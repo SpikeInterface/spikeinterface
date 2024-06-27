@@ -87,7 +87,6 @@ streaming_extractors = [
 
 preprocessing = [
     "scipy",
-    "ibllib>=2.36.0", # for IBL preprocessing
 ]
 
 
@@ -136,6 +135,9 @@ test = [
 
     "xarray",
     "huggingface_hub",
+
+    # preprocessing
+    "ibllib>=2.36.0", # for IBL
 
     # tridesclous
     "numba",
