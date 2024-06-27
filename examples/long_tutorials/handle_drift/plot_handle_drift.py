@@ -238,7 +238,7 @@ for preset in presets_to_run:
 #   * The preset **'rigid_fast'** has only one motion vector for the entire probe because it is a 'rigid' case.
 #     The motion amplitude is globally underestimated because it averages across depths.
 #     However, the corrected peaks are flatter than the non-corrected ones, so the job is partially done.
-#     The big jump at=600s when the probe start moving is recovered quite well.
+#     The big jump at 600s when the probe start moving is recovered quite well.
 #   * The preset **kilosort_like** gives better results because it is a non-rigid case.
 #     The motion vector is computed for different depths.
 #     The corrected peak locations are flatter than the rigid case.
