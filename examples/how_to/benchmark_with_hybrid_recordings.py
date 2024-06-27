@@ -1,3 +1,20 @@
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.16.2
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# %%
 # # Benchmark spike sorting with hybrid recordings
 #
 # This example shows how to use the SpikeInterface hybrid recordings framework to benchmark spike sorting results.
@@ -65,99 +82,7 @@ _, motion_info = spre.correct_motion(
 )
 
 
-# substitute with "official" plot_drift map
-def plot_drift_map(
-    peaks=None,
-    peak_locations=None,
-    recording=None,
-    analyzer=None,
-    direction="y",
-    sampling_frequency=None,
-    segment_index=0,
-    depth_lim=None,
-    color_amplitude=True,
-    scatter_decimate=None,
-    color="k",
-    cmap="inferno",
-    clim=None,
-    alpha=1,
-    ax=None,
-):
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import Normalize
-
-    if ax is None:
-        fig, ax = plt.subplots()
-
-    assert peaks is not None or analyzer is not None
-    if peaks is not None:
-        assert peak_locations is not None
-        if recording is None:
-            assert sampling_frequency is not None
-        else:
-            sampling_frequency = recording.sampling_frequency
-        peak_amplitudes = peaks["amplitude"]
-    if analyzer is not None:
-        if analyzer.has_recording():
-            recording = analyzer.recording
-        else:
-            recording = None
-            sampling_frequency = analyzer.sampling_frequency
-        peaks = analyzer.sorting.to_spike_vector()
-        assert analyzer.has_extension("spike_locations")
-        peak_locations = analyzer.get_extension("spike_locations").get_data()
-        if analyzer.has_extension("spike_amplitudes"):
-            peak_amplitudes = analyzer.get_extension("spike_amplitudes").get_data()
-        else:
-            peak_amplitudes = None
-    times = recording.get_times(segment_index=segment_index) if recording is not None else None
-
-    if times is None:
-        x = peaks["sample_index"] / sampling_frequency
-    else:
-        # use real times and adjust temporal bins with t_start
-        x = times[peaks["sample_index"]]
-
-    y = peak_locations[direction]
-    if scatter_decimate is not None:
-        x = x[::scatter_decimate]
-        y = y[::scatter_decimate]
-        y2 = y2[::scatter_decimate]
-
-    if color_amplitude:
-        assert peak_amplitudes is not None, "To color by amplitudes the 'spike_amplitude' extension is needed"
-        amps = peak_amplitudes
-        amps_abs = np.abs(amps)
-        q_95 = np.quantile(amps_abs, 0.95)
-        if scatter_decimate is not None:
-            amps = amps[::scatter_decimate]
-            amps_abs = amps_abs[::scatter_decimate]
-        cmap = plt.colormaps[cmap]
-        if clim is None:
-            amps = amps_abs
-            amps /= q_95
-            c = cmap(amps)
-        else:
-            norm_function = Normalize(vmin=clim[0], vmax=clim[1], clip=True)
-            c = cmap(norm_function(amps))
-        color_kwargs = dict(
-            color=None,
-            c=c,
-            alpha=alpha,
-        )
-    else:
-        color_kwargs = dict(color=color, c=None, alpha=alpha)
-
-    ax.scatter(x, y, s=1, **color_kwargs)
-    if depth_lim is not None:
-        ax.set_ylim(*depth_lim)
-    ax.set_title("Peak depth")
-    ax.set_xlabel("Times [s]")
-    ax.set_ylabel("Depth [$\\mu$m]")
-    return ax
-
-
-ax = plot_drift_map(
+ax = sw.plot_drift_map(
     peaks=motion_info["peaks"],
     peak_locations=motion_info["peak_locations"],
     recording=drifting_recording,
@@ -243,22 +168,22 @@ analyzer_hybrid_no_drift.compute("spike_locations", method="grid_convolution")
 # Let's plot the added hybrid spikes using the drift maps:
 
 fig, axs = plt.subplots(ncols=2, figsize=(10, 7))
-_ = plot_drift_map(
+_ = sw.plot_drift_map(
     peaks=motion_info["peaks"],
     peak_locations=motion_info["peak_locations"],
     recording=drifting_recording,
     cmap="Greys_r",
     ax=axs[0],
 )
-_ = plot_drift_map(analyzer=analyzer_hybrid_no_drift, color_amplitude=False, color="r", ax=axs[0])
-_ = plot_drift_map(
+_ = sw.plot_drift_map(analyzer=analyzer_hybrid_no_drift, color_amplitude=False, color="r", ax=axs[0])
+_ = sw.plot_drift_map(
     peaks=motion_info["peaks"],
     peak_locations=motion_info["peak_locations"],
     recording=drifting_recording,
     cmap="Greys_r",
     ax=axs[1],
 )
-_ = plot_drift_map(analyzer=analyzer_hybrid, color_amplitude=False, color="b", ax=axs[1])
+_ = sw.plot_drift_map(analyzer=analyzer_hybrid, color_amplitude=False, color="b", ax=axs[1])
 axs[0].set_title("Ignoring drift")
 axs[1].set_title("Accounting for drift")
 
