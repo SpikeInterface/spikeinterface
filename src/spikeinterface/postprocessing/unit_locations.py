@@ -55,8 +55,9 @@ class ComputeUnitLocations(AnalyzerExtension):
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, method="monopolar_triangulation", method_kwargs=None):
-        params = dict(method=method, method_kwargs=method_kwargs)
+    def _set_params(self, method="monopolar_triangulation", **method_kwargs):
+        params = dict(method=method)
+        params.update(method_kwargs)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -89,11 +90,10 @@ class ComputeUnitLocations(AnalyzerExtension):
         return dict(unit_locations=new_unit_location)
 
     def _run(self, verbose=False):
-        method = self.params["method"]
-        method_kwargs = self.params["method_kwargs"]
-        if method_kwargs is None:
-            method_kwargs = dict()
-
+        method = self.params.get("method")
+        method_kwargs = self.params.copy()
+        method_kwargs.pop("method")
+        
         assert method in possible_localization_methods
 
         if method == "center_of_mass":
