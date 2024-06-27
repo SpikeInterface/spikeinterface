@@ -387,7 +387,7 @@ def _compute_correlograms_numba(sorting, window_size, bin_size):
     sorting : Sorting
         A SpikeInterface Sorting object
     window_size : int
-            The wi  ndow size over which to perform the cross-correlation, in samples
+            The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
 
