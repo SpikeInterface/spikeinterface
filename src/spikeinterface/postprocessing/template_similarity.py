@@ -93,7 +93,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 unit_ind2 = new_sorting_analyzer.sorting.id_to_index(unit_id2)
                 template2 = templates_array[unit_ind2][np.newaxis, :]
                 if sparsity is not None:
-                    sparsity2 = ChannelSparsity(sparsity.mask[unit_ind2][np.newaxis, :], [unit_id2], sparsity.channel_ids)
+                    sparsity2 = ChannelSparsity(
+                        sparsity.mask[unit_ind2][np.newaxis, :], [unit_id2], sparsity.channel_ids
+                    )
                 else:
                     sparsity2 = None
                 if unit_id2 in new_unit_ids:

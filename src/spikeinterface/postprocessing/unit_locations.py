@@ -93,7 +93,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         method = self.params.get("method")
         method_kwargs = self.params.copy()
         method_kwargs.pop("method")
-        
+
         assert method in possible_localization_methods
 
         if method == "center_of_mass":
