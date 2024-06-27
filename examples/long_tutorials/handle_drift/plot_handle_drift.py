@@ -62,7 +62,7 @@ speed and effectiveness of motion correction. As such, ``correct_motion``
 provides three setting 'presets' which configure the motion correct
 to proceed either as:
 
-* **rigid_fast** - a fast, not particularly accurate correction assuming ridigt drift.
+* **rigid_fast** - a fast, not particularly accurate correction assuming rigid drift.
 * **kilosort-like** - Mimics what is done in Kilosort.
 * **nonrigid_accurate** - A decentralised drift correction (DREDGE), introduced by the Paninski group.
 
