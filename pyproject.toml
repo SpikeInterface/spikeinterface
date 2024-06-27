@@ -85,6 +85,11 @@ streaming_extractors = [
     "s3fs"
 ]
 
+preprocessing = [
+    "scipy",
+]
+
+
 full = [
     "h5py",
     "pandas",
