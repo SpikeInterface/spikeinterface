@@ -163,6 +163,11 @@ class Kilosort4Sorter(BaseSorter):
 
             logging.basicConfig(level=logging.INFO)
 
+        if cls.get_sorter_version() == version.parse("4.0.4"):
+            raise RuntimeError(
+                "Kilosort version 4.0.4 is not supported" "in SpikeInterface. Please change Kilosort version."
+            )
+
         sorter_output_folder = sorter_output_folder.absolute()
 
         probe_filename = sorter_output_folder / "probe.prb"

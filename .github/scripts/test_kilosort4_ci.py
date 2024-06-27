@@ -342,7 +342,7 @@ class TestKilosort4Long:
 
     # Full Test ####
     @pytest.mark.parametrize("parameter", PARAMS_TO_TEST)
-    def test_kilosort4(self, recording_and_paths, default_results, tmp_path, parameter):
+    def test_kilosort4_main(self, recording_and_paths, default_results, tmp_path, parameter):
         """
         Given a recording, paths to raw data, and a parameter to change,
         run KS4 natively and within the SpikeInterface wrapper with the
@@ -398,6 +398,7 @@ class TestKilosort4Long:
         if parse(version("kilosort")) > parse("4.0.4"):
             self._check_test_parameters_are_changing_the_output(results, default_results, param_key)
 
+    @pytest.mark.skipif(parse(version("kilosort")) == parse("4.0.9"), reason="nblock=0 fails on KS4=4.0.9")
     def test_kilosort4_no_correction(self, recording_and_paths, tmp_path):
         """
         Test the SpikeInterface wrappers `do_correction` argument. We set
