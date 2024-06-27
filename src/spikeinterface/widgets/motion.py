@@ -97,6 +97,8 @@ class MotionWidget(BaseWidget):
 class DriftRasterMapWidget(BaseWidget):
     """
     Plot the drift raster map from peaks or a SortingAnalyzer.
+    The drift raster map is a scatter plot of the estimated peak depth vs time and it is
+    useful to visualize the drift over the course of the recording.
 
     Parameters
     ----------
