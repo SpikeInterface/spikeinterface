@@ -526,7 +526,6 @@ def generate_hybrid_recording(
             temporal_bins_segment = motion.temporal_bins_s[segment_index]
             displacement_segment = motion.displacement[segment_index]
             displacement_vector = np.zeros((len(temporal_bins_segment), 2, len(spatial_bins_um)))
-            displacement_unit_factor = np.zeros((num_units, len(spatial_bins_um)))
 
             for count, i in enumerate(spatial_bins_um):
                 local_motion = displacement_segment[:, count]
