@@ -11,6 +11,8 @@ on:
 
 jobs:
   versions:
+    # Poll Pypi for all released KS4 versions >4.0.4, save to JSON
+    # and store them in a matrix for the next job.
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
