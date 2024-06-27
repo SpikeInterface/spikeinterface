@@ -280,7 +280,7 @@ class DriftRasterMapWidget(BaseWidget):
 class MotionInfoWidget(BaseWidget):
     """
     Plot motion information from the motion_info dictionary returned by the `correct_motion()` funciton.
-    This widget plots::
+    This widget plots:
         * the motion iself
         * the drift raster map (peak depth vs time) before correction
         * the drift raster map (peak depth vs time) after correction
