@@ -41,7 +41,7 @@ The drift correction steps
 
 The easiest way to run drift correction in SpikeInterface is with the
 high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` function.
-This function takes a preprocessed recording as input and returns a motion-corrected
+This function takes a recording as input and returns a motion-corrected
 recording object. As with all other preprocessing steps, the correction (in this
 case interpolation of the data to correct the detected motion) is lazy and applied on-the-fly when data is needed).
 
