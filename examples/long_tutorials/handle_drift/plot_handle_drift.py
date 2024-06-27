@@ -182,7 +182,7 @@ for preset in presets_to_run:
 #   file, so it can be loaded and visualized later. This can be done by setting
 #   the ``folder`` argument of
 #   :py:func:`~spikeinterface.preprocessing.correct_motion()` to a path to write
-#   the motion output to. The ``motion_info`` can be loaded back with
+#   all motion outputs to. The ``motion_info`` can be loaded back with
 #   ``si.load_motion_info``.
 
 # %%
