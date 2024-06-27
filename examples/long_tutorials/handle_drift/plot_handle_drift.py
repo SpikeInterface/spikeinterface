@@ -64,7 +64,7 @@ to proceed either as:
 
 * **rigid_fast** - a fast, not particularly accurate correction assuming rigid drift.
 * **kilosort-like** - Mimics what is done in Kilosort.
-* **nonrigid_accurate** - A decentralised drift correction (DREDGE), introduced by the Paninski group.
+* **nonrigid_accurate** - A decentralized drift correction (DREDGE), introduced by the Paninski group.
 
 When using motion correction in your analysis, please make sure to
 :ref:`cite the appropriate paper for your chosen method<cite-motion-correction>`.
