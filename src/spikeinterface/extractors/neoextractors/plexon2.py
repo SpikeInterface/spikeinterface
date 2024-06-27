@@ -19,7 +19,7 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream id you want to load.
     stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    use_names_as_ids:
+    use_names_as_ids : bool, default: True
         If True, the names of the signals are used as channel ids. If False, the channel ids are a combination of the
         source id and the channel index.
 

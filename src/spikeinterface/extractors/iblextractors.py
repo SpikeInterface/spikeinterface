@@ -41,7 +41,7 @@ class IblRecordingExtractor(BaseRecording):
     stream_name : str
         The name of the stream to load for the session.
         These can be retrieved from calling `StreamingIblExtractor.get_stream_names(session="<your session ID>")`.
-    load_sync_channels : bool, default: false
+    load_sync_channel : bool, default: false
         Load or not the last channel (sync).
         If not then the probe is loaded.
     cache_folder : str or None, default: None
