@@ -188,7 +188,7 @@ for preset in presets_to_run:
 # %%
 # --------------------
 # Plotting the results
-# -------------------
+# --------------------
 #
 # Next, let's plot the results of our motion estimation using the ``plot_motion_info()``
 # function. The plot contains 4 panels, on the x-axis of all plots we have
