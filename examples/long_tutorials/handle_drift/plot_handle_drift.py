@@ -32,7 +32,7 @@ handled is most pronounced as the probe is most likely to move along the path of
 Vertical drift can come in two forms, *'rigid'* and *'non-rigid'*. Rigid drift
 is drift caused by movement of the entire probe, and the motion is
 similar across all channels along the probe depth. In contrast,
-non-rigid drift is instead caused by local movements brain along the
+non-rigid drift is instead caused by local movements of neuronal tissue along the
 probe, and can selectively affect subsets of channels..
 
 --------------------------
