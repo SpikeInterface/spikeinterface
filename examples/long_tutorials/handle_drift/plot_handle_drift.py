@@ -9,7 +9,7 @@ movement of the probe or the sliding of brain tissue
 deforming across the probe, can complicate the sorting
 and analysis of units.
 
-Spikeinterface offers a flexible framework to handle motion correction
+SpikeInterface offers a flexible framework to handle motion correction
 as a preprocessing step. In this tutorial we will cover the three main
 drift-correction algorithms implemented in SpikeInterface
 (**rigid_fast**, **kilosort_like** and **nonrigid_accurate**) with
