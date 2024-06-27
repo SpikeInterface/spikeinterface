@@ -36,7 +36,7 @@ class Kilosort4Sorter(BaseSorter):
         "drift_smoothing": [0.5, 0.5, 0.5],
         "nt0min": None,
         "dmin": None,
-        "dminx": 32 if version.parse(importlib_version("kilosort")) > version.parse("4.0.2") else None,
+        "dminx": 32,
         "min_template_size": 10,
         "template_sizes": 5,
         "nearest_chans": 10,
@@ -51,7 +51,7 @@ class Kilosort4Sorter(BaseSorter):
         "cluster_downsampling": 20,
         "cluster_pcs": 64,
         "x_centers": None,
-        "duplicate_spike_bins": 7 if version.parse(importlib_version("kilosort")) >= version.parse("4.0.4") else 15,
+        "duplicate_spike_bins": 7,
         "do_correction": True,
         "keep_good_only": False,
         "save_extra_kwargs": False,
@@ -163,9 +163,11 @@ class Kilosort4Sorter(BaseSorter):
 
             logging.basicConfig(level=logging.INFO)
 
-        if cls.get_sorter_version() == version.parse("4.0.4"):
+        if cls.get_sorter_version() < version.parse("4.0.5"):
             raise RuntimeError(
-                "Kilosort version 4.0.4 is not supported" "in SpikeInterface. Please change Kilosort version."
+                "Kilosort versions before 4.0.5 are not supported"
+                "in SpikeInterface. "
+                "Please upgrade Kilosort version."
             )
 
         sorter_output_folder = sorter_output_folder.absolute()

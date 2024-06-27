@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 import requests
 import json
-
+from packaging.version import parse
 
 def get_pypi_versions(package_name):
     """
@@ -15,8 +15,9 @@ def get_pypi_versions(package_name):
     response.raise_for_status()
     data = response.json()
     versions = list(sorted(data["releases"].keys()))
+    versions = [ver for ver in versions if parse(ver) >= parse("4.0.5")]
     versions.pop(versions.index("4.0.4"))
-    return list(sorted(data["releases"].keys()))
+    return versions
 
 
 if __name__ == "__main__":
