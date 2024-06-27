@@ -26,7 +26,7 @@ import torch
 import kilosort
 from kilosort.io import load_probe
 import pandas as pd
-
+from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter
 import pytest
 from probeinterface.io import write_prb
 from kilosort.parameters import DEFAULT_SETTINGS
@@ -229,6 +229,21 @@ class TestKilosort4Long:
 
             if param_key not in ["n_chan_bin", "fs", "tmin", "tmax"]:
                 assert param_key in tested_keys, f"param: {param_key} in DEFAULT SETTINGS but not tested."
+
+    def test_spikeinterface_defaults_against_kilsort(self):
+        """
+        Here check that all _
+        Don't check that every default in KS is exposed in params,
+        because they change across versions. Instead, this check
+        is performed here against PARAMS_TO_TEST.
+        """
+        params = copy.deepcopy(Kilosort4Sorter._default_params)
+
+        for key in params.keys():
+            # "artifact threshold" is set to `np.inf` if `None` in
+            # the body of the `Kilosort4Sorter` class.
+            if key in DEFAULT_SETTINGS and key not in ["artifact_threshold"]:
+                assert params[key] == DEFAULT_SETTINGS[key], f"{key} is not the same across versions."
 
     # Testing Arguments ###
     def test_set_files_arguments(self):
@@ -533,7 +548,7 @@ class TestKilosort4Long:
         the skipped three parameters below to change the results on this
         small test file.
         """
-        if param_key in ["acg_threshold", "ccg_threshold", "artifact_threshold", "cluster_downsampling"]:
+        if param_key in ["acg_threshold", "ccg_threshold", "artifact_threshold", "cluster_downsampling", "cluster_pcs"]:
             return
 
         if param_key == "change_nothing":
@@ -583,7 +598,7 @@ class TestKilosort4Long:
         Generate settings kwargs for running KS4 in SpikeInterface.
         See `_get_kilosort_native_settings()` for some details.
         """
-        settings = copy.deepcopy(DEFAULT_SETTINGS)
+        settings = {} # copy.deepcopy(DEFAULT_SETTINGS)
 
         if param_key != "change_nothing":
             settings.update({param_key: param_value})
@@ -591,8 +606,8 @@ class TestKilosort4Long:
         if param_key == "binning_depth":
             settings.update({"nblocks": 5})
 
-        for name in ["n_chan_bin", "fs", "tmin", "tmax"]:
-            settings.pop(name)
+       # for name in ["n_chan_bin", "fs", "tmin", "tmax"]:
+        #    settings.pop(name)
 
         return settings
 

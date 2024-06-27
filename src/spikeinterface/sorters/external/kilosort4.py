@@ -6,6 +6,7 @@ from packaging import version
 
 from ..basesorter import BaseSorter
 from .kilosortbase import KilosortBase
+from importlib.metadata import version as importlib_version
 
 PathType = Union[str, Path]
 
@@ -35,7 +36,7 @@ class Kilosort4Sorter(BaseSorter):
         "drift_smoothing": [0.5, 0.5, 0.5],
         "nt0min": None,
         "dmin": None,
-        "dminx": 32,
+        "dminx": 32 if version.parse(importlib_version("kilosort")) > version.parse("4.0.0.1") else None,
         "min_template_size": 10,
         "template_sizes": 5,
         "nearest_chans": 10,
@@ -50,7 +51,7 @@ class Kilosort4Sorter(BaseSorter):
         "cluster_downsampling": 20,
         "cluster_pcs": 64,
         "x_centers": None,
-        "duplicate_spike_bins": 7,
+        "duplicate_spike_bins": 7 if version.parse(importlib_version("kilosort")) >= version.parse("4.0.4") else 15,
         "do_correction": True,
         "keep_good_only": False,
         "save_extra_kwargs": False,
@@ -128,8 +129,6 @@ class Kilosort4Sorter(BaseSorter):
     @classmethod
     def get_sorter_version(cls):
         """kilosort version <0.0.10 is always '4'"""
-        from importlib.metadata import version as importlib_version
-
         return importlib_version("kilosort")
 
     @classmethod
