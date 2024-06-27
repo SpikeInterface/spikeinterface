@@ -136,6 +136,9 @@ test = [
     "xarray",
     "huggingface_hub",
 
+    # preprocessing
+    "ibllib>=2.36.0", # for IBL
+
     # tridesclous
     "numba",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
