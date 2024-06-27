@@ -228,6 +228,8 @@ class TestKilosort4Long:
         for param_key in DEFAULT_SETTINGS:
 
             if param_key not in ["n_chan_bin", "fs", "tmin", "tmax"]:
+                if parse(version("kilosort")) == parse("4.0.9") and param_key == "nblocks":
+                    continue
                 assert param_key in tested_keys, f"param: {param_key} in DEFAULT SETTINGS but not tested."
 
     def test_spikeinterface_defaults_against_kilsort(self):
@@ -434,6 +436,7 @@ class TestKilosort4Long:
         assert np.array_equal(results["ks"]["st"], results["si"]["st"])
         assert np.array_equal(results["ks"]["clus"], results["si"]["clus"])
 
+    @pytest.mark.skipif(parse(version("kilosort")) == parse("4.0.9"), reason="nblock=0 fails on KS4=4.0.9")
     @pytest.mark.parametrize("param_to_test", [
         ("change_nothing", None),
         ("do_CAR", False),
