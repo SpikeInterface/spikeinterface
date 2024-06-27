@@ -242,7 +242,7 @@ def _compute_correlograms_numpy(sorting, window_size, bin_size):
     This very elegant implementation is copied from phy package written by Cyrille Rossant.
     https://github.com/cortex-lab/phylib/blob/master/phylib/stats/ccg.py
 
-    The main modification is way the positive and negative are handled
+    The main modification is the way positive and negative are handled
     explicitly for rounding reasons.
 
     Other slight modifications have been made to fit the SpikeInterface
