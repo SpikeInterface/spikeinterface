@@ -148,10 +148,6 @@ class Motion:
 
         return displacement
 
-    @staticmethod
-    def from_dict(d):
-        return Motion(**d)
-
     def to_dict(self):
         return dict(
             displacement=self.displacement,
@@ -160,14 +156,6 @@ class Motion:
             direction=self.direction,
             interpolation_method=self.interpolation_method,
         )
-
-    def __reduce__(self):
-        """
-        This function is used by pickle to serialize the object.
-        """
-        instance_constructor = self.from_dict
-        intialization_args = (self.to_dict(),)
-        return (instance_constructor, intialization_args)
 
     def save(self, folder):
         folder = Path(folder)
