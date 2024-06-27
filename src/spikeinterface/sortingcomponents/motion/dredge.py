@@ -31,13 +31,6 @@ import gc
 from .motion_utils import Motion, get_spatial_windows, get_window_domains, scipy_conv1d, make_2d_motion_histogram
 
 
-# to discuss
-# margin
-# xcorr new function
-# which dataset band usefull for ?
-# dredge_ap
-# use patient 2
-
 # todo use gaussian_filter1d in historgam 2d
 # put smotthing inside the histogram function
 # put the log for weight inhitstogram
