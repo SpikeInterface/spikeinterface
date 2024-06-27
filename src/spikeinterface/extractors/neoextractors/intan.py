@@ -28,7 +28,9 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
         the attribute `discontinuous_timestamps` to True in the underlying neo object.
     use_names_as_ids : bool, default: False
-        If True, use channel names as IDs. If False, use default IDs inherited from neo.
+        If False, use default IDs inherited from Neo. If True, use channel names as IDs.
+
+
     """
 
     mode = "file"
