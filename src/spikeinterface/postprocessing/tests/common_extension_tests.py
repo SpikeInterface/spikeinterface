@@ -79,7 +79,7 @@ class AnalyzerExtensionCommonTestSuite:
     def setUpClass(cls):
         cls.recording, cls.sorting = get_dataset()
         # sparsity is computed once for all cases to save processing time and force a small radius
-        cls.sparsity = estimate_sparsity(cls.recording, cls.sorting, method="radius", radius_um=20)
+        cls.sparsity = estimate_sparsity(cls.sorting, cls.recording, method="radius", radius_um=20)
 
     @property
     def extension_name(self):
