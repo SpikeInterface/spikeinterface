@@ -26,6 +26,9 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        If False, use default IDs inherited from Neo. If True, use channel names as IDs.
+
     """
 
     mode = "file"
@@ -37,7 +40,6 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         file_path,
         stream_id=None,
         stream_name=None,
-        block_index=None,
         all_annotations=False,
         use_names_as_ids=False,
     ):
