@@ -114,7 +114,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         sparsity = new_sorting_analyzer.sparsity
 
         if sparsity is not None:
-            
+
             new_data["pca_projection"] = pca_projections.copy()
             for to_be_merge, unit_id in zip(units_to_merge, new_unit_ids):
                 new_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
@@ -123,7 +123,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 new_data["pca_projection"][spike_unit_indices, :, :num_chans] = waveforms
 
         else:
-            new_data["pca_projection"] = waveforms        
+            new_data["pca_projection"] = waveforms
 
         # one or several model
         for k, v in self.data.items():
@@ -266,7 +266,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_projection, local_chan_inds = self.get_projections_one_unit(unit_id, sparse=True, kept_indices=kept_indices)
+                sparse_projection, local_chan_inds = self.get_projections_one_unit(
+                    unit_id, sparse=True, kept_indices=kept_indices
+                )
 
                 # keep only requested channels
                 channel_mask = np.isin(local_chan_inds, channel_indices)
