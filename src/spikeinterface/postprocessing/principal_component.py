@@ -121,7 +121,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 waveforms, spike_unit_indices = self.get_some_projections(new_chan_inds, to_be_merge, kept_indices)
                 num_chans = waveforms.shape[2]
                 new_data["pca_projection"][spike_unit_indices, :, :num_chans] = waveforms
-
+                new_data["pca_projection"][spike_unit_indices, :, num_chans:] = 0
         else:
             new_data["pca_projection"] = waveforms        
 

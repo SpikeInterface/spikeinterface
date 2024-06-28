@@ -261,6 +261,7 @@ class ComputeWaveforms(AnalyzerExtension):
                 waveforms, spike_unit_indices = self.get_some_waveforms(new_chan_inds, to_be_merge, kept_indices)
                 num_chans = waveforms.shape[2]
                 new_data["waveforms"][spike_unit_indices, :, :num_chans] = waveforms
+                new_data["waveforms"][spike_unit_indices, :, num_chans:] = 0
 
         else:
             new_data["waveforms"] = waveforms
