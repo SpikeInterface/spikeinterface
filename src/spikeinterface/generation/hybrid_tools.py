@@ -541,23 +541,6 @@ def generate_hybrid_recording(
         # since displacement is estimated by interpolation for each unit, the unit factor is an eye
         displacement_unit_factor = np.eye(num_units)
 
-        # spatial_bins_um = motion.spatial_bins_um
-        # for segment_index in range(motion.num_segments):
-        #     temporal_bins_segment = motion.temporal_bins_s[segment_index]
-        #     displacement_segment = motion.displacement[segment_index]
-        #     displacement_vector = np.zeros((len(temporal_bins_segment), 2, len(spatial_bins_um)))
-
-        #     for count, i in enumerate(spatial_bins_um):
-        #         local_motion = displacement_segment[:, count]
-        #         displacement_vector[:, motion.dim, count] = local_motion
-        #     displacement_vectors.append(displacement_vector)
-
-        # # calculate displacement unit factor
-        # displacement_unit_factor = np.zeros((num_units, len(spatial_bins_um)))
-        # for count in range(num_units):
-        #     a = 1 / np.abs((unit_locations[count, motion.dim] - spatial_bins_um))
-        #     displacement_unit_factor[count] = a / a.sum()
-
         hybrid_recording = InjectDriftingTemplatesRecording(
             sorting=sorting,
             parent_recording=recording,
