@@ -87,12 +87,12 @@ def test_run_node_pipeline(cache_folder_creation):
     peak_retriever = PeakRetriever(recording, peaks)
     # channel index is from template
     spike_retriever_T = SpikeRetriever(
-        recording, sorting, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
+        sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
     )
     # channel index is per spike
     spike_retriever_S = SpikeRetriever(
-        recording,
         sorting,
+        recording,
         channel_from_template=False,
         extremum_channel_inds=extremum_channel_inds,
         radius_um=50,
