@@ -27,11 +27,13 @@ class KNNMerging(BaseMergingEngine):
         "verbose": True,
         "censor_ms": 3,
         "remove_emtpy": True,
-        "recursive": True,   
-        "knn_kwargs" : {"minimum_spikes": 50,
-                        "maximum_distance_um": 50,
-                        "refractory_period": (0.3, 1.0),
-                        "corr_diff_thresh": 0.5}
+        "recursive": True,
+        "knn_kwargs": {
+            "minimum_spikes": 50,
+            "maximum_distance_um": 50,
+            "refractory_period": (0.3, 1.0),
+            "corr_diff_thresh": 0.5,
+        },
     }
 
     def __init__(self, recording, sorting, kwargs):
@@ -64,7 +66,6 @@ class KNNMerging(BaseMergingEngine):
             from spikeinterface.curation.curation_tools import remove_empty_units
 
             self.analyzer = remove_empty_units(self.analyzer)
-
 
     def _get_new_sorting(self):
         knn_kwargs = self.params.get("knn_kwargs", None)
