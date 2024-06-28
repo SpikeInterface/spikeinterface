@@ -34,11 +34,9 @@ def test_generate_hybrid_with_sorting():
     assert sorting_hybrid.get_num_units() == len(hybrid.templates)
 
 
-def test_generate_hybrid_motion(create_cache_folder):
-    cache_folder = create_cache_folder
+def test_generate_hybrid_motion():
     rec, _ = generate_ground_truth_recording(sampling_frequency=20000, durations=[10], seed=0)
-    correct_motion(rec, folder=cache_folder / "motion")
-    motion_info = load_motion_info(cache_folder / "motion")
+    _, motion_info = correct_motion(rec, output_motion_info=True)
     motion = motion_info["motion"]
     hybrid, sorting_hybrid = generate_hybrid_recording(rec, motion=motion, seed=0)
     assert rec.get_num_channels() == hybrid.get_num_channels()

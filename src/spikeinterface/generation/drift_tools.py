@@ -118,21 +118,15 @@ class DriftingTemplates(Templates):
         This is the same strategy used by MEArec.
     """
 
-    def __init__(self, **kwargs):
-        has_templates_moved = "templates_array_moved" in kwargs
-        has_displacements = "displacements" in kwargs
-        precomputed = has_templates_moved or has_displacements
-        if precomputed and not (has_templates_moved and has_displacements):
-            raise ValueError(
-                "Please pass both template_array_moved and displacements to DriftingTemplates "
-                "if you are using precomputed displaceed templates."
-            )
-        templates_array_moved = kwargs.pop("templates_array_moved", None)
-        displacements = kwargs.pop("displacements", None)
-
-        Templates.__init__(self, **kwargs)
+    def __init__(self, templates_array_moved=None, displacements=None, **static_kwargs):
+        Templates.__init__(self, **static_kwargs)
         assert self.probe is not None, "DriftingTemplates need a Probe in the init"
-
+        if templates_array_moved is not None:
+            if displacements is None:
+                raise ValueError(
+                    "Please pass both template_array_moved and displacements to DriftingTemplates "
+                    "if you are using precomputed displaced templates."
+                )
         self.templates_array_moved = templates_array_moved
         self.displacements = displacements
 
@@ -192,11 +186,11 @@ class DriftingTemplates(Templates):
         templates_static = templates_array_moved[templates_array_moved.shape[0] // 2]
         return cls(
             templates_array=templates_static,
-            templates_array_moved=templates_array_moved,
-            displacements=displacements,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
             probe=probe,
+            templates_array_moved=templates_array_moved,
+            displacements=displacements,
         )
 
     def move_one_template(self, unit_index, displacement, **interpolation_kwargs):

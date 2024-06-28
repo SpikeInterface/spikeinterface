@@ -321,6 +321,7 @@ def generate_hybrid_recording(
     motion: Motion | None = None,
     templates_in_uV: bool = True,
     unit_locations: np.ndarray | None = None,
+    drift_step_um: float = 1.0,
     upsample_factor: int | None = None,
     upsample_vector: np.ndarray | None = None,
     amplitude_std: float = 0.05,
@@ -361,7 +362,9 @@ def generate_hybrid_recording(
         Cut out in ms after spike peak.
     unit_locations : np.array, default: None
         The locations at which the templates should be injected. If not provided, generated (see
-        generate_unit_location_kwargs)
+        generate_unit_location_kwargs).
+    drift_step_um : float, default: 1.0
+        The step in um to use for the drifting templates.
     upsample_factor : None or int, default: None
         A upsampling factor used only when templates are not provided.
     upsample_vector : np.array or None
@@ -512,31 +515,46 @@ def generate_hybrid_recording(
             stop = np.array([0, np.max(motion_array_concat)])
         elif dim == 2:
             raise NotImplementedError("3D motion not implemented yet")
-        displacements = make_linear_displacement(start, stop, num_step=int((stop - start)[dim]))
+        num_step = int((stop - start)[dim] / drift_step_um)
+        displacements = make_linear_displacement(start, stop, num_step=num_step)
 
         # use templates_, because templates_array might have been scaled
         drifting_templates = DriftingTemplates.from_static_templates(templates_)
         drifting_templates.precompute_displacements(displacements)
 
-        # calculate displacement vectors for each segment
+        # calculate displacement vectors for each segment and unit
+        # for each unit, we interpolate the motion at its location
         displacement_sampling_frequency = 1.0 / np.diff(motion.temporal_bins_s[0])[0]
         displacement_vectors = []
-        spatial_bins_um = motion.spatial_bins_um
         for segment_index in range(motion.num_segments):
             temporal_bins_segment = motion.temporal_bins_s[segment_index]
-            displacement_segment = motion.displacement[segment_index]
-            displacement_vector = np.zeros((len(temporal_bins_segment), 2, len(spatial_bins_um)))
+            displacement_vector = np.zeros((len(temporal_bins_segment), 2, num_units))
+            for unit_index in range(num_units):
+                motion_for_unit = motion.get_displacement_at_time_and_depth(
+                    times=temporal_bins_segment,
+                    locations_um=unit_locations[unit_index],
+                    segment_index=segment_index,
+                )
+                displacement_vector[:, motion.dim, unit_index] = motion_for_unit
+        # since displacement is estimated by interpolation for each unit, the unit factor is an eye
+        displacement_unit_factor = np.eye(num_units)
 
-            for count, i in enumerate(spatial_bins_um):
-                local_motion = displacement_segment[:, count]
-                displacement_vector[:, motion.dim, count] = local_motion
-            displacement_vectors.append(displacement_vector)
+        # spatial_bins_um = motion.spatial_bins_um
+        # for segment_index in range(motion.num_segments):
+        #     temporal_bins_segment = motion.temporal_bins_s[segment_index]
+        #     displacement_segment = motion.displacement[segment_index]
+        #     displacement_vector = np.zeros((len(temporal_bins_segment), 2, len(spatial_bins_um)))
 
-        # calculate displacement unit factor
-        displacement_unit_factor = np.zeros((num_units, len(spatial_bins_um)))
-        for count in range(num_units):
-            a = 1 / np.abs((unit_locations[count, motion.dim] - spatial_bins_um))
-            displacement_unit_factor[count] = a / a.sum()
+        #     for count, i in enumerate(spatial_bins_um):
+        #         local_motion = displacement_segment[:, count]
+        #         displacement_vector[:, motion.dim, count] = local_motion
+        #     displacement_vectors.append(displacement_vector)
+
+        # # calculate displacement unit factor
+        # displacement_unit_factor = np.zeros((num_units, len(spatial_bins_um)))
+        # for count in range(num_units):
+        #     a = 1 / np.abs((unit_locations[count, motion.dim] - spatial_bins_um))
+        #     displacement_unit_factor[count] = a / a.sum()
 
         hybrid_recording = InjectDriftingTemplatesRecording(
             sorting=sorting,
@@ -550,6 +568,10 @@ def generate_hybrid_recording(
         )
 
     else:
+        warnings.warn(
+            "No Motion is provided! Please check that your recording is drift-free, otherwise the hybrid recording "
+            "will have stationary units over a drifting recording..."
+        )
         hybrid_recording = InjectTemplatesRecording(
             sorting,
             templates_array,

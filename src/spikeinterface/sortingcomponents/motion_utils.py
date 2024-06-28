@@ -90,10 +90,12 @@ class Motion:
         Parameters
         ----------
         times_s: np.array
+            The time points at which to evaluate the displacement.
         locations_um: np.array
             Either this is a one-dimensional array (a vector of positions along self.dimension), or
             else a 2d array with the 2 or 3 spatial dimensions indexed along axis=1.
-        segment_index: int, optional
+        segment_index: int, default: None
+            The index of the segment to evaluate. If None, and there is only one segment, then that segment is used.
         grid : bool
             If grid=False, the default, then times_s and locations_um should have the same one-dimensional
             shape, and the returned displacement[i] is the displacement at time times_s[i] and location
