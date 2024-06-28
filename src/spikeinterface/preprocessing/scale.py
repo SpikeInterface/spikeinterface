@@ -38,10 +38,13 @@ class ScaleTouVRecording(BasePreprocessor):
             error_msg = "Recording must have gains and offsets set to be scaled to µV"
             raise RuntimeError(error_msg)
 
+        self.set_channel_gains(gains=1.0)
+        self.set_channel_offsets(offsets=0.0)
+
         gain = recording.get_channel_gains()[None, :]
         offset = recording.get_channel_offsets()[None, :]
         for parent_segment in recording._recording_segments:
-            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, self._dtype)
+            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(
