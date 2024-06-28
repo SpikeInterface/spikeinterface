@@ -697,24 +697,26 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
     Parameters
     ----------
     sorting_analyzer_1 : SortingAnalyzer
-        The first SortingAnalyzer to get templates to compare
+        The first SortingAnalyzer to get templates to compare.
     sorting_analyzer_2 : SortingAnalyzer
-        The second SortingAnalyzer to get templates to compare
+        The second SortingAnalyzer to get templates to compare.
     unit_ids1 : list, default: None
-        List of units from sorting_analyzer_1 to compare
+        List of units from sorting_analyzer_1 to compare.
     unit_ids2 : list, default: None
-        List of units from sorting_analyzer_2 to compare
-    similarity_method : str, default: "cosine_similarity"
-        Method for the similaroty matrix
-    sparsity_dict : dict, default: None
-        Dictionary for sparsity
+        List of units from sorting_analyzer_2 to compare.
+    similarity_method : "cosine" | "l1" | "l2", default: "cosine"
+        Method for the similarity matrix.
+    support : "dense" | "union" | "intersection", default: "union"
+        The support to compute the similarity matrix.
+    num_shifts : int, default: 0
+        Number of shifts to use to shift templates to maximize similarity.
     verbose : bool, default: False
-        If True, output is verbose
+        If True, output is verbose.
 
     Returns
     -------
     comparison : TemplateComparison
-        The output TemplateComparison object
+        The output TemplateComparison object.
     """
 
     def __init__(
@@ -727,8 +729,9 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         unit_ids2=None,
         match_score=0.7,
         chance_score=0.3,
-        similarity_method="cosine_similarity",
-        sparsity_dict=None,
+        similarity_method="cosine",
+        support="union",
+        num_shifts=0,
         verbose=False,
     ):
         if name1 is None:
@@ -745,7 +748,9 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinTemplateComparison.__init__(self, similarity_method=similarity_method, sparsity_dict=sparsity_dict)
+        MixinTemplateComparison.__init__(
+            self, similarity_method=similarity_method, support=support, num_shifts=num_shifts
+        )
 
         self.sorting_analyzer_1 = sorting_analyzer_1
         self.sorting_analyzer_2 = sorting_analyzer_2
@@ -754,10 +759,9 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
 
         # two options: all channels are shared or partial channels are shared
         if sorting_analyzer_1.recording.get_num_channels() != sorting_analyzer_2.recording.get_num_channels():
-            raise NotImplementedError
+            raise ValueError("The two recordings must have the same number of channels")
         if np.any([ch1 != ch2 for (ch1, ch2) in zip(channel_ids1, channel_ids2)]):
-            # TODO: here we can check location and run it on the union. Might be useful for reconfigurable probes
-            raise NotImplementedError
+            raise ValueError("The two recordings must have the same channel ids")
 
         self.matches = dict()
 
@@ -768,11 +772,6 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             unit_ids2 = sorting_analyzer_2.sorting.get_unit_ids()
         self.unit_ids = [unit_ids1, unit_ids2]
 
-        if sparsity_dict is not None:
-            raise NotImplementedError
-        else:
-            self.sparsity = None
-
         self._do_agreement()
         self._do_matching()
 
@@ -781,7 +780,11 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             print("Agreement scores...")
 
         agreement_scores = compute_template_similarity_by_pair(
-            self.sorting_analyzer_1, self.sorting_analyzer_2, method=self.similarity_method
+            self.sorting_analyzer_1,
+            self.sorting_analyzer_2,
+            method=self.similarity_method,
+            support=self.support,
+            num_shifts=self.num_shifts,
         )
         import pandas as pd
 

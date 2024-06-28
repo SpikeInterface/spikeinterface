@@ -35,6 +35,8 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         you want to extract. (rec_name='rec0000').
     install_maxwell_plugin : bool, default: False
         If True, install the maxwell plugin for neo.
+    block_index : int, default: None
+        If there are several blocks (experiments), specify the block index you want to load
     """
 
     mode = "file"

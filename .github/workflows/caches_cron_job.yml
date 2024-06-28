@@ -2,64 +2,35 @@ name: Create caches for gin ecephys data and virtual env
 
 on:
   workflow_dispatch:
-  push:  # When someting is pushed into main this checks if caches need to re-created
+  push:  # When something is pushed into main this checks if caches need to be re-created
     branches:
       - main
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
 
 jobs:
-
-
-
-  create-virtual-env-cache-if-missing:
-    name: Caching virtual env
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: Get current year-month
-        id: date
-        run: |
-          echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-      - name: Get current dependencies hash
-        id: dependencies
-        run: |
-          echo "hash=${{hashFiles('**/pyproject.toml')}}" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v4
-        id: cache-venv
-        with:
-          path: ${{ github.workspace }}/test_env
-          key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
-          lookup-only: 'true'   # Avoids downloading the data, saving behavior is not affected.
-      - name: Cache found?
-        run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}}"
-      - name: Create the virtual environment to be cached
-        if: steps.cache-venv.outputs.cache-hit != 'true'
-        uses: ./.github/actions/build-test-environment
-
-
-
-
   create-gin-data-cache-if-missing:
     name: Caching data env
-    runs-on: "ubuntu-latest"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: Create the directory to store the data
         run: |
-          mkdir --parents --verbose $HOME/spikeinterface_datasets/ephy_testing_data/
-          chmod -R 777 $HOME/spikeinterface_datasets
-          ls -l $HOME/spikeinterface_datasets
+          mkdir -p  ~/spikeinterface_datasets/ephy_testing_data/
+          ls -l ~/spikeinterface_datasets
+        shell: bash
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
         run: |
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+        shell: bash
       - uses: actions/cache@v4
         id: cache-datasets
         with:
@@ -68,6 +39,7 @@ jobs:
           lookup-only: 'true'   # Avoids downloading the data, saving behavior is not affected.
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
+        shell: bash
       - name: Installing datalad and git-annex
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
@@ -75,20 +47,29 @@ jobs:
           git config --global user.name "CI Almighty"
           python -m pip install -U pip  # Official recommended way
           pip install datalad-installer
-          datalad-installer --sudo ok git-annex --method datalad/packages
+          if [ ${{ runner.os }} == 'Linux' ]; then
+            datalad-installer --sudo ok git-annex --method datalad/packages
+          elif [ ${{ runner.os }} == 'macOS' ]; then
+            datalad-installer --sudo ok git-annex --method brew
+          elif [ ${{ runner.os }} == 'Windows' ]; then
+            datalad-installer --sudo ok git-annex --method datalad/git-annex:release
+          fi
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
+        shell: bash
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
           datalad install --recursive --get-data https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
+        shell: bash
       - name: Move the downloaded data to the right directory
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          mv --force ./ephy_testing_data $HOME/spikeinterface_datasets/
+          mv ./ephy_testing_data ~/spikeinterface_datasets/
+        shell: bash
       - name: Show size of the cache to assert data is downloaded
         run: |
-          cd $HOME
+          cd ~
           pwd
           du -hs spikeinterface_datasets  # Should show the size of ephy_testing_data
           cd spikeinterface_datasets
@@ -96,3 +77,4 @@ jobs:
           ls -lh  # Should show ephy_testing_data
           cd ephy_testing_data
           ls -lh
+        shell: bash

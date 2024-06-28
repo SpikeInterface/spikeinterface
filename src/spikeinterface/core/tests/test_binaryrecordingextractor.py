@@ -36,11 +36,10 @@ def test_BinaryRecordingExtractor(create_cache_folder):
 
 def test_round_trip(tmp_path):
     num_channels = 10
-    num_samples = 50
-
-    traces = np.arange(num_channels * num_samples, dtype="int16").reshape(num_samples, num_channels)
+    num_samples = 500
+    traces_list = [np.ones(shape=(num_samples, num_channels), dtype="int32")]
     sampling_frequency = 30_000.0
-    recording = NumpyRecording(traces_list=[traces], sampling_frequency=sampling_frequency)
+    recording = NumpyRecording(traces_list=traces_list, sampling_frequency=sampling_frequency)
 
     file_path = tmp_path / "test_BinaryRecordingExtractor.raw"
     dtype = recording.get_dtype()

@@ -147,7 +147,7 @@ class BinaryRecordingExtractor(BaseRecording):
         """
         write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
-    def is_binary_compatible(self):
+    def is_binary_compatible(self) -> bool:
         return True
 
     def get_binary_description(self):

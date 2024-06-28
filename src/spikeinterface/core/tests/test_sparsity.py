@@ -166,8 +166,8 @@ def test_estimate_sparsity():
 
     # small radius should give a very sparse = one channel per unit
     sparsity = estimate_sparsity(
-        recording,
         sorting,
+        recording,
         num_spikes_for_sparsity=50,
         ms_before=1.0,
         ms_after=2.0,
@@ -182,8 +182,8 @@ def test_estimate_sparsity():
 
     # best_channel : the mask should exactly 3 channels per units
     sparsity = estimate_sparsity(
-        recording,
         sorting,
+        recording,
         num_spikes_for_sparsity=50,
         ms_before=1.0,
         ms_after=2.0,
