@@ -98,6 +98,9 @@ class SIJsonEncoder(json.JSONEncoder):
         if isinstance(obj, BaseExtractor):
             return obj.to_dict()
 
+        if isinstance(obj, Path):
+            return str(obj)
+
         # The base-class handles the assertion
         return super().default(obj)
 
