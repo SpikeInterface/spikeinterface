@@ -5,7 +5,7 @@ import numpy as np
 from .base import BaseWidget, to_attr
 
 from spikeinterface.core import BaseRecording, SortingAnalyzer
-from spikeinterface.sortingcomponents.motion_utils import Motion
+from spikeinterface.sortingcomponents.motion import Motion
 
 
 class MotionWidget(BaseWidget):

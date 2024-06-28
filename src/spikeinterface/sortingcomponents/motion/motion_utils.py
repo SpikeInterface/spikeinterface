@@ -299,7 +299,6 @@ def get_spatial_windows(
                 f"get_spatial_windows(): spatial windows are probably not overlaping because {win_scale_um=} and {win_step_um=}"
             )
 
-        # @charlie: I am pretty sure this is the best option
         if win_margin_um is None:
             # this ensure that first/last windows do not overflow outside the probe
             win_margin_um = -win_scale_um / 2.
@@ -392,6 +391,7 @@ def make_2d_motion_histogram(
     peaks,
     peak_locations,
     weight_with_amplitude=False,
+    avg_in_bin=True,
     direction="y",
     bin_duration_s=1.0,
     bin_um=2.0,
@@ -413,6 +413,9 @@ def make_2d_motion_histogram(
         Array with peak locations
     weight_with_amplitude : bool, default: False
         If True, motion histogram is weighted by amplitudes
+    avg_in_bin : bool, default True
+        If true, average the amplitudes in each bin.
+        This is done only if weight_with_amplitude=True.
     direction : "x" | "y" | "z", default: "y"
         The depth direction
     bin_duration_s : float, default: 1.0
@@ -457,9 +460,9 @@ def make_2d_motion_histogram(
         weights = None
 
     motion_histogram, edges = np.histogramdd(arr, bins=(temporal_bin_edges, spatial_bin_edges), weights=weights)
-
+    
     # average amplitude in each bin
-    if weight_with_amplitude:
+    if weight_with_amplitude and avg_in_bin:
         bin_counts, _ = np.histogramdd(arr, bins=(temporal_bin_edges, spatial_bin_edges))
         bin_counts[bin_counts == 0] = 1
         motion_histogram = motion_histogram / bin_counts

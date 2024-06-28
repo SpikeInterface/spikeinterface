@@ -113,10 +113,10 @@ def dredge_ap(
     mincorr_percentile=None,
     mincorr_percentile_nneighbs=None,
     # raster arguments
-    amp_scale_fn=None,
-    post_transform=np.log1p,
-    gaussian_smoothing_sigma_um=1,
-    gaussian_smoothing_sigma_s=1,
+    amp_scale_fn=None,  ## @Charlie this one is not used anymore
+    post_transform=np.log1p,  ###@this one is directly transimited to weight_correlation_matrix() and so get_wieiith()
+    histogram_depth_smooth_um=1,
+    histogram_time_smooth_s=1,
     avg_in_bin=False,
     count_masked_correlation=False,
     count_bins=401,
@@ -219,18 +219,19 @@ def dredge_ap(
     #TODO @charlie I think this is a bad to have the dict which is transported to every function
     # this should be used only in histogram function but not in weight_correlation_matrix()
     # only important kwargs should be explicitly reported
-    raster_kw = dict(
-        amp_scale_fn=amp_scale_fn,
-        post_transform=post_transform,
-        gaussian_smoothing_sigma_um=gaussian_smoothing_sigma_um,
-        gaussian_smoothing_sigma_s=gaussian_smoothing_sigma_s,
-        bin_s=bin_s,
-        bin_um=bin_um,
-        avg_in_bin=avg_in_bin,
-        return_counts=count_masked_correlation,
-        count_bins=count_bins,
-        count_bin_min=count_bin_min,
-    )
+    # raster_kw = dict(
+    #     amp_scale_fn=amp_scale_fn,
+    #     post_transform=post_transform,
+    #     histogram_depth_smooth_um=histogram_depth_smooth_um,
+    #     histogram_time_smooth_s=histogram_time_smooth_s,
+    #     bin_s=bin_s,
+    #     bin_um=bin_um,
+    #     avg_in_bin=avg_in_bin,
+    #     return_counts=count_masked_correlation,
+    #     count_bins=count_bins,
+    #     count_bin_min=count_bin_min,
+    # )
+
     weights_kw = dict(
         mincorr=mincorr,
         time_horizon_s=time_horizon_s,
@@ -246,7 +247,7 @@ def dredge_ap(
 
     # TODO charlie I switch this to make_2d_motion_histogram
     # but we need to add all options from the original spike_raster()
-
+    # but I think this is OK
     # raster_res = spike_raster(
     #     amps,
     #     depths_um,
@@ -258,23 +259,26 @@ def dredge_ap(
     # else:
     #     raster, spatial_bin_edges_um, time_bin_edges_s = raster_res
     
+
+
     motion_histogram, time_bin_edges_s, spatial_bin_edges_um = make_2d_motion_histogram(
         recording,
         peaks,
         peak_locations,
         weight_with_amplitude=False,
-        direction="y",
-        bin_duration_s=1.0,
-        bin_um=2.0,
-        hist_margin_um=50,
+        avg_in_bin=avg_in_bin,
+        direction=direction,
+        bin_duration_s=bin_s,
+        bin_um=bin_um,
+        hist_margin_um=0.,  # @charlie maybe we should expose this and set +20. for instance
         spatial_bin_edges=None,
-        depth_smooth_um=None,
-        time_smooth_s=None,
+        depth_smooth_um=histogram_depth_smooth_um,
+        time_smooth_s=histogram_time_smooth_s,
     )
     raster = motion_histogram.T
 
 
-    # TODO @charlie check that we are doing the same thing
+    # TODO @charlie you should check that we are doing the same thing
     # windows, window_centers = get_spatial_windows(
     #     np.c_[np.zeros_like(spatial_bin_edges_um), spatial_bin_edges_um],
     #     win_step_um,
@@ -303,7 +307,7 @@ def dredge_ap(
 
 
 
-    # TODO charlie : put back the count
+    # TODO charlie : the count has disapeared
     # if extra_outputs and count_masked_correlation:
     #     extra["counts"] = counts
 
@@ -335,7 +339,8 @@ def dredge_ap(
         raster,
         spatial_bin_edges_um,
         time_bin_edges_s,
-        raster_kw,
+        # raster_kw, #@charlie this is removed
+        post_transform=post_transform, # @charlie this isnew
         lambda_t=thomas_kw.get("lambda_t", DEFAULT_LAMBDA_T),
         eps=thomas_kw.get("eps", DEFAULT_EPS),
         progress_bar=progress_bar,
@@ -668,7 +673,7 @@ def dredge_online_lfp(
         return motion
 
 
-
+# -- zone forbiden for sam
 # -- functions from dredgelib
 
 DEFAULT_LAMBDA_T = 1.0
@@ -1303,7 +1308,9 @@ def get_weights(
     raster,
     dbe,
     tbe,
-    raster_kw,
+    # @charlie raster_kw is removed in favor of post_transform only is this OK ???
+    # raster_kw,
+    post_transform=np.log1p,
     weights_threshold_low=0.0,
     weights_threshold_high=np.inf,
     progress_bar=False,
@@ -1321,7 +1328,8 @@ def get_weights(
         weights.append(window_sliced @ raster[ilow:ihigh])
     weights_orig = np.array(weights)
 
-    scale_fn = raster_kw["post_transform"] or raster_kw["amp_scale_fn"]
+    # scale_fn = raster_kw["post_transform"] or raster_kw["amp_scale_fn"]
+    scale_fn = post_transform
     if isinstance(weights_threshold_low, tuple):
         nspikes_threshold_low, amp_threshold_low = weights_threshold_low
         unif = np.full_like(windows[0], 1 / len(windows[0]))
@@ -1353,7 +1361,9 @@ def weight_correlation_matrix(
     raster,
     depth_bin_edges,
     time_bin_edges,
-    raster_kw,
+    # @charlie raster_kw is remove in favor of post_transform only
+    # raster_kw,
+    post_transform=np.log1p,
     mincorr=0.0,
     mincorr_percentile=None,
     mincorr_percentile_nneighbs=20,
@@ -1405,7 +1415,8 @@ def weight_correlation_matrix(
         raster,
         depth_bin_edges,
         time_bin_edges,
-        raster_kw,
+        #raster_kw,
+        post_transform=post_transform,
         weights_threshold_low=weights_threshold_low,
         weights_threshold_high=weights_threshold_high,
         progress_bar=progress_bar,
