@@ -44,7 +44,7 @@ for changed_file in changed_files_in_the_pull_request_paths:
     elif changed_file.name == "plexon2.py":
         plexon2_changed = True
     elif "core" in changed_file.parts:
-        conditions_changed = True
+        core_changed = True
     elif "extractors" in changed_file.parts:
         extractors_changed = True
     elif "preprocessing" in changed_file.parts:
