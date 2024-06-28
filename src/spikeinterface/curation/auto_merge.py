@@ -340,21 +340,35 @@ def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None):
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
 
-    unit_positions = sorting_analyzer.get_extension('unit_locations').get_data()
     spike_positions = sorting_analyzer.get_extension('spike_locations').get_data()
     spike_amplitudes = sorting_analyzer.get_extension('spike_amplitudes').get_data()
     spikes = sorting_analyzer.sorting.to_spike_vector()
+
+    ## We need to build a sparse distance matrix
     data = np.vstack((spike_amplitudes, spike_positions['x'], spike_positions['y'])).T
     from sklearn.neighbors import NearestNeighbors
     data = (data - data.mean(0))/data.std(0)
 
+    import scipy.sparse
+    import sklearn.metrics
+    distances = scipy.sparse.lil_matrix((len(data), len(data)), dtype=np.float32)
+    for unit_ind1 in range(n):
+        mask_1 = spikes['unit_index'] == unit_ind1
+        print(unit_ind1)
+        for unit_ind2 in range(unit_ind1+1, n):
+            mask_2 = spikes['unit_index'] == unit_ind2
+            if not pair_mask[unit_ind1, unit_ind2]:
+                continue
+
+            tmp = sklearn.metrics.pairwise_distances(data[mask_1], data[mask_2])
+            distances[mask_1][:, mask_2] = tmp
+
     all_spike_counts = sorting_analyzer.sorting.count_num_spikes_per_unit()
     all_spike_counts = np.array(list(all_spike_counts.keys()))
     
-    kdtree = NearestNeighbors(n_neighbors=k_nn, n_jobs=-1)
-    kdtree.fit(data)
+    kdtree = NearestNeighbors(n_neighbors=k_nn, n_jobs=-1, metric='precomputed')
+    kdtree.fit(distances)
     for unit_ind in range(n):
-        print(unit_ind)
         mask = spikes['unit_index'] == unit_ind
         ind = kdtree.kneighbors(data[mask], return_distance=False)
         ind = ind.flatten()
