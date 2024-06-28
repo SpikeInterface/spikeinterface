@@ -531,11 +531,13 @@ def generate_hybrid_recording(
             displacement_vector = np.zeros((len(temporal_bins_segment), 2, num_units))
             for unit_index in range(num_units):
                 motion_for_unit = motion.get_displacement_at_time_and_depth(
-                    times=temporal_bins_segment,
+                    times_s=temporal_bins_segment,
                     locations_um=unit_locations[unit_index],
                     segment_index=segment_index,
+                    grid=True,
                 )
-                displacement_vector[:, motion.dim, unit_index] = motion_for_unit
+                displacement_vector[:, motion.dim, unit_index] = motion_for_unit[motion.dim, :]
+            displacement_vectors.append(displacement_vector)
         # since displacement is estimated by interpolation for each unit, the unit factor is an eye
         displacement_unit_factor = np.eye(num_units)
 

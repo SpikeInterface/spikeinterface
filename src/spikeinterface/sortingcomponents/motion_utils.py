@@ -96,7 +96,7 @@ class Motion:
             else a 2d array with the 2 or 3 spatial dimensions indexed along axis=1.
         segment_index: int, default: None
             The index of the segment to evaluate. If None, and there is only one segment, then that segment is used.
-        grid : bool
+        grid : bool, default: False
             If grid=False, the default, then times_s and locations_um should have the same one-dimensional
             shape, and the returned displacement[i] is the displacement at time times_s[i] and location
             locations_um[i].
