@@ -95,7 +95,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         peak_shifts = get_template_extremum_channel_peak_shift(self.sorting_analyzer, peak_sign=peak_sign)
 
         spike_retriever_node = SpikeRetriever(
-            recording, sorting, channel_from_template=True, extremum_channel_inds=extremum_channels_indices
+            sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channels_indices
         )
         spike_amplitudes_node = SpikeAmplitudeNode(
             recording,
