@@ -254,7 +254,7 @@ class ComputeWaveforms(AnalyzerExtension):
         sparsity = new_sorting_analyzer.sparsity
 
         if sparsity is not None:
-            
+
             new_data["waveforms"] = waveforms.copy()
             for to_be_merge, unit_id in zip(units_to_merge, new_unit_ids):
                 new_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
@@ -268,12 +268,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
-    def get_waveforms_one_unit(
-        self,
-        unit_id,
-        force_dense: bool = False,
-        kept_indices = None
-    ):
+    def get_waveforms_one_unit(self, unit_id, force_dense: bool = False, kept_indices=None):
         """
         Returns the waveforms of a unit id.
 
@@ -395,7 +390,6 @@ class ComputeWaveforms(AnalyzerExtension):
                 some_waveforms[spike_mask, :, :] = proj
 
         return some_waveforms, spike_unit_indices
-    
 
     def _get_data(self):
         return self.data["waveforms"]
