@@ -16,13 +16,15 @@ A correlation will lead to an overestimation of the contamination, whereas an an
 
 Different formulas have been developed, but all require:
 
-- :math:`T` the duration of the recording.
+- :math:`T` the duration of the recording in seconds.
 - :math:`N` the number of spikes in the unit's spike train.
-- :math:`t_r` the duration of the unit's refractory period.
+- :math:`t_r` the duration of the unit's refractory period in seconds.
 - :math:`n_v` the number of violations of the refractory period.
 
 Calculation from the [UMS]_ package
 -----------------------------------
+
+Originally implemented in the `rpv_contamination` calculation of the UltraMegaSort2000 package `<https://github.com/danamics/UMS2K/blob/master/quality_measures/rpv_contamination.m>`_.
 
 Here, the refactory period :math:`t_r` is adjusted to take account of the data recording system's minimum possible refactory
 period. E.g. if a system has a sampling rate of :math:`f \text{ Hz}`, the closest that two spikes from the same unit can possibly
@@ -39,8 +41,8 @@ Calculation from the [Llobet]_ paper
 ------------------------------------
 
 The estimated contamination :math:`C` is calculated in 2 extreme scenarios. In the first, the contaminant spikes
- are completely random (or come from an infinite number of other neurons). In the second, the contaminant spikes
- come from a single other neuron. In these scenarios, the contamination rate is
+are completely random (or come from an infinite number of other neurons). In the second, the contaminant spikes
+come from a single other neuron. In these scenarios, the contamination rate is
 
 .. math::
 

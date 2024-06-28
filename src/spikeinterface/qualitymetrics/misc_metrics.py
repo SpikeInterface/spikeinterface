@@ -272,9 +272,14 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
     becomes worse as it grows. In cases of highly contaminated units, the ISI  violations
     ratio can sometimes be greater than 1.
 
+    This method counts the number of spikes whose isi is violated. If there are three
+    spikes within `isi_threshold_ms`, the first and second are violated. Hence there are two
+    spikes which have been violated.  This is is contrast to `compute_refrac_period_violations`,
+    which counts the number of violations.
+
     References
     ----------
-    Based on metrics originally implemented in [UMS]_
+    Based on metrics originally implemented in Ultra Mega Sort [UMS]_.
 
     This implementation is based on one written in Matlab by Nick Steinmetz
     (https://github.com/cortex-lab/sortingQuality) and converted to Python by Daniel Denman.
@@ -325,7 +330,6 @@ def compute_refrac_period_violations(
     Calculate the number of refractory period violations.
 
     This is similar (but slightly different) to the ISI violations.
-    The key differences being that the violations are not only computed on consecutive spikes.
 
     This is required for some formulas (e.g. the ones from Llobet & Wyngaard 2022).
 
@@ -351,6 +355,12 @@ def compute_refrac_period_violations(
     Notes
     -----
     Requires "numba" package
+
+    This method counts the number of violations which occur during the refactory period.
+    If there are three spikes within `refractory_period_ms`, the second and third spikes
+    violate the first spikes and the third spike violates the second spike. Hence there
+    are three violations. This is in contrast to `compute_isi_violations`, which
+    computes the number of spikes which have been violated.
 
     References
     ----------
