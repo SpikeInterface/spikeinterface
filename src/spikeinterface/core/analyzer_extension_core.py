@@ -348,7 +348,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
         waveforms = self.data["waveforms"]
-        num_components = waveforms.shape[1]
+        num_samples = waveforms.shape[1]
         dtype = waveforms.dtype
 
         sparsity = self.sorting_analyzer.sparsity
@@ -370,7 +370,7 @@ class ComputeWaveforms(AnalyzerExtension):
             some_waveforms = waveforms[selected_inds, :, :][:, :, channel_indices]
         else:
             # need re-alignement
-            some_waveforms = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
+            some_waveforms = np.zeros((selected_inds.size, num_samples, channel_indices.size), dtype=dtype)
 
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
@@ -383,7 +383,7 @@ class ComputeWaveforms(AnalyzerExtension):
                 local_chan_inds = local_chan_inds[channel_mask]
 
                 spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
-                proj = np.zeros((spike_mask.size, num_components, channel_indices.size), dtype=dtype)
+                proj = np.zeros((spike_mask.size, num_samples, channel_indices.size), dtype=dtype)
                 # inject in requested channels
                 channel_mask = np.isin(channel_indices, local_chan_inds)
                 proj[:, :, channel_mask] = sparse_waveforms
