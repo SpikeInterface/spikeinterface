@@ -6,7 +6,7 @@ from spikeinterface.core import BaseRecording
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor
 
 
-class ScaleTouVRecording(BasePreprocessor):
+def scale_to_uV(recording: BasePreprocessor) -> BasePreprocessor:
     """
     Scale raw traces to microvolts (µV).
 
@@ -24,32 +24,20 @@ class ScaleTouVRecording(BasePreprocessor):
     AssertionError
         If the recording extractor does not have scaleable traces.
     """
+    # To avoid a circular import
+    from spikeinterface.preprocessing import ScaleRecording
 
-    name = "scale_to_uV"
+    if not recording.has_scaleable_traces():
+        error_msg = "Recording must have gains and offsets set to be scaled to µV"
+        raise RuntimeError(error_msg)
 
-    def __init__(self, recording: BaseRecording):
-        # Importing inside to avoid a circular import
-        from spikeinterface.preprocessing.normalize_scale import ScaleRecordingSegment
+    gain = recording.get_channel_gains()
+    offset = recording.get_channel_offsets()
 
-        dtype = np.dtype("float32")
-        BasePreprocessor.__init__(self, recording, dtype=dtype)
+    scaled_to_uV_recording = ScaleRecording(recording, gain=gain, offset=offset, dtype="float32")
 
-        if not recording.has_scaleable_traces():
-            error_msg = "Recording must have gains and offsets set to be scaled to µV"
-            raise RuntimeError(error_msg)
+    # We do this so when get_traces(return_scaled=True) is called, the return is the same.
+    scaled_to_uV_recording.set_channel_gains(gains=1.0)
+    scaled_to_uV_recording.set_channel_offsets(offsets=0.0)
 
-        self.set_channel_gains(gains=1.0)
-        self.set_channel_offsets(offsets=0.0)
-
-        gain = recording.get_channel_gains()[None, :]
-        offset = recording.get_channel_offsets()[None, :]
-        for parent_segment in recording._recording_segments:
-            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype)
-            self.add_recording_segment(rec_segment)
-
-        self._kwargs = dict(
-            recording=recording,
-        )
-
-
-scale_to_uV = ScaleTouVRecording
+    return scaled_to_uV_recording

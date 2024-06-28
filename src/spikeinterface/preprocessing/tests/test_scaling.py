@@ -1,10 +1,10 @@
 import pytest
 import numpy as np
 from spikeinterface.core.testing_tools import generate_recording
-from spikeinterface.preprocessing import ScaleTouVRecording, CenterRecording
+from spikeinterface.preprocessing import scale_to_uV, CenterRecording
 
 
-def test_scale_to_uv():
+def test_scale_to_uV():
     # Create a sample recording extractor with fake gains and offsets
     num_channels = 4
     sampling_frequency = 30_000.0
@@ -22,7 +22,7 @@ def test_scale_to_uv():
     recording.set_channel_offsets(offsets)
 
     # Apply the preprocessor
-    scaled_recording = ScaleTouVRecording(recording=recording)
+    scaled_recording = scale_to_uV(recording=recording)
 
     # Check if the traces are indeed scaled
     expected_traces = recording.get_traces(return_scaled=True, segment_index=0)
@@ -33,7 +33,7 @@ def test_scale_to_uv():
     # Test for the error when recording doesn't have scaleable traces
     recording.set_channel_gains(None)  # Remove gains to make traces unscaleable
     with pytest.raises(RuntimeError):
-        ScaleTouVRecording(recording)
+        scale_to_uV(recording)
 
 
 def test_scaling_in_preprocessing_chain():
@@ -55,11 +55,11 @@ def test_scaling_in_preprocessing_chain():
     recording.set_channel_gains(gains)
     recording.set_channel_offsets(offsets)
 
-    centered_recording = CenterRecording(ScaleTouVRecording(recording=recording))
+    centered_recording = CenterRecording(scale_to_uV(recording=recording))
     traces_scaled_with_argument = centered_recording.get_traces(return_scaled=True)
 
     # Chain preprocessors
-    centered_recording_scaled = CenterRecording(ScaleTouVRecording(recording=recording))
+    centered_recording_scaled = CenterRecording(scale_to_uV(recording=recording))
     traces_scaled_with_preprocessor = centered_recording_scaled.get_traces()
 
     np.testing.assert_allclose(traces_scaled_with_argument, traces_scaled_with_preprocessor)
