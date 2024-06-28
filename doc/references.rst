@@ -19,6 +19,7 @@ If you use one of the following preprocessing methods, please cite the appropria
 - :code:`detect_bad_channels(method='coherence+psd')` [IBL]_
 - :code:`common_reference` [Rolston]_
 
+.. _cite-motion-correction:
 Motion Correction
 ^^^^^^^^^^^^^^^^^
 If you use the :code:`correct_motion` method in the preprocessing module, please cite [Garcia]_

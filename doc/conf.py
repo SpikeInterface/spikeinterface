@@ -119,7 +119,7 @@ from sphinx_gallery.sorting import FileNameSortKey
 sphinx_gallery_conf = {
     'only_warn_on_example_error': True,
     'examples_dirs': ['../examples/tutorials'],
-    'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
+    'gallery_dirs': ['tutorials'],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
                                        '../examples/tutorials/core',
                                        '../examples/tutorials/extractors',
@@ -130,8 +130,18 @@ sphinx_gallery_conf = {
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_',
     'nested_sections': False,
-    'copyfile_regex': r'.*\.rst|.*\.png|.*\.svg'
+    'copyfile_regex': r'.*\.rst|.*\.png|.*\.svg',
+    'filename_pattern': '/plot_',
 }
+
+if tags.has("handle_drift") or tags.has("all_long_plot"):
+
+    if (handle_drift_path := (Path('long_tutorials/handle_drift'))).is_dir():
+        shutil.rmtree(handle_drift_path)
+
+    sphinx_gallery_conf['examples_dirs'].append('../examples/long_tutorials/handle_drift')
+    sphinx_gallery_conf["gallery_dirs"].append(handle_drift_path.as_posix())
+
 
 intersphinx_mapping = {
     "neo": ("https://neo.readthedocs.io/en/latest/", None),
