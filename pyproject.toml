@@ -85,6 +85,11 @@ streaming_extractors = [
     "s3fs"
 ]
 
+preprocessing = [
+    "scipy",
+]
+
+
 full = [
     "h5py",
     "pandas",
@@ -130,6 +135,9 @@ test = [
 
     "xarray",
     "huggingface_hub",
+
+    # preprocessing
+    "ibllib>=2.36.0", # for IBL
 
     # tridesclous
     "numba",
