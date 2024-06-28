@@ -23,6 +23,8 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    block_index : int, default: None
+        If there are several blocks (experiments), specify the block index you want to load
     """
 
     mode = "folder"

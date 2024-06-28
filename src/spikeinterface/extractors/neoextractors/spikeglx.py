@@ -10,7 +10,7 @@ from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_s
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
-from .neobaseextractor import NeoBaseRecordingExtractor
+from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
 class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
@@ -98,3 +98,47 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
 
 read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
+
+
+class SpikeGLXEventExtractor(NeoBaseEventExtractor):
+    """
+    Class for reading events saved on the event channel by SpikeGLX software.
+
+    Parameters
+    ----------
+    folder_path: str
+
+    """
+
+    mode = "folder"
+    NeoRawIOClass = "SpikeGLXRawIO"
+    name = "spikeglx"
+
+    def __init__(self, folder_path, block_index=None):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+        NeoBaseEventExtractor.__init__(self, block_index=block_index, **neo_kwargs)
+
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {"dirname": str(folder_path)}
+        return neo_kwargs
+
+
+def read_spikeglx_event(folder_path, block_index=None):
+    """
+    Read SpikeGLX events
+
+    Parameters
+    ----------
+    folder_path: str or Path
+        Path to openephys folder
+    block_index: int, default: None
+        If there are several blocks (experiments), specify the block index you want to load.
+
+    Returns
+    -------
+    event: SpikeGLXEventExtractor
+    """
+
+    event = SpikeGLXEventExtractor(folder_path, block_index=block_index)
+    return event
