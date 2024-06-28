@@ -24,7 +24,7 @@ Different formulas have been developed, but all require:
 Calculation from the [UMS]_ package
 -----------------------------------
 
-Originally implemented in the `rpv_contamination` calculation of the UltraMegaSort2000 package `<https://github.com/danamics/UMS2K/blob/master/quality_measures/rpv_contamination.m>`_.
+Originally implemented in the `rpv_contamination` calculation of the UltraMegaSort2000 package: `<https://github.com/danamics/UMS2K/blob/master/quality_measures/rpv_contamination.m>`_.
 
 Here, the refactory period :math:`t_r` is adjusted to take account of the data recording system's minimum possible refactory
 period. E.g. if a system has a sampling rate of :math:`f \text{ Hz}`, the closest that two spikes from the same unit can possibly
