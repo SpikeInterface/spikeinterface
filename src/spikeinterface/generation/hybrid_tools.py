@@ -319,7 +319,7 @@ def generate_hybrid_recording(
     sorting: BaseSorting | None = None,
     templates: Templates | None = None,
     motion: Motion | None = None,
-    templates_in_uV: bool = True,
+    are_templates_scaled: bool = True,
     unit_locations: np.ndarray | None = None,
     drift_step_um: float = 1.0,
     upsample_factor: int | None = None,
@@ -353,8 +353,8 @@ def generate_hybrid_recording(
         If None they are generated.
     motion : Motion | None, default: None
         The motion object to use for the drifting templates.
-    templates_in_uV : bool, default: True
-        If True, the templates are in uV, otherwise they are in the same unit as the recording.
+    are_templates_scaled : bool, default: True
+        If True, the templates are assumed to be in uV, otherwise in the same unit as the recording.
         In case the recording has scaling, the templates are "unscaled" before injection.
     ms_before : float, default: 1.5
         Cut out in ms before spike peak.
@@ -469,7 +469,7 @@ def generate_hybrid_recording(
         # manage scaling of templates
         templates_ = templates
         if recording.has_scaleable_traces():
-            if templates_in_uV:
+            if are_templates_scaled:
                 templates_array = (templates_array - recording.get_channel_offsets()) / recording.get_channel_gains()
                 # make a copy of the templates and reset templates_array (might have scaled templates)
                 templates_ = templates.select_units(templates.unit_ids)

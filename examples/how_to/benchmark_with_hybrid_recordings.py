@@ -107,7 +107,7 @@ templates_scaled = sgen.scale_template_to_range(
 )
 
 min_displacement = 1000
-max_displacement = 4000
+max_displacement = 3000
 templates_relocated = sgen.relocate_templates(
     templates=templates_scaled,
     min_displacement=min_displacement,
@@ -250,26 +250,34 @@ cases = {
         },
     },
 }
+
+# +
+study_folder = workdir / "gt_study"
+
+gtstudy = sc.GroundTruthStudy(study_folder)
+
 # -
 
-study_folder = workdir / "gt_study"
-if (workdir / "gt_study").is_dir():
-    gtstudy = sc.GroundTruthStudy(study_folder)
-else:
-    gtstudy = sc.GroundTruthStudy.create(study_folder=study_folder, datasets=datasets, cases=cases)
-
 # run the spike sorting jobs
-gtstudy.run_sorters(verbose=True, keep=False)
+gtstudy.run_sorters(verbose=False, keep=True)
 
 # run the comparisons
 gtstudy.run_comparisons(exhaustive_gt=False)
 
 # ## Plot performances
+#
+# Given that we know the exactly where we injected the hybrid spikes, we can now compute and plot performance metrics: accuracy, precision, and recall.
+#
+# In the following plot, the x axis is the unit index, while the y axis is the performance metric. The units are sorted by performance.
 
 w_perf = sw.plot_study_performances(gtstudy, figsize=(12, 7))
 w_perf.axes[0, 0].legend(loc=4)
 
-# And the winner of the hybrid study challenge is...`SpyKING-CIRCUS 2` 🎉🎉🎉
+# From the performance plots, we can see that there is no clear "winner", but `Kilosort3` definitely performs worse than the other options.
+#
+# Although non of the sorters find all units perfectly, `Kilosort2.5`, `Kilosort4`, and `SpyKING CIRCUS 2` all find around 10-12 hybrid units with accuracy greater than 80%.
+# `Kilosort4` has a better overall curve, being able to find almost all units with an accuracy above 50%. `Kilosort2.5` performs well when looking at precision (finding all spikes in a hybrid unit), at the cost of lower recall (finding spikes when it shouldn't).
+#
 #
 # In this example, we showed how to:
 #
