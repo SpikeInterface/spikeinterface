@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from spikeinterface.sortingcomponents.motion_utils import Motion
+from spikeinterface.sortingcomponents.motion.motion_utils import Motion
 from spikeinterface.generation import make_one_displacement_vector
 
 if hasattr(pytest, "global_test_folder"):

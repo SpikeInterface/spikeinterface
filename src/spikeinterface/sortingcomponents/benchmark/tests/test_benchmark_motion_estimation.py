@@ -45,7 +45,7 @@ def test_benchmark_motion_estimaton(create_cache_folder):
                     bin_um=5.0,
                     rigid=False,
                     win_step_um=50.0,
-                    win_sigma_um=200.0,
+                    win_scale_um=200.0,
                 ),
             ),
         )

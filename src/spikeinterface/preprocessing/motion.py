@@ -40,10 +40,10 @@ motion_options_preset = {
             margin_um=0.0,
             # win_shape="gaussian",
             # win_step_um=50.0,
-            # win_sigma_um=150.0,
+            # win_scale_um=150.0,
             win_shape="gaussian",
             win_step_um=100.0,
-            win_sigma_um=200.0,
+            win_scale_um=200.0,
             histogram_depth_smooth_um=5.0,
             histogram_time_smooth_s=None,
             pairwise_displacement_method="conv",
@@ -99,10 +99,10 @@ motion_options_preset = {
             margin_um=0.0,
             # win_shape="gaussian",
             # win_step_um=50.0,
-            # win_sigma_um=150.0,
+            # win_scale_um=150.0,
             win_shape="gaussian",
             win_step_um=100.0,
-            win_sigma_um=200.0,
+            win_scale_um=200.0,
             histogram_depth_smooth_um=5.0,
             histogram_time_smooth_s=None,
             pairwise_displacement_method="conv",
@@ -181,7 +181,7 @@ motion_options_preset = {
             bin_duration_s=2.0,
             rigid=False,
             win_step_um=50.0,
-            win_sigma_um=150.0,
+            win_scale_um=150.0,
             margin_um=0,
             win_shape="rect",
         ),
@@ -239,8 +239,8 @@ def correct_motion(
       * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks`
       * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks`
       * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks`
-      * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion`
-      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion.motion_estimation.estimate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion.motion_interpolation.interpolate_motion`
 
 
     Possible presets : {}
@@ -282,8 +282,7 @@ def correct_motion(
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
-    from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-    from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+    from spikeinterface.sortingcomponents.motion import estimate_motion, InterpolateMotionRecording
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 
     # get preset params and update if necessary
