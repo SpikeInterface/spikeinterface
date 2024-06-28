@@ -218,7 +218,7 @@ def test_delete_on_recompute(create_cache_folder):
     sorting_analyzer.compute("templates")
 
     # re compute random_spikes should delete waveforms and templates
-    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute("random_spikes", force_recompute=True)
     assert sorting_analyzer.get_extension("templates") is None
     assert sorting_analyzer.get_extension("waveforms") is None
 
