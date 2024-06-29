@@ -181,7 +181,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
                 f.write(slurm_script)
                 os.fchmod(f.fileno(), mode=stat.S_IRWXU)
             sbatch_args = ' '.join(['--{k}={v}' for k, v in engine_kwargs['sbatch_args'].items()])
-            subprocess.Popen("sbatch", str(script_name.absolute()), sbatch_args)
+            subprocess.Popen(["sbatch", str(script_name.absolute()), sbatch_args])
 
     return out
 
