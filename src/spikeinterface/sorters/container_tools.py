@@ -9,19 +9,14 @@ import string
 # TODO move this inside functions
 
 
-from spikeinterface.core.core_tools import recursive_path_modifier
+from spikeinterface.core.core_tools import recursive_path_modifier, _get_paths_list
 
 
 def find_recording_folders(d):
     """Finds all recording folders 'paths' in a dict"""
-    folders_to_mount = []
 
-    def append_parent_folder(p):
-        p = Path(p)
-        folders_to_mount.append(p.resolve().absolute().parent)
-        return p
-
-    _ = recursive_path_modifier(d, append_parent_folder, target="path", copy=True)
+    path_list = _get_paths_list(d=d)
+    folders_to_mount = [Path(p).resolve().parent for p in path_list]
 
     try:  # this will fail if on different drives (Windows)
         base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
