@@ -115,8 +115,8 @@ class ComputeSpikeLocations(AnalyzerExtension):
         )
 
         retriever = SpikeRetriever(
-            recording,
             sorting,
+            recording,
             channel_from_template=True,
             extremum_channel_inds=extremum_channels_indices,
         )
