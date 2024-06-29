@@ -3,7 +3,6 @@ import numpy as np
 import warnings
 
 from .template import Templates
-from .sparsity import _sparsity_doc
 from .sortinganalyzer import SortingAnalyzer
 
 
@@ -50,7 +49,7 @@ def _get_nbefore(one_object):
             raise ValueError("SortingAnalyzer need extension 'templates' to be computed")
         return ext.nbefore
     else:
-        raise ValueError("Input should be Templates or SortingAnalyzer or SortingAnalyzer")
+        raise ValueError("Input should be Templates or SortingAnalyzer")
 
 
 def get_template_amplitudes(
