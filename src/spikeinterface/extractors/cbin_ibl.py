@@ -27,9 +27,11 @@ class CompressedBinaryIblExtractor(BaseRecording):
     load_sync_channel : bool, default: False
         Load or not the last channel (sync).
         If not then the probe is loaded.
-    stream_name : str, default: "ap".
+    stream_name : {"ap", "lp"}, default: "ap".
         Whether to load AP or LFP band, one
         of "ap" or "lp".
+    cbin_file : str or None, default None
+        The cbin file of the recording. If None, searches in `folder_path` for file.
 
     Returns
     -------

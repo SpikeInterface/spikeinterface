@@ -42,7 +42,6 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         electrode_width=None,
         stream_id=None,
         stream_name=None,
-        block_index=None,
         all_annotations=False,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
