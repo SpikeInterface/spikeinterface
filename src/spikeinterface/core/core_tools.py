@@ -75,6 +75,7 @@ class SIJsonEncoder(json.JSONEncoder):
 
     def default(self, obj):
         from spikeinterface.core.base import BaseExtractor
+        from spikeinterface.sortingcomponents.motion_utils import Motion
 
         # Over-write behaviors for datetime object
         if isinstance(obj, datetime.datetime):
@@ -100,6 +101,9 @@ class SIJsonEncoder(json.JSONEncoder):
 
         if isinstance(obj, Path):
             return str(obj)
+          
+        if isinstance(obj, Motion):
+            return obj.to_dict()
 
         # The base-class handles the assertion
         return super().default(obj)
