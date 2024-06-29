@@ -41,6 +41,14 @@ def test_whiten(create_cache_folder):
     assert rec4.get_dtype() == "int16"
     assert rec4._kwargs["M"] is None
 
+    # test regularization
+    with pytest.raises(AssertionError):
+        W, M = compute_whitening_matrix(
+            rec, "local", random_chunk_kwargs, apply_mean=False, radius_um=None, regularize=True
+        )
+    # W must be sparse
+    np.sum(W == 0) == 6
+
 
 if __name__ == "__main__":
     test_whiten()
