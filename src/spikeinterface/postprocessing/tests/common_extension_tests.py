@@ -73,7 +73,7 @@ class AnalyzerExtensionCommonTestSuite:
         self.__class__.recording, self.__class__.sorting = get_dataset()
 
         self.__class__.sparsity = estimate_sparsity(
-            self.__class__.recording, self.__class__.sorting, method="radius", radius_um=20
+            self.__class__.sorting, self.__class__.recording, method="radius", radius_um=20
         )
         self.__class__.cache_folder = create_cache_folder
 

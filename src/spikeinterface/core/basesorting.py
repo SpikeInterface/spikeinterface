@@ -197,7 +197,7 @@ class BaseSorting(BaseExtractor):
             self.get_num_segments() == recording.get_num_segments()
         ), "The recording has a different number of segments than the sorting!"
         if check_spike_frames:
-            if has_exceeding_spikes(recording, self):
+            if has_exceeding_spikes(self, recording):
                 warnings.warn(
                     "Some spikes exceed the recording's duration! "
                     "Removing these excess spikes with `spikeinterface.curation.remove_excess_spikes()` "
