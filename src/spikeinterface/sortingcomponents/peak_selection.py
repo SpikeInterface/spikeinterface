@@ -6,7 +6,9 @@ from __future__ import annotations
 import numpy as np
 
 
-def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **method_kwargs):
+def select_peaks(
+    peaks, recording=None, method="uniform", seed=None, return_indices=False, margin=None, **method_kwargs
+):
     """
     Method to select a subset of peaks from a set of peaks.
     Usually use for reducing computational foorptint of downstream methods.
@@ -28,6 +30,9 @@ def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **met
         The seed for random generations
     return_indices: bool
         If True, return the indices of selection such that selected_peaks = peaks[selected_indices]
+    margin : Margin in timesteps. default: None. Otherwise should be a tuple (nbefore, nafter)
+        preventing peaks to be selected at the borders of the segments. A recording should be provided to get the duration
+        of the segments
 
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
@@ -66,8 +71,24 @@ def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **met
         return_indices is True.
     """
 
+    if margin is not None:
+        assert recording is not None, "recording should be provided if margin is not None"
+
     selected_indices = select_peak_indices(peaks, method=method, seed=seed, **method_kwargs)
     selected_peaks = peaks[selected_indices]
+
+    if margin is not None:
+        to_keep = np.ones(len(selected_peaks), dtype=bool)
+        offset = 0
+        for segment_index in range(recording.get_num_segments()):
+            duration = recording.get_num_frames(segment_index)
+            i0, i1 = np.searchsorted(selected_peaks["segment_index"], [segment_index, segment_index + 1])
+            to_keep[i0:i1] = selected_peaks["sample_index"][i0:i1] > margin[0] + offset
+            to_keep[i0:i1] &= selected_peaks["sample_index"][i0:i1] < (duration - margin[1]) + offset
+            offset += duration
+        selected_indices = selected_indices[to_keep]
+        selected_peaks = peaks[selected_indices]
+
     if return_indices:
         return selected_peaks, selected_indices
     else:
