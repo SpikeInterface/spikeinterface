@@ -188,6 +188,6 @@ class SortingSummaryWidget(BaseWidget):
         import spikeinterface_gui
 
         app = spikeinterface_gui.mkQApp()
-        win = spikeinterface_gui.MainWindow(sorting_analyzer)
+        win = spikeinterface_gui.MainWindow(sorting_analyzer, curation=data_plot["curation"])
         win.show()
         app.exec_()
