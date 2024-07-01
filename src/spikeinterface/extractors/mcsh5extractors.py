@@ -62,6 +62,9 @@ class MCSH5RecordingExtractor(BaseRecording):
         # set gain
         self.set_channel_gains(mcs_info["gain"])
 
+        # set offsets
+        self.set_channel_offsets(mcs_info["offset"])
+
         # set other properties
         self.set_property("electrode_labels", mcs_info["electrode_labels"])
 
@@ -101,7 +104,11 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
 
 
 def openMCSH5File(filename, stream_id):
-    """Open an MCS hdf5 file, read and return the recording info."""
+    """Open an MCS hdf5 file, read and return the recording info.
+    Specs can be found online
+    https://www.multichannelsystems.com/downloads/documentation?page=3
+    """
+
     import h5py
 
     rf = h5py.File(filename, "r")
@@ -122,7 +129,8 @@ def openMCSH5File(filename, stream_id):
     Tick = info["Tick"][0] / 1e6
     exponent = info["Exponent"][0]
     convFact = info["ConversionFactor"][0]
-    gain = convFact.astype(float) * (10.0**exponent)
+    gain_uV = 1e6 * (convFact.astype(float) * (10.0**exponent))
+    offset_uV = -1e6 * (info["ADZero"].astype(float) * (10.0**exponent))
 
     nRecCh, nFrames = data.shape
     channel_ids = [f"Ch{ch}" for ch in info["ChannelID"]]
@@ -150,8 +158,9 @@ def openMCSH5File(filename, stream_id):
         "num_channels": nRecCh,
         "channel_ids": channel_ids,
         "electrode_labels": electrodeLabels,
-        "gain": gain,
+        "gain": gain_uV,
         "dtype": dtype,
+        "offset": offset_uV,
     }
 
     return mcs_info
