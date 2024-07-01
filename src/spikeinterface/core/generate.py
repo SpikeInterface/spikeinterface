@@ -3,7 +3,6 @@ import math
 import warnings
 import numpy as np
 from typing import Union, Optional, List, Literal
-import warnings
 from math import ceil
 
 from .basesorting import SpikeVectorSortingSegment
@@ -1858,7 +1857,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
             wf = template[start_template:end_template]
             if self.amplitude_vector is not None:
                 wf = wf * self.amplitude_vector[i]
-            traces[start_traces:end_traces] += wf
+            traces[start_traces:end_traces] += wf.astype(traces.dtype, copy=False)
 
         return traces.astype(self.dtype, copy=False)
 
