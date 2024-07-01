@@ -357,8 +357,8 @@ def compute_refrac_period_violations(
     Requires "numba" package
 
     This method counts the number of violations which occur during the refactory period.
-    If there are three spikes within `refractory_period_ms`, the second and third spikes
-    violate the first spikes and the third spike violates the second spike. Hence there
+    For example, if there are three spikes within `refractory_period_ms`, the second and third spikes
+    violate the first spike and the third spike violates the second spike. Hence there
     are three violations. This is in contrast to `compute_isi_violations`, which
     computes the number of spikes which have been violated.
 
