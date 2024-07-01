@@ -99,6 +99,9 @@ class SIJsonEncoder(json.JSONEncoder):
         if isinstance(obj, BaseExtractor):
             return obj.to_dict()
 
+        if isinstance(obj, Path):
+            return str(obj)
+
         if isinstance(obj, Motion):
             return obj.to_dict()
 
