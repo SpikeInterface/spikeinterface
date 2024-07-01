@@ -14,7 +14,7 @@
 #     name: python3
 # ---
 
-# # Analyse Neuropixels datasets
+# # Analyze Neuropixels datasets
 #
 # This example shows how to perform Neuropixels-specific analysis, including custom pre- and post-processing.
 

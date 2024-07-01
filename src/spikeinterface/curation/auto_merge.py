@@ -37,7 +37,7 @@ def get_potential_auto_merge(
     template_metric="l1",
     p_value=0.2,
     CC_threshold=0.1,
-    k_nn=5,
+    k_nn=10,
     **presence_distance_kwargs,
 ):
     """
@@ -107,15 +107,17 @@ def get_potential_auto_merge(
         Number of shifts in samles to be explored for template similarity computation
     firing_contamination_balance : float, default: 2.5
         Parameter to control the balance between firing rate and contamination in computing unit "quality score"
-    presence_distance_thresh: float, default: 100
+    presence_distance_thresh : float, default: 100
         Parameter to control how present two units should be simultaneously
+    k_nn : int, default 5
+        The number of neighbors to consider for every spike in the recording
     extra_outputs : bool, default: False
         If True, an additional dictionary (`outs`) with processed data is returned
     steps : None or list of str, default: None
         which steps to run (gives flexibility to running just some steps)
         If None all steps are done (except presence_distance).
         Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram",
-        "template_similarity", "presence_distance", "check_increase_score".
+        "template_similarity", "presence_distance", "cross_contamination", "knn", "check_increase_score"
         Please check steps explanations above!
     template_metric : 'l1', 'l2' or 'cosine'
         The metric to consider when measuring the distances between templates. Default is l1
@@ -366,8 +368,8 @@ def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None):
             ind = ind[mask_2]
             chan_inds, all_counts = np.unique(spikes["unit_index"][ind], return_counts=True)
             all_counts = all_counts.astype(float)
-            # all_counts /= all_spike_counts[chan_inds]
-            best_indices = np.argsort(all_counts)[::-1][0:]
+            all_counts /= all_spike_counts[chan_inds]
+            best_indices = np.argsort(all_counts)[::-1]
             pair_mask[unit_ind] &= np.isin(np.arange(n), chan_inds[best_indices])
     return pair_mask
 

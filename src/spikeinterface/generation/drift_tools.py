@@ -1,11 +1,12 @@
 from __future__ import annotations
+
+import math
 from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
-from spikeinterface.core import Templates, BaseRecording, BaseSorting, BaseRecordingSegment
-import math
+from probeinterface import Probe
+from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, Templates
 
 
 def interpolate_templates(templates_array, source_locations, dest_locations, interpolation_method="cubic"):
@@ -117,22 +118,80 @@ class DriftingTemplates(Templates):
         This is the same strategy used by MEArec.
     """
 
-    def __init__(self, **kwargs):
-        Templates.__init__(self, **kwargs)
+    def __init__(self, templates_array_moved=None, displacements=None, **static_kwargs):
+        Templates.__init__(self, **static_kwargs)
         assert self.probe is not None, "DriftingTemplates need a Probe in the init"
-
-        self.templates_array_moved = None
-        self.displacements = None
+        if templates_array_moved is not None:
+            if displacements is None:
+                raise ValueError(
+                    "Please pass both template_array_moved and displacements to DriftingTemplates "
+                    "if you are using precomputed displaced templates."
+                )
+        self.templates_array_moved = templates_array_moved
+        self.displacements = displacements
 
     @classmethod
-    def from_static(cls, templates):
-        drifting_teplates = cls(
+    def from_static_templates(cls, templates: Templates):
+        """
+        Construct a DriftingTemplates object given static templates.
+        The drifting templates can be then computed using the `precompute_displacements` method.
+
+        Parameters
+        ----------
+        templates : Templates
+            The static templates.
+
+        Returns
+        -------
+        drifting_templates : DriftingTemplates
+            The drifting templates object.
+
+        """
+        drifting_templates = cls(
             templates_array=templates.templates_array,
             sampling_frequency=templates.sampling_frequency,
             nbefore=templates.nbefore,
             probe=templates.probe,
         )
-        return drifting_teplates
+        return drifting_templates
+
+    @classmethod
+    def from_precomputed_templates(
+        cls,
+        templates_array_moved: ArrayLike,
+        displacements: ArrayLike,
+        sampling_frequency: float,
+        nbefore: int,
+        probe: Probe,
+    ):
+        """Construct a DriftingTemplates object given precomputed drifting templates
+
+        Parameters
+        ----------
+        templates_array_moved : np.array
+            Shape is (num_displacement, num_templates, num_samples, num_channels)
+        displacements : np.array
+            Shape is (num_displacement, 2). Last axis is xy, as in make_linear_displacement below.
+        sampling_frequency : float
+        nbefore : int
+        probe : probeinterface.Probe
+
+        Returns
+        -------
+        drifting_templates : DriftingTemplates
+            The drifting templates object.
+        """
+        # take the central templates as representatives, just to make the super()
+        # constructor happy. they won't be used as drifting templates.
+        templates_static = templates_array_moved[templates_array_moved.shape[0] // 2]
+        return cls(
+            templates_array=templates_static,
+            sampling_frequency=sampling_frequency,
+            nbefore=nbefore,
+            probe=probe,
+            templates_array_moved=templates_array_moved,
+            displacements=displacements,
+        )
 
     def move_one_template(self, unit_index, displacement, **interpolation_kwargs):
         """
@@ -443,7 +502,8 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         # TODO: self.upsample_vector = upsample_vector
         self.upsample_vector = None
         self.parent_recording = parent_recording_segment
-        self.num_samples = parent_recording_segment.get_num_frames() if num_samples is None else num_samples
+        self.num_samples = parent_recording_segment.get_num_samples() if num_samples is None else num_samples
+        self.num_samples = int(num_samples)
 
         self.displacement_indices = displacement_indices
         self.templates_array_moved = templates_array_moved
@@ -508,7 +568,7 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
             wf = template[start_template:end_template]
             if self.amplitude_vector is not None:
                 wf *= self.amplitude_vector[i]
-            traces[start_traces:end_traces] += wf
+            traces[start_traces:end_traces] += wf.astype(self.dtype, copy=False)
 
         return traces.astype(self.dtype)
 
