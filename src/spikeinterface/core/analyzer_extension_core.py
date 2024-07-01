@@ -84,7 +84,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
             valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
             nb_skipped = np.cumsum(~kept_indices)
             new_data["random_spikes_indices"] = np.flatnonzero(valid)
-            new_data["random_spikes_indices"] -= nb_skipped[valid]
+            new_data["random_spikes_indices"] -= nb_skipped[new_data["random_spikes_indices"]]
         else:
             new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
         return new_data
