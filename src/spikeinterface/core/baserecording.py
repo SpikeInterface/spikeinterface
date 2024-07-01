@@ -475,8 +475,8 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        times : float | 1d np.array
-            If `int`, this is the `t_start` for the segment,
+        times : int | float | 1d np.array
+            If `int` or `float`, this is the `t_start` for the segment,
             otherwise, it is the time vector.
         segment_index : int or None, default: None
             The segment index (required for multi-segment)
