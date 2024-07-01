@@ -24,8 +24,11 @@ from spikeinterface.core import get_channel_distances
 from ..postprocessing.unit_locations import (
     dtype_localize_by_method,
     possible_localization_methods,
-    solve_monopolar_triangulation,
+)
+
+from ..postprocessing.localization_tools import (
     make_radial_order_parents,
+    solve_monopolar_triangulation,
     enforce_decrease_shells_data,
     get_grid_convolution_templates_and_weights,
 )
@@ -66,6 +69,8 @@ def get_localization_pipeline_nodes(
     elif method == "grid_convolution":
         if "prototype" not in method_kwargs:
             assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
+            # extract prototypes silently
+            job_kwargs["progress_bar"] = False
             method_kwargs["prototype"] = get_prototype_spike(
                 recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
