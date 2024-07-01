@@ -88,8 +88,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         new_data["amplitudes"] = self.data["amplitudes"]
 
         if kept_indices is not None:
-            valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
-            new_data["amplitudes"] = new_data["amplitudes"][valid]
+            new_data["amplitudes"] = new_data["amplitudes"][kept_indices]
 
         return new_data
 

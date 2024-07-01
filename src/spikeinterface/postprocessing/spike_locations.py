@@ -97,8 +97,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
     ):
         new_spike_locations = self.data["spike_locations"]
         if kept_indices is not None:
-            valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
-            new_spike_locations = new_spike_locations[valid]
+            new_spike_locations = new_spike_locations[kept_indices]
 
         ### In theory here, we should recompute the locations since the peak positions
         ### in a merged could be different. Should be discussed

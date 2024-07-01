@@ -123,10 +123,9 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             new_data["collision_mask"] = self.data["collision_mask"]
 
         if kept_indices is not None:
-            valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
-            new_data["amplitude_scalings"] = new_data["amplitude_scalings"][valid]
+            new_data["amplitude_scalings"] = new_data["amplitude_scalings"][kept_indices]
             if self.params["handle_collisions"]:
-                new_data["collision_mask"] = new_data["collision_mask"][valid]
+                new_data["collision_mask"] = new_data["collision_mask"][kept_indices]
 
         return new_data
 
