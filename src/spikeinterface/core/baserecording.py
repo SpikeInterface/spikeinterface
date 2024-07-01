@@ -458,12 +458,26 @@ class BaseRecording(BaseRecordingSnippets):
         return d["time_vector"] is not None
 
     def set_times(self, times, segment_index=None, with_warning=True):
-        """Set times for a recording segment.
+        """Set times for a recording segment. Any existing times
+        will be overwritten.
+
+        Times can be manually set on the recording segment. If times are
+        not set, the sample index and sampling frequency are used to
+        calculate time. Otherwise, `t_start` or `time_vector` can be
+        provided:
+
+        `t_start` - the start time for the segment. The times for
+            this recording segment will be calculated as
+            t_start + sample_index * (1 / sampling_frequency)
+
+        `time_vector` - A vector of length segment.get_num_samples()
+            that holds the exact time for each sample in the recording.
 
         Parameters
         ----------
-        times : 1d np.array
-            The time vector
+        times : float | 1d np.array
+            If `int`, this is the `t_start` for the segment,
+            otherwise, it is the time vector.
         segment_index : int or None, default: None
             The segment index (required for multi-segment)
         with_warning : bool, default: True
@@ -472,11 +486,18 @@ class BaseRecording(BaseRecordingSnippets):
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
 
-        assert times.ndim == 1, "Time must have ndim=1"
-        assert rs.get_num_samples() == times.shape[0], "times have wrong shape"
+        if isinstance(times, float) or isinstance(times, int):
+            rs.t_start = times
+            rs.time_vector = None
+        elif isinstance(times, np.ndarray):
 
-        rs.t_start = None
-        rs.time_vector = times.astype("float64", copy=False)
+            assert times.ndim == 1, "Time must have ndim=1"
+            assert rs.get_num_samples() == times.shape[0], "times have wrong shape"
+
+            rs.t_start = None
+            rs.time_vector = times.astype("float64", copy=False)
+        else:
+            raise TypeError("`times` must be an integer / float (`t_start`) or " "numpy array (`time_vector`).")
 
         if with_warning:
             warnings.warn(
