@@ -32,7 +32,7 @@ class KNNMerging(BaseMergingEngine):
             "minimum_spikes": 50,
             "maximum_distance_um": 100,
             "refractory_period": (0.3, 1.0),
-            "corr_diff_thresh": 0.25,
+            "corr_diff_thresh": 0.2,
             "k_nn" : 10
         },
     }
