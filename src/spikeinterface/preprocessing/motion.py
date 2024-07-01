@@ -320,12 +320,11 @@ def correct_motion(
     if folder is not None:
         folder = Path(folder)
         if overwrite:
-            if folder.exists():        
+            if folder.is_dir():     
                 import shutil
                 shutil.rmtree(folder)
         else:
             assert not folder.exists(), f"Folder {folder} already exists"
-
         folder.mkdir(exist_ok=True, parents=True)
 
         (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
