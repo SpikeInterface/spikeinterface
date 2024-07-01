@@ -322,6 +322,7 @@ def correct_motion(
         if overwrite:
             if folder.is_dir():     
                 import shutil
+
                 shutil.rmtree(folder)
         else:
             assert not folder.exists(), f"Folder {folder} already exists"
