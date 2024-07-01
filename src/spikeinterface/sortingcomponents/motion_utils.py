@@ -90,11 +90,13 @@ class Motion:
         Parameters
         ----------
         times_s: np.array
+            The time points at which to evaluate the displacement.
         locations_um: np.array
             Either this is a one-dimensional array (a vector of positions along self.dimension), or
             else a 2d array with the 2 or 3 spatial dimensions indexed along axis=1.
-        segment_index: int, optional
-        grid : bool
+        segment_index: int, default: None
+            The index of the segment to evaluate. If None, and there is only one segment, then that segment is used.
+        grid : bool, default: False
             If grid=False, the default, then times_s and locations_um should have the same one-dimensional
             shape, and the returned displacement[i] is the displacement at time times_s[i] and location
             locations_um[i].
@@ -153,6 +155,7 @@ class Motion:
             displacement=self.displacement,
             temporal_bins_s=self.temporal_bins_s,
             spatial_bins_um=self.spatial_bins_um,
+            direction=self.direction,
             interpolation_method=self.interpolation_method,
         )
 
@@ -223,8 +226,9 @@ class Motion:
 
     def copy(self):
         return Motion(
-            self.displacement.copy(),
-            self.temporal_bins_s.copy(),
-            self.spatial_bins_um.copy(),
+            [d.copy() for d in self.displacement],
+            [t.copy() for t in self.temporal_bins_s],
+            [s.copy() for s in self.spatial_bins_um],
+            direction=self.direction,
             interpolation_method=self.interpolation_method,
         )

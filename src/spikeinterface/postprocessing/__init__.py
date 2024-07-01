@@ -40,7 +40,6 @@ from .spike_locations import compute_spike_locations, ComputeSpikeLocations
 from .unit_locations import (
     compute_unit_locations,
     ComputeUnitLocations,
-    compute_center_of_mass,
 )
 
 from .amplitude_scalings import compute_amplitude_scalings, ComputeAmplitudeScalings

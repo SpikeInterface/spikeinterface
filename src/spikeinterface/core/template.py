@@ -353,9 +353,9 @@ class Templates:
         the `add_templates_to_zarr_group` method.
 
         """
-        templates_array = zarr_group["templates_array"]
-        channel_ids = zarr_group["channel_ids"]
-        unit_ids = zarr_group["unit_ids"]
+        templates_array = zarr_group["templates_array"][:]
+        channel_ids = zarr_group["channel_ids"][:]
+        unit_ids = zarr_group["unit_ids"][:]
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
@@ -364,7 +364,7 @@ class Templates:
 
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
-            sparsity_mask = zarr_group["sparsity_mask"]
+            sparsity_mask = zarr_group["sparsity_mask"][:]
 
         probe = None
         if "probe" in zarr_group:
@@ -449,7 +449,7 @@ class Templates:
 
         return True
 
-    def get_channel_locations(self):
+    def get_channel_locations(self) -> np.ndarray:
         assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
         channel_locations = self.probe.contact_positions
         return channel_locations
