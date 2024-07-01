@@ -516,7 +516,6 @@ def _init_peak_pipeline(recording, nodes):
     worker_ctx["recording"] = recording
     worker_ctx["nodes"] = nodes
     worker_ctx["max_margin"] = max(node.get_trace_margin() for node in nodes)
-
     return worker_ctx
 
 
