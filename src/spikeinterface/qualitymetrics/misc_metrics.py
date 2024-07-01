@@ -281,7 +281,7 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
     ----------
     Based on metrics originally implemented in Ultra Mega Sort [UMS]_.
 
-    This implementation is based on one written in Matlab by Nick Steinmetz
+    This implementation is based on one of the original implementations written in Matlab by Nick Steinmetz
     (https://github.com/cortex-lab/sortingQuality) and converted to Python by Daniel Denman.
     """
     res = namedtuple("isi_violation", ["isi_violations_ratio", "isi_violations_count"])
