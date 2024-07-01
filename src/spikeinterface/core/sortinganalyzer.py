@@ -857,6 +857,9 @@ class SortingAnalyzer:
 
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
+        if len(units_to_merge) == 0:
+            return self
+        
         new_unit_ids = get_new_unit_ids_for_merges(self.sorting, units_to_merge, new_unit_ids)
 
         if not isinstance(units_to_merge[0], (list, tuple)):
