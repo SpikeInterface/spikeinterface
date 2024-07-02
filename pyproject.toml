@@ -88,7 +88,6 @@ streaming_extractors = [
 
 preprocessing = [
     "scipy",
-    "ibllib>=2.36.0", # for IBL
 ]
 
 
@@ -136,6 +135,10 @@ test_extractors = [
     "datalad>=1.0.2",
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+]
+
+test_preprocessing = [
+    "ibllib>=2.36.0", # for IBL
 ]
 
 

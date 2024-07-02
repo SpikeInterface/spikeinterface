@@ -140,7 +140,7 @@ jobs:
         shell: bash
         if: env.RUN_PREPROCESSING_TESTS == 'true'
         run: |
-          pip install -e .[preprocessing]
+          pip install -e .[preprocessing,test_preprocessing]
           ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
 
       - name: Install remaining testing dependencies # TODO: Remove this step once we have better modularization
