@@ -1440,7 +1440,6 @@ def generate_templates(
     dtype="float32",
     upsample_factor=None,
     unit_params=None,
-    unit_params_range=None,
     mode="ellipsoid",
 ):
     """
@@ -1497,9 +1496,7 @@ def generate_templates(
             * (num_units, num_samples, num_channels, upsample_factor) if upsample_factor is not None
 
     """
-
     unit_params = unit_params or dict()
-    unit_params_range = unit_params_range or dict()
     rng = np.random.default_rng(seed=seed)
 
     # neuron location must be 3D
