@@ -233,8 +233,14 @@ class BaseRecording(BaseRecordingSnippets):
             The duration in seconds
         """
         segment_index = self._check_segment_index(segment_index)
-        segment_num_samples = self.get_num_samples(segment_index=segment_index)
-        segment_duration = segment_num_samples / self.get_sampling_frequency()
+
+        if self.has_time_vector(segment_index):
+            times = self.get_times(segment_index)
+            segment_duration = times[-1] - times[0] + (1 / self.get_sampling_frequency())
+        else:
+            segment_num_samples = self.get_num_samples(segment_index=segment_index)
+            segment_duration = segment_num_samples / self.get_sampling_frequency()
+
         return segment_duration
 
     def get_total_duration(self) -> float:
@@ -246,7 +252,7 @@ class BaseRecording(BaseRecordingSnippets):
         float
             The duration in seconds
         """
-        duration = self.get_total_samples() / self.get_sampling_frequency()
+        duration = sum([self.get_duration(idx) for idx in range(self.get_num_segments())])
         return duration
 
     def get_memory_size(self, segment_index=None) -> int:
