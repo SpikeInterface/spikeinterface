@@ -78,9 +78,8 @@ jobs:
         run: pytest -m "core"
         shell: bash
 
-      - name: Install Other Testing Dependencies
+      - name: Install Dependencies for Timing Display
         run: |
-          pip install -e .[test]
           pip install tabulate
           pip install pandas
         shell: bash
@@ -91,6 +90,7 @@ jobs:
         run: echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
 
       - name: Cache datasets
+        if: env.RUN_EXTRACTORS_TESTS == 'true'
         id: cache-datasets
         uses: actions/cache/restore@v4
         with:
@@ -119,6 +119,9 @@ jobs:
           fi
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
 
+      - name : Install Plexon dependencies
+        if: env.INSTALL_PLEXON_DEPENDENCIES == 'true'
+        uses: ./.github/actions/install-wine
 
       - name: Set execute permissions on run_tests.sh
         shell: bash
@@ -130,15 +133,20 @@ jobs:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         if: env.RUN_EXTRACTORS_TESTS == 'true'
         run: |
-          pip install -e .[extractors,streaming_extractors]
+          pip install -e .[extractors,streaming_extractors,test_extractors]
           ./.github/run_tests.sh "extractors and not streaming_extractors" --no-virtual-env
 
       - name: Test preprocessing
         shell: bash
         if: env.RUN_PREPROCESSING_TESTS == 'true'
         run: |
-          pip install -e .[preprocessing]
+          pip install -e .[preprocessing,test_preprocessing]
           ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
+
+      - name: Install remaining testing dependencies # TODO: Remove this step once we have better modularization
+        shell: bash
+        run: |
+          pip install -e .[test]
 
       - name: Test postprocessing
         shell: bash
