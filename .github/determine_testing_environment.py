@@ -43,10 +43,10 @@ for changed_file in changed_files_in_the_pull_request_paths:
         extractors_changed = True
     elif changed_file.name == "plexon2.py":
         plexon2_changed = True
-    elif changed_file.filename == "nwbextractors.py":
+    elif changed_file.name == "nwbextractors.py":
         stream_extractors_changed = True
         extractors_changed = True
-    elif changed_file.filename == "iblstreamingrecording.py":
+    elif changed_file.name == "iblstreamingrecording.py":
         stream_extractors_changed = True
     elif "core" in changed_file.parts:
         core_changed = True
