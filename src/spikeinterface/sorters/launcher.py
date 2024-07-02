@@ -26,7 +26,8 @@ _default_engine_kwargs = dict(
     joblib=dict(n_jobs=-1, backend="loky"),
     processpoolexecutor=dict(max_workers=2, mp_context=None),
     dask=dict(client=None),
-    slurm={"tmp_script_folder": None, "sbatch_executable_path": "sbatch", "cpus-per-task": 1, "mem": "1G"},
+    slurm={"tmp_script_folder": None, "sbatch_executable_path": "sbatch",
+           'sbatch_kwargs':{"cpus-per-task": 1, "mem": "1G"}},
 )
 
 
@@ -73,7 +74,8 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
             the `tempfile` library
         - sbatch_executable_path: str, default 'sbatch'
             the path to the `sbatch` executable
-        - other kwargs are interpreted as arguments to sbatch, and are translated to the --args to be passed to sbatch.
+        - sbatch_kwargs: dict
+          arguments to be passed to sbatch. They are translated to the --args form.
           see the [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
 
     return_output : bool, default False
@@ -155,20 +157,13 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
 
     elif engine == "slurm":
         # generate python script for slurm
-        tmp_script_folder = engine_kwargs.pop("tmp_script_folder")
+        tmp_script_folder = engine_kwargs["tmp_script_folder"]
         if tmp_script_folder is None:
             tmp_script_folder = tempfile.mkdtemp(prefix="spikeinterface_slurm_")
         tmp_script_folder = Path(tmp_script_folder)
-        sbatch_executable = engine_kwargs.pop("sbatch_executable_path")
-
-        # for backward compatibility with previous version
-        if "cpus_per_task" in engine_kwargs:
-            warnings.warn("cpus_per_task is deprecated, use cpus-per-task instead", DeprecationWarning)
-            cpus_per_task = engine_kwargs.pop("cpus_per_task")
-            if "cpus-per-task" not in engine_kwargs:
-                engine_kwargs["cpus-per-task"] = cpus_per_task
-
         tmp_script_folder.mkdir(exist_ok=True, parents=True)
+
+        sbatch_executable = engine_kwargs["sbatch_executable_path"]
 
         for i, kwargs in enumerate(job_list):
             script_name = tmp_script_folder / f"si_script_{i}.py"
@@ -197,7 +192,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
                 os.fchmod(f.fileno(), mode=stat.S_IRWXU)
 
             progr = [sbatch_executable]
-            for k, v in engine_kwargs.items():
+            for k, v in engine_kwargs['sbatch_kwargs'].items():
                 progr.append(f"--{k}")
                 progr.append(f"{v}")
             progr.append(str(script_name.absolute()))
