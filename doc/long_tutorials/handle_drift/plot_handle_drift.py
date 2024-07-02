@@ -9,14 +9,18 @@ movement of the probe or the sliding of brain tissue
 deforming across the probe, can complicate the sorting
 and analysis of units.
 
-Spikeinterface offers a flexible framework to handle motion correction
+SpikeInterface offers a flexible framework to handle motion correction
 as a preprocessing step. In this tutorial we will cover the three main
 drift-correction algorithms implemented in SpikeInterface
 (**rigid_fast**, **kilosort_like** and **nonrigid_accurate**) with
 a focus on running the methods and interpreting the output.
 
 For more information on the theory and implementation of these methods,
-see the :ref:`motion_correction` section of the documentation.
+see the :ref:`motion_correction` section of the documentation and
+the `kilosort4 page <https://kilosort.readthedocs.io/en/latest/drift.html>`_
+on drift correction. Drift correction may not always work as expected
+(for example, if the probe has a small number of channels), see the
+`When do I need to apply drift correction?`_ section.
 
 ---------------------
 What is probe drift?
@@ -24,16 +28,17 @@ What is probe drift?
 
 The inserted probe can move from side-to-side (*'x' direction*),
 up-or-down (*'y' direction*) or forwards-or-backwards (*'z' direction*).
-Movement in the 'x' and 'y' direction is harder to model than vertical
+Movement in the 'x' and 'z' direction is harder to model than vertical
 drift (i.e. along the probe depth), and are not handled by most motion
 correction algorithms. Fortunately, vertical drift which is most easily
-handled is most pronounced as the probe is most likely to move along the path of insertion.
+handled is most pronounced as the probe is most likely to move along the path
+of insertion.
 
 Vertical drift can come in two forms, *'rigid'* and *'non-rigid'*. Rigid drift
 is drift caused by movement of the entire probe, and the motion is
 similar across all channels along the probe depth. In contrast,
-non-rigid drift is instead caused by local movements brain along the
-probe, and can selectively affect subsets of channels..
+non-rigid drift is instead caused by local movements of neuronal tissue along the
+probe, and can selectively affect subsets of channels.
 
 --------------------------
 The drift correction steps
@@ -41,7 +46,7 @@ The drift correction steps
 
 The easiest way to run drift correction in SpikeInterface is with the
 high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` function.
-This function takes a preprocessed recording as input and returns a motion-corrected
+This function takes a recording as input and returns a motion-corrected
 recording object. As with all other preprocessing steps, the correction (in this
 case interpolation of the data to correct the detected motion) is lazy and applied on-the-fly when data is needed).
 
@@ -62,9 +67,9 @@ speed and effectiveness of motion correction. As such, ``correct_motion``
 provides three setting 'presets' which configure the motion correct
 to proceed either as:
 
-* **rigid_fast** - a fast, not particularly accurate correction assuming ridigt drift.
+* **rigid_fast** - a fast, not particularly accurate correction assuming rigid drift.
 * **kilosort-like** - Mimics what is done in Kilosort.
-* **nonrigid_accurate** - A decentralised drift correction (DREDGE), introduced by the Paninski group.
+* **nonrigid_accurate** - A decentralized drift correction (DREDGE), introduced by the Paninski group.
 
 When using motion correction in your analysis, please make sure to
 :ref:`cite the appropriate paper for your chosen method<cite-motion-correction>`.
@@ -109,8 +114,8 @@ from spikeinterface.widgets import plot_peaks_on_probe
 #    need to place the code within a  ``if __name__ == "__main__":`` block.
 
 
-num_units = 100  # 250 still too many I think!
-duration = 1000
+num_units = 10# 200  # 250 still too many I think!
+duration = 50  # 1000
 
 _, raw_recording, _ = generate_drifting_recording(
     num_units=num_units,
@@ -120,7 +125,7 @@ _, raw_recording, _ = generate_drifting_recording(
     generate_displacement_vector_kwargs=dict(motion_list=[
             dict(
                 drift_mode="zigzag",
-                non_rigid_gradient=None, # 0.1,
+                non_rigid_gradient=0.01,
                 t_start_drift=int(duration/10),
                 t_end_drift=None,
                 period_s=int(duration/10),
@@ -178,17 +183,17 @@ for preset in presets_to_run:
 
 # %%
 #.. seealso::
-#   It is often very useful to save ``motion_info`` to
-#   file, so it can be loaded and visualised later. This can be done by setting
+#   It is often very useful to save ``motion_info`` to a
+#   file, so it can be loaded and visualized later. This can be done by setting
 #   the ``folder`` argument of
 #   :py:func:`~spikeinterface.preprocessing.correct_motion()` to a path to write
-#   the motion output to. The ``motion_info`` can be loaded back with
+#   all motion outputs to. The ``motion_info`` can be loaded back with
 #   ``si.load_motion_info``.
 
 # %%
-# -------------------
+# --------------------
 # Plotting the results
-# -------------------
+# --------------------
 #
 # Next, let's plot the results of our motion estimation using the ``plot_motion_info()``
 # function. The plot contains 4 panels, on the x-axis of all plots we have
@@ -196,7 +201,7 @@ for preset in presets_to_run:
 #   * **top left:** The estimated peak depth for every detected peak.
 #   * **top right:** The estimated peak depths after motion correction.
 #   * **bottom left:** The average motion vector across depths and all motion across spatial depths (for non-rigid estimation).
-#   * **bottom right:** if motion correction is non rigid, the motion vector across depths is plotted as a map, with the color code representing the motion in micrometers.
+#   * **bottom right:** if motion correction is non-rigid, the motion vector across depths is plotted as a map, with the color code representing the motion in micrometers.
 
 for preset in presets_to_run:
 
@@ -219,8 +224,8 @@ for preset in presets_to_run:
 # its depth (first panel) using a method from
 # :py:func:`~spikeinterface.postprocessing.compute_unit_locations()`.
 #
-# Then, the probe motion is estimated the location of the detected peaks are
-# adjusted to account for this (second panel).
+# Then, the probe motion is estimated and the location of the
+# spikes are adjusted to account for the motion (second panel).
 #
 # The motion estimation produces
 # a measure of how much and in what direction the probe is moving at any given
@@ -238,11 +243,11 @@ for preset in presets_to_run:
 #   * The preset **'rigid_fast'** has only one motion vector for the entire probe because it is a 'rigid' case.
 #     The motion amplitude is globally underestimated because it averages across depths.
 #     However, the corrected peaks are flatter than the non-corrected ones, so the job is partially done.
-#     The big jump at=600s when the probe start moving is recovered quite well.
+#     The big jump at 600s when the probe start moving is recovered quite well.
 #   * The preset **kilosort_like** gives better results because it is a non-rigid case.
 #     The motion vector is computed for different depths.
 #     The corrected peak locations are flatter than the rigid case.
-#     The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
+#     The motion vector map is still a bit noisy at some depths (e.g around 1000um).
 #   * The preset **nonrigid_accurate** seems to give the best results on this recording.
 #     The motion vector seems less noisy globally, but it is not 'perfect' (see at the top of the probe 3200um to 3800um).
 #     Also note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
@@ -331,6 +336,26 @@ for preset in presets_to_run:
     print(results[preset]["motion_info"]["run_times"])
 
 # %%
+# -----------------------------------------
+# When do I need to apply drift correction?
+# -----------------------------------------
+#
+# Drift correction may not always be necessary for your data, for
+# example, for example when there is not much drift in the data to begin with.
+# Further, in some cases (e.g. when the probe has a smaller number of channels,
+# e.g. 64 or less) the drift correction algorithms may not perfect well.
+#
+# To check whether drift correction is required and how it is performing,
+# it is necessary to run drift correction as above and then check the output plots.
+# In the below example, the 'Peak depth' plot shows minimal drift in the peak position.
+# In this example, it does not look like drift correction is that necessary. Further,
+# because there are only 16 channels in this recording, the drift correction is failing.
+# The 'Correct Peak Depth' as erroenously shifted peaks to the wrong position, spreading
+# them across the probe. In this instance, drift correction could be skipped.
+#
+# .. image:: ../../images/no-drift-example.png
+
+# %%
 # ------------------------
 # Summary
 # ------------------------
@@ -339,4 +364,4 @@ for preset in presets_to_run:
 # SpikeInterface. Remember that correcting motion makes some
 # assumptions on your data (e.g. number of channels, noise in the recording)—always
 # plot the motion correction information for your
-# recordings, to make sure the correction is behaviour as expected!
+# recordings, to make sure the correction is behaving as expected!

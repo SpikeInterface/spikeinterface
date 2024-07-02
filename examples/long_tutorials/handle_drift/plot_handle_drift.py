@@ -16,7 +16,12 @@ drift-correction algorithms implemented in SpikeInterface
 a focus on running the methods and interpreting the output.
 
 For more information on the theory and implementation of these methods,
-see the :ref:`motion_correction` section of the documentation.
+see the :ref:`motion_correction` section of the documentation and
+the `kilosort4 page <https://kilosort.readthedocs.io/en/latest/drift.html>`_
+on drift correction. Drift correction may not always work as expected
+(for example, if the probe has a small number of channels), see the
+`When do I need to apply drift correction?`_ section for assessing
+drift correction output.
 
 ---------------------
 What is probe drift?
@@ -27,7 +32,8 @@ up-or-down (*'y' direction*) or forwards-or-backwards (*'z' direction*).
 Movement in the 'x' and 'z' direction is harder to model than vertical
 drift (i.e. along the probe depth), and are not handled by most motion
 correction algorithms. Fortunately, vertical drift which is most easily
-handled is most pronounced as the probe is most likely to move along the path of insertion.
+handled is most pronounced as the probe is most likely to move along the path
+of insertion.
 
 Vertical drift can come in two forms, *'rigid'* and *'non-rigid'*. Rigid drift
 is drift caused by movement of the entire probe, and the motion is
@@ -109,8 +115,8 @@ from spikeinterface.widgets import plot_peaks_on_probe
 #    need to place the code within a  ``if __name__ == "__main__":`` block.
 
 
-num_units = 100  # 250 still too many I think!
-duration = 1000
+num_units = 10# 200  # 250 still too many I think!
+duration = 50  # 1000
 
 _, raw_recording, _ = generate_drifting_recording(
     num_units=num_units,
@@ -120,7 +126,7 @@ _, raw_recording, _ = generate_drifting_recording(
     generate_displacement_vector_kwargs=dict(motion_list=[
             dict(
                 drift_mode="zigzag",
-                non_rigid_gradient=None, # 0.1,
+                non_rigid_gradient=0.01,
                 t_start_drift=int(duration/10),
                 t_end_drift=None,
                 period_s=int(duration/10),
@@ -329,6 +335,26 @@ for preset in presets_to_run:
 for preset in presets_to_run:
     print(preset)
     print(results[preset]["motion_info"]["run_times"])
+
+# %%
+# -----------------------------------------
+# When do I need to apply drift correction?
+# -----------------------------------------
+#
+# Drift correction may not always be necessary for your data, for
+# example, for example when there is not much drift in the data to begin with.
+# Further, in some cases (e.g. when the probe has a smaller number of channels,
+# e.g. 64 or less) the drift correction algorithms may not perfect well.
+#
+# To check whether drift correction is required and how it is performing,
+# it is necessary to run drift correction as above and then check the output plots.
+# In the below example, the 'Peak depth' plot shows minimal drift in the peak position.
+# In this example, it does not look like drift correction is that necessary. Further,
+# because there are only 16 channels in this recording, the drift correction is failing.
+# The 'Correct Peak Depth' as erroenously shifted peaks to the wrong position, spreading
+# them across the probe. In this instance, drift correction could be skipped.
+#
+# .. image:: ../../images/no-drift-example.png
 
 # %%
 # ------------------------
