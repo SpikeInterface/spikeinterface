@@ -8,6 +8,7 @@ from .motion import (
     get_motion_presets,
     compute_motion,
 )
+from .inter_session_displacement import correct_inter_session_displacement
 
 from .preprocessing_tools import get_spatial_interpolation_kernel
 from .detect_bad_channels import detect_bad_channels
