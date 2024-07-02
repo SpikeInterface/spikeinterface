@@ -1,16 +1,9 @@
 from __future__ import annotations
 
 import pytest
-from pathlib import Path
 
 from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
 from spikeinterface.qualitymetrics import compute_quality_metrics
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "curation"
-else:
-    cache_folder = Path("cache_folder") / "curation"
-
 
 job_kwargs = dict(n_jobs=-1)
 

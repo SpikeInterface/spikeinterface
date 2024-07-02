@@ -41,7 +41,7 @@ class IblRecordingExtractor(BaseRecording):
     stream_name : str
         The name of the stream to load for the session.
         These can be retrieved from calling `StreamingIblExtractor.get_stream_names(session="<your session ID>")`.
-    load_sync_channels : bool, default: false
+    load_sync_channel : bool, default: false
         Load or not the last channel (sync).
         If not then the probe is loaded.
     cache_folder : str or None, default: None
@@ -269,10 +269,6 @@ class IblRecordingSegment(BaseRecordingSegment):
         return self._file_streamer.ns
 
     def get_traces(self, start_frame: int, end_frame: int, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
         if channel_indices is None:
             channel_indices = slice(None)
         traces = self._file_streamer.read(nsel=slice(start_frame, end_frame), volts=False)

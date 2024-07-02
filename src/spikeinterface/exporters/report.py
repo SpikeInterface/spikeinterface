@@ -6,8 +6,7 @@ import shutil
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 import spikeinterface.widgets as sw
 from spikeinterface.core import get_template_extremum_channel, get_template_extremum_amplitude
-from spikeinterface.postprocessing import compute_spike_amplitudes, compute_unit_locations, compute_correlograms
-from spikeinterface.qualitymetrics import compute_quality_metrics
+from spikeinterface.postprocessing import compute_correlograms
 
 
 def export_report(
@@ -112,7 +111,7 @@ def export_report(
     # global figures
     fig = plt.figure(figsize=(20, 10))
     w = sw.plot_unit_locations(sorting_analyzer, figure=fig, unit_colors=unit_colors)
-    fig.savefig(output_folder / f"unit_localization.{format}")
+    fig.savefig(output_folder / f"unit_locations.{format}")
     if not show_figures:
         plt.close(fig)
 

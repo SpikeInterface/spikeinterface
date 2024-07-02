@@ -731,7 +731,7 @@ class NwbRecordingExtractor(BaseRecording):
             sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
 
         if load_time_vector and timestamps is not None:
-            times_kwargs = dict(time_vector=electrical_series.timestamps)
+            times_kwargs = dict(time_vector=electrical_series["timestamps"])
         else:
             times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
 
@@ -932,11 +932,6 @@ class NwbRecordingSegment(BaseRecordingSegment):
         return self._num_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
         electrical_series_data = self.electrical_series_data
         if electrical_series_data.ndim == 1:
             traces = electrical_series_data[start_frame:end_frame][:, np.newaxis]

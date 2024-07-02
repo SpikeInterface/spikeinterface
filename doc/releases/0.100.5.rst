@@ -1,0 +1,12 @@
+.. _release0.100.5:
+
+SpikeInterface 0.100.5 release notes
+------------------------------------
+
+6th April 2024
+
+Minor release with bug fixes
+
+* Open Ephys: Use discovered recording ids to load sync timestamps (#2655)
+* Fix channel gains in NwbRecordingExtractor with backend (#2661)
+* Fix depth location in spikes on traces map (#2676)

@@ -4,7 +4,6 @@ from pathlib import Path
 from packaging import version
 from typing import Optional
 
-import neo
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -27,6 +26,9 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        If False, use default IDs inherited from Neo. If True, use channel names as IDs.
+
     """
 
     mode = "file"
@@ -38,14 +40,12 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         file_path,
         stream_id=None,
         stream_name=None,
-        block_index=None,
         all_annotations=False,
         use_names_as_ids=False,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        if version.parse(neo.__version__) > version.parse("0.12.0"):
-            # do not load spike because this is slow but not released yet
-            neo_kwargs["load_nev"] = False
+        neo_kwargs["load_nev"] = False  # Avoid loading spikes release in neo 0.12.0
+
         # trick to avoid to select automatically the correct stream_id
         suffix = Path(file_path).suffix
         if ".ns" in suffix:

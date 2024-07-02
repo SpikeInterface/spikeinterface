@@ -1,7 +1,8 @@
 import unittest
 import pytest
 import os
-from pathlib import Path
+
+import numpy as np
 
 if __name__ != "__main__":
     try:
@@ -21,13 +22,7 @@ from spikeinterface import (
 
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
-from spikeinterface.preprocessing import scale
-
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "widgets"
-else:
-    cache_folder = Path("cache_folder") / "widgets"
+from spikeinterface.preprocessing import scale, correct_motion
 
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
@@ -60,6 +55,9 @@ class TestWidgets(unittest.TestCase):
         # cls.sorting = sorting.save(folder=cache_folder / "sorting")
         cls.recording = recording
         cls.sorting = sorting
+
+        # estimate motion for motion widgets
+        _, cls.motion_info = correct_motion(recording, preset="kilosort_like", output_motion_info=True)
 
         cls.num_units = len(cls.sorting.get_unit_ids())
 
@@ -585,6 +583,45 @@ class TestWidgets(unittest.TestCase):
                 _, axes = plt.subplots(len(mcmp.object_list), 1)
                 sw.plot_multicomparison_agreement_by_sorter(mcmp, axes=axes)
 
+    def test_plot_motion(self):
+        motion = self.motion_info["motion"]
+
+        possible_backends = list(sw.MotionWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_motion(motion, backend=backend, mode="line")
+                sw.plot_motion(motion, backend=backend, mode="map")
+
+    def test_drift_raster_map(self):
+        peaks = self.motion_info["peaks"]
+        recording = self.recording
+        peak_locations = self.motion_info["peak_locations"]
+        analyzer = self.sorting_analyzer_sparse
+
+        possible_backends = list(sw.MotionWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                # with recording
+                sw.plot_drift_raster_map(
+                    peaks=peaks, peak_locations=peak_locations, recording=recording, color_amplitude=True
+                )
+                # without recording
+                sw.plot_drift_raster_map(
+                    peaks=peaks,
+                    peak_locations=peak_locations,
+                    sampling_frequency=recording.sampling_frequency,
+                    color_amplitude=False,
+                )
+                # with analyzer
+                sw.plot_drift_raster_map(sorting_analyzer=analyzer, color_amplitude=True, scatter_decimate=2)
+
+    def test_plot_motion_info(self):
+        motion_info = self.motion_info
+        possible_backends = list(sw.MotionWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_motion_info(motion_info, recording=self.recording, backend=backend)
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -599,7 +636,7 @@ if __name__ == "__main__":
     # mytest.test_plot_traces()
     # mytest.test_plot_spikes_on_traces()
     # mytest.test_plot_unit_waveforms()
-    mytest.test_plot_spikes_on_traces()
+    # mytest.test_plot_spikes_on_traces()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_autocorrelograms()
     # mytest.test_plot_crosscorrelograms()
@@ -619,6 +656,8 @@ if __name__ == "__main__":
     # mytest.test_plot_peak_activity()
     # mytest.test_plot_multicomparison()
     # mytest.test_plot_sorting_summary()
+    # mytest.test_plot_motion()
+    mytest.test_plot_motion_info()
     plt.show()
 
     # TestWidgets.tearDownClass()

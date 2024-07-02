@@ -1,9 +1,7 @@
 from __future__ import annotations
-from operator import is_
 
 from .si_based import ComponentsBasedSorter
 
-import os
 import shutil
 import numpy as np
 
@@ -11,7 +9,6 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.template import Templates
-from spikeinterface.core.template_tools import get_template_extremum_amplitude
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
@@ -20,14 +17,6 @@ from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
-
-
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
@@ -100,6 +89,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        try:
+            import hdbscan
+
+            HAVE_HDBSCAN = True
+        except:
+            HAVE_HDBSCAN = False
+
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy
@@ -282,29 +278,30 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_params["templates"] = templates
             matching_job_params = job_kwargs.copy()
 
-            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                if value in matching_job_params:
-                    matching_job_params[value] = None
-            matching_job_params["chunk_duration"] = "100ms"
+            if matching_method is not None:
+                for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+                    if value in matching_job_params:
+                        matching_job_params[value] = None
+                matching_job_params["chunk_duration"] = "100ms"
 
-            spikes = find_spikes_from_templates(
-                recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
-            )
+                spikes = find_spikes_from_templates(
+                    recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
+                )
 
-            if params["debug"]:
-                fitting_folder = sorter_output_folder / "fitting"
-                fitting_folder.mkdir(parents=True, exist_ok=True)
-                np.save(fitting_folder / "spikes", spikes)
+                if params["debug"]:
+                    fitting_folder = sorter_output_folder / "fitting"
+                    fitting_folder.mkdir(parents=True, exist_ok=True)
+                    np.save(fitting_folder / "spikes", spikes)
 
-            if verbose:
-                print("We found %d spikes" % len(spikes))
+                if verbose:
+                    print("We found %d spikes" % len(spikes))
 
-            ## And this is it! We have a spyking circus
-            sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
-            sorting["sample_index"] = spikes["sample_index"]
-            sorting["unit_index"] = spikes["cluster_index"]
-            sorting["segment_index"] = spikes["segment_index"]
-            sorting = NumpySorting(sorting, sampling_frequency, unit_ids)
+                ## And this is it! We have a spyking circus
+                sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+                sorting["sample_index"] = spikes["sample_index"]
+                sorting["unit_index"] = spikes["cluster_index"]
+                sorting["segment_index"] = spikes["segment_index"]
+                sorting = NumpySorting(sorting, sampling_frequency, unit_ids)
 
         sorting_folder = sorter_output_folder / "sorting"
         if sorting_folder.exists():
@@ -317,7 +314,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 from spikeinterface.preprocessing.motion import load_motion_info
 
                 motion_info = load_motion_info(motion_folder)
-                merging_params["maximum_distance_um"] = max(50, 2 * np.abs(motion_info["motion"]).max())
+                motion = motion_info["motion"]
+                max_motion = max(
+                    np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
+                )
+                merging_params["maximum_distance_um"] = max(50, 2 * max_motion)
 
             # peak_sign = params['detection'].get('peak_sign', 'neg')
             # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)
