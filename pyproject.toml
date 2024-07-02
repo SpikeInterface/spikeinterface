@@ -187,13 +187,16 @@ docs = [
     "ipython",
 
     # for notebooks in the gallery
-    "MEArec",   # Use as an example
-    "datalad==0.16.2",  # Download mearec data, not sure if needed as is installed with conda as well because of git-annex
+    "MEArec", # Use as an example
     "pandas", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "xarray", # For use of SortingAnalyzer zarr format
     "networkx",
+    # Download data
+    "pooch>=1.8.2",
+    "datalad>=1.0.2",
+
     # for release we need pypi, so this needs to be commented
     # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
