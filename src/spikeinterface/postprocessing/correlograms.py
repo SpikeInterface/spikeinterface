@@ -70,6 +70,48 @@ class ComputeCorrelograms(AnalyzerExtension):
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+    ):
+
+        all_new_units = new_sorting_analyzer.unit_ids
+        new_bins = self.data["bins"]
+        arr = self.data["ccgs"]
+        num_dims = arr.shape[2]
+        fs = self.sorting_analyzer.sampling_frequency
+
+        window_size = int(round(fs * self.params["window_ms"] / 2 * 1e-3))
+        bin_size = int(round(fs * self.params["bin_ms"] * 1e-3))
+
+        new_ccgs = np.zeros((len(all_new_units), len(all_new_units), num_dims), dtype=arr.dtype)
+        for unit_ind1, unit_id1 in enumerate(all_new_units):
+            spiketrain1 = new_sorting_analyzer.sorting.get_unit_spike_train(unit_id1)
+            if unit_id1 in new_unit_ids:
+                new_spk1 = True
+            else:
+                new_spk1 = False
+                i = self.sorting_analyzer.sorting.id_to_index(unit_id1)
+
+            for unit_ind2, unit_id2 in enumerate(all_new_units[unit_ind1:]):
+                spiketrain2 = new_sorting_analyzer.sorting.get_unit_spike_train(unit_id2)
+                if unit_id2 in new_unit_ids:
+                    new_spk2 = True
+                else:
+                    new_spk2 = False
+                    j = self.sorting_analyzer.sorting.id_to_index(unit_id2)
+
+                position = unit_ind1 + unit_ind2
+                if new_spk1 or new_spk2:
+                    new_ccgs[unit_ind1, position] = compute_crosscorrelogram_from_spiketrain(
+                        spiketrain1, spiketrain2, window_size, bin_size
+                    )
+                else:
+                    new_ccgs[unit_ind1, position] = arr[i, j]
+                new_ccgs[position, unit_ind1] = new_ccgs[unit_ind1, position][::-1]
+
+        new_data = dict(ccgs=new_ccgs, bins=new_bins)
+        return new_data
+
     def _run(self, verbose=False):
         ccgs, bins = compute_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
         self.data["ccgs"] = ccgs

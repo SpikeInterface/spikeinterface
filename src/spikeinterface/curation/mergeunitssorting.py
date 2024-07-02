@@ -4,6 +4,7 @@ import numpy as np
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from copy import deepcopy
+from spikeinterface.core.sorting_tools import get_new_unit_ids_for_merges
 
 
 class MergeUnitsSorting(BaseSorting):
@@ -49,29 +50,7 @@ class MergeUnitsSorting(BaseSorting):
             all_removed_ids.extend(ids)
         keep_unit_ids = [u for u in parents_unit_ids if u not in all_removed_ids]
 
-        if new_unit_ids is None:
-            dtype = parents_unit_ids.dtype
-            # select new_unit_ids greater that the max id, event greater than the numerical str ids
-            if np.issubdtype(dtype, np.character):
-                # dtype str
-                if all(p.isdigit() for p in parents_unit_ids):
-                    # All str are digit : we can generate a max
-                    m = max(int(p) for p in parents_unit_ids) + 1
-                    new_unit_ids = [str(m + i) for i in range(num_merge)]
-                else:
-                    # we cannot automatically find new names
-                    new_unit_ids = [f"merge{i}" for i in range(num_merge)]
-                    if np.any(np.isin(new_unit_ids, keep_unit_ids)):
-                        raise ValueError(
-                            "Unable to find 'new_unit_ids' because it is a string and parents "
-                            "already contain merges. Pass a list of 'new_unit_ids' as an argument."
-                        )
-            else:
-                # dtype int
-                new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
-        else:
-            if np.any(np.isin(new_unit_ids, keep_unit_ids)):
-                raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
+        new_unit_ids = get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids)
 
         assert len(new_unit_ids) == num_merge, "new_unit_ids must have the same size as units_to_merge"
 

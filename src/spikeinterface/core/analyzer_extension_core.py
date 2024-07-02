@@ -76,6 +76,19 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_spike_mask])
         return new_data
 
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+    ):
+        new_data = dict()
+        if kept_indices is not None:
+            valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
+            nb_skipped = np.cumsum(~kept_indices)
+            new_data["random_spikes_indices"] = np.flatnonzero(valid)
+            new_data["random_spikes_indices"] -= nb_skipped[new_data["random_spikes_indices"]]
+        else:
+            new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
+        return new_data
+
     def _get_data(self):
         return self.data["random_spikes_indices"]
 
@@ -224,18 +237,72 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
-    def get_waveforms_one_unit(
-        self,
-        unit_id,
-        force_dense: bool = False,
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
+        new_data = dict()
+
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        waveforms = self.data["waveforms"]
+
+        if kept_indices is not None:
+            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
+            valid = kept_indices[spike_indices]
+            some_spikes = some_spikes[valid]
+            waveforms = waveforms[valid]
+
+        sparsity = new_sorting_analyzer.sparsity
+
+        if sparsity is not None:
+
+            new_data["waveforms"] = waveforms.copy()
+            for to_be_merged, unit_id in zip(units_to_merge, new_unit_ids):
+                new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
+                waveforms, spike_unit_indices = self.get_some_waveforms(new_channel_ids, to_be_merged, kept_indices)
+                num_chans = waveforms.shape[2]
+                new_data["waveforms"][spike_unit_indices, :, :num_chans] = waveforms
+                new_data["waveforms"][spike_unit_indices, :, num_chans:] = 0
+
+        else:
+            new_data["waveforms"] = waveforms
+
+        return new_data
+
+    def get_waveforms_one_unit(self, unit_id, force_dense: bool = False, kept_indices=None):
+        """
+        Returns the waveforms of a unit id.
+
+        Parameters
+        ----------
+        unit_id : int or str
+            The unit id to return waveforms for
+        force_dense : bool, default: False
+            If True, and SortingAnalyzer must be sparse then only waveforms on sparse channels are returned.
+        kept_indices : array, default None
+            If specified, a mask to select only some spikes (mostly used during merging)
+
+        Returns
+        -------
+        waveforms: np.array
+            The waveforms (num_waveforms, num_samples, num_channels).
+            In case sparsity is used, only the waveforms on sparse channels are returned.
+
+        """
         sorting = self.sorting_analyzer.sorting
         unit_index = sorting.id_to_index(unit_id)
         # spikes = sorting.to_spike_vector()
         # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        waveforms = self.data["waveforms"]
+
+        if kept_indices is not None:
+            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
+            valid = kept_indices[spike_indices]
+            some_spikes = some_spikes[valid]
+            waveforms = waveforms[valid]
+
         spike_mask = some_spikes["unit_index"] == unit_index
-        wfs = self.data["waveforms"][spike_mask, :, :]
+        wfs = waveforms[spike_mask, :, :]
 
         if self.sorting_analyzer.sparsity is not None:
             chan_inds = self.sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
@@ -247,6 +314,82 @@ class ComputeWaveforms(AnalyzerExtension):
                 wfs = dense_wfs
 
         return wfs
+
+    def get_some_waveforms(self, channel_ids=None, unit_ids=None, kept_indices=None):
+        """
+        Returns the waveforms of some units and some channels.
+
+        When internally sparse, this function realign waveforms on given channel_ids set.
+
+        Parameters
+        ----------
+        channel_ids : list, default: None
+            List of channel ids on which waveforms must aligned
+        unit_ids : list, default: None
+            List of unit ids to return waveforms for
+        kept_indices : array, default None
+            If specified, a mask to select only some spikes (mostly used during merging)
+
+        Returns
+        -------
+        some_waveforms: np.array
+            The waveforms (num_spikes, num_samples, num_sparse_channels)
+        spike_unit_indices: np.array
+            Array a copy of with some_spikes["unit_index"] of returned waveforms of shape (num_spikes, )
+        """
+        sorting = self.sorting_analyzer.sorting
+        if unit_ids is None:
+            unit_ids = sorting.unit_ids
+
+        if channel_ids is None:
+            channel_ids = self.sorting_analyzer.channel_ids
+
+        channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
+
+        # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
+        waveforms = self.data["waveforms"]
+        num_samples = waveforms.shape[1]
+        dtype = waveforms.dtype
+
+        sparsity = self.sorting_analyzer.sparsity
+
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+        if kept_indices is not None:
+            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
+            valid = kept_indices[spike_indices]
+            some_spikes = some_spikes[valid]
+            waveforms = waveforms[valid]
+
+        unit_indices = sorting.ids_to_indices(unit_ids)
+        selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
+
+        spike_unit_indices = some_spikes["unit_index"][selected_inds]
+
+        if sparsity is None:
+            some_waveforms = waveforms[selected_inds, :, :][:, :, channel_indices]
+        else:
+            # need re-alignement
+            some_waveforms = np.zeros((selected_inds.size, num_samples, channel_indices.size), dtype=dtype)
+
+            for unit_id in unit_ids:
+                unit_index = sorting.id_to_index(unit_id)
+                sparse_waveforms = self.get_waveforms_one_unit(unit_id, kept_indices=kept_indices)
+                local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+
+                # keep only requested channels
+                channel_mask = np.isin(local_chan_inds, channel_indices)
+                sparse_waveforms = sparse_waveforms[:, :, channel_mask]
+                local_chan_inds = local_chan_inds[channel_mask]
+
+                spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
+                proj = np.zeros((spike_mask.size, num_samples, channel_indices.size), dtype=dtype)
+                # inject in requested channels
+                channel_mask = np.isin(channel_indices, local_chan_inds)
+                proj[:, :, channel_mask] = sparse_waveforms
+                some_waveforms[spike_mask, :, :] = proj
+
+        return some_waveforms, spike_unit_indices
 
     def _get_data(self):
         return self.data["waveforms"]
@@ -296,18 +439,10 @@ class ComputeTemplates(AnalyzerExtension):
                 assert len(operator) == 2
                 assert operator[0] == "percentile"
 
-        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
-        if waveforms_extension is not None:
-            nbefore = waveforms_extension.nbefore
-            nafter = waveforms_extension.nafter
-        else:
-            nbefore = int(ms_before * self.sorting_analyzer.sampling_frequency / 1000.0)
-            nafter = int(ms_after * self.sorting_analyzer.sampling_frequency / 1000.0)
-
         params = dict(
             operators=operators,
-            nbefore=nbefore,
-            nafter=nafter,
+            ms_before=ms_before,
+            ms_after=ms_after,
         )
         return params
 
@@ -410,11 +545,21 @@ class ComputeTemplates(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        return self.params["nbefore"]
+        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
+        if waveforms_extension is not None:
+            nbefore = waveforms_extension.nbefore
+        else:
+            nbefore = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return nbefore
 
     @property
     def nafter(self):
-        return self.params["nafter"]
+        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
+        if waveforms_extension is not None:
+            nafter = waveforms_extension.nafter
+        else:
+            nafter = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return nafter
 
     def _select_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
@@ -425,12 +570,42 @@ class ComputeTemplates(AnalyzerExtension):
 
         return new_data
 
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+    ):
+
+        all_new_units = new_sorting_analyzer.unit_ids
+        new_data = dict()
+        counts = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
+        for key, arr in self.data.items():
+            new_data[key] = np.zeros((len(all_new_units), arr.shape[1], arr.shape[2]), dtype=arr.dtype)
+            for unit_ind, unit_id in enumerate(all_new_units):
+                if unit_id not in new_unit_ids:
+                    keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                    new_data[key][unit_ind] = arr[keep_unit_index, :, :]
+                else:
+                    id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                    unit_ids = units_to_merge[id]
+                    keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+                    # We do a weighted sum of the templates
+                    weights = np.zeros(len(unit_ids), dtype=np.float32)
+                    for count, id in enumerate(unit_ids):
+                        weights[count] = counts[id]
+                    weights /= weights.sum()
+                    new_data[key][unit_ind] = (arr[keep_unit_indices, :, :] * weights[:, np.newaxis, np.newaxis]).sum(0)
+                    if new_sorting_analyzer.sparsity is not None:
+                        chan_ids = new_sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
+                        mask = ~np.isin(np.arange(arr.shape[2]), chan_ids)
+                        new_data[key][unit_ind][:, mask] = 0
+
+        return new_data
+
     def _get_data(self, operator="average", percentile=None, outputs="numpy"):
         if operator != "percentile":
             key = operator
         else:
             assert percentile is not None, "You must provide percentile=..."
-            key = f"pencentile_{percentile}"
+            key = f"percentile_{percentile}"
 
         templates_array = self.data[key]
 
@@ -579,6 +754,12 @@ class ComputeNoiseLevels(AnalyzerExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
+        # this do not depend on units
+        return self.data
+
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+    ):
         # this do not depend on units
         return self.data
 

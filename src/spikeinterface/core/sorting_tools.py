@@ -1,6 +1,8 @@
 from __future__ import annotations
 from .basesorting import BaseSorting
 import numpy as np
+from spikeinterface.core import NumpySorting
+from spikeinterface.core import NumpySorting
 
 
 def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.array) -> dict[dict[str, np.array]]:
@@ -220,3 +222,116 @@ def random_spikes_selection(
         raise ValueError(f"random_spikes_selection(): method must be 'all' or 'uniform'")
 
     return random_spikes_indices
+
+
+def get_ids_after_merging(sorting, units_to_merge, new_unit_ids):
+
+    assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
+
+    merged_unit_ids = set(sorting.unit_ids)
+    for count in range(len(units_to_merge)):
+        assert len(units_to_merge[count]) > 1, "A merge should have at least two units"
+        for unit_id in units_to_merge[count]:
+            assert unit_id in sorting.unit_ids, "Merged ids should be in the sorting"
+        for unit_id in units_to_merge[count]:
+            merged_unit_ids.discard(unit_id)
+            merged_unit_ids = merged_unit_ids.union([new_unit_ids[count]])
+    return np.array(list(merged_unit_ids))
+
+
+def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_ms=None):
+    """
+    Function to apply a resolved representation of the merges to a sorting object. If censor_ms is not None,
+    duplicated spikes violating the censor_ms refractory period are removed
+
+    Parameters
+    ----------
+    sorting: The Sorting object to apply merges
+    units_to_merge : list/tuple of lists/tuples
+        A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
+        but it can also have more (merge multiple units at once).
+    new_unit_ids : None or list
+        A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
+        merged units will have the first unit_id of every lists of merges
+    censor_ms: None or float
+        When applying the merges, should be discard consecutive spikes violating a given refractory per
+
+    Returns
+    -------
+    sorting :  The new Sorting object
+        The newly create sorting with the merged units
+    kept_indices : A boolean mask, if censor_ms is not None, telling which spike from the original spike vector
+        has been kept, given the refractory period violations (None if censor_ms is None)
+    """
+
+    spikes = sorting.to_spike_vector().copy()
+    to_keep = np.ones(len(spikes), dtype=bool)
+
+    new_unit_ids = get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids)
+
+    all_unit_ids = get_ids_after_merging(sorting, units_to_merge, new_unit_ids)
+
+    segment_slices = {}
+    for segment_index in range(sorting.get_num_segments()):
+        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
+        segment_slices[segment_index] = (s0, s1)
+
+    if censor_ms is not None:
+        rpv = int(sorting.sampling_frequency * censor_ms / 1000)
+
+    max_index = len(sorting.unit_ids)
+
+    for unit_id, to_be_merged in zip(new_unit_ids, units_to_merge):
+        mask = np.in1d(spikes["unit_index"], sorting.ids_to_indices(to_be_merged))
+        if unit_id in sorting.unit_ids:
+            spikes["unit_index"][mask] = sorting.id_to_index(unit_id)
+        else:
+            spikes["unit_index"][mask] = max_index
+            max_index += 1
+
+        if censor_ms is not None:
+            for segment_index in range(sorting.get_num_segments()):
+                s0, s1 = segment_slices[segment_index]
+                (indices,) = s0 + np.nonzero(mask[s0:s1])
+                to_keep[indices[1:]] = np.diff(spikes[indices]["sample_index"]) > rpv
+
+    combined_ids = np.array(list(sorting.unit_ids) + list(new_unit_ids))
+    sorting = NumpySorting(spikes[to_keep], unit_ids=combined_ids, sampling_frequency=sorting.sampling_frequency)
+    sorting = sorting.select_units(all_unit_ids)
+    return sorting, to_keep
+
+
+def get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids):
+
+    all_removed_ids = []
+    for ids in units_to_merge:
+        all_removed_ids.extend(ids)
+    keep_unit_ids = [u for u in sorting.unit_ids if u not in all_removed_ids]
+
+    if new_unit_ids is not None:
+        assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
+        if np.any(np.isin(new_unit_ids, keep_unit_ids)):
+            raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
+    else:
+        dtype = sorting.unit_ids.dtype
+        num_merge = len(units_to_merge)
+        # select new_unit_ids greater that the max id, event greater than the numerical str ids
+        if np.issubdtype(dtype, np.character):
+            # dtype str
+            if all(p.isdigit() for p in sorting.unit_ids):
+                # All str are digit : we can generate a max
+                m = max(int(p) for p in sorting.unit_ids) + 1
+                new_unit_ids = [str(m + i) for i in range(num_merge)]
+            else:
+                # we cannot automatically find new names
+                new_unit_ids = [f"merge{i}" for i in range(num_merge)]
+                if np.any(np.isin(new_unit_ids, keep_unit_ids)):
+                    raise ValueError(
+                        "Unable to find 'new_unit_ids' because it is a string and parents "
+                        "already contain merges. Pass a list of 'new_unit_ids' as an argument."
+                    )
+        else:
+            # dtype int
+            new_unit_ids = list(max(sorting.unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
+
+    return new_unit_ids

@@ -49,7 +49,8 @@ class ComputeUnitLocations(AnalyzerExtension):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, method="monopolar_triangulation", **method_kwargs):
-        params = dict(method=method, method_kwargs=method_kwargs)
+        params = dict(method=method)
+        params.update(method_kwargs)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -57,9 +58,34 @@ class ComputeUnitLocations(AnalyzerExtension):
         new_unit_location = self.data["unit_locations"][unit_inds]
         return dict(unit_locations=new_unit_location)
 
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+    ):
+        arr = self.data["unit_locations"]
+        num_dims = arr.shape[1]
+        all_new_unit_ids = new_sorting_analyzer.unit_ids
+        counts = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
+        new_unit_location = np.zeros((len(all_new_unit_ids), num_dims), dtype=arr.dtype)
+        for unit_ind, unit_id in enumerate(all_new_unit_ids):
+            if unit_id not in new_unit_ids:
+                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                new_unit_location[unit_ind] = arr[keep_unit_index]
+            else:
+                id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                unit_ids = units_to_merge[id]
+                keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+                weights = np.zeros(len(unit_ids), dtype=np.float32)
+                for count, id in enumerate(unit_ids):
+                    weights[count] = counts[id]
+                weights /= weights.sum()
+                new_unit_location[unit_ind] = (arr[keep_unit_indices] * weights[:, np.newaxis]).sum(0)
+
+        return dict(unit_locations=new_unit_location)
+
     def _run(self, verbose=False):
-        method = self.params["method"]
-        method_kwargs = self.params["method_kwargs"]
+        method = self.params.get("method")
+        method_kwargs = self.params.copy()
+        method_kwargs.pop("method")
 
         assert method in possible_localization_methods
 
