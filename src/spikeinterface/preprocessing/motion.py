@@ -318,6 +318,16 @@ def correct_motion(
     job_kwargs = fix_job_kwargs(job_kwargs)
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
+    if folder is not None:
+        folder = Path(folder)
+        if overwrite:
+            if folder.is_dir():
+                import shutil
+
+                shutil.rmtree(folder)
+        else:
+            assert not folder.is_dir(), f"Folder {folder} already exists"
+
     if not do_selection:
         # maybe do this directly in the folder when not None, but might be slow on external storage
         gather_mode = "memory"
