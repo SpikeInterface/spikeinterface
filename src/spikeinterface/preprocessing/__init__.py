@@ -1,6 +1,7 @@
 from .preprocessinglist import *
 
 from .motion import correct_motion, load_motion_info, save_motion_info, get_motion_parameters_preset, get_motion_presets
+from .inter_session_displacement import correct_inter_session_displacement
 
 from .preprocessing_tools import get_spatial_interpolation_kernel
 from .detect_bad_channels import detect_bad_channels
