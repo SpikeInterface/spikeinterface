@@ -545,11 +545,11 @@ class BaseRecording(BaseRecordingSnippets):
             if kwargs.get("sharedmem", True):
                 from .numpyextractors import SharedMemoryRecording
 
-                cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
+                cached = SharedMemoryRecording.from_recording(self, t_starts=t_starts, **job_kwargs)
             else:
                 from spikeinterface.core import NumpyRecording
 
-                cached = NumpyRecording.from_recording(self, **job_kwargs)
+                cached = NumpyRecording.from_recording(self, t_starts=t_starts, **job_kwargs)
 
         elif format == "zarr":
             from .zarrextractors import ZarrRecordingExtractor
