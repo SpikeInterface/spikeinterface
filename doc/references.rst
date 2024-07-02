@@ -51,7 +51,8 @@ or :code:`compute_quality_metrics()` methods, please include the citations for t
 important for your research:
 
 - :code:`amplitude_cutoff` [Hill]_
-- :code:`amplitude_median` or :code:`sliding_rp_violation` [IBL]_
+- :code:`amplitude_median` [IBL]_
+- :code:`sliding_rp_violation` [IBL]_
 - :code:`drift` [Siegle]_
 - :code:`isi_violation` [UMS]_
 - :code:`rp_violation` [Llobet]_

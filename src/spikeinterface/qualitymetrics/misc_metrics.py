@@ -267,10 +267,11 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
 
     Notes
     -----
-    The returned ISI violations ratio measures the approximate fraction of spikes in each
-    unit which are contaminted. This interpretation is good when the ratio is small, and
-    becomes worse as it grows. In cases of highly contaminated units, the ISI  violations
-    ratio can sometimes be greater than 1.
+    The returned ISI violations ratio approximates the fraction of spikes in each
+    unit which are contaminted. The formulation assumes that the contaminating spikes
+    are statistically independent from the other spikes in that cluster. This
+    approximation can break down in reality, especially for highly contaminated units.
+    See the discussion in Section 4.1 of [Llobet]_ for more details.
 
     This method counts the number of spikes whose isi is violated. If there are three
     spikes within `isi_threshold_ms`, the first and second are violated. Hence there are two

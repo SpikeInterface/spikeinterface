@@ -19,12 +19,13 @@ Different formulas have been developed, but all require:
 - :math:`T` the duration of the recording in seconds.
 - :math:`N` the number of spikes in the unit's spike train.
 - :math:`t_r` the duration of the unit's refractory period in seconds.
-- :math:`n_v` the number of violations of the refractory period.
 
 Calculation from the [UMS]_ package
 -----------------------------------
 
 Originally implemented in the `rpv_contamination` calculation of the UltraMegaSort2000 package: `<https://github.com/danamics/UMS2K/blob/master/quality_measures/rpv_contamination.m>`_.
+
+In this method the number of spikes whose refractory period are violated, denoted :math:`n_v`, is used.
 
 Here, the refactory period :math:`t_r` is adjusted to take account of the data recording system's minimum possible refactory
 period. E.g. if a system has a sampling rate of :math:`f \text{ Hz}`, the closest that two spikes from the same unit can possibly
@@ -40,6 +41,8 @@ The contamination rate is calculated to be
 Calculation from the [Llobet]_ paper
 ------------------------------------
 
+In this method the number spikes which violate other spikes' refractory periods, denoted :math:`\tilde{n}_v`, is used.
+
 The estimated contamination :math:`C` is calculated in 2 extreme scenarios. In the first, the contaminant spikes
 are completely random (or come from an infinite number of other neurons). In the second, the contaminant spikes
 come from a single other neuron. In these scenarios, the contamination rate is
@@ -47,8 +50,8 @@ come from a single other neuron. In these scenarios, the contamination rate is
 .. math::
 
     C = \frac{FP}{TP + FP} \approx \begin{cases}
-        1 - \sqrt{1 - \frac{n_v T}{N^2 t_r}} \text{ for the case of random contamination} \\
-        \frac{1}{2} \left( 1 - \sqrt{1 - \frac{2 n_v T}{N^2 t_r}} \right) \text{ for the case of 1 contaminant neuron}
+        1 - \sqrt{1 - \frac{\tilde{n}_v T}{N^2 t_r}} \text{ for the case of random contamination} \\
+        \frac{1}{2} \left( 1 - \sqrt{1 - \frac{2 \tilde{n}_v T}{N^2 t_r}} \right) \text{ for the case of 1 contaminant neuron}
     \end{cases}
 
 Where :math:`TP` is the number of true positives (detected spikes that come from the neuron) and :math:`FP` is the number of false positives (detected spikes that don't come from the neuron).
