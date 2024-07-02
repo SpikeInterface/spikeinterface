@@ -136,6 +136,13 @@ jobs:
           pip install -e .[extractors,streaming_extractors,test_extractors]
           ./.github/run_tests.sh "extractors and not streaming_extractors" --no-virtual-env
 
+      - name: Test streaming extracotors
+        shell: bash
+        if: env.RUN_STREAMING_EXTRACTORS_TESTS
+        run: |
+          pip install -e .[streaming_extractors,test_extractors]
+          ./.github/run_tests.sh "streaming_extractors" --no-virtual-env
+
       - name: Test preprocessing
         shell: bash
         if: env.RUN_PREPROCESSING_TESTS == 'true'

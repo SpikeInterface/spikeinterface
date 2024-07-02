@@ -309,7 +309,7 @@ class IblSortingExtractor(BaseSorting):
     name = "ibl"
     installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
 
-    def __init__(self, pid, good_clusters_only=False, load_unit_properties=True, one=None):
+    def __init__(self, pid: str, good_clusters_only: bool = False, load_unit_properties: bool = True, one=None):
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
