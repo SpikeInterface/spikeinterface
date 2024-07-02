@@ -36,10 +36,12 @@ class ComputeCorrelograms(AnalyzerExtension):
     -------
     correlogram : np.array
         Correlograms with shape (num_units, num_units, num_bins)
-        The diagonal of correlogram is the auto correlogram. The output
-        is in bin counts.
-        correlogram[A, B, :] is the symmetry of correlogram[B, A, :]
-        correlogram[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
+        The diagonal of the correlogram (e.g. correlogram[A, A, :])
+        holds the unit auto correlograms. The off-diagonal elements
+        are the cross-correlograms between units, where correlogram[A, B, :]
+        and correlogram[B, A, :] represent cross-correlation between
+        the same pair of units, applied in opposite directions,
+        correlogram[A, B, :] = correlogram[B, A, ::-1].
     bins :  np.array
         The bin edges in ms
 
