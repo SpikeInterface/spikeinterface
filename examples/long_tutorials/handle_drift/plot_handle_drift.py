@@ -339,4 +339,4 @@ for preset in presets_to_run:
 # SpikeInterface. Remember that correcting motion makes some
 # assumptions on your data (e.g. number of channels, noise in the recording)—always
 # plot the motion correction information for your
-# recordings, to make sure the correction is behaviour as expected!
+# recordings, to make sure the correction is behaving as expected!
