@@ -256,9 +256,9 @@ class ComputeWaveforms(AnalyzerExtension):
         if sparsity is not None:
 
             new_data["waveforms"] = waveforms.copy()
-            for to_be_merge, unit_id in zip(units_to_merge, new_unit_ids):
-                new_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
-                waveforms, spike_unit_indices = self.get_some_waveforms(new_chan_inds, to_be_merge, kept_indices)
+            for to_be_merged, unit_id in zip(units_to_merge, new_unit_ids):
+                new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
+                waveforms, spike_unit_indices = self.get_some_waveforms(new_channel_ids, to_be_merged, kept_indices)
                 num_chans = waveforms.shape[2]
                 new_data["waveforms"][spike_unit_indices, :, :num_chans] = waveforms
                 new_data["waveforms"][spike_unit_indices, :, num_chans:] = 0
