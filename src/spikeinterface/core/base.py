@@ -56,7 +56,7 @@ class BaseExtractor:
 
         # "main_ids" will either be channel_ids or units_ids
         # They are used for properties
-        self._main_ids = np.asarray(main_ids)
+        self._main_ids = np.array(main_ids)
         if len(self._main_ids) > 0:
             assert (
                 self._main_ids.dtype.kind in "uiSU"
