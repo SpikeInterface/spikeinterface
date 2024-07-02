@@ -241,7 +241,7 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
 
     It computes several metrics related to isi violations:
         * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are
-                                generating the ISI violations. Described in [Hill]_. See Notes.
+                                generating the ISI violations. See Notes.
         * isi_violation_count: number of ISI violations
 
     Parameters
@@ -261,22 +261,29 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
     Returns
     -------
     isi_violations_ratio : dict
-        The isi violation ratio described in [Hill]_.
+        The isi violation ratio.
     isi_violation_count : dict
         Number of violations.
 
     Notes
     -----
-    You can interpret an ISI violations ratio value of 0.5 as meaning that contaminating spikes are
-    occurring at roughly half the rate of "true" spikes for that unit.
-    In cases of highly contaminated units, the ISI violations ratio can sometimes be greater than 1.
+    The returned ISI violations ratio approximates the fraction of spikes in each
+    unit which are contaminted. The formulation assumes that the contaminating spikes
+    are statistically independent from the other spikes in that cluster. This
+    approximation can break down in reality, especially for highly contaminated units.
+    See the discussion in Section 4.1 of [Llobet]_ for more details.
+
+    This method counts the number of spikes whose isi is violated. If there are three
+    spikes within `isi_threshold_ms`, the first and second are violated. Hence there are two
+    spikes which have been violated.  This is is contrast to `compute_refrac_period_violations`,
+    which counts the number of violations.
 
     References
     ----------
-    Based on metrics described in [Hill]_
+    Based on metrics originally implemented in Ultra Mega Sort [UMS]_.
 
-    Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality)
-    and converted to Python by Daniel Denman.
+    This implementation is based on one of the original implementations written in Matlab by Nick Steinmetz
+    (https://github.com/cortex-lab/sortingQuality) and converted to Python by Daniel Denman.
     """
     res = namedtuple("isi_violation", ["isi_violations_ratio", "isi_violations_count"])
 
@@ -324,7 +331,6 @@ def compute_refrac_period_violations(
     Calculate the number of refractory period violations.
 
     This is similar (but slightly different) to the ISI violations.
-    The key difference being that the violations are not only computed on consecutive spikes.
 
     This is required for some formulas (e.g. the ones from Llobet & Wyngaard 2022).
 
@@ -350,6 +356,12 @@ def compute_refrac_period_violations(
     Notes
     -----
     Requires "numba" package
+
+    This method counts the number of violations which occur during the refactory period.
+    For example, if there are three spikes within `refractory_period_ms`, the second and third spikes
+    violate the first spike and the third spike violates the second spike. Hence there
+    are three violations. This is in contrast to `compute_isi_violations`, which
+    computes the number of spikes which have been violated.
 
     References
     ----------

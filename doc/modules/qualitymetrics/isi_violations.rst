@@ -10,46 +10,48 @@ Calculation
 Neurons have a refractory period after a spiking event during which they cannot fire again.
 Inter-spike-interval (ISI) violations refers to the rate of refractory period violations (as described by [Hill]_).
 
+We aim to calculate the contamination rate :math:`C`, measuring the ratio of isi violations in the spike-train of a unit.
 The calculation works under the assumption that the contaminant events happen randomly or come from another neuron that is not correlated with our unit.
 A correlation will lead to an overestimation of the contamination, whereas an anti-correlation will lead to an underestimation.
 
-Different formulas have been developed over the years.
+Different formulas have been developed, but all require:
 
-Calculation from the [Hill]_ paper
-----------------------------------
+- :math:`T` the duration of the recording in seconds.
+- :math:`N` the number of spikes in the unit's spike train.
+- :math:`t_r` the duration of the unit's refractory period in seconds.
 
-The following quantities are required:
+Calculation from the [UMS]_ package
+-----------------------------------
 
-- :math:`ISI_t` : biological threshold for ISI violation.
-- :math:`ISI_{min}`: minimum ISI threshold enforced by the data recording system used.
-- :math:`ISI_s` : the array of ISI violations which are observed in the unit's spike train.
-- :math:`\#`: denotes count.
+Originally implemented in the `rpv_contamination` calculation of the UltraMegaSort2000 package: `<https://github.com/danamics/UMS2K/blob/master/quality_measures/rpv_contamination.m>`_.
 
-The threshold for ISI violations is the biological ISI threshold, :math:`ISI_t`, minus the minimum ISI threshold, :math:`ISI_{min}` enforced by the data recording system used.
-The array of inter-spike-intervals observed in the unit's spike train, :math:`ISI_s`, is used to identify the count (:math:`\#`) of observed ISI's below this threshold.
-For a recording with a duration of :math:`T_r` seconds, and a unit with :math:`N_s` spikes, the rate of ISI violations is:
+In this method the number of spikes whose refractory period are violated, denoted :math:`n_v`, is used.
+
+Here, the refactory period :math:`t_r` is adjusted to take account of the data recording system's minimum possible refactory
+period. E.g. if a system has a sampling rate of :math:`f \text{ Hz}`, the closest that two spikes from the same unit can possibly
+be is :math:`1/f \, \text{s}`. Hence the refactory period :math:`t_r` is the expected biological threshold minus this minimum possible
+threshold.
+
+The contamination rate is calculated to be
 
 .. math::
 
-    \textrm{ISI violations} = \frac{ \#( ISI_s < ISI_t) T_r  }{ 2  N_s^2  (ISI_t - ISI_{min}) }
+    C = \frac{ n_v T }{ 2 N^2 t_r }
 
 Calculation from the [Llobet]_ paper
 ------------------------------------
 
-The following quantities are required:
+In this method the number spikes which violate other spikes' refractory periods, denoted :math:`\tilde{n}_v`, is used.
 
-- :math:`T` the duration of the recording.
-- :math:`N` the number of spikes in the unit's spike train.
-- :math:`t_r` the duration of the unit's refractory period.
-- :math:`n_v` the number of violations of the refractory period.
-
-The estimated contamination :math:`C` can be calculated with 2 extreme scenarios. In the first one, the contaminant spikes are completely random (or come from an infinite number of other neurons). In the second one, the contaminant spikes come from a single other neuron:
+The estimated contamination :math:`C` is calculated in 2 extreme scenarios. In the first, the contaminant spikes
+are completely random (or come from an infinite number of other neurons). In the second, the contaminant spikes
+come from a single other neuron. In these scenarios, the contamination rate is
 
 .. math::
 
     C = \frac{FP}{TP + FP} \approx \begin{cases}
-        1 - \sqrt{1 - \frac{n_v T}{N^2 t_r}} \text{ for the case of random contamination} \\
-        \frac{1}{2} \left( 1 - \sqrt{1 - \frac{2 n_v T}{N^2 t_r}} \right) \text{ for the case of 1 contaminant neuron}
+        1 - \sqrt{1 - \frac{\tilde{n}_v T}{N^2 t_r}} \text{ for the case of random contamination} \\
+        \frac{1}{2} \left( 1 - \sqrt{1 - \frac{2 \tilde{n}_v T}{N^2 t_r}} \right) \text{ for the case of 1 contaminant neuron}
     \end{cases}
 
 Where :math:`TP` is the number of true positives (detected spikes that come from the neuron) and :math:`FP` is the number of false positives (detected spikes that don't come from the neuron).
@@ -58,7 +60,9 @@ Expectation and use
 -------------------
 
 ISI violations identifies unit contamination - a high value indicates a highly contaminated unit.
-Despite being a ratio, ISI violations can exceed 1 (or become a complex number in the [Llobet]_ formula). This is usually due to the contaminant events being correlated with our neuron, and their number is greater than a purely random spike train.
+Despite being a ratio, the contamination can exceed 1 (or become a complex number in the [Llobet]_ formula).
+This is usually due to the contaminant events being correlated with our neuron, and their number is
+greater than a purely random spike train.
 
 Example code
 ------------
@@ -86,8 +90,8 @@ With SpikeInterface:
 References
 ----------
 
-Hill implementation (:code:`isi_violation`)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UMS implementation (:code:`isi_violation`)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_isi_violations
 
@@ -160,5 +164,5 @@ Links to original implementations
 Literature
 ----------
 
-Introduced by [Hill]_ (2011).
+Introduced in UltraMegaSort2000 [UMS]_ (2011).
 Also described by [Llobet]_ (2022)
