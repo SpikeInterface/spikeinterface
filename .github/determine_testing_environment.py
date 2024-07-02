@@ -30,6 +30,7 @@ widgets_changed = False
 exporters_changed = False
 sortingcomponents_changed = False
 generation_changed = False
+stream_extractors_changed = False
 
 
 for changed_file in changed_files_in_the_pull_request_paths:
@@ -44,9 +45,9 @@ for changed_file in changed_files_in_the_pull_request_paths:
     elif changed_file.name == "plexon2.py":
         plexon2_changed = True
     elif changed_file.name == "nwbextractors.py":
+        extractors_changed = True  # There are NWB tests that are not streaming
         stream_extractors_changed = True
-        extractors_changed = True
-    elif changed_file.name == "iblstreamingrecording.py":
+    elif changed_file.name == "iblextractors.py":
         stream_extractors_changed = True
     elif "core" in changed_file.parts:
         core_changed = True
