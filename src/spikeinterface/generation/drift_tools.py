@@ -567,7 +567,7 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
 
             wf = template[start_template:end_template]
             if self.amplitude_vector is not None:
-                wf *= self.amplitude_vector[i]
+                wf = wf * self.amplitude_vector[i]
             traces[start_traces:end_traces] += wf.astype(self.dtype, copy=False)
 
         return traces.astype(self.dtype)
