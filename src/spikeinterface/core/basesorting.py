@@ -30,7 +30,7 @@ class BaseSorting(BaseExtractor):
         self._cached_spike_trains = {}
 
     def __repr__(self):
-        clsname = self.__class__.__name__
+        clsname = self.__class__.__name__ if self.name is None else self.name
         nseg = self.get_num_segments()
         nunits = self.get_num_units()
         sf_khz = self.get_sampling_frequency() / 1000.0

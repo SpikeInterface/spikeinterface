@@ -45,7 +45,7 @@ class BaseRecording(BaseRecordingSnippets):
         self.annotate(is_filtered=False)
 
     def __repr__(self):
-        extractor_name = self.__class__.__name__
+        extractor_name = self.__class__.__name__ if self.name is None else self.name
         num_segments = self.get_num_segments()
 
         txt = self._repr_header()

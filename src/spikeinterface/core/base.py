@@ -50,6 +50,8 @@ class BaseExtractor:
     installed = True
     installation_mesg = ""
 
+    name = None  # The name of the extractor for display purposes
+
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
         self._kwargs = {}
