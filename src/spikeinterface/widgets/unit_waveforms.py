@@ -538,6 +538,8 @@ class UnitWaveformsWidget(BaseWidget):
         hide_axis = self.hide_axis_button.value
         do_shading = self.template_shading_button.value
 
+        data_plot = self.next_data_plot
+
         if self.sorting_analyzer is not None:
             templates = self.templates_ext.get_templates(unit_ids=unit_ids, operator="average")
             templates_shadings = self._get_template_shadings(unit_ids, data_plot["templates_percentile_shading"])
@@ -549,7 +551,6 @@ class UnitWaveformsWidget(BaseWidget):
             channel_locations = self.templates.get_channel_locations()
 
         # matplotlib next_data_plot dict update at each call
-        data_plot = self.next_data_plot
         data_plot["unit_ids"] = unit_ids
         data_plot["templates"] = templates
         data_plot["templates_shading"] = templates_shadings
