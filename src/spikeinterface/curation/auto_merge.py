@@ -9,11 +9,12 @@ from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
+from .merge_temporal_splits import compute_presence_distance
 
 
 def get_potential_auto_merge(
     sorting_analyzer,
-    minimum_spikes=1000,
+    minimum_spikes=100,
     maximum_distance_um=150.0,
     peak_sign="neg",
     bin_ms=0.25,
@@ -28,10 +29,17 @@ def get_potential_auto_merge(
     censor_correlograms_ms: float = 0.15,
     num_channels=5,
     num_shift=5,
-    firing_contamination_balance=1.5,
+    firing_contamination_balance=2.5,
     extra_outputs=False,
     steps=None,
+    presence_distance_thresh=100,
+    preset=None,
     template_metric="l1",
+    p_value=0.2,
+    CC_threshold=0.1,
+    k_nn=10,
+    knn_kwargs=None,
+    **presence_distance_kwargs,
 ):
     """
     Algorithm to find and check potential merges between units.
@@ -47,7 +55,9 @@ def get_potential_auto_merge(
         * STEP 3: estimated unit locations are close enough (`maximum_distance_um`)
         * STEP 4: the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
         * STEP 5: the templates of the two units are similar (`template_diff_thresh`)
-        * STEP 6: the unit "quality score" is increased after the merge.
+        * STEP 6: [optional] the presence distance of two units
+        * STEP 7: [optional] the cross-contamination is not significant
+        * STEP 8: the unit "quality score" is increased after the merge.
 
     The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
     contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
@@ -61,7 +71,7 @@ def get_potential_auto_merge(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    minimum_spikes : int, default: 1000
+    minimum_spikes : int, default: 100
         Minimum number of spikes for each unit to consider a potential merge.
         Enough spikes are needed to estimate the correlogram
     maximum_distance_um : float, default: 150
@@ -96,15 +106,22 @@ def get_potential_auto_merge(
         Number of channel to use for template similarity computation
     num_shift : int, default: 5
         Number of shifts in samles to be explored for template similarity computation
-    firing_contamination_balance : float, default: 1.5
+    firing_contamination_balance : float, default: 2.5
         Parameter to control the balance between firing rate and contamination in computing unit "quality score"
+    presence_distance_thresh : float, default: 100
+        Parameter to control how present two units should be simultaneously
+    k_nn : int, default 5
+        The number of neighbors to consider for every spike in the recording
+    knn_kwargs : dict, default None
+        The dict of extra params to be passed to knn
     extra_outputs : bool, default: False
         If True, an additional dictionary (`outs`) with processed data is returned
     steps : None or list of str, default: None
         which steps to run (gives flexibility to running just some steps)
-        If None all steps are done.
-        Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram", "template_similarity",
-        "check_increase_score". Please check steps explanations above!
+        If None all steps are done (except presence_distance).
+        Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram",
+        "template_similarity", "presence_distance", "cross_contamination", "knn", "check_increase_score"
+        Please check steps explanations above!
     template_metric : 'l1', 'l2' or 'cosine'
         The metric to consider when measuring the distances between templates. Default is l1
 
@@ -122,130 +139,245 @@ def get_potential_auto_merge(
     sorting = sorting_analyzer.sorting
     recording = sorting_analyzer.recording
     unit_ids = sorting.unit_ids
+    sorting.register_recording(recording)
 
     # to get fast computation we will not analyse pairs when:
     #    * not enough spikes for one of theses
     #    * auto correlogram is contaminated
     #    * to far away one from each other
 
+    all_steps = [
+        "min_spikes",
+        "remove_contaminated",
+        "unit_positions",
+        "correlogram",
+        "template_similarity",
+        "presence_distance",
+        "knn",
+        "cross_contamination",
+        "check_increase_score",
+    ]
+
     if steps is None:
-        steps = [
-            "min_spikes",
-            "remove_contaminated",
-            "unit_positions",
-            "correlogram",
-            "template_similarity",
-            "check_increase_score",
-        ]
+        if preset is None:
+            steps = [
+                "min_spikes",
+                "remove_contaminated",
+                "unit_positions",
+                "template_similarity",
+                "correlogram",
+                "check_increase_score",
+            ]
+        elif preset == "temporal_splits":
+            steps = [
+                "min_spikes",
+                "remove_contaminated",
+                "unit_positions",
+                "template_similarity",
+                "correlogram",
+                "presence_distance",
+                "check_increase_score",
+            ]
+        elif preset == "lussac":
+            steps = [
+                "min_spikes",
+                "remove_contaminated",
+                "unit_positions",
+                "template_similarity",
+                "cross_contamination",
+                "check_increase_score",
+            ]
+        elif preset == "knn":
+            steps = [
+                "min_spikes",
+                "remove_contaminated",
+                "unit_positions",
+                "knn",
+                "correlogram",
+                "check_increase_score",
+            ]
 
     n = unit_ids.size
-    pair_mask = np.ones((n, n), dtype="bool")
+    pair_mask = np.triu(np.arange(n)) > 0
+    outs = dict()
 
-    # STEP 1 :
-    if "min_spikes" in steps:
-        num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
-        to_remove = num_spikes < minimum_spikes
-        pair_mask[to_remove, :] = False
-        pair_mask[:, to_remove] = False
+    for step in steps:
 
-    # STEP 2 : remove contaminated auto corr
-    if "remove_contaminated" in steps:
-        contaminations, nb_violations = compute_refrac_period_violations(
-            sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
-        )
-        nb_violations = np.array(list(nb_violations.values()))
-        contaminations = np.array(list(contaminations.values()))
-        to_remove = contaminations > contamination_threshold
-        pair_mask[to_remove, :] = False
-        pair_mask[:, to_remove] = False
+        assert step in all_steps, f"{step} is not a valid step"
 
-    # STEP 3 : unit positions are estimated roughly with channel
-    if "unit_positions" in steps:
-        positions_ext = sorting_analyzer.get_extension("unit_locations")
-        if positions_ext is not None:
-            unit_locations = positions_ext.get_data()[:, :2]
-        else:
-            chan_loc = sorting_analyzer.get_channel_locations()
-            unit_max_chan = get_template_extremum_channel(
-                sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
+        # STEP : remove units with too few spikes
+        if step == "min_spikes":
+            num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
+            to_remove = num_spikes < minimum_spikes
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
+
+        # STEP : remove contaminated auto corr
+        elif step == "remove_contaminated":
+            contaminations, nb_violations = compute_refrac_period_violations(
+                sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
             )
-            unit_max_chan = list(unit_max_chan.values())
-            unit_locations = chan_loc[unit_max_chan, :]
+            nb_violations = np.array(list(nb_violations.values()))
+            contaminations = np.array(list(contaminations.values()))
+            to_remove = contaminations > contamination_threshold
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
 
-        unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
-        pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
+        # STEP : unit positions are estimated roughly with channel
+        elif step == "unit_positions" in steps:
+            positions_ext = sorting_analyzer.get_extension("unit_locations")
+            if positions_ext is not None:
+                unit_locations = positions_ext.get_data()[:, :2]
+            else:
+                chan_loc = sorting_analyzer.get_channel_locations()
+                unit_max_chan = get_template_extremum_channel(
+                    sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
+                )
+                unit_max_chan = list(unit_max_chan.values())
+                unit_locations = chan_loc[unit_max_chan, :]
 
-    # STEP 4 : potential auto merge by correlogram
-    if "correlogram" in steps:
-        correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
-        mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
-        correlograms[:, :, mask] = 0
-        correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
-        # find correlogram window for each units
-        win_sizes = np.zeros(n, dtype=int)
-        for unit_ind in range(n):
-            auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
-            thresh = np.max(auto_corr) * adaptative_window_threshold
-            win_size = get_unit_adaptive_window(auto_corr, thresh)
-            win_sizes[unit_ind] = win_size
-        correlogram_diff = compute_correlogram_diff(
-            sorting,
-            correlograms_smoothed,
-            win_sizes,
-            pair_mask=pair_mask,
-        )
-        # print(correlogram_diff)
-        pair_mask = pair_mask & (correlogram_diff < corr_diff_thresh)
+            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
+            pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
+            outs["unit_distances"] = unit_distances
 
-    # STEP 5 : check if potential merge with CC also have template similarity
-    if "template_similarity" in steps:
-        templates_ext = sorting_analyzer.get_extension("templates")
-        assert (
-            templates_ext is not None
-        ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
+        # STEP : potential auto merge by correlogram
+        elif step == "correlogram" in steps:
+            correlograms_ext = sorting_analyzer.get_extension("correlograms")
+            if correlograms_ext is not None:
+                correlograms, bins = correlograms_ext.get_data()
+            else:
+                correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
+            mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
+            correlograms[:, :, mask] = 0
+            correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
+            # find correlogram window for each units
+            win_sizes = np.zeros(n, dtype=int)
+            for unit_ind in range(n):
+                auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
+                thresh = np.max(auto_corr) * adaptative_window_threshold
+                win_size = get_unit_adaptive_window(auto_corr, thresh)
+                win_sizes[unit_ind] = win_size
+            correlogram_diff = compute_correlogram_diff(
+                sorting,
+                correlograms_smoothed,
+                win_sizes,
+                pair_mask=pair_mask,
+            )
+            # print(correlogram_diff)
+            pair_mask = pair_mask & (correlogram_diff < corr_diff_thresh)
+            outs["correlograms"] = correlograms
+            outs["bins"] = bins
+            outs["correlograms_smoothed"] = correlograms_smoothed
+            outs["correlogram_diff"] = correlogram_diff
+            outs["win_sizes"] = win_sizes
 
-        templates_array = templates_ext.get_data(outputs="numpy")
+        # STEP : check if potential merge with CC also have template similarity
+        elif step == "template_similarity" in steps:
+            template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
+            if template_similarity_ext is not None:
+                templates_similarity = template_similarity_ext.get_data()
+                templates_diff = 1 - templates_similarity
 
-        templates_diff = compute_templates_diff(
-            sorting,
-            templates_array,
-            num_channels=num_channels,
-            num_shift=num_shift,
-            pair_mask=pair_mask,
-            template_metric=template_metric,
-            sparsity=sorting_analyzer.sparsity,
-        )
+            else:
+                templates_ext = sorting_analyzer.get_extension("templates")
+                assert (
+                    templates_ext is not None
+                ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
+                templates_array = templates_ext.get_data(outputs="numpy")
 
-        pair_mask = pair_mask & (templates_diff < template_diff_thresh)
+                templates_diff = compute_templates_diff(
+                    sorting,
+                    templates_array,
+                    num_channels=num_channels,
+                    num_shift=num_shift,
+                    pair_mask=pair_mask,
+                    template_metric=template_metric,
+                    sparsity=sorting_analyzer.sparsity,
+                )
 
-    # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
-    if "check_increase_score" in steps:
-        pair_mask, pairs_decreased_score = check_improve_contaminations_score(
-            sorting_analyzer,
-            pair_mask,
-            contaminations,
-            firing_contamination_balance,
-            refractory_period_ms,
-            censored_period_ms,
-        )
+            pair_mask = pair_mask & (templates_diff < template_diff_thresh)
+            outs["templates_diff"] = templates_diff
+
+        # STEP : check the vicinity of the spikes
+        elif step == "knn" in steps:
+            if knn_kwargs is None:
+                knn_kwargs = dict()
+            pair_mask = get_pairs_via_nntree(sorting_analyzer, k_nn, pair_mask, **knn_kwargs)
+
+        # STEP : check how the rates overlap in times
+        elif step == "presence_distance" in steps:
+            presence_distances = compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs)
+            pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
+            outs["presence_distances"] = presence_distances
+
+        # STEP : check if the cross contamination is significant
+        elif step == "cross_contamination" in steps:
+            refractory = (censored_period_ms, refractory_period_ms)
+            CC, p_values = compute_cross_contaminations(sorting_analyzer, pair_mask, CC_threshold, refractory)
+            pair_mask = pair_mask & (p_values > p_value)
+            outs["cross_contaminations"] = CC, p_values
+
+        # STEP : validate the potential merges with CC increase the contamination quality metrics
+        elif step == "check_increase_score" in steps:
+            pair_mask, pairs_decreased_score = check_improve_contaminations_score(
+                sorting_analyzer,
+                pair_mask,
+                contaminations,
+                firing_contamination_balance,
+                refractory_period_ms,
+                censored_period_ms,
+            )
+            outs["pairs_decreased_score"] = pairs_decreased_score
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
     potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
 
     if extra_outputs:
-        outs = dict(
-            correlograms=correlograms,
-            bins=bins,
-            correlograms_smoothed=correlograms_smoothed,
-            correlogram_diff=correlogram_diff,
-            win_sizes=win_sizes,
-            templates_diff=templates_diff,
-            pairs_decreased_score=pairs_decreased_score,
-        )
         return potential_merges, outs
     else:
         return potential_merges
+
+
+def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):
+
+    sorting = sorting_analyzer.sorting
+    unit_ids = sorting.unit_ids
+    n = len(unit_ids)
+
+    if pair_mask is None:
+        pair_mask = np.ones((n, n), dtype="bool")
+
+    spike_positions = sorting_analyzer.get_extension("spike_locations").get_data()
+    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+    spikes = sorting_analyzer.sorting.to_spike_vector()
+
+    ## We need to build a sparse distance matrix
+    data = np.vstack((spike_amplitudes, spike_positions["x"], spike_positions["y"])).T
+    from sklearn.neighbors import NearestNeighbors
+
+    data = (data - data.mean(0)) / data.std(0)
+    all_spike_counts = sorting_analyzer.sorting.count_num_spikes_per_unit()
+    all_spike_counts = np.array(list(all_spike_counts.keys()))
+
+    kdtree = NearestNeighbors(n_neighbors=k_nn, **knn_kwargs)
+    kdtree.fit(data)
+
+    for unit_ind in range(n):
+        mask = spikes["unit_index"] == unit_ind
+        valid = pair_mask[unit_ind, unit_ind + 1 :]
+        valid_indices = np.arange(unit_ind + 1, n)[valid]
+        if len(valid_indices) > 0:
+            ind = kdtree.kneighbors(data[mask], return_distance=False)
+            ind = ind.flatten()
+            mask_2 = np.isin(spikes["unit_index"][ind], valid_indices)
+            ind = ind[mask_2]
+            chan_inds, all_counts = np.unique(spikes["unit_index"][ind], return_counts=True)
+            all_counts = all_counts.astype(float)
+            all_counts /= all_spike_counts[chan_inds]
+            best_indices = np.argsort(all_counts)[::-1]
+            pair_mask[unit_ind] &= np.isin(np.arange(n), chan_inds[best_indices])
+    return pair_mask
 
 
 def compute_correlogram_diff(sorting, correlograms_smoothed, win_sizes, pair_mask=None):
@@ -390,6 +522,54 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
+def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_period):
+    """
+    Looks at a sorting analyzer, and returns statistical tests for cross_contaminations
+
+    Parameters
+    ----------
+    analyzer : SortingAnalyzer
+        The analyzer to look at
+    CC_treshold : float, default: 0.1
+        The threshold on the cross-contamination.
+        Any pair above this threshold will not be considered.
+    refractory_period : array/list/tuple of 2 floats
+        (censored_period_ms, refractory_period_ms)
+
+    """
+
+    sorting = analyzer.sorting
+    unit_ids = sorting.unit_ids
+    n = len(unit_ids)
+    sf = analyzer.recording.sampling_frequency
+    n_frames = analyzer.recording.get_num_samples()
+    from spikeinterface.sortingcomponents.merging.lussac import estimate_cross_contamination
+
+    if pair_mask is None:
+        pair_mask = np.ones((n, n), dtype="bool")
+
+    CC = np.zeros((n, n), dtype=np.float32)
+    p_values = np.zeros((n, n), dtype=np.float32)
+
+    for unit_ind1 in range(len(unit_ids)):
+
+        unit_id1 = unit_ids[unit_ind1]
+        spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
+
+        for unit_ind2 in range(unit_ind1 + 1, len(unit_ids)):
+            if not pair_mask[unit_ind1, unit_ind2]:
+                continue
+
+            unit_id2 = unit_ids[unit_ind2]
+            spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
+            # Compuyting the cross-contamination difference
+            CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2] = estimate_cross_contamination(
+                spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold
+            )
+
+    return CC, p_values
+
+
 def compute_templates_diff(
     sorting, templates_array, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1", sparsity=None
 ):
@@ -434,6 +614,7 @@ def compute_templates_diff(
         sparsity_mask = sparsity.mask
 
     templates_diff = np.full((n, n), np.nan, dtype="float64")
+    all_shifts = range(-num_shift, num_shift + 1)
     for unit_ind1 in range(n):
         for unit_ind2 in range(unit_ind1 + 1, n):
             if not pair_mask[unit_ind1, unit_ind2]:
@@ -445,31 +626,33 @@ def compute_templates_diff(
             if not adaptative_masks:
                 chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
             else:
-                chan_inds = np.intersect1d(
-                    np.flatnonzero(sparsity_mask[unit_ind1]), np.flatnonzero(sparsity_mask[unit_ind2])
-                )
+                chan_inds = np.flatnonzero(sparsity_mask[unit_ind1] * sparsity_mask[unit_ind2])
 
-            template1 = template1[:, chan_inds]
-            template2 = template2[:, chan_inds]
+            if len(chan_inds) > 0:
+                template1 = template1[:, chan_inds]
+                template2 = template2[:, chan_inds]
 
-            num_samples = template1.shape[0]
-            if template_metric == "l1":
-                norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
-            elif template_metric == "l2":
-                norm = np.sum(template1**2) + np.sum(template2**2)
-            elif template_metric == "cosine":
-                norm = np.linalg.norm(template1) * np.linalg.norm(template2)
-            all_shift_diff = []
-            for shift in range(-num_shift, num_shift + 1):
-                temp1 = template1[num_shift : num_samples - num_shift, :]
-                temp2 = template2[num_shift + shift : num_samples - num_shift + shift, :]
+                num_samples = template1.shape[0]
                 if template_metric == "l1":
-                    d = np.sum(np.abs(temp1 - temp2)) / norm
+                    norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
                 elif template_metric == "l2":
-                    d = np.linalg.norm(temp1 - temp2) / norm
+                    norm = np.sum(template1**2) + np.sum(template2**2)
                 elif template_metric == "cosine":
-                    d = 1 - np.sum(temp1 * temp2) / norm
-                all_shift_diff.append(d)
+                    norm = np.linalg.norm(template1) * np.linalg.norm(template2)
+                all_shift_diff = []
+                for shift in all_shifts:
+                    temp1 = template1[num_shift : num_samples - num_shift, :]
+                    temp2 = template2[num_shift + shift : num_samples - num_shift + shift, :]
+                    if template_metric == "l1":
+                        d = np.sum(np.abs(temp1 - temp2)) / norm
+                    elif template_metric == "l2":
+                        d = np.linalg.norm(temp1 - temp2) / norm
+                    elif template_metric == "cosine":
+                        d = 1 - np.sum(temp1 * temp2) / norm
+                    all_shift_diff.append(d)
+            else:
+                all_shift_diff = [1] * len(all_shifts)
+
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
 
     return templates_diff
@@ -520,10 +703,10 @@ def check_improve_contaminations_score(
         f_new = compute_firing_rates(sorting_analyzer_new)[unit_id1]
 
         # old and new scores
-        k = 1 + firing_contamination_balance
-        score_1 = f_1 * (1 - k * c_1)
-        score_2 = f_2 * (1 - k * c_2)
-        score_new = f_new * (1 - k * c_new)
+        k = firing_contamination_balance
+        score_1 = f_1 * (1 - (k + 1) * c_1)
+        score_2 = f_2 * (1 - (k + 1) * c_2)
+        score_new = f_new * (1 - (k + 1) * c_new)
 
         if score_new < score_1 or score_new < score_2:
             # the score is not improved

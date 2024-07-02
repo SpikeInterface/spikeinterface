@@ -14,9 +14,6 @@ from spikeinterface.preprocessing import common_reference, whiten, bandpass_filt
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.curation.auto_merge import get_potential_auto_merge
-from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
@@ -36,13 +33,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
-        "merging": {
-            "minimum_spikes": 10,
-            "corr_diff_thresh": 0.5,
-            "template_metric": "cosine",
-            "censor_correlograms_ms": 0.4,
-            "num_channels": None,
-        },
+        "merging": {"method": "lussac"},
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
         "apply_preprocessing": True,
@@ -103,13 +94,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+        from spikeinterface.sortingcomponents.merging import merge_spikes
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
-        from spikeinterface.sortingcomponents.tools import get_prototype_spike
+        from spikeinterface.core.globals import set_global_job_kwargs, get_global_job_kwargs
 
-        job_kwargs = params["job_kwargs"]
+        job_kwargs_before = get_global_job_kwargs().copy()
+        job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs.update({"progress_bar": verbose})
+        set_global_job_kwargs(**job_kwargs)
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -216,6 +209,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["ms_before"] = exclude_sweep_ms
             clustering_params["ms_after"] = exclude_sweep_ms
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
+            clustering_params["verbose"] = verbose
 
             legacy = clustering_params.get("legacy", True)
 
@@ -334,7 +328,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting.save(folder=curation_folder)
                 # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params)
+            merging_params["method_kwargs"] = {"templates": templates}
+            sorting = merge_spikes(recording_w, sorting, **merging_params)
 
             if verbose:
                 print(f"Final merging, keeping {len(sorting.unit_ids)} units")
@@ -351,29 +346,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(folder_to_delete)
 
         sorting = sorting.save(folder=sorting_folder)
+        set_global_job_kwargs(**job_kwargs_before)
 
         return sorting
-
-
-def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
-
-    from spikeinterface.sortingcomponents.clustering.clustering_tools import (
-        resolve_merging_graph,
-        apply_merges_to_sorting,
-    )
-
-    sparsity = templates.sparsity
-    templates_array = templates.get_dense_templates().copy()
-
-    sa = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
-
-    sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"nbefore": templates.nbefore}
-    sa.extensions["templates"].data["average"] = templates_array
-    sa.compute("unit_locations", method="monopolar_triangulation")
-    merges = get_potential_auto_merge(sa, **merging_kwargs)
-    merges = resolve_merging_graph(sorting, merges)
-    sorting = apply_merges_to_sorting(sorting, merges)
-    # sorting = merge_units_sorting(sorting, merges)
-
-    return sorting
