@@ -242,7 +242,7 @@ for preset in presets_to_run:
 #   * The preset **kilosort_like** gives better results because it is a non-rigid case.
 #     The motion vector is computed for different depths.
 #     The corrected peak locations are flatter than the rigid case.
-#     The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
+#     The motion vector map is still a bit noisy at some depths (e.g around 1000um).
 #   * The preset **nonrigid_accurate** seems to give the best results on this recording.
 #     The motion vector seems less noisy globally, but it is not 'perfect' (see at the top of the probe 3200um to 3800um).
 #     Also note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
