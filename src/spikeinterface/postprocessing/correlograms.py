@@ -192,7 +192,7 @@ def _compute_num_bins(window_size, bin_size):
 
 def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     """
-    Computes several cross-correlogram in one course from several clusters.
+    Computes cross-correlograms from multiple units.
 
     Entry function to compute correlograms across all units in a `Sorting`
     object (i.e. spike trains at all determined offsets will be computed
@@ -342,7 +342,7 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
             m = mask[:-shift]
 
             # Find the indices in the raveled correlograms array that need
-            # to be incremented, taking into account the spike clusters.
+            # to be incremented, taking into account the spike unit labels.
             if sign == 1:
                 indices = np.ravel_multi_index(
                     (spike_labels[+shift:][m], spike_labels[:-shift][m], spike_diff_b[m] + num_half_bins),
