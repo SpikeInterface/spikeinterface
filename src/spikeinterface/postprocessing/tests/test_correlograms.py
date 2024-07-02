@@ -189,18 +189,18 @@ def test_compute_correlograms(fill_all_bins, on_time_bin, multi_segment):
     counts should double when two segments with identical spike times / labels are used.
     """
     sampling_frequency = 30000
-    window_ms, bin_ms, spike_times, spike_labels, expected_bins, expected_result_auto, expected_result_corr = (
+    window_ms, bin_ms, spike_times, spike_unit_indices, expected_bins, expected_result_auto, expected_result_corr = (
         generate_correlogram_test_dataset(sampling_frequency, fill_all_bins, on_time_bin)
     )
 
     if multi_segment:
         sorting = NumpySorting.from_times_labels(
-            times_list=[spike_times], labels_list=[spike_labels], sampling_frequency=sampling_frequency
+            times_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
         )
     else:
         sorting = NumpySorting.from_times_labels(
             times_list=[spike_times, spike_times],
-            labels_list=[spike_labels, spike_labels],
+            labels_list=[spike_unit_indices, spike_unit_indices],
             sampling_frequency=sampling_frequency,
         )
         expected_result_auto *= 2
@@ -235,13 +235,13 @@ def test_compute_correlograms_different_units(method):
     spike_times = np.array([0, 4, 8, 16]) / 1000 * sampling_frequency
     spike_times.astype(int)
 
-    spike_labels = np.array([0, 1, 0, 1])
+    spike_unit_indices = np.array([0, 1, 0, 1])
 
     window_ms = 40
     bin_ms = 5
 
     sorting = NumpySorting.from_times_labels(
-        times_list=[spike_times], labels_list=[spike_labels], sampling_frequency=sampling_frequency
+        times_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
     )
 
     result, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -323,7 +323,7 @@ def generate_correlogram_test_dataset(sampling_frequency, fill_all_bins, hit_bin
     # Now, make a set of times that increase by `base_diff_time` e.g.
     # if base_diff_time=0.0051 then our spike times are [`0.0051, 0.0102, ...]`
     spike_times = np.repeat(np.arange(num_filled_bins), num_units) * base_diff_time
-    spike_labels = np.tile(np.arange(num_units), int(spike_times.size / num_units))
+    spike_unit_indices = np.tile(np.arange(num_units), int(spike_times.size / num_units))
 
     spike_times *= sampling_frequency
     spike_times = spike_times.astype(int)
@@ -368,4 +368,4 @@ def generate_correlogram_test_dataset(sampling_frequency, fill_all_bins, hit_bin
     expected_result_corr = expected_result_auto.copy()
     expected_result_corr[int(num_bins / 2)] = num_filled_bins
 
-    return window_ms, bin_ms, spike_times, spike_labels, expected_bins, expected_result_auto, expected_result_corr
+    return window_ms, bin_ms, spike_times, spike_unit_indices, expected_bins, expected_result_auto, expected_result_corr

@@ -262,16 +262,16 @@ def _compute_correlograms_numpy(sorting, window_size, bin_size):
 
     for seg_index in range(num_seg):
         spike_times = spikes[seg_index]["sample_index"]
-        spike_labels = spikes[seg_index]["unit_index"]
+        spike_unit_indices = spikes[seg_index]["unit_index"]
 
-        c0 = correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size)
+        c0 = correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size)
 
         correlograms += c0
 
     return correlograms
 
 
-def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size):
+def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size):
     """
     A very well optimized algorithm for the cross-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
@@ -281,7 +281,7 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
     spike_times : np.ndarray
         An array of spike times (in samples, not seconds).
         This contains spikes from all units.
-    spike_labels : np.ndarray
+    spike_unit_indices : np.ndarray
         An array of labels indicating the unit of the corresponding
         spike in `spike_times`.
     window_size : int
@@ -315,7 +315,7 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
     match within the window size.
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
-    num_units = len(np.unique(spike_labels))
+    num_units = len(np.unique(spike_unit_indices))
 
     correlograms = np.zeros((num_units, num_units, num_bins), dtype="int64")
 
@@ -347,12 +347,12 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
             # to be incremented, taking into account the spike unit labels.
             if sign == 1:
                 indices = np.ravel_multi_index(
-                    (spike_labels[+shift:][m], spike_labels[:-shift][m], spike_diff_b[m] + num_half_bins),
+                    (spike_unit_indices[+shift:][m], spike_unit_indices[:-shift][m], spike_diff_b[m] + num_half_bins),
                     correlograms.shape,
                 )
             else:
                 indices = np.ravel_multi_index(
-                    (spike_labels[:-shift][m], spike_labels[+shift:][m], spike_diff_b[m] + num_half_bins),
+                    (spike_unit_indices[:-shift][m], spike_unit_indices[+shift:][m], spike_diff_b[m] + num_half_bins),
                     correlograms.shape,
                 )
 
@@ -411,12 +411,12 @@ def _compute_correlograms_numba(sorting, window_size, bin_size):
 
     for seg_index in range(sorting.get_num_segments()):
         spike_times = spikes[seg_index]["sample_index"]
-        spike_labels = spikes[seg_index]["unit_index"]
+        spike_unit_indices = spikes[seg_index]["unit_index"]
 
         _compute_correlograms_one_segment_numba(
             correlograms,
             spike_times.astype(np.int64, copy=False),
-            spike_labels.astype(np.int32, copy=False),
+            spike_unit_indices.astype(np.int32, copy=False),
             window_size,
             bin_size,
             num_half_bins,
@@ -433,7 +433,7 @@ if HAVE_NUMBA:
         cache=False,
     )
     def _compute_correlograms_one_segment_numba(
-        correlograms, spike_times, spike_labels, window_size, bin_size, num_half_bins
+        correlograms, spike_times, spike_unit_indices, window_size, bin_size, num_half_bins
     ):
         """
         Compute the correlograms using `numba` for speed.
@@ -455,7 +455,7 @@ if HAVE_NUMBA:
         spike_times : np.ndarray
             An array of spike times (in samples, not seconds).
             This contains spikes from all units.
-        spike_labels : np.ndarray
+        spike_unit_indices : np.ndarray
             An array of labels indicating the unit of the corresponding
             spike in `spike_times`.
         window_size : int
@@ -494,4 +494,4 @@ if HAVE_NUMBA:
 
                 bin = diff // bin_size
 
-                correlograms[spike_labels[i], spike_labels[j], num_half_bins + bin] += 1
+                correlograms[spike_unit_indices[i], spike_unit_indices[j], num_half_bins + bin] += 1
