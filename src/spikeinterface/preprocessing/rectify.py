@@ -22,7 +22,7 @@ class RectifyRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         return np.abs(traces)
 

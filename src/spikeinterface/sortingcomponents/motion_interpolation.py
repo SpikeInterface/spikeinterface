@@ -420,7 +420,7 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         self.dtype = dtype
         self.motion = motion
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         if self.time_vector is not None:
             raise NotImplementedError("InterpolateMotionRecording does not yet support recordings with time_vectors.")
 

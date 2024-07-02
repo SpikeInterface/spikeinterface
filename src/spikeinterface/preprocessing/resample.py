@@ -114,7 +114,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self):
         return int(self._parent_segment.get_num_samples() / self._parent_rate * self.sampling_frequency)
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         # get parent traces with margin
         parent_start_frame, parent_end_frame = [
             int((frame / self.sampling_frequency) * self._parent_rate) for frame in [start_frame, end_frame]

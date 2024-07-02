@@ -161,7 +161,7 @@ class ClipRecordingSegment(BasePreprocessorSegment):
         self.a_max = a_max
         self.value_max = value_max
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
 

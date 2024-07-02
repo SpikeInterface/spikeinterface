@@ -74,7 +74,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
 
         super().__init__(parent_recording_segment=recording_segment)
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         # This contains the padded elements by default and we add the original traces if necessary
         trace_size = end_frame - start_frame
         if isinstance(channel_indices, (np.ndarray, list)):
@@ -194,7 +194,7 @@ class ZeroChannelPaddedRecordingSegment(BasePreprocessorSegment):
         self.num_channels = num_channels
         self.channel_mapping = channel_mapping
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         traces = np.zeros((end_frame - start_frame, self.num_channels))
         traces[:, self.channel_mapping] = self.parent_recording_segment.get_traces(
             start_frame=start_frame, end_frame=end_frame, channel_indices=self.channel_mapping

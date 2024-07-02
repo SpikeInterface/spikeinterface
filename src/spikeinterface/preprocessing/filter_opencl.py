@@ -97,7 +97,7 @@ class FilterOpenCLRecordingSegment(BasePreprocessorSegment):
         self.executor = executor
         self.margin = margin
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         assert start_frame is not None, "FilterOpenCLRecording only works with fixed chunk_size"
         assert end_frame is not None, "FilterOpenCLRecording only works with fixed chunk_size"
 
