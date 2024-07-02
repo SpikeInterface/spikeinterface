@@ -115,8 +115,8 @@ from spikeinterface.widgets import plot_peaks_on_probe
 #    need to place the code within a  ``if __name__ == "__main__":`` block.
 
 
-num_units = 10# 200  # 250 still too many I think!
-duration = 50  # 1000
+num_units = 200
+duration = 1000
 
 _, raw_recording, _ = generate_drifting_recording(
     num_units=num_units,

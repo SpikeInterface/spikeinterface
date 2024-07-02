@@ -20,7 +20,8 @@ see the :ref:`motion_correction` section of the documentation and
 the `kilosort4 page <https://kilosort.readthedocs.io/en/latest/drift.html>`_
 on drift correction. Drift correction may not always work as expected
 (for example, if the probe has a small number of channels), see the
-`When do I need to apply drift correction?`_ section.
+`When do I need to apply drift correction?`_ section for assessing
+drift correction output.
 
 ---------------------
 What is probe drift?
@@ -114,8 +115,8 @@ from spikeinterface.widgets import plot_peaks_on_probe
 #    need to place the code within a  ``if __name__ == "__main__":`` block.
 
 
-num_units = 10# 200  # 250 still too many I think!
-duration = 50  # 1000
+num_units = 200  # 250 still too many I think!
+duration = 1000
 
 _, raw_recording, _ = generate_drifting_recording(
     num_units=num_units,
