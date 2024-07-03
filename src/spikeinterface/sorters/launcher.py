@@ -26,8 +26,7 @@ _default_engine_kwargs = dict(
     joblib=dict(n_jobs=-1, backend="loky"),
     processpoolexecutor=dict(max_workers=2, mp_context=None),
     dask=dict(client=None),
-    slurm={"tmp_script_folder": None,
-           'sbatch_args': {"cpus-per-task": 1, "mem": "1G"}},
+    slurm={"tmp_script_folder": None, "sbatch_args": {"cpus-per-task": 1, "mem": "1G"}},
 )
 
 
@@ -187,8 +186,8 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
                 f.write(slurm_script)
                 os.fchmod(f.fileno(), mode=stat.S_IRWXU)
 
-            progr = ['sbatch']
-            for k, v in engine_kwargs['sbatch_args'].items():
+            progr = ["sbatch"]
+            for k, v in engine_kwargs["sbatch_args"].items():
                 progr.append(f"--{k}")
                 progr.append(f"{v}")
             progr.append(str(script_name.absolute()))
