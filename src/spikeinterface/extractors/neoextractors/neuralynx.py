@@ -26,16 +26,17 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
-    exlude_filename : list[str], default: None
+    exclude_filename : list[str], default: None
         List of filename to exclude from the loading.
         For example, use `exclude_filename=["events.nev"]` to skip loading the event file.
     strict_gap_mode : bool, default: False
         See neo documentation.
         Detect gaps using strict mode or not.
-          * strict_gap_mode = True then a gap is consider when timstamp difference between two
-            consecutive data packets is more than one sample interval.
-          * strict_gap_mode = False then a gap has an increased tolerance. Some new systems with different clocks need this option
-            otherwise, too many gaps are detected
+        * strict_gap_mode = True then a gap is consider when timstamp difference between
+        two consecutive data packets is more than one sample interval.
+        * strict_gap_mode = False then a gap has an increased tolerance. Some new systems
+        with different clocks need this option otherwise, too many gaps are detected
+
         Note that here the default is False contrary to neo.
     """
 

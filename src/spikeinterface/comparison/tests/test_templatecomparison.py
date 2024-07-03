@@ -16,7 +16,12 @@ def test_compare_multiple_templates():
     duration = 60
     num_channels = 8
 
-    rec, sort = generate_ground_truth_recording(durations=[duration], num_channels=num_channels)
+    seed = 0
+    rec, sort = generate_ground_truth_recording(
+        durations=[duration],
+        num_channels=num_channels,
+        seed=seed,
+    )
 
     # split recording in 3 equal slices
     fs = rec.get_sampling_frequency()

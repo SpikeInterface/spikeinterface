@@ -127,7 +127,7 @@ def create_sorting_analyzer(
             recording.channel_ids, sparsity.channel_ids
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
     elif sparse:
-        sparsity = estimate_sparsity(recording, sorting, **sparsity_kwargs)
+        sparsity = estimate_sparsity(sorting, recording, **sparsity_kwargs)
     else:
         sparsity = None
 
@@ -970,7 +970,9 @@ class SortingAnalyzer:
         extension_class = get_extension_class(extension_name)
 
         for child in _get_children_dependencies(extension_name):
-            self.delete_extension(child)
+            if self.has_extension(child):
+                print(f"Deleting {child}")
+                self.delete_extension(child)
 
         if extension_class.need_job_kwargs:
             params, job_kwargs = split_job_kwargs(kwargs)
@@ -1229,7 +1231,7 @@ class SortingAnalyzer:
         """
         return get_available_analyzer_extensions()
 
-    def get_default_extension_params(self, extension_name: str):
+    def get_default_extension_params(self, extension_name: str) -> dict:
         """
         Get the default params for an extension.
 
@@ -1608,7 +1610,9 @@ class AnalyzerExtension:
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             for ext_data_file in extension_folder.iterdir():
-                if ext_data_file.name == "params.json":
+                # patch for https://github.com/SpikeInterface/spikeinterface/issues/3041
+                # maybe add a check for version number from the info.json during loading only
+                if ext_data_file.name == "params.json" or ext_data_file.name == "info.json":
                     continue
                 ext_data_name = ext_data_file.stem
                 if ext_data_file.suffix == ".json":

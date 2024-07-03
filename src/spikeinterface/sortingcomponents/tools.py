@@ -62,6 +62,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
         return_scaled=False,
         sparsity_mask=sparsity_mask,
         copy=True,
+        verbose=False,
         **job_kwargs,
     )
 
