@@ -85,7 +85,7 @@ def select_peaks(
             i0, i1 = np.searchsorted(selected_peaks["segment_index"], [segment_index, segment_index + 1])
             while selected_peaks["sample_index"][i0] <= margin[0] + offset:
                 i0 += 1
-            while selected_peaks["sample_index"][i1-1] >= (duration - margin[1]) + offset:
+            while selected_peaks["sample_index"][i1 - 1] >= (duration - margin[1]) + offset:
                 i1 -= 1
             to_keep[i0:i1] = True
             offset += duration
