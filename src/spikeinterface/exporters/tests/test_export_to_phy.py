@@ -91,6 +91,69 @@ def test_export_to_phy_by_property(sorting_analyzer_with_group_for_export, creat
     assert template_inds.shape == (sorting_analyzer.unit_ids.size, 4)
 
 
+def test_export_to_phy_metrics(sorting_analyzer_sparse_for_export, create_cache_folder):
+    cache_folder = create_cache_folder
+
+    sorting_analyzer = sorting_analyzer_sparse_for_export
+
+    # quality metrics are computed already
+    qm = sorting_analyzer.get_extension("quality_metrics").get_data()
+    output_folder = cache_folder / "phy_output_qm"
+    export_to_phy(
+        sorting_analyzer,
+        output_folder,
+        compute_pc_features=False,
+        compute_amplitudes=False,
+        n_jobs=1,
+        chunk_size=10000,
+        progress_bar=True,
+        add_quality_metrics=True,
+    )
+    for col_name in qm.columns:
+        assert (output_folder / f"cluster_{col_name}.tsv").is_file()
+
+    # quality metrics are computed already
+    tm_ext = sorting_analyzer.compute("template_metrics")
+    tm = tm_ext.get_data()
+    output_folder = cache_folder / "phy_output_tm_not_qm"
+    export_to_phy(
+        sorting_analyzer,
+        output_folder,
+        compute_pc_features=False,
+        compute_amplitudes=False,
+        n_jobs=1,
+        chunk_size=10000,
+        progress_bar=True,
+        add_quality_metrics=False,
+        add_template_metrics=True,
+    )
+    for col_name in tm.columns:
+        assert (output_folder / f"cluster_{col_name}.tsv").is_file()
+    for col_name in qm.columns:
+        assert not (output_folder / f"cluster_{col_name}.tsv").is_file()
+
+    # custom metrics
+    sorting_analyzer.sorting.set_property("custom_metric", np.random.rand(sorting_analyzer.unit_ids.size))
+    output_folder = cache_folder / "phy_output_custom"
+    export_to_phy(
+        sorting_analyzer,
+        output_folder,
+        compute_pc_features=False,
+        compute_amplitudes=False,
+        n_jobs=1,
+        chunk_size=10000,
+        progress_bar=True,
+        add_quality_metrics=False,
+        add_template_metrics=False,
+        additional_properties=["custom_metric"],
+    )
+    assert (output_folder / "cluster_custom_metric.tsv").is_file()
+    for col_name in tm.columns:
+        assert not (output_folder / f"cluster_{col_name}.tsv").is_file()
+    for col_name in qm.columns:
+        assert not (output_folder / f"cluster_{col_name}.tsv").is_file()
+
+
 if __name__ == "__main__":
     sorting_analyzer_sparse = make_sorting_analyzer(sparse=True)
     sorting_analyzer_group = make_sorting_analyzer(sparse=False, with_group=True)
