@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core import ChannelSparsity, get_chunk_with_margin
+from spikeinterface.core import ChannelSparsity
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs, fix_job_kwargs
 
 from spikeinterface.core.template_tools import get_template_extremum_channel
@@ -170,8 +170,8 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         sparsity_mask = sparsity.mask
 
         spike_retriever_node = SpikeRetriever(
-            recording,
             sorting,
+            recording,
             channel_from_template=True,
             extremum_channel_inds=extremum_channels_indices,
             include_spikes_in_margin=True,

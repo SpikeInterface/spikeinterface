@@ -38,6 +38,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "detect_threshold": 6,
         "projection_threshold": [9, 9],
         "preclust_threshold": 8,
+        "whiteningRange": 32,
         "car": True,
         "minFR": 0.2,
         "minfr_goodchannels": 0.2,
@@ -65,6 +66,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "detect_threshold": "Threshold for spike detection",
         "projection_threshold": "Threshold on projections",
         "preclust_threshold": "Threshold crossings for pre-clustering (in PCA projection space)",
+        "whiteningRange": "number of channels to use for whitening each channel",
         "car": "Enable or disable common reference",
         "minFR": "Minimum spike rate (Hz), if a cluster falls below this for too long it gets removed",
         "minfr_goodchannels": "Minimum firing rate on a 'good' channel",
@@ -212,7 +214,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         ops["NT"] = params[
             "NT"
         ]  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
-        ops["whiteningRange"] = 32.0  # number of channels to use for whitening each channel
+        ops["whiteningRange"] = params["whiteningRange"]  # number of channels to use for whitening each channel
         ops["nSkipCov"] = 25.0  # compute whitening matrix from every N-th batch
         ops["scaleproc"] = 200.0  # int16 scaling of whitened data
         ops["nPCs"] = params["nPCs"]  # how many PCs to project the spikes into

@@ -550,7 +550,7 @@ class BaseExtractor:
                         return False
         return self._serializability[type]
 
-    def check_if_memory_serializable(self):
+    def check_if_memory_serializable(self) -> bool:
         """
         Check if the object is serializable to memory with pickle, including nested objects.
 
@@ -561,7 +561,7 @@ class BaseExtractor:
         """
         return self.check_serializability("memory")
 
-    def check_if_json_serializable(self):
+    def check_if_json_serializable(self) -> bool:
         """
         Check if the object is json serializable, including nested objects.
 
@@ -574,7 +574,7 @@ class BaseExtractor:
         # is this needed ??? I think no.
         return self.check_serializability("json")
 
-    def check_if_pickle_serializable(self):
+    def check_if_pickle_serializable(self) -> bool:
         # is this needed ??? I think no.
         return self.check_serializability("pickle")
 

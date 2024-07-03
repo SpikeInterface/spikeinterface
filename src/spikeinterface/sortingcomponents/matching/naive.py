@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 import numpy as np
-from spikeinterface.core import get_noise_levels, get_channel_distances, get_chunk_with_margin, get_random_data_chunks
+from spikeinterface.core import get_noise_levels, get_channel_distances, get_random_data_chunks
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 from spikeinterface.core.template import Templates
 

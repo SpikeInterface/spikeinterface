@@ -56,14 +56,14 @@ def test_benchmark_peak_localization(create_cache_folder):
 
 
 @pytest.mark.skip()
-def test_benchmark_unit_localization(create_cache_folder):
+def test_benchmark_unit_locations(create_cache_folder):
     cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
     recording, gt_sorting = make_dataset()
 
     # create study
-    study_folder = cache_folder / "study_unit_localization"
+    study_folder = cache_folder / "study_unit_locations"
     datasets = {"toy": (recording, gt_sorting)}
     cases = {}
     for method in ["center_of_mass", "grid_convolution", "monopolar_triangulation"]:
@@ -100,4 +100,4 @@ def test_benchmark_unit_localization(create_cache_folder):
 
 if __name__ == "__main__":
     # test_benchmark_peak_localization()
-    test_benchmark_unit_localization()
+    test_benchmark_unit_locations()

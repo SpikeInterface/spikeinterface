@@ -194,7 +194,7 @@ def compute_snrs(
         A SortingAnalyzer object.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the template to compute best channels.
-    peak_mode : "extremum" | "at_index", default: "extremum"
+    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
         How to compute the amplitude.
         Extremum takes the maxima/minima
         At_index takes the value at t=sorting_analyzer.nbefore.
@@ -210,7 +210,7 @@ def compute_snrs(
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     assert peak_sign in ("neg", "pos", "both")
-    assert peak_mode in ("extremum", "at_index")
+    assert peak_mode in ("extremum", "at_index", "peak_to_peak")
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
