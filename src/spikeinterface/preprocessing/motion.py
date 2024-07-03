@@ -409,7 +409,7 @@ correct_motion.__doc__ = correct_motion.__doc__.format(_doc_presets, _shared_job
 
 
 def load_motion_info(folder):
-    from spikeinterface.sortingcomponents.motion_utils import Motion
+    from spikeinterface.sortingcomponents.motion import Motion
 
     folder = Path(folder)
 

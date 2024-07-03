@@ -39,12 +39,52 @@ from .motion_utils import Motion, get_spatial_windows, get_window_domains, scipy
 # simple class wrapper to be compliant with estimate_motion
 class DredgeApRegistration:
     """
+    Estimate motion from spikes times and depth.
 
+    This the certified and official version of the dredge implementation.
+
+    Method developed by the Paninski's group from Columbia university:
+    Charlie Windolf, Julien Boussard, Erdem Varol
+
+    This method is quite similar to "decentralized" which was the previous implementation in spikeinterface.
+
+    The reference is here https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1
+
+    The original code were here : https://github.com/evarol/DREDge
+    But this code which use the same internal function is in line with the Motion object of spikeinterface contrary to the dredge repo.
+
+    This code has been ported in spikeinterface (with simple copy/paste) by Samuel but main author is truely Charlie Windolf.
     """
+
     name = "dredge_ap"
     need_peak_location = True
     params_doc = """
-
+    bin_um: float
+        Bin duration in second
+    bin_s : float
+        The size of the bins along depth in microns and along time in seconds.
+        The returned object's .displacement array will respect these bins.
+        Increasing these can lead to more stable estimates and faster runtimes
+        at the cost of spatial and/or temporal resolution.
+    max_disp_um : float
+        Maximum possible displacement in microns. If you can guess a number which is larger
+        than the largest displacement possible in your recording across a span of `time_horizon_s`
+        seconds, setting this value to that number can stabilize the result and speed up
+        the algorithm (since it can do less cross-correlating).
+        By default, this is set to win-scale_um / 4, or 112.5 microns. Which can be a bit
+        large!
+    time_horizon_s : float
+        "Time horizon" parameter, in seconds. Time bins separated by more seconds than this
+        will not be cross-correlated. So, if your data has nonstationarities or changes which
+        could lead to bad cross-correlations at some timescale, it can help to input that
+        value here. If this is too small, it can make the motion estimation unstable.
+    mincorr : float, between 0 and 1
+        Correlation threshold. Pairs of frames whose maximal cross correlation value is smaller
+        than this threshold will be ignored when solving for the global displacement estimate.
+    thomas_kw, xcorr_kw, raster_kw, weights_kw
+        These dictionaries allow setting parameters for fine control over the registration
+    device : str or torch.device
+        What torch device to run on? E.g., "cpu" or "cuda" or "cuda:1".
     """
     @classmethod
     def run(
@@ -86,6 +126,7 @@ class DredgeApRegistration:
         else:
             motion = outs
         return motion
+
 
 # @TODO : Charlie I started very small refactoring, I let you continue
 def dredge_ap(
@@ -138,13 +179,14 @@ def dredge_ap(
 
     Arguments
     ---------
-    recording : Recording
-        The recording
-    amps : np.array of shape (n_spikes,)
-    depths: np.array of shape (n_spikes,)
-    times : np.array of shape (n_spikes,)
-        The amplitudes, depths (microns) and times (seconds) of input
-        spike events.
+    recording: BaseRecording
+        The recording extractor
+    peaks: numpy array
+        Peak vector (complex dtype).
+        Needed for decentralized and iterative_template methods.
+    peak_locations: numpy array
+        Complex dtype with "x", "y", "z" fields
+        Needed for decentralized and iterative_template methods.
     direction : "x" | "y", default "y"
         Dimension on which the motion is estimated. "y" is depth along the probe.
     rigid : bool, default=False
@@ -160,39 +202,12 @@ def dredge_ap(
     win_margin_um : float
         Distance of nonrigid windows centers from the probe boundary (-1000 means there will
         be no window center within 1000um of the edge of the probe)
-    bin_um: float
-    bin_s : float
-        The size of the bins along depth in microns and along time in seconds.
-        The returned object's .displacement array will respect these bins.
-        Increasing these can lead to more stable estimates and faster runtimes
-        at the cost of spatial and/or temporal resolution.
-    max_disp_um : float
-        Maximum possible displacement in microns. If you can guess a number which is larger
-        than the largest displacement possible in your recording across a span of `time_horizon_s`
-        seconds, setting this value to that number can stabilize the result and speed up
-        the algorithm (since it can do less cross-correlating).
-        By default, this is set to win-scale_um / 4, or 112.5 microns. Which can be a bit
-        large!
-    time_horizon_s : float
-        "Time horizon" parameter, in seconds. Time bins separated by more seconds than this
-        will not be cross-correlated. So, if your data has nonstationarities or changes which
-        could lead to bad cross-correlations at some timescale, it can help to input that
-        value here. If this is too small, it can make the motion estimation unstable.
-    mincorr : float, between 0 and 1
-        Correlation threshold. Pairs of frames whose maximal cross correlation value is smaller
-        than this threshold will be ignored when solving for the global displacement estimate.
-    thomas_kw, xcorr_kw, raster_kw, weights_kw
-        These dictionaries allow setting parameters for fine control over the registration
-    device : str or torch.device
-        What torch device to run on? E.g., "cpu" or "cuda" or "cuda:1".
+    {}
 
     Returns
     -------
-    motion_est : a motion_util.MotionEstimate object
-        This has a .displacement attribute which is the displacement estimate in a
-        (num_nonrigid_blocks, num_time_bins) array. It also has properties describing
-        the time and spatial bins, and methods for getting the displacement at a particular
-        time and depth. See the documentation of these classes in motion_util.py.
+    motion : Motion
+        The motion object
     extra : dict
         This has extra info about what happened during registration, including the nonrigid
         windows if one wants to visualize them. Set `extra_outputs` to also save displacement
@@ -376,15 +391,64 @@ def dredge_ap(
         return motion
 
 
+dredge_ap.__doc__ = dredge_ap.__doc__.format(DredgeApRegistration.params_doc)
+
+
 # simple class wrapper to be compliant with estimate_motion
 class DredgeLfpRegistration:
     """
+    Estimate motion from LFP recording.
 
+    This the certified and official version of the dredge implementation.
+
+    Method developed by the Paninski's group from Columbia university:
+    Charlie Windolf, Julien Boussard, Erdem Varol
+
+    The reference is here https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1
     """
     name = "dredge_lfp"
     need_peak_location = False
     params_doc = """
-
+    lfp_recording : spikeinterface BaseRecording object
+        Preprocessed LFP recording. The temporal resolution of this recording will
+        be the target resolution of the registration, so definitely use SpikeInterface
+        to resample your recording to, say, 250Hz (or a value you like) rather than
+        estimating motion at the original frequency (which may be high).
+    direction : "x" | "y", default "y"
+        Dimension on which the motion is estimated. "y" is depth along the probe.
+    rigid : boolean, optional
+        If True, window-related arguments are ignored and we do rigid registration
+    win_shape, win_step_um, win_scale_um, win_margin_um : float
+        Nonrigid window-related arguments
+        The depth domain will be broken up into windows with shape controlled by win_shape,
+        spaced by win_step_um at a margin of win_margin_um from the boundary, and with
+        width controlled by win_scale_um.
+    chunk_len_s : float
+        Length of chunks (in seconds) that the recording is broken into for online
+        registration. The computational speed of the method is a function of the
+        number of samples this corresponds to, and things can get slow if it is
+        set high enough that the number of samples per chunk is bigger than ~10,000.
+        But, it can't be set too low or the algorithm doesn't have enough data
+        to work with. The default is set assuming sampling rate of 250Hz, leading
+        to 2500 samples per chunk.
+    time_horizon_s : float
+        Time-bins farther apart than this value in seconds will not be cross-correlated.
+        Set this to at least `chunk_len_s`.
+    max_disp_um : number, optional
+        This is the ceiling on the possible displacement estimates. It should be
+        set to a number which is larger than the allowed displacement in a single
+        chunk. Setting it as small as possible (while following that rule) can speed
+        things up and improve the result by making it impossible to estimate motion
+        which is too big.
+    mincorr : float in [0,1]
+        Minimum correlation between pairs of frames such that they will be included
+        in the optimization of the displacement estimates.
+    mincorr_percentile, mincorr_percentile_nneighbs
+        If mincorr_percentile is set to a number in [0, 100], then mincorr will be replaced
+        by this percentile of the correlations of neighbors within mincorr_percentile_nneighbs
+        time bins of each other.
+    device : string or torch.device
+        Controls torch device
     """
     @classmethod
     def run(
@@ -429,6 +493,8 @@ class DredgeLfpRegistration:
 
 
 
+
+
 def dredge_online_lfp(
     lfp_recording,
     direction='y',
@@ -461,46 +527,7 @@ def dredge_online_lfp(
 
     Arguments
     ---------
-    lfp_recording : spikeinterface BaseRecording object
-        Preprocessed LFP recording. The temporal resolution of this recording will
-        be the target resolution of the registration, so definitely use SpikeInterface
-        to resample your recording to, say, 250Hz (or a value you like) rather than
-        estimating motion at the original frequency (which may be high).
-    direction : "x" | "y", default "y"
-        Dimension on which the motion is estimated. "y" is depth along the probe.
-    rigid : boolean, optional
-        If True, window-related arguments are ignored and we do rigid registration
-    win_shape, win_step_um, win_scale_um, win_margin_um : float
-        Nonrigid window-related arguments
-        The depth domain will be broken up into windows with shape controlled by win_shape,
-        spaced by win_step_um at a margin of win_margin_um from the boundary, and with
-        width controlled by win_scale_um.
-    chunk_len_s : float
-        Length of chunks (in seconds) that the recording is broken into for online
-        registration. The computational speed of the method is a function of the
-        number of samples this corresponds to, and things can get slow if it is
-        set high enough that the number of samples per chunk is bigger than ~10,000.
-        But, it can't be set too low or the algorithm doesn't have enough data
-        to work with. The default is set assuming sampling rate of 250Hz, leading
-        to 2500 samples per chunk.
-    time_horizon_s : float
-        Time-bins farther apart than this value in seconds will not be cross-correlated.
-        Set this to at least `chunk_len_s`.
-    max_disp_um : number, optional
-        This is the ceiling on the possible displacement estimates. It should be
-        set to a number which is larger than the allowed displacement in a single
-        chunk. Setting it as small as possible (while following that rule) can speed
-        things up and improve the result by making it impossible to estimate motion
-        which is too big.
-    mincorr : float in [0,1]
-        Minimum correlation between pairs of frames such that they will be included
-        in the optimization of the displacement estimates.
-    mincorr_percentile, mincorr_percentile_nneighbs
-        If mincorr_percentile is set to a number in [0, 100], then mincorr will be replaced
-        by this percentile of the correlations of neighbors within mincorr_percentile_nneighbs
-        time bins of each other.
-    device : string or torch.device
-        Controls torch device
+    {}
 
     Returns
     -------
@@ -668,9 +695,10 @@ def dredge_online_lfp(
     else:
         return motion
 
+dredge_online_lfp.__doc__  = dredge_online_lfp.__doc__.format(DredgeLfpRegistration.params_doc)
 
-# -- zone forbiden for sam
-# -- functions from dredgelib
+
+# -- functions from dredgelib (zone forbiden for sam)
 
 DEFAULT_LAMBDA_T = 1.0
 DEFAULT_EPS = 1e-3

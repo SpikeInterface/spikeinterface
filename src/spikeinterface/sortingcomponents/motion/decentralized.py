@@ -45,7 +45,7 @@ class DecentralizedRegistration:
         Margin in um from histogram estimation.
         Positive margin extrapolate out of the probe the motion.
         Negative margin crop the motion on the border
-    bin_s: float, default: 2.0
+    bin_s: float, default 1.0
         Bin duration in second
     histogram_depth_smooth_um: None or float
         Optional gaussian smoother on histogram on depth axis.

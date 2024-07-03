@@ -18,7 +18,8 @@ if DEBUG:
     plt.show()
 
 
-def setup_module(cache_folder):
+def setup_dataset_and_peaks(cache_folder):
+    print(cache_folder, type(cache_folder))
     cache_folder.mkdir(parents=True, exist_ok=True)
 
     recording, sorting = make_dataset()
@@ -47,15 +48,16 @@ def setup_module(cache_folder):
     return recording, sorting, cache_folder
 
 
-@pytest.fixture(scope="module", name="setup_module")
-def setup_module_fixture(tmp_path_factory):
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
-    return setup_module(cache_folder)
+@pytest.fixture(scope="module", name="dataset")
+def dataset_fixture(create_cache_folder):
+    cache_folder = create_cache_folder / "motion_estimation"
+    return setup_dataset_and_peaks(cache_folder)
 
 
-def test_estimate_motion(setup_module):
+def test_estimate_motion(dataset):
     # recording, sorting = make_dataset()
-    recording, sorting, cache_folder = setup_module
+    recording, sorting, cache_folder = dataset
+    
     peaks = np.load(cache_folder / "dataset_peaks.npy")
     peak_locations = np.load(cache_folder / "dataset_peak_locations.npy")
 
@@ -222,5 +224,5 @@ if __name__ == "__main__":
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdirname:
         cache_folder = Path(tmpdirname)
-    args = setup_module(cache_folder)
+    args = setup_dataset_and_peaks(cache_folder)
     test_estimate_motion(args)
