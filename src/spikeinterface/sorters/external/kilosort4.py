@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import random
 from typing import Union
 from packaging import version
 
@@ -246,6 +247,7 @@ class Kilosort4Sorter(BaseSorter):
             ops["Wrot"] = torch.as_tensor(np.eye(recording.get_num_channels()))
             ops["Nbatches"] = bfile.n_batches
 
+        random.seed(params['seed'])
         np.random.seed(params['seed'])
         torch.cuda.manual_seed_all(params['seed'])
         torch.random.manual_seed(params['seed'])

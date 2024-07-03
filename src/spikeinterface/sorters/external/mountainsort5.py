@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import random
 from packaging.version import parse
 
 import shutil
@@ -45,6 +46,7 @@ class Mountainsort5Sorter(BaseSorter):
         "filter": True,
         "whiten": True,  # Important to do whitening
         "delete_temporary_recording": True,
+        "seed": 1,
     }
 
     _params_description = {
@@ -69,6 +71,7 @@ class Mountainsort5Sorter(BaseSorter):
         "filter": "Enable or disable filter",
         "whiten": "Enable or disable whitening",
         "delete_temporary_recording": "If True, the temporary recording file is deleted after sorting (this may fail on Windows requiring the end-user to delete the file themselves later)",
+        "seed": "Random seed",
     }
 
     sorter_description = "MountainSort5 uses Isosplit clustering. It is an updated version of MountainSort4. See https://doi.org/10.1016/j.neuron.2017.08.030"
@@ -183,6 +186,9 @@ class Mountainsort5Sorter(BaseSorter):
         scheme3_sorting_parameters = ms5.Scheme3SortingParameters(
             block_sorting_parameters=scheme2_sorting_parameters, block_duration_sec=p["scheme3_block_duration_sec"]
         )
+        
+        random.seed(params['seed'])
+        np.random.seed(params['seed'])
 
         if not recording.is_binary_compatible():
             recording_cached = recording.save(folder=sorter_output_folder / "recording", **get_job_kwargs(p, verbose))
