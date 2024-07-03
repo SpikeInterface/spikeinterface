@@ -130,7 +130,7 @@ def openMCSH5File(filename, stream_id):
     exponent = info["Exponent"][0]
     convFact = info["ConversionFactor"][0]
     gain_uV = 1e6 * (convFact.astype(float) * (10.0**exponent))
-    offset_uV = -1e6 * (info["ADZero"].astype(float) * (10.0**exponent))
+    offset_uV = -1e6 * (info["ADZero"].astype(float) * (10.0**exponent)) / gain_uV
 
     nRecCh, nFrames = data.shape
     channel_ids = [f"Ch{ch}" for ch in info["ChannelID"]]
