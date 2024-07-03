@@ -15,6 +15,7 @@ from .merge_temporal_splits import compute_presence_distance
 def get_potential_auto_merge(
     sorting_analyzer,
     minimum_spikes=100,
+    minimum_snr=2,
     maximum_distance_um=150.0,
     peak_sign="neg",
     bin_ms=0.25,
@@ -74,6 +75,8 @@ def get_potential_auto_merge(
     minimum_spikes : int, default: 100
         Minimum number of spikes for each unit to consider a potential merge.
         Enough spikes are needed to estimate the correlogram
+    minimum_snr : float, default 2
+        Minimum Signal to Noise ratio for templates to be considered while merging
     maximum_distance_um : float, default: 150
         Maximum distance between units for considering a merge
     peak_sign : "neg" | "pos" | "both", default: "neg"
@@ -148,6 +151,7 @@ def get_potential_auto_merge(
 
     all_steps = [
         "min_spikes",
+        "min_snr",
         "remove_contaminated",
         "unit_positions",
         "correlogram",
@@ -190,6 +194,7 @@ def get_potential_auto_merge(
         elif preset == "knn":
             steps = [
                 "min_spikes",
+                "min_snr",
                 "remove_contaminated",
                 "unit_positions",
                 "knn",
@@ -209,6 +214,19 @@ def get_potential_auto_merge(
         if step == "min_spikes":
             num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
             to_remove = num_spikes < minimum_spikes
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
+        
+        # STEP : remove units with too small SNR
+        if step == "min_snr":
+            qm_ext = sorting_analyzer.get_extension("quality_metrics")
+            if qm_ext is None:
+                sorting_analyzer.compute('noise_levels')
+                sorting_analyzer.compute('quality_metrics', metric_names=['snr'])
+                qm_ext = sorting_analyzer.get_extension("quality_metrics")
+
+            snrs = qm_ext.get_data()['snr'].values    
+            to_remove = snrs < minimum_snr
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
 
@@ -294,7 +312,6 @@ def get_potential_auto_merge(
                     template_metric=template_metric,
                     sparsity=sorting_analyzer.sparsity,
                 )
-
             pair_mask = pair_mask & (templates_diff < template_diff_thresh)
             outs["templates_diff"] = templates_diff
 
@@ -374,9 +391,9 @@ def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs)
             ind = ind[mask_2]
             chan_inds, all_counts = np.unique(spikes["unit_index"][ind], return_counts=True)
             all_counts = all_counts.astype(float)
-            all_counts /= all_spike_counts[chan_inds]
+            #all_counts /= all_spike_counts[chan_inds]
             best_indices = np.argsort(all_counts)[::-1]
-            pair_mask[unit_ind] &= np.isin(np.arange(n), chan_inds[best_indices])
+            pair_mask[unit_ind, unit_ind + 1 :] &= np.isin(np.arange(unit_ind + 1, n), chan_inds[best_indices])
     return pair_mask
 
 
