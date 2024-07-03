@@ -78,13 +78,16 @@ def select_peaks(
     selected_peaks = peaks[selected_indices]
 
     if margin is not None:
-        to_keep = np.ones(len(selected_peaks), dtype=bool)
+        to_keep = np.zeros(len(selected_peaks), dtype=bool)
         offset = 0
         for segment_index in range(recording.get_num_segments()):
             duration = recording.get_num_frames(segment_index)
             i0, i1 = np.searchsorted(selected_peaks["segment_index"], [segment_index, segment_index + 1])
-            to_keep[i0:i1] = selected_peaks["sample_index"][i0:i1] > margin[0] + offset
-            to_keep[i0:i1] &= selected_peaks["sample_index"][i0:i1] < (duration - margin[1]) + offset
+            while selected_peaks["sample_index"][i0] <= margin[0] + offset:
+                i0 += 1
+            while selected_peaks["sample_index"][i1-1] >= (duration - margin[1]) + offset:
+                i1 -= 1
+            to_keep[i0:i1] = True
             offset += duration
         selected_indices = selected_indices[to_keep]
         selected_peaks = peaks[selected_indices]
