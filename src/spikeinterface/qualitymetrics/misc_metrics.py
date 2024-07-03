@@ -1085,10 +1085,10 @@ def compute_drift_metrics(
             spikes_in_bin = spikes_in_segment[i0:i1]
             spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 
-            for unit_index, unit_id in enumerate(unit_ids):
+            for i, unit_id in enumerate(unit_ids):
                 mask = spikes_in_bin["unit_index"] == sorting.id_to_index(unit_id)
                 if np.sum(mask) >= min_spikes_per_interval:
-                    median_positions[unit_index, bin_index] = np.median(spike_locations_in_bin[mask])
+                    median_positions[i, bin_index] = np.median(spike_locations_in_bin[mask])
         if median_position_segments is None:
             median_position_segments = median_positions
         else:
