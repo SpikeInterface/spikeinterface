@@ -178,7 +178,6 @@ def get_potential_auto_merge(
                 "remove_contaminated",
                 "unit_positions",
                 "template_similarity",
-                "correlogram",
                 "presence_distance",
                 "check_increase_score",
             ]
@@ -218,7 +217,7 @@ def get_potential_auto_merge(
             pair_mask[:, to_remove] = False
         
         # STEP : remove units with too small SNR
-        if step == "min_snr":
+        elif step == "min_snr":
             qm_ext = sorting_analyzer.get_extension("quality_metrics")
             if qm_ext is None:
                 sorting_analyzer.compute('noise_levels')
@@ -330,7 +329,7 @@ def get_potential_auto_merge(
         # STEP : check if the cross contamination is significant
         elif step == "cross_contamination" in steps:
             refractory = (censored_period_ms, refractory_period_ms)
-            CC, p_values = compute_cross_contaminations(sorting_analyzer, pair_mask, CC_threshold, refractory)
+            CC, p_values = compute_cross_contaminations(sorting_analyzer, pair_mask, CC_threshold, refractory, contaminations)
             pair_mask = pair_mask & (p_values > p_value)
             outs["cross_contaminations"] = CC, p_values
 
@@ -539,7 +538,7 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
-def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_period):
+def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_period, contaminations=None):
     """
     Looks at a sorting analyzer, and returns statistical tests for cross_contaminations
 
@@ -552,6 +551,7 @@ def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_p
         Any pair above this threshold will not be considered.
     refractory_period : array/list/tuple of 2 floats
         (censored_period_ms, refractory_period_ms)
+    contaminations : contaminations of the units, if already precomputed
 
     """
 
@@ -580,8 +580,12 @@ def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_p
             unit_id2 = unit_ids[unit_ind2]
             spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
             # Compuyting the cross-contamination difference
+            if contaminations is not None:
+                C1 = contaminations[unit_ind1]
+            else:
+                C1 = None
             CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2] = estimate_cross_contamination(
-                spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold
+                spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold, contaminations=C1
             )
 
     return CC, p_values
