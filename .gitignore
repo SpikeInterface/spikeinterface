@@ -129,8 +129,6 @@ examples/modules/extractors/firings_true.mda
 examples/modules/extractors/circular_layout.csv
 examples/modules/comparison/tmp_*
 examples/modules/comparison/a_study_folder/*
-examples/modules/toolkit/phy/*
-examples/modules/toolkit/tmp_*
 
 examples/modules_gallery/**/*.raw
 examples/modules_gallery/**/*.npy
