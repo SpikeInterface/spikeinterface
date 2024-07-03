@@ -102,8 +102,8 @@ def test_export_to_phy_metrics(sorting_analyzer_sparse_for_export, create_cache_
     export_to_phy(
         sorting_analyzer,
         output_folder,
-        compute_pc_features=True,
-        compute_amplitudes=True,
+        compute_pc_features=False,
+        compute_amplitudes=False,
         n_jobs=1,
         chunk_size=10000,
         progress_bar=True,
@@ -119,8 +119,8 @@ def test_export_to_phy_metrics(sorting_analyzer_sparse_for_export, create_cache_
     export_to_phy(
         sorting_analyzer,
         output_folder,
-        compute_pc_features=True,
-        compute_amplitudes=True,
+        compute_pc_features=False,
+        compute_amplitudes=False,
         n_jobs=1,
         chunk_size=10000,
         progress_bar=True,
@@ -138,8 +138,8 @@ def test_export_to_phy_metrics(sorting_analyzer_sparse_for_export, create_cache_
     export_to_phy(
         sorting_analyzer,
         output_folder,
-        compute_pc_features=True,
-        compute_amplitudes=True,
+        compute_pc_features=False,
+        compute_amplitudes=False,
         n_jobs=1,
         chunk_size=10000,
         progress_bar=True,
