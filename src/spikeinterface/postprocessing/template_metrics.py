@@ -150,7 +150,29 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
 
-    def _run(self, verbose=False):
+    def _merge_extension_data(
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+    ):
+        import pandas as pd
+
+        old_metrics = self.data["metrics"]
+
+        metrics = pd.DataFrame(index=new_sorting_analyzer.unit_ids)
+        new_metrics = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
+        for unit_id in new_sorting_analyzer.unit_ids:
+            if unit_id in new_unit_ids:
+                source = new_metrics
+            else:
+                source = old_metrics
+            for k in source.loc[unit_id].keys():
+                metrics.loc[unit_id, k] = source.loc[unit_id, k]
+        new_data = dict(metrics=metrics)
+        return new_data
+
+    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, **job_kwargs):
+        """
+        Compute template metrics.
+        """
         import pandas as pd
         from scipy.signal import resample_poly
 
@@ -158,16 +180,15 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         sparsity = self.params["sparsity"]
         peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
-        unit_ids = self.sorting_analyzer.unit_ids
-        sampling_frequency = self.sorting_analyzer.sampling_frequency
+        if unit_ids is None:
+            unit_ids = sorting_analyzer.unit_ids
+        sampling_frequency = sorting_analyzer.sampling_frequency
 
         metrics_single_channel = [m for m in metric_names if m in get_single_channel_template_metric_names()]
         metrics_multi_channel = [m for m in metric_names if m in get_multi_channel_template_metric_names()]
 
         if sparsity is None:
-            extremum_channels_ids = get_template_extremum_channel(
-                self.sorting_analyzer, peak_sign=peak_sign, outputs="id"
-            )
+            extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="id")
 
             template_metrics = pd.DataFrame(index=unit_ids, columns=metric_names)
         else:
@@ -182,16 +203,16 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             )
             template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
 
-        all_templates = get_dense_templates_array(self.sorting_analyzer, return_scaled=True)
+        all_templates = get_dense_templates_array(sorting_analyzer, return_scaled=True)
 
-        channel_locations = self.sorting_analyzer.get_channel_locations()
+        channel_locations = sorting_analyzer.get_channel_locations()
 
         for unit_index, unit_id in enumerate(unit_ids):
             template_all_chans = all_templates[unit_index]
             chan_ids = np.array(extremum_channels_ids[unit_id])
             if chan_ids.ndim == 0:
                 chan_ids = [chan_ids]
-            chan_ind = self.sorting_analyzer.channel_ids_to_indices(chan_ids)
+            chan_ind = sorting_analyzer.channel_ids_to_indices(chan_ids)
             template = template_all_chans[:, chan_ind]
 
             # compute single_channel metrics
@@ -225,8 +246,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             for metric_name in metrics_multi_channel:
                 # retrieve template (with sparsity if waveform extractor is sparse)
                 template = all_templates[unit_index, :, :]
-                if self.sorting_analyzer.is_sparse():
-                    mask = self.sorting_analyzer.sparsity.mask[unit_index, :]
+                if sorting_analyzer.is_sparse():
+                    mask = sorting_analyzer.sparsity.mask[unit_index, :]
                     template = template[:, mask]
 
                 if template.shape[1] < self.min_channels_for_multi_channel_warning:
@@ -234,8 +255,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                         f"With less than {self.min_channels_for_multi_channel_warning} channels, "
                         "multi-channel metrics might not be reliable."
                     )
-                if self.sorting_analyzer.is_sparse():
-                    channel_locations_sparse = channel_locations[self.sorting_analyzer.sparsity.mask[unit_index]]
+                if sorting_analyzer.is_sparse():
+                    channel_locations_sparse = channel_locations[sorting_analyzer.sparsity.mask[unit_index]]
                 else:
                     channel_locations_sparse = channel_locations
 
@@ -255,7 +276,12 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                     **self.params["metrics_kwargs"],
                 )
                 template_metrics.at[index, metric_name] = value
-        self.data["metrics"] = template_metrics
+        return template_metrics
+
+    def _run(self, verbose=False):
+        self.data["metrics"] = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose
+        )
 
     def _get_data(self):
         return self.data["metrics"]

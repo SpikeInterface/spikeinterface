@@ -89,8 +89,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
     def _merge_extension_data(
         self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
     ):
-        old_metrics = self.data["metrics"]
         import pandas as pd
+
+        old_metrics = self.data["metrics"]
 
         metrics = pd.DataFrame(index=new_sorting_analyzer.unit_ids)
         new_metrics = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
@@ -117,9 +118,6 @@ class ComputeQualityMetrics(AnalyzerExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         n_jobs = job_kwargs["n_jobs"]
         progress_bar = job_kwargs["progress_bar"]
-
-        if sorting_analyzer is None:
-            sorting_analyzer = self.sorting_analyzer
 
         if unit_ids is None:
             sorting = sorting_analyzer.sorting
@@ -188,7 +186,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
         return metrics
 
     def _run(self, verbose=False, **job_kwargs):
-        self.data["metrics"] = self._compute_metrics(None, None, verbose=verbose, **job_kwargs)
+        self.data["metrics"] = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, **job_kwargs
+        )
 
     def _get_data(self):
         return self.data["metrics"]

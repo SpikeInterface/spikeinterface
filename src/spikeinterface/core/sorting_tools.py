@@ -229,13 +229,13 @@ def get_ids_after_merging(sorting, units_to_merge, new_unit_ids):
     assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
 
     merged_unit_ids = set(sorting.unit_ids)
-    for count in range(len(units_to_merge)):
-        assert len(units_to_merge[count]) > 1, "A merge should have at least two units"
-        for unit_id in units_to_merge[count]:
+    for i, units in enumerate(units_to_merge):
+        assert len(units) > 1, "A merge should have at least two units"
+        for unit_id in units:
             assert unit_id in sorting.unit_ids, "Merged ids should be in the sorting"
-        for unit_id in units_to_merge[count]:
+        for unit_id in units:
             merged_unit_ids.discard(unit_id)
-            merged_unit_ids = merged_unit_ids.union([new_unit_ids[count]])
+            merged_unit_ids = merged_unit_ids.union([new_unit_ids[i]])
     return np.array(list(merged_unit_ids))
 
 

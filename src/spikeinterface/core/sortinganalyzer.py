@@ -860,6 +860,10 @@ class SortingAnalyzer:
         if len(units_to_merge) == 0:
             return self
 
+        for units in units_to_merge:
+            if len(units) < 2:
+                raise ValueError("Merging requires at least two units to merge")
+
         new_unit_ids = get_new_unit_ids_for_merges(self.sorting, units_to_merge, new_unit_ids)
 
         if not isinstance(units_to_merge[0], (list, tuple)):
