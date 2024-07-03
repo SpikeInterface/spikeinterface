@@ -26,8 +26,8 @@ _default_engine_kwargs = dict(
     joblib=dict(n_jobs=-1, backend="loky"),
     processpoolexecutor=dict(max_workers=2, mp_context=None),
     dask=dict(client=None),
-    slurm={"tmp_script_folder": None, "sbatch_executable_path": "sbatch",
-           'sbatch_kwargs':{"cpus-per-task": 1, "mem": "1G"}},
+    slurm={"tmp_script_folder": None,
+           'sbatch_args': {"cpus-per-task": 1, "mem": "1G"}},
 )
 
 
@@ -72,8 +72,6 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
         - tmp_script_folder: str, default None
             the folder in which the job scripts are created. Default: directory created by
             the `tempfile` library
-        - sbatch_executable_path: str, default 'sbatch'
-            the path to the `sbatch` executable
         - sbatch_kwargs: dict
           arguments to be passed to sbatch. They are translated to the --args form.
           see the [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
@@ -163,8 +161,6 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
         tmp_script_folder = Path(tmp_script_folder)
         tmp_script_folder.mkdir(exist_ok=True, parents=True)
 
-        sbatch_executable = engine_kwargs["sbatch_executable_path"]
-
         for i, kwargs in enumerate(job_list):
             script_name = tmp_script_folder / f"si_script_{i}.py"
             with open(script_name, "w") as f:
@@ -191,8 +187,8 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
                 f.write(slurm_script)
                 os.fchmod(f.fileno(), mode=stat.S_IRWXU)
 
-            progr = [sbatch_executable]
-            for k, v in engine_kwargs['sbatch_kwargs'].items():
+            progr = ['sbatch']
+            for k, v in engine_kwargs['sbatch_args'].items():
                 progr.append(f"--{k}")
                 progr.append(f"{v}")
             progr.append(str(script_name.absolute()))
