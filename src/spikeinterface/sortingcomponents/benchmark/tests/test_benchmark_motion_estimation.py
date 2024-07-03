@@ -41,7 +41,7 @@ def test_benchmark_motion_estimaton(create_cache_folder):
                 localize_kwargs=dict(method=loc_method),
                 estimate_motion_kwargs=dict(
                     method=est_method,
-                    bin_duration_s=1.0,
+                    bin_s=1.0,
                     bin_um=5.0,
                     rigid=False,
                     win_step_um=50.0,

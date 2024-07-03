@@ -193,7 +193,7 @@ Here is an example with non-rigid motion estimation:
     from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
     motion, temporal_bins, spatial_bins,
                 extra_check = estimate_motion(recording=recording, peaks=peaks, peak_locations=peak_locations,
-                                              direction='y', bin_duration_s=10., bin_um=10., margin_um=0.,
+                                              direction='y', bin_s=10., bin_um=10., margin_um=0.,
                                               method='decentralized_registration',
                                               rigid=False, win_shape='gaussian', win_step_um=50., win_sigma_um=150.,
                                               progress_bar=True, verbose=True)

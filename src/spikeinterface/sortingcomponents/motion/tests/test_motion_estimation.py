@@ -150,7 +150,7 @@ def test_estimate_motion(setup_module):
 
         kwargs = dict(
             direction="y",
-            bin_duration_s=1.0,
+            bin_s=1.0,
             bin_um=10.0,
             margin_um=5,
             extra_outputs=True,

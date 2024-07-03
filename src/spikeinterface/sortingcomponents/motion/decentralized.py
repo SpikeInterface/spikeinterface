@@ -45,7 +45,7 @@ class DecentralizedRegistration:
         Margin in um from histogram estimation.
         Positive margin extrapolate out of the probe the motion.
         Negative margin crop the motion on the border
-    bin_duration_s: float, default: 2.0
+    bin_s: float, default: 2.0
         Bin duration in second
     histogram_depth_smooth_um: None or float
         Optional gaussian smoother on histogram on depth axis.
@@ -115,7 +115,7 @@ class DecentralizedRegistration:
         extra,
         bin_um=1.0,
         hist_margin_um=20.0,
-        bin_duration_s=1.0,
+        bin_s=1.0,
         histogram_depth_smooth_um=1.,
         histogram_time_smooth_s=1.,
         pairwise_displacement_method="conv",
@@ -172,7 +172,7 @@ class DecentralizedRegistration:
             peaks,
             peak_locations,
             direction=direction,
-            bin_duration_s=bin_duration_s,
+            bin_s=bin_s,
             spatial_bin_edges=spatial_bin_edges,
             weight_with_amplitude=weight_with_amplitude,
             depth_smooth_um=histogram_depth_smooth_um,
@@ -220,7 +220,7 @@ class DecentralizedRegistration:
                 centered_xcorr=centered_xcorr,
                 corr_threshold=corr_threshold,
                 time_horizon_s=time_horizon_s,
-                bin_duration_s=bin_duration_s,
+                bin_s=bin_s,
                 progress_bar=False,
             )
 
@@ -315,7 +315,7 @@ def compute_pairwise_displacement(
     time_horizon_s=None,
     normalized_xcorr=True,
     centered_xcorr=True,
-    bin_duration_s=None,
+    bin_s=None,
     progress_bar=False,
     window=None,
 ):
@@ -329,7 +329,7 @@ def compute_pairwise_displacement(
     pairwise_displacement = np.zeros((size, size), dtype="float32")
 
     if time_horizon_s is not None:
-        band_width = int(np.ceil(time_horizon_s / bin_duration_s))
+        band_width = int(np.ceil(time_horizon_s / bin_s))
         if band_width >= size:
             time_horizon_s = None
 

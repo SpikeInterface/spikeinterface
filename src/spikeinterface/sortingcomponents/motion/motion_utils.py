@@ -393,7 +393,7 @@ def make_2d_motion_histogram(
     weight_with_amplitude=False,
     avg_in_bin=True,
     direction="y",
-    bin_duration_s=1.0,
+    bin_s=1.0,
     bin_um=2.0,
     hist_margin_um=50,
     spatial_bin_edges=None,
@@ -418,7 +418,7 @@ def make_2d_motion_histogram(
         This is done only if weight_with_amplitude=True.
     direction : "x" | "y" | "z", default: "y"
         The depth direction
-    bin_duration_s : float, default: 1.0
+    bin_s : float, default: 1.0
         The temporal bin duration in s
     bin_um : float, default: 2.0
         The spatial bin size in um. Ignored if spatial_bin_edges is given.
@@ -446,9 +446,11 @@ def make_2d_motion_histogram(
     n_samples = recording.get_num_samples()
     mint_s = recording.sample_index_to_time(0)
     maxt_s = recording.sample_index_to_time(n_samples)
-    temporal_bin_edges = np.arange(mint_s, maxt_s + bin_duration_s, bin_duration_s)
+    temporal_bin_edges = np.arange(mint_s, maxt_s + bin_s, bin_s)
     if spatial_bin_edges is None:
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
+    else:
+        bin_um = spatial_bin_edges[1] - spatial_bin_edges[0]
 
     arr = np.zeros((peaks.size, 2), dtype="float64")
     arr[:, 0] = recording.sample_index_to_time(peaks["sample_index"])
@@ -473,7 +475,7 @@ def make_2d_motion_histogram(
         motion_histogram = gaussian_filter1d(motion_histogram, depth_smooth_um / bin_um, axis=1, mode="constant")
 
     if time_smooth_s is not None:
-        motion_histogram = gaussian_filter1d(motion_histogram, time_smooth_s / bin_duration_s, axis=0, mode="constant")
+        motion_histogram = gaussian_filter1d(motion_histogram, time_smooth_s / bin_s, axis=0, mode="constant")
 
     return motion_histogram, temporal_bin_edges, spatial_bin_edges
 
@@ -483,7 +485,7 @@ def make_3d_motion_histograms(
     peaks,
     peak_locations,
     direction="y",
-    bin_duration_s=1.0,
+    bin_s=1.0,
     bin_um=2.0,
     hist_margin_um=50,
     num_amp_bins=20,
@@ -505,7 +507,7 @@ def make_3d_motion_histograms(
         Array with peak locations
     direction : "x" | "y" | "z", default: "y"
         The depth direction
-    bin_duration_s : float, default: 1.0
+    bin_s : float, default: 1.0
         The temporal bin duration in s.
     bin_um : float, default: 2.0
         The spatial bin size in um. Ignored if spatial_bin_edges is given.
@@ -529,7 +531,7 @@ def make_3d_motion_histograms(
     n_samples = recording.get_num_samples()
     mint_s = recording.sample_index_to_time(0)
     maxt_s = recording.sample_index_to_time(n_samples)
-    temporal_bin_edges = np.arange(mint_s, maxt_s + bin_duration_s, bin_duration_s)
+    temporal_bin_edges = np.arange(mint_s, maxt_s + bin_s, bin_s)
     if spatial_bin_edges is None:
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
 

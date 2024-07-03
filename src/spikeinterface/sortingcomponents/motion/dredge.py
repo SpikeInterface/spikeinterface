@@ -28,14 +28,12 @@ import numpy as np
 
 import gc
 
-from .motion_utils import Motion, get_spatial_windows, get_window_domains, scipy_conv1d, make_2d_motion_histogram
+from .motion_utils import Motion, get_spatial_windows, get_window_domains, scipy_conv1d, make_2d_motion_histogram, get_spatial_bin_edges
 
 
 # todo use gaussian_filter1d in historgam 2d
 # put smotthing inside the histogram function
 # put the log for weight inhitstogram
-
-# TODO maybe change everywhere bin_duration_s to bin_s
 
 
 # simple class wrapper to be compliant with estimate_motion
@@ -259,16 +257,14 @@ def dredge_ap(
     # else:
     #     raster, spatial_bin_edges_um, time_bin_edges_s = raster_res
     
-
-
     motion_histogram, time_bin_edges_s, spatial_bin_edges_um = make_2d_motion_histogram(
         recording,
         peaks,
         peak_locations,
-        weight_with_amplitude=False,
+        weight_with_amplitude=True,
         avg_in_bin=avg_in_bin,
         direction=direction,
-        bin_duration_s=bin_s,
+        bin_s=bin_s,
         bin_um=bin_um,
         hist_margin_um=0.,  # @charlie maybe we should expose this and set +20. for instance
         spatial_bin_edges=None,

@@ -21,8 +21,8 @@ def estimate_motion(
     direction="y",
     rigid=False,
     win_shape="gaussian",
-    win_step_um=50.0, # 400
-    win_scale_um=150.0, # 400
+    win_step_um=50.0, # @alessio charlie is proposing here instead 400
+    win_scale_um=150.0, # @alessio charlie is proposing here instead 400
     win_margin_um=None,
     method="decentralized",
     extra_outputs=False,
@@ -32,9 +32,13 @@ def estimate_motion(
     **method_kwargs,
 ):
     """
-    Estimate motion for given peaks and after their localization.
+    
+    
+    Estimate motion with several possible methods.
 
-    Note that the way you detect peak locations (center of mass/monopolar triangulation)
+    Most of methods except dredge_lfp needs peaks and after their localization.
+
+    Note that the way you detect peak locations (center of mass/monopolar_triangulation/grid_convolution)
     have an impact on the result.
 
     Parameters
@@ -50,12 +54,7 @@ def estimate_motion(
     direction: "x" | "y" | "z", default: "y"
         Dimension on which the motion is estimated. "y" is depth along the probe.
 
-        
-        
     {method_doc}
-
-    **histogram section**
-
 
     **non-rigid section**
 
@@ -120,9 +119,6 @@ def estimate_motion(
         peak_locations,
         direction,
 
-        # bin_um,
-        # spatial_bin_edges,
-        # non_rigid_windows,
         rigid,
         win_shape,
         win_step_um,
@@ -134,8 +130,6 @@ def estimate_motion(
         extra,
         **method_kwargs,
     )
-
-    # motion = Motion([motion_array], [temporal_bins], non_rigid_window_centers, direction=direction)
 
     if extra_outputs:
         return motion, extra

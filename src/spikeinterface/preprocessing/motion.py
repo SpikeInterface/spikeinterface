@@ -34,7 +34,7 @@ motion_options_preset = {
         "estimate_motion_kwargs": dict(
             method="decentralized",
             direction="y",
-            bin_duration_s=2.0,
+            bin_s=2.0,
             rigid=False,
             bin_um=5.0,
             margin_um=0.0,
@@ -93,7 +93,7 @@ motion_options_preset = {
         "estimate_motion_kwargs": dict(
             method="decentralized",
             direction="y",
-            bin_duration_s=2.0,
+            bin_s=2.0,
             rigid=False,
             bin_um=5.0,
             margin_um=0.0,
@@ -148,7 +148,7 @@ motion_options_preset = {
         ),
         "estimate_motion_kwargs": dict(
             method="decentralized",
-            bin_duration_s=10.0,
+            bin_s=10.0,
             rigid=True,
         ),
         "interpolate_motion_kwargs": dict(
@@ -178,7 +178,7 @@ motion_options_preset = {
         ),
         "estimate_motion_kwargs": dict(
             method="iterative_template",
-            bin_duration_s=2.0,
+            bin_s=2.0,
             rigid=False,
             win_step_um=50.0,
             win_scale_um=150.0,

@@ -29,7 +29,7 @@ class IterativeTemplateRegistration:
         Margin in um from histogram estimation.
         Positive margin extrapolate out of the probe the motion.
         Negative margin crop the motion on the border
-    bin_duration_s: float, default: 2.0
+    bin_s: float, default: 2.0
         Bin duration in second
     num_amp_bins: int, default: 20
         number ob bins in the histogram on the log amplitues dimension
@@ -66,7 +66,7 @@ class IterativeTemplateRegistration:
         extra,
         bin_um=10.0,
         hist_margin_um=0.0,
-        bin_duration_s=2.0,
+        bin_s=2.0,
         num_amp_bins=20,
         num_shifts_global=15,
         num_iterations=10,
@@ -105,11 +105,11 @@ class IterativeTemplateRegistration:
             peak_locations,
             direction=direction,
             num_amp_bins=num_amp_bins,
-            bin_duration_s=bin_duration_s,
+            bin_s=bin_s,
             spatial_bin_edges=spatial_bin_edges,
         )
         # temporal bins are bin center
-        temporal_bins = temporal_hist_bin_edges[:-1] + bin_duration_s // 2.0
+        temporal_bins = temporal_hist_bin_edges[:-1] + bin_s // 2.0
 
         # do alignment
         shift_indices, target_histogram, shift_covs_block = iterative_template_registration(
