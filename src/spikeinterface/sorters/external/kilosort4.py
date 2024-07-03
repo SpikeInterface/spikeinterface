@@ -58,7 +58,7 @@ class Kilosort4Sorter(BaseSorter):
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
         "torch_device": "auto",
-        "seed": 1
+        "seed": 1,
     }
 
     _params_description = {
@@ -101,7 +101,7 @@ class Kilosort4Sorter(BaseSorter):
         "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "torch_device": "Select the torch device auto/cuda/cpu",
-        "seed": "Kilosort random seed"
+        "seed": "Kilosort random seed",
     }
 
     sorter_description = """Kilosort4 is a Python package for spike sorting on GPUs with template matching.
@@ -247,10 +247,10 @@ class Kilosort4Sorter(BaseSorter):
             ops["Wrot"] = torch.as_tensor(np.eye(recording.get_num_channels()))
             ops["Nbatches"] = bfile.n_batches
 
-        random.seed(params['seed'])
-        np.random.seed(params['seed'])
-        torch.cuda.manual_seed_all(params['seed'])
-        torch.random.manual_seed(params['seed'])
+        random.seed(params["seed"])
+        np.random.seed(params["seed"])
+        torch.cuda.manual_seed_all(params["seed"])
+        torch.random.manual_seed(params["seed"])
         # if not params["skip_kilosort_preprocessing"]:
         if not params["do_correction"]:
             print("Skipping drift correction.")

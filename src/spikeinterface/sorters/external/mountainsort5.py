@@ -186,9 +186,9 @@ class Mountainsort5Sorter(BaseSorter):
         scheme3_sorting_parameters = ms5.Scheme3SortingParameters(
             block_sorting_parameters=scheme2_sorting_parameters, block_duration_sec=p["scheme3_block_duration_sec"]
         )
-        
-        random.seed(params['seed'])
-        np.random.seed(params['seed'])
+
+        random.seed(params["seed"])
+        np.random.seed(params["seed"])
 
         if not recording.is_binary_compatible():
             recording_cached = recording.save(folder=sorter_output_folder / "recording", **get_job_kwargs(p, verbose))
