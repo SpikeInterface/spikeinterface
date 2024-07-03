@@ -76,18 +76,19 @@ def select_peaks(
 
     selected_indices = select_peak_indices(peaks, method=method, seed=seed, **method_kwargs)
     selected_peaks = peaks[selected_indices]
-    num_segments = len(np.unique(selected_peaks["segment_index"]))
 
     if margin is not None:
         to_keep = np.zeros(len(selected_peaks), dtype=bool)
-        for segment_index in range(num_segments):
-            num_samples_in_segment = recording.get_num_samples(segment_index)
+        offset = 0
+        for segment_index in range(recording.get_num_segments()):
+            duration = recording.get_num_frames(segment_index)
             i0, i1 = np.searchsorted(selected_peaks["segment_index"], [segment_index, segment_index + 1])
-            while selected_peaks["sample_index"][i0] <= margin[0]:
+            while selected_peaks["sample_index"][i0] <= margin[0] + offset:
                 i0 += 1
-            while selected_peaks["sample_index"][i1 - 1] >= (num_samples_in_segment - margin[1]):
+            while selected_peaks["sample_index"][i1 - 1] >= (duration - margin[1]) + offset:
                 i1 -= 1
             to_keep[i0:i1] = True
+            offset += duration
         selected_indices = selected_indices[to_keep]
         selected_peaks = peaks[selected_indices]
 
@@ -283,9 +284,7 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
         )
 
     selected_indices = np.concatenate(selected_indices)
-    selected_indices = selected_indices[
-        np.lexsort((peaks[selected_indices]["sample_index"], peaks[selected_indices]["segment_index"]))
-    ]
+    selected_indices = selected_indices[np.argsort(peaks[selected_indices]["sample_index"])]
     return selected_indices
 
 
