@@ -72,7 +72,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
         - tmp_script_folder: str, default None
             the folder in which the job scripts are created. Default: directory created by
             the `tempfile` library
-        - sbatch_kwargs: dict
+        - sbatch_args: dict
           arguments to be passed to sbatch. They are translated to the --args form.
           see the [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
 
