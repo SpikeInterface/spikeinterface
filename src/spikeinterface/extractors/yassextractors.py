@@ -29,7 +29,6 @@ class YassSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = "YassExtractor"
     mode = "folder"
     installed = HAVE_YAML  # check at class level if installed or not
     installation_mesg = (
