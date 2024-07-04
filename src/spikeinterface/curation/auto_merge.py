@@ -81,7 +81,7 @@ def get_potential_auto_merge(
             "template_similarity", "cross_contamination", "check_increase_score"
         * "temporal_splits" uses the following steps: "min_spikes", "remove_contaminated", "unit_positions",
             "template_similarity", "presence_distance", "check_increase_score"
-        * "knn" uses the following steps: "min_spikes", "min_snr", "remove_contaminated", "unit_positions", 
+        * "knn" uses the following steps: "min_spikes", "min_snr", "remove_contaminated", "unit_positions",
             "knn", "check_increase_score"
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     minimum_spikes : int, default: 100
