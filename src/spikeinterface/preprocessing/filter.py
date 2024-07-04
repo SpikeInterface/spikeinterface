@@ -353,6 +353,7 @@ class CausalFilter(FilterRecording):
         If true, filtering is applied in just one direction.
     direction : "forward" | "backward", default: "forward"
         when causal_mode = True, defines the direction of the filtering
+
     Returns
     -------
     filter_recording : CausalFilterRecording
