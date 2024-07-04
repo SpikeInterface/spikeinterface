@@ -57,7 +57,7 @@ class FilterRecording(BasePreprocessor):
         - numerator/denominator : ("ba")
     ftype : str, default: "butter"
         Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
-    causal_mode : Bool, default: False
+    causal_mode : bool, default: False
         If true, filtering is applied in just one direction.
     direction : "forward" | "backward", default: "forward"
         when causal_mode = True, defines the direction of the filtering
