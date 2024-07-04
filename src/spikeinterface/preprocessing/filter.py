@@ -402,7 +402,7 @@ filter = define_function_from_class(source_class=FilterRecording, name="filter")
 bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
-causal_filter = define_function_from_class(source_class=Causal_filter, name="causal_filter")
+causal_filter = define_function_from_class(source_class=CausalFilter, name="causal_filter")
 
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
