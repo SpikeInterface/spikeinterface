@@ -372,7 +372,7 @@ class CausalFilter(FilterRecording):
         margin_ms=5.0,
         dtype=None,
         causal_mode=True,
-        direction="Forward",
+        direction="forward",
         **filter_kwargs,
     ):
         FilterRecording.__init__(
