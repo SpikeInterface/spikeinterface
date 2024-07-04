@@ -333,7 +333,7 @@ class NotchFilterRecording(BasePreprocessor):
         self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
 
 
-class Causal_filter(FilterRecording):
+class CausalFilter(FilterRecording):
     """
     Performs causal filtering using:
         * scipy.signal.lfilt or scipy.signal.sosfilt
