@@ -388,7 +388,7 @@ class CausalFilter(FilterRecording):
             band=band,
             margin_ms=margin_ms,
             dtype=dtype.str,
-            causal_mode=causal_mode,
+            causal_mode=True,
             direction=direction,
         )
         self._kwargs.update(filter_kwargs)
