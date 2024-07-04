@@ -15,7 +15,7 @@ from .merge_temporal_splits import compute_presence_distance
 
 def get_potential_auto_merge(
     sorting_analyzer: SortingAnalyzer,
-    preset: str | None = "lussac",
+    preset: str | None = "default",
     minimum_spikes: int = 100,
     minimum_snr: float = 2,
     maximum_distance_um: float = 150.0,
