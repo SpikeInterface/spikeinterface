@@ -206,6 +206,7 @@ def correct_motion(
     preset="nonrigid_accurate",
     folder=None,
     output_motion_info=False,
+    overwrite=False,
     detect_kwargs={},
     select_kwargs={},
     localize_peaks_kwargs={},
