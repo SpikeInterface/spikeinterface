@@ -209,7 +209,7 @@ def estimate_cross_contamination(
     T: int,
     refractory_period: tuple[float, float],
     limit: float | None = None,
-    C1: np.ndarray | None = None,
+    C1: float | None = None,
 ) -> tuple[float, float] | float:
     """
     Estimates the cross-contamination of the second spike train with the neuron of the first spike train.
@@ -229,7 +229,7 @@ def estimate_cross_contamination(
         The censored and refractory period (t_c, t_r) used (in ms).
     limit : float, optional
         The higher limit of cross-contamination for the statistical test.
-    C1 : np.ndarray, optional
+    C1 : float, optional
         The contamination estimate of the first spike train.
 
     Returns

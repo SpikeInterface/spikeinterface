@@ -73,14 +73,16 @@ def get_potential_auto_merge(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    preset : "lussac" | "temporal_splits" | "knn" | None, default: "lussac"
+    preset : "default" | "lussac" | "temporal_splits" | "knn" | None, default: "default"
         The preset to use for the auto-merge. Presets combine different steps into a recipe:
-        * "lussac" uses the following steps: "min_spikes", "remove_contaminated", "unit_positions", "correlogram",
+        * "default" uses the following steps: "min_spikes", "remove_contaminated", "unit_positions",
+            "template_similarity", "correlogram", "check_increase_score"
+        * "lussac" uses the following steps: "min_spikes", "remove_contaminated", "unit_positions",
             "template_similarity", "cross_contamination", "check_increase_score"
         * "temporal_splits" uses the following steps: "min_spikes", "remove_contaminated", "unit_positions",
             "template_similarity", "presence_distance", "check_increase_score"
-        * "knn" uses the following steps: "min_spikes", "min_snr", "remove_contaminated", "unit_positions", "knn",
-            "correlogram", "check_increase_score"
+        * "knn" uses the following steps: "min_spikes", "min_snr", "remove_contaminated", "unit_positions", 
+            "knn", "check_increase_score"
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     minimum_spikes : int, default: 100
         Minimum number of spikes for each unit to consider a potential merge.
@@ -174,6 +176,15 @@ def get_potential_auto_merge(
         if preset is None:
             if steps is None:
                 raise ValueError("You need to specify a preset or steps for the auto-merge function")
+        elif preset == "default":
+            steps = [
+                "min_spikes",
+                "remove_contaminated",
+                "unit_positions",
+                "template_similarity",
+                "correlogram",
+                "check_increase_score",
+            ]
         elif preset == "temporal_splits":
             steps = [
                 "min_spikes",
@@ -203,7 +214,6 @@ def get_potential_auto_merge(
                 "remove_contaminated",
                 "unit_positions",
                 "knn",
-                "correlogram",
                 "check_increase_score",
             ]
 
