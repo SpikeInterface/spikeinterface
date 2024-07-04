@@ -22,7 +22,6 @@ class NumpyFolderSorting(BaseSorting):
 
     """
 
-    extractor_name = "NumpyFolderSorting"
     mode = "folder"
     name = "NumpyFolder"
 
@@ -91,7 +90,6 @@ class NpzFolderSorting(NpzSortingExtractor):
         The sorting
     """
 
-    extractor_name = "NpzFolder"
     mode = "folder"
     name = "npzfolder"
 

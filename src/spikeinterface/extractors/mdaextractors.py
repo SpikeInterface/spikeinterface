@@ -36,7 +36,6 @@ class MdaRecordingExtractor(BaseRecording):
         The loaded data.
     """
 
-    extractor_name = "MdaRecording"
     mode = "folder"
     name = "mda"
 
@@ -193,7 +192,6 @@ class MdaSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "MdaSorting"
     mode = "file"
     name = "mda"
 

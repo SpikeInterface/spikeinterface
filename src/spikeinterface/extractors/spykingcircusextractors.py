@@ -29,7 +29,6 @@ class SpykingCircusSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = "SpykingCircusSortingExtractor"
     installed = HAVE_H5PY  # check at class level if installed or not
     mode = "folder"
     installation_mesg = "To use the SpykingCircusSortingExtractor install h5py: \n\n pip install h5py\n\n"

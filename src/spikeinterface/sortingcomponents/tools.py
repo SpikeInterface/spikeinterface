@@ -70,16 +70,15 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
 
 
 def get_prototype_spike(recording, peaks, ms_before=0.5, ms_after=0.5, nb_peaks=1000, **job_kwargs):
-    if peaks.size > nb_peaks:
-        idx = np.sort(np.random.choice(len(peaks), nb_peaks, replace=False))
-        some_peaks = peaks[idx]
-    else:
-        some_peaks = peaks
-
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+
+    from spikeinterface.sortingcomponents.peak_selection import select_peaks
+
+    few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=nb_peaks, margin=(nbefore, nafter))
 
     waveforms = extract_waveform_at_max_channel(
-        recording, some_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+        recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
     )
     with np.errstate(divide="ignore"):
         prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
