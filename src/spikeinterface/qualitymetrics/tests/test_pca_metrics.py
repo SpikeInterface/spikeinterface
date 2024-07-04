@@ -13,7 +13,6 @@ from spikeinterface.qualitymetrics import (
     nearest_neighbors_noise_overlap,
 )
 
-
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
@@ -47,18 +46,21 @@ def sorting_analyzer_simple():
     return _sorting_analyzer_simple()
 
 
-def test_calculate_pc_metrics(sorting_analyzer_simple):
+def test_calculate_pc_metrics(small_sorting_analyzer):
     import pandas as pd
 
-    sorting_analyzer = sorting_analyzer_simple
-    res1 = compute_pc_metrics(sorting_analyzer, n_jobs=1, progress_bar=True)
+    sorting_analyzer = small_sorting_analyzer
+    res1 = compute_pc_metrics(sorting_analyzer, n_jobs=1, progress_bar=True, seed=1205)
     res1 = pd.DataFrame(res1)
 
-    res2 = compute_pc_metrics(sorting_analyzer, n_jobs=2, progress_bar=True)
+    res2 = compute_pc_metrics(sorting_analyzer, n_jobs=2, progress_bar=True, seed=1205)
     res2 = pd.DataFrame(res2)
 
     for k in res1.columns:
-        mask = ~np.isnan(res1[k].values)
+        if k == "nn_unit_id":
+            mask = [True, True, True]
+        else:
+            mask = ~np.isnan(res1[k].values)
         if np.any(mask):
             assert np.array_equal(res1[k].values[mask], res2[k].values[mask])
 

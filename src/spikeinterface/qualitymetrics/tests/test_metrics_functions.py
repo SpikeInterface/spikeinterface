@@ -50,11 +50,11 @@ job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 def _small_sorting_analyzer():
     recording, sorting = generate_ground_truth_recording(
         durations=[2.0],
-        num_units=4,
+        num_units=10,
         seed=1205,
     )
 
-    sorting = sorting.select_units([3, 2, 0], ["#3", "#9", "#4"])
+    sorting = sorting.select_units([2, 7, 0], ["#3", "#9", "#4"])
 
     sorting_analyzer = create_sorting_analyzer(recording=recording, sorting=sorting, format="memory")
 
@@ -62,7 +62,7 @@ def _small_sorting_analyzer():
         "random_spikes": {"seed": 1205},
         "noise_levels": {"seed": 1205},
         "waveforms": {},
-        "templates": {},
+        "templates": {"operators": ["average", "median"]},
         "spike_amplitudes": {},
         "spike_locations": {},
         "principal_components": {},
@@ -126,7 +126,7 @@ def test_unit_id_order_independence(small_sorting_analyzer):
     """
 
     recording = small_sorting_analyzer.recording
-    sorting = small_sorting_analyzer.sorting.select_units(["#4", "#9", "#3"], [0, 2, 3])
+    sorting = small_sorting_analyzer.sorting.select_units(["#4", "#9", "#3"], [1, 7, 2])
 
     small_sorting_analyzer_2 = create_sorting_analyzer(recording=recording, sorting=sorting, format="memory")
 
@@ -161,9 +161,9 @@ def test_unit_id_order_independence(small_sorting_analyzer):
     )
 
     for metric, metric_1_data in quality_metrics_1.items():
-        assert quality_metrics_2[metric][3] == metric_1_data["#3"]
-        assert quality_metrics_2[metric][2] == metric_1_data["#9"]
-        assert quality_metrics_2[metric][0] == metric_1_data["#4"]
+        assert quality_metrics_2[metric][2] == metric_1_data["#3"]
+        assert quality_metrics_2[metric][7] == metric_1_data["#9"]
+        assert quality_metrics_2[metric][1] == metric_1_data["#4"]
 
 
 def _sorting_analyzer_simple():
