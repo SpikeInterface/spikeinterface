@@ -285,7 +285,8 @@ class LussacMerging(BaseMergingEngine):
         "lussac_kwargs": {
             "minimum_spikes": 50,
             "maximum_distance_um": 50,
-            "refractory_period": (0.3, 1.0),
+            "censored_period_ms": 0.3,
+            "refractory_period_ms": 1.0,
             "template_diff_thresh": 0.5,
         },
     }
