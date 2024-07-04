@@ -626,13 +626,29 @@ class NwbRecordingExtractor(BaseRecording):
             "file": file,
         }
 
+    def _close_hdf5_file(self):
+        has_hdf5_backend = hasattr(self, "_file")
+        if has_hdf5_backend:
+            import h5py
+
+            main_file_id = self._file.id
+            open_object_ids_main = h5py.h5f.get_obj_ids(main_file_id, types=h5py.h5f.OBJ_ALL)
+            for object_id in open_object_ids_main:
+                object_name = h5py.h5i.get_name(object_id).decode("utf-8")
+                try:
+                    object_id.close()
+                except:
+                    import warnings
+
+                    warnings.warn(f"Error closing object {object_name}")
+
     def __del__(self):
         # backend mode
         if hasattr(self, "_file"):
             if hasattr(self._file, "store"):
                 self._file.store.close()
             else:
-                self._file.close()
+                self._close_hdf5_file()
         # pynwb mode
         elif hasattr(self, "_nwbfile"):
             io = self._nwbfile.get_read_io()
@@ -1111,15 +1127,37 @@ class NwbSortingExtractor(BaseSorting):
             "t_start": self.t_start,
         }
 
+    def _close_hdf5_file(self):
+        has_hdf5_backend = hasattr(self, "_file")
+        if has_hdf5_backend:
+            import h5py
+
+            main_file_id = self._file.id
+            open_object_ids_main = h5py.h5f.get_obj_ids(main_file_id, types=h5py.h5f.OBJ_ALL)
+            for object_id in open_object_ids_main:
+                object_name = h5py.h5i.get_name(object_id).decode("utf-8")
+                try:
+                    object_id.close()
+                except:
+                    import warnings
+
+                    warnings.warn(f"Error closing object {object_name}")
+
     def __del__(self):
         # backend mode
         if hasattr(self, "_file"):
             if hasattr(self._file, "store"):
                 self._file.store.close()
             else:
-                self._file.close()
+                self._close_hdf5_file()
         # pynwb mode
         elif hasattr(self, "_nwbfile"):
+            io = self._nwbfile.get_read_io()
+            if io is not None:
+                io.close()
+
+        # pynwb mode
+        elif hasattr(self, "_nwbfile"):  # hdf
             io = self._nwbfile.get_read_io()
             if io is not None:
                 io.close()
