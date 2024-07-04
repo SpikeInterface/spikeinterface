@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import Tuple
 import numpy as np
 
-from ..core import create_sorting_analyzer
+from ..core import create_sorting_analyzer, SortingAnalyzer
 from ..core.template import Templates
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms
@@ -13,35 +14,35 @@ from .merge_temporal_splits import compute_presence_distance
 
 
 def get_potential_auto_merge(
-    sorting_analyzer,
-    minimum_spikes=100,
-    minimum_snr=2,
-    maximum_distance_um=150.0,
-    peak_sign="neg",
-    bin_ms=0.25,
-    window_ms=100.0,
-    corr_diff_thresh=0.16,
-    template_diff_thresh=0.25,
-    censored_period_ms=0.3,
-    refractory_period_ms=1.0,
-    sigma_smooth_ms=0.6,
-    contamination_threshold=0.2,
-    adaptative_window_threshold=0.5,
+    sorting_analyzer: SortingAnalyzer,
+    preset: str | None = "lussac",
+    minimum_spikes: int = 100,
+    minimum_snr: float = 2,
+    maximum_distance_um: float = 150.0,
+    peak_sign: str = "neg",
+    bin_ms: float = 0.25,
+    window_ms: float = 100.0,
+    corr_diff_thresh: float = 0.16,
+    template_diff_thresh: float = 0.25,
+    censored_period_ms: float = 0.3,
+    refractory_period_ms: float = 1.0,
+    sigma_smooth_ms: float = 0.6,
+    contamination_threshold: float = 0.2,
+    adaptative_window_threshold: float = 0.5,
     censor_correlograms_ms: float = 0.15,
-    num_channels=5,
-    num_shift=5,
-    firing_contamination_balance=2.5,
-    extra_outputs=False,
-    steps=None,
-    presence_distance_thresh=100,
-    preset=None,
-    template_metric="l1",
-    p_value=0.2,
-    CC_threshold=0.1,
-    k_nn=10,
-    knn_kwargs=None,
-    **presence_distance_kwargs,
-):
+    num_channels: int = 5,
+    num_shift: int = 5,
+    firing_contamination_balance: float = 2.5,
+    extra_outputs: bool = False,
+    steps: list[str] | None = None,
+    presence_distance_thresh: float = 100,
+    template_metric: str = "l1",
+    p_value: float = 0.2,
+    CC_threshold: float = 0.1,
+    k_nn: int = 10,
+    knn_kwargs: dict | None = None,
+    presence_distance_kwargs: dict | None = None,
+) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
     """
     Algorithm to find and check potential merges between units.
 
@@ -72,6 +73,15 @@ def get_potential_auto_merge(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
+    preset : "lussac" | "temporal_splits" | "knn" | None, default: "lussac"
+        The preset to use for the auto-merge. Presets combine different steps into a recipe:
+        * "lussac" uses the following steps: "min_spikes", "remove_contaminated", "unit_positions", "correlogram",
+            "template_similarity", "cross_contamination", "check_increase_score"
+        * "temporal_splits" uses the following steps: "min_spikes", "remove_contaminated", "unit_positions",
+            "template_similarity", "presence_distance", "check_increase_score"
+        * "knn" uses the following steps: "min_spikes", "min_snr", "remove_contaminated", "unit_positions", "knn",
+            "correlogram", "check_increase_score"
+        If `preset` is None, you can specify the steps manually with the `steps` parameter.
     minimum_spikes : int, default: 100
         Minimum number of spikes for each unit to consider a potential merge.
         Enough spikes are needed to estimate the correlogram
@@ -91,42 +101,42 @@ def get_potential_auto_merge(
     template_diff_thresh : float, default: 0.25
         The threshold on the "template distance metric" for considering a merge.
         It needs to be between 0 and 1
-    template_metric : 'l1'
-        The metric to be used when comparing templates. Default is l1 norm
+    template_metric : 'l1' | 'l2' | 'cosine', default: 'l1'
+        The metric to be used when comparing templates.
     censored_period_ms : float, default: 0.3
-        Used to compute the refractory period violations aka "contamination"
+        Used to compute the refractory period violations aka "contamination".
     refractory_period_ms : float, default: 1
-        Used to compute the refractory period violations aka "contamination"
+        Used to compute the refractory period violations aka "contamination".
     sigma_smooth_ms : float, default: 0.6
-        Parameters to smooth the correlogram estimation
+        Parameters to smooth the correlogram estimation.
     contamination_threshold : float, default: 0.2
-        Threshold for not taking in account a unit when it is too contaminated
+        Threshold for not taking in account a unit when it is too contaminated.
     adaptative_window_threshold : : float, default: 0.5
-        Parameter to detect the window size in correlogram estimation
+        Parameter to detect the window size in correlogram estimation.
     censor_correlograms_ms : float, default: 0.15
-        The period to censor on the auto and cross-correlograms
+        The period to censor on the auto and cross-correlograms.
     num_channels : int, default: 5
-        Number of channel to use for template similarity computation
+        Number of channel to use for template similarity computation.
     num_shift : int, default: 5
-        Number of shifts in samles to be explored for template similarity computation
+        Number of shifts in samles to be explored for template similarity computation.
     firing_contamination_balance : float, default: 2.5
-        Parameter to control the balance between firing rate and contamination in computing unit "quality score"
+        Parameter to control the balance between firing rate and contamination in computing unit "quality score".
     presence_distance_thresh : float, default: 100
-        Parameter to control how present two units should be simultaneously
+        Parameter to control how present two units should be simultaneously.
     k_nn : int, default 5
-        The number of neighbors to consider for every spike in the recording
+        The number of neighbors to consider for every spike in the recording.
     knn_kwargs : dict, default None
-        The dict of extra params to be passed to knn
+        The dict of extra params to be passed to knn.
+    presence_distance_kwargs : dict, default None
+        The dict of extra params to be passed to presence_distance.
     extra_outputs : bool, default: False
-        If True, an additional dictionary (`outs`) with processed data is returned
+        If True, an additional dictionary (`outs`) with processed data is returned.
     steps : None or list of str, default: None
         which steps to run (gives flexibility to running just some steps)
         If None all steps are done (except presence_distance).
         Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram",
         "template_similarity", "presence_distance", "cross_contamination", "knn", "check_increase_score"
         Please check steps explanations above!
-    template_metric : 'l1', 'l2' or 'cosine'
-        The metric to consider when measuring the distances between templates. Default is l1
 
     Returns
     -------
@@ -140,9 +150,7 @@ def get_potential_auto_merge(
     import scipy
 
     sorting = sorting_analyzer.sorting
-    recording = sorting_analyzer.recording
     unit_ids = sorting.unit_ids
-    sorting.register_recording(recording)
 
     # to get fast computation we will not analyse pairs when:
     #    * not enough spikes for one of theses
@@ -164,14 +172,8 @@ def get_potential_auto_merge(
 
     if steps is None:
         if preset is None:
-            steps = [
-                "min_spikes",
-                "remove_contaminated",
-                "unit_positions",
-                "template_similarity",
-                "correlogram",
-                "check_increase_score",
-            ]
+            if steps is None:
+                raise ValueError("You need to specify a preset or steps for the auto-merge function")
         elif preset == "temporal_splits":
             steps = [
                 "min_spikes",
@@ -191,6 +193,10 @@ def get_potential_auto_merge(
                 "check_increase_score",
             ]
         elif preset == "knn":
+            if not sorting_analyzer.has_extension("spike_locations"):
+                raise ValueError("knn preset requires spike_locations extension")
+            if not sorting_analyzer.has_extension("spike_amplitudes"):
+                raise ValueError("knn preset requires spike_amplitudes extension")
             steps = [
                 "min_spikes",
                 "min_snr",
@@ -215,16 +221,16 @@ def get_potential_auto_merge(
             to_remove = num_spikes < minimum_spikes
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
-        
+
         # STEP : remove units with too small SNR
         elif step == "min_snr":
             qm_ext = sorting_analyzer.get_extension("quality_metrics")
             if qm_ext is None:
-                sorting_analyzer.compute('noise_levels')
-                sorting_analyzer.compute('quality_metrics', metric_names=['snr'])
+                sorting_analyzer.compute("noise_levels")
+                sorting_analyzer.compute("quality_metrics", metric_names=["snr"])
                 qm_ext = sorting_analyzer.get_extension("quality_metrics")
 
-            snrs = qm_ext.get_data()['snr'].values    
+            snrs = qm_ext.get_data()["snr"].values
             to_remove = snrs < minimum_snr
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
@@ -322,14 +328,22 @@ def get_potential_auto_merge(
 
         # STEP : check how the rates overlap in times
         elif step == "presence_distance" in steps:
-            presence_distances = compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs)
+            presence_distance_kwargs = presence_distance_kwargs or dict()
+            num_samples = [
+                sorting_analyzer.get_num_samples(segment_index) for segment_index in range(sorting.get_num_segments())
+            ]
+            presence_distances = compute_presence_distance(
+                sorting, pair_mask, num_samples=num_samples, **presence_distance_kwargs
+            )
             pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
             outs["presence_distances"] = presence_distances
 
         # STEP : check if the cross contamination is significant
         elif step == "cross_contamination" in steps:
             refractory = (censored_period_ms, refractory_period_ms)
-            CC, p_values = compute_cross_contaminations(sorting_analyzer, pair_mask, CC_threshold, refractory, contaminations)
+            CC, p_values = compute_cross_contaminations(
+                sorting_analyzer, pair_mask, CC_threshold, refractory, contaminations
+            )
             pair_mask = pair_mask & (p_values > p_value)
             outs["cross_contaminations"] = CC, p_values
 
@@ -390,7 +404,7 @@ def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs)
             ind = ind[mask_2]
             chan_inds, all_counts = np.unique(spikes["unit_index"][ind], return_counts=True)
             all_counts = all_counts.astype(float)
-            #all_counts /= all_spike_counts[chan_inds]
+            # all_counts /= all_spike_counts[chan_inds]
             best_indices = np.argsort(all_counts)[::-1]
             pair_mask[unit_ind, unit_ind + 1 :] &= np.isin(np.arange(unit_ind + 1, n), chan_inds[best_indices])
     return pair_mask
@@ -554,13 +568,13 @@ def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_p
     contaminations : contaminations of the units, if already precomputed
 
     """
+    from spikeinterface.sortingcomponents.merging.lussac import estimate_cross_contamination
 
     sorting = analyzer.sorting
     unit_ids = sorting.unit_ids
     n = len(unit_ids)
-    sf = analyzer.recording.sampling_frequency
-    n_frames = analyzer.recording.get_num_samples()
-    from spikeinterface.sortingcomponents.merging.lussac import estimate_cross_contamination
+    sf = analyzer.sampling_frequency
+    n_frames = analyzer.get_total_samples()
 
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
@@ -585,7 +599,7 @@ def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_p
             else:
                 C1 = None
             CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2] = estimate_cross_contamination(
-                spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold, contaminations=C1
+                spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold, C1=C1
             )
 
     return CC, p_values
@@ -692,7 +706,6 @@ def check_improve_contaminations_score(
     Check that the contamination score is improved (decrease)  after
     a potential merge
     """
-    recording = sorting_analyzer.recording
     sorting = sorting_analyzer.sorting
     pair_mask = pair_mask.copy()
     pairs_removed = []
@@ -715,7 +728,14 @@ def check_improve_contaminations_score(
             sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1], delta_time_ms=censored_period_ms
         ).select_units([unit_id1])
 
-        sorting_analyzer_new = create_sorting_analyzer(sorting_merged, recording, format="memory", sparse=False)
+        # create recordingless analyzer
+        sorting_analyzer_new = SortingAnalyzer(
+            sorting=sorting_merged,
+            recording=None,
+            rec_attributes=sorting_analyzer.rec_attributes,
+            format="memory",
+            sparsity=None,
+        )
 
         new_contaminations, _ = compute_refrac_period_violations(
             sorting_analyzer_new, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms

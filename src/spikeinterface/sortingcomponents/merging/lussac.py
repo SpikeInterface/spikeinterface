@@ -20,16 +20,19 @@ from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 def binom_sf(x: int, n: float, p: float) -> float:
     """
     Computes the survival function (sf = 1 - cdf) of the binomial distribution.
-    From values where the cdf is really close to 1.0, the survival function gives more precise results.
-    Allows for a non-integer n (uses interpolation).
 
-    @param x : int
+    Parameters
+    ----------
+    x : int
         The number of successes.
-    @param n : float
+    n : float
         The number of trials.
-    @param p: float
+    p : float
         The probability of success.
-    @return sf : float
+
+    Returns
+    -------
+    sf : float
         The survival function of the binomial distribution.
     """
 
@@ -51,10 +54,21 @@ if HAVE_NUMBA:
         """
         Computes the integer borders, and the probability of 2 spikes distant by this border to be closer than max_time.
 
-        @param max_time : float
+        Parameters
+        ----------
+        max_time : float
             The maximum time between 2 spikes to be considered as a coincidence.
-        @return border_low, border_high, p_low, p_high: tuple[int, int, float, float]
-            The borders and their probabilities.
+
+        Returns
+        -------
+        border_low : int
+            The lower border.
+        border_high : int
+            The higher border.
+        p_low : float
+            The probability of 2 spikes distant by the lower border to be closer than max_time.
+        p_high : float
+            The probability of 2 spikes distant by the higher border to be closer than max_time.
         """
 
         border_high = math.ceil(max_time)
@@ -72,11 +86,16 @@ if HAVE_NUMBA:
         """
         Computes the number of refractory period violations in a spike train.
 
-        @param spike_train : array[int64] (n_spikes)
+        Parameters
+        ----------
+        spike_train : array[int64] (n_spikes)
             The spike train to compute the number of violations for.
-        @param max_time : float32
+        max_time : float32
             The maximum time to consider for violations (in number of samples).
-        @return n_violations : float
+
+        Returns
+        -------
+        n_violations : float
             The number of spike pairs that violate the refractory period.
         """
 
@@ -107,20 +126,19 @@ if HAVE_NUMBA:
     def compute_nb_coincidence(spike_train1, spike_train2, max_time) -> float:
         """
         Computes the number of coincident spikes between two spike trains.
-        Spike timings are integers, so their real timing follows a uniform distribution between t - dt/2 and t + dt/2.
-        Under the assumption that the uniform distributions from two spikes are independent, we can compute the probability
-        of those two spikes being closer than the coincidence window:
-        f(x) = 1/2 (x+1)² if -1 <= x <= 0
-        f(x) = 1/2 (1-x²) + x if 0 <= x <= 1
-        where x is the distance between max_time floor/ceil(max_time)
 
-        @param spike_train1 : array[int64] (n_spikes1)
+        Parameters
+        ----------
+        spike_train1 : array[int64] (n_spikes1)
             The spike train of the first unit.
-        @param spike_train2 : array[int64] (n_spikes2)
+        spike_train2 : array[int64] (n_spikes2)
             The spike train of the second unit.
-        @param max_time : float32
+        max_time : float32
             The maximum time to consider for coincidence (in number samples).
-        @return n_coincidence : float
+
+        Returns
+        -------
+        n_coincidence : float
             The number of coincident spikes.
         """
 
@@ -155,15 +173,21 @@ if HAVE_NUMBA:
 def estimate_contamination(spike_train: np.ndarray, sf: float, T: int, refractory_period: tuple[float, float]) -> float:
     """
     Estimates the contamination of a spike train by looking at the number of refractory period violations.
-    The spike train is assumed to have spikes coming from a neuron, and noisy spikes that are random and
-    uncorrelated to the neuron. Under this assumption, we can estimate the contamination (i.e. the
-    fraction of noisy spikes to the total number of spikes).
 
-    @param spike_train : np.ndarray
+    Parameters
+    ----------
+    spike_train : np.ndarray
         The unit's spike train.
-    @param refractory_period : tuple[float, float]
+    sf : float
+        The sampling frequency of the spike train.
+    T : int
+        The duration of the spike train in samples.
+    refractory_period : tuple[float, float]
         The censored and refractory period (t_c, t_r) used (in ms).
-    @return estimated_contamination : float
+
+    Returns
+    -------
+    estimated_contamination : float
         The estimated contamination between 0 and 1.
     """
 
@@ -185,29 +209,44 @@ def estimate_cross_contamination(
     T: int,
     refractory_period: tuple[float, float],
     limit: float | None = None,
+    C1: np.ndarray | None = None,
 ) -> tuple[float, float] | float:
     """
     Estimates the cross-contamination of the second spike train with the neuron of the first spike train.
     Also performs a statistical test to check if the cross-contamination is significantly higher than a given limit.
 
-    @param spike_train1 : np.ndarray
+    Parameters
+    ----------
+    spike_train1 : np.ndarray
         The spike train of the first unit.
-    @param spike_train2 : np.ndarray
+    spike_train2 : np.ndarray
         The spike train of the second unit.
-    @param refractory_period : tuple[float, float]
+    sf : float
+        The sampling frequency (in Hz).
+    T : int
+        The duration of the recording (in samples).
+    refractory_period : tuple[float, float]
         The censored and refractory period (t_c, t_r) used (in ms).
-    @param limit : float | None
+    limit : float, optional
         The higher limit of cross-contamination for the statistical test.
-    @return (estimated_cross_cont, p_value) : tuple[float, float] if limit is not None
-            estimated_cross_cont: float if limit is None
-        Returns the estimation of cross-contamination, as well as the p-value of the statistical test if the limit is given.
+    C1 : np.ndarray, optional
+        The contamination estimate of the first spike train.
+
+    Returns
+    -------
+    (estimated_cross_cont, p_value) : tuple[float, float] if limit is not None
+        estimated_cross_cont : float if limit is None
+            The estimation of cross-contamination.
+        p_value : float
+            The p-value of the statistical test if the limit is given.
     """
     spike_train1 = spike_train1.astype(np.int64, copy=False)
     spike_train2 = spike_train2.astype(np.int64, copy=False)
 
     N1 = float(len(spike_train1))
     N2 = float(len(spike_train2))
-    C1 = estimate_contamination(spike_train1, sf, T, refractory_period)
+    if C1 is None:
+        C1 = estimate_contamination(spike_train1, sf, T, refractory_period)
 
     t_c = int(round(refractory_period[0] * 1e-3 * sf))
     t_r = int(round(refractory_period[1] * 1e-3 * sf))

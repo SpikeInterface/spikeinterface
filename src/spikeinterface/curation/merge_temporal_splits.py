@@ -2,7 +2,7 @@ from __future__ import annotations
 import numpy as np
 
 
-def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None):
+def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_samples=None):
     """
     Compute the presence distance between two units.
 
@@ -11,61 +11,84 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None):
 
     Parameters
     ----------
-    sorting: Sorting
+    sorting : Sorting
         The sorting object.
-    unit1: int or str
+    unit1 : int or str
         The id of the first unit.
-    unit2: int or str
+    unit2 : int or str
         The id of the second unit.
-    bin_duration_s: float
+    bin_duration_s : float
         The duration of the bin in seconds.
-    bins: array-like
+    bins : array-like
         The bins used to compute the firing rate.
+    num_samples : list | int | None, default: None
+        The number of samples for each segment. Required if the sorting doesn't have a recording
+        attached.
 
     Returns
     -------
-    d: float
+    d : float
         The presence distance between the two units.
     """
-    if bins is None:
-        bin_size = bin_duration_s * sorting.sampling_frequency
-        bins = np.arange(0, sorting.get_num_samples(), bin_size)
-
-    st1 = sorting.get_unit_spike_train(unit_id=unit1)
-    st2 = sorting.get_unit_spike_train(unit_id=unit2)
-
-    h1, _ = np.histogram(st1, bins)
-    h1 = h1.astype(float)
-
-    h2, _ = np.histogram(st2, bins)
-    h2 = h2.astype(float)
-
     import scipy
 
-    xaxis = bins[1:] / sorting.sampling_frequency
-    d = scipy.stats.wasserstein_distance(xaxis, xaxis, h1, h2)
+    distances = []
+    if num_samples is not None:
+        if isinstance(num_samples, int):
+            num_samples = [num_samples]
 
-    return d
+    if not sorting.has_recording():
+        if num_samples is None:
+            raise ValueError("num_samples must be provided if sorting has no recording")
+        if len(num_samples) != sorting.get_num_segments():
+            raise ValueError("num_samples must have the same length as the number of segments")
+
+    for segment_index in range(sorting.get_num_segments()):
+        if bins is None:
+            bin_size = bin_duration_s * sorting.sampling_frequency
+            if sorting.has_recording():
+                ns = sorting.get_num_samples(segment_index)
+            else:
+                ns = num_samples[segment_index]
+            bins = np.arange(0, ns, bin_size)
+
+        st1 = sorting.get_unit_spike_train(unit_id=unit1)
+        st2 = sorting.get_unit_spike_train(unit_id=unit2)
+
+        h1, _ = np.histogram(st1, bins)
+        h1 = h1.astype(float)
+
+        h2, _ = np.histogram(st2, bins)
+        h2 = h2.astype(float)
+
+        xaxis = bins[1:] / sorting.sampling_frequency
+        d = scipy.stats.wasserstein_distance(xaxis, xaxis, h1, h2)
+        distances.append(d)
+
+    return np.mean(d)
 
 
-def compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs):
+def compute_presence_distance(sorting, pair_mask, num_samples=None, **presence_distance_kwargs):
     """
     Get the potential drift-related merges based on similarity and presence completeness.
 
     Parameters
     ----------
-    sorting: Sorting
+    sorting : Sorting
         The sorting object
-    pair_mask: None or boolean array
+    pair_mask : None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
-    presence_distance_threshold: float
+    num_samples : list | int | None, default: None
+        The number of samples for each segment. Required if the sorting doesn't have a recording
+        attached.
+    presence_distance_threshold : float
         The presence distance threshold used to consider two units as similar
-    presence_distance_kwargs: A dictionary of kwargs to be passed to compute_presence_distance()
+    presence_distance_kwargs : A dictionary of kwargs to be passed to compute_presence_distance().
 
     Returns
     -------
-    potential_merges: list
+    potential_merges : list
         The list of potential merges
 
     """
@@ -84,7 +107,7 @@ def compute_presence_distance(sorting, pair_mask, **presence_distance_kwargs):
                 continue
             unit1 = unit_ids[unit_ind1]
             unit2 = unit_ids[unit_ind2]
-            d = presence_distance(sorting, unit1, unit2, **presence_distance_kwargs)
+            d = presence_distance(sorting, unit1, unit2, num_samples=num_samples, **presence_distance_kwargs)
             presence_distances[unit_ind1, unit_ind2] = d
 
     return presence_distances
