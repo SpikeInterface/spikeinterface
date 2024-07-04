@@ -215,16 +215,16 @@ def get_potential_auto_merge(
             to_remove = num_spikes < minimum_spikes
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
-        
+
         # STEP : remove units with too small SNR
         elif step == "min_snr":
             qm_ext = sorting_analyzer.get_extension("quality_metrics")
             if qm_ext is None:
-                sorting_analyzer.compute('noise_levels')
-                sorting_analyzer.compute('quality_metrics', metric_names=['snr'])
+                sorting_analyzer.compute("noise_levels")
+                sorting_analyzer.compute("quality_metrics", metric_names=["snr"])
                 qm_ext = sorting_analyzer.get_extension("quality_metrics")
 
-            snrs = qm_ext.get_data()['snr'].values    
+            snrs = qm_ext.get_data()["snr"].values
             to_remove = snrs < minimum_snr
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
@@ -329,7 +329,9 @@ def get_potential_auto_merge(
         # STEP : check if the cross contamination is significant
         elif step == "cross_contamination" in steps:
             refractory = (censored_period_ms, refractory_period_ms)
-            CC, p_values = compute_cross_contaminations(sorting_analyzer, pair_mask, CC_threshold, refractory, contaminations)
+            CC, p_values = compute_cross_contaminations(
+                sorting_analyzer, pair_mask, CC_threshold, refractory, contaminations
+            )
             pair_mask = pair_mask & (p_values > p_value)
             outs["cross_contaminations"] = CC, p_values
 
@@ -390,7 +392,7 @@ def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs)
             ind = ind[mask_2]
             chan_inds, all_counts = np.unique(spikes["unit_index"][ind], return_counts=True)
             all_counts = all_counts.astype(float)
-            #all_counts /= all_spike_counts[chan_inds]
+            # all_counts /= all_spike_counts[chan_inds]
             best_indices = np.argsort(all_counts)[::-1]
             pair_mask[unit_ind, unit_ind + 1 :] &= np.isin(np.arange(unit_ind + 1, n), chan_inds[best_indices])
     return pair_mask
