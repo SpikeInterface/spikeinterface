@@ -349,8 +349,6 @@ class CausalFilter(FilterRecording):
         Margin in ms on border to avoid border effect
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
-    causal_mode : Bool, default: True
-        If true, filtering is applied in just one direction.
     direction : "forward" | "backward", default: "forward"
         when causal_mode = True, defines the direction of the filtering
 
@@ -371,7 +369,6 @@ class CausalFilter(FilterRecording):
         band=[300.0, 6000.0],
         margin_ms=5.0,
         dtype=None,
-        causal_mode=True,
         direction="forward",
         **filter_kwargs,
     ):
@@ -381,7 +378,7 @@ class CausalFilter(FilterRecording):
             band=band,
             margin_ms=margin_ms,
             dtype=dtype,
-            causal_mode=causal_mode,
+            causal_mode=True,
             direction=direction,
             **filter_kwargs,
         )
