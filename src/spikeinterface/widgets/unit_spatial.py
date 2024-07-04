@@ -25,6 +25,7 @@ class UnitSpatialDistributionsWidget(BaseWidget):
             depth_axis=1, bins=None,
             cmap="viridis", kde=False,
             depth_hist=True, groups=None,
+            kde_kws=None,
             backend=None, **backend_kwargs
     ):
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
@@ -50,6 +51,7 @@ class UnitSpatialDistributionsWidget(BaseWidget):
                 np.round(np.diff(xrange).squeeze() / 75).astype(int),
                 np.round(np.diff(yrange).squeeze() / 75).astype(int)
             )
+            # TODO: change behaviour, if bins is not defined, bin only along the depth axis
 
         if type(cmap) is str:
             cmap = color_palette(cmap, as_cmap=True)
@@ -65,7 +67,8 @@ class UnitSpatialDistributionsWidget(BaseWidget):
             kde=kde,
             cmap=cmap,
             depth_hist=depth_hist,
-            groups=groups
+            groups=groups,
+            kde_kws=kde_kws
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -90,6 +93,9 @@ class UnitSpatialDistributionsWidget(BaseWidget):
             hist, xedges, yedges = np.histogram2d(dp.x, dp.y, bins=dp.bins, range=[dp.xrange, dp.yrange])
             pcm = ax.pcolormesh(xedges, yedges, hist.T, cmap=dp.cmap)
         else:
+            kde_kws = dict(levels=100, thresh=0, fill=True, bw_adjust=0.1)
+            if dp.kde_kws is not None:
+                kde_kws.update(dp.kde_kws)
             data = dict(x=dp.x, y=dp.y)
             bg = ax.add_patch(
                 patches.Rectangle(
@@ -103,8 +109,9 @@ class UnitSpatialDistributionsWidget(BaseWidget):
             bg.set_clip_path(patch)
             kdeplot(
                 data, x='x', y='y',
-                cmap=dp.cmap, levels=100, thresh=0, fill=True,
-                ax=ax, bw_adjust=0.1, clip=[dp.xrange, dp.yrange]
+                clip=[dp.xrange, dp.yrange],
+                cmap=dp.cmap, ax=ax,
+                **kde_kws
             )
             pcm = ax.collections[0]
             ax.set_xlabel(None)
