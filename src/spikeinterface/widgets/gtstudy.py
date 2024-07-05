@@ -30,10 +30,7 @@ class StudyRunTimesWidget(BaseWidget):
             case_keys = list(study.cases.keys())
 
         plot_data = dict(
-            study=study,
-            run_times=study.get_run_times(case_keys),
-            case_keys=case_keys,
-            colors=study.get_colors()
+            study=study, run_times=study.get_run_times(case_keys), case_keys=case_keys, colors=study.get_colors()
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
