@@ -282,10 +282,8 @@ def apply_merges_to_sorting(
     all_unit_ids = list(all_unit_ids)
 
     num_seg = sorting.get_num_segments()
-    segment_limits = np.searchsorted(spikes["segment_index"], np.arange(0, num_seg + 2))
-    segment_slices = []
-    for i in range(num_seg):
-        segment_slices += [(segment_limits[i], segment_limits[i + 1])]
+    seg_lims = np.searchsorted(spikes["segment_index"], np.arange(0, num_seg + 2))
+    segment_slices = [(seg_lims[i], seg_lims[i + 1]) for i in range(num_seg)]
 
     # using this function vaoid to use the mask approach and simplify a lot the algo
     spike_vector_list = [spikes[s0:s1] for s0, s1 in segment_slices]
@@ -369,7 +367,7 @@ def generate_unit_ids_for_merge_group(old_unit_ids, units_to_merge, new_unit_ids
     """
     Function to generate new units ids during a merging procedure. If new_units_ids
     are provided, it will return these unit ids, checking that they have the the same
-    length as `units_to:merge`.
+    length as `units_to_merge`.
 
     Parameters
     ----------
@@ -391,13 +389,16 @@ def generate_unit_ids_for_merge_group(old_unit_ids, units_to_merge, new_unit_ids
     -------
     new_unit_ids :  The new unit ids
         The new units_ids associated with the merges.
-
-
     """
     old_unit_ids = np.asarray(old_unit_ids)
 
     if new_unit_ids is not None:
+        # then only doing a consistency check
         assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
+        # new_unit_ids can also be part of old_unit_ids only inside the same group: 
+        for i, new_unit_id in enumerate(new_unit_ids):
+            if new_unit_id in old_unit_ids:
+                assert new_unit_id in units_to_merge[i], "new_unit_ids already exists but outside the merged groups"
     else:
         dtype = old_unit_ids.dtype
         num_merge = len(units_to_merge)

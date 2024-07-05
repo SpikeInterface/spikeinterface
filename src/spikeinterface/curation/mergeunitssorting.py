@@ -45,8 +45,6 @@ class MergeUnitsSorting(BaseSorting):
         parents_unit_ids = sorting.unit_ids
         sampling_frequency = sorting.get_sampling_frequency()
 
-        from spikeinterface.core.sorting_tools import generate_unit_ids_for_merge_group
-
         new_unit_ids = generate_unit_ids_for_merge_group(
             sorting.unit_ids, units_to_merge, new_unit_ids=new_unit_ids, new_id_strategy="append"
         )
