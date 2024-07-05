@@ -225,17 +225,18 @@ def random_spikes_selection(
     return random_spikes_indices
 
 
-
-def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_ms=None, return_kept=False, new_id_strategy='append'):
+def apply_merges_to_sorting(
+    sorting, units_to_merge, new_unit_ids=None, censor_ms=None, return_kept=False, new_id_strategy="append"
+):
     """
     Function to apply a resolved representation of the merges to a sorting object.
 
     This function is not lazy and create a new NumpySorting with a compact spike_vector as fast as possible.
-    
+
     If censor_ms is not None, duplicated spikes violating the censor_ms refractory period are removed.
 
     Optionaly, the boolean of kept spikes is returned
-    
+
     Parameters
     ----------
     sorting : Sorting
@@ -251,7 +252,7 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
     return_kept : bool, default False
         return also a booolean of kept spikes
     new_id_strategy : "append" | "take_first", default "append"
-        The strategy that should be used, if new_unit_ids is None, to create new unit_ids. 
+        The strategy that should be used, if new_unit_ids is None, to create new unit_ids.
             "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
             "take_first" : new_unit_ids will be the first unit_id of every list of merges
 
@@ -267,14 +268,15 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
     spikes = sorting.to_spike_vector().copy()
     keep_mask = np.ones(len(spikes), dtype=bool)
 
-    new_unit_ids = generate_unit_ids_for_merge_group(sorting.unit_ids, units_to_merge,
-                                                     new_unit_ids=new_unit_ids, new_id_strategy=new_id_strategy)
+    new_unit_ids = generate_unit_ids_for_merge_group(
+        sorting.unit_ids, units_to_merge, new_unit_ids=new_unit_ids, new_id_strategy=new_id_strategy
+    )
 
     rename_ids = {}
     for i, merge_group in enumerate(units_to_merge):
         for unit_id in merge_group:
             rename_ids[unit_id] = new_unit_ids[i]
-    
+
     all_unit_ids = _get_ids_after_merging(sorting.unit_ids, units_to_merge, new_unit_ids)
     all_unit_ids = list(all_unit_ids)
 
@@ -282,23 +284,23 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
     segment_limits = np.searchsorted(spikes["segment_index"], np.arange(0, num_seg + 2))
     segment_slices = []
     for i in range(num_seg):
-        segment_slices += [(segment_limits[i], segment_limits[i+1])]
+        segment_slices += [(segment_limits[i], segment_limits[i + 1])]
 
     # using this function vaoid to use the mask approach and simplify a lot the algo
     spike_vector_list = [spikes[s0:s1] for s0, s1 in segment_slices]
     spike_indices = spike_vector_to_indices(spike_vector_list, sorting.unit_ids, absolute_index=True)
-    
+
     for old_unit_id in sorting.unit_ids:
         if old_unit_id in rename_ids.keys():
             new_unit_id = rename_ids[old_unit_id]
         else:
             new_unit_id = old_unit_id
-        
+
         new_unit_index = all_unit_ids.index(new_unit_id)
         for segment_index in range(num_seg):
             spike_inds = spike_indices[segment_index][old_unit_id]
             spikes["unit_index"][spike_inds] = new_unit_index
-    
+
     if censor_ms is not None:
         rpv = int(sorting.sampling_frequency * censor_ms / 1000.0)
         for group_old_ids in units_to_merge:
@@ -308,7 +310,7 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
                     group_indices.append(spike_indices[segment_index][unit_id])
                 group_indices = np.concatenate(group_indices)
                 group_indices = np.sort(group_indices)
-                inds  = np.flatnonzero(np.diff(spikes["sample_index"][group_indices])  < rpv )
+                inds = np.flatnonzero(np.diff(spikes["sample_index"][group_indices]) < rpv)
                 keep_mask[group_indices[inds + 1]] = False
 
     spikes = spikes[keep_mask]
@@ -326,7 +328,7 @@ def _get_ids_after_merging(old_unit_ids, units_to_merge, new_unit_ids):
     be provided.
 
     Every new unit_id will be added at the end if not already present.
-    
+
     Parameters
     ----------
     old_unit_ids : np.array
@@ -341,7 +343,7 @@ def _get_ids_after_merging(old_unit_ids, units_to_merge, new_unit_ids):
     -------
 
     all_unit_ids :  The unit ids in the merged sorting
-        The units_ids that will be present after merges 
+        The units_ids that will be present after merges
 
     """
     old_unit_ids = np.asarray(old_unit_ids)
@@ -362,8 +364,7 @@ def _get_ids_after_merging(old_unit_ids, units_to_merge, new_unit_ids):
     return np.array(all_unit_ids)
 
 
-
-def generate_unit_ids_for_merge_group(old_unit_ids, units_to_merge, new_unit_ids=None, new_id_strategy='append'):
+def generate_unit_ids_for_merge_group(old_unit_ids, units_to_merge, new_unit_ids=None, new_id_strategy="append"):
     """
     Function to generate new units ids during a merging procedure. If new_units_ids
     are provided, it will return these unit ids, checking that they have the length as
@@ -380,19 +381,18 @@ def generate_unit_ids_for_merge_group(old_unit_ids, units_to_merge, new_unit_ids
         A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
         merged units will have the first unit_id of every lists of merges
     new_id_strategy : "append" | "take_first", default "append"
-        The strategy that should be used, if new_unit_ids is None, to create new unit_ids. 
+        The strategy that should be used, if new_unit_ids is None, to create new unit_ids.
             "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
             "take_first" : new_unit_ids will be the first unit_id of every list of merges
-    
+
     Returns
     -------
     new_unit_ids :  The new unit ids
-        The new units_ids associated with the merges 
+        The new units_ids associated with the merges
 
-    
+
     """
     old_unit_ids = np.asarray(old_unit_ids)
-
 
     if new_unit_ids is not None:
         assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"

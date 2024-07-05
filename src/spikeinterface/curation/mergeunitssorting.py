@@ -6,6 +6,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 from copy import deepcopy
 from spikeinterface.core.sorting_tools import generate_unit_ids_for_merge_group
 
+
 class MergeUnitsSorting(BaseSorting):
     """
     Class that handles several merges of units from a Sorting object based on a list of lists of unit_ids.
@@ -45,9 +46,10 @@ class MergeUnitsSorting(BaseSorting):
         sampling_frequency = sorting.get_sampling_frequency()
 
         from spikeinterface.core.sorting_tools import generate_unit_ids_for_merge_group
-        new_unit_ids = generate_unit_ids_for_merge_group(sorting.unit_ids, units_to_merge,
-                                                         new_unit_ids=new_unit_ids, 
-                                                         new_id_strategy='append')
+
+        new_unit_ids = generate_unit_ids_for_merge_group(
+            sorting.unit_ids, units_to_merge, new_unit_ids=new_unit_ids, new_id_strategy="append"
+        )
 
         all_removed_ids = []
         for ids in units_to_merge:
