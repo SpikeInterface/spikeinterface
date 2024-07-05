@@ -52,9 +52,6 @@ class BinaryRecordingExtractor(BaseRecording):
         The recording Extractor
     """
 
-    mode = "file"
-    name = "binary"
-
     def __init__(
         self,
         file_paths,
