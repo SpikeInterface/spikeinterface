@@ -77,12 +77,12 @@ class ComputeRandomSpikes(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
-        if kept_indices is not None:
-            valid = kept_indices[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
-            nb_skipped = np.cumsum(~kept_indices)
+        if keep_mask is not None:
+            valid = keep_mask[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
+            nb_skipped = np.cumsum(~keep_mask)
             new_data["random_spikes_indices"] = np.flatnonzero(valid)
             new_data["random_spikes_indices"] -= nb_skipped[new_data["random_spikes_indices"]]
         else:
@@ -238,16 +238,16 @@ class ComputeWaveforms(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
 
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         waveforms = self.data["waveforms"]
 
-        if kept_indices is not None:
+        if keep_mask is not None:
             spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
-            valid = kept_indices[spike_indices]
+            valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
             waveforms = waveforms[valid]
 
@@ -258,7 +258,7 @@ class ComputeWaveforms(AnalyzerExtension):
             new_data["waveforms"] = waveforms.copy()
             for to_be_merged, unit_id in zip(units_to_merge, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-                waveforms, spike_indices = self.get_some_waveforms(new_channel_ids, to_be_merged, kept_indices)
+                waveforms, spike_indices = self.get_some_waveforms(new_channel_ids, to_be_merged, keep_mask)
                 num_chans = waveforms.shape[2]
                 new_data["waveforms"][spike_indices, :, :num_chans] = waveforms
                 new_data["waveforms"][spike_indices, :, num_chans:] = 0
@@ -268,7 +268,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
-    def get_waveforms_one_unit(self, unit_id, force_dense: bool = False, kept_indices=None):
+    def get_waveforms_one_unit(self, unit_id, force_dense: bool = False, keep_mask=None):
         """
         Returns the waveforms of a unit id.
 
@@ -278,7 +278,7 @@ class ComputeWaveforms(AnalyzerExtension):
             The unit id to return waveforms for
         force_dense : bool, default: False
             If True, and SortingAnalyzer must be sparse then only waveforms on sparse channels are returned.
-        kept_indices : array, default None
+        keep_mask : array, default None
             If specified, a mask to select only some spikes (mostly used during merging)
 
         Returns
@@ -295,9 +295,9 @@ class ComputeWaveforms(AnalyzerExtension):
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         waveforms = self.data["waveforms"]
 
-        if kept_indices is not None and sum(kept_indices) < len(kept_indices):
+        if keep_mask is not None and sum(keep_mask) < len(keep_mask):
             spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
-            valid = kept_indices[spike_indices]
+            valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
             waveforms = waveforms[valid]
 
@@ -315,7 +315,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return wfs
 
-    def get_some_waveforms(self, channel_ids=None, unit_ids=None, kept_indices=None):
+    def get_some_waveforms(self, channel_ids=None, unit_ids=None, keep_mask=None):
         """
         Returns the waveforms of some units and some channels.
 
@@ -327,7 +327,7 @@ class ComputeWaveforms(AnalyzerExtension):
             List of channel ids on which waveforms must aligned
         unit_ids : list, default: None
             List of unit ids to return waveforms for
-        kept_indices : array, default None
+        keep_mask : array, default None
             If specified, a mask to select only some spikes (mostly used during merging)
 
         Returns
@@ -335,7 +335,7 @@ class ComputeWaveforms(AnalyzerExtension):
         some_waveforms: np.array
             The waveforms (num_spikes, num_samples, num_sparse_channels)
         spike_indices: np.array
-            Spike indices of the returned PCA projections of shape (num_spikes, )
+            Spike indices of the returned waveforms of shape (num_spikes, )
         """
         sorting = self.sorting_analyzer.sorting
         if unit_ids is None:
@@ -355,9 +355,9 @@ class ComputeWaveforms(AnalyzerExtension):
 
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-        if kept_indices is not None and sum(kept_indices) < len(kept_indices):
+        if keep_mask is not None and sum(keep_mask) < len(keep_mask):
             spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
-            valid = kept_indices[spike_indices]
+            valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
             waveforms = waveforms[valid]
 
@@ -374,7 +374,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_waveforms = self.get_waveforms_one_unit(unit_id, kept_indices=kept_indices)
+                sparse_waveforms = self.get_waveforms_one_unit(unit_id, keep_mask=keep_mask)
                 local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
 
                 # keep only requested channels
@@ -567,7 +567,7 @@ class ComputeTemplates(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
 
         all_new_units = new_sorting_analyzer.unit_ids
@@ -754,7 +754,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
         return self.data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         # this do not depend on units
         return self.data

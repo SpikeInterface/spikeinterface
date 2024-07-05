@@ -260,7 +260,7 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
     -------
     sorting :  The new Sorting object
         The newly create sorting with the merged units
-    kept_indices : A boolean mask, if censor_ms is not None, telling which spike from the original spike vector
+    keep_mask : A boolean mask, if censor_ms is not None, telling which spike from the original spike vector
         has been kept, given the refractory period violations (None if censor_ms is None)
     """
 

@@ -93,11 +93,11 @@ class ComputeSpikeLocations(AnalyzerExtension):
         return dict(spike_locations=new_spike_locations)
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         new_spike_locations = self.data["spike_locations"]
-        if kept_indices is not None:
-            new_spike_locations = new_spike_locations[kept_indices]
+        if keep_mask is not None:
+            new_spike_locations = new_spike_locations[keep_mask]
 
         ### In theory here, we should recompute the locations since the peak positions
         ### in a merged could be different. Should be discussed
