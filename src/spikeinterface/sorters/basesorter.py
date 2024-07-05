@@ -169,14 +169,12 @@ class BaseSorter:
     @classmethod
     def set_params_to_folder(cls, recording, output_folder, new_params, verbose):
         params = cls.default_params()
+        valid_parameters = cls.params_description().keys()
+        invalid_parameters = [k for k in new_params.keys() if k not in valid_parameters]
 
-        # verify params are in list
-        bad_params = []
-        for p in new_params.keys():
-            if p not in params.keys():
-                bad_params.append(p)
-        if len(bad_params) > 0:
-            raise AttributeError("Bad parameters: " + str(bad_params))
+        if invalid_parameters:
+            error_msg = f"Invalid parameters: {invalid_parameters} \n" f"Valid parameters are: {valid_parameters}"
+            raise ValueError(error_msg)
 
         params.update(new_params)
 
