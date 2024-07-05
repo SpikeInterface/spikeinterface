@@ -40,9 +40,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
-    mode = "file"
     NeoRawIOClass = "MEArecRawIO"
-    name = "mearec"
 
     def __init__(self, file_path: Union[str, Path], all_annotations: bool = False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
@@ -75,10 +73,8 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
 
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
-    mode = "file"
     NeoRawIOClass = "MEArecRawIO"
     neo_returns_frames = False
-    name = "mearec"
 
     def __init__(self, file_path: Union[str, Path]):
         neo_kwargs = self.map_to_neo_kwargs(file_path)

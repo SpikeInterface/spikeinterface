@@ -21,9 +21,7 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
-    mode = "folder"
     NeoRawIOClass = "AxonaRawIO"
-    name = "axona"
 
     def __init__(self, file_path, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)

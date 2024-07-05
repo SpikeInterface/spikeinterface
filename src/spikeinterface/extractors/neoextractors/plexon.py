@@ -25,9 +25,7 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
-    mode = "file"
     NeoRawIOClass = "PlexonRawIO"
-    name = "plexon"
 
     def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
@@ -54,9 +52,7 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
         The file path to load the recordings from.
     """
 
-    mode = "file"
     NeoRawIOClass = "PlexonRawIO"
-    name = "plexon"
     neo_returns_frames = True
 
     def __init__(self, file_path):
