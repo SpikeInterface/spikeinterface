@@ -16,7 +16,6 @@ class NpzSortingExtractor(BaseSorting):
     All spike are store in two columns maner index+labels
     """
 
-    extractor_name = "NpzSortingExtractor"
     mode = "file"
     name = "npz"
 

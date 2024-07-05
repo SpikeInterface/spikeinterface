@@ -43,7 +43,6 @@ class KlustaSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "KlustaSortingExtractor"
     installed = HAVE_H5PY  # check at class level if installed or not
     installation_mesg = (
         "To use the KlustaSortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed

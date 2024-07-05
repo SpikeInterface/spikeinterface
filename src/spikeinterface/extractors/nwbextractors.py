@@ -472,7 +472,6 @@ class NwbRecordingExtractor(BaseRecording):
     >>> rec = NwbRecordingExtractor(s3_url, stream_mode="fsspec", stream_cache_path="cache")
     """
 
-    extractor_name = "NwbRecording"
     mode = "file"
     name = "nwb"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
@@ -1001,7 +1000,6 @@ class NwbSortingExtractor(BaseSorting):
         The sorting extractor for the NWB file.
     """
 
-    extractor_name = "NwbSorting"
     mode = "file"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
     name = "nwb"
