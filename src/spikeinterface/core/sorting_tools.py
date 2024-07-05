@@ -233,8 +233,12 @@ def get_ids_after_merging(sorting, units_to_merge, new_unit_ids):
         assert len(units) > 1, "A merge should have at least two units"
         for unit_id in units:
             assert unit_id in sorting.unit_ids, "Merged ids should be in the sorting"
-        for unit_id in units:
-            merged_unit_ids.discard(unit_id)
+        if new_unit_ids is None:
+            for unit_id in merged_unit_ids[1:]:
+                merged_unit_ids.discard(unit_id)
+        else:
+            for unit_id in merged_unit_ids:
+                merged_unit_ids.discard(unit_id)
             merged_unit_ids = merged_unit_ids.union([new_unit_ids[i]])
     return np.array(list(merged_unit_ids))
 
@@ -263,11 +267,17 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
     kept_indices : A boolean mask, if censor_ms is not None, telling which spike from the original spike vector
         has been kept, given the refractory period violations (None if censor_ms is None)
     """
-
     spikes = sorting.to_spike_vector().copy()
-    to_keep = np.ones(len(spikes), dtype=bool)
 
-    new_unit_ids = get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids)
+    if censor_ms is None:
+        to_keep = None
+    else:
+        to_keep = np.ones(len(spikes), dtype=bool)
+
+    if new_unit_ids is not None:
+        assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
+    else:
+        new_unit_ids = [i[0] for i in units_to_merge]
 
     all_unit_ids = get_ids_after_merging(sorting, units_to_merge, new_unit_ids)
 
@@ -295,43 +305,22 @@ def apply_merges_to_sorting(sorting, units_to_merge, new_unit_ids=None, censor_m
                 (indices,) = s0 + np.nonzero(mask[s0:s1])
                 to_keep[indices[1:]] = np.diff(spikes[indices]["sample_index"]) > rpv
 
-    combined_ids = np.array(list(sorting.unit_ids) + list(new_unit_ids))
-    sorting = NumpySorting(spikes[to_keep], unit_ids=combined_ids, sampling_frequency=sorting.sampling_frequency)
-    sorting = sorting.select_units(all_unit_ids)
-    return sorting, to_keep
+    from spikeinterface.core import NumpySorting
 
-
-def get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids):
-
-    all_removed_ids = []
-    for ids in units_to_merge:
-        all_removed_ids.extend(ids)
-    keep_unit_ids = [u for u in sorting.unit_ids if u not in all_removed_ids]
-
-    if new_unit_ids is not None:
-        assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
-        if np.any(np.isin(new_unit_ids, keep_unit_ids)):
-            raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
-    else:
-        dtype = sorting.unit_ids.dtype
-        num_merge = len(units_to_merge)
-        # select new_unit_ids greater that the max id, event greater than the numerical str ids
-        if np.issubdtype(dtype, np.character):
-            # dtype str
-            if all(p.isdigit() for p in sorting.unit_ids):
-                # All str are digit : we can generate a max
-                m = max(int(p) for p in sorting.unit_ids) + 1
-                new_unit_ids = [str(m + i) for i in range(num_merge)]
-            else:
-                # we cannot automatically find new names
-                new_unit_ids = [f"merge{i}" for i in range(num_merge)]
-                if np.any(np.isin(new_unit_ids, keep_unit_ids)):
-                    raise ValueError(
-                        "Unable to find 'new_unit_ids' because it is a string and parents "
-                        "already contain merges. Pass a list of 'new_unit_ids' as an argument."
-                    )
+    times_list = []
+    labels_list = []
+    for segment_index in range(sorting.get_num_segments()):
+        s0, s1 = segment_slices[segment_index]
+        if censor_ms is not None:
+            times_list += [spikes["sample_index"][s0:s1][to_keep[s0:s1]]]
+            labels = spikes["unit_index"][s0:s1][to_keep[s0:s1]]
+            labels_list += [labels]
         else:
-            # dtype int
-            new_unit_ids = list(max(sorting.unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
+            times_list += [spikes["sample_index"][s0:s1]]
+            labels = spikes["unit_index"][s0:s1]
+            labels_list += [labels]
 
-    return new_unit_ids
+    sorting = NumpySorting.from_times_labels(times_list, labels_list, sorting.sampling_frequency)
+    sorting = sorting.rename_units(all_unit_ids)
+
+    return sorting, to_keep
