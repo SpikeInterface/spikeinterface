@@ -301,21 +301,30 @@ template_metrics
 This extension computes commonly used waveform/template metrics.
 By default, the following metrics are computed:
 
-* "peak_to_valley": duration between negative and positive peaks
-* "halfwidth": duration in s at 50% of the amplitude
+* "peak_to_valley": duration in :math:`s` between negative and positive peaks
+* "halfwidth": duration in :math:`s` at 50% of the amplitude
 * "peak_to_trough_ratio": ratio between negative and positive peaks
-* "recovery_slope": speed in V/s to recover from the negative peak to 0
-* "repolarization_slope": speed in V/s to repolarize from the positive peak to 0
+* "recovery_slope": speed to recover from the negative peak to 0
+* "repolarization_slope": speed to repolarize from the positive peak to 0
 * "num_positive_peaks": the number of positive peaks
 * "num_negative_peaks": the number of negative peaks
+
+The units of :code:`recovery_slope` and :code:`repolarization_slope` depend on the
+input. Voltages are based on the units of the template. By default this is :math:`\mu V`
+but can be the raw output from the recording device (this depends on the
+:code:`return_scaled` parameter, read more here: :ref:`core-sorting-analyzer`).
+Distances are in :math:`\mu m` and times are in seconds. So, for example, if the
+templates are in units of :math:`\mu V` then: :code:`repolarization_slope` is in
+:math:`mV / s`; :code:`peak_to_trough_ratio` is in :math:`\mu m` and the
+:code:`halfwidth` is in :math:`s`.
 
 Optionally, the following multi-channel metrics can be computed by setting:
 :code:`include_multi_channel_metrics=True`
 
-* "velocity_above": the velocity above the max channel of the template
-* "velocity_below": the velocity below the max channel of the template
-* "exp_decay": the exponential decay of the template amplitude over distance
-* "spread": the spread of the template amplitude over distance
+* "velocity_above": the velocity in :math:`\mu m/s` above the max channel of the template
+* "velocity_below": the velocity in :math:`\mu m/s` below the max channel of the template
+* "exp_decay": the exponential decay in :math:`\mu m` of the template amplitude over distance
+* "spread": the spread in :math:`\mu m` of the template amplitude over distance
 
 .. figure:: ../images/1d_waveform_features.png
 

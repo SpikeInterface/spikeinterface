@@ -26,7 +26,6 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         If True, all cluster properties are loaded from the tsv/csv files.
     """
 
-    extractor_name = "BasePhyKilosortSorting"
     installed = False  # check at class level if installed or not
     mode = "folder"
     installation_mesg = (
@@ -229,7 +228,6 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
         The loaded Sorting object.
     """
 
-    extractor_name = "PhySorting"
     name = "phy"
 
     def __init__(
@@ -271,7 +269,6 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
         The loaded Sorting object.
     """
 
-    extractor_name = "KiloSortSorting"
     name = "kilosort"
 
     def __init__(self, folder_path: Path | str, keep_good_only: bool = False, remove_empty_units: bool = True):

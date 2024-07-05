@@ -170,8 +170,8 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         sparsity_mask = sparsity.mask
 
         spike_retriever_node = SpikeRetriever(
-            recording,
             sorting,
+            recording,
             channel_from_template=True,
             extremum_channel_inds=extremum_channels_indices,
             include_spikes_in_margin=True,

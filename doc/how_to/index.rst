@@ -13,3 +13,4 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     combine_recordings
     process_by_channel_group
     load_your_data_into_sorting
+    benchmark_with_hybrid_recordings

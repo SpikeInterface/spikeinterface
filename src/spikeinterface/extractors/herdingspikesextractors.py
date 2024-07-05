@@ -20,7 +20,7 @@ class HerdingspikesSortingExtractor(BaseSorting):
 
     Parameters
     ----------
-    folder_path : str or Path
+    file_path : str or Path
         Path to the ALF folder.
     load_unit_info : bool, default: True
         Whether to load the unit info from the file.
@@ -31,7 +31,6 @@ class HerdingspikesSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "HS2Sorting"
     installed = HAVE_HS2SX  # check at class level if installed or not
     mode = "file"
     installation_mesg = (
