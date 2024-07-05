@@ -8,6 +8,7 @@ import shutil
 import numpy as np
 from warnings import warn
 
+from spikeinterface.core.generate import _ensure_seed
 from spikeinterface.preprocessing import bandpass_filter, whiten
 
 from spikeinterface.core.baserecording import BaseRecording
@@ -46,7 +47,7 @@ class Mountainsort5Sorter(BaseSorter):
         "filter": True,
         "whiten": True,  # Important to do whitening
         "delete_temporary_recording": True,
-        "seed": 1,
+        "seed": None,
     }
 
     _params_description = {
@@ -187,6 +188,7 @@ class Mountainsort5Sorter(BaseSorter):
             block_sorting_parameters=scheme2_sorting_parameters, block_duration_sec=p["scheme3_block_duration_sec"]
         )
 
+        params["seed"] = _ensure_seed(params["seed"])
         random.seed(params["seed"])
         np.random.seed(params["seed"])
 

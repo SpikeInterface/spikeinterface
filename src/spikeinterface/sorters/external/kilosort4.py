@@ -5,6 +5,8 @@ import random
 from typing import Union
 from packaging import version
 
+from spikeinterface.core.generate import _ensure_seed
+
 from ..basesorter import BaseSorter
 from .kilosortbase import KilosortBase
 
@@ -58,7 +60,7 @@ class Kilosort4Sorter(BaseSorter):
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
         "torch_device": "auto",
-        "seed": 1,
+        "seed": None,
     }
 
     _params_description = {
@@ -246,7 +248,8 @@ class Kilosort4Sorter(BaseSorter):
             ops["preprocessing"] = dict(hp_filter=None, whiten_mat=None)
             ops["Wrot"] = torch.as_tensor(np.eye(recording.get_num_channels()))
             ops["Nbatches"] = bfile.n_batches
-
+        
+        params["seed"] = _ensure_seed(params["seed"])
         random.seed(params["seed"])
         np.random.seed(params["seed"])
         torch.cuda.manual_seed_all(params["seed"])
