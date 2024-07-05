@@ -118,10 +118,10 @@ class ComputePrincipalComponents(AnalyzerExtension):
             new_data["pca_projection"] = pca_projections.copy()
             for to_be_merge, unit_id in zip(units_to_merge, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-                projections, spike_unit_indices = self.get_some_projections(new_channel_ids, to_be_merge, kept_indices)
+                projections, spike_indices = self.get_some_projections(new_channel_ids, to_be_merge, kept_indices)
                 num_chans = projections.shape[2]
-                new_data["pca_projection"][spike_unit_indices, :, :num_chans] = projections
-                new_data["pca_projection"][spike_unit_indices, :, num_chans:] = 0
+                new_data["pca_projection"][spike_indices, :, :num_chans] = projections
+                new_data["pca_projection"][spike_indices, :, num_chans:] = 0
         else:
             new_data["pca_projection"] = pca_projections
 
@@ -226,8 +226,8 @@ class ComputePrincipalComponents(AnalyzerExtension):
         -------
         some_projections: np.array
             The PCA projections (num_spikes, num_components, num_sparse_channels)
-        spike_unit_indices: np.array
-            Array a copy of with some_spikes["unit_index"] of returned PCA projections of shape (num_spikes, )
+        spike_indices: np.array
+            Spike indices of the returned PCA projections of shape (num_spikes, )
         """
         sorting = self.sorting_analyzer.sorting
         if unit_ids is None:
@@ -277,7 +277,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
                 some_projections[spike_mask] = sparse_projection
 
-        return some_projections, spike_unit_indices
+        return some_projections, selected_inds
 
     def project_new(self, new_spikes, new_waveforms, progress_bar=True):
         """

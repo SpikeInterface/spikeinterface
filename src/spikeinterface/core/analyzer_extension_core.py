@@ -258,10 +258,10 @@ class ComputeWaveforms(AnalyzerExtension):
             new_data["waveforms"] = waveforms.copy()
             for to_be_merged, unit_id in zip(units_to_merge, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-                waveforms, spike_unit_indices = self.get_some_waveforms(new_channel_ids, to_be_merged, kept_indices)
+                waveforms, spike_indices = self.get_some_waveforms(new_channel_ids, to_be_merged, kept_indices)
                 num_chans = waveforms.shape[2]
-                new_data["waveforms"][spike_unit_indices, :, :num_chans] = waveforms
-                new_data["waveforms"][spike_unit_indices, :, num_chans:] = 0
+                new_data["waveforms"][spike_indices, :, :num_chans] = waveforms
+                new_data["waveforms"][spike_indices, :, num_chans:] = 0
 
         else:
             new_data["waveforms"] = waveforms
@@ -334,8 +334,8 @@ class ComputeWaveforms(AnalyzerExtension):
         -------
         some_waveforms: np.array
             The waveforms (num_spikes, num_samples, num_sparse_channels)
-        spike_unit_indices: np.array
-            Array a copy of with some_spikes["unit_index"] of returned waveforms of shape (num_spikes, )
+        spike_indices: np.array
+            Spike indices of the returned PCA projections of shape (num_spikes, )
         """
         sorting = self.sorting_analyzer.sorting
         if unit_ids is None:
