@@ -59,7 +59,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         return dict(unit_locations=new_unit_location)
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices=None, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         arr = self.data["unit_locations"]
         num_dims = arr.shape[1]

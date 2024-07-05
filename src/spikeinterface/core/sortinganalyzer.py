@@ -704,7 +704,7 @@ class SortingAnalyzer:
         else:
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
-            sorting_provenance, kept_indices = apply_merges_to_sorting(
+            sorting_provenance, keep_mask = apply_merges_to_sorting(
                 sorting_provenance, units_to_merge, unit_ids, censor_ms
             )
 
@@ -749,7 +749,7 @@ class SortingAnalyzer:
                         new_sorting_analyzer,
                         units_to_merge=units_to_merge,
                         new_unit_ids=unit_ids,
-                        kept_indices=kept_indices,
+                        keep_mask=keep_mask,
                         verbose=verbose,
                         **job_kwargs,
                     )
@@ -1645,7 +1645,7 @@ class AnalyzerExtension:
         raise NotImplementedError
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices, verbose=False, **job_kwargs
+        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=False, **job_kwargs
     ):
         # must be implemented in subclass
         raise NotImplementedError
@@ -1818,7 +1818,7 @@ class AnalyzerExtension:
         new_sorting_analyzer,
         units_to_merge=None,
         new_unit_ids=None,
-        kept_indices=None,
+        keep_mask=None,
         verbose=False,
         **job_kwargs,
     ):
@@ -1828,7 +1828,7 @@ class AnalyzerExtension:
             new_extension.data = self.data
         else:
             new_extension.data = self._merge_extension_data(
-                units_to_merge, new_unit_ids, new_sorting_analyzer, kept_indices, verbose=verbose, **job_kwargs
+                units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
             )
         new_extension.save()
         return new_extension
