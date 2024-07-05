@@ -118,11 +118,11 @@ class FilterRecording(BasePreprocessor):
                     parent_segment,
                     filter_coeff,
                     filter_mode,
-                    causal_mode,
-                    direction,
                     margin,
                     dtype,
                     add_reflect_padding=add_reflect_padding,
+                    causal_mode=causal_mode,
+                    direction=direction,
                 )
             )
 
@@ -148,11 +148,11 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         parent_recording_segment,
         coeff,
         filter_mode,
-        causal_mode,
-        direction,
         margin,
         dtype,
         add_reflect_padding=False,
+        causal_mode=False,
+        direction="forward"
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.coeff = coeff
@@ -403,6 +403,7 @@ causal_filter = define_function_from_class(source_class=CausalFilter, name="caus
 
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
+causal_filter.__doc__ = causal_filter.__doc__.format(_common_filter_docs)
 
 
 def fix_dtype(recording, dtype):
