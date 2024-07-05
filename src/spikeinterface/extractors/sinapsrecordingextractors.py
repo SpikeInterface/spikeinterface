@@ -23,10 +23,6 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         "filt" extracts the filtered data, "raw" extracts the raw data, and "aux" extracts the auxiliary data.
     """
 
-    extractor_name = "SinapsResearchPlatform"
-    mode = "file"
-    name = "sinaps_research_platform"
-
     def __init__(self, file_path: str | Path, stream_name: str = "filt"):
         from ..preprocessing import UnsignedToSignedRecording
 
@@ -90,10 +86,6 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
     file_path : str | Path
         Path to the SiNAPS .h5 file.
     """
-
-    extractor_name = "SinapsResearchPlatformH5"
-    mode = "file"
-    name = "sinaps_research_platform_h5"
 
     def __init__(self, file_path: str | Path):
         self._file_path = file_path

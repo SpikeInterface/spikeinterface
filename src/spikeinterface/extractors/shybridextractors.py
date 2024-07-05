@@ -30,24 +30,19 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         Loaded data.
     """
 
-    mode = "folder"
     installation_mesg = (
         "To use the SHYBRID extractors, install SHYBRID and pyyaml: " "\n\n pip install shybrid pyyaml\n\n"
     )
-    name = "shybrid"
 
     def __init__(self, file_path):
         try:
             import hybridizer.io as sbio
             import hybridizer.probes as sbprb
             import yaml
-
-            HAVE_SBEX = True
         except ImportError:
-            HAVE_SBEX = False
+            raise ImportError(self.installation_mesg)
 
         # load params file related to the given shybrid recording
-        assert HAVE_SBEX, self.installation_mesg
         assert Path(file_path).suffix in [".yml", ".yaml"], "The 'file_path' should be a yaml file!"
         params = sbio.get_params(file_path)["data"]
         file_path = Path(file_path)
@@ -102,12 +97,9 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
             import hybridizer.io as sbio
             import hybridizer.probes as sbprb
             import yaml
-
-            HAVE_SBEX = True
         except ImportError:
-            HAVE_SBEX = False
+            raise ImportError(SHYBRIDRecordingExtractor.installation_mesg)
 
-        assert HAVE_SBEX, SHYBRIDRecordingExtractor.installation_mesg
         assert recording.get_num_segments() == 1, "SHYBRID can only write single segment recordings"
         save_path = Path(save_path)
         recording_name = "recording.bin"
@@ -159,18 +151,14 @@ class SHYBRIDSortingExtractor(BaseSorting):
     """
 
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
-    name = "shybrid"
 
     def __init__(self, file_path, sampling_frequency, delimiter=","):
         try:
             import hybridizer.io as sbio
             import hybridizer.probes as sbprb
-
-            HAVE_SBEX = True
         except ImportError:
-            HAVE_SBEX = False
+            raise ImportError(self.installation_mesg)
 
-        assert HAVE_SBEX, self.installation_mesg
         assert Path(file_path).suffix == ".csv", "The 'file_path' should be a csv file!"
 
         if Path(file_path).is_file():
@@ -205,12 +193,9 @@ class SHYBRIDSortingExtractor(BaseSorting):
         try:
             import hybridizer.io as sbio
             import hybridizer.probes as sbprb
-
-            HAVE_SBEX = True
         except ImportError:
-            HAVE_SBEX = False
+            raise ImportError(SHYBRIDSortingExtractor.installation_mesg)
 
-        assert HAVE_SBEX, SHYBRIDSortingExtractor.installation_mesg
         assert sorting.get_num_segments() == 1, "SHYBRID can only write single segment sortings"
         save_path = Path(save_path)
 
