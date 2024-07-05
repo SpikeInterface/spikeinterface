@@ -152,7 +152,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         dtype,
         add_reflect_padding=False,
         causal_mode=False,
-        direction="forward"
+        direction="forward",
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.coeff = coeff
