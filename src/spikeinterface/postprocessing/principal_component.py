@@ -117,8 +117,8 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
             new_data["pca_projection"] = pca_projections.copy()
             for to_be_merge, unit_id in zip(units_to_merge, new_unit_ids):
-                new_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
-                projections, spike_unit_indices = self.get_some_projections(new_chan_inds, to_be_merge, kept_indices)
+                new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
+                projections, spike_unit_indices = self.get_some_projections(new_channel_ids, to_be_merge, kept_indices)
                 num_chans = projections.shape[2]
                 new_data["pca_projection"][spike_unit_indices, :, :num_chans] = projections
                 new_data["pca_projection"][spike_unit_indices, :, num_chans:] = 0
@@ -247,7 +247,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-        if kept_indices is not None:
+        if kept_indices is not None and sum(kept_indices) < kept_indices.size:
             spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
             valid = kept_indices[spike_indices]
             some_spikes = some_spikes[valid]
@@ -269,18 +269,13 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 sparse_projection, local_chan_inds = self.get_projections_one_unit(
                     unit_id, sparse=True, kept_indices=kept_indices
                 )
-
                 # keep only requested channels
                 channel_mask = np.isin(local_chan_inds, channel_indices)
-                sparse_projection = sparse_projection[:, :, channel_mask]
-                local_chan_inds = local_chan_inds[channel_mask]
+                if sum(channel_mask) != len(channel_mask):
+                    sparse_projection = sparse_projection[:, :, channel_mask]
 
                 spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
-                proj = np.zeros((spike_mask.size, num_components, channel_indices.size), dtype=dtype)
-                # inject in requested channels
-                channel_mask = np.isin(channel_indices, local_chan_inds)
-                proj[:, :, channel_mask] = sparse_projection
-                some_projections[spike_mask, :, :] = proj
+                some_projections[spike_mask] = sparse_projection
 
         return some_projections, spike_unit_indices
 

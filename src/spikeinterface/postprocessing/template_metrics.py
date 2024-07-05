@@ -111,6 +111,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         sparsity=None,
         metrics_kwargs=None,
         include_multi_channel_metrics=False,
+        **other_kwargs,
     ):
 
         # TODO alessio can you check this : this used to be in the function but now we have ComputeTemplateMetrics.function_factory()
@@ -132,6 +133,10 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
         if metrics_kwargs is None:
             metrics_kwargs_ = _default_function_kwargs.copy()
+            if len(other_kwargs) > 0:
+                for m in other_kwargs:
+                    if m in metrics_kwargs_:
+                        metrics_kwargs_[m] = other_kwargs[m]
         else:
             metrics_kwargs_ = _default_function_kwargs.copy()
             metrics_kwargs_.update(metrics_kwargs)

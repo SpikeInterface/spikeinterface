@@ -295,7 +295,7 @@ class ComputeWaveforms(AnalyzerExtension):
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         waveforms = self.data["waveforms"]
 
-        if kept_indices is not None:
+        if kept_indices is not None and sum(kept_indices) < len(kept_indices):
             spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
             valid = kept_indices[spike_indices]
             some_spikes = some_spikes[valid]
@@ -355,7 +355,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-        if kept_indices is not None:
+        if kept_indices is not None and sum(kept_indices) < len(kept_indices):
             spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
             valid = kept_indices[spike_indices]
             some_spikes = some_spikes[valid]
@@ -379,17 +379,13 @@ class ComputeWaveforms(AnalyzerExtension):
 
                 # keep only requested channels
                 channel_mask = np.isin(local_chan_inds, channel_indices)
-                sparse_waveforms = sparse_waveforms[:, :, channel_mask]
-                local_chan_inds = local_chan_inds[channel_mask]
+                if sum(channel_mask) != len(channel_mask):
+                    sparse_waveforms = sparse_waveforms[:, :, channel_mask]
 
                 spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
-                proj = np.zeros((spike_mask.size, num_samples, channel_indices.size), dtype=dtype)
-                # inject in requested channels
-                channel_mask = np.isin(channel_indices, local_chan_inds)
-                proj[:, :, channel_mask] = sparse_waveforms
-                some_waveforms[spike_mask, :, :] = proj
+                some_waveforms[spike_mask] = sparse_waveforms
 
-        return some_waveforms, spike_unit_indices
+        return some_waveforms, selected_inds
 
     def _get_data(self):
         return self.data["waveforms"]
