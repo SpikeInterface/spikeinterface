@@ -19,8 +19,8 @@ motion_options_preset = {
             method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
-            exclude_sweep_ms=0.1,
-            radius_um=50,
+            exclude_sweep_ms=0.8,
+            radius_um=80.,
         ),
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
@@ -35,16 +35,13 @@ motion_options_preset = {
         "estimate_motion_kwargs": dict(
             method="decentralized",
             direction="y",
-            bin_s=2.0,
+            bin_s=1.0,
             rigid=False,
             bin_um=5.0,
-            margin_um=0.0,
-            # win_shape="gaussian",
-            # win_step_um=50.0,
-            # win_scale_um=150.0,
+            hist_margin_um=20.0,
             win_shape="gaussian",
-            win_step_um=100.0,
-            win_scale_um=200.0,
+            win_step_um=200.0,
+            win_scale_um=300.0,
             histogram_depth_smooth_um=5.0,
             histogram_time_smooth_s=None,
             pairwise_displacement_method="conv",
@@ -78,13 +75,14 @@ motion_options_preset = {
             method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
-            exclude_sweep_ms=0.5,
-            radius_um=50,
+            exclude_sweep_ms=0.8,
+            radius_um=80.,
         ),
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
-            radius_um=40.0,
+            # radius_um=40.0,
+            radius_um=80.0,
             upsampling_um=5.0,
             sigma_ms=0.25,
             margin_um=30.0,
@@ -97,10 +95,7 @@ motion_options_preset = {
             bin_s=2.0,
             rigid=False,
             bin_um=5.0,
-            margin_um=0.0,
-            # win_shape="gaussian",
-            # win_step_um=50.0,
-            # win_scale_um=150.0,
+            hist_margin_um=0.0,
             win_shape="gaussian",
             win_step_um=100.0,
             win_scale_um=200.0,
@@ -183,7 +178,7 @@ motion_options_preset = {
             rigid=False,
             win_step_um=50.0,
             win_scale_um=150.0,
-            margin_um=0,
+            hist_margin_um=0,
             win_shape="rect",
         ),
         "interpolate_motion_kwargs": dict(
@@ -199,6 +194,7 @@ motion_options_preset = {
         "interpolate_motion_kwargs": {},
     },
 }
+
 
 
 def correct_motion(
