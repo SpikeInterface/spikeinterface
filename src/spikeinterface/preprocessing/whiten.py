@@ -202,11 +202,12 @@ def compute_whitening_matrix(
         cov = data.T @ data
         cov = cov / data.shape[0]
     else:
-        import sklearn.covariance as cov
+        import sklearn.covariance
 
         method = regularize_kwargs.pop("method")
         regularize_kwargs["assume_centered"] = True
-        estimator = eval(f"cov.{method}")(**regularize_kwargs)
+        estimator_class = getattr(sklearn.covariance, method)
+        estimator = estimator_class(**regularize_kwargs)
         estimator.fit(data)
         cov = estimator.covariance_
 
