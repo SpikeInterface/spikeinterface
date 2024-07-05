@@ -299,9 +299,6 @@ class ClusteringStudy(BenchmarkStudy):
             axes[count].set_title(label)
             axes[count].legend()
 
-        if fig is not None:
-            return fig
-
         return fig
 
     def plot_metrics_vs_depth_and_snr(self, metric="agreement", case_keys=None, figsize=(15, 5)):
