@@ -42,9 +42,7 @@ def test_whiten(create_cache_folder):
     assert rec4._kwargs["M"] is None
 
     # test regularization : norm should be smaller
-    W2, M = compute_whitening_matrix(
-        rec, "global", random_chunk_kwargs, apply_mean=False, regularize=True
-    )
+    W2, M = compute_whitening_matrix(rec, "global", random_chunk_kwargs, apply_mean=False, regularize=True)
     assert np.linalg.norm(W1) > np.linalg.norm(W2)
 
 
