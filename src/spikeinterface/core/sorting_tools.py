@@ -229,32 +229,33 @@ def apply_merges_to_sorting(
     sorting, units_to_merge, new_unit_ids=None, censor_ms=None, return_kept=False, new_id_strategy="append"
 ):
     """
-    Function to apply a resolved representation of the merges to a sorting object.
+    Apply a resolved representation of the merges to a sorting object.
 
-    This function is not lazy and create a new NumpySorting with a compact spike_vector as fast as possible.
+    This function is not lazy and creates a new NumpySorting with a compact spike_vector as fast as possible.
 
-    If censor_ms is not None, duplicated spikes violating the censor_ms refractory period are removed.
+    If `censor_ms` is not None, duplicated spikes violating the `censor_ms` refractory period are removed.
 
-    Optionaly, the boolean of kept spikes is returned
+    Optionally, the boolean mask of kept spikes is returned.
 
     Parameters
     ----------
     sorting : Sorting
-        The Sorting object to apply merges
+        The Sorting object to apply merges.
     units_to_merge : list/tuple of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
         but it can also have more (merge multiple units at once).
-    new_unit_ids : None or list
+    new_unit_ids : list | None, default: None
         A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
-        merged units will have the first unit_id of every lists of merges
-    censor_ms: None or float
+        merged units will have the first unit_id of every lists of merges.
+    censor_ms: float | None, default: None
         When applying the merges, should be discard consecutive spikes violating a given refractory per
-    return_kept : bool, default False
-        return also a booolean of kept spikes
-    new_id_strategy : "append" | "take_first", default "append"
-        The strategy that should be used, if new_unit_ids is None, to create new unit_ids.
-            "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
-            "take_first" : new_unit_ids will be the first unit_id of every list of merges
+    return_kept : bool, default: False
+        If True, also return also a booolean mask of kept spikes.
+    new_id_strategy : "append" | "take_first", default: "append"
+        The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
+            * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+            * "take_first" : new_unit_ids will be the first unit_id of every list of merges
 
     Returns
     -------
@@ -336,7 +337,7 @@ def _get_ids_after_merging(old_unit_ids, units_to_merge, new_unit_ids):
     units_to_merge : list/tuple of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
         but it can also have more (merge multiple units at once).
-    new_unit_ids : None or list
+    new_unit_ids : list | None
         A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`.
 
     Returns
@@ -367,28 +368,29 @@ def _get_ids_after_merging(old_unit_ids, units_to_merge, new_unit_ids):
 def generate_unit_ids_for_merge_group(old_unit_ids, units_to_merge, new_unit_ids=None, new_id_strategy="append"):
     """
     Function to generate new units ids during a merging procedure. If new_units_ids
-    are provided, it will return these unit ids, checking that they have the length as
-    to_be_merged.
+    are provided, it will return these unit ids, checking that they have the the same
+    length as `units_to:merge`.
 
     Parameters
     ----------
     old_unit_ids : np.array
-        The old unit_ids
+        The old unit_ids.
     units_to_merge : list/tuple of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
         but it can also have more (merge multiple units at once).
-    new_unit_ids : None or list
-        A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
-        merged units will have the first unit_id of every lists of merges
-    new_id_strategy : "append" | "take_first", default "append"
-        The strategy that should be used, if new_unit_ids is None, to create new unit_ids.
-            "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
-            "take_first" : new_unit_ids will be the first unit_id of every list of merges
+    new_unit_ids : list | None, default: None
+        Optional new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`.
+        If None, new ids will be generated.
+    new_id_strategy : "append" | "take_first", default: "append"
+        The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
+            * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+            * "take_first" : new_unit_ids will be the first unit_id of every list of merges
 
     Returns
     -------
     new_unit_ids :  The new unit ids
-        The new units_ids associated with the merges
+        The new units_ids associated with the merges.
 
 
     """
