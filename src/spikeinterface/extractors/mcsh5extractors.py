@@ -24,18 +24,12 @@ class MCSH5RecordingExtractor(BaseRecording):
         The loaded data.
     """
 
-    mode = "file"
-    installation_mesg = (
-        "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
-    )
-    name = "mcsh5"
+    installation_mesg = "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"
 
     def __init__(self, file_path, stream_id=0):
 
         try:
             import h5py
-
-            HAVE_MCSH5 = True
         except ImportError:
             raise ImportError(self.installation_mesg)
 

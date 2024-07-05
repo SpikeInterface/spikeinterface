@@ -37,9 +37,6 @@ class NumpyRecording(BaseRecording):
         An optional list of channel_ids. If None, linear channels are assumed
     """
 
-    mode = "memory"
-    name = "numpy"
-
     def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
         if isinstance(traces_list, list):
             all_elements_are_list = all(isinstance(e, list) for e in traces_list)
@@ -141,9 +138,6 @@ class SharedMemoryRecording(BaseRecording):
     main_shm_owner : bool, default: True
         If True, the main instance will unlink the sharedmem buffer when deleted
     """
-
-    mode = "memory"
-    name = "SharedMemory"
 
     def __init__(
         self, shm_names, shape_list, dtype, sampling_frequency, channel_ids=None, t_starts=None, main_shm_owner=True
@@ -251,8 +245,6 @@ class NumpySorting(BaseSorting):
     channel_ids : list
         A list of unit_ids.
     """
-
-    name = "numpy"
 
     def __init__(self, spikes, sampling_frequency, unit_ids):
         """ """

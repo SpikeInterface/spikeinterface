@@ -30,9 +30,7 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
-    mode = "file"
     NeoRawIOClass = "Plexon2RawIO"
-    name = "plexon2"
 
     def __init__(self, file_path, stream_id=None, stream_name=None, use_names_as_ids=True, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
@@ -66,10 +64,8 @@ class Plexon2SortingExtractor(NeoBaseSortingExtractor):
         The sampling frequency of the sorting (required for multiple streams with different sampling frequencies).
     """
 
-    mode = "file"
     NeoRawIOClass = "Plexon2RawIO"
     neo_returns_frames = True
-    name = "plexon2"
 
     def __init__(self, file_path, sampling_frequency=None):
         from neo.rawio import Plexon2RawIO
@@ -98,9 +94,7 @@ class Plexon2EventExtractor(NeoBaseEventExtractor):
 
     """
 
-    mode = "file"
     NeoRawIOClass = "Plexon2RawIO"
-    name = "plexon2"
 
     def __init__(self, folder_path, block_index=None):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)

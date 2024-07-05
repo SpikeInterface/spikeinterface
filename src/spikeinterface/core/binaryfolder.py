@@ -25,9 +25,6 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         The recording
     """
 
-    mode = "folder"
-    name = "binaryfolder"
-
     def __init__(self, folder_path):
         folder_path = Path(folder_path)
 
