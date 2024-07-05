@@ -160,17 +160,14 @@ class ComputePrincipalComponents(AnalyzerExtension):
             The unit id to return PCA projections for
         sparse : bool, default: False
             If True, and SortingAnalyzer must be sparse then only projections on sparse channels are returned.
-            Channel indices are also returned.
         kept_indices : array, default None
             If specified, a mask to select only some spikes (mostly used during merging)
 
         Returns
         -------
-        projections: np.array
+        projections : np.array
             The PCA projections (num_waveforms, num_components, num_channels).
             In case sparsity is used, only the projections on sparse channels are returned.
-        channel_indices: np.array
-
         """
         sparsity = self.sorting_analyzer.sparsity
         sorting = self.sorting_analyzer.sorting
@@ -197,8 +194,8 @@ class ComputePrincipalComponents(AnalyzerExtension):
         else:
             channel_indices = sparsity.unit_id_to_channel_indices[unit_id]
             projections = projections[:, :, : channel_indices.size]
-            if sparse:
-                return projections, channel_indices
+            if not sparse:
+                return projections
             else:
                 num_chans = self.sorting_analyzer.get_num_channels()
                 projections_ = np.zeros(
@@ -255,7 +252,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         unit_indices = sorting.ids_to_indices(unit_ids)
         selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
-
         spike_unit_indices = some_spikes["unit_index"][selected_inds]
 
         if sparsity is None:
@@ -263,19 +259,25 @@ class ComputePrincipalComponents(AnalyzerExtension):
         else:
             # need re-alignement
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
-
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_projection, local_chan_inds = self.get_projections_one_unit(
-                    unit_id, sparse=True, kept_indices=kept_indices
-                )
+                sparse_projection = self.get_projections_one_unit(unit_id, sparse=True, kept_indices=kept_indices)
+                local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
                 # keep only requested channels
-                channel_mask = np.isin(local_chan_inds, channel_indices)
-                if sum(channel_mask) != len(channel_mask):
-                    sparse_projection = sparse_projection[:, :, channel_mask]
+                channel_mask_local_inds = np.isin(local_chan_inds, channel_indices)
+                if sum(channel_mask_local_inds) < len(channel_mask_local_inds):
+                    sparse_projection = sparse_projection[:, :, channel_mask_local_inds]
 
+                # inject in requested channels
                 spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
-                some_projections[spike_mask] = sparse_projection
+                channel_mask_channel_inds = np.isin(channel_indices, local_chan_inds)
+                if sum(channel_mask_channel_inds) < len(channel_mask_channel_inds):
+                    # inject in requested channels
+                    proj = np.zeros((spike_mask.size, num_components, channel_indices.size), dtype=dtype)
+                    proj[:, :, channel_mask_channel_inds] = sparse_projection
+                else:
+                    proj = sparse_projection
+                some_projections[spike_mask] = proj
 
         return some_projections, selected_inds
 

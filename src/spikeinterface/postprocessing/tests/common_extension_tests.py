@@ -101,7 +101,7 @@ class AnalyzerExtensionCommonTestSuite:
         sorting_analyzer = self.get_sorting_analyzer(
             self.recording, self.sorting, format=format, sparsity=sparsity_, name=extension_class.extension_name
         )
-        sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
+        sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
 
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:

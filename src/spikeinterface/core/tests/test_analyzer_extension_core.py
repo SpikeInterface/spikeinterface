@@ -110,6 +110,99 @@ def test_ComputeWaveforms(format, sparse, create_cache_folder):
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
+def test_get_some_waveforms(format, sparse, create_cache_folder):
+    """
+    Test the shape of output waveforms are
+    correct when adjusting sparsity and using the
+    `get_some_waveforms()` function. We expect them
+    to hold, for each spike and each channel, the loading
+    for each of the specified number of components.
+    """
+    cache_folder = create_cache_folder
+    sorting_analyzer = get_sorting_analyzer(cache_folder, format=format, sparse=sparse)
+    num_chans = sorting_analyzer.get_num_channels()
+
+    job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
+    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
+    ext = sorting_analyzer.compute("waveforms", **job_kwargs)
+
+    spike_vector = sorting_analyzer.sorting.to_spike_vector()
+    num_samples = ext.nbefore + ext.nafter
+
+    # First, check the created projections have the expected number
+    # of components and the expected number of channels based on sparsity.
+    for unit_id in sorting_analyzer.unit_ids:
+        if not sparse:
+            one_wfs = ext.get_waveforms_one_unit(unit_id, force_dense=True)
+            assert one_wfs.shape[1] == num_samples
+            assert one_wfs.shape[2] == num_chans
+        else:
+            one_wfs = ext.get_waveforms_one_unit(unit_id, force_dense=True)
+            assert one_wfs.shape[1] == num_samples
+            assert one_wfs.shape[2] == num_chans
+
+            one_wfs = ext.get_waveforms_one_unit(unit_id, force_dense=False)
+            chan_inds = sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
+            assert one_wfs.shape[1] == num_samples
+            num_channels_for_unit = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id].size
+            assert one_wfs.shape[2] == num_channels_for_unit
+            assert one_wfs.shape[2] == chan_inds.size
+
+    # Next, check that the `get_some_waveforms()` function returns
+    # projections with the expected shapes when selecting subjsets
+    # of channel and unit IDs.
+    some_unit_ids = sorting_analyzer.unit_ids[::2]
+    some_channel_ids = sorting_analyzer.channel_ids[::2]
+
+    random_spikes_indices = sorting_analyzer.get_extension("random_spikes").get_data()
+    random_spikes = spike_vector[random_spikes_indices]
+
+    # this should be all spikes all channels
+    some_waveforms, selected_indices = ext.get_some_waveforms(channel_ids=None, unit_ids=None)
+    assert some_waveforms.shape[0] == selected_indices.shape[0]
+    assert len(selected_indices) == random_spikes_indices.size
+    assert some_waveforms.shape[1] == num_samples
+    assert some_waveforms.shape[2] == num_chans
+
+    # this should be some spikes all channels
+    some_waveforms, selected_indices = ext.get_some_waveforms(channel_ids=None, unit_ids=some_unit_ids)
+    assert some_waveforms.shape[0] == selected_indices.shape[0]
+    assert len(selected_indices) < random_spikes_indices.size
+    assert some_waveforms.shape[1] == num_samples
+    assert some_waveforms.shape[2] == num_chans
+    assert 1 not in random_spikes[selected_indices]["unit_index"]
+
+    # check correctness
+    for unit_id in some_unit_ids:
+        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+        if sparse:
+            sparse_channels = sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
+        else:
+            sparse_channels = slice(None)
+        spike_mask = random_spikes[selected_indices]["unit_index"] == unit_index
+        some_waveforms_sparse = some_waveforms[:, :, sparse_channels]
+        wfs_one_unit = ext.get_waveforms_one_unit(unit_id)
+        np.testing.assert_array_equal(some_waveforms_sparse[spike_mask], wfs_one_unit)
+
+    # this should be some spikes some channels
+    some_waveforms, selected_indices = ext.get_some_waveforms(channel_ids=some_channel_ids, unit_ids=some_unit_ids)
+    assert some_waveforms.shape[0] == selected_indices.shape[0]
+    assert len(selected_indices) < random_spikes_indices.size
+    assert some_waveforms.shape[1] == num_samples
+    assert some_waveforms.shape[2] == some_channel_ids.size
+    assert 1 not in random_spikes[selected_indices]["unit_index"]
+
+    # check correctness
+    channel_indices = sorting_analyzer.recording.ids_to_indices(some_channel_ids)
+    for unit_id in some_unit_ids:
+        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+        spike_mask = random_spikes[selected_indices]["unit_index"] == unit_index
+        wfs_one_unit = ext.get_waveforms_one_unit(unit_id, force_dense=True)
+        np.testing.assert_array_almost_equal(some_waveforms[spike_mask], wfs_one_unit[:, :, channel_indices])
+
+
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeTemplates(format, sparse, create_cache_folder):
     cache_folder = create_cache_folder
     sorting_analyzer = get_sorting_analyzer(cache_folder, format=format, sparse=sparse)

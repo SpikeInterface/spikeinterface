@@ -55,6 +55,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
 
         sorting_analyzer.compute("principal_components", mode="by_channel_global", n_components=n_components)
         ext = sorting_analyzer.get_extension("principal_components")
+        spike_vector = sorting_analyzer.sorting.to_spike_vector()
 
         # First, check the created projections have the expected number
         # of components and the expected number of channels based on sparsity.
@@ -68,9 +69,10 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
                 assert one_proj.shape[1] == n_components
                 assert one_proj.shape[2] == num_chans
 
-                one_proj, chan_inds = ext.get_projections_one_unit(unit_id, sparse=True)
+                one_proj = ext.get_projections_one_unit(unit_id, sparse=True)
+                chan_inds = sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
                 assert one_proj.shape[1] == n_components
-                num_channels_for_unit = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id].size
+                num_channels_for_unit = chan_inds.size
                 assert one_proj.shape[2] == num_channels_for_unit
                 assert one_proj.shape[2] == chan_inds.size
 
@@ -79,35 +81,53 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         # of channel and unit IDs.
         some_unit_ids = sorting_analyzer.unit_ids[::2]
         some_channel_ids = sorting_analyzer.channel_ids[::2]
-
         random_spikes_indices = sorting_analyzer.get_extension("random_spikes").get_data()
-        all_num_spikes = sorting_analyzer.sorting.get_total_num_spikes()
-        unit_ids_num_spikes = np.sum(all_num_spikes[unit_id] for unit_id in some_unit_ids)
+        random_spikes = spike_vector[random_spikes_indices]
 
         # this should be all spikes all channels
-        some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=None)
-        assert some_projections.shape[0] == spike_unit_index.shape[0]
-        assert spike_unit_index.shape[0] == random_spikes_indices.size
+        some_projections, selected_indices = ext.get_some_projections(channel_ids=None, unit_ids=None)
+        assert some_projections.shape[0] == selected_indices.shape[0]
+        assert len(selected_indices) == random_spikes_indices.size
         assert some_projections.shape[1] == n_components
         assert some_projections.shape[2] == num_chans
 
         # this should be some spikes all channels
-        some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=some_unit_ids)
-        assert some_projections.shape[0] == spike_unit_index.shape[0]
-        assert spike_unit_index.shape[0] == unit_ids_num_spikes
+        some_projections, selected_indices = ext.get_some_projections(channel_ids=None, unit_ids=some_unit_ids)
+        assert some_projections.shape[0] == selected_indices.shape[0]
+        assert len(selected_indices) < random_spikes_indices.size
         assert some_projections.shape[1] == n_components
         assert some_projections.shape[2] == num_chans
-        assert 1 not in spike_unit_index
+        assert 1 not in random_spikes[selected_indices]["unit_index"]
+
+        # check correctness
+        for unit_id in some_unit_ids:
+            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+            if sparse:
+                sparse_channels = sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
+            else:
+                sparse_channels = slice(None)
+            proj_one_unit = ext.get_projections_one_unit(unit_id, sparse=sparse)
+            spike_mask = random_spikes[selected_indices]["unit_index"] == unit_index
+            some_proj_sparse = some_projections[:, :, sparse_channels]
+            np.testing.assert_array_equal(some_proj_sparse[spike_mask], proj_one_unit)
 
         # this should be some spikes some channels
-        some_projections, spike_unit_index = ext.get_some_projections(
+        some_projections, selected_indices = ext.get_some_projections(
             channel_ids=some_channel_ids, unit_ids=some_unit_ids
         )
-        assert some_projections.shape[0] == spike_unit_index.shape[0]
-        assert spike_unit_index.shape[0] == unit_ids_num_spikes
+        assert some_projections.shape[0] == selected_indices.shape[0]
+        assert len(selected_indices) < random_spikes_indices.size
         assert some_projections.shape[1] == n_components
         assert some_projections.shape[2] == some_channel_ids.size
-        assert 1 not in spike_unit_index
+        assert 1 not in random_spikes[selected_indices]["unit_index"]
+
+        # check correctness
+        channel_indices = sorting_analyzer.recording.ids_to_indices(some_channel_ids)
+        for unit_id in some_unit_ids:
+            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+            spike_mask = random_spikes[selected_indices]["unit_index"] == unit_index
+            proj_one_unit = ext.get_projections_one_unit(unit_id, sparse=False)
+            np.testing.assert_array_almost_equal(some_projections[spike_mask], proj_one_unit[:, :, channel_indices])
 
     @pytest.mark.parametrize("sparse", [True, False])
     def test_compute_for_all_spikes(self, sparse):

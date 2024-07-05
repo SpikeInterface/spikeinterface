@@ -286,7 +286,6 @@ class ComputeWaveforms(AnalyzerExtension):
         waveforms: np.array
             The waveforms (num_waveforms, num_samples, num_channels).
             In case sparsity is used, only the waveforms on sparse channels are returned.
-
         """
         sorting = self.sorting_analyzer.sorting
         unit_index = sorting.id_to_index(unit_id)
@@ -363,7 +362,6 @@ class ComputeWaveforms(AnalyzerExtension):
 
         unit_indices = sorting.ids_to_indices(unit_ids)
         selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
-
         spike_unit_indices = some_spikes["unit_index"][selected_inds]
 
         if sparsity is None:
@@ -374,7 +372,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_waveforms = self.get_waveforms_one_unit(unit_id, kept_indices=kept_indices)
+                sparse_waveforms = self.get_waveforms_one_unit(unit_id, force_dense=False, kept_indices=kept_indices)
                 local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
 
                 # keep only requested channels
@@ -382,8 +380,16 @@ class ComputeWaveforms(AnalyzerExtension):
                 if sum(channel_mask) != len(channel_mask):
                     sparse_waveforms = sparse_waveforms[:, :, channel_mask]
 
+                # inject in requested channels
                 spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
-                some_waveforms[spike_mask] = sparse_waveforms
+                channel_mask_channel_inds = np.isin(channel_indices, local_chan_inds)
+                if sum(channel_mask_channel_inds) < len(channel_mask_channel_inds):
+                    # inject in requested channels
+                    wfs = np.zeros((spike_mask.size, num_samples, channel_indices.size), dtype=dtype)
+                    wfs[:, :, channel_mask_channel_inds] = sparse_waveforms
+                else:
+                    wfs = sparse_waveforms
+                some_waveforms[spike_mask] = wfs
 
         return some_waveforms, selected_inds
 
