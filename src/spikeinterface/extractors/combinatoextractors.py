@@ -37,7 +37,6 @@ class CombinatoSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "CombinatoSortingExtractor"
     installed = HAVE_H5PY
     installation_mesg = "To use the CombinatoSortingExtractor install h5py: \n\n pip install h5py\n\n"
     name = "combinato"

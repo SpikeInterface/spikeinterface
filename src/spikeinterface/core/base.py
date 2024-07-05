@@ -128,8 +128,18 @@ class BaseExtractor:
                 indices = np.arange(len(self._main_ids))
         else:
             assert isinstance(ids, (list, np.ndarray, tuple)), "'ids' must be a list, np.ndarray or tuple"
+
+            non_existent_ids = [id for id in ids if id not in self._main_ids]
+            if non_existent_ids:
+                error_msg = (
+                    f"IDs {non_existent_ids} are not channel ids of the extractor. \n"
+                    f"Available ids are {self._main_ids} with dtype {self._main_ids.dtype}"
+                )
+                raise ValueError(error_msg)
+
             _main_ids = self._main_ids.tolist()
             indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
+
             if prefer_slice:
                 if np.all(np.diff(indices) == 1):
                     indices = slice(indices[0], indices[-1] + 1)
@@ -881,7 +891,7 @@ class BaseExtractor:
 
         Parameters
         ----------
-        name : str , optional
+        name : str or Path, optional
             The name of the subfolder within the global temporary folder. If `folder`
             is provided, this argument must be None.
         folder : str or Path, optional

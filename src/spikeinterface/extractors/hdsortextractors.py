@@ -25,7 +25,6 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "HDSortSortingExtractor"
     mode = "file"
     name = "hdsort"
 

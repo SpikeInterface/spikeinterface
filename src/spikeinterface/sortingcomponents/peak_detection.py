@@ -23,7 +23,7 @@ from spikeinterface.core.node_pipeline import (
     base_peak_dtype,
 )
 
-from spikeinterface.postprocessing.unit_locations import get_convolution_weights
+from spikeinterface.postprocessing.localization_tools import get_convolution_weights
 
 from .tools import make_multi_method_doc
 
