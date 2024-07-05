@@ -395,7 +395,7 @@ def generate_unit_ids_for_merge_group(old_unit_ids, units_to_merge, new_unit_ids
     if new_unit_ids is not None:
         # then only doing a consistency check
         assert len(new_unit_ids) == len(units_to_merge), "new_unit_ids should have the same len as units_to_merge"
-        # new_unit_ids can also be part of old_unit_ids only inside the same group: 
+        # new_unit_ids can also be part of old_unit_ids only inside the same group:
         for i, new_unit_id in enumerate(new_unit_ids):
             if new_unit_id in old_unit_ids:
                 assert new_unit_id in units_to_merge[i], "new_unit_ids already exists but outside the merged groups"
