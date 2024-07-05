@@ -57,8 +57,8 @@ def get_potential_auto_merge(
         * STEP 3: estimated unit locations are close enough (`maximum_distance_um`)
         * STEP 4: the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
         * STEP 5: the templates of the two units are similar (`template_diff_thresh`)
-        * STEP 6: [optional] the presence distance of two units
-        * STEP 7: [optional] the cross-contamination is not significant
+        * STEP 6: the presence distance of two units
+        * STEP 7: the cross-contamination is not significant
         * STEP 8: the unit "quality score" is increased after the merge.
 
     The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
