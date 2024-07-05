@@ -142,6 +142,27 @@ def test_SortingAnalyzer_tmp_recording(dataset):
         sorting_analyzer.set_temporary_recording(recording_sliced)
 
 
+def test_SortingAnalyzer_merge_all_extensions(dataset):
+    recording, sorting = dataset
+    recording_cached = recording.save(mode="memory")
+
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    sorting_analyzer.set_temporary_recording(recording_cached)
+    assert sorting_analyzer.has_temporary_recording()
+    
+    sorting_analyzer.compute(['random_spikes', 'templates', 'waveforms', 'principal_components',
+            'correlograms', 'noise_levels', 'template_similarity', 
+            'spike_amplitudes', 'spike_locations', 'unit_locations', 'quality_metrics', 'template_metrics'])
+
+    similarity = sorting_analyzer.get_extension('template_similarity').get_data()
+    import numpy as np
+    src, tgt = np.where(similarity > 0.8)
+    from spikeinterface.sortingcomponents.clustering.clustering_tools import resolve_merging_graph
+    merges = resolve_merging_graph(sorting, [(i,j) for (i,j) in zip(src, tgt)])
+    
+    sa3 = sorting_analyzer.merge_units(units_to_merge=merges, censor_ms=5, merging_mode='hard')
+    sa4 = sorting_analyzer.merge_units(units_to_merge=merges, censor_ms=5, merging_mode='soft', sparsity_overlap=0.5)
+
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     register_result_extension(DummyAnalyzerExtension)
@@ -382,4 +403,5 @@ if __name__ == "__main__":
     test_SortingAnalyzer_zarr(tmp_path, dataset)
     test_SortingAnalyzer_tmp_recording(dataset)
     test_extension()
+    test_SortingAnalyzer_merge_all_extensions()
     test_extension_params()
