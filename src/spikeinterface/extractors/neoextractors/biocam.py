@@ -31,6 +31,8 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
+    NeoRawIOClass = "BiocamRawIO"
+
     def __init__(
         self,
         file_path,
