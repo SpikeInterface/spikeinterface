@@ -125,7 +125,7 @@ def compute_pc_metrics(
 
     # this get dense projection for selected unit_ids
     dense_projections, spike_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)
-    spike_unit_indices = sorting.to_spike_vector()['unit_index']
+    spike_unit_indices = sorting.to_spike_vector()["unit_index"]
     all_labels = sorting.unit_ids[spike_unit_indices[spike_indices]]
 
     items = []
