@@ -28,7 +28,7 @@ class FilterRecording(BasePreprocessor):
 
       * scipy.signal.iirfilter
       * scipy.signal.filtfilt or scipy.signal.sosfiltfilt when direction = "forward-backward"
-      * scipy.signal.lfilt or scipy.signal.sosfilt 
+      * scipy.signal.lfilt or scipy.signal.sosfilt
 
     BandpassFilterRecording is built on top of it.
 
@@ -60,7 +60,7 @@ class FilterRecording(BasePreprocessor):
     direction : "forward" | "backward" | "forward-backward", default: "forward-backward"
         Direction of filtering:
         - forward and backward filter in just one direction, creating phase shifts in the signal.
-        - forward-backward filters in both directions, a zero-phase filtering. 
+        - forward-backward filters in both directions, a zero-phase filtering.
 
     Returns
     -------
@@ -192,7 +192,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
                 filtered_traces = scipy.signal.lfilt(b, a, traces_chunk, axis=0)
 
             if self.direction == "backward":
-                filtered_traces = np.flip(filtered_traces, axis=0)            
+                filtered_traces = np.flip(filtered_traces, axis=0)
 
         if right_margin > 0:
             filtered_traces = filtered_traces[left_margin:-right_margin, :]
