@@ -193,14 +193,6 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         end_frame: int | None = None,
         channel_indices: list | None = None,
     ) -> np.ndarray:
-        if start_frame is None:
-            start_frame = 0
-
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
-        if end_frame > self.get_num_samples():
-            raise ValueError(f"end_frame {end_frame} is larger than the number of samples {self.get_num_samples()}")
 
         # Calculate byte offsets for start and end frames
         start_byte = self.file_offset + start_frame * self.bytes_per_sample
