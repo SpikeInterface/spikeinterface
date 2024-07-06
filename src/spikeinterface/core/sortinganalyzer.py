@@ -24,7 +24,7 @@ from .basesorting import BaseSorting
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import check_json, retrieve_importing_provenance
-from .sorting_tools import get_new_unit_ids_for_merges
+from .sorting_tools import generate_unit_ids_for_merge_group
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
@@ -647,9 +647,9 @@ class SortingAnalyzer:
         """
 
         if units_to_merge is not None:
-            from spikeinterface.core.sorting_tools import get_ids_after_merging
+            from spikeinterface.core.sorting_tools import _get_ids_after_merging
 
-            new_unit_ids = get_ids_after_merging(self.sorting, units_to_merge, new_unit_ids=unit_ids)
+            new_unit_ids = _get_ids_after_merging(self.unit_ids, units_to_merge, new_unit_ids=unit_ids)
 
         if self.has_recording():
             recording = self._recording
@@ -694,7 +694,7 @@ class SortingAnalyzer:
         # Note that the sorting is a copy we need to go back to the orginal sorting (if available)
         sorting_provenance = self.get_sorting_provenance()
         if sorting_provenance is None:
-            # if the original sorting objetc is not available anymore (kilosort folder deleted, ....), take the copy
+            # if the original sorting object is not available anymore (kilosort folder deleted, ....), take the copy
             sorting_provenance = self.sorting
 
         if units_to_merge is None:
@@ -705,8 +705,14 @@ class SortingAnalyzer:
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
             sorting_provenance, keep_mask = apply_merges_to_sorting(
-                sorting_provenance, units_to_merge, unit_ids, censor_ms
+                sorting=sorting_provenance,
+                units_to_merge=units_to_merge,
+                new_unit_ids=unit_ids,
+                censor_ms=censor_ms,
+                return_kept=True,
             )
+            # TODO: sam/pierre would create a curation field / curation.json with the applied merges.
+            # What do you think?
 
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
@@ -864,7 +870,7 @@ class SortingAnalyzer:
             if len(units) < 2:
                 raise ValueError("Merging requires at least two units to merge")
 
-        new_unit_ids = get_new_unit_ids_for_merges(self.sorting, units_to_merge, new_unit_ids)
+        new_unit_ids = generate_unit_ids_for_merge_group(self.unit_ids, units_to_merge, new_unit_ids)
 
         if not isinstance(units_to_merge[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge

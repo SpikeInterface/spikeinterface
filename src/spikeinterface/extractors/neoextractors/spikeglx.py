@@ -40,9 +40,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
-    mode = "folder"
     NeoRawIOClass = "SpikeGLXRawIO"
-    name = "spikeglx"
 
     def __init__(self, folder_path, load_sync_channel=False, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel=load_sync_channel)
@@ -110,9 +108,7 @@ class SpikeGLXEventExtractor(NeoBaseEventExtractor):
 
     """
 
-    mode = "folder"
     NeoRawIOClass = "SpikeGLXRawIO"
-    name = "spikeglx"
 
     def __init__(self, folder_path, block_index=None):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)

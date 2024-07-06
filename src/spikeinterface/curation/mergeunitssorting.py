@@ -4,7 +4,7 @@ import numpy as np
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from copy import deepcopy
-from spikeinterface.core.sorting_tools import get_new_unit_ids_for_merges
+from spikeinterface.core.sorting_tools import generate_unit_ids_for_merge_group
 
 
 class MergeUnitsSorting(BaseSorting):
@@ -45,12 +45,14 @@ class MergeUnitsSorting(BaseSorting):
         parents_unit_ids = sorting.unit_ids
         sampling_frequency = sorting.get_sampling_frequency()
 
+        new_unit_ids = generate_unit_ids_for_merge_group(
+            sorting.unit_ids, units_to_merge, new_unit_ids=new_unit_ids, new_id_strategy="append"
+        )
+
         all_removed_ids = []
         for ids in units_to_merge:
             all_removed_ids.extend(ids)
         keep_unit_ids = [u for u in parents_unit_ids if u not in all_removed_ids]
-
-        new_unit_ids = get_new_unit_ids_for_merges(sorting, units_to_merge, new_unit_ids)
 
         assert len(new_unit_ids) == num_merge, "new_unit_ids must have the same size as units_to_merge"
 
@@ -60,7 +62,7 @@ class MergeUnitsSorting(BaseSorting):
         assert properties_policy in ("keep", "remove"), "properties_policy must be " "keep" " or " "remove" ""
 
         # new units are put at the end
-        unit_ids = keep_unit_ids + new_unit_ids
+        unit_ids = keep_unit_ids + list(new_unit_ids)
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         # assert all(np.isin(keep_unit_ids, self.unit_ids)), 'new_unit_id should have a compatible format with the parent ids'
 

@@ -33,9 +33,7 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 
     """
 
-    mode = "file"
     NeoRawIOClass = "IntanRawIO"
-    name = "intan"
 
     def __init__(
         self,

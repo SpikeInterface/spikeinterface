@@ -194,7 +194,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         else:
             channel_indices = sparsity.unit_id_to_channel_indices[unit_id]
             projections = projections[:, :, : channel_indices.size]
-            if not sparse:
+            if sparse:
                 return projections
             else:
                 num_chans = self.sorting_analyzer.get_num_channels()

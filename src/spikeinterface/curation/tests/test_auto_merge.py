@@ -12,10 +12,8 @@ from spikeinterface.curation import get_potential_auto_merge
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 
 
-@pytest.mark.parametrize("preset", ["lussac", "knn", "temporal_splits", None])
-def test_get_auto_merge_list(sorting_analyzer_for_curation, preset):
+def test_get_auto_merge_list(sorting_analyzer_for_curation):
 
-    print(sorting_analyzer_for_curation)
     sorting = sorting_analyzer_for_curation.sorting
     recording = sorting_analyzer_for_curation.recording
     num_unit_splited = 1
@@ -36,43 +34,32 @@ def test_get_auto_merge_list(sorting_analyzer_for_curation, preset):
     sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute("waveforms", **job_kwargs)
     sorting_analyzer.compute("templates")
-    sorting_analyzer.compute(["spike_amplitudes", "spike_locations"])
 
-    if preset is not None:
-        potential_merges, outs = get_potential_auto_merge(
-            sorting_analyzer,
-            preset=preset,
-            minimum_spikes=1000,
-            maximum_distance_um=150.0,
-            peak_sign="neg",
-            bin_ms=0.25,
-            window_ms=100.0,
-            corr_diff_thresh=0.16,
-            template_diff_thresh=0.25,
-            censored_period_ms=0.0,
-            refractory_period_ms=4.0,
-            sigma_smooth_ms=0.6,
-            contamination_threshold=0.2,
-            adaptative_window_threshold=0.5,
-            num_channels=5,
-            num_shift=5,
-            firing_contamination_balance=1.5,
-            extra_outputs=True,
-        )
-        if preset == "lussac":
-            assert len(potential_merges) == num_unit_splited
-            for true_pair in other_ids.values():
-                true_pair = tuple(true_pair)
-                assert true_pair in potential_merges
-    else:
-        # when preset is None you have to specify the steps
-        with pytest.raises(ValueError):
-            potential_merges = get_potential_auto_merge(sorting_analyzer, preset=preset)
-        potential_merges = get_potential_auto_merge(
-            sorting_analyzer, preset=preset, steps=["min_spikes", "min_snr", "remove_contaminated", "unit_positions"]
-        )
+    potential_merges, outs = get_potential_auto_merge(
+        sorting_analyzer,
+        minimum_spikes=1000,
+        maximum_distance_um=150.0,
+        peak_sign="neg",
+        bin_ms=0.25,
+        window_ms=100.0,
+        corr_diff_thresh=0.16,
+        template_diff_thresh=0.25,
+        censored_period_ms=0.0,
+        refractory_period_ms=4.0,
+        sigma_smooth_ms=0.6,
+        contamination_threshold=0.2,
+        adaptative_window_threshold=0.5,
+        num_channels=5,
+        num_shift=5,
+        firing_contamination_balance=1.5,
+        extra_outputs=True,
+    )
 
-    # DEBUG
+    assert len(potential_merges) == num_unit_splited
+    for true_pair in other_ids.values():
+        true_pair = tuple(true_pair)
+        assert true_pair in potential_merges
+
     # import matplotlib.pyplot as plt
     # from spikeinterface.curation.auto_merge import normalize_correlogram
     # templates_diff = outs['templates_diff']

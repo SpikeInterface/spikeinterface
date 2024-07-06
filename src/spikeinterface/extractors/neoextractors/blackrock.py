@@ -31,9 +31,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
 
     """
 
-    mode = "file"
     NeoRawIOClass = "BlackrockRawIO"
-    name = "blackrock"
 
     def __init__(
         self,
@@ -87,10 +85,8 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     """
 
-    mode = "file"
     NeoRawIOClass = "BlackrockRawIO"
     neo_returns_frames = False
-    name = "blackrock"
 
     def __init__(
         self,
