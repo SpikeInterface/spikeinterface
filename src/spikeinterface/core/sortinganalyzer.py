@@ -820,7 +820,7 @@ class SortingAnalyzer:
         censor_ms=None,
         merging_mode="soft",
         sparsity_overlap=0.75,
-        new_id_strategy='append',
+        new_id_strategy="append",
         format="memory",
         folder=None,
         verbose=False,

@@ -368,8 +368,7 @@ def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
     sa = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
 
     sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"ms_before": templates.ms_before,
-                                         "ms_after": templates.ms_after}
+    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
     sa.extensions["templates"].data["average"] = templates_array
     sa.compute("unit_locations", method="monopolar_triangulation")
     merges = get_potential_auto_merge(sa, **merging_kwargs)
