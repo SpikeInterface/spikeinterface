@@ -820,6 +820,7 @@ class SortingAnalyzer:
         censor_ms=None,
         merging_mode="soft",
         sparsity_overlap=0.75,
+        new_id_strategy='append',
         format="memory",
         folder=None,
         verbose=False,
@@ -848,6 +849,10 @@ class SortingAnalyzer:
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
             achieved, soft merging will not be possible
+        new_id_strategy : "append" | "take_first", default: "append"
+            The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+                * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+                * "take_first" : new_unit_ids will be the first unit_id of every list of merges
         folder : Path or None
             The new folder where selected waveforms are copied
         format : "auto" | "binary_folder" | "zarr"
@@ -870,11 +875,11 @@ class SortingAnalyzer:
             if len(units) < 2:
                 raise ValueError("Merging requires at least two units to merge")
 
-        new_unit_ids = generate_unit_ids_for_merge_group(self.unit_ids, units_to_merge, new_unit_ids)
-
         if not isinstance(units_to_merge[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge
             units_to_merge = [units_to_merge]
+
+        new_unit_ids = generate_unit_ids_for_merge_group(self.unit_ids, units_to_merge, new_unit_ids, new_id_strategy)
 
         return self._save_or_select_or_merge(
             format=format,
