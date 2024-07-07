@@ -64,9 +64,7 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         neo.OpenEphysRawIO is now handling gaps directly but makes the read slower.
     """
 
-    mode = "folder"
     NeoRawIOClass = "OpenEphysRawIO"
-    name = "openephyslegacy"
 
     def __init__(
         self,
@@ -138,9 +136,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
     """
 
-    mode = "folder"
     NeoRawIOClass = "OpenEphysBinaryRawIO"
-    name = "openephys"
 
     def __init__(
         self,
@@ -287,9 +283,7 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
     """
 
-    mode = "folder"
     NeoRawIOClass = "OpenEphysBinaryRawIO"
-    name = "openephys"
 
     def __init__(self, folder_path, block_index=None):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)

@@ -1,4 +1,4 @@
-Analyse Neuropixels datasets
+Analyze Neuropixels datasets
 ============================
 
 This example shows how to perform Neuropixels-specific analysis,
@@ -218,7 +218,7 @@ We need to specify which one to read:
 
 
 
-.. image:: analyse_neuropixels_files/analyse_neuropixels_8_1.png
+.. image:: analyze_neuropixels_files/analyze_neuropixels_8_1.png
 
 
 Preprocess the recording
@@ -286,7 +286,7 @@ is lazy, so you can change the previsous cell (parameters, step order,
 
 
 
-.. image:: analyse_neuropixels_files/analyse_neuropixels_13_0.png
+.. image:: analyze_neuropixels_files/analyze_neuropixels_13_0.png
 
 
 .. code:: ipython3
@@ -306,7 +306,7 @@ is lazy, so you can change the previsous cell (parameters, step order,
 
 
 
-.. image:: analyse_neuropixels_files/analyse_neuropixels_14_1.png
+.. image:: analyze_neuropixels_files/analyze_neuropixels_14_1.png
 
 
 Should we save the preprocessed data to a binary file?
@@ -389,7 +389,7 @@ Noise levels can be estimated on the scaled traces or on the raw
 
 
 
-.. image:: analyse_neuropixels_files/analyse_neuropixels_21_1.png
+.. image:: analyze_neuropixels_files/analyze_neuropixels_21_1.png
 
 
 Detect and localize peaks
@@ -480,7 +480,7 @@ documentation for motion estimation and correction for more details.
 
 
 
-.. image:: analyse_neuropixels_files/analyse_neuropixels_26_1.png
+.. image:: analyze_neuropixels_files/analyze_neuropixels_26_1.png
 
 
 .. code:: ipython3
@@ -502,7 +502,7 @@ documentation for motion estimation and correction for more details.
 
 
 
-.. image:: analyse_neuropixels_files/analyse_neuropixels_27_1.png
+.. image:: analyze_neuropixels_files/analyze_neuropixels_27_1.png
 
 
 Run a spike sorter
