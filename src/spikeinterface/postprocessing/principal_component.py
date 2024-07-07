@@ -120,10 +120,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
             new_data["pca_projection"] = pca_projections.copy()
             for to_be_merge, unit_id in zip(units_to_merge, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-                new_projections, spike_indices = self.get_some_projections(new_channel_ids, 
-                                                                       to_be_merge, 
-                                                                       kept_projections=pca_projections, 
-                                                                       kept_spikes=some_spikes)
+                new_projections, spike_indices = self.get_some_projections(
+                    new_channel_ids, to_be_merge, kept_projections=pca_projections, kept_spikes=some_spikes
+                )
                 num_chans = new_projections.shape[2]
                 new_data["pca_projection"][spike_indices, :, :num_chans] = new_projections
                 new_data["pca_projection"][spike_indices, :, num_chans:] = 0
@@ -246,7 +245,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
 
         # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
-        
+
         sparsity = self.sorting_analyzer.sparsity
 
         if kept_projections is not None:
@@ -273,7 +272,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_projection = self.get_projections_one_unit(unit_id, sparse=True, kept_projections=kept_projections, kept_spikes=kept_spikes)
+                sparse_projection = self.get_projections_one_unit(
+                    unit_id, sparse=True, kept_projections=kept_projections, kept_spikes=kept_spikes
+                )
                 local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
                 # keep only requested channels
                 channel_mask_local_inds = np.isin(local_chan_inds, channel_indices)
