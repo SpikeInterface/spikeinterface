@@ -242,11 +242,10 @@ class ComputeWaveforms(AnalyzerExtension):
     ):
         new_data = dict()
 
-        
         waveforms = self.data["waveforms"]
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-        if keep_mask is not None:            
+        if keep_mask is not None:
             spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]

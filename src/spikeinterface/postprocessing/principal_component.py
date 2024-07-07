@@ -121,10 +121,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
             new_data["pca_projection"] = pca_projections.copy()
             for to_be_merge, unit_id in zip(units_to_merge, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-                new_projections, spike_indices = self.get_some_projections(new_channel_ids, 
-                                                                       to_be_merge, 
-                                                                       kept_projections=new_data["pca_projection"], 
-                                                                       kept_spikes=some_spikes)
+                new_projections, spike_indices = self.get_some_projections(
+                    new_channel_ids, to_be_merge, kept_projections=new_data["pca_projection"], kept_spikes=some_spikes
+                )
                 num_chans = new_projections.shape[2]
                 new_data["pca_projection"][spike_indices, :, :num_chans] = new_projections
                 new_data["pca_projection"][spike_indices, :, num_chans:] = 0
