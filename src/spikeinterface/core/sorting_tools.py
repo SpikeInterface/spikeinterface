@@ -225,7 +225,6 @@ def random_spikes_selection(
     return random_spikes_indices
 
 
-
 def apply_merges_to_sorting(
     sorting, units_to_merge, new_unit_ids=None, censor_ms=None, return_kept=False, new_id_strategy="append"
 ):
