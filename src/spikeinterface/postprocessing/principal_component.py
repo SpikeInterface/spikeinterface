@@ -106,9 +106,10 @@ class ComputePrincipalComponents(AnalyzerExtension):
     ):
         new_data = dict()
         pca_projections = self.data["pca_projection"]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         if keep_mask is not None:
-            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
+            spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
             pca_projections = pca_projections[valid]
@@ -122,7 +123,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
                 new_projections, spike_indices = self.get_some_projections(new_channel_ids, 
                                                                        to_be_merge, 
-                                                                       kept_projections=pca_projections, 
+                                                                       kept_projections=new_data["pca_projection"], 
                                                                        kept_spikes=some_spikes)
                 num_chans = new_projections.shape[2]
                 new_data["pca_projection"][spike_indices, :, :num_chans] = new_projections
