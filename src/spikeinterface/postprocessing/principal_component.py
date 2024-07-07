@@ -247,7 +247,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
 
         # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
-        
+
         sparsity = self.sorting_analyzer.sparsity
 
         if kept_projections is not None:
@@ -274,7 +274,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_projection = self.get_projections_one_unit(unit_id, sparse=True, kept_projections=kept_projections, kept_spikes=kept_spikes)
+                sparse_projection = self.get_projections_one_unit(
+                    unit_id, sparse=True, kept_projections=kept_projections, kept_spikes=kept_spikes
+                )
                 local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
                 # keep only requested channels
                 channel_mask_local_inds = np.isin(local_chan_inds, channel_indices)

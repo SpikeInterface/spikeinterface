@@ -259,10 +259,9 @@ class ComputeWaveforms(AnalyzerExtension):
             new_data["waveforms"] = waveforms.copy()
             for to_be_merged, unit_id in zip(units_to_merge, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-                new_waveforms, spike_indices = self.get_some_waveforms(new_channel_ids, 
-                                                                       to_be_merged, 
-                                                                       kept_waveforms=new_data["waveforms"], 
-                                                                       kept_spikes=some_spikes)
+                new_waveforms, spike_indices = self.get_some_waveforms(
+                    new_channel_ids, to_be_merged, kept_waveforms=new_data["waveforms"], kept_spikes=some_spikes
+                )
                 num_chans = new_waveforms.shape[2]
                 new_data["waveforms"][spike_indices, :, :num_chans] = new_waveforms
                 new_data["waveforms"][spike_indices, :, num_chans:] = 0
@@ -383,7 +382,9 @@ class ComputeWaveforms(AnalyzerExtension):
 
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_waveforms = self.get_waveforms_one_unit(unit_id, kept_waveforms=kept_waveforms, kept_spikes=kept_spikes)
+                sparse_waveforms = self.get_waveforms_one_unit(
+                    unit_id, kept_waveforms=kept_waveforms, kept_spikes=kept_spikes
+                )
                 local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
 
                 # keep only requested channels
