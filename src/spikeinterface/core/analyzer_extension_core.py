@@ -258,9 +258,12 @@ class ComputeWaveforms(AnalyzerExtension):
             new_data["waveforms"] = waveforms.copy()
             for to_be_merged, unit_id in zip(units_to_merge, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-                waveforms, spike_indices = self.get_some_waveforms(new_channel_ids, to_be_merged, keep_mask)
-                num_chans = waveforms.shape[2]
-                new_data["waveforms"][spike_indices, :, :num_chans] = waveforms
+                new_waveforms, spike_indices = self.get_some_waveforms(new_channel_ids, 
+                                                                       to_be_merged, 
+                                                                       kept_waveforms=new_data["waveforms"], 
+                                                                       kept_spikes=some_spikes)
+                num_chans = new_waveforms.shape[2]
+                new_data["waveforms"][spike_indices, :, :num_chans] = new_waveforms
                 new_data["waveforms"][spike_indices, :, num_chans:] = 0
 
         else:
@@ -268,7 +271,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
-    def get_waveforms_one_unit(self, unit_id, force_dense: bool = False, keep_mask=None):
+    def get_waveforms_one_unit(self, unit_id, force_dense: bool = False, kept_waveforms=None, kept_spikes=None):
         """
         Returns the waveforms of a unit id.
 
@@ -278,8 +281,10 @@ class ComputeWaveforms(AnalyzerExtension):
             The unit id to return waveforms for
         force_dense : bool, default: False
             If True, and SortingAnalyzer must be sparse then only waveforms on sparse channels are returned.
-        keep_mask : array, default None
-            If specified, a mask to select only some spikes (mostly used during merging)
+        kept_waveforms : array, default None
+            If specified, the kept waveforms to select waveforms from
+        kept_spikes : spikes, default None
+            If specified, the spikes associated with the kept waveforms
 
         Returns
         -------
@@ -289,16 +294,16 @@ class ComputeWaveforms(AnalyzerExtension):
         """
         sorting = self.sorting_analyzer.sorting
         unit_index = sorting.id_to_index(unit_id)
-        # spikes = sorting.to_spike_vector()
-        # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-        waveforms = self.data["waveforms"]
 
-        if keep_mask is not None and sum(keep_mask) < len(keep_mask):
-            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
-            valid = keep_mask[spike_indices]
-            some_spikes = some_spikes[valid]
-            waveforms = waveforms[valid]
+        if kept_waveforms is not None:
+            waveforms = kept_waveforms
+        else:
+            waveforms = self.data["waveforms"]
+
+        if kept_spikes is not None:
+            some_spikes = kept_spikes
+        else:
+            some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         spike_mask = some_spikes["unit_index"] == unit_index
         wfs = waveforms[spike_mask, :, :]
@@ -314,7 +319,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return wfs
 
-    def get_some_waveforms(self, channel_ids=None, unit_ids=None, keep_mask=None):
+    def get_some_waveforms(self, channel_ids=None, unit_ids=None, kept_waveforms=None, kept_spikes=None):
         """
         Returns the waveforms of some units and some channels.
 
@@ -326,8 +331,10 @@ class ComputeWaveforms(AnalyzerExtension):
             List of channel ids on which waveforms must aligned
         unit_ids : list, default: None
             List of unit ids to return waveforms for
-        keep_mask : array, default None
-            If specified, a mask to select only some spikes (mostly used during merging)
+        kept_waveforms : array, default None
+            If specified, the kept waveforms to select waveforms from
+        kept_spikes : spikes, default None
+            If specified, the spikes associated with the kept waveforms
 
         Returns
         -------
@@ -336,6 +343,7 @@ class ComputeWaveforms(AnalyzerExtension):
         spike_indices: np.array
             Spike indices of the returned waveforms of shape (num_spikes, )
         """
+
         sorting = self.sorting_analyzer.sorting
         if unit_ids is None:
             unit_ids = sorting.unit_ids
@@ -346,19 +354,21 @@ class ComputeWaveforms(AnalyzerExtension):
         channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
 
         # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
-        waveforms = self.data["waveforms"]
-        num_samples = waveforms.shape[1]
-        dtype = waveforms.dtype
 
         sparsity = self.sorting_analyzer.sparsity
 
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        if kept_waveforms is not None:
+            waveforms = kept_waveforms
+        else:
+            waveforms = self.data["waveforms"]
 
-        if keep_mask is not None and sum(keep_mask) < len(keep_mask):
-            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
-            valid = keep_mask[spike_indices]
-            some_spikes = some_spikes[valid]
-            waveforms = waveforms[valid]
+        num_samples = waveforms.shape[1]
+        dtype = waveforms.dtype
+
+        if kept_spikes is not None:
+            some_spikes = kept_spikes
+        else:
+            some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         unit_indices = sorting.ids_to_indices(unit_ids)
         selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
@@ -372,7 +382,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_waveforms = self.get_waveforms_one_unit(unit_id, keep_mask=keep_mask)
+                sparse_waveforms = self.get_waveforms_one_unit(unit_id, kept_waveforms=kept_waveforms, kept_spikes=kept_spikes)
                 local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
 
                 # keep only requested channels

@@ -108,7 +108,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
         pca_projections = self.data["pca_projection"]
 
         if keep_mask is not None:
-            valid = keep_mask[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
+            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
+            valid = keep_mask[spike_indices]
+            some_spikes = some_spikes[valid]
             pca_projections = pca_projections[valid]
 
         sparsity = new_sorting_analyzer.sparsity
@@ -118,9 +120,12 @@ class ComputePrincipalComponents(AnalyzerExtension):
             new_data["pca_projection"] = pca_projections.copy()
             for to_be_merge, unit_id in zip(units_to_merge, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-                projections, spike_indices = self.get_some_projections(new_channel_ids, to_be_merge, keep_mask)
-                num_chans = projections.shape[2]
-                new_data["pca_projection"][spike_indices, :, :num_chans] = projections
+                new_projections, spike_indices = self.get_some_projections(new_channel_ids, 
+                                                                       to_be_merge, 
+                                                                       kept_projections=pca_projections, 
+                                                                       kept_spikes=some_spikes)
+                num_chans = new_projections.shape[2]
+                new_data["pca_projection"][spike_indices, :, :num_chans] = new_projections
                 new_data["pca_projection"][spike_indices, :, num_chans:] = 0
         else:
             new_data["pca_projection"] = pca_projections
@@ -150,7 +155,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             pca_models = self.data[f"pca_model_{mode}"]
         return pca_models
 
-    def get_projections_one_unit(self, unit_id, sparse=False, keep_mask=None):
+    def get_projections_one_unit(self, unit_id, sparse=False, kept_projections=None, kept_spikes=None):
         """
         Returns the computed projections for the sampled waveforms of a unit id.
 
@@ -160,8 +165,10 @@ class ComputePrincipalComponents(AnalyzerExtension):
             The unit id to return PCA projections for
         sparse : bool, default: False
             If True, and SortingAnalyzer must be sparse then only projections on sparse channels are returned.
-        keep_mask : array, default None
-            If specified, a mask to select only some spikes (mostly used during merging)
+        kept_projections : array, default None
+            If specified, the kept projections to select projections from
+        kept_spikes : spikes, default None
+            If specified, the spikes associated with the kept projections
 
         Returns
         -------
@@ -176,14 +183,15 @@ class ComputePrincipalComponents(AnalyzerExtension):
             assert self.params["mode"] != "concatenated", "mode concatenated cannot retrieve sparse projection"
             assert sparsity is not None, "sparse projection need SortingAnalyzer to be sparse"
 
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-        projections = self.data["pca_projection"]
+        if kept_projections is not None:
+            projections = kept_projections
+        else:
+            projections = self.data["pca_projection"]
 
-        if keep_mask is not None:
-            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
-            valid = keep_mask[spike_indices]
-            some_spikes = some_spikes[valid]
-            projections = projections[valid]
+        if kept_spikes is not None:
+            some_spikes = kept_spikes
+        else:
+            some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         unit_index = sorting.id_to_index(unit_id)
         spike_mask = some_spikes["unit_index"] == unit_index
@@ -204,7 +212,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 projections_[:, :, channel_indices] = projections
                 return projections_
 
-    def get_some_projections(self, channel_ids=None, unit_ids=None, keep_mask=None):
+    def get_some_projections(self, channel_ids=None, unit_ids=None, kept_projections=None, kept_spikes=None):
         """
         Returns the computed projections for the sampled waveforms of some units and some channels.
 
@@ -216,8 +224,10 @@ class ComputePrincipalComponents(AnalyzerExtension):
             List of channel ids on which projections must aligned
         unit_ids : list, default: None
             List of unit ids to return projections for
-        keep_mask : array, default None
-            If specified, a mask to select only some spikes (mostly used during merging)
+        kept_projections : array, default None
+            If specified, the kept projections to select projections from
+        kept_spikes : spikes, default None
+            If specified, the spikes associated with the kept projections
 
         Returns
         -------
@@ -236,19 +246,21 @@ class ComputePrincipalComponents(AnalyzerExtension):
         channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
 
         # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
-        all_projections = self.data["pca_projection"]
+        
+        sparsity = self.sorting_analyzer.sparsity
+
+        if kept_projections is not None:
+            all_projections = kept_projections
+        else:
+            all_projections = self.data["pca_projection"]
+
         num_components = all_projections.shape[1]
         dtype = all_projections.dtype
 
-        sparsity = self.sorting_analyzer.sparsity
-
-        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-
-        if keep_mask is not None and sum(keep_mask) < keep_mask.size:
-            spike_indices = self.sorting_analyzer.get_extension("random_spikes")._get_data()
-            valid = keep_mask[spike_indices]
-            some_spikes = some_spikes[valid]
-            all_projections = all_projections[valid]
+        if kept_spikes is not None:
+            some_spikes = kept_spikes
+        else:
+            some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         unit_indices = sorting.ids_to_indices(unit_ids)
         selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
@@ -261,7 +273,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_projection = self.get_projections_one_unit(unit_id, sparse=True, keep_mask=keep_mask)
+                sparse_projection = self.get_projections_one_unit(unit_id, sparse=True, kept_projections=kept_projections, kept_spikes=kept_spikes)
                 local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
                 # keep only requested channels
                 channel_mask_local_inds = np.isin(local_chan_inds, channel_indices)
