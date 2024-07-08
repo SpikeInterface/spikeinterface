@@ -251,7 +251,7 @@ def apply_merges_to_sorting(
     censor_ms: float | None, default: None
         When applying the merges, should be discard consecutive spikes violating a given refractory per
     return_kept : bool, default: False
-        If True, also return also a booolean mask of kept spikes.
+        If True, also return also a boolean mask of kept spikes.
     new_id_strategy : "append" | "take_first", default: "append"
         The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
 

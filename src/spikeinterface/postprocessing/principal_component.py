@@ -13,6 +13,8 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 
+from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
+
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
 
@@ -100,42 +102,84 @@ class ComputePrincipalComponents(AnalyzerExtension):
             if "model" in k:
                 new_data[k] = v
         return new_data
-
+    
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
-        new_data = dict()
+        
         pca_projections = self.data["pca_projection"]
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-        if keep_mask is not None:
+        if keep_mask is None:
             spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
             pca_projections = pca_projections[valid]
-
-        sparsity = new_sorting_analyzer.sparsity
-
-        if sparsity is not None:
-
-            max_num_chans = np.sum(new_sorting_analyzer.sparsity.mask, 1).max()
-            new_data["pca_projection"] = pca_projections.copy()
-            for to_be_merge, unit_id in zip(merge_unit_groups, new_unit_ids):
-                new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-                new_projections, spike_indices = self.get_some_projections(
-                    new_channel_ids, to_be_merge, kept_projections=new_data["pca_projection"], kept_spikes=some_spikes
-                )
-                num_chans = new_projections.shape[2]
-                new_data["pca_projection"][spike_indices, :, :num_chans] = new_projections
-            new_data["pca_projection"] = new_data["pca_projection"][:, :, :max_num_chans]
         else:
-            new_data["pca_projection"] = pca_projections
+            pca_projections = pca_projections.copy()
+
+        old_sparsity = self.sorting_analyzer.sparsity
+        if old_sparsity is not None:
+            
+            # we need a realignement inside each group because we take the channel intersection sparsity
+            # the story is same as in "waveforms" extension
+            for group_ids in merge_unit_groups:
+                group_indices = self.sorting_analyzer.sorting.ids_to_indices(group_ids)
+                group_sparsity_mask = old_sparsity.mask[group_indices, :]
+                group_selection = []
+                for unit_id in group_ids:
+                    unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                    selection = np.flatnonzero(some_spikes["unit_index"] == unit_index)
+                    group_selection.append(selection)
+                    
+                _inplace_sparse_realign_waveforms(pca_projections, group_selection, group_sparsity_mask)
+
+
+        new_data = dict(pca_projections=pca_projections)
 
         # one or several model
         for k, v in self.data.items():
             if "model" in k:
                 new_data[k] = v
         return new_data
+
+
+    # def _merge_extension_data(
+    #     self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    # ):
+    #     new_data = dict()
+    #     pca_projections = self.data["pca_projection"]
+    #     some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+    #     if keep_mask is not None:
+    #         spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
+    #         valid = keep_mask[spike_indices]
+    #         some_spikes = some_spikes[valid]
+    #         pca_projections = pca_projections[valid]
+
+    #     sparsity = new_sorting_analyzer.sparsity
+
+    #     if sparsity is not None:
+
+    #         max_num_chans = np.sum(new_sorting_analyzer.sparsity.mask, 1).max()
+    #         new_data["pca_projection"] = pca_projections.copy()
+    #         for to_be_merge, unit_id in zip(merge_unit_groups, new_unit_ids):
+    #             new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
+    #             new_projections, spike_indices = self.get_some_projections(
+    #                 new_channel_ids, to_be_merge, kept_projections=new_data["pca_projection"], kept_spikes=some_spikes
+    #             )
+    #             num_chans = new_projections.shape[2]
+    #             new_data["pca_projection"][spike_indices, :, :num_chans] = new_projections
+    #         new_data["pca_projection"] = new_data["pca_projection"][:, :, :max_num_chans]
+    #     else:
+    #         new_data["pca_projection"] = pca_projections
+
+    #     # one or several model
+    #     for k, v in self.data.items():
+    #         if "model" in k:
+    #             new_data[k] = v
+    #     return new_data
+
 
     def get_pca_model(self):
         """
@@ -156,7 +200,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             pca_models = self.data[f"pca_model_{mode}"]
         return pca_models
 
-    def get_projections_one_unit(self, unit_id, sparse=False, kept_projections=None, kept_spikes=None):
+    def get_projections_one_unit(self, unit_id, sparse=False):
         """
         Returns the computed projections for the sampled waveforms of a unit id.
 
@@ -164,18 +208,17 @@ class ComputePrincipalComponents(AnalyzerExtension):
         ----------
         unit_id : int or str
             The unit id to return PCA projections for
-        sparse : bool, default: False
+        sparse: bool, default: False
             If True, and SortingAnalyzer must be sparse then only projections on sparse channels are returned.
-        kept_projections : array, default None
-            If specified, the kept projections to select projections from
-        kept_spikes : spikes, default None
-            If specified, the spikes associated with the kept projections
+            Channel indices are also returned.
 
         Returns
         -------
-        projections : np.array
+        projections: np.array
             The PCA projections (num_waveforms, num_components, num_channels).
             In case sparsity is used, only the projections on sparse channels are returned.
+        channel_indices: np.array
+
         """
         sparsity = self.sorting_analyzer.sparsity
         sorting = self.sorting_analyzer.sorting
@@ -184,19 +227,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
             assert self.params["mode"] != "concatenated", "mode concatenated cannot retrieve sparse projection"
             assert sparsity is not None, "sparse projection need SortingAnalyzer to be sparse"
 
-        if kept_projections is not None:
-            projections = kept_projections
-        else:
-            projections = self.data["pca_projection"]
-
-        if kept_spikes is not None:
-            some_spikes = kept_spikes
-        else:
-            some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         unit_index = sorting.id_to_index(unit_id)
         spike_mask = some_spikes["unit_index"] == unit_index
-        projections = projections[spike_mask]
+        projections = self.data["pca_projection"][spike_mask]
 
         if sparsity is None:
             return projections
@@ -204,7 +239,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             channel_indices = sparsity.unit_id_to_channel_indices[unit_id]
             projections = projections[:, :, : channel_indices.size]
             if sparse:
-                return projections
+                return projections, channel_indices
             else:
                 num_chans = self.sorting_analyzer.get_num_channels()
                 projections_ = np.zeros(
@@ -213,7 +248,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 projections_[:, :, channel_indices] = projections
                 return projections_
 
-    def get_some_projections(self, channel_ids=None, unit_ids=None, kept_projections=None, kept_spikes=None):
+    def get_some_projections(self, channel_ids=None, unit_ids=None):
         """
         Returns the computed projections for the sampled waveforms of some units and some channels.
 
@@ -225,17 +260,13 @@ class ComputePrincipalComponents(AnalyzerExtension):
             List of channel ids on which projections must aligned
         unit_ids : list, default: None
             List of unit ids to return projections for
-        kept_projections : array, default None
-            If specified, the kept projections to select projections from
-        kept_spikes : spikes, default None
-            If specified, the spikes associated with the kept projections
 
         Returns
         -------
         some_projections: np.array
             The PCA projections (num_spikes, num_components, num_sparse_channels)
-        spike_indices: np.array
-            Spike indices of the returned PCA projections of shape (num_spikes, )
+        spike_unit_indices: np.array
+            Array a copy of with some_spikes["unit_index"] of returned PCA projections of shape (num_spikes, )
         """
         sorting = self.sorting_analyzer.sorting
         if unit_ids is None:
@@ -247,24 +278,17 @@ class ComputePrincipalComponents(AnalyzerExtension):
         channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
 
         # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
-
-        sparsity = self.sorting_analyzer.sparsity
-
-        if kept_projections is not None:
-            all_projections = kept_projections
-        else:
-            all_projections = self.data["pca_projection"]
-
+        all_projections = self.data["pca_projection"]
         num_components = all_projections.shape[1]
         dtype = all_projections.dtype
 
-        if kept_spikes is not None:
-            some_spikes = kept_spikes
-        else:
-            some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        sparsity = self.sorting_analyzer.sparsity
+
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         unit_indices = sorting.ids_to_indices(unit_ids)
         selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
+
         spike_unit_indices = some_spikes["unit_index"][selected_inds]
 
         if sparsity is None:
@@ -272,29 +296,164 @@ class ComputePrincipalComponents(AnalyzerExtension):
         else:
             # need re-alignement
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
+
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_projection = self.get_projections_one_unit(
-                    unit_id, sparse=True, kept_projections=kept_projections, kept_spikes=kept_spikes
-                )
-                local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+                sparse_projection, local_chan_inds = self.get_projections_one_unit(unit_id, sparse=True)
+
                 # keep only requested channels
-                channel_mask_local_inds = np.isin(local_chan_inds, channel_indices)
-                if sum(channel_mask_local_inds) < len(channel_mask_local_inds):
-                    sparse_projection = sparse_projection[:, :, channel_mask_local_inds]
+                channel_mask = np.isin(local_chan_inds, channel_indices)
+                sparse_projection = sparse_projection[:, :, channel_mask]
+                local_chan_inds = local_chan_inds[channel_mask]
 
-                # inject in requested channels
                 spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
-                channel_mask_channel_inds = np.isin(channel_indices, local_chan_inds)
-                if sum(channel_mask_channel_inds) < len(channel_mask_channel_inds):
-                    # inject in requested channels
-                    proj = np.zeros((spike_mask.size, num_components, channel_indices.size), dtype=dtype)
-                    proj[:, :, channel_mask_channel_inds] = sparse_projection
-                else:
-                    proj = sparse_projection
-                some_projections[spike_mask] = proj
+                proj = np.zeros((spike_mask.size, num_components, channel_indices.size), dtype=dtype)
+                # inject in requested channels
+                channel_mask = np.isin(channel_indices, local_chan_inds)
+                proj[:, :, channel_mask] = sparse_projection
+                some_projections[spike_mask, :, :] = proj
 
-        return some_projections, selected_inds
+        return some_projections, spike_unit_indices
+
+    # def get_projections_one_unit(self, unit_id, sparse=False, kept_projections=None, kept_spikes=None):
+    #     """
+    #     Returns the computed projections for the sampled waveforms of a unit id.
+
+    #     Parameters
+    #     ----------
+    #     unit_id : int or str
+    #         The unit id to return PCA projections for
+    #     sparse : bool, default: False
+    #         If True, and SortingAnalyzer must be sparse then only projections on sparse channels are returned.
+    #     kept_projections : array, default None
+    #         If specified, the kept projections to select projections from
+    #     kept_spikes : spikes, default None
+    #         If specified, the spikes associated with the kept projections
+
+    #     Returns
+    #     -------
+    #     projections : np.array
+    #         The PCA projections (num_waveforms, num_components, num_channels).
+    #         In case sparsity is used, only the projections on sparse channels are returned.
+    #     """
+    #     sparsity = self.sorting_analyzer.sparsity
+    #     sorting = self.sorting_analyzer.sorting
+
+    #     if sparse:
+    #         assert self.params["mode"] != "concatenated", "mode concatenated cannot retrieve sparse projection"
+    #         assert sparsity is not None, "sparse projection need SortingAnalyzer to be sparse"
+
+    #     if kept_projections is not None:
+    #         projections = kept_projections
+    #     else:
+    #         projections = self.data["pca_projection"]
+
+    #     if kept_spikes is not None:
+    #         some_spikes = kept_spikes
+    #     else:
+    #         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+    #     unit_index = sorting.id_to_index(unit_id)
+    #     spike_mask = some_spikes["unit_index"] == unit_index
+    #     projections = projections[spike_mask]
+
+    #     if sparsity is None:
+    #         return projections
+    #     else:
+    #         channel_indices = sparsity.unit_id_to_channel_indices[unit_id]
+    #         projections = projections[:, :, : channel_indices.size]
+    #         if sparse:
+    #             return projections
+    #         else:
+    #             num_chans = self.sorting_analyzer.get_num_channels()
+    #             projections_ = np.zeros(
+    #                 (projections.shape[0], projections.shape[1], num_chans), dtype=projections.dtype
+    #             )
+    #             projections_[:, :, channel_indices] = projections
+    #             return projections_
+
+    # def get_some_projections(self, channel_ids=None, unit_ids=None, kept_projections=None, kept_spikes=None):
+    #     """
+    #     Returns the computed projections for the sampled waveforms of some units and some channels.
+
+    #     When internally sparse, this function realign  projection on given channel_ids set.
+
+    #     Parameters
+    #     ----------
+    #     channel_ids : list, default: None
+    #         List of channel ids on which projections must aligned
+    #     unit_ids : list, default: None
+    #         List of unit ids to return projections for
+    #     kept_projections : array, default None
+    #         If specified, the kept projections to select projections from
+    #     kept_spikes : spikes, default None
+    #         If specified, the spikes associated with the kept projections
+
+    #     Returns
+    #     -------
+    #     some_projections: np.array
+    #         The PCA projections (num_spikes, num_components, num_sparse_channels)
+    #     spike_indices: np.array
+    #         Spike indices of the returned PCA projections of shape (num_spikes, )
+    #     """
+    #     sorting = self.sorting_analyzer.sorting
+    #     if unit_ids is None:
+    #         unit_ids = sorting.unit_ids
+
+    #     if channel_ids is None:
+    #         channel_ids = self.sorting_analyzer.channel_ids
+
+    #     channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
+
+    #     # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
+
+    #     sparsity = self.sorting_analyzer.sparsity
+
+    #     if kept_projections is not None:
+    #         all_projections = kept_projections
+    #     else:
+    #         all_projections = self.data["pca_projection"]
+
+    #     num_components = all_projections.shape[1]
+    #     dtype = all_projections.dtype
+
+    #     if kept_spikes is not None:
+    #         some_spikes = kept_spikes
+    #     else:
+    #         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+    #     unit_indices = sorting.ids_to_indices(unit_ids)
+    #     selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
+    #     spike_unit_indices = some_spikes["unit_index"][selected_inds]
+
+    #     if sparsity is None:
+    #         some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+    #     else:
+    #         # need re-alignement
+    #         some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
+    #         for unit_id in unit_ids:
+    #             unit_index = sorting.id_to_index(unit_id)
+    #             sparse_projection = self.get_projections_one_unit(
+    #                 unit_id, sparse=True, kept_projections=kept_projections, kept_spikes=kept_spikes
+    #             )
+    #             local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+    #             # keep only requested channels
+    #             channel_mask_local_inds = np.isin(local_chan_inds, channel_indices)
+    #             if sum(channel_mask_local_inds) < len(channel_mask_local_inds):
+    #                 sparse_projection = sparse_projection[:, :, channel_mask_local_inds]
+
+    #             # inject in requested channels
+    #             spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
+    #             channel_mask_channel_inds = np.isin(channel_indices, local_chan_inds)
+    #             if sum(channel_mask_channel_inds) < len(channel_mask_channel_inds):
+    #                 # inject in requested channels
+    #                 proj = np.zeros((spike_mask.size, num_components, channel_indices.size), dtype=dtype)
+    #                 proj[:, :, channel_mask_channel_inds] = sparse_projection
+    #             else:
+    #                 proj = sparse_projection
+    #             some_projections[spike_mask] = proj
+
+    #     return some_projections, selected_inds
 
     def project_new(self, new_spikes, new_waveforms, progress_bar=True):
         """
