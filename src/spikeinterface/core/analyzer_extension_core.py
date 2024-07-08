@@ -255,6 +255,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         if sparsity is not None:
 
+            max_num_chans = np.sum(new_sorting_analyzer.sparsity.mask, 1).max()
             new_data["waveforms"] = waveforms.copy()
             for to_be_merged, unit_id in zip(units_to_merge, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
@@ -263,8 +264,7 @@ class ComputeWaveforms(AnalyzerExtension):
                 )
                 num_chans = new_waveforms.shape[2]
                 new_data["waveforms"][spike_indices, :, :num_chans] = new_waveforms
-                new_data["waveforms"][spike_indices, :, num_chans:] = 0
-
+            new_data["waveforms"] = new_data["waveforms"][:, :, :max_num_chans]
         else:
             new_data["waveforms"] = waveforms
 
