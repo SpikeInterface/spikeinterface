@@ -191,20 +191,20 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
                 seg_start = self.cumsum_length[i]
                 if i == i0:
                     # first
-                    end_frame = rec_seg.get_num_samples()
-                    traces_chunk = rec_seg.get_traces(start_frame - seg_start, end_frame, channel_indices)
+                    end_frame_ = rec_seg.get_num_samples()
+                    traces_chunk = rec_seg.get_traces(start_frame - seg_start, end_frame_, channel_indices)
                     all_traces.append(traces_chunk)
                 elif i == i1:
                     # last
                     if (end_frame - seg_start) > 0:
-                        start_frame = 0
-                        traces_chunk = rec_seg.get_traces(start_frame, end_frame - seg_start, channel_indices)
+                        start_frame_ = 0
+                        traces_chunk = rec_seg.get_traces(start_frame_, end_frame - seg_start, channel_indices)
                         all_traces.append(traces_chunk)
                 else:
                     # in between
-                    start_frame = 0
-                    end_frame = rec_seg.get_num_samples()
-                    traces_chunk = rec_seg.get_traces(start_frame, end_frame, channel_indices)
+                    start_frame_ = 0
+                    end_frame_ = rec_seg.get_num_samples()
+                    traces_chunk = rec_seg.get_traces(start_frame_, end_frame_, channel_indices)
                     all_traces.append(traces_chunk)
             traces = np.concatenate(all_traces, axis=0)
 
