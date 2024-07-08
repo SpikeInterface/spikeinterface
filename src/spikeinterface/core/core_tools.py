@@ -99,6 +99,9 @@ class SIJsonEncoder(json.JSONEncoder):
         if isinstance(obj, BaseExtractor):
             return obj.to_dict()
 
+        if isinstance(obj, Path):
+            return str(obj)
+
         if isinstance(obj, Motion):
             return obj.to_dict()
 
@@ -656,3 +659,28 @@ def retrieve_importing_provenance(a_class):
     }
 
     return info
+
+
+def measure_memory_allocation(measure_in_process: bool = True) -> float:
+    """
+    A local utility to measure memory allocation at a specific point in time.
+    Can measure either the process resident memory or system wide memory available
+
+    Uses psutil package.
+
+    Parameters
+    ----------
+    measure_in_process : bool, True by default
+        Mesure memory allocation in the current process only, if false then measures at the system
+        level.
+    """
+    import psutil
+
+    if measure_in_process:
+        process = psutil.Process()
+        memory = process.memory_info().rss
+    else:
+        mem_info = psutil.virtual_memory()
+        memory = mem_info.total - mem_info.available
+
+    return memory

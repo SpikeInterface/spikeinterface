@@ -37,9 +37,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
-    mode = "file"
     NeoRawIOClass = "NeuroScopeRawIO"
-    name = "neuroscope"
 
     def __init__(self, file_path, xml_file_path=None, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path, xml_file_path)
@@ -102,9 +100,6 @@ class NeuroScopeSortingExtractor(BaseSorting):
     xml_file_path : PathType, default: None
         Path to the .xml file referenced by this sorting.
     """
-
-    extractor_name = "NeuroscopeSortingExtractor"
-    name = "neuroscope"
 
     def __init__(
         self,

@@ -65,10 +65,7 @@ class IblRecordingExtractor(BaseRecording):
         The recording extractor which allows access to the traces.
     """
 
-    extractor_name = "IblRecording"
-    mode = "folder"
     installation_mesg = "To use the IblRecordingSegment, install ibllib: \n\n pip install ONE-api\npip install ibllib\n"
-    name = "ibl_recording"
 
     @staticmethod
     def _get_default_one(cache_folder: Optional[Union[Path, str]] = None):
@@ -305,11 +302,9 @@ class IblSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "IBLSorting"
-    name = "ibl"
     installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
 
-    def __init__(self, pid, good_clusters_only=False, load_unit_properties=True, one=None):
+    def __init__(self, pid: str, good_clusters_only: bool = False, load_unit_properties: bool = True, one=None):
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader

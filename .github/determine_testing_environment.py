@@ -30,56 +30,59 @@ widgets_changed = False
 exporters_changed = False
 sortingcomponents_changed = False
 generation_changed = False
+stream_extractors_changed = False
 
 
 for changed_file in changed_files_in_the_pull_request_paths:
 
     file_is_in_src = changed_file.parts[0] == "src"
 
-    if not file_is_in_src:
-
-        if changed_file.name == "pyproject.toml":
-            pyproject_toml_changed = True
-
-    else:
-        if changed_file.name == "neobaseextractor.py":
-            neobaseextractor_changed = True
-        elif changed_file.name == "plexon2.py":
-            extractors_changed = True
-        elif "core" in changed_file.parts:
-            conditions_changed = True
-        elif "extractors" in changed_file.parts:
-            extractors_changed = True
-        elif "preprocessing" in changed_file.parts:
-            preprocessing_changed = True
-        elif "postprocessing" in changed_file.parts:
-            postprocessing_changed = True
-        elif "qualitymetrics" in changed_file.parts:
-            qualitymetrics_changed = True
-        elif "comparison" in changed_file.parts:
-            comparison_changed = True
-        elif "curation" in changed_file.parts:
-            curation_changed = True
-        elif "widgets" in changed_file.parts:
-            widgets_changed = True
-        elif "exporters" in changed_file.parts:
-            exporters_changed = True
-        elif "sortingcomponents" in changed_file.parts:
-            sortingcomponents_changed = True
-        elif "generation" in changed_file.parts:
-            generation_changed = True
-        elif "sorters" in changed_file.parts:
-            if "external" in changed_file.parts:
-                sorters_external_changed = True
-            elif "internal" in changed_file.parts:
-                sorters_internal_changed = True
-            else:
-                sorters_changed = True
+    if changed_file.name == "pyproject.toml":
+        pyproject_toml_changed = True
+    elif changed_file.name == "neobaseextractor.py":
+        neobaseextractor_changed = True
+        extractors_changed = True
+    elif changed_file.name == "plexon2.py":
+        plexon2_changed = True
+    elif changed_file.name == "nwbextractors.py":
+        extractors_changed = True  # There are NWB tests that are not streaming
+        stream_extractors_changed = True
+    elif changed_file.name == "iblextractors.py":
+        stream_extractors_changed = True
+    elif "core" in changed_file.parts:
+        core_changed = True
+    elif "extractors" in changed_file.parts:
+        extractors_changed = True
+    elif "preprocessing" in changed_file.parts:
+        preprocessing_changed = True
+    elif "postprocessing" in changed_file.parts:
+        postprocessing_changed = True
+    elif "qualitymetrics" in changed_file.parts:
+        qualitymetrics_changed = True
+    elif "comparison" in changed_file.parts:
+        comparison_changed = True
+    elif "curation" in changed_file.parts:
+        curation_changed = True
+    elif "widgets" in changed_file.parts:
+        widgets_changed = True
+    elif "exporters" in changed_file.parts:
+        exporters_changed = True
+    elif "sortingcomponents" in changed_file.parts:
+        sortingcomponents_changed = True
+    elif "generation" in changed_file.parts:
+        generation_changed = True
+    elif "sorters" in changed_file.parts:
+        if "external" in changed_file.parts:
+            sorters_external_changed = True
+        elif "internal" in changed_file.parts:
+            sorters_internal_changed = True
+        else:
+            sorters_changed = True
 
 
 run_everything = core_changed or pyproject_toml_changed or neobaseextractor_changed
 run_generation_tests = run_everything or generation_changed
-run_extractor_tests = run_everything or extractors_changed
+run_extractor_tests = run_everything or extractors_changed or plexon2_changed
 run_preprocessing_tests = run_everything or preprocessing_changed
 run_postprocessing_tests = run_everything or postprocessing_changed
 run_qualitymetrics_tests = run_everything or qualitymetrics_changed
@@ -93,7 +96,10 @@ run_exporters_test = run_everything or run_widgets_test or exporters_changed
 run_sorters_test = run_everything or sorters_changed
 run_internal_sorters_test = run_everything or run_sortingcomponents_tests or sorters_internal_changed
 
+run_streaming_extractors_test = stream_extractors_changed
+
 install_plexon_dependencies = plexon2_changed
+
 
 environment_varaiables_to_add = {
     "RUN_EXTRACTORS_TESTS": run_extractor_tests,
@@ -109,6 +115,7 @@ environment_varaiables_to_add = {
     "RUN_SORTERS_TESTS": run_sorters_test,
     "RUN_INTERNAL_SORTERS_TESTS": run_internal_sorters_test,
     "INSTALL_PLEXON_DEPENDENCIES": install_plexon_dependencies,
+    "RUN_STREAMING_EXTRACTORS_TESTS": run_streaming_extractors_test,
 }
 
 # Write the conditions to the GITHUB_ENV file
