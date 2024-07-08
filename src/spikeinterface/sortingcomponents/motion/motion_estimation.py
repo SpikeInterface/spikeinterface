@@ -14,6 +14,7 @@ from .iterative_template import IterativeTemplateRegistration
 from .dredge import DredgeLfpRegistration, DredgeApRegistration
 
 
+# estimate_motion > infer_motion
 def estimate_motion(
     recording,
     peaks=None,

@@ -31,9 +31,7 @@ import gc
 from .motion_utils import Motion, get_spatial_windows, get_window_domains, scipy_conv1d, make_2d_motion_histogram, get_spatial_bin_edges
 
 
-# todo use gaussian_filter1d in historgam 2d
-# put smotthing inside the histogram function
-# put the log for weight inhitstogram
+
 
 
 # simple class wrapper to be compliant with estimate_motion
@@ -157,9 +155,6 @@ def dredge_ap(
     histogram_depth_smooth_um=1,
     histogram_time_smooth_s=1,
     avg_in_bin=False,
-    count_masked_correlation=False,
-    count_bins=401,
-    count_bin_min=2,
     # low-level keyword args
     thomas_kw=None,
     xcorr_kw=None,
@@ -287,6 +282,8 @@ def dredge_ap(
         time_smooth_s=histogram_time_smooth_s,
     )
     raster = motion_histogram.T
+
+    # TODO charlie : put the log for hitstogram
 
 
     # TODO @charlie you should check that we are doing the same thing
@@ -1180,7 +1177,6 @@ def calc_corr_decent_pair(
     return D, C
 
 
-# TODO charlie sam : at the moment this is a duplicate with small differences see motion_estimate.py same function
 def normxcorr1d(
     template,
     x,
@@ -1190,6 +1186,7 @@ def normxcorr1d(
     normalized=True,
     padding="same",
     conv_engine="torch",
+
 ):
     """normxcorr1d: Normalized cross-correlation, optionally weighted
 
@@ -1223,10 +1220,10 @@ def normxcorr1d(
         If true, normalize by the variance (per weighted patch).
     padding : int, optional
         How far to look? if unset, we'll use half the length
-    conv_engine : string, one of "torch", "numpy"
+    conv_engine : "torch" | "numpy"
         What library to use for computing cross-correlations.
         If numpy, falls back to the scipy correlate function.
-
+conv_engine
     Returns
     -------
     corr : tensor
