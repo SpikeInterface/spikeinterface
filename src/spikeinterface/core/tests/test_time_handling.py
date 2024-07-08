@@ -54,9 +54,12 @@ class TestTimeHandling:
         for segment_index in range(raw_recording.get_num_segments()):
 
             t_start = segment_index + 1 * 100
-            offsets = np.arange(times_recording.get_num_samples(segment_index)) * (
+
+            some_small_increasing_numbers = np.arange(times_recording.get_num_samples(segment_index)) * (
                 1 / times_recording.get_sampling_frequency()
             )
+
+            offsets = np.cumsum(some_small_increasing_numbers)
             time_vector = t_start + times_recording.get_times(segment_index) + offsets
 
             all_time_vectors.append(time_vector)
