@@ -156,7 +156,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         return dict(metrics=new_metrics)
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         import pandas as pd
 

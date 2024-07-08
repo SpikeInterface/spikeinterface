@@ -8,6 +8,7 @@ Theses two classes replace the WaveformExtractor
 It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
+import warnings
 
 import numpy as np
 
@@ -77,16 +78,16 @@ class ComputeRandomSpikes(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
-        if keep_mask is not None:
-            valid = keep_mask[self.sorting_analyzer.get_extension("random_spikes")._get_data()]
-            nb_skipped = np.cumsum(~keep_mask)
-            new_data["random_spikes_indices"] = np.flatnonzero(valid)
-            new_data["random_spikes_indices"] -= nb_skipped[new_data["random_spikes_indices"]]
+        random_spikes_indices = self.data["random_spikes_indices"]
+        if keep_mask is  None:
+            new_data["random_spikes_indices"] = random_spikes_indices.copy()
         else:
-            new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
+            mask = keep_mask[random_spikes_indices]
+            new_data["random_spikes_indices"] = random_spikes_indices[mask]
+
         return new_data
 
     def _get_data(self):
@@ -238,7 +239,7 @@ class ComputeWaveforms(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
 
@@ -250,6 +251,8 @@ class ComputeWaveforms(AnalyzerExtension):
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
             waveforms = waveforms[valid]
+        else:
+            waveforms = waveforms.copy()
 
         sparsity = new_sorting_analyzer.sparsity
 
@@ -257,7 +260,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
             max_num_chans = np.sum(new_sorting_analyzer.sparsity.mask, 1).max()
             new_data["waveforms"] = waveforms.copy()
-            for to_be_merged, unit_id in zip(units_to_merge, new_unit_ids):
+            for to_be_merged, unit_id in zip(merge_unit_groups, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
                 new_waveforms, spike_indices = self.get_some_waveforms(
                     new_channel_ids, to_be_merged, kept_waveforms=new_data["waveforms"], kept_spikes=some_spikes
@@ -452,6 +455,11 @@ class ComputeTemplates(AnalyzerExtension):
                 assert len(operator) == 2
                 assert operator[0] == "percentile"
 
+        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
+        if waveforms_extension is not None:
+            ms_before = waveforms_extension.params["ms_before"]
+            ms_after = waveforms_extension.params["ms_after"]
+
         params = dict(
             operators=operators,
             ms_before=ms_before,
@@ -464,6 +472,7 @@ class ComputeTemplates(AnalyzerExtension):
 
         if self.sorting_analyzer.has_extension("waveforms"):
             self._compute_and_append_from_waveforms(self.params["operators"])
+            
         else:
             for operator in self.params["operators"]:
                 if operator not in ("average", "std"):
@@ -558,20 +567,30 @@ class ComputeTemplates(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
-        if waveforms_extension is not None:
-            nbefore = waveforms_extension.nbefore
-        else:
-            nbefore = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        if "ms_before" not in self.params:
+            # compatibility february 2024 > july 2024
+            self.params["ms_before"] = self.params["nbefore"] * 1000.0 / self.sorting_analyzer.sampling_frequency
+            warnings.warn(
+                "The 'nbefore' parameter is deprecated and it's been replaced by 'ms_before' in the params."
+                "You can save the sorting_analyzer to update the params.",
+                DeprecationWarning, stacklevel=2
+            )
+
+        nbefore = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
         return nbefore
 
     @property
     def nafter(self):
-        waveforms_extension = self.sorting_analyzer.get_extension("waveforms")
-        if waveforms_extension is not None:
-            nafter = waveforms_extension.nafter
-        else:
-            nafter = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        if "ms_after" not in self.params:
+            # compatibility february 2024 > july 2024
+            warnings.warn(
+                "The 'nafter' parameter is deprecated and it's been replaced by 'ms_after' in the params."
+                "You can save the sorting_analyzer to update the params.",
+                DeprecationWarning, stacklevel=2
+            )
+            self.params["ms_after"] = self.params["nafter"] * 1000.0 / self.sorting_analyzer.sampling_frequency
+
+        nafter = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
         return nafter
 
     def _select_extension_data(self, unit_ids):
@@ -584,7 +603,7 @@ class ComputeTemplates(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
 
         all_new_units = new_sorting_analyzer.unit_ids
@@ -592,24 +611,23 @@ class ComputeTemplates(AnalyzerExtension):
         counts = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
         for key, arr in self.data.items():
             new_data[key] = np.zeros((len(all_new_units), arr.shape[1], arr.shape[2]), dtype=arr.dtype)
-            for unit_ind, unit_id in enumerate(all_new_units):
+            for unit_index, unit_id in enumerate(all_new_units):
                 if unit_id not in new_unit_ids:
                     keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
-                    new_data[key][unit_ind] = arr[keep_unit_index, :, :]
+                    new_data[key][unit_index] = arr[keep_unit_index, :, :]
                 else:
-                    id = np.flatnonzero(new_unit_ids == unit_id)[0]
-                    unit_ids = units_to_merge[id]
-                    keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+                    merge_group = merge_unit_groups[list(new_unit_ids).index(unit_id)]
+                    keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_group)
                     # We do a weighted sum of the templates
-                    weights = np.zeros(len(unit_ids), dtype=np.float32)
-                    for count, id in enumerate(unit_ids):
-                        weights[count] = counts[id]
+                    weights = np.zeros(len(merge_group), dtype=np.float32)
+                    for count, merge_unit_id in enumerate(merge_group):
+                        weights[count] = counts[merge_unit_id]
                     weights /= weights.sum()
-                    new_data[key][unit_ind] = (arr[keep_unit_indices, :, :] * weights[:, np.newaxis, np.newaxis]).sum(0)
+                    new_data[key][unit_index] = (arr[keep_unit_indices, :, :] * weights[:, np.newaxis, np.newaxis]).sum(0)
                     if new_sorting_analyzer.sparsity is not None:
                         chan_ids = new_sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
                         mask = ~np.isin(np.arange(arr.shape[2]), chan_ids)
-                        new_data[key][unit_ind][:, mask] = 0
+                        new_data[key][unit_index][:, mask] = 0
 
         return new_data
 
@@ -771,10 +789,10 @@ class ComputeNoiseLevels(AnalyzerExtension):
         return self.data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         # this do not depend on units
-        return self.data
+        return self.data.copy()
 
     def _run(self, verbose=False):
         self.data["noise_levels"] = get_noise_levels(

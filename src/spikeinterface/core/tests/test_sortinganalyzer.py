@@ -142,43 +142,6 @@ def test_SortingAnalyzer_tmp_recording(dataset):
         sorting_analyzer.set_temporary_recording(recording_sliced)
 
 
-# TODO: Alessio's opinion: this doesn't belong here
-# def test_SortingAnalyzer_merge_all_extensions(dataset):
-#     recording, sorting = dataset
-#     recording_cached = recording.save(mode="memory")
-
-#     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
-#     sorting_analyzer.set_temporary_recording(recording_cached)
-#     assert sorting_analyzer.has_temporary_recording()
-
-#     sorting_analyzer.compute(
-#         [
-#             "random_spikes",
-#             "templates",
-#             "waveforms",
-#             "principal_components",
-#             "correlograms",
-#             "noise_levels",
-#             "template_similarity",
-#             "spike_amplitudes",
-#             "spike_locations",
-#             "unit_locations",
-#             "quality_metrics",
-#             "template_metrics",
-#         ]
-#     )
-
-#     similarity = sorting_analyzer.get_extension("template_similarity").get_data()
-#     import numpy as np
-
-#     src, tgt = np.where(similarity > 0.8)
-#     from spikeinterface.sortingcomponents.clustering.clustering_tools import resolve_merging_graph
-
-#     merges = resolve_merging_graph(sorting, [(i, j) for (i, j) in zip(src, tgt)])
-
-#     sa3 = sorting_analyzer.merge_units(units_to_merge=merges, censor_ms=5, merging_mode="hard")
-#     sa4 = sorting_analyzer.merge_units(units_to_merge=merges, censor_ms=5, merging_mode="soft", sparsity_overlap=0.5)
-
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
@@ -270,7 +233,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
                 shutil.rmtree(folder)
         else:
             folder = None
-        sorting_analyzer3 = sorting_analyzer.merge_units(units_to_merge=[[0, 1]], format=format, folder=folder)
+        sorting_analyzer3 = sorting_analyzer.merge_units(merge_unit_groups=[[0, 1]], format=format, folder=folder)
 
         if format != "memory":
             if format == "zarr":
@@ -282,7 +245,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer4 = sorting_analyzer.merge_units(
-            units_to_merge=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, mode="hard"
+            merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, mode="hard"
         )
 
     # test compute with extension-specific params
@@ -345,7 +308,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
 
         all_new_unit_ids = new_sorting_analyzer.unit_ids
@@ -362,7 +325,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
                 new_data["result_three"][unit_ind] = arr[keep_unit_index]
             else:
                 id = np.flatnonzero(new_unit_ids == unit_id)[0]
-                keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(units_to_merge[id])
+                keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_groups[id])
                 new_data["result_three"][unit_ind] = arr[keep_unit_indices].mean(axis=0)
 
         return new_data

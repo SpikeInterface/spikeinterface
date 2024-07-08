@@ -102,7 +102,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
         pca_projections = self.data["pca_projection"]
@@ -120,7 +120,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
             max_num_chans = np.sum(new_sorting_analyzer.sparsity.mask, 1).max()
             new_data["pca_projection"] = pca_projections.copy()
-            for to_be_merge, unit_id in zip(units_to_merge, new_unit_ids):
+            for to_be_merge, unit_id in zip(merge_unit_groups, new_unit_ids):
                 new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
                 new_projections, spike_indices = self.get_some_projections(
                     new_channel_ids, to_be_merge, kept_projections=new_data["pca_projection"], kept_spikes=some_spikes

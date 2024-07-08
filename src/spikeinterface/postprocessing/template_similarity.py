@@ -65,7 +65,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         return dict(similarity=new_similarity)
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
         templates_array = get_dense_templates_array(
