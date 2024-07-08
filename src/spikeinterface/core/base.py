@@ -881,7 +881,7 @@ class BaseExtractor:
 
         Parameters
         ----------
-        name : str , optional
+        name : str or Path, optional
             The name of the subfolder within the global temporary folder. If `folder`
             is provided, this argument must be None.
         folder : str or Path, optional

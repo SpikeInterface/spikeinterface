@@ -15,7 +15,6 @@ class NpySnippetsExtractor(BaseSnippets):
     All spike are store in two columns maner index+labels
     """
 
-    extractor_name = "NpySnippets"
     mode = "file"
     name = "npy"
 

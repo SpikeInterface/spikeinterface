@@ -970,7 +970,9 @@ class SortingAnalyzer:
         extension_class = get_extension_class(extension_name)
 
         for child in _get_children_dependencies(extension_name):
-            self.delete_extension(child)
+            if self.has_extension(child):
+                print(f"Deleting {child}")
+                self.delete_extension(child)
 
         if extension_class.need_job_kwargs:
             params, job_kwargs = split_job_kwargs(kwargs)

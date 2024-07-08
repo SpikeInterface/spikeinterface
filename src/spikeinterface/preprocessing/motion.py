@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import json
+import shutil
 from pathlib import Path
 import time
 
@@ -18,8 +19,8 @@ motion_options_preset = {
             method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
-            exclude_sweep_ms=0.1,
-            radius_um=50,
+            exclude_sweep_ms=0.8,
+            radius_um=80.,
         ),
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
@@ -34,16 +35,13 @@ motion_options_preset = {
         "estimate_motion_kwargs": dict(
             method="decentralized",
             direction="y",
-            bin_s=2.0,
+            bin_s=1.0,
             rigid=False,
             bin_um=5.0,
-            margin_um=0.0,
-            # win_shape="gaussian",
-            # win_step_um=50.0,
-            # win_scale_um=150.0,
+            hist_margin_um=20.0,
             win_shape="gaussian",
-            win_step_um=100.0,
-            win_scale_um=200.0,
+            win_step_um=200.0,
+            win_scale_um=300.0,
             histogram_depth_smooth_um=5.0,
             histogram_time_smooth_s=None,
             pairwise_displacement_method="conv",
@@ -77,13 +75,14 @@ motion_options_preset = {
             method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
-            exclude_sweep_ms=0.5,
-            radius_um=50,
+            exclude_sweep_ms=0.8,
+            radius_um=80.,
         ),
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
-            radius_um=40.0,
+            # radius_um=40.0,
+            radius_um=80.0,
             upsampling_um=5.0,
             sigma_ms=0.25,
             margin_um=30.0,
@@ -96,10 +95,7 @@ motion_options_preset = {
             bin_s=2.0,
             rigid=False,
             bin_um=5.0,
-            margin_um=0.0,
-            # win_shape="gaussian",
-            # win_step_um=50.0,
-            # win_scale_um=150.0,
+            hist_margin_um=0.0,
             win_shape="gaussian",
             win_step_um=100.0,
             win_scale_um=200.0,
@@ -182,7 +178,7 @@ motion_options_preset = {
             rigid=False,
             win_step_um=50.0,
             win_scale_um=150.0,
-            margin_um=0,
+            hist_margin_um=0,
             win_shape="rect",
         ),
         "interpolate_motion_kwargs": dict(
@@ -200,11 +196,13 @@ motion_options_preset = {
 }
 
 
+
 def correct_motion(
     recording,
     preset="nonrigid_accurate",
     folder=None,
     output_motion_info=False,
+    overwrite=False,
     detect_kwargs={},
     select_kwargs={},
     localize_peaks_kwargs={},
@@ -257,6 +255,8 @@ def correct_motion(
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
         This dictionary is the same when reloaded from the folder
+    overwrite : bool, default: False
+        If True and folder is given, overwrite the folder if it already exists
     detect_kwargs : dict
         Optional parameters to overwrite the ones in the preset for "detect" step.
     select_kwargs : dict
@@ -315,11 +315,13 @@ def correct_motion(
 
     if folder is not None:
         folder = Path(folder)
-        folder.mkdir(exist_ok=True, parents=True)
+        if overwrite:
+            if folder.is_dir():
+                import shutil
 
-        (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
-        if recording.check_serializability("json"):
-            recording.dump_to_json(folder / "recording.json")
+                shutil.rmtree(folder)
+        else:
+            assert not folder.is_dir(), f"Folder {folder} already exists"
 
     if not do_selection:
         # maybe do this directly in the folder when not None, but might be slow on external storage
@@ -331,7 +333,7 @@ def correct_motion(
 
         node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
 
-        # node nolcalize
+        # node detect + localize
         method = localize_peaks_kwargs.pop("method", "center_of_mass")
         method_class = localize_peak_methods[method]
         node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs)
@@ -370,9 +372,6 @@ def correct_motion(
             select_peaks=t2 - t1,
             localize_peaks=t3 - t2,
         )
-    if folder is not None:
-        np.save(folder / "peaks.npy", peaks)
-        np.save(folder / "peak_locations.npy", peak_locations)
 
     t0 = time.perf_counter()
     motion = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
@@ -381,18 +380,17 @@ def correct_motion(
 
     recording_corrected = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
 
+    motion_info = dict(
+        parameters=parameters,
+        run_times=run_times,
+        peaks=peaks,
+        peak_locations=peak_locations,
+        motion=motion,
+    )
     if folder is not None:
-        (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-        motion.save(folder / "motion")
+        save_motion_info(motion_info, folder, overwrite=overwrite)
 
     if output_motion_info:
-        motion_info = dict(
-            parameters=parameters,
-            run_times=run_times,
-            peaks=peaks,
-            peak_locations=peak_locations,
-            motion=motion,
-        )
         return recording_corrected, motion_info
     else:
         return recording_corrected
@@ -406,6 +404,25 @@ for k, v in motion_options_preset.items():
     _doc_presets = _doc_presets + f"      * {k}: {doc}\n"
 
 correct_motion.__doc__ = correct_motion.__doc__.format(_doc_presets, _shared_job_kwargs_doc)
+
+
+def save_motion_info(motion_info, folder, overwrite=False):
+    folder = Path(folder)
+    if folder.is_dir():
+        if not overwrite:
+            raise FileExistsError(f"Folder {folder} already exists. Use `overwrite=True` to overwrite.")
+        else:
+            shutil.rmtree(folder)
+    folder.mkdir(exist_ok=True, parents=True)
+
+    (folder / "parameters.json").write_text(
+        json.dumps(motion_info["parameters"], indent=4, cls=SIJsonEncoder), encoding="utf8"
+    )
+    (folder / "run_times.json").write_text(json.dumps(motion_info["run_times"], indent=4), encoding="utf8")
+
+    np.save(folder / "peaks.npy", motion_info["peaks"])
+    np.save(folder / "peak_locations.npy", motion_info["peak_locations"])
+    motion_info["motion"].save(folder / "motion")
 
 
 def load_motion_info(folder):

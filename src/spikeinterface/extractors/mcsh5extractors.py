@@ -24,7 +24,6 @@ class MCSH5RecordingExtractor(BaseRecording):
         The loaded data.
     """
 
-    extractor_name = "MCSH5Recording"
     mode = "file"
     installation_mesg = (
         "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed

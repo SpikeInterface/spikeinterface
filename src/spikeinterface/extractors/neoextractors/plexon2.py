@@ -13,8 +13,8 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path : str
-        The file path to load the recordings from.
+    file_path : str | Path
+        The file path of the plexon2 file. It should have the .pl2 extension.
     stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
     stream_name : str, default: None
@@ -23,7 +23,7 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
         If True, the names of the signals are used as channel ids. If False, the channel ids are a combination of the
         source id and the channel index.
 
-        Example for widegain signals:
+        Example for wideband signals:
             names: ["WB01", "WB02", "WB03", "WB04"]
             ids: ["source3.1" , "source3.2", "source3.3", "source3.4"]
     all_annotations : bool, default: False
