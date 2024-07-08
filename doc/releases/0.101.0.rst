@@ -271,7 +271,6 @@ Contributors:
 * @NinelK
 * @RobertoDF
 * @alejoe91
-* @app/pre-commit-ci
 * @bagibence
 * @chrishalcrow
 * @cwindolf
