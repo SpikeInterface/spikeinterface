@@ -164,7 +164,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         old_metrics = self.data["metrics"]
 
         all_unit_ids = new_sorting_analyzer.unit_ids
-        not_new_ids = all_unit_ids[np.isin(all_unit_ids, new_unit_ids)]
+        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
 
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
         
