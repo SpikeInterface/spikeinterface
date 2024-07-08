@@ -11,7 +11,7 @@ class TestTimeHandling:
 
     # Fixtures #####
     @pytest.fixture(scope="session")
-    def time_vector_recording(self, raw_recording):
+    def time_vector_recording(self):
         """
         Add time vectors to the recording, returning the
         raw recording, recording with time vectors added to
@@ -23,7 +23,7 @@ class TestTimeHandling:
         return self._get_time_vector_recording(raw_recording)
 
     @pytest.fixture(scope="session")
-    def t_start_recording(self, raw_recording):
+    def t_start_recording(self):
         """
         Add a t_starts to the recording, returning the
         raw recording, recording with t_starts added to segments,
