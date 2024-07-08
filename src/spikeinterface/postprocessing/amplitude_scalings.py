@@ -13,8 +13,6 @@ from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_
 
 from ..core.template_tools import get_dense_templates_array, _get_nbefore
 
-# TODO extra sparsity and job_kwargs handling
-
 
 class ComputeAmplitudeScalings(AnalyzerExtension):
     """
@@ -118,14 +116,15 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
-        new_data["amplitude_scalings"] = self.data["amplitude_scalings"]
-        if self.params["handle_collisions"]:
-            new_data["collision_mask"] = self.data["collision_mask"]
 
-        if keep_mask is not None:
-            new_data["amplitude_scalings"] = new_data["amplitude_scalings"][keep_mask]
+        if keep_mask is None:
+            new_data["amplitude_scalings"] = self.data["amplitude_scalings"].copy()
             if self.params["handle_collisions"]:
-                new_data["collision_mask"] = new_data["collision_mask"][keep_mask]
+                new_data["collision_mask"] = self.data["collision_mask"].copy()
+        else:
+            new_data["amplitude_scalings"] =  self.data["amplitude_scalings"][keep_mask]
+            if self.params["handle_collisions"]:
+                new_data["collision_mask"] =  self.data["collision_mask"][keep_mask]
 
         return new_data
 

@@ -160,17 +160,19 @@ class ComputeTemplateMetrics(AnalyzerExtension):
     ):
         import pandas as pd
 
+
         old_metrics = self.data["metrics"]
 
-        metrics = pd.DataFrame(index=new_sorting_analyzer.unit_ids)
-        new_metrics = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
-        for unit_id in new_sorting_analyzer.unit_ids:
-            if unit_id in new_unit_ids:
-                source = new_metrics
-            else:
-                source = old_metrics
-            for k in source.loc[unit_id].keys():
-                metrics.loc[unit_id, k] = source.loc[unit_id, k]
+        all_unit_ids = new_sorting_analyzer.unit_ids
+        not_new_ids = all_unit_ids[np.isin(all_unit_ids, new_unit_ids)]
+
+        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+        
+        
+
+        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
+        metrics.loc[new_unit_ids, :] = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
+
         new_data = dict(metrics=metrics)
         return new_data
 

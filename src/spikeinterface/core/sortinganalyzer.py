@@ -803,7 +803,7 @@ class SortingAnalyzer:
                     recompute_dict[extension_name] = extension.params
 
         if merge_unit_groups is not None and merging_mode == "hard" and len(recompute_dict) > 0:
-            new_sorting_analyzer.compute(recompute_dict, save=True, verbose=verbose, **job_kwargs)
+            new_sorting_analyzer.compute_several_extensions(recompute_dict, save=True, verbose=verbose, **job_kwargs)
 
         return new_sorting_analyzer
 
@@ -905,12 +905,15 @@ class SortingAnalyzer:
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
         if len(merge_unit_groups) == 0:
+            # TODO I think we should raise an error or at least make a copy and not return itself
             return self
 
         for units in merge_unit_groups:
+            # TODO more checks like one units is only in one group
             if len(units) < 2:
                 raise ValueError("Merging requires at least two units to merge")
 
+        # TODO : no this function did not exists before
         if not isinstance(merge_unit_groups[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge
             merge_unit_groups = [merge_unit_groups]
