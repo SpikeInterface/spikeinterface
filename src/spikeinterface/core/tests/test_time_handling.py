@@ -8,6 +8,12 @@ import spikeinterface.full as si
 
 
 class TestTimeHandling:
+    """
+    This class tests how time is handled in SpikeInterface. Under the hood,
+    time can be represented as a full `time_vector` or only as
+    `t_start` attribute on segments from which a vector of times
+    is generated on the fly. Both time representations are tested here.
+    """
 
     # Fixtures #####
     @pytest.fixture(scope="session")
