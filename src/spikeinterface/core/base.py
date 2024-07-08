@@ -938,11 +938,11 @@ class BaseExtractor:
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
-        provenance_file = folder / f"provenance.json"
+        provenance_file_path = folder / f"provenance.json"
         if self.check_serializability("json"):
-            self.dump(provenance_file)
+            self.dump_to_json(file_path=provenance_file_path, relative_to=folder)
         else:
-            provenance_file.write_text(
+            provenance_file_path.write_text(
                 json.dumps({"warning": "the provenace is not json serializable!!!"}), encoding="utf8"
             )
 
@@ -954,8 +954,9 @@ class BaseExtractor:
         # copy properties/
         self.copy_metadata(cached)
 
-        # dump
-        cached.dump(folder / f"si_folder.json", relative_to=folder)
+        # Dump the extractor to json file
+        si_folder_path = folder / f"si_folder.json"
+        cached.dump_to_json(file_path=si_folder_path, relative_to=folder)
 
         return cached
 
