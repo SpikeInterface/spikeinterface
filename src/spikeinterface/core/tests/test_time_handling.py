@@ -11,21 +11,15 @@ class TestTimeHandling:
 
     # Fixtures #####
     @pytest.fixture(scope="session")
-    def raw_recording(self):
-        """
-        A three-segment raw recording without times added.
-        """
-        durations = [10, 15, 20]
-        recording = generate_recording(num_channels=4, durations=durations)
-        return recording
-
-    @pytest.fixture(scope="session")
     def time_vector_recording(self, raw_recording):
         """
         Add time vectors to the recording, returning the
         raw recording, recording with time vectors added to
         segments, and list a the time vectors added to the recording.
         """
+        durations = [10, 15, 20]
+        raw_recording = generate_recording(num_channels=4, durations=durations)
+
         return self._get_time_vector_recording(raw_recording)
 
     @pytest.fixture(scope="session")
@@ -36,6 +30,9 @@ class TestTimeHandling:
         and a list of the time vectors generated from adding the
         t_start to the recording times.
         """
+        durations = [10, 15, 20]
+        raw_recording = generate_recording(num_channels=4, durations=durations)
+
         return self._get_t_start_recording(raw_recording)
 
     def _get_time_vector_recording(self, raw_recording):
