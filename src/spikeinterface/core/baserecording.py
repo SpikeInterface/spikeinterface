@@ -103,7 +103,7 @@ class BaseRecording(BaseRecordingSnippets):
         total_samples = self.get_total_samples()
         total_duration = self.get_total_duration()
         total_memory_size = self.get_total_memory_size()
-        sampling_frequency_repr = f"{sf_khz:0.1f}kHz" if sf_hz > 10000 else f"{sf_hz}Hz"
+        sampling_frequency_repr = f"{sf_khz:0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
 
         txt = (
             f"{self.name}: "
