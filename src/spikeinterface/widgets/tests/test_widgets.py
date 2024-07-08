@@ -190,8 +190,8 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                # test "larger" sparsity
-                with self.assertRaises(AssertionError):
+                # test warning with "larger" sparsity
+                with self.assertWarns(UserWarning):
                     sw.plot_unit_waveforms(
                         self.sorting_analyzer_sparse,
                         sparsity=self.sparsity_large,
@@ -270,7 +270,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
                 # test "larger" sparsity
-                with self.assertRaises(AssertionError):
+                with self.assertWarns(UserWarning):
                     sw.plot_unit_templates(
                         self.sorting_analyzer_sparse,
                         sparsity=self.sparsity_large,

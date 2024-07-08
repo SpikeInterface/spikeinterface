@@ -159,6 +159,9 @@ class UnitWaveformsWidget(BaseWidget):
             else:
                 assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
 
+        if channel_ids is None:
+            channel_ids = sorting_analyzer_or_templates.channel_ids
+
         # assert provided sparsity is a subset of waveform sparsity
         if extra_sparsity:
             combined_mask = np.logical_or(analyzer_sparsity.mask, sparsity.mask)
@@ -195,12 +198,15 @@ class UnitWaveformsWidget(BaseWidget):
             wfs_by_ids = self._get_wfs_by_ids(
                 sorting_analyzer_or_templates, unit_ids, sparsity, extra_sparsity=extra_sparsity
             )
+        else:
+            wfs_by_ids = None
 
         plot_data = dict(
             sorting_analyzer_or_templates=sorting_analyzer_or_templates,
             sampling_frequency=sorting_analyzer_or_templates.sampling_frequency,
             nbefore=nbefore,
             unit_ids=unit_ids,
+            channel_ids=channel_ids,
             sparsity=sparsity,
             unit_colors=unit_colors,
             channel_locations=channel_locations,
@@ -269,7 +275,6 @@ class UnitWaveformsWidget(BaseWidget):
             # plot waveforms
             if dp.plot_waveforms:
                 wfs = dp.wfs_by_ids[unit_id] * dp.scale
-                print(wfs.shape)
                 if dp.unit_selected_waveforms is not None:
                     wfs = wfs[dp.unit_selected_waveforms[unit_id]]
                 elif dp.max_spikes_per_unit is not None:
