@@ -81,7 +81,8 @@ class BaseExtractor:
 
     @property
     def name(self):
-        return self._annotations.get("name", self.__class__.__name__)
+        name = self._annotations.get("name", None)
+        return name if name is not None else self.__class__.__name__
 
     @name.setter
     def name(self, value):
