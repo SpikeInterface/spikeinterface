@@ -122,9 +122,9 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             if self.params["handle_collisions"]:
                 new_data["collision_mask"] = self.data["collision_mask"].copy()
         else:
-            new_data["amplitude_scalings"] =  self.data["amplitude_scalings"][keep_mask]
+            new_data["amplitude_scalings"] = self.data["amplitude_scalings"][keep_mask]
             if self.params["handle_collisions"]:
-                new_data["collision_mask"] =  self.data["collision_mask"][keep_mask]
+                new_data["collision_mask"] = self.data["collision_mask"][keep_mask]
 
         return new_data
 

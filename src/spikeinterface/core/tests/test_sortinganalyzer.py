@@ -142,7 +142,6 @@ def test_SortingAnalyzer_tmp_recording(dataset):
         sorting_analyzer.set_temporary_recording(recording_sliced)
 
 
-
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     register_result_extension(DummyAnalyzerExtension)

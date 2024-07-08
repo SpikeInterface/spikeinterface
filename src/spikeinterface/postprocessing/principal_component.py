@@ -102,11 +102,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
             if "model" in k:
                 new_data[k] = v
         return new_data
-    
+
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
-        
+
         pca_projections = self.data["pca_projection"]
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
@@ -120,7 +120,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         old_sparsity = self.sorting_analyzer.sparsity
         if old_sparsity is not None:
-            
+
             # we need a realignement inside each group because we take the channel intersection sparsity
             # the story is same as in "waveforms" extension
             for group_ids in merge_unit_groups:
@@ -131,9 +131,8 @@ class ComputePrincipalComponents(AnalyzerExtension):
                     unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                     selection = np.flatnonzero(some_spikes["unit_index"] == unit_index)
                     group_selection.append(selection)
-                    
-                _inplace_sparse_realign_waveforms(pca_projections, group_selection, group_sparsity_mask)
 
+                _inplace_sparse_realign_waveforms(pca_projections, group_selection, group_sparsity_mask)
 
         new_data = dict(pca_projections=pca_projections)
 
@@ -142,7 +141,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
             if "model" in k:
                 new_data[k] = v
         return new_data
-
 
     # def _merge_extension_data(
     #     self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -179,7 +177,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
     #         if "model" in k:
     #             new_data[k] = v
     #     return new_data
-
 
     def get_pca_model(self):
         """

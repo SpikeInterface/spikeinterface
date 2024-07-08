@@ -85,7 +85,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
-        
+
         if keep_mask is None:
             new_data["amplitudes"] = self.data["amplitudes"].copy()
         else:
