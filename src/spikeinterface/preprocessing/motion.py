@@ -201,6 +201,7 @@ def correct_motion(
     recording,
     preset="nonrigid_accurate",
     folder=None,
+    output_motion=False,
     output_motion_info=False,
     overwrite=False,
     detect_kwargs={},
@@ -251,6 +252,8 @@ def correct_motion(
         The preset name
     folder : Path str or None, default: None
         If not None then intermediate motion info are saved into a folder
+    output_motion : bool, default: False
+        It True, the function returns a `motion` object.
     output_motion_info : bool, default: False
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
@@ -275,8 +278,11 @@ def correct_motion(
     -------
     recording_corrected : Recording
         The motion corrected recording
+    motion : Motion
+        Optional output if `output_motion=True`.
     motion_info : dict
-        Optional output if `output_motion_info=True`. The key "motion" holds the Motion object.
+        Optional output if `output_motion_info=True`. This dict contains several variable for
+        for plotting. See `plot_motion_info()`
     """
     # local import are important because "sortingcomponents" is not important by default
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
@@ -390,10 +396,16 @@ def correct_motion(
     if folder is not None:
         save_motion_info(motion_info, folder, overwrite=overwrite)
 
-    if output_motion_info:
-        return recording_corrected, motion_info
-    else:
+    if not output_motion and not output_motion_info:
         return recording_corrected
+    
+    out = (recording_corrected, )
+    if output_motion:
+        out += (motion, )
+    if output_motion_info:
+        out += (motion_info, )
+    return out
+
 
 
 _doc_presets = "\n"
