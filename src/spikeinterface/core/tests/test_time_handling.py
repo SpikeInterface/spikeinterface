@@ -123,8 +123,8 @@ class TestTimeHandling:
         self._check_times_match(recording_cache, all_times)
         self._check_times_match(recording_load, all_times)
 
-    @pytest.mark.parametrize("fixture_name", ["time_vector_recording", "t_start_recording"])
     @pytest.mark.parametrize("sharedmem", [True, False])
+    @pytest.mark.parametrize("fixture_name", ["time_vector_recording", "t_start_recording"])
     def test_times_propagated_to_save_memory(self, request, fixture_name, sharedmem):
         """
         Test t_start and time_vector are propagated to recording saved into memory.
@@ -191,9 +191,9 @@ class TestTimeHandling:
     @pytest.mark.parametrize("bounds", ["start", "middle", "end"])
     def test_slice_recording(self, time_type, bounds):
         """
-        Test after `frame_slice` and `time_slice` a recording or
-        sorting (for `frame_slice`), the recording times are
-        correct with respect to the set `t_start` or `time_vector`.
+        Test times are correct after applying `frame_slice` or `time_slice`
+        to a recording or sorting (for `frame_slice`). The the recording times
+        should be correct with respect to the set `t_start` or `time_vector`.
         """
         raw_recording = generate_recording(num_channels=4, durations=[10])
 
