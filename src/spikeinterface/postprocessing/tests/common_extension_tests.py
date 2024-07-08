@@ -1,23 +1,12 @@
 from __future__ import annotations
 
 import pytest
-import numpy as np
-import pandas as pd
 import shutil
-import platform
-from pathlib import Path
+import numpy as np
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core import estimate_sparsity
-
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "postprocessing"
-else:
-    cache_folder = Path("cache_folder") / "postprocessing"
-
-cache_folder.mkdir(exist_ok=True, parents=True)
 
 
 def get_dataset():
@@ -43,85 +32,115 @@ def get_dataset():
     return recording, sorting
 
 
-def get_sorting_analyzer(recording, sorting, format="memory", sparsity=None, name=""):
-    sparse = sparsity is not None
-    if format == "memory":
-        folder = None
-    elif format == "binary_folder":
-        folder = cache_folder / f"test_{name}_sparse{sparse}_{format}"
-    elif format == "zarr":
-        folder = cache_folder / f"test_{name}_sparse{sparse}_{format}.zarr"
-    if folder and folder.exists():
-        shutil.rmtree(folder)
-
-    sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity
-    )
-
-    return sorting_analyzer
-
-
 class AnalyzerExtensionCommonTestSuite:
     """
-    Common tests with class approach to compute extension on several cases (3 format x 2 sparsity)
+    Common tests with class approach to compute extension on several cases,
+    format ("memory", "binary_folder", "zarr") and sparsity (True, False).
+    Extensions refer to the extension classes that handle the postprocessing,
+    for example extracting principal components or amplitude scalings.
 
-    This is done a a list of differents parameters (extension_function_params_list).
+    This base class provides a fixture which sets a recording
+    and sorting object onto itself, which are set up once each time
+    the base class is subclassed in a test environment. The recording
+    and sorting object are used in the creation of the `sorting_analyzer`
+    object used to run postprocessing routines.
 
-    This automatically precompute extension dependencies with default params before running computation.
+    When subclassed, a test function that parametrises arguments
+    that are passed to the `sorting_analyzer.compute()` can be setup.
+    This must call `run_extension_tests()`  which sets up a `sorting_analyzer`
+    with the relevant format and sparsity. This also automatically precomputes
+    extension dependencies with default params, Then, `check_one()` is called
+    which runs the compute function with the passed params and tests that:
 
-    This also test the select_units() ability.
+    1) the returned extractor object has data on it
+    2) check `sorting_analyzer.get_extension()` does not return None
+    3) the correct units are sliced with the `select_units()` function.
     """
 
-    extension_class = None
-    extension_function_params_list = None
+    @pytest.fixture(autouse=True, scope="class")
+    def setUpClass(self, create_cache_folder):
+        """
+        This method sets up the class once at the start of testing. It is
+        in scope for the lifetime of te class and is reused across all
+        tests that inherit from this base class to save processing time and
+        force a small radius.
 
-    @classmethod
-    def setUpClass(cls):
-        cls.recording, cls.sorting = get_dataset()
-        # sparsity is computed once for all cases to save processing time and force a small radius
-        cls.sparsity = estimate_sparsity(cls.recording, cls.sorting, method="radius", radius_um=20)
+        When setting attributes on `self` in `scope="class"` a new
+        class instance is used for each. In this case, we have to set
+        from the base object `__class__` to ensure the attributes
+        are available to all subclass instances.
+        """
+        self.__class__.recording, self.__class__.sorting = get_dataset()
 
-    @property
-    def extension_name(self):
-        return self.extension_class.extension_name
+        self.__class__.sparsity = estimate_sparsity(
+            self.__class__.sorting, self.__class__.recording, method="radius", radius_um=20
+        )
+        self.__class__.cache_folder = create_cache_folder
 
-    def _prepare_sorting_analyzer(self, format, sparse):
+    def get_sorting_analyzer(self, recording, sorting, format="memory", sparsity=None, name=""):
+        sparse = sparsity is not None
+
+        if format == "memory":
+            folder = None
+        elif format == "binary_folder":
+            folder = self.cache_folder / f"test_{name}_sparse{sparse}_{format}"
+        elif format == "zarr":
+            folder = self.cache_folder / f"test_{name}_sparse{sparse}_{format}.zarr"
+        if folder and folder.exists():
+            shutil.rmtree(folder)
+
+        sorting_analyzer = create_sorting_analyzer(
+            sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity
+        )
+
+        return sorting_analyzer
+
+    def _prepare_sorting_analyzer(self, format, sparse, extension_class):
         # prepare a SortingAnalyzer object with depencies already computed
         sparsity_ = self.sparsity if sparse else None
-        sorting_analyzer = get_sorting_analyzer(
-            self.recording, self.sorting, format=format, sparsity=sparsity_, name=self.extension_class.extension_name
+        sorting_analyzer = self.get_sorting_analyzer(
+            self.recording, self.sorting, format=format, sparsity=sparsity_, name=extension_class.extension_name
         )
         sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
-        for dependency_name in self.extension_class.depend_on:
+
+        for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 dependency_name = dependency_name.split("|")[0]
             sorting_analyzer.compute(dependency_name)
+
         return sorting_analyzer
 
-    def _check_one(self, sorting_analyzer):
-        if self.extension_class.need_job_kwargs:
+    def _check_one(self, sorting_analyzer, extension_class, params):
+        """
+        Take a prepared sorting analyzer object, compute the extension of interest
+        with the passed parameters, and check the output is not empty, the extension
+        exists and `select_units()` method works.
+        """
+        if extension_class.need_job_kwargs:
             job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
         else:
             job_kwargs = dict()
 
-        for params in self.extension_function_params_list:
-            print("  params", params)
-            ext = sorting_analyzer.compute(self.extension_name, **params, **job_kwargs)
-            assert len(ext.data) > 0
-            main_data = ext.get_data()
+        ext = sorting_analyzer.compute(extension_class.extension_name, **params, **job_kwargs)
+        assert len(ext.data) > 0
+        main_data = ext.get_data()
+        assert len(main_data) > 0
 
-        ext = sorting_analyzer.get_extension(self.extension_name)
+        ext = sorting_analyzer.get_extension(extension_class.extension_name)
         assert ext is not None
 
         some_unit_ids = sorting_analyzer.unit_ids[::2]
         sliced = sorting_analyzer.select_units(some_unit_ids, format="memory")
         assert np.array_equal(sliced.unit_ids, sorting_analyzer.unit_ids[::2])
-        # print(sliced)
 
-    def test_extension(self):
+    def run_extension_tests(self, extension_class, params):
+        """
+        Convenience function to perform all checks on the extension
+        of interest with the passed parameters. Will perform tests
+        for sparsity and format.
+        """
         for sparse in (True, False):
             for format in ("memory", "binary_folder", "zarr"):
-                print()
                 print("sparse", sparse, format)
-                sorting_analyzer = self._prepare_sorting_analyzer(format, sparse)
-                self._check_one(sorting_analyzer)
+                sorting_analyzer = self._prepare_sorting_analyzer(format, sparse, extension_class)
+                self._check_one(sorting_analyzer, extension_class, params)

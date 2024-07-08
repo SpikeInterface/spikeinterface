@@ -12,11 +12,11 @@ class QualityMetricsWidget(MetricsBaseWidget):
     ----------
     sorting_analyzer : SortingAnalyzer
         The object to get quality metrics from
-    unit_ids: list or None, default: None
+    unit_ids : list or None, default: None
         List of unit ids
-    include_metrics: list or None, default: None
+    include_metrics : list or None, default: None
         If given, a list of quality metrics to include
-    skip_metrics: list or None, default: None
+    skip_metrics : list or None, default: None
         If given, a list of quality metrics to skip
     unit_colors : dict or None, default: None
         If given, a dictionary with unit ids as keys and colors as values

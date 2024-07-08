@@ -5,8 +5,8 @@ import json
 import numpy as np
 
 import spikeinterface as si
+from spikeinterface.core import generate_sorting
 import spikeinterface.extractors as se
-from spikeinterface.extractors import read_mearec
 from spikeinterface import set_global_tmp_folder
 from spikeinterface.postprocessing import (
     compute_correlograms,
@@ -16,17 +16,9 @@ from spikeinterface.postprocessing import (
 )
 from spikeinterface.curation import apply_sortingview_curation
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "curation"
-else:
-    cache_folder = Path("cache_folder") / "curation"
-
 parent_folder = Path(__file__).parent
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
-
-
-set_global_tmp_folder(cache_folder)
 
 
 # this needs to be run only once: if we want to regenerate we need to start with sorting result
@@ -34,8 +26,6 @@ set_global_tmp_folder(cache_folder)
 # def generate_sortingview_curation_dataset():
 #     import spikeinterface.widgets as sw
 
-#     local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-#     recording, sorting = read_mearec(local_path)
 
 #     sorting_analyzer = si.create_sorting_analyzer(sorting, recording, format="memory")
 #     sorting_analyzer.compute("random_spikes")
@@ -50,7 +40,7 @@ set_global_tmp_folder(cache_folder)
 #     w = sw.plot_sorting_summary(sorting_analyzer, curation=True, backend="sortingview")
 
 #     # curation_link:
-#     # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary
+#     # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
 
 
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
@@ -58,15 +48,14 @@ def test_gh_curation():
     """
     Test curation using GitHub URI.
     """
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    _, sorting = read_mearec(local_path)
+    sorting = generate_sorting(num_units=10)
     # curated link:
-    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22gh://alejoe91/spikeinterface/fix-codecov/spikeinterface/curation/tests/sv-sorting-curation.json%22}
+    # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
     gh_uri = "gh://SpikeInterface/spikeinterface/main/src/spikeinterface/curation/tests/sv-sorting-curation.json"
     sorting_curated_gh = apply_sortingview_curation(sorting, uri_or_json=gh_uri, verbose=True)
 
     assert len(sorting_curated_gh.unit_ids) == 9
-    assert "#8-#9" in sorting_curated_gh.unit_ids
+    assert 1, 2 in sorting_curated_gh.unit_ids
     assert "accept" in sorting_curated_gh.get_property_keys()
     assert "mua" in sorting_curated_gh.get_property_keys()
     assert "artifact" in sorting_curated_gh.get_property_keys()
@@ -86,18 +75,17 @@ def test_sha1_curation():
     """
     Test curation using SHA1 URI.
     """
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    _, sorting = read_mearec(local_path)
+    sorting = generate_sorting(num_units=10)
 
     # from SHA1
     # curated link:
-    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22sha1://1182ba19671fcc7d3f8e0501b0f8c07fb9736c22%22}
-    sha1_uri = "sha1://1182ba19671fcc7d3f8e0501b0f8c07fb9736c22"
+    # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
+    sha1_uri = "sha1://449a428e8824eef9ad9bcc3241e45a2cee02d381"
     sorting_curated_sha1 = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, verbose=True)
     # print(f"From SHA: {sorting_curated_sha1}")
 
     assert len(sorting_curated_sha1.unit_ids) == 9
-    assert "#8-#9" in sorting_curated_sha1.unit_ids
+    assert 1, 2 in sorting_curated_sha1.unit_ids
     assert "accept" in sorting_curated_sha1.get_property_keys()
     assert "mua" in sorting_curated_sha1.get_property_keys()
     assert "artifact" in sorting_curated_sha1.get_property_keys()
@@ -116,8 +104,7 @@ def test_json_curation():
     """
     Test curation using a JSON file.
     """
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    _, sorting = read_mearec(local_path)
+    sorting = generate_sorting(num_units=10)
 
     # from curation.json
     json_file = parent_folder / "sv-sorting-curation.json"
@@ -125,7 +112,7 @@ def test_json_curation():
     sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
 
     assert len(sorting_curated_json.unit_ids) == 9
-    assert "#8-#9" in sorting_curated_json.unit_ids
+    assert 1, 2 in sorting_curated_json.unit_ids
     assert "accept" in sorting_curated_json.get_property_keys()
     assert "mua" in sorting_curated_json.get_property_keys()
     assert "artifact" in sorting_curated_json.get_property_keys()

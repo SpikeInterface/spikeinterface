@@ -13,13 +13,13 @@ class ProbeMapWidget(BaseWidget):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object
-    color_channels: list or matplotlib color
+    color_channels : list or matplotlib color
         List of colors to be associated with each channel_id, if only one color is present all channels will take the specified color
-    with_channel_ids: bool False default
+    with_channel_ids : bool False default
         Add channel ids text on the probe
-    **plot_probe_kwargs: keyword arguments for probeinterface.plotting.plot_probe_group() function
+    **plot_probe_kwargs : keyword arguments for probeinterface.plotting.plot_probe_group() function
 
     """
 

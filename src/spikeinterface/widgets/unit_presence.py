@@ -11,15 +11,15 @@ class UnitPresenceWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting: SortingExtractor
+    sorting : SortingExtractor
         The sorting extractor object
-    segment_index: None or int
+    segment_index : None or int
         The segment index.
-    time_range: list or None, default: None
+    time_range : list or None, default: None
         List with start time and end time
-    bin_duration_s: float, default: 0.5
+    bin_duration_s : float, default: 0.5
         Bin size (in seconds) for the heat map time axis
-    smooth_sigma: float, default: 4.5
+    smooth_sigma : float, default: 4.5
         Sigma for the Gaussian kernel (in number of bins)
     """
 

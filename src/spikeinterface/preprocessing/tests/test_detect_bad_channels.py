@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-import scipy.stats
 
 from spikeinterface import NumpyRecording, get_random_data_chunks
 from probeinterface import generate_linear_probe
@@ -167,6 +166,8 @@ def test_detect_bad_channels_ibl(num_channels):
         channel_flags_ibl[:, i] = channel_flags
 
     # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
+    import scipy.stats
+
     bad_channel_labels_ibl, _ = scipy.stats.mode(channel_flags_ibl, axis=1, keepdims=False)
 
     # Compare

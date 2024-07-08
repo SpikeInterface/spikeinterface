@@ -12,7 +12,7 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 
-from .quality_metric_list import calculate_pc_metrics, _misc_metric_name_to_func, _possible_pc_metric_names
+from .quality_metric_list import compute_pc_metrics, _misc_metric_name_to_func, _possible_pc_metric_names
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
 
@@ -23,8 +23,8 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     metric_names : list or None
         List of quality metrics to compute.
     qm_params : dict or None
@@ -36,7 +36,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
     Returns
     -------
     metrics: pandas.DataFrame
-        Data frame with the computed metrics
+        Data frame with the computed metrics.
 
     Notes
     -----
@@ -143,7 +143,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         if len(pc_metric_names) > 0 and not self.params["skip_pc_metrics"]:
             if not self.sorting_analyzer.has_extension("principal_components"):
                 raise ValueError("waveform_principal_component must be provied")
-            pc_metrics = calculate_pc_metrics(
+            pc_metrics = compute_pc_metrics(
                 self.sorting_analyzer,
                 unit_ids=non_empty_unit_ids,
                 metric_names=pc_metric_names,
@@ -171,13 +171,16 @@ compute_quality_metrics = ComputeQualityMetrics.function_factory()
 
 
 def get_quality_metric_list():
-    """Get a list of the available quality metrics."""
+    """
+    Return a list of the available quality metrics.
+    """
 
     return deepcopy(list(_misc_metric_name_to_func.keys()))
 
 
 def get_default_qm_params():
-    """Return default dictionary of quality metrics parameters.
+    """
+    Return default dictionary of quality metrics parameters.
 
     Returns
     -------

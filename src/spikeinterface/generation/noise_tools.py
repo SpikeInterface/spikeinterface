@@ -10,25 +10,24 @@ def generate_noise(
 
     Parameters
     ----------
-    probe: Probe
+    probe : Probe
         A probe object.
-    sampling_frequency: float
+    sampling_frequency : float
         Sampling frequency
-    durations: list of float
+    durations : list of float
         Durations
-    dtype: np.dtype
+    dtype : np.dtype
         Dtype
-    noise_levels: float | np.array | tuple
+    noise_levels : float | np.array | tuple
         If scalar same noises on all channels.
         If array then per channels noise level.
         If tuple, then this represent the range.
-
-    seed: None | int
+    seed : None | int
         The seed for random generator.
 
     Returns
     -------
-    noise: NoiseGeneratorRecording
+    noise : NoiseGeneratorRecording
         A lazy noise generator recording.
     """
 

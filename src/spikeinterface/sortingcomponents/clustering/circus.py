@@ -21,7 +21,6 @@ from spikeinterface.core.recording_tools import get_noise_levels, get_channel_di
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
-from sklearn.decomposition import TruncatedSVD, PCA
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
@@ -31,6 +30,7 @@ from spikeinterface.core.node_pipeline import (
     ExtractSparseWaveforms,
     PeakRetriever,
 )
+
 
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
@@ -90,12 +90,14 @@ class CircusClustering:
         tmp_folder.mkdir(parents=True, exist_ok=True)
 
         # SVD for time compression
-        few_peaks = select_peaks(peaks, method="uniform", n_peaks=10000)
+        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=10000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
             recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **params["job_kwargs"]
         )
 
         wfs = few_wfs[:, :, 0]
+        from sklearn.decomposition import TruncatedSVD
+
         tsvd = TruncatedSVD(params["n_svd"][0])
         tsvd.fit(wfs)
 
