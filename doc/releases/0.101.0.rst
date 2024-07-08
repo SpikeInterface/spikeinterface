@@ -40,7 +40,8 @@ core:
 * Add peak_to_peak mode to get_templates_amplitude (#2885)
 * Protect zarr properties of type object (#2884)
 * Avoid returning std when asking for only mean/average with templates extension (#2868)
-* Add binary sufixes to job tools memory specification (e.g. 1GiB vs 1GB) (#2858)
+* Add binary suffixes to job tools memory specification (e.g. 1GiB vs 1GB) (#2858)
+* **Implementation of `SortingAnalyzer` (#2398)**
 
 extractors:
 
