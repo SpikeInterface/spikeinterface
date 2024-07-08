@@ -501,24 +501,35 @@ class BaseRecording(BaseRecordingSnippets):
         rs = self._recording_segments[segment_index]
         return rs.time_to_sample_index(time_s)
 
-    def _save(self, format="binary", verbose: bool = False, **save_kwargs):
+    def _get_t_starts(self):
         # handle t_starts
         t_starts = []
         has_time_vectors = []
-        for segment_index, rs in enumerate(self._recording_segments):
+        for rs in self._recording_segments:
             d = rs.get_times_kwargs()
             t_starts.append(d["t_start"])
-            has_time_vectors.append(d["time_vector"] is not None)
 
         if all(t_start is None for t_start in t_starts):
             t_starts = None
+        return t_starts
 
+    def _get_time_vectors(self):
+        time_vectors = []
+        for rs in self._recording_segments:
+            d = rs.get_times_kwargs()
+            time_vectors.append(d["time_vector"])
+        if all(time_vector is None for time_vector in time_vectors):
+            time_vectors = None
+        return time_vectors
+
+    def _save(self, format="binary", verbose: bool = False, **save_kwargs):
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
         if format == "binary":
             folder = kwargs["folder"]
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
+            t_starts = self._get_t_starts()
 
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
 
@@ -548,11 +559,11 @@ class BaseRecording(BaseRecordingSnippets):
             if kwargs.get("sharedmem", True):
                 from .numpyextractors import SharedMemoryRecording
 
-                cached = SharedMemoryRecording.from_recording(self, t_starts=t_starts, **job_kwargs)
+                cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
             else:
                 from spikeinterface.core import NumpyRecording
 
-                cached = NumpyRecording.from_recording(self, t_starts=t_starts, **job_kwargs)
+                cached = NumpyRecording.from_recording(self, **job_kwargs)
 
         elif format == "zarr":
             from .zarrextractors import ZarrRecordingExtractor
@@ -575,11 +586,11 @@ class BaseRecording(BaseRecordingSnippets):
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
 
-        for segment_index, rs in enumerate(self._recording_segments):
-            d = rs.get_times_kwargs()
-            time_vector = d["time_vector"]
-            if time_vector is not None:
-                cached._recording_segments[segment_index].time_vector = time_vector
+        time_vectors = self._get_time_vectors()
+        if time_vectors is not None:
+            for segment_index, time_vector in enumerate(time_vectors):
+                if time_vector is not None:
+                    cached.set_times(time_vector, segment_index=segment_index)
 
         return cached
 

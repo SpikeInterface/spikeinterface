@@ -81,8 +81,11 @@ class NumpyRecording(BaseRecording):
         }
 
     @staticmethod
-    def from_recording(source_recording, t_starts=None, **job_kwargs):
+    def from_recording(source_recording, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
+
+        t_starts = source_recording._get_t_starts()
+
         if shms[0] is not None:
             # if the computation was done in parallel then traces_list is shared array
             # this can lead to problem
@@ -204,8 +207,10 @@ class SharedMemoryRecording(BaseRecording):
                 shm.unlink()
 
     @staticmethod
-    def from_recording(source_recording, t_starts=None, **job_kwargs):
+    def from_recording(source_recording, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
+
+        t_starts = source_recording._get_t_starts()
 
         recording = SharedMemoryRecording(
             shm_names=[shm.name for shm in shms],
