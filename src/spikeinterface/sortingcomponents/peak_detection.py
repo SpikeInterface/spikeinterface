@@ -4,15 +4,13 @@ from __future__ import annotations
 
 
 import copy
-from typing import Tuple, Union, List, Dict, Any, Optional, Callable
+from typing import Tuple, List, Optional
 
 import numpy as np
 
 from spikeinterface.core.job_tools import (
-    ChunkRecordingExecutor,
     _shared_job_kwargs_doc,
     split_job_kwargs,
-    fix_job_kwargs,
 )
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances, get_random_data_chunks
 
@@ -25,8 +23,7 @@ from spikeinterface.core.node_pipeline import (
     base_peak_dtype,
 )
 
-from spikeinterface.postprocessing.unit_localization import get_convolution_weights
-from ..core import get_chunk_with_margin
+from spikeinterface.postprocessing.localization_tools import get_convolution_weights
 
 from .tools import make_multi_method_doc
 
@@ -45,11 +42,10 @@ try:
 except ImportError:
     HAVE_TORCH = False
 
+
 """
 TODO:
     * remove the wrapper class and move  all implementation to instance
-    *
-
 """
 
 
@@ -613,6 +609,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         self,
         recording,
         prototype,
+        ms_before,
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
@@ -644,6 +641,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
             raise NotImplementedError("Matched filtering not working with peak_sign=both yet!")
 
         self.peak_sign = peak_sign
+        self.nbefore = int(ms_before * recording.sampling_frequency / 1000)
         contact_locations = recording.get_channel_locations()
         dist = np.linalg.norm(contact_locations[:, np.newaxis] - contact_locations[np.newaxis, :], axis=2)
         weights, self.z_factors = get_convolution_weights(dist, **weight_method)
@@ -689,17 +687,19 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
 
-        # peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular, z_factors = self.args
-
         assert HAVE_NUMBA, "You need to install numba"
         conv_traces = self.get_convolved_traces(traces, self.temporal, self.spatial, self.singular)
         conv_traces /= self.abs_thresholds[:, None]
         conv_traces = conv_traces[:, self.conv_margin : -self.conv_margin]
         traces_center = conv_traces[:, self.exclude_sweep_size : -self.exclude_sweep_size]
-        num_z_factors = len(self.z_factors)
-        num_channels = conv_traces.shape[0] // num_z_factors
 
+        num_z_factors = len(self.z_factors)
+        num_templates = traces.shape[1]
+
+        traces_center = traces_center.reshape(num_z_factors, num_templates, traces_center.shape[1])
+        conv_traces = conv_traces.reshape(num_z_factors, num_templates, conv_traces.shape[1])
         peak_mask = traces_center > 1
+
         peak_mask = _numba_detect_peak_matched_filtering(
             conv_traces,
             traces_center,
@@ -708,15 +708,11 @@ class DetectPeakMatchedFiltering(PeakDetector):
             self.abs_thresholds,
             self.peak_sign,
             self.neighbours_mask,
-            num_channels,
+            num_templates,
         )
 
         # Find peaks and correct for time shift
-        peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
-
-        # If we do not want to estimate the z accurately
-        z = self.z_factors[peak_chan_ind // num_channels]
-        peak_chan_ind = peak_chan_ind % num_channels
+        z_ind, peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
 
         # If we want to estimate z
         # peak_chan_ind = peak_chan_ind % num_channels
@@ -730,7 +726,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         if peak_sample_ind.size == 0 or peak_chan_ind.size == 0:
             return (np.zeros(0, dtype=self._dtype),)
 
-        peak_sample_ind += self.exclude_sweep_size + self.conv_margin
+        peak_sample_ind += self.exclude_sweep_size + self.conv_margin + self.nbefore
 
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
         local_peaks = np.zeros(peak_sample_ind.size, dtype=self._dtype)
@@ -738,7 +734,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         local_peaks["channel_index"] = peak_chan_ind
         local_peaks["amplitude"] = peak_amplitude
         local_peaks["segment_index"] = segment_index
-        local_peaks["z"] = z
+        local_peaks["z"] = z_ind
 
         # return is always a tuple
         return (local_peaks,)
@@ -747,10 +743,11 @@ class DetectPeakMatchedFiltering(PeakDetector):
         import scipy.signal
 
         num_timesteps, num_templates = len(traces), temporal.shape[1]
-        scalar_products = np.zeros((num_templates, num_timesteps), dtype=np.float32)
+        num_peaks = num_timesteps - self.conv_margin + 1
+        scalar_products = np.zeros((num_templates, num_peaks), dtype=np.float32)
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
         scaled_filtered_data = spatially_filtered_data * singular
-        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="same")
+        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="valid")
         scalar_products += np.sum(objective_by_rank, axis=0)
         return scalar_products
 
@@ -876,27 +873,51 @@ if HAVE_NUMBA:
 
     @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_matched_filtering(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_channels
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_templates
     ):
-        num_chans = traces_center.shape[0]
-        for chan_ind in range(num_chans):
-            for s in range(peak_mask.shape[1]):
-                if not peak_mask[chan_ind, s]:
-                    continue
-                for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind % num_channels, neighbour % num_channels]:
+        num_z = traces_center.shape[0]
+        for template_ind in range(num_templates):
+            for z in range(num_z):
+                for s in range(peak_mask.shape[2]):
+                    if not peak_mask[z, template_ind, s]:
                         continue
-                    for i in range(exclude_sweep_size):
-                        if chan_ind != neighbour:
-                            peak_mask[chan_ind, s] &= traces_center[chan_ind, s] >= traces_center[neighbour, s]
-                        peak_mask[chan_ind, s] &= traces_center[chan_ind, s] > traces[neighbour, s + i]
-                        peak_mask[chan_ind, s] &= (
-                            traces_center[chan_ind, s] >= traces[neighbour, exclude_sweep_size + s + i + 1]
-                        )
-                        if not peak_mask[chan_ind, s]:
+                    for neighbour in range(num_templates):
+                        if not neighbours_mask[template_ind, neighbour]:
+                            continue
+                        for j in range(num_z):
+                            for i in range(exclude_sweep_size):
+                                if template_ind >= neighbour:
+                                    if z >= j:
+                                        peak_mask[z, template_ind, s] &= (
+                                            traces_center[z, template_ind, s] >= traces_center[j, neighbour, s]
+                                        )
+                                    else:
+                                        peak_mask[z, template_ind, s] &= (
+                                            traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
+                                        )
+                                elif template_ind < neighbour:
+                                    if z > j:
+                                        peak_mask[z, template_ind, s] &= (
+                                            traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
+                                        )
+                                    else:
+                                        peak_mask[z, template_ind, s] &= (
+                                            traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
+                                        )
+                                peak_mask[z, template_ind, s] &= (
+                                    traces_center[z, template_ind, s] > traces[j, neighbour, s + i]
+                                )
+                                peak_mask[z, template_ind, s] &= (
+                                    traces_center[z, template_ind, s]
+                                    >= traces[j, neighbour, exclude_sweep_size + s + i + 1]
+                                )
+                                if not peak_mask[z, template_ind, s]:
+                                    break
+                            if not peak_mask[z, template_ind, s]:
+                                break
+                        if not peak_mask[z, template_ind, s]:
                             break
-                    if not peak_mask[chan_ind, s]:
-                        break
+
         return peak_mask
 
 

@@ -382,7 +382,7 @@ class PeakSelectionStudy(BenchmarkStudy):
 
 #         import matplotlib
 
-#         my_cmap = plt.get_cmap(cmap)
+#         my_cmap = plt.colormaps[cmap]
 #         cNorm = matplotlib.colors.Normalize(vmin=clim[0], vmax=clim[1])
 #         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 

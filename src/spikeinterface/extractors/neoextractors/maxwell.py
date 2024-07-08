@@ -20,26 +20,26 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to the maxwell h5 file.
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
         For MaxTwo when there are several wells at the same time you
         need to specify stream_id='well000' or 'well0001', etc.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
-    rec_name: str, default: None
+    rec_name : str, default: None
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
-    install_maxwell_plugin: bool, default: False
+    install_maxwell_plugin : bool, default: False
         If True, install the maxwell plugin for neo.
+    block_index : int, default: None
+        If there are several blocks (experiments), specify the block index you want to load
     """
 
-    mode = "file"
     NeoRawIOClass = "MaxwellRawIO"
-    name = "maxwell"
 
     def __init__(
         self,
@@ -93,8 +93,6 @@ class MaxwellEventExtractor(BaseEvent):
     """
     Class for reading TTL events from Maxwell files.
     """
-
-    name = "maxwell"
 
     def __init__(self, file_path):
         import h5py

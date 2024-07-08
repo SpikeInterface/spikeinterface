@@ -3,7 +3,6 @@ import math
 import warnings
 import numpy as np
 from typing import Union, Optional, List, Literal
-import warnings
 from math import ceil
 
 from .basesorting import SpikeVectorSortingSegment
@@ -1136,7 +1135,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         elif self.strategy == "on_the_fly":
             pass
 
-    def get_num_samples(self):
+    def get_num_samples(self) -> int:
         return self.num_samples
 
     def get_traces(
@@ -1145,9 +1144,6 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        start_frame = 0 if start_frame is None else max(start_frame, 0)
-        end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
-
         start_frame_within_block = start_frame % self.noise_block_size
         end_frame_within_block = end_frame % self.noise_block_size
         num_samples = end_frame - start_frame
@@ -1446,11 +1442,10 @@ def generate_templates(
     dtype="float32",
     upsample_factor=None,
     unit_params=None,
-    unit_params_range=None,
     mode="ellipsoid",
 ):
     """
-    Generate some templates from the given channel positions and neuron position.s
+    Generate some templates from the given channel positions and neuron positions.
 
     The implementation is very naive : it generates a mono channel waveform using generate_single_fake_waveform()
     and duplicates this same waveform on all channel given a simple decay law per unit.
@@ -1503,9 +1498,7 @@ def generate_templates(
             * (num_units, num_samples, num_channels, upsample_factor) if upsample_factor is not None
 
     """
-
     unit_params = unit_params or dict()
-    unit_params_range = unit_params_range or dict()
     rng = np.random.default_rng(seed=seed)
 
     # neuron location must be 3D
@@ -1812,9 +1805,6 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        start_frame = 0 if start_frame is None else start_frame
-        end_frame = self.num_samples if end_frame is None else end_frame
-
         if channel_indices is None:
             n_channels = self.templates.shape[2]
         elif isinstance(channel_indices, slice):
@@ -1850,6 +1840,8 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
             end_traces = start_traces + template.shape[0]
             if start_traces >= end_frame - start_frame or end_traces <= 0:
                 continue
+            start_traces = int(start_traces)
+            end_traces = int(end_traces)
 
             start_template = 0
             end_template = template.shape[0]
@@ -1864,7 +1856,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
             wf = template[start_template:end_template]
             if self.amplitude_vector is not None:
                 wf = wf * self.amplitude_vector[i]
-            traces[start_traces:end_traces] += wf
+            traces[start_traces:end_traces] += wf.astype(traces.dtype, copy=False)
 
         return traces.astype(self.dtype, copy=False)
 

@@ -95,7 +95,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         peak_shifts = get_template_extremum_channel_peak_shift(self.sorting_analyzer, peak_sign=peak_sign)
 
         spike_retriever_node = SpikeRetriever(
-            recording, sorting, channel_from_template=True, extremum_channel_inds=extremum_channels_indices
+            sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channels_indices
         )
         spike_amplitudes_node = SpikeAmplitudeNode(
             recording,
@@ -107,7 +107,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         nodes = [spike_retriever_node, spike_amplitudes_node]
         return nodes
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         amps = run_node_pipeline(
@@ -116,6 +116,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name="spike_amplitudes",
             gather_mode="memory",
+            verbose=False,
         )
         self.data["amplitudes"] = amps
 
@@ -126,7 +127,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
             spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
+            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
             amplitudes_by_units = {}
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 amplitudes_by_units[segment_index] = {}
@@ -154,7 +155,7 @@ class SpikeAmplitudeNode(PipelineNode):
     ):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.return_scaled = return_scaled
-        if return_scaled and recording.has_scaled():
+        if return_scaled and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_gains()

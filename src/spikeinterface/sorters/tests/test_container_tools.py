@@ -5,30 +5,31 @@ import shutil
 import os
 
 import spikeinterface as si
-from spikeinterface.extractors import toy_example
+from spikeinterface import generate_ground_truth_recording
+
 from spikeinterface.sorters.container_tools import find_recording_folders, ContainerClient, install_package_in_container
+import platform
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sorters"
-else:
-    cache_folder = Path("cache_folder") / "sorters"
 
-
-def setup_module():
+@pytest.fixture(scope="module")
+def setup_module(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     test_dirs = [cache_folder / "mono", cache_folder / "multi"]
     for test_dir in test_dirs:
         if test_dir.exists():
             shutil.rmtree(test_dir)
-    rec1, _ = toy_example(num_segments=1)
+    rec1, _ = generate_ground_truth_recording(durations=[10])
     rec1 = rec1.save(folder=cache_folder / "mono")
 
-    rec2, _ = toy_example(num_segments=3)
+    rec2, _ = generate_ground_truth_recording(durations=[10, 10, 10])
     rec2 = rec2.save(folder=cache_folder / "multi")
+    return cache_folder
 
 
-def test_find_recording_folders():
+def test_find_recording_folders(setup_module):
+    cache_folder = setup_module
     rec1 = si.load_extractor(cache_folder / "mono")
     rec2 = si.load_extractor(cache_folder / "multi" / "binary.json", base_folder=cache_folder / "multi")
 
@@ -58,7 +59,9 @@ def test_find_recording_folders():
     assert str(f2[0]) == str((cache_folder / "multi").absolute())
 
     # in this case the paths are in 3 separate drives
-    assert len(f3) == 3
+    # Not a good test on windows because all the paths resolve to C when absolute in `find_recording_folders`
+    if platform.system() != "Windows":
+        assert len(f3) == 3
 
 
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")

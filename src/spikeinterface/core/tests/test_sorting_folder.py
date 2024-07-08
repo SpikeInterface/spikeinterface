@@ -1,6 +1,4 @@
 import pytest
-
-from pathlib import Path
 import shutil
 
 import numpy as np
@@ -9,13 +7,9 @@ from spikeinterface.core import NpzFolderSorting, NumpyFolderSorting, load_extra
 from spikeinterface.core import generate_sorting
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
 
-
-def test_NumpyFolderSorting():
+def test_NumpyFolderSorting(create_cache_folder):
+    cache_folder = create_cache_folder
     sorting = generate_sorting(seed=42)
 
     folder = cache_folder / "numpy_sorting_1"
@@ -33,7 +27,8 @@ def test_NumpyFolderSorting():
     )
 
 
-def test_NpzFolderSorting():
+def test_NpzFolderSorting(create_cache_folder):
+    cache_folder = create_cache_folder
     sorting = generate_sorting(seed=42)
 
     folder = cache_folder / "npz_folder_sorting_1"

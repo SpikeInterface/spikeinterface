@@ -7,7 +7,6 @@ import numpy.typing as npt
 import shutil
 import warnings
 
-import spikeinterface
 from spikeinterface.core import (
     write_binary_recording,
     BinaryRecordingExtractor,
@@ -16,11 +15,6 @@ from spikeinterface.core import (
     SortingAnalyzer,
 )
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
-from spikeinterface.postprocessing import (
-    compute_spike_amplitudes,
-    compute_template_similarity,
-    compute_principal_components,
-)
 
 
 def export_to_phy(
@@ -31,8 +25,10 @@ def export_to_phy(
     sparsity: Optional[ChannelSparsity] = None,
     copy_binary: bool = True,
     remove_if_exists: bool = False,
-    peak_sign: Literal["both", "neg", "pos"] = "neg",
     template_mode: str = "average",
+    add_quality_metrics: bool = True,
+    add_template_metrics: bool = True,
+    additional_properties: list | None = None,
     dtype: Optional[npt.DTypeLike] = None,
     verbose: bool = True,
     use_relative_path: bool = False,
@@ -43,27 +39,31 @@ def export_to_phy(
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    output_folder: str | Path
+    output_folder : str | Path
         The output folder where the phy template-gui files are saved
-    compute_pc_features: bool, default: True
+    compute_pc_features : bool, default: True
         If True, pc features are computed
-    compute_amplitudes: bool, default: True
+    compute_amplitudes : bool, default: True
         If True, waveforms amplitudes are computed
-    sparsity: ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default: None
         The sparsity object
-    copy_binary: bool, default: True
+    copy_binary : bool, default: True
         If True, the recording is copied and saved in the phy "output_folder"
-    remove_if_exists: bool, default: False
+    remove_if_exists : bool, default: False
         If True and "output_folder" exists, it is removed and overwritten
-    peak_sign: "neg" | "pos" | "both", default: "neg"
-        Used by compute_spike_amplitudes
-    template_mode: str, default: "average"
+    template_mode : str, default: "average"
         Parameter "mode" to be given to SortingAnalyzer.get_template()
-    dtype: dtype or None, default: None
+    add_quality_metrics : bool, default: True
+        If True, quality metrics (if computed) are saved as Phy tsv and will appear in the ClusterView.
+    add_template_metrics : bool, default: True
+        If True, template metrics (if computed) are saved as Phy tsv and will appear in the ClusterView.
+    additional_properties : list | None, default: None
+        List of additional properties to be saved as Phy tsv and will appear in the ClusterView.
+    dtype : dtype or None, default: None
         Dtype to save binary data
-    verbose: bool, default: True
+    verbose : bool, default: True
         If True, output is verbose
     use_relative_path : bool, default: False
         If True and `copy_binary=True` saves the binary file `dat_path` in the `params.py` relative to `output_folder` (ie `dat_path=r"recording.dat"`). If `copy_binary=False`, then uses a path relative to the `output_folder`
@@ -250,7 +250,7 @@ def export_to_phy(
     channel_group = pd.DataFrame({"cluster_id": [i for i in range(len(unit_ids))], "channel_group": unit_groups})
     channel_group.to_csv(output_folder / "cluster_channel_group.tsv", sep="\t", index=False)
 
-    if sorting_analyzer.has_extension("quality_metrics"):
+    if sorting_analyzer.has_extension("quality_metrics") and add_quality_metrics:
         qm_data = sorting_analyzer.get_extension("quality_metrics").get_data()
         for column_name in qm_data.columns:
             # already computed by phy
@@ -259,6 +259,19 @@ def export_to_phy(
                     {"cluster_id": [i for i in range(len(unit_ids))], column_name: qm_data[column_name].values}
                 )
                 metric.to_csv(output_folder / f"cluster_{column_name}.tsv", sep="\t", index=False)
+    if sorting_analyzer.has_extension("template_metrics") and add_template_metrics:
+        tm_data = sorting_analyzer.get_extension("template_metrics").get_data()
+        for column_name in tm_data.columns:
+            metric = pd.DataFrame(
+                {"cluster_id": [i for i in range(len(unit_ids))], column_name: tm_data[column_name].values}
+            )
+            metric.to_csv(output_folder / f"cluster_{column_name}.tsv", sep="\t", index=False)
+    if additional_properties is not None:
+        for prop_name in additional_properties:
+            prop_data = sorting.get_property(prop_name)
+            if prop_data is not None:
+                prop = pd.DataFrame({"cluster_id": [i for i in range(len(unit_ids))], prop_name: prop_data})
+                prop.to_csv(output_folder / f"cluster_{prop_name}.tsv", sep="\t", index=False)
 
     if verbose:
         print("Run:\nphy template-gui ", str(output_folder / "params.py"))

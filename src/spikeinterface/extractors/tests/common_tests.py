@@ -6,7 +6,6 @@ import numpy as np
 
 from spikeinterface import download_dataset, get_global_dataset_folder
 from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor
-from spikeinterface.extractors import get_neo_streams, get_neo_num_blocks
 
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 
@@ -19,8 +18,9 @@ class CommonTestSuite:
     downloads = []
     entities = []
 
-    def setUp(self):
-        for remote_path in self.downloads:
+    @classmethod
+    def setUpClass(cls):
+        for remote_path in cls.downloads:
             download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder, update_if_exists=True)
 
 

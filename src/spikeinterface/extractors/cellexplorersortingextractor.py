@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from pathlib import Path
-import warnings
-import datetime
+
 
 from ..core import BaseSorting, BaseSortingSegment
 from ..core.core_tools import define_function_from_class
@@ -30,41 +29,18 @@ class CellExplorerSortingExtractor(BaseSorting):
         Path to the `sessionInfo.mat` file. If None, it will be inferred from the file_path.
     """
 
-    extractor_name = "CellExplorerSortingExtractor"
-    mode = "file"
     installation_mesg = "To use the CellExplorerSortingExtractor install pymatreader"
 
     def __init__(
         self,
-        file_path: str | Path | None = None,
+        file_path: str | Path,
         sampling_frequency: float | None = None,
         session_info_file_path: str | Path | None = None,
-        spikes_matfile_path: str | Path | None = None,
     ):
         try:
             from pymatreader import read_mat
         except ImportError:
             raise ImportError(self.installation_mesg)
-
-        assert (
-            file_path is not None or spikes_matfile_path is not None
-        ), "Either file_path or spikes_matfile_path must be provided!"
-
-        if spikes_matfile_path is not None:
-            # Raise an error if the warning period has expired
-            deprecation_issued = datetime.datetime(2023, 4, 1)
-            deprecation_deadline = deprecation_issued + datetime.timedelta(days=180)
-            if datetime.datetime.now() > deprecation_deadline:
-                raise ValueError("The spikes_matfile_path argument is no longer supported in. Use file_path instead.")
-
-            # Otherwise, issue a DeprecationWarning
-            else:
-                warnings.warn(
-                    "The spikes_matfile_path argument is deprecated and will be removed in six months. "
-                    "Use file_path instead.",
-                    DeprecationWarning,
-                )
-            file_path = spikes_matfile_path if file_path is None else file_path
 
         self.spikes_cellinfo_path = Path(file_path)
         self.session_path = self.spikes_cellinfo_path.parent

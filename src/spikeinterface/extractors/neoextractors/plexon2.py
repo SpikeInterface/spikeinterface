@@ -13,24 +13,34 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
-        The file path to load the recordings from.
-    stream_id: str, default: None
+    file_path : str | Path
+        The file path of the plexon2 file. It should have the .pl2 extension.
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    use_names_as_ids : bool, default: True
+        If True, the names of the signals are used as channel ids. If False, the channel ids are a combination of the
+        source id and the channel index.
+
+        Example for wideband signals:
+            names: ["WB01", "WB02", "WB03", "WB04"]
+            ids: ["source3.1" , "source3.2", "source3.3", "source3.4"]
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     """
 
-    mode = "file"
     NeoRawIOClass = "Plexon2RawIO"
-    name = "plexon2"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
+    def __init__(self, file_path, stream_id=None, stream_name=None, use_names_as_ids=True, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
-            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
         )
         self._kwargs.update({"file_path": str(file_path)})
 
@@ -48,16 +58,14 @@ class Plexon2SortingExtractor(NeoBaseSortingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    sampling_frequency: float, default: None
+    sampling_frequency : float, default: None
         The sampling frequency of the sorting (required for multiple streams with different sampling frequencies).
     """
 
-    mode = "file"
     NeoRawIOClass = "Plexon2RawIO"
     neo_returns_frames = True
-    name = "plexon2"
 
     def __init__(self, file_path, sampling_frequency=None):
         from neo.rawio import Plexon2RawIO
@@ -82,13 +90,11 @@ class Plexon2EventExtractor(NeoBaseEventExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
 
     """
 
-    mode = "file"
     NeoRawIOClass = "Plexon2RawIO"
-    name = "plexon2"
 
     def __init__(self, folder_path, block_index=None):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)

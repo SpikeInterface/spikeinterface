@@ -9,14 +9,6 @@ from spikeinterface.preprocessing import normalize_by_quantile, scale, center, z
 import numpy as np
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
-
-
 def test_normalize_by_quantile():
     rec = generate_recording()
 

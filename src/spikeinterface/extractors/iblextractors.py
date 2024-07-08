@@ -41,7 +41,7 @@ class IblRecordingExtractor(BaseRecording):
     stream_name : str
         The name of the stream to load for the session.
         These can be retrieved from calling `StreamingIblExtractor.get_stream_names(session="<your session ID>")`.
-    load_sync_channels : bool, default: false
+    load_sync_channel : bool, default: false
         Load or not the last channel (sync).
         If not then the probe is loaded.
     cache_folder : str or None, default: None
@@ -65,10 +65,7 @@ class IblRecordingExtractor(BaseRecording):
         The recording extractor which allows access to the traces.
     """
 
-    extractor_name = "IblRecording"
-    mode = "folder"
     installation_mesg = "To use the IblRecordingSegment, install ibllib: \n\n pip install ONE-api\npip install ibllib\n"
-    name = "ibl_recording"
 
     @staticmethod
     def _get_default_one(cache_folder: Optional[Union[Path, str]] = None):
@@ -139,7 +136,7 @@ class IblRecordingExtractor(BaseRecording):
         pid: str | None = None,
         stream_name: str | None = None,
         load_sync_channel: bool = False,
-        cache_folder: Optional[Union[Path, str]] = None,
+        cache_folder: Optional[Path | str] = None,
         remove_cached: bool = True,
         stream: bool = True,
         one: "one.api.OneAlyx" = None,
@@ -165,7 +162,7 @@ class IblRecordingExtractor(BaseRecording):
                 stream_name is not None
             ), f"Multiple streams found for session. Please specify a stream name from {stream_names}."
             assert stream_name in stream_names, (
-                f"The `stream_name` '{stream_name}' was not found in the available listing for session '{session}'! "
+                f"The `stream_name` '{stream_name}' is not available for this experiment {eid}! "
                 f"Please choose one of {stream_names}."
             )
         else:
@@ -269,10 +266,6 @@ class IblRecordingSegment(BaseRecordingSegment):
         return self._file_streamer.ns
 
     def get_traces(self, start_frame: int, end_frame: int, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
         if channel_indices is None:
             channel_indices = slice(None)
         traces = self._file_streamer.read(nsel=slice(start_frame, end_frame), volts=False)
@@ -309,11 +302,9 @@ class IblSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "IBLSorting"
-    name = "ibl"
     installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
 
-    def __init__(self, pid, good_clusters_only=False, load_unit_properties=True, one=None):
+    def __init__(self, pid: str, good_clusters_only: bool = False, load_unit_properties: bool = True, one=None):
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader

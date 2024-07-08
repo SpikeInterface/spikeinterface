@@ -60,6 +60,10 @@ spikeinterface.core
     .. autofunction:: select_segment_sorting
     .. autofunction:: read_binary
     .. autofunction:: read_zarr
+    .. autofunction:: apply_merges_to_sorting
+    .. autofunction:: spike_vector_to_spike_trains
+    .. autofunction:: random_spikes_selection
+
 
 Low-level
 ~~~~~~~~~
@@ -67,7 +71,6 @@ Low-level
 .. automodule:: spikeinterface.core
     :noindex:
 
-    .. autoclass:: BaseWaveformExtractorExtension
     .. autoclass:: ChunkRecordingExecutor
 
 spikeinterface.extractors
@@ -117,7 +120,7 @@ Non-NEO-based
     .. autofunction:: read_bids
     .. autofunction:: read_cbin_ibl
     .. autofunction:: read_combinato
-    .. autofunction:: read_ibl_streaming_recording
+    .. autofunction:: read_ibl_recording
     .. autofunction:: read_hdsort
     .. autofunction:: read_herdingspikes
     .. autofunction:: read_kilosort

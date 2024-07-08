@@ -9,9 +9,6 @@ import pickle
 import numpy as np
 
 from spikeinterface.core import load_extractor, create_sorting_analyzer, load_sorting_analyzer
-from spikeinterface.core.core_tools import SIJsonEncoder
-from spikeinterface.core.job_tools import split_job_kwargs
-
 from spikeinterface.sorters import run_sorter_jobs, read_sorter_folder
 
 from spikeinterface.qualitymetrics import compute_quality_metrics
@@ -54,6 +51,7 @@ class GroundTruthStudy:
         self.cases = {}
         self.sortings = {}
         self.comparisons = {}
+        self.colors = None
 
         self.scan_folder()
 
@@ -141,7 +139,10 @@ class GroundTruthStudy:
             comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
             if comparison_file.exists():
                 with open(comparison_file, mode="rb") as f:
-                    self.comparisons[key] = pickle.load(f)
+                    try:
+                        self.comparisons[key] = pickle.load(f)
+                    except Exception:
+                        pass
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
@@ -164,11 +165,29 @@ class GroundTruthStudy:
         sorting_folder = self.folder / "sortings" / self.key_to_str(key)
         log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
         comparison_file = self.folder / "comparisons" / self.key_to_str(key)
+        self.sortings[key] = None
+        self.comparisons[key] = None
         if sorting_folder.exists():
             shutil.rmtree(sorting_folder)
         for f in (log_file, comparison_file):
             if f.exists():
                 f.unlink()
+
+    def set_colors(self, colors=None, map_name="tab20"):
+        from spikeinterface.widgets import get_some_colors
+
+        if colors is None:
+            case_keys = list(self.cases.keys())
+            self.colors = get_some_colors(
+                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0
+            )
+        else:
+            self.colors = colors
+
+    def get_colors(self):
+        if self.colors is None:
+            self.set_colors()
+        return self.colors
 
     def run_sorters(self, case_keys=None, engine="loop", engine_kwargs={}, keep=True, verbose=False):
         if case_keys is None:
@@ -378,6 +397,7 @@ class GroundTruthStudy:
 
         perf_by_unit = pd.concat(perf_by_unit)
         perf_by_unit = perf_by_unit.set_index(self.levels)
+        perf_by_unit = perf_by_unit.sort_index()
         return perf_by_unit
 
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
