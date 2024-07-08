@@ -1,0 +1,29 @@
+#!/bin/bash
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 START_DATE END_DATE [LABEL]"
+    exit 1
+fi
+
+START_DATE="$1"
+END_DATE="$2"
+
+if [ -z "$3" ]; then
+    LABELS=("core" "extractors" "sorters" "postprocessing" "qualitymetrics" "curation" "widgets" "generation" "hybrid" "sortingcomponents" "documentation" "continuous integration" "packaging" "testing")
+else
+    LABELS=("$3")
+fi
+
+for LABEL in "${LABELS[@]}"; do
+    echo "$LABEL:"
+    echo ""
+    gh pr list --repo SpikeInterface/spikeinterface --label "$LABEL" --base "main" --state merged --json number,title,mergedAt \
+        | jq -r --arg start_date "${START_DATE}T00:00:00Z" --arg end_date "${END_DATE}T00:00:00Z" \
+        '.[] | select(.mergedAt >= $start_date and .mergedAt <= $end_date) | "* \(.title) (#\(.number))"'
+    echo ""
+done
+
+echo "Contributors:"
+echo ""
+gh pr list --repo SpikeInterface/spikeinterface --limit 1000 --base main --state merged --json number,title,author,mergedAt \
+  | jq -r --arg start_date "${START_DATE}T00:00:00Z" --arg end_date "${END_DATE}T00:00:00Z" \
+  '[.[] | select(.mergedAt >= $start_date and .mergedAt <= $end_date) | .author.login] | unique | .[] | "* @" + .'

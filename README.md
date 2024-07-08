@@ -76,11 +76,13 @@ With SpikeInterface, users can:
 
 ## Documentation
 
-Detailed documentation of the latest PyPI release of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/0.101.0).
+Detailed documentation of the latest PyPI release of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/stable).
 
 Detailed documentation of the development version of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
 
 Several tutorials to get started can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
+
+Checkout our YouTube channel for video tutorials: [SpikeInterface YouTube Channel](https://www.youtube.com/@Spikeinterface).
 
 There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking
 and sorting components.
@@ -130,3 +132,6 @@ If you find SpikeInterface useful in your research, please cite:
   publisher={eLife Sciences Publications Limited}
 }
 ```
+
+Please also cite other relevant papers for the specific components you use.
+For a ful list of references, please check the [references](https://spikeinterface.readthedocs.io/en/latest/references.html) page.
