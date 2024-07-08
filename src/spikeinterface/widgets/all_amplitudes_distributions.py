@@ -15,12 +15,12 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    unit_ids: list
+    unit_ids : list
         List of unit ids, default None
-    unit_colors: None or dict
-        Dict of colors with key: unit, value: color, default None
+    unit_colors : None or dict
+        Dict of colors with key : unit, value : color, default None
     """
 
     def __init__(

@@ -3,14 +3,18 @@ from pathlib import Path
 
 import shutil
 
-from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import (
+    generate_ground_truth_recording,
     create_sorting_analyzer,
     load_sorting_analyzer,
     get_available_analyzer_extensions,
     get_default_analyzer_extension_params,
 )
-from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.sortinganalyzer import (
+    register_result_extension,
+    AnalyzerExtension,
+    _sort_extensions_by_dependency,
+)
 
 import numpy as np
 
@@ -28,8 +32,13 @@ def get_dataset():
     return recording, sorting
 
 
-def test_SortingAnalyzer_memory(tmp_path):
-    recording, sorting = get_dataset()
+@pytest.fixture(scope="module")
+def dataset():
+    return get_dataset()
+
+
+def test_SortingAnalyzer_memory(tmp_path, dataset):
+    recording, sorting = dataset
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
@@ -48,8 +57,8 @@ def test_SortingAnalyzer_memory(tmp_path):
     assert not sorting_analyzer.return_scaled
 
 
-def test_SortingAnalyzer_binary_folder(tmp_path):
-    recording, sorting = get_dataset()
+def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
+    recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
@@ -58,8 +67,15 @@ def test_SortingAnalyzer_binary_folder(tmp_path):
     sorting_analyzer = create_sorting_analyzer(
         sorting, recording, format="binary_folder", folder=folder, sparse=False, sparsity=None
     )
+
+    sorting_analyzer.compute(["random_spikes", "templates"])
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
+    # this bug requires that we have an info.json file so we calculate templates above
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    assert len(select_units_sorting_analyer.unit_ids) == 1
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
@@ -78,8 +94,8 @@ def test_SortingAnalyzer_binary_folder(tmp_path):
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
 
-def test_SortingAnalyzer_zarr(tmp_path):
-    recording, sorting = get_dataset()
+def test_SortingAnalyzer_zarr(tmp_path, dataset):
+    recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
@@ -88,8 +104,14 @@ def test_SortingAnalyzer_zarr(tmp_path):
     sorting_analyzer = create_sorting_analyzer(
         sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
     )
+    sorting_analyzer.compute(["random_spikes", "templates"])
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
+    # this bug requires that we have an info.json file so we calculate templates above
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    assert len(select_units_sorting_analyer.unit_ids) == 1
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
@@ -99,10 +121,27 @@ def test_SortingAnalyzer_zarr(tmp_path):
     )
 
 
-def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
+def test_SortingAnalyzer_tmp_recording(dataset):
+    recording, sorting = dataset
+    recording_cached = recording.save(mode="memory")
 
-    print()
-    print(sorting_analyzer)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    sorting_analyzer.set_temporary_recording(recording_cached)
+    assert sorting_analyzer.has_temporary_recording()
+    # check that saving as uses the original recording
+    sorting_analyzer_saved = sorting_analyzer.save_as(format="memory")
+    assert sorting_analyzer_saved.has_recording()
+    assert not sorting_analyzer_saved.has_temporary_recording()
+    assert isinstance(sorting_analyzer_saved.recording, type(recording))
+
+    recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
+
+    # wrong channels
+    with pytest.raises(AssertionError):
+        sorting_analyzer.set_temporary_recording(recording_sliced)
+
+
+def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     register_result_extension(DummyAnalyzerExtension)
 
@@ -151,9 +190,14 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
         data = sorting_analyzer2.get_extension("dummy").data
         assert "result_one" in data
+        assert isinstance(data["result_one"], str)
+        assert isinstance(data["result_two"], np.ndarray)
         assert data["result_two"].size == original_sorting.to_spike_vector().size
+        assert np.array_equal(data["result_two"], sorting_analyzer.get_extension("dummy").data["result_two"])
 
         assert sorting_analyzer2.return_scaled == sorting_analyzer.return_scaled
+
+        assert sorting_analyzer2.sparsity == sorting_analyzer.sparsity
 
     # select unit_ids to several format
     for format in ("memory", "binary_folder", "zarr"):
@@ -255,10 +299,36 @@ def test_extension():
         register_result_extension(DummyAnalyzerExtension2)
 
 
+def test_extensions_sorting():
+
+    # nothing happens if all parents are on the left of the children
+    extensions_in_order = {"random_spikes": {"rs": 1}, "waveforms": {"wv": 2}}
+    sorted_extensions_1 = _sort_extensions_by_dependency(extensions_in_order)
+    assert list(sorted_extensions_1.keys()) == list(extensions_in_order.keys())
+
+    extensions_out_of_order = {"waveforms": {"wv": 2}, "random_spikes": {"rs": 1}}
+    sorted_extensions_2 = _sort_extensions_by_dependency(extensions_out_of_order)
+    assert list(sorted_extensions_2.keys()) == list(extensions_in_order.keys())
+
+    # doing two movements
+    extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}}
+    extensions_qm_correct = {"waveforms": {}, "templates": {}, "quality_metrics": {}}
+    sorted_extensions_3 = _sort_extensions_by_dependency(extensions_qm_left)
+    assert list(sorted_extensions_3.keys()) == list(extensions_qm_correct.keys())
+
+    # should move parent (waveforms) left of child (quality_metrics), and move grandparent (random_spikes) left of parent
+    extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}, "random_spikes": {}}
+    extensions_qm_correct = {"random_spikes": {}, "waveforms": {}, "templates": {}, "quality_metrics": {}}
+    sorted_extensions_4 = _sort_extensions_by_dependency(extensions_qm_left)
+    assert list(sorted_extensions_4.keys()) == list(extensions_qm_correct.keys())
+
+
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
-    test_SortingAnalyzer_memory(tmp_path)
-    test_SortingAnalyzer_binary_folder(tmp_path)
-    test_SortingAnalyzer_zarr(tmp_path)
+    dataset = get_dataset()
+    test_SortingAnalyzer_memory(tmp_path, dataset)
+    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    test_SortingAnalyzer_zarr(tmp_path, dataset)
+    test_SortingAnalyzer_tmp_recording(dataset)
     test_extension()
     test_extension_params()

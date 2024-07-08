@@ -34,15 +34,13 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     """
 
-    mode = "file"
     NeoRawIOClass = "MEArecRawIO"
-    name = "mearec"
 
     def __init__(self, file_path: Union[str, Path], all_annotations: bool = False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
@@ -75,10 +73,8 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
 
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
-    mode = "file"
     NeoRawIOClass = "MEArecRawIO"
     neo_returns_frames = False
-    name = "mearec"
 
     def __init__(self, file_path: Union[str, Path]):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
@@ -120,14 +116,14 @@ def read_mearec(file_path):
 
     Parameters
     ----------
-    file_path: str or Path
+    file_path : str or Path
         Path to MEArec h5 file
 
     Returns
     -------
-    recording: MEArecRecordingExtractor
+    recording : MEArecRecordingExtractor
         The recording extractor object
-    sorting: MEArecSortingExtractor
+    sorting : MEArecSortingExtractor
         The sorting extractor object
     """
     recording = MEArecRecordingExtractor(file_path)

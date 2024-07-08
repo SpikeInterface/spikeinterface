@@ -81,12 +81,12 @@ def get_default_sorter_params(sorter_name_or_class):
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
+    sorter_name_or_class : str or SorterClass
         The sorter to retrieve default parameters from.
 
     Returns
     -------
-    default_params: dict
+    default_params : dict
         Dictionary with default params for the specified sorter.
     """
 
@@ -105,12 +105,12 @@ def get_sorter_params_description(sorter_name_or_class):
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
+    sorter_name_or_class : str or SorterClass
         The sorter to retrieve parameters description from.
 
     Returns
     -------
-    params_description: dict
+    params_description : dict
         Dictionary with parameter description
     """
 
@@ -129,12 +129,12 @@ def get_sorter_description(sorter_name_or_class):
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
+    sorter_name_or_class : str or SorterClass
         The sorter to retrieve description from.
 
     Returns
     -------
-    params_description: dict
+    params_description : dict
         Dictionary with parameter description.
     """
 

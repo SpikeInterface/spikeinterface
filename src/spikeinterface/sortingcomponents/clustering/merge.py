@@ -1,23 +1,24 @@
 from __future__ import annotations
 
-from pathlib import Path
 from multiprocessing import get_context
-from concurrent.futures import ProcessPoolExecutor
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
-import scipy.spatial
-from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 import numpy as np
-import networkx as nx
 
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
+try:
+    import numba
+    import networkx as nx
+    import scipy.spatial
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-from .isocut5 import isocut5
+    from .isocut5 import isocut5
 
+except:
+    pass
 from .tools import aggregate_sparse_features, FeaturesLoader, compute_template_from_sparse
 
 

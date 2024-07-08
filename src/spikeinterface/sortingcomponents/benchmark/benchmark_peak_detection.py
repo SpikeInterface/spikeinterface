@@ -1,24 +1,15 @@
 from __future__ import annotations
 
-from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.core import NumpySorting
-from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.widgets import (
-    plot_probe_map,
     plot_agreement_matrix,
-    plot_comparison_collision_by_similarity,
-    plot_unit_templates,
-    plot_unit_waveforms,
 )
 from spikeinterface.comparison.comparisontools import make_matching_events
 from spikeinterface.core import get_noise_levels
 
-import time
-import string, random
-import pylab as plt
-import os
+
 import numpy as np
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
@@ -136,6 +127,7 @@ class PeakDetectionStudy(BenchmarkStudy):
     def plot_agreements_by_channels(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -147,6 +139,7 @@ class PeakDetectionStudy(BenchmarkStudy):
     def plot_agreements_by_units(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -184,6 +177,7 @@ class PeakDetectionStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -202,10 +196,13 @@ class PeakDetectionStudy(BenchmarkStudy):
                 abs_threshold = -detect_threshold * noise_levels
                 ax.plot([abs_threshold, abs_threshold], [ymin, ymax], "k--")
 
+        return fig
+
     def plot_deltas_per_cells(self, case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
         for count, key in enumerate(case_keys):
@@ -226,6 +223,7 @@ class PeakDetectionStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=figsize, squeeze=True)
         for key in case_keys:

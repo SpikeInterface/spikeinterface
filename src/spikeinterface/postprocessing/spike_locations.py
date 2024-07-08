@@ -59,9 +59,6 @@ class ComputeSpikeLocations(AnalyzerExtension):
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-        extremum_channel_inds = get_template_extremum_channel(self.sorting_analyzer, outputs="index")
-        self.spikes = self.sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-
     def _set_params(
         self,
         ms_before=0.5,
@@ -89,8 +86,9 @@ class ComputeSpikeLocations(AnalyzerExtension):
     def _select_extension_data(self, unit_ids):
         old_unit_ids = self.sorting_analyzer.unit_ids
         unit_inds = np.flatnonzero(np.isin(old_unit_ids, unit_ids))
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
 
-        spike_mask = np.isin(self.spikes["unit_index"], unit_inds)
+        spike_mask = np.isin(spikes["unit_index"], unit_inds)
         new_spike_locations = self.data["spike_locations"][spike_mask]
         return dict(spike_locations=new_spike_locations)
 
@@ -105,8 +103,8 @@ class ComputeSpikeLocations(AnalyzerExtension):
         )
 
         retriever = SpikeRetriever(
-            recording,
             sorting,
+            recording,
             channel_from_template=True,
             extremum_channel_inds=extremum_channels_indices,
         )
@@ -120,7 +118,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
         )
         return nodes
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         spike_locations = run_node_pipeline(
@@ -129,6 +127,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name="spike_locations",
             gather_mode="memory",
+            verbose=verbose,
         )
         self.data["spike_locations"] = spike_locations
 
@@ -139,7 +138,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
             spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
+            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
             spike_locations_by_units = {}
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 spike_locations_by_units[segment_index] = {}

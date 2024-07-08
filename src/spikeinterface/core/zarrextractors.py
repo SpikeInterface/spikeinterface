@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 import numpy as np
 import zarr
@@ -19,25 +20,18 @@ class ZarrRecordingExtractor(BaseRecording):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to the zarr root folder
-    storage_options: dict or None
+    storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
 
     Returns
     -------
-    recording: ZarrRecordingExtractor
+    recording : ZarrRecordingExtractor
         The recording Extractor
     """
 
-    extractor_name = "ZarrRecording"
-    installed = True
-    mode = "folder"
-    installation_mesg = ""
-    name = "zarr"
-
     def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
-        assert self.installed, self.installation_mesg
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
@@ -133,7 +127,7 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         """Returns the number of samples in this signal block
 
         Returns:
-            SampleIndex: Number of samples in the signal block
+            SampleIndex : Number of samples in the signal block
         """
         return self._timeseries.shape[0]
 
@@ -155,26 +149,19 @@ class ZarrSortingExtractor(BaseSorting):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to the zarr root file
-    storage_options: dict or None
+    storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
-    zarr_group: str or None, default: None
+    zarr_group : str or None, default: None
         Optional zarr group path to load the sorting from. This can be used when the sorting is not stored at the root, but in sub group.
     Returns
     -------
-    sorting: ZarrSortingExtractor
+    sorting : ZarrSortingExtractor
         The sorting Extractor
     """
 
-    extractor_name = "ZarrSorting"
-    installed = True
-    mode = "folder"
-    installation_mesg = ""
-    name = "zarr"
-
     def __init__(self, folder_path: Path | str, storage_options: dict | None = None, zarr_group: str | None = None):
-        assert self.installed, self.installation_mesg
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
@@ -244,14 +231,14 @@ def read_zarr(
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to the zarr root file
-    storage_options: dict or None
+    storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
 
     Returns
     -------
-    extractor: ZarrExtractor
+    extractor : ZarrExtractor
         The loaded extractor
     """
     # TODO @alessio : we should have something more explicit in our zarr format to tell which object it is.
@@ -308,13 +295,14 @@ def get_default_zarr_compressor(clevel: int = 5):
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
 
 
-def add_properties_and_annotations(
-    zarr_group: zarr.hierarchy.Group, recording_or_sorting: Union[BaseRecording, BaseSorting]
-):
+def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_or_sorting: BaseRecording | BaseSorting):
     # save properties
     prop_group = zarr_group.create_group("properties")
     for key in recording_or_sorting.get_property_keys():
         values = recording_or_sorting.get_property(key)
+        if values.dtype.kind == "O":
+            warnings.warn(f"Property {key} not saved because it is a python Object type")
+            continue
         prop_group.create_dataset(name=key, data=values, compressor=None)
 
     # save annotations
@@ -327,11 +315,11 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The sorting extractor object to be added to the zarr group
-    zarr_group: zarr.hierarchy.Group
+    zarr_group : zarr.hierarchy.Group
         The zarr group
-    kwargs: dict
+    kwargs : dict
         Other arguments passed to the zarr compressor
     """
     from numcodecs import Delta
@@ -451,23 +439,23 @@ def add_traces_to_zarr(
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object to be saved in .dat format
-    zarr_group: zarr.Group
+    zarr_group : zarr.Group
         The zarr group to add traces to
-    dataset_paths: list
+    dataset_paths : list
         List of paths to traces datasets in the zarr group
-    channel_chunk_size: int or None, default: None (chunking in time only)
+    channel_chunk_size : int or None, default: None (chunking in time only)
         Channels per chunk
-    dtype: dtype, default: None
+    dtype : dtype, default: None
         Type of the saved data
-    compressor: zarr compressor or None, default: None
+    compressor : zarr compressor or None, default: None
         Zarr compressor
-    filters: list, default: None
+    filters : list, default: None
         List of zarr filters
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool, default: True
+    auto_cast_uint : bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """
