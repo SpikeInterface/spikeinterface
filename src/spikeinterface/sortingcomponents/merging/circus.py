@@ -23,9 +23,7 @@ class CircusMerging(BaseMergingEngine):
         "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.2},
         "curation_kwargs": {
             "minimum_spikes": 50,
-            "corr_diff_thresh": 0.5,
             "maximum_distance_um": 50,
-            "template_diff_thresh": 0.5,
         },
         "temporal_splits_kwargs": {
             "minimum_spikes": 50,
@@ -68,7 +66,7 @@ class CircusMerging(BaseMergingEngine):
     def _get_new_sorting(self):
         curation_kwargs = self.params.get("curation_kwargs", None)
         if curation_kwargs is not None:
-            merges = get_potential_auto_merge(self.analyzer, **curation_kwargs, preset="lussac")
+            merges = get_potential_auto_merge(self.analyzer, **curation_kwargs, preset="default")
         else:
             merges = []
         if self.verbose:
