@@ -188,15 +188,20 @@ def compute_pc_metrics(
         metric_params = qm_params[metric_name] if metric_name in qm_params else {}
 
         for unit_ind, unit_id in units_loop:
-
-            res = func(
-                sorting_analyzer,
-                unit_id,
-                seed=seed,
-                n_spikes_all_units=n_spikes_all_units,
-                fr_all_units=fr_all_units,
-                **metric_params,
-            )
+            try:
+                res = func(
+                    sorting_analyzer,
+                    unit_id,
+                    seed=seed,
+                    n_spikes_all_units=n_spikes_all_units,
+                    fr_all_units=fr_all_units,
+                    **metric_params,
+                )
+            except:
+                if metric_name == "nn_isolation":
+                    res = (np.nan, np.nan)
+                elif metric_name == "nn_noise_overlap":
+                    res = np.nan
 
             if metric_name == "nn_isolation":
                 nn_isolation, nn_unit_id = res
