@@ -105,6 +105,8 @@ def correct_inter_session_displacement(
 
     motion_histogram_list = []
 
+    bin_um = 2  # TODO: critial paraneter. easier to take no binning and gaus smooth?
+
     # TODO: own function
     for recording, peaks, peak_locations in zip(
         recordings_list,
@@ -112,6 +114,7 @@ def correct_inter_session_displacement(
         peak_locations_list,  # TODO: this is overwriting above variable names. Own function!
     ):  # TODO: do a lot of checks to make sure these bin sizes make sesnese
         # Do some checks on temporal and spatial bin edges that they are all the same?
+
         if motion_histogram_dim == "2D":
             motion_histogram = make_2d_motion_histogram(
                 recording,
@@ -120,7 +123,7 @@ def correct_inter_session_displacement(
                 weight_with_amplitude=False,
                 direction="y",
                 bin_duration_s=recording.get_duration(segment_index=0),  # 1.0,
-                bin_um=2.0,
+                bin_um=bin_um,
                 margin_um=50,
                 spatial_bin_edges=None,
             )
@@ -131,7 +134,7 @@ def correct_inter_session_displacement(
                 peak_locations,
                 direction="y",
                 bin_duration_s=recording.get_duration(segment_index=0),  # 1.0,
-                bin_um=2.0,
+                bin_um=bin_um,
                 margin_um=50,
                 num_amp_bins=20,
                 log_transform=True,
@@ -148,32 +151,37 @@ def correct_inter_session_displacement(
     # which is (2P-1)^N where P is length of motion histogram and N is number of recordings.
     # TODO: double-check what is done in kilosort-like / DREDGE
     # put histograms into X and do X^T X then mean(U), det or eigs of covar mat
+    # can try iterative template. Not sure it will work so well taking the mean
+    # over only a few histograms that could be wildy different.
+    # Displacemene
     num_recordings = len(recordings_list)
 
     shifts = np.zeros(num_recordings)
 
     # TODO: not checked any of the below properly
     first_hist = motion_histogram_list[0] / motion_histogram_list[0].sum()
-    first_hist -= np.mean(first_hist)  # TODO: pretty sure not necessary
+    #  first_hist -= np.mean(first_hist)  # TODO: pretty sure not necessary
 
     for i in range(1, num_recordings):
 
         hist = motion_histogram_list[i] / motion_histogram_list[i].sum()
-        hist -= np.mean(hist)  # TODO: pretty sure not necessary
+        #   hist -= np.mean(hist)  # TODO: pretty sure not necessary
+        conv = np.correlate(first_hist, hist, mode="full")
 
-        conv = np.convolve(first_hist, hist, mode="full")
-
-        if hist.size % 2 == 0:
-            midpoint = hist.size / 2
+        if conv.size % 2 == 0:
+            midpoint = conv.size / 2
         else:
-            midpoint = (hist.size - 1) / 2  # TODO: carefully double check!
+            midpoint = (conv.size - 1) / 2  # TODO: carefully double check!
 
-        shifts[i] = midpoint - np.argmax(conv)  # TODO: the bin spacing is super important for resoltuion
-
-    # TODO
-    import matplotlib.pyplot as plt
+        # TODO: think will need to make this negative
+        shifts[i] = (midpoint - np.argmax(conv)) * bin_um  # # TODO: the bin spacing is super important for resoltuion
 
     # TODO: handle only the 2D case for now
     # TODO: do multi-session optimisation
 
     # Handle drift
+
+    # TODO: add motion to motion if exists otherwise create InterpolateMotionRecording object!
+    # Will need the y-axis bins for this
+    motion = Motion([motion_array], [temporal_bins], non_rigid_window_centers, direction=direction)
+    recording_corrected = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
