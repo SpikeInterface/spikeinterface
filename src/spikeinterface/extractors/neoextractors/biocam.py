@@ -31,9 +31,7 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
-    mode = "file"
     NeoRawIOClass = "BiocamRawIO"
-    name = "biocam"
 
     def __init__(
         self,
@@ -42,7 +40,6 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         electrode_width=None,
         stream_id=None,
         stream_name=None,
-        block_index=None,
         all_annotations=False,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)

@@ -29,8 +29,6 @@ class CellExplorerSortingExtractor(BaseSorting):
         Path to the `sessionInfo.mat` file. If None, it will be inferred from the file_path.
     """
 
-    extractor_name = "CellExplorerSortingExtractor"
-    mode = "file"
     installation_mesg = "To use the CellExplorerSortingExtractor install pymatreader"
 
     def __init__(

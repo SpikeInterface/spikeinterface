@@ -21,7 +21,7 @@ All classes support:
   * data on-demand (lazy loading)
   * multiple segments, where each segment is a contiguous piece of data (recording, sorting, events).
 
-
+.. _core-recording:
 Recording
 ---------
 
@@ -162,7 +162,7 @@ Internally, any sorting object can construct 2 internal caches:
   2. a unique numpy.array with structured dtype aka "spikes vector". This is useful for processing by small chunks of
      time, like for extracting amplitudes from a recording.
 
-
+.. _core-sorting-analyzer:
 SortingAnalyzer
 ---------------
 
@@ -179,9 +179,8 @@ to perform further analysis, such as calculating :code:`waveforms` and :code:`te
 Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* and the physical *scaling*.
 Sparsity defines the channels on which waveforms and templates are calculated using, for example,  a
 physical distance from the channel with the largest peak amplitude (see the :ref:`Sparsity` section). Scaling, set by
-the :code:`return_scaled` argument, says whether the data has been converted from integer values to physical units such as
-Voltage (see the end of the :ref:`Recording` section).
-
+the :code:`return_scaled` argument, determines whether the data is converted from integer values to :math:`\mu V` or not.
+By default, :code:`return_scaled` is true and all processed data voltage values are in :math:`\mu V` (e.g., waveforms, templates, spike amplitudes, etc.).
 
 Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 

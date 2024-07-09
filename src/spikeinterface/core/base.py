@@ -7,7 +7,6 @@ import warnings
 import weakref
 import json
 import pickle
-import os
 import random
 import string
 from packaging.version import parse
@@ -41,7 +40,7 @@ class BaseExtractor:
     # This replaces the old key_properties
     # These are annotations/properties that always need to be
     # dumped (for instance locations, groups, is_fileterd, etc.)
-    _main_annotations = []
+    _main_annotations = ["name"]
     _main_properties = []
 
     # these properties are skipped by default in copy_metadata
@@ -78,6 +77,19 @@ class BaseExtractor:
 
         # preferred context for multiprocessing
         self._preferred_mp_context = None
+
+    @property
+    def name(self):
+        name = self._annotations.get("name", None)
+        return name if name is not None else self.__class__.__name__
+
+    @name.setter
+    def name(self, value):
+        if value is not None:
+            self.annotate(name=value)
+        else:
+            # we remove the annotation if it exists
+            _ = self._annotations.pop("name", None)
 
     def get_num_segments(self) -> int:
         # This is implemented in BaseRecording or BaseSorting
@@ -128,8 +140,18 @@ class BaseExtractor:
                 indices = np.arange(len(self._main_ids))
         else:
             assert isinstance(ids, (list, np.ndarray, tuple)), "'ids' must be a list, np.ndarray or tuple"
+
+            non_existent_ids = [id for id in ids if id not in self._main_ids]
+            if non_existent_ids:
+                error_msg = (
+                    f"IDs {non_existent_ids} are not channel ids of the extractor. \n"
+                    f"Available ids are {self._main_ids} with dtype {self._main_ids.dtype}"
+                )
+                raise ValueError(error_msg)
+
             _main_ids = self._main_ids.tolist()
             indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
+
             if prefer_slice:
                 if np.all(np.diff(indices) == 1):
                     indices = slice(indices[0], indices[-1] + 1)
@@ -550,7 +572,7 @@ class BaseExtractor:
                         return False
         return self._serializability[type]
 
-    def check_if_memory_serializable(self):
+    def check_if_memory_serializable(self) -> bool:
         """
         Check if the object is serializable to memory with pickle, including nested objects.
 
@@ -561,7 +583,7 @@ class BaseExtractor:
         """
         return self.check_serializability("memory")
 
-    def check_if_json_serializable(self):
+    def check_if_json_serializable(self) -> bool:
         """
         Check if the object is json serializable, including nested objects.
 
@@ -574,7 +596,7 @@ class BaseExtractor:
         # is this needed ??? I think no.
         return self.check_serializability("json")
 
-    def check_if_pickle_serializable(self):
+    def check_if_pickle_serializable(self) -> bool:
         # is this needed ??? I think no.
         return self.check_serializability("pickle")
 
@@ -881,7 +903,7 @@ class BaseExtractor:
 
         Parameters
         ----------
-        name : str , optional
+        name : str or Path, optional
             The name of the subfolder within the global temporary folder. If `folder`
             is provided, this argument must be None.
         folder : str or Path, optional
@@ -928,13 +950,14 @@ class BaseExtractor:
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
-        provenance_file = folder / f"provenance.json"
         if self.check_serializability("json"):
+            provenance_file = folder / f"provenance.json"
+            self.dump(provenance_file)
+        elif self.check_serializability("pickle"):
+            provenance_file = folder / f"provenance.pkl"
             self.dump(provenance_file)
         else:
-            provenance_file.write_text(
-                json.dumps({"warning": "the provenace is not json serializable!!!"}), encoding="utf8"
-            )
+            warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
         self.save_metadata_to_folder(folder)
 
@@ -1001,7 +1024,6 @@ class BaseExtractor:
         cached: ZarrExtractor
             Saved copy of the extractor.
         """
-        import zarr
         from .zarrextractors import read_zarr
 
         save_kwargs.pop("format", None)

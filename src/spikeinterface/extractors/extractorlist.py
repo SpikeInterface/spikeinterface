@@ -45,6 +45,12 @@ from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spyking
 from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
 from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
 from .phykilosortextractors import PhySortingExtractor, KiloSortSortingExtractor, read_phy, read_kilosort
+from .sinapsrecordingextractors import (
+    SinapsResearchPlatformRecordingExtractor,
+    SinapsResearchPlatformH5RecordingExtractor,
+    read_sinaps_research_platform,
+    read_sinaps_research_platform_h5,
+)
 
 # sorting in relation with simulator
 from .shybridextractors import (
@@ -77,6 +83,7 @@ recording_extractor_full_list = [
     CompressedBinaryIblExtractor,
     IblRecordingExtractor,
     MCSH5RecordingExtractor,
+    SinapsResearchPlatformRecordingExtractor,
 ]
 recording_extractor_full_list += neo_recording_extractors_list
 
@@ -110,51 +117,20 @@ event_extractor_full_list += neo_event_extractors_list
 
 snippets_extractor_full_list = [NpySnippetsExtractor, WaveClusSnippetsExtractor]
 
+recording_extractor_full_dict = {}
+for rec_class in recording_extractor_full_list:
+    # here we get the class name, remove "Recording" and "Extractor" and make it lower case
+    rec_class_name = rec_class.__name__.replace("Recording", "").replace("Extractor", "").lower()
+    recording_extractor_full_dict[rec_class_name] = rec_class
 
-recording_extractor_full_dict = {recext.name: recext for recext in recording_extractor_full_list}
-sorting_extractor_full_dict = {recext.name: recext for recext in sorting_extractor_full_list}
-snippets_extractor_full_dict = {recext.name: recext for recext in snippets_extractor_full_list}
+sorting_extractor_full_dict = {}
+for sort_class in sorting_extractor_full_list:
+    # here we get the class name, remove "Extractor" and make it lower case
+    sort_class_name = sort_class.__name__.replace("Sorting", "").replace("Extractor", "").lower()
+    sorting_extractor_full_dict[sort_class_name] = sort_class
 
-
-def get_recording_extractor_from_name(name: str) -> Type[BaseRecording]:
-    """
-    Returns the Recording Extractor class based on its name.
-
-    Parameters
-    ----------
-    name: str
-        The Recording Extractor's name.
-
-    Returns
-    -------
-    recording_extractor: BaseRecording
-        The Recording Extractor class.
-    """
-
-    for recording_extractor in recording_extractor_full_list:
-        if recording_extractor.__name__ == name:
-            return recording_extractor
-
-    raise ValueError(f"Recording extractor '{name}' not found.")
-
-
-def get_sorting_extractor_from_name(name: str) -> Type[BaseSorting]:
-    """
-    Returns the Sorting Extractor class based on its name.
-
-    Parameters
-    ----------
-    name: str
-        The Sorting Extractor's name.
-
-    Returns
-    -------
-    sorting_extractor: BaseSorting
-        The Sorting Extractor class.
-    """
-
-    for sorting_extractor in sorting_extractor_full_list:
-        if sorting_extractor.__name__ == name:
-            return sorting_extractor
-
-    raise ValueError(f"Sorting extractor '{name}' not found.")
+event_extractor_full_dict = {}
+for event_class in event_extractor_full_list:
+    # here we get the class name, remove "Extractor" and make it lower case
+    event_class_name = event_class.__name__.replace("Event", "").replace("Extractor", "").lower()
+    event_extractor_full_dict[event_class_name] = event_class

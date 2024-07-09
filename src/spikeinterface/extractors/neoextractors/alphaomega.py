@@ -27,9 +27,7 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
-    mode = "folder"
     NeoRawIOClass = "AlphaOmegaRawIO"
-    name = "alphaomega"
 
     def __init__(self, folder_path, lsx_files=None, stream_id="RAW", stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(folder_path, lsx_files)
@@ -50,6 +48,11 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
 class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
     """
     Class for reading events from AlphaOmega MPX file format
+
+    Parameters
+    ----------
+    folder_path : str or Path-like
+        The folder path to the AlphaOmega events.
     """
 
     mode = "folder"
