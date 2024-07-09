@@ -766,6 +766,7 @@ class BaseExtractor:
             if "warning" in d:
                 print("The extractor was not serializable to file")
                 return None
+
             extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
             return extractor
 
@@ -798,7 +799,10 @@ class BaseExtractor:
             return extractor
 
         else:
-            raise ValueError("spikeinterface.Base.load() file_path must be an existing folder or file")
+            error_msg = f"Failed to load the file_path {file_path} must be an existing folder or file"
+            if base_folder:
+                error_msg = f"\n base folder provided is {base_folder}"
+            raise ValueError(error_msg)
 
     def __reduce__(self):
         """
