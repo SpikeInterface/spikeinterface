@@ -15,6 +15,7 @@ Main changes:
 
 core:
 
+* Saving provenance with paths relative to folder (#3165)
 * Better error message for `BaseExtractor.load()` (#3170)
 * Fix segment start/end frame None in `concatenate_recordings` (#3161)
 * Implement `apply_merges_to_sorting()` (#3154)
