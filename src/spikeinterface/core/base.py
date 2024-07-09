@@ -799,7 +799,7 @@ class BaseExtractor:
             return extractor
 
         else:
-            error_msg = f"Failed to load the file_path {file_path} must be an existing folder or file"
+            error_msg = f"{file_path} is not a file or a folder"
             if base_folder:
                 error_msg = f"\n The provided base_folder is {base_folder}"
             raise ValueError(error_msg)
