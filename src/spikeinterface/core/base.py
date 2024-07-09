@@ -799,9 +799,8 @@ class BaseExtractor:
             return extractor
 
         else:
-            error_msg = f"{file_path} is not a file or a folder"
-            if base_folder:
-                error_msg = f"\n The provided base_folder is {base_folder}"
+            error_msg = f"{file_path} is not a file or a folder. It should point out to either a json, pickle file or a
+            folder that is the result of extractor.save(...)"
             raise ValueError(error_msg)
 
     def __reduce__(self):
