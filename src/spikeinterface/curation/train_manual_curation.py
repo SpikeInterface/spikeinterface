@@ -13,9 +13,23 @@ warnings.filterwarnings("ignore")
 
 class CurationModelTrainer:
     def __init__(
-        self, target_column, output_folder, imputation_strategies=None, scaling_techniques=None, metrics_to_use=None
+        self,
+        target_column,
+        output_folder,
+        metrics_to_use=None,
+        imputation_strategies=None,
+        scaling_techniques=None,
+        classifiers=None,
     ):
         from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+        from sklearn.experimental import enable_hist_gradient_boosting
+        from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
+        from sklearn.svm import SVC
+        from sklearn.linear_model import LogisticRegression
+        from lightgbm import LGBMClassifier
+        from catboost import CatBoostClassifier
+        from xgboost import XGBClassifier
+        from sklearn.neural_network import MLPClassifier
 
         if imputation_strategies is None:
             imputation_strategies = ["median", "most_frequent", "knn", "iterative"]
@@ -25,6 +39,19 @@ class CurationModelTrainer:
                 ("min_max_scaler", MinMaxScaler()),
                 ("robust_scaler", RobustScaler()),
             ]
+        if classifiers is None:
+            classifiers = [
+                RandomForestClassifier,
+                AdaBoostClassifier,
+                GradientBoostingClassifier,
+                SVC,
+                LogisticRegression,
+                XGBClassifier,
+                CatBoostClassifier,
+                LGBMClassifier,
+                MLPClassifier,
+            ]
+
         self.output_folder = output_folder
         self.target_column = target_column
         self.imputation_strategies = imputation_strategies
@@ -59,20 +86,31 @@ class CurationModelTrainer:
         self.testing_metrics = {0: pd.read_csv(path, index_col=0)}
 
     def process_test_data_for_classification(self):
-        import pandas as pd
-
-        # Remove infinite values from the metrics and convert to float32
-        self.testing_metrics[0] = self.testing_metrics[0].astype("float32")
-        self.testing_metrics[0] = self.testing_metrics[0].map(lambda x: np.nan if np.isinf(x) else x)
-        self.testing_metrics[0] = self.testing_metrics[0].dropna(subset=[self.target_column])
 
         if self.target_column in self.testing_metrics[0].columns:
             # Extract the target variable and features
             self.y = self.testing_metrics[0][self.target_column]
 
+            # If any string labels in y, convert to integers and print a warning
+            if self.y.dtype == "object":
+                self.y = self.y.astype("category").cat.codes
+                # Store conversion of unique label to int
+                self.label_conversion = dict(
+                    zip(self.testing_metrics[0][self.target_column].astype("category").cat.categories, self.y)
+                )
+                warnings.warn(
+                    "Target column contains string labels, converting to integers. "
+                    "Please ensure that the labels are in the correct order."
+                    "Conversion can be found in self.label_conversion"
+                )
+
             # Reorder columns to match the initial metrics list,
             # Drops any columns not in the metrics list, fills any missing columns with NaN
             self.X = self.testing_metrics[0].reindex(columns=self.metrics_list)
+
+            # Remove infinite values from the metrics and convert to float32
+            self.X = self.X.astype("float32")
+            self.X = self.X.map(lambda x: np.nan if np.isinf(x) else x)
 
             # Fill any NaN values with 0
             self.X.fillna(0, inplace=True)
@@ -255,44 +293,23 @@ class CurationModelTrainer:
         }, (model, imputer, scaler)
 
 
-def train_model(metrics_path, output_folder, target_label, metrics_list=None):
-
-    from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-    from sklearn.experimental import enable_hist_gradient_boosting
-    from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
-    from sklearn.svm import SVC
-    from sklearn.linear_model import LogisticRegression
-    from lightgbm import LGBMClassifier
-    from catboost import CatBoostClassifier
-    from xgboost import XGBClassifier
-    from sklearn.neural_network import MLPClassifier
-
-    # TODO: align syntax for passing imputers, scalers, classifiers
-    imputation_strategies = ["median", "most_frequent", "knn", "iterative"]
-    scaling_techniques = [
-        ("standard_scaler", StandardScaler()),
-        ("min_max_scaler", MinMaxScaler()),
-        ("robust_scaler", RobustScaler()),
-    ]
-
-    classifiers = [
-        RandomForestClassifier,
-        AdaBoostClassifier,
-        GradientBoostingClassifier,
-        SVC,
-        LogisticRegression,
-        XGBClassifier,
-        CatBoostClassifier,
-        LGBMClassifier,
-        MLPClassifier,
-    ]
+def train_model(
+    metrics_path,
+    output_folder,
+    target_label,
+    metrics_list=None,
+    imputation_strategies=None,
+    scaling_techniques=None,
+    classifiers=None,
+):
 
     trainer = CurationModelTrainer(
         target_label,
         output_folder,
+        metrics_to_use=metrics_list,
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
-        metrics_list=metrics_list,
+        classifiers=classifiers,
     )
 
     trainer.load_and_preprocess_full(metrics_path)
