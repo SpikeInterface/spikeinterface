@@ -9,6 +9,75 @@ warnings.filterwarnings("ignore")
 
 
 class CurationModelTrainer:
+    """
+    A class used to train and evaluate machine learning models for spike sorting curation.
+
+    Parameters
+    ----------
+    target_column : str
+        The name of the target column in the dataset.
+    output_folder : str
+        The folder where outputs such as models and evaluation metrics will be saved.
+    metrics_to_use : list of str, optional
+        A list of metrics to use for training. If None, default metrics will be used.
+    imputation_strategies : list of str, optional
+        A list of imputation strategies to apply. If None, default strategies will be used.
+    scaling_techniques : list of str, optional
+        A list of scaling techniques to apply. If None, default techniques will be used.
+    classifiers : list of str, optional
+        A list of classifiers to evaluate. If None, default classifiers will be used.
+    seed : int, optional
+        Random seed for reproducibility. If None, a random seed will be generated.
+
+    Attributes
+    ----------
+    output_folder : str
+        The folder where outputs such as models and evaluation metrics will be saved.
+    target_column : str
+        The name of the target column in the dataset.
+    imputation_strategies : list of str
+        The list of imputation strategies to apply.
+    scaling_techniques : list of str
+        The list of scaling techniques to apply.
+    classifiers : list of str
+        The list of classifiers to evaluate.
+    seed : int
+        Random seed for reproducibility.
+    metrics_list : list of str
+        The list of metrics to use for training.
+    X : pandas.DataFrame or None
+        The feature matrix after preprocessing.
+    y : pandas.Series or None
+        The target vector after preprocessing.
+    testing_metrics : dict or None
+        Dictionary to hold testing metrics data.
+    label_conversion : dict or None
+        Dictionary to map string labels to integer codes if target column contains string labels.
+
+    Methods
+    -------
+    get_default_metrics_list()
+        Returns the default list of metrics.
+    load_and_preprocess_full(path)
+        Loads and preprocesses the data from the given path.
+    load_data_file(path)
+        Loads the data file from the given path.
+    process_test_data_for_classification()
+        Processes the test data for classification.
+    apply_scaling_imputation(imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val)
+        Applies the specified imputation and scaling techniques to the data.
+    get_classifier_instance(classifier_name)
+        Returns an instance of the specified classifier.
+    get_classifier_search_space(classifier_name)
+        Returns the search space for hyperparameter tuning for the specified classifier.
+    evaluate_model_config(imputation_strategies, scaling_techniques, classifiers)
+        Evaluates the model configurations with the given imputation strategies, scaling techniques, and classifiers.
+    _evaluate(imputation_strategies, scaling_techniques, classifiers, X_train, X_test, y_train, y_test)
+        Internal method to perform evaluation with parallel processing.
+    _train_and_evaluate(imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id)
+        Internal method to train and evaluate a single model configuration.
+    """
+
     def __init__(
         self,
         target_column,
@@ -62,6 +131,7 @@ class CurationModelTrainer:
         self.testing_metrics = None
 
     def get_default_metrics_list(self):
+        """Returns the default list of metrics."""
         return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_names()
 
     def load_and_preprocess_full(self, path):
@@ -74,6 +144,25 @@ class CurationModelTrainer:
         self.testing_metrics = {0: pd.read_csv(path, index_col=0)}
 
     def process_test_data_for_classification(self):
+        """
+        Processes the test data for classification.
+
+        This method extracts the target variable and features from the loaded dataset.
+        It handles string labels by converting them to integer codes and reindexes the
+        feature matrix to match the specified metrics list. Infinite values in the features
+        are replaced with NaN, and any remaining NaN values are filled with zeros.
+
+        Raises
+        ------
+        ValueError
+            If the target column specified is not found in the loaded dataset.
+
+        Notes
+        -----
+        If the target column contains string labels, a warning is issued and the labels
+        are converted to integer codes. The mapping from string labels to integer codes
+        is stored in the `label_conversion` attribute.
+        """
         if self.target_column in self.testing_metrics[0].columns:
             self.y = self.testing_metrics[0][self.target_column]
             if self.y.dtype == "object":
@@ -94,6 +183,7 @@ class CurationModelTrainer:
             raise ValueError(f"Target column {self.target_column} not found in testing metrics file")
 
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val):
+        """Impute and scale the data using the specified techniques."""
         from sklearn.experimental import enable_iterative_imputer
         from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
         from sklearn.ensemble import HistGradientBoostingRegressor
@@ -225,6 +315,32 @@ class CurationModelTrainer:
         return model, param_space
 
     def evaluate_model_config(self, imputation_strategies, scaling_techniques, classifiers):
+        """
+        Evaluates the model configurations with the given imputation strategies, scaling techniques, and classifiers.
+
+        This method splits the preprocessed data into training and testing sets, then evaluates the specified
+        combinations of imputation strategies, scaling techniques, and classifiers. The evaluation results are
+        saved to the output folder.
+
+        Parameters
+        ----------
+        imputation_strategies : list of str
+            A list of imputation strategies to apply to the data.
+        scaling_techniques : list of str
+            A list of scaling techniques to apply to the data.
+        classifiers : list of str
+            A list of classifier names to evaluate.
+
+        Raises
+        ------
+        ValueError
+            If any of the specified classifier names are not recognized.
+
+        Notes
+        -----
+        The method converts the classifier names to actual classifier instances before evaluating them.
+        The evaluation results, including the best model and its parameters, are saved to the output folder.
+        """
         from sklearn.model_selection import train_test_split
 
         X_train, X_test, y_train, y_test = train_test_split(
@@ -315,6 +431,42 @@ def train_model(
     classifiers=None,
     seed=None,
 ):
+    """
+    Trains and evaluates machine learning models for spike sorting curation.
+
+    This function initializes a `CurationModelTrainer` object, loads and preprocesses the data,
+    and evaluates the specified combinations of imputation strategies, scaling techniques, and classifiers.
+    The evaluation results, including the best model and its parameters, are saved to the output folder.
+
+    Parameters
+    ----------
+    metrics_path : str
+        The path to the CSV file containing the metrics data.
+    output_folder : str
+        The folder where outputs such as models and evaluation metrics will be saved.
+    target_label : str
+        The name of the target column in the dataset.
+    metrics_list : list of str, optional
+        A list of metrics to use for training. If None, default metrics will be used.
+    imputation_strategies : list of str, optional
+        A list of imputation strategies to apply. If None, default strategies will be used.
+    scaling_techniques : list of str, optional
+        A list of scaling techniques to apply. If None, default techniques will be used.
+    classifiers : list of str, optional
+        A list of classifiers to evaluate. If None, default classifiers will be used.
+    seed : int, optional
+        Random seed for reproducibility. If None, a random seed will be generated.
+
+    Returns
+    -------
+    CurationModelTrainer
+        The `CurationModelTrainer` object used for training and evaluation.
+
+    Notes
+    -----
+    This function handles the entire workflow of initializing the trainer, loading and preprocessing the data,
+    and evaluating the models. The evaluation results are saved to the specified output folder.
+    """
     trainer = CurationModelTrainer(
         target_label,
         output_folder,
