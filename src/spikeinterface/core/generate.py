@@ -585,6 +585,35 @@ def generate_snippets(
     empty_units=None,
     **job_kwargs,
 ):
+    """
+    Generates a synthetic Snippets object.
+
+    Parameters
+    ----------
+    nbefore : int, default: 20
+        Number of samples before the peak.
+    nafter : int, default: 44
+        Number of samples after the peak.
+    num_channels : int, default: 2
+        Number of channels.
+    wf_folder : str | Path | None, default: None
+        Optional folder to save the waveform snippets. If None, snippets are in memory.
+    sampling_frequency : float, default: 30000.0
+        The sampling frequency of the snippets.
+    ndim : int, default: 2
+        The number of dimensions of the probe.
+    num_units : int, default: 5
+        The number of units.
+    empty_units : list | None, default: None
+        A list of units that will have no spikes.
+
+    Returns
+    -------
+    snippets : NumpySnippets
+        The snippets object.
+    sorting : NumpySorting
+        The associated sorting object.
+    """
     recording = generate_recording(
         durations=durations,
         num_channels=num_channels,
