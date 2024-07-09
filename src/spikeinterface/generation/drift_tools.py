@@ -458,6 +458,9 @@ class InjectDriftingTemplatesRecording(BaseRecording):
 
         self.set_probe(drifting_templates.probe, in_place=True)
 
+        # templates are too large, we don't serialize them to JSON
+        self._serializability["json"] = False
+
         self._kwargs = {
             "sorting": sorting,
             "drifting_templates": drifting_templates,
