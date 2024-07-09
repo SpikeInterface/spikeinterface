@@ -59,7 +59,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         return dict(unit_locations=new_unit_location)
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         arr = self.data["unit_locations"]
         num_dims = arr.shape[1]
@@ -72,7 +72,7 @@ class ComputeUnitLocations(AnalyzerExtension):
                 new_unit_location[unit_ind] = arr[keep_unit_index]
             else:
                 id = np.flatnonzero(new_unit_ids == unit_id)[0]
-                unit_ids = units_to_merge[id]
+                unit_ids = merge_unit_groups[id]
                 keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
                 weights = np.zeros(len(unit_ids), dtype=np.float32)
                 for count, id in enumerate(unit_ids):

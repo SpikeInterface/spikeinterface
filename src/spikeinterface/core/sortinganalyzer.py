@@ -24,7 +24,7 @@ from .basesorting import BaseSorting
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import check_json, retrieve_importing_provenance
-from .sorting_tools import generate_unit_ids_for_merge_group
+from .sorting_tools import generate_unit_ids_for_merge_group, _get_ids_after_merging
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
@@ -635,22 +635,49 @@ class SortingAnalyzer:
         format="binary_folder",
         folder=None,
         unit_ids=None,
-        units_to_merge=None,
+        merge_unit_groups=None,
         censor_ms=None,
         merging_mode="soft",
         sparsity_overlap=0.75,
         verbose=False,
+        new_unit_ids=None,
         **job_kwargs,
     ) -> "SortingAnalyzer":
         """
-        Internal used by both save_as(), copy() and select_units() which are more or less the same.
+        Internal method used by both `save_as()`, `copy()`, `select_units()`, and `merge_units()`.
+
+        Parameters
+        ----------
+        format : "memory" | "binary_folder" | "zarr", default: "binary_folder"
+            The format to save the SortingAnalyzer object
+        folder : str | Path | None, default: None
+            The folder where the SortingAnalyzer object will be saved
+        unit_ids : list or None, default: None
+            The unit ids to keep in the new SortingAnalyzer object. If `merge_unit_groups` is not None,
+            `unit_ids` must be given it must contain all unit_ids.
+        merge_unit_groups : list/tuple of lists/tuples or None, default: None
+            A list of lists for every merge group. Each element needs to have at least two elements
+            (two units to merge). If `merge_unit_groups` is not None, `new_unit_ids` must be given.
+        censor_ms : None or float, default: None
+            When merging units, any spikes violating this refractory period will be discarded.
+        merging_mode : "soft" | "hard", default: "soft"
+            How merges are performed. In the "soft" mode, merges will be approximated, with no smart merging
+            of the extension data.
+        sparsity_overlap : float, default 0.75
+            The percentage of overlap that units should share in order to accept merges. If this criteria is not
+            achieved, soft merging will not be performed.
+        new_unit_ids : list or None, default: None
+            The new unit ids for merged units. Required if `merge_unit_groups` is not None.
+        verbose : bool, default: False
+            If True, output is verbose.
+        job_kwargs : dict
+            Keyword arguments for parallelization.
+
+        Returns
+        -------
+        new_sorting_analyzer : SortingAnalyzer
+            The newly created SortingAnalyzer object.
         """
-
-        if units_to_merge is not None:
-            from spikeinterface.core.sorting_tools import _get_ids_after_merging
-
-            new_unit_ids = _get_ids_after_merging(self.unit_ids, units_to_merge, new_unit_ids=unit_ids)
-
         if self.has_recording():
             recording = self._recording
         elif self.has_temporary_recording():
@@ -658,35 +685,36 @@ class SortingAnalyzer:
         else:
             recording = None
 
-        if self.sparsity is not None and unit_ids is None and units_to_merge is None:
+        if self.sparsity is not None and unit_ids is None and merge_unit_groups is None:
             sparsity = self.sparsity
-        elif self.sparsity is not None and unit_ids is not None and units_to_merge is None:
+        elif self.sparsity is not None and unit_ids is not None and merge_unit_groups is None:
             sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
             sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
-        elif self.sparsity is not None and units_to_merge is not None:
-            sparsity_mask = np.zeros((len(new_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
-            for unit_ind, unit_id in enumerate(new_unit_ids):
-                if unit_id in unit_ids:
+        elif self.sparsity is not None and merge_unit_groups is not None:
+            all_unit_ids = unit_ids
+            sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
+            for unit_index, unit_id in enumerate(all_unit_ids):
+                if unit_id in new_unit_ids:
                     # This is a new unit, and the sparsity mask will be the intersection of the
                     # ones of all merges
-                    id = np.flatnonzero(unit_ids == unit_id)[0]
-                    to_be_merged = units_to_merge[id]
-                    indices = self.sorting.ids_to_indices(to_be_merged)
-                    union_mask = np.sum(self.sparsity.mask[indices], axis=0) > 0
-                    intersection_mask = np.prod(self.sparsity.mask[indices], axis=0) > 0
+                    current_merge_group = merge_unit_groups[list(new_unit_ids).index(unit_id)]
+                    merge_unit_indices = self.sorting.ids_to_indices(current_merge_group)
+                    union_mask = np.sum(self.sparsity.mask[merge_unit_indices], axis=0) > 0
                     if merging_mode == "soft":
+                        intersection_mask = np.prod(self.sparsity.mask[merge_unit_indices], axis=0) > 0
                         thr = np.sum(intersection_mask) / np.sum(union_mask)
-                        assert (
-                            thr > sparsity_overlap
-                        ), f"A sparsity threshold of {thr} has been found, can not use soft mode"
-                        sparsity_mask[unit_ind] = intersection_mask
+                        assert thr > sparsity_overlap, (
+                            f"The sparsities of {current_merge_group} do not overlap enough for a soft merge using "
+                            f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
+                            "a hard merge."
+                        )
+                        sparsity_mask[unit_index] = intersection_mask
                     elif merging_mode == "hard":
-                        sparsity_mask[unit_ind] = union_mask
-
+                        sparsity_mask[unit_index] = union_mask
                 else:
                     # This means that the unit is already in the previous sorting
                     index = self.sorting.id_to_index(unit_id)
-                    sparsity_mask[unit_ind] = self.sparsity.mask[index]
+                    sparsity_mask[unit_index] = self.sparsity.mask[index]
             sparsity = ChannelSparsity(sparsity_mask, list(new_unit_ids), self.channel_ids)
         else:
             sparsity = None
@@ -697,7 +725,7 @@ class SortingAnalyzer:
             # if the original sorting object is not available anymore (kilosort folder deleted, ....), take the copy
             sorting_provenance = self.sorting
 
-        if units_to_merge is None:
+        if merge_unit_groups is None:
             # when only some unit_ids then the sorting must be sliced
             # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
             sorting_provenance = sorting_provenance.select_units(unit_ids)
@@ -706,11 +734,14 @@ class SortingAnalyzer:
 
             sorting_provenance, keep_mask = apply_merges_to_sorting(
                 sorting=sorting_provenance,
-                units_to_merge=units_to_merge,
-                new_unit_ids=unit_ids,
+                merge_unit_groups=merge_unit_groups,
+                new_unit_ids=new_unit_ids,
                 censor_ms=censor_ms,
                 return_kept=True,
             )
+            if censor_ms is None:
+                # in this case having keep_mask None is faster instead of having a vector of ones
+                keep_mask = None
             # TODO: sam/pierre would create a curation field / curation.json with the applied merges.
             # What do you think?
 
@@ -749,25 +780,27 @@ class SortingAnalyzer:
         recompute_dict = {}
 
         for extension_name, extension in sorted_extensions.items():
-            if units_to_merge is not None:
+            if merge_unit_groups is None:
+                # copy full or select
+                new_sorting_analyzer.extensions[extension_name] = extension.copy(
+                    new_sorting_analyzer, unit_ids=unit_ids
+                )
+            else:
+                # merge
                 if merging_mode == "soft":
                     new_sorting_analyzer.extensions[extension_name] = extension.merge(
                         new_sorting_analyzer,
-                        units_to_merge=units_to_merge,
-                        new_unit_ids=unit_ids,
+                        merge_unit_groups=merge_unit_groups,
+                        new_unit_ids=new_unit_ids,
                         keep_mask=keep_mask,
                         verbose=verbose,
                         **job_kwargs,
                     )
                 elif merging_mode == "hard":
                     recompute_dict[extension_name] = extension.params
-            else:
-                new_sorting_analyzer.extensions[extension_name] = extension.copy(
-                    new_sorting_analyzer, unit_ids=unit_ids
-                )
 
-        if units_to_merge is not None and merging_mode == "hard":
-            new_sorting_analyzer.compute(recompute_dict, save=True, verbose=verbose, **job_kwargs)
+        if merge_unit_groups is not None and merging_mode == "hard" and len(recompute_dict) > 0:
+            new_sorting_analyzer.compute_several_extensions(recompute_dict, save=True, verbose=verbose, **job_kwargs)
 
         return new_sorting_analyzer
 
@@ -815,7 +848,7 @@ class SortingAnalyzer:
 
     def merge_units(
         self,
-        units_to_merge,
+        merge_unit_groups,
         new_unit_ids=None,
         censor_ms=None,
         merging_mode="soft",
@@ -834,11 +867,11 @@ class SortingAnalyzer:
 
         Parameters
         ----------
-        units_to_merge : list/tuple of lists/tuples
+        merge_unit_groups : list/tuple of lists/tuples
             A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
             but it can also have more (merge multiple units at once).
         new_unit_ids : None or list
-            A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`. If None,
+            A new unit_ids for merged units. If given, it needs to have the same length as `merge_unit_groups`. If None,
             merged units will have the first unit_id of every lists of merges
         censor_ms : None or float
             When merging units, any spikes violating this refractory period will be discarded. Default is None
@@ -868,28 +901,35 @@ class SortingAnalyzer:
 
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
-        if len(units_to_merge) == 0:
+        if len(merge_unit_groups) == 0:
+            # TODO I think we should raise an error or at least make a copy and not return itself
             return self
 
-        for units in units_to_merge:
+        for units in merge_unit_groups:
+            # TODO more checks like one units is only in one group
             if len(units) < 2:
                 raise ValueError("Merging requires at least two units to merge")
 
-        if not isinstance(units_to_merge[0], (list, tuple)):
+        # TODO : no this function did not exists before
+        if not isinstance(merge_unit_groups[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge
-            units_to_merge = [units_to_merge]
+            merge_unit_groups = [merge_unit_groups]
 
-        new_unit_ids = generate_unit_ids_for_merge_group(self.unit_ids, units_to_merge, new_unit_ids, new_id_strategy)
+        new_unit_ids = generate_unit_ids_for_merge_group(
+            self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
+        )
+        all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
 
         return self._save_or_select_or_merge(
             format=format,
             folder=folder,
-            units_to_merge=units_to_merge,
-            unit_ids=new_unit_ids,
+            merge_unit_groups=merge_unit_groups,
+            unit_ids=all_unit_ids,
             censor_ms=censor_ms,
             merging_mode=merging_mode,
             sparsity_overlap=sparsity_overlap,
             verbose=verbose,
+            new_unit_ids=new_unit_ids,
             **job_kwargs,
         )
 
@@ -1656,7 +1696,7 @@ class AnalyzerExtension:
         raise NotImplementedError
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=False, **job_kwargs
     ):
         # must be implemented in subclass
         raise NotImplementedError
@@ -1668,9 +1708,6 @@ class AnalyzerExtension:
     def _get_data(self):
         # must be implemented in subclass
         raise NotImplementedError
-
-    #
-    #######
 
     @classmethod
     def function_factory(cls):
@@ -1827,20 +1864,17 @@ class AnalyzerExtension:
     def merge(
         self,
         new_sorting_analyzer,
-        units_to_merge=None,
-        new_unit_ids=None,
+        merge_unit_groups,
+        new_unit_ids,
         keep_mask=None,
         verbose=False,
         **job_kwargs,
     ):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
-        if units_to_merge is None:
-            new_extension.data = self.data
-        else:
-            new_extension.data = self._merge_extension_data(
-                units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
-            )
+        new_extension.data = self._merge_extension_data(
+            merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
+        )
         new_extension.save()
         return new_extension
 

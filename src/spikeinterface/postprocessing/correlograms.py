@@ -91,7 +91,7 @@ class ComputeCorrelograms(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
     ):
         # recomputing correlogram is fast enough and much easier in this case
         new_ccgs, new_bins = _compute_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)

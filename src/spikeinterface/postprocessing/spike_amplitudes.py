@@ -82,13 +82,14 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         return new_data
 
     def _merge_extension_data(
-        self, units_to_merge, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
         new_data = dict()
-        new_data["amplitudes"] = self.data["amplitudes"]
 
-        if keep_mask is not None:
-            new_data["amplitudes"] = new_data["amplitudes"][keep_mask]
+        if keep_mask is None:
+            new_data["amplitudes"] = self.data["amplitudes"].copy()
+        else:
+            new_data["amplitudes"] = self.data["amplitudes"][keep_mask]
 
         return new_data
 

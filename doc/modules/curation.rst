@@ -62,7 +62,7 @@ This format has two part:
   * **manual output** curation with the folowing keys:
 
     * "manual_labels"
-    * "merged_unit_groups"
+    * "merge_unit_groups"
     * "removed_units"
 
 Here is the description of the format with a simple example:
@@ -128,7 +128,7 @@ Here is the description of the format with a simple example:
                 ]
             }
         ],
-        "merged_unit_groups": [
+        "merge_unit_groups": [
             [
                 "u3",
                 "u6"

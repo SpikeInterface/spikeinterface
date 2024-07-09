@@ -23,7 +23,7 @@ from spikeinterface.curation.curation_format import (
          category_key1': List[str],
          }
     ],
-    'merged_unit_groups': List[List[unit_ids]],  # one cell goes into at most one list
+    'merge_unit_groups': List[List[unit_ids]],  # one cell goes into at most one list
     'removed_units': List[unit_ids]  # Can not be  in the merged_units
 }
 """
@@ -50,7 +50,7 @@ curation_ids_int = {
         },
         {"unit_id": 3, "putative_type": ["inhibitory"]},
     ],
-    "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
+    "merge_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
 }
 
@@ -75,23 +75,23 @@ curation_ids_str = {
         },
         {"unit_id": "u3", "putative_type": ["inhibitory"]},
     ],
-    "merged_unit_groups": [["u3", "u6"], ["u10", "u14", "u20"]],  # one cell goes into at most one list
+    "merge_unit_groups": [["u3", "u6"], ["u10", "u14", "u20"]],  # one cell goes into at most one list
     "removed_units": ["u31", "u42"],  # Can not be  in the merged_units
 }
 
 # This is a failure example with duplicated merge
 duplicate_merge = curation_ids_int.copy()
-duplicate_merge["merged_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
+duplicate_merge["merge_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
 
 
 # This is a failure example with unit 3 both in removed and merged
 merged_and_removed = curation_ids_int.copy()
-merged_and_removed["merged_unit_groups"] = [[3, 6], [10, 14, 20]]
+merged_and_removed["merge_unit_groups"] = [[3, 6], [10, 14, 20]]
 merged_and_removed["removed_units"] = [3, 31, 42]
 
 # this is a failure because unit 99 is not in the initial list
 unknown_merged_unit = curation_ids_int.copy()
-unknown_merged_unit["merged_unit_groups"] = [[3, 6, 99], [10, 14, 20]]
+unknown_merged_unit["merge_unit_groups"] = [[3, 6, 99], [10, 14, 20]]
 
 # this is a failure because unit 99 is not in the initial list
 unknown_removed_unit = curation_ids_int.copy()
