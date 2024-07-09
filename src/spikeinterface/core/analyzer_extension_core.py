@@ -268,182 +268,15 @@ class ComputeWaveforms(AnalyzerExtension):
                     group_selection.append(selection)
                 _inplace_sparse_realign_waveforms(waveforms, group_selection, group_sparsity_mask)
 
+            old_num_chans = int(np.max(np.sum(old_sparsity.mask, axis=1)))
+            new_num_chans = int(np.max(np.sum(new_sorting_analyzer.sparsity.mask, axis=1)))
+            if new_num_chans < old_num_chans:
+                waveforms = waveforms[:,:,:new_num_chans]
+
         return dict(waveforms=waveforms)
 
-    # def _merge_extension_data(
-    #     self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
-    # ):
-    #     new_data = dict()
 
-    #     waveforms = self.data["waveforms"]
-    #     some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-
-    #     if keep_mask is not None:
-    #         spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
-    #         valid = keep_mask[spike_indices]
-    #         some_spikes = some_spikes[valid]
-    #         waveforms = waveforms[valid]
-    #     else:
-    #         waveforms = waveforms.copy()
-
-    #     sparsity = new_sorting_analyzer.sparsity
-
-    #     if sparsity is not None:
-
-    #         max_num_chans = np.sum(new_sorting_analyzer.sparsity.mask, 1).max()
-    #         new_data["waveforms"] = waveforms.copy()
-    #         for to_be_merged, unit_id in zip(merge_unit_groups, new_unit_ids):
-    #             new_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-    #             new_waveforms, spike_indices = self.get_some_waveforms(
-    #                 new_channel_ids, to_be_merged, kept_waveforms=new_data["waveforms"], kept_spikes=some_spikes
-    #             )
-    #             num_chans = new_waveforms.shape[2]
-    #             new_data["waveforms"][spike_indices, :, :num_chans] = new_waveforms
-    #         new_data["waveforms"] = new_data["waveforms"][:, :, :max_num_chans]
-    #     else:
-    #         new_data["waveforms"] = waveforms
-
-    #     return new_data
-
-    # def get_waveforms_one_unit(self, unit_id, force_dense: bool = False, kept_waveforms=None, kept_spikes=None):
-    #     """
-    #     Returns the waveforms of a unit id.
-
-    #     Parameters
-    #     ----------
-    #     unit_id : int or str
-    #         The unit id to return waveforms for
-    #     force_dense : bool, default: False
-    #         If True, and SortingAnalyzer must be sparse then only waveforms on sparse channels are returned.
-    #     kept_waveforms : array, default None
-    #         If specified, the kept waveforms to select waveforms from
-    #     kept_spikes : spikes, default None
-    #         If specified, the spikes associated with the kept waveforms
-
-    #     Returns
-    #     -------
-    #     waveforms: np.array
-    #         The waveforms (num_waveforms, num_samples, num_channels).
-    #         In case sparsity is used, only the waveforms on sparse channels are returned.
-    #     """
-    #     sorting = self.sorting_analyzer.sorting
-    #     unit_index = sorting.id_to_index(unit_id)
-
-    #     if kept_waveforms is not None:
-    #         waveforms = kept_waveforms
-    #     else:
-    #         waveforms = self.data["waveforms"]
-
-    #     if kept_spikes is not None:
-    #         some_spikes = kept_spikes
-    #     else:
-    #         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-
-    #     spike_mask = some_spikes["unit_index"] == unit_index
-    #     wfs = waveforms[spike_mask, :, :]
-
-    #     if self.sorting_analyzer.sparsity is not None:
-    #         chan_inds = self.sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
-    #         wfs = wfs[:, :, : chan_inds.size]
-    #         if force_dense:
-    #             num_channels = self.sorting_analyzer.get_num_channels()
-    #             dense_wfs = np.zeros((wfs.shape[0], wfs.shape[1], num_channels), dtype=wfs.dtype)
-    #             dense_wfs[:, :, chan_inds] = wfs
-    #             wfs = dense_wfs
-
-    #     return wfs
-
-    # def get_some_waveforms(self, channel_ids=None, unit_ids=None, kept_waveforms=None, kept_spikes=None):
-    #     """
-    #     Returns the waveforms of some units and some channels.
-
-    #     When internally sparse, this function realign waveforms on given channel_ids set.
-
-    #     Parameters
-    #     ----------
-    #     channel_ids : list, default: None
-    #         List of channel ids on which waveforms must aligned
-    #     unit_ids : list, default: None
-    #         List of unit ids to return waveforms for
-    #     kept_waveforms : array, default None
-    #         If specified, the kept waveforms to select waveforms from
-    #     kept_spikes : spikes, default None
-    #         If specified, the spikes associated with the kept waveforms
-
-    #     Returns
-    #     -------
-    #     some_waveforms: np.array
-    #         The waveforms (num_spikes, num_samples, num_sparse_channels)
-    #     spike_indices: np.array
-    #         Spike indices of the returned waveforms of shape (num_spikes, )
-    #     """
-
-    #     sorting = self.sorting_analyzer.sorting
-    #     if unit_ids is None:
-    #         unit_ids = sorting.unit_ids
-
-    #     if channel_ids is None:
-    #         channel_ids = self.sorting_analyzer.channel_ids
-
-    #     channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
-
-    #     # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
-
-    #     sparsity = self.sorting_analyzer.sparsity
-
-    #     if kept_waveforms is not None:
-    #         waveforms = kept_waveforms
-    #     else:
-    #         waveforms = self.data["waveforms"]
-
-    #     num_samples = waveforms.shape[1]
-    #     dtype = waveforms.dtype
-
-    #     if kept_spikes is not None:
-    #         some_spikes = kept_spikes
-    #     else:
-    #         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-
-    #     unit_indices = sorting.ids_to_indices(unit_ids)
-    #     selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
-    #     spike_unit_indices = some_spikes["unit_index"][selected_inds]
-
-    #     if sparsity is None:
-    #         some_waveforms = waveforms[selected_inds, :, :][:, :, channel_indices]
-    #     else:
-    #         # need re-alignement
-    #         some_waveforms = np.zeros((selected_inds.size, num_samples, channel_indices.size), dtype=dtype)
-
-    #         for unit_id in unit_ids:
-    #             unit_index = sorting.id_to_index(unit_id)
-    #             sparse_waveforms = self.get_waveforms_one_unit(
-    #                 unit_id, kept_waveforms=kept_waveforms, kept_spikes=kept_spikes
-    #             )
-    #             local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
-
-    #             # keep only requested channels
-    #             channel_mask = np.isin(local_chan_inds, channel_indices)
-    #             if sum(channel_mask) != len(channel_mask):
-    #                 sparse_waveforms = sparse_waveforms[:, :, channel_mask]
-
-    #             # inject in requested channels
-    #             spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
-    #             channel_mask_channel_inds = np.isin(channel_indices, local_chan_inds)
-    #             if sum(channel_mask_channel_inds) < len(channel_mask_channel_inds):
-    #                 # inject in requested channels
-    #                 wfs = np.zeros((spike_mask.size, num_samples, channel_indices.size), dtype=dtype)
-    #                 wfs[:, :, channel_mask_channel_inds] = sparse_waveforms
-    #             else:
-    #                 wfs = sparse_waveforms
-    #         some_waveforms[spike_mask] = wfs
-
-    # return some_waveforms, selected_inds
-
-    def get_waveforms_one_unit(
-        self,
-        unit_id,
-        force_dense: bool = False,
-    ):
+    def get_waveforms_one_unit(self, unit_id, force_dense: bool = False):
         """
         Returns the waveforms of a unit id.
 
@@ -460,12 +293,14 @@ class ComputeWaveforms(AnalyzerExtension):
             The waveforms (num_waveforms, num_samples, num_channels).
             In case sparsity is used, only the waveforms on sparse channels are returned.
         """
-
         sorting = self.sorting_analyzer.sorting
         unit_index = sorting.id_to_index(unit_id)
+
+        waveforms = self.data["waveforms"]
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
         spike_mask = some_spikes["unit_index"] == unit_index
-        wfs = self.data["waveforms"][spike_mask, :, :]
+        wfs = waveforms[spike_mask, :, :]
 
         if self.sorting_analyzer.sparsity is not None:
             chan_inds = self.sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
@@ -477,6 +312,81 @@ class ComputeWaveforms(AnalyzerExtension):
                 wfs = dense_wfs
 
         return wfs
+
+    def get_some_waveforms(self, channel_ids=None, unit_ids=None):
+        """
+        Returns the waveforms of some units and some channels.
+
+        When internally sparse, this function realign waveforms on given channel_ids set.
+
+        Parameters
+        ----------
+        channel_ids : list, default: None
+            List of channel ids on which waveforms must aligned
+        unit_ids : list, default: None
+            List of unit ids to return waveforms for
+
+        Returns
+        -------
+        some_waveforms: np.array
+            The waveforms (num_spikes, num_samples, num_sparse_channels)
+        spike_indices: np.array
+            Spike indices of the returned waveforms of shape (num_spikes, )
+        """
+
+        sorting = self.sorting_analyzer.sorting
+        if unit_ids is None:
+            unit_ids = sorting.unit_ids
+
+        if channel_ids is None:
+            channel_ids = self.sorting_analyzer.channel_ids
+
+        channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
+
+        # note : internally when sparse PCA are not aligned!! Exactly like waveforms.
+
+        sparsity = self.sorting_analyzer.sparsity
+
+        waveforms = self.data["waveforms"]
+
+        num_samples = waveforms.shape[1]
+        dtype = waveforms.dtype
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+        unit_indices = sorting.ids_to_indices(unit_ids)
+        selected_inds = np.flatnonzero(np.isin(some_spikes["unit_index"], unit_indices))
+        spike_unit_indices = some_spikes["unit_index"][selected_inds]
+
+        if sparsity is None:
+            some_waveforms = waveforms[selected_inds, :, :][:, :, channel_indices]
+        else:
+            # need re-alignement
+            some_waveforms = np.zeros((selected_inds.size, num_samples, channel_indices.size), dtype=dtype)
+
+            for unit_id in unit_ids:
+                unit_index = sorting.id_to_index(unit_id)
+                sparse_waveforms = self.get_waveforms_one_unit(
+                    unit_id
+                )
+                local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+
+                # keep only requested channels
+                channel_mask = np.isin(local_chan_inds, channel_indices)
+                if sum(channel_mask) != len(channel_mask):
+                    sparse_waveforms = sparse_waveforms[:, :, channel_mask]
+
+                # inject in requested channels
+                spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
+                channel_mask_channel_inds = np.isin(channel_indices, local_chan_inds)
+                if sum(channel_mask_channel_inds) < len(channel_mask_channel_inds):
+                    # inject in requested channels
+                    wfs = np.zeros((spike_mask.size, num_samples, channel_indices.size), dtype=dtype)
+                    wfs[:, :, channel_mask_channel_inds] = sparse_waveforms
+                else:
+                    wfs = sparse_waveforms
+            some_waveforms[spike_mask] = wfs
+
+        return some_waveforms, selected_inds
 
     def _get_data(self):
         return self.data["waveforms"]
