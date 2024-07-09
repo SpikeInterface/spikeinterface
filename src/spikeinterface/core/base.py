@@ -41,7 +41,7 @@ class BaseExtractor:
     # This replaces the old key_properties
     # These are annotations/properties that always need to be
     # dumped (for instance locations, groups, is_fileterd, etc.)
-    _main_annotations = []
+    _main_annotations = ["name"]
     _main_properties = []
 
     # these properties are skipped by default in copy_metadata
@@ -78,6 +78,19 @@ class BaseExtractor:
 
         # preferred context for multiprocessing
         self._preferred_mp_context = None
+
+    @property
+    def name(self):
+        name = self._annotations.get("name", None)
+        return name if name is not None else self.__class__.__name__
+
+    @name.setter
+    def name(self, value):
+        if value is not None:
+            self.annotate(name=value)
+        else:
+            # we remove the annotation if it exists
+            _ = self._annotations.pop("name", None)
 
     def get_num_segments(self) -> int:
         # This is implemented in BaseRecording or BaseSorting
