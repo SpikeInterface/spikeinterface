@@ -354,7 +354,7 @@ def causal_filter(
     recording : Recording
         The recording extractor to be re-referenced
     direction : "forward" | "backward", default: "forward"
-        Direction of causal filter. The "backward" option flips the traces in time before applying the filter 
+        Direction of causal filter. The "backward" option flips the traces in time before applying the filter
         and then flips them back.
     band : float or list, default: [300.0, 6000.0]
         If float, cutoff frequency in Hz for "highpass" filter type
@@ -377,7 +377,7 @@ def causal_filter(
         - numerator/denominator : ("ba")
     ftype : str, default: "butter"
         Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
-    
+
     Returns
     -------
     filter_recording : FilterRecording
@@ -396,7 +396,7 @@ def causal_filter(
         add_reflect_padding=add_reflect_padding,
         coeff=coeff,
         dtype=dtype,
-    )   
+    )
 
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
