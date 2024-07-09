@@ -365,26 +365,21 @@ class ComputeWaveforms(AnalyzerExtension):
 
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_waveforms = self.get_waveforms_one_unit(
-                    unit_id
-                )
+                sparse_waveforms = self.get_waveforms_one_unit(unit_id, force_dense=False)
                 local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
 
                 # keep only requested channels
                 channel_mask = np.isin(local_chan_inds, channel_indices)
-                if sum(channel_mask) != len(channel_mask):
-                    sparse_waveforms = sparse_waveforms[:, :, channel_mask]
+                sparse_waveforms = sparse_waveforms[:, :, channel_mask]
+                local_chan_inds = local_chan_inds[channel_mask]
 
-                # inject in requested channels
                 spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
-                channel_mask_channel_inds = np.isin(channel_indices, local_chan_inds)
-                if sum(channel_mask_channel_inds) < len(channel_mask_channel_inds):
-                    # inject in requested channels
-                    wfs = np.zeros((spike_mask.size, num_samples, channel_indices.size), dtype=dtype)
-                    wfs[:, :, channel_mask_channel_inds] = sparse_waveforms
-                else:
-                    wfs = sparse_waveforms
-            some_waveforms[spike_mask] = wfs
+                wfs = np.zeros((spike_mask.size, num_samples, channel_indices.size), dtype=dtype)
+                
+                # inject in requested channels
+                channel_mask = np.isin(channel_indices, local_chan_inds)
+                wfs[:, :, channel_mask] = sparse_waveforms
+                some_waveforms[spike_mask, :, :] = wfs
 
         return some_waveforms, selected_inds
 
