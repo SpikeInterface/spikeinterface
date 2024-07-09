@@ -801,7 +801,7 @@ class BaseExtractor:
         else:
             error_msg = f"Failed to load the file_path {file_path} must be an existing folder or file"
             if base_folder:
-                error_msg = f"\n base folder provided is {base_folder}"
+                error_msg = f"\n The provided base_folder is {base_folder}"
             raise ValueError(error_msg)
 
     def __reduce__(self):
