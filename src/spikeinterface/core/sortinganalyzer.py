@@ -33,7 +33,6 @@ from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
 from .node_pipeline import run_node_pipeline
 
 
-
 # high level function
 def create_sorting_analyzer(
     sorting,
@@ -654,15 +653,15 @@ class SortingAnalyzer:
         folder : str | Path | None, default: None
             The folder where the SortingAnalyzer object will be saved
         unit_ids : list or None, default: None
-            The unit ids to keep in the new SortingAnalyzer object. If `merge_unit_groups` is not None, 
+            The unit ids to keep in the new SortingAnalyzer object. If `merge_unit_groups` is not None,
             `unit_ids` must be given it must contain all unit_ids.
         merge_unit_groups : list/tuple of lists/tuples or None, default: None
-            A list of lists for every merge group. Each element needs to have at least two elements 
+            A list of lists for every merge group. Each element needs to have at least two elements
             (two units to merge). If `merge_unit_groups` is not None, `new_unit_ids` must be given.
         censor_ms : None or float, default: None
             When merging units, any spikes violating this refractory period will be discarded.
         merging_mode : "soft" | "hard", default: "soft"
-            How merges are performed. In the "soft" mode, merges will be approximated, with no smart merging 
+            How merges are performed. In the "soft" mode, merges will be approximated, with no smart merging
             of the extension data.
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
@@ -704,9 +703,7 @@ class SortingAnalyzer:
                     if merging_mode == "soft":
                         intersection_mask = np.prod(self.sparsity.mask[merge_unit_indices], axis=0) > 0
                         thr = np.sum(intersection_mask) / np.sum(union_mask)
-                        assert (
-                            thr > sparsity_overlap
-                        ), (
+                        assert thr > sparsity_overlap, (
                             f"The sparsities of {current_merge_group} do not overlap enough for a soft merge using "
                             f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
                             "a hard merge."
@@ -918,7 +915,9 @@ class SortingAnalyzer:
             # keep backward compatibility : the previous behavior was only one merge
             merge_unit_groups = [merge_unit_groups]
 
-        new_unit_ids = generate_unit_ids_for_merge_group(self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy)
+        new_unit_ids = generate_unit_ids_for_merge_group(
+            self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
+        )
         all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
 
         return self._save_or_select_or_merge(

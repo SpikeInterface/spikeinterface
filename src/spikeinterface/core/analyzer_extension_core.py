@@ -8,6 +8,7 @@ Theses two classes replace the WaveformExtractor
 It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
+
 import warnings
 
 import numpy as np
@@ -82,7 +83,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
     ):
         new_data = dict()
         random_spikes_indices = self.data["random_spikes_indices"]
-        if keep_mask is  None:
+        if keep_mask is None:
             new_data["random_spikes_indices"] = random_spikes_indices.copy()
         else:
             mask = keep_mask[random_spikes_indices]
@@ -266,9 +267,8 @@ class ComputeWaveforms(AnalyzerExtension):
                     selection = np.flatnonzero(some_spikes["unit_index"] == unit_index)
                     group_selection.append(selection)
                 _inplace_sparse_realign_waveforms(waveforms, group_selection, group_sparsity_mask)
-            
-        return dict(waveforms=waveforms)
 
+        return dict(waveforms=waveforms)
 
     # def _merge_extension_data(
     #     self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -435,9 +435,9 @@ class ComputeWaveforms(AnalyzerExtension):
     #                 wfs[:, :, channel_mask_channel_inds] = sparse_waveforms
     #             else:
     #                 wfs = sparse_waveforms
-        #         some_waveforms[spike_mask] = wfs
-    
-        # return some_waveforms, selected_inds
+    #         some_waveforms[spike_mask] = wfs
+
+    # return some_waveforms, selected_inds
 
     def get_waveforms_one_unit(
         self,
@@ -460,7 +460,7 @@ class ComputeWaveforms(AnalyzerExtension):
             The waveforms (num_waveforms, num_samples, num_channels).
             In case sparsity is used, only the waveforms on sparse channels are returned.
         """
-        
+
         sorting = self.sorting_analyzer.sorting
         unit_index = sorting.id_to_index(unit_id)
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
@@ -491,13 +491,11 @@ def _inplace_sparse_realign_waveforms(waveforms, group_selection, group_sparsity
     for i in range(len(group_selection)):
         chan_mask = group_sparsity_mask[i, :]
         sel = group_selection[i]
-        wfs = waveforms[sel, :, :][:, :, :np.sum(chan_mask)]
+        wfs = waveforms[sel, :, :][:, :, : np.sum(chan_mask)]
         keep_mask = common_mask[chan_mask]
         wfs = wfs[:, :, keep_mask]
-        waveforms[:, :, :wfs.shape[2]][sel, :, :] = wfs
-        waveforms[:, :, wfs.shape[2]:][sel, :, :] = 0.
-
-
+        waveforms[:, :, : wfs.shape[2]][sel, :, :] = wfs
+        waveforms[:, :, wfs.shape[2] :][sel, :, :] = 0.0
 
 
 compute_waveforms = ComputeWaveforms.function_factory()
@@ -561,7 +559,7 @@ class ComputeTemplates(AnalyzerExtension):
 
         if self.sorting_analyzer.has_extension("waveforms"):
             self._compute_and_append_from_waveforms(self.params["operators"])
-            
+
         else:
             for operator in self.params["operators"]:
                 if operator not in ("average", "std"):
@@ -662,7 +660,8 @@ class ComputeTemplates(AnalyzerExtension):
             warnings.warn(
                 "The 'nbefore' parameter is deprecated and it's been replaced by 'ms_before' in the params."
                 "You can save the sorting_analyzer to update the params.",
-                DeprecationWarning, stacklevel=2
+                DeprecationWarning,
+                stacklevel=2,
             )
 
         nbefore = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
@@ -675,7 +674,8 @@ class ComputeTemplates(AnalyzerExtension):
             warnings.warn(
                 "The 'nafter' parameter is deprecated and it's been replaced by 'ms_after' in the params."
                 "You can save the sorting_analyzer to update the params.",
-                DeprecationWarning, stacklevel=2
+                DeprecationWarning,
+                stacklevel=2,
             )
             self.params["ms_after"] = self.params["nafter"] * 1000.0 / self.sorting_analyzer.sampling_frequency
 
@@ -712,7 +712,9 @@ class ComputeTemplates(AnalyzerExtension):
                     for count, merge_unit_id in enumerate(merge_group):
                         weights[count] = counts[merge_unit_id]
                     weights /= weights.sum()
-                    new_data[key][unit_index] = (arr[keep_unit_indices, :, :] * weights[:, np.newaxis, np.newaxis]).sum(0)
+                    new_data[key][unit_index] = (arr[keep_unit_indices, :, :] * weights[:, np.newaxis, np.newaxis]).sum(
+                        0
+                    )
                     if new_sorting_analyzer.sparsity is not None:
                         chan_ids = new_sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
                         mask = ~np.isin(np.arange(arr.shape[2]), chan_ids)

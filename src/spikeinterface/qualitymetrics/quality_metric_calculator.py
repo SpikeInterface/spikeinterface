@@ -99,7 +99,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids, :] =  self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
+        metrics.loc[new_unit_ids, :] = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
 
         new_data = dict(metrics=metrics)
         return new_data
