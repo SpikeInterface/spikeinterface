@@ -124,6 +124,12 @@ class PeakRetriever(PeakSource):
     def get_trace_margin(self):
         return 0
 
+    def has_peaks(self, start_frame, end_frame, segment_index):
+        sl = self.segment_slices[segment_index]
+        peaks_in_segment = self.peaks[sl]
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        return i0 < i1
+
     def get_dtype(self):
         return base_peak_dtype
 
@@ -208,6 +214,12 @@ class SpikeRetriever(PeakSource):
 
     def get_trace_margin(self):
         return 0
+
+    def has_peaks(self, start_frame, end_frame, segment_index):
+        sl = self.segment_slices[segment_index]
+        peaks_in_segment = self.peaks[sl]
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        return i0 < i1
 
     def get_dtype(self):
         return self._dtype
@@ -467,12 +479,14 @@ def run_node_pipeline(
     nodes,
     job_kwargs,
     job_name="pipeline",
+    max_peaks=None,
     mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
     squeeze_output=True,
     folder=None,
     names=None,
+    seed=None,
     verbose=False,
 ):
     """
@@ -491,7 +505,7 @@ def run_node_pipeline(
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
-    init_args = (recording, nodes)
+    init_args = (recording, nodes, max_peaks)
 
     processor = ChunkRecordingExecutor(
         recording,
@@ -504,17 +518,19 @@ def run_node_pipeline(
         **job_kwargs,
     )
 
-    processor.run()
+    processor.run(seed=seed)
 
     outs = gather_func.finalize_buffers(squeeze_output=squeeze_output)
     return outs
 
 
-def _init_peak_pipeline(recording, nodes):
+def _init_peak_pipeline(recording, nodes, max_peaks):
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx["recording"] = recording
     worker_ctx["nodes"] = nodes
+    worker_ctx["num_peaks"] = 0
+    worker_ctx["max_peaks"] = max_peaks
     worker_ctx["max_margin"] = max(node.get_trace_margin() for node in nodes)
     return worker_ctx
 
@@ -522,12 +538,31 @@ def _init_peak_pipeline(recording, nodes):
 def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx["recording"]
     max_margin = worker_ctx["max_margin"]
+    max_peaks = worker_ctx["max_peaks"]
     nodes = worker_ctx["nodes"]
+    num_peaks = worker_ctx["num_peaks"]
 
     recording_segment = recording._recording_segments[segment_index]
-    traces_chunk, left_margin, right_margin = get_chunk_with_margin(
-        recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
-    )
+
+    if max_peaks is not None:
+        search_for_peaks = num_peaks < max_peaks
+    else:
+        search_for_peaks = True
+
+    if isinstance(nodes[0], PeakRetriever) or isinstance(nodes[0], SpikeRetriever):
+        chunk_has_peaks = nodes[0].has_peaks(start_frame, end_frame, segment_index)
+    else:
+        chunk_has_peaks = True
+
+    if search_for_peaks and chunk_has_peaks:
+        traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+            recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
+        )
+        traces_loaded = True
+    else:
+        peak_output = np.zeros(0, base_peak_dtype)
+        waveform_output, left_margin, right_margin = np.zeros((0, 0), dtype=recording.dtype), 0, 0
+        traces_loaded = False
 
     # compute the graph
     pipeline_outputs = {}
@@ -538,23 +573,32 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
             parent_output = pipeline_outputs[parent]
             parent_outputs_tuple = parent_output if isinstance(parent_output, tuple) else (parent_output,)
             node_input_args += parent_outputs_tuple
-        if isinstance(node, PeakDetector):
-            # to handle compatibility peak detector is a special case
-            # with specific margin
-            #  TODO later when in master: change this later
-            extra_margin = max_margin - node.get_trace_margin()
-            if extra_margin:
-                trace_detection = traces_chunk[extra_margin:-extra_margin]
+        if traces_loaded:
+            if isinstance(node, PeakDetector):
+                # to handle compatibility peak detector is a special case
+                # with specific margin
+                #  TODO later when in master: change this later
+                extra_margin = max_margin - node.get_trace_margin()
+                if extra_margin:
+                    trace_detection = traces_chunk[extra_margin:-extra_margin]
+                else:
+                    trace_detection = traces_chunk
+                node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
+                # set sample index to local
+                node_output[0]["sample_index"] += extra_margin
+                worker_ctx["num_peaks"] += len(node_output[0])
+            elif isinstance(node, PeakSource):
+                node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
+                worker_ctx["num_peaks"] += len(node_output[0])
             else:
-                trace_detection = traces_chunk
-            node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
-            # set sample index to local
-            node_output[0]["sample_index"] += extra_margin
-        elif isinstance(node, PeakSource):
-            node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
+                # TODO later when in master: change the signature of all nodes (or maybe not!)
+                node_output = node.compute(traces_chunk, *node_input_args)
         else:
-            # TODO later when in master: change the signature of all nodes (or maybe not!)
-            node_output = node.compute(traces_chunk, *node_input_args)
+            if isinstance(node, PeakSource):
+                node_output = peak_output
+            else:
+                node_output = waveform_output
+
         pipeline_outputs[node] = node_output
 
     # propagate the output
@@ -581,6 +625,9 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
         # the first out element is the peak vector
         # we need to go back to absolut sample index
         pipeline_outputs_tuple[0]["sample_index"] += start_frame - left_margin
+
+    else:
+        pipeline_outputs_tuple = tuple()
 
     return pipeline_outputs_tuple
 

@@ -385,11 +385,14 @@ class ChunkRecordingExecutor:
                 f"chunk_duration={chunk_duration_str}",
             )
 
-    def run(self):
+    def run(self, seed=None):
         """
         Runs the defined jobs.
         """
         all_chunks = divide_recording_into_chunks(self.recording, self.chunk_size)
+        if seed is not None:
+            rng = np.random.default_rng(seed)
+            all_chunks = rng.permutation(all_chunks)
 
         if self.handle_returns:
             returns = []
