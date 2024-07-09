@@ -16,7 +16,7 @@ class CircusMerging(BaseMergingEngine):
 
     default_params = {
         "templates": None,
-        "verbose": True,
+        "verbose": False,
         "remove_emtpy": True,
         "recursive": False,
         "censor_ms": 3,
@@ -68,7 +68,7 @@ class CircusMerging(BaseMergingEngine):
     def _get_new_sorting(self):
         curation_kwargs = self.params.get("curation_kwargs", None)
         if curation_kwargs is not None:
-            merges = get_potential_auto_merge(self.analyzer, **curation_kwargs)
+            merges = get_potential_auto_merge(self.analyzer, **curation_kwargs, preset="lussac")
         else:
             merges = []
         if self.verbose:

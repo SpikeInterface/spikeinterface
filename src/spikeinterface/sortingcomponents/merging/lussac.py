@@ -277,7 +277,7 @@ class LussacMerging(BaseMergingEngine):
 
     default_params = {
         "templates": None,
-        "verbose": True,
+        "verbose": False,
         "censor_ms": 3,
         "remove_emtpy": True,
         "recursive": False,

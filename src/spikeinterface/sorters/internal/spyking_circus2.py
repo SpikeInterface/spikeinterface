@@ -33,7 +33,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
-        "merging": {"method": "lussac"},
+        "merging": {"method": "circus"},
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
         "apply_preprocessing": True,
@@ -133,7 +133,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 if verbose:
                     print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
-                params["motion_correction"].update({"folder": motion_folder})
+                params["motion_correction"].update({"folder": motion_folder, "overwrite" : True})
                 recording_f = correct_motion(recording_f, **params["motion_correction"])
         else:
             motion_folder = None
@@ -302,8 +302,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(sorting_folder)
 
         merging_params = params["merging"].copy()
+        merging_method = merging_params.get("method", None)
 
-        if len(merging_params) > 0:
+        if merging_method is not None:
             if params["motion_correction"] and motion_folder is not None:
                 from spikeinterface.preprocessing.motion import load_motion_info
 
