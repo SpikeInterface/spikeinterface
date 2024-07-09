@@ -5,7 +5,6 @@ import numpy as np
 from spikeinterface.qualitymetrics import get_quality_metric_list, get_quality_pca_metric_list
 from spikeinterface.postprocessing import get_template_metric_names
 
-seed = 42
 warnings.filterwarnings("ignore")
 
 
@@ -18,6 +17,7 @@ class CurationModelTrainer:
         imputation_strategies=None,
         scaling_techniques=None,
         classifiers=None,
+        seed = None
     ):
         if imputation_strategies is None:
             imputation_strategies = ["median", "most_frequent", "knn", "iterative"]
@@ -45,6 +45,7 @@ class CurationModelTrainer:
         self.imputation_strategies = imputation_strategies
         self.scaling_techniques = scaling_techniques
         self.classifiers = classifiers
+        self.seed = seed if seed is not None else np.random.default_rng(seed=None).integers(0, 2**31)
 
         if metrics_to_use is None:
             self.metrics_list = self.get_default_metrics_list()
@@ -101,7 +102,7 @@ class CurationModelTrainer:
         if imputation_strategy == "knn":
             imputer = KNNImputer(n_neighbors=5)
         elif imputation_strategy == "iterative":
-            imputer = IterativeImputer(estimator=HistGradientBoostingRegressor(random_state=seed), random_state=seed)
+            imputer = IterativeImputer(estimator=HistGradientBoostingRegressor(random_state=self.seed), random_state=self.seed)
         else:
             imputer = SimpleImputer(strategy=imputation_strategy)
 
@@ -129,12 +130,12 @@ class CurationModelTrainer:
         from sklearn.neural_network import MLPClassifier
 
         classifier_mapping = {
-            "RandomForestClassifier": RandomForestClassifier(random_state=seed),
-            "AdaBoostClassifier": AdaBoostClassifier(random_state=seed),
-            "GradientBoostingClassifier": GradientBoostingClassifier(random_state=seed),
-            "SVC": SVC(random_state=seed),
-            "LogisticRegression": LogisticRegression(random_state=seed),
-            "MLPClassifier": MLPClassifier(random_state=seed),
+            "RandomForestClassifier": RandomForestClassifier(random_state=self.seed),
+            "AdaBoostClassifier": AdaBoostClassifier(random_state=self.seed),
+            "GradientBoostingClassifier": GradientBoostingClassifier(random_state=self.seed),
+            "SVC": SVC(random_state=self.seed),
+            "LogisticRegression": LogisticRegression(random_state=self.seed),
+            "MLPClassifier": MLPClassifier(random_state=self.seed),
         }
 
         # Check lightgbm package install
@@ -142,21 +143,21 @@ class CurationModelTrainer:
             try:
                 from lightgbm import LGBMClassifier
 
-                classifier_mapping["LGBMClassifier"] = LGBMClassifier(random_state=seed, verbose=-1)
+                classifier_mapping["LGBMClassifier"] = LGBMClassifier(random_state=self.seed, verbose=-1)
             except ImportError:
                 raise ImportError("Please install lightgbm package to use LGBMClassifier")
         elif classifier_name == "CatBoostClassifier":
             try:
                 from catboost import CatBoostClassifier
 
-                classifier_mapping["CatBoostClassifier"] = CatBoostClassifier(silent=True, random_state=seed)
+                classifier_mapping["CatBoostClassifier"] = CatBoostClassifier(silent=True, random_state=self.seed)
             except ImportError:
                 raise ImportError("Please install catboost package to use CatBoostClassifier")
         elif classifier_name == "XGBClassifier":
             try:
                 from xgboost import XGBClassifier
 
-                classifier_mapping["XGBClassifier"] = XGBClassifier(use_label_encoder=False, random_state=seed)
+                classifier_mapping["XGBClassifier"] = XGBClassifier(use_label_encoder=False, random_state=self.seed)
             except ImportError:
                 raise ImportError("Please install xgboost package to use XGBClassifier")
 
@@ -225,7 +226,7 @@ class CurationModelTrainer:
         from sklearn.model_selection import train_test_split
 
         X_train, X_test, y_train, y_test = train_test_split(
-            self.X, self.y, test_size=0.2, random_state=seed, stratify=self.y
+            self.X, self.y, test_size=0.2, random_state=self.seed, stratify=self.y
         )
         classifier_instances = [self.get_classifier_instance(clf) for clf in classifiers]
         self._evaluate(
@@ -275,7 +276,7 @@ class CurationModelTrainer:
         print(f"Running {classifier.__class__.__name__} with imputation {imputation_strategy} and scaling {scaler}")
         model, param_space = self.get_classifier_search_space(classifier.__class__.__name__)
         model = BayesSearchCV(
-            model, param_space, cv=3, scoring="balanced_accuracy", n_iter=25, random_state=seed, n_jobs=-1
+            model, param_space, cv=3, scoring="balanced_accuracy", n_iter=25, random_state=self.seed, n_jobs=-1
         )
         model.fit(X_train_scaled, y_train)
         y_pred = model.predict(X_test_scaled)
@@ -302,6 +303,7 @@ def train_model(
     imputation_strategies=None,
     scaling_techniques=None,
     classifiers=None,
+    seed = None
 ):
     trainer = CurationModelTrainer(
         target_label,
@@ -310,6 +312,7 @@ def train_model(
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
+        seed = seed
     )
     trainer.load_and_preprocess_full(metrics_path)
     trainer.evaluate_model_config(imputation_strategies, scaling_techniques, classifiers)
