@@ -271,10 +271,9 @@ class ComputeWaveforms(AnalyzerExtension):
             old_num_chans = int(np.max(np.sum(old_sparsity.mask, axis=1)))
             new_num_chans = int(np.max(np.sum(new_sorting_analyzer.sparsity.mask, axis=1)))
             if new_num_chans < old_num_chans:
-                waveforms = waveforms[:,:,:new_num_chans]
+                waveforms = waveforms[:, :, :new_num_chans]
 
         return dict(waveforms=waveforms)
-
 
     def get_waveforms_one_unit(self, unit_id, force_dense: bool = False):
         """

@@ -137,7 +137,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             old_num_chans = int(np.max(np.sum(old_sparsity.mask, axis=1)))
             new_num_chans = int(np.max(np.sum(new_sorting_analyzer.sparsity.mask, axis=1)))
             if new_num_chans < old_num_chans:
-                pca_projections = pca_projections[:,:,:new_num_chans]
+                pca_projections = pca_projections[:, :, :new_num_chans]
 
         new_data = dict(pca_projections=pca_projections)
 
@@ -146,7 +146,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
             if "model" in k:
                 new_data[k] = v
         return new_data
-
 
     def get_pca_model(self):
         """
