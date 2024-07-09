@@ -26,12 +26,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         If True, all cluster properties are loaded from the tsv/csv files.
     """
 
-    installed = False  # check at class level if installed or not
-    mode = "folder"
     installation_mesg = (
         "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
     )
-    name = "phykilosort"
 
     def __init__(
         self,
@@ -43,14 +40,10 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     ):
         try:
             import pandas as pd
-
-            HAVE_PD = True
         except ImportError:
-            HAVE_PD = False
-        assert HAVE_PD, self.installation_mesg
+            raise ImportError(self.installation_mesg)
 
         phy_folder = Path(folder_path)
-
         spike_times = np.load(phy_folder / "spike_times.npy").astype(int)
 
         if (phy_folder / "spike_clusters.npy").is_file():
@@ -228,8 +221,6 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
         The loaded Sorting object.
     """
 
-    name = "phy"
-
     def __init__(
         self,
         folder_path: Path | str,
@@ -268,8 +259,6 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     extractor : KiloSortSortingExtractor
         The loaded Sorting object.
     """
-
-    name = "kilosort"
 
     def __init__(self, folder_path: Path | str, keep_good_only: bool = False, remove_empty_units: bool = True):
         BasePhyKilosortSortingExtractor.__init__(

@@ -1,8 +1,11 @@
 import pytest
 import numpy as np
+from pathlib import Path
 
 from spikeinterface.core import BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
+from spikeinterface.core.core_tools import measure_memory_allocation
+from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
 def test_BinaryRecordingExtractor(create_cache_folder):
@@ -51,14 +54,74 @@ def test_round_trip(tmp_path):
         dtype=dtype,
     )
 
+    # Test for full traces
     assert np.allclose(recording.get_traces(), binary_recorder.get_traces())
 
-    start_frame = 200
-    end_frame = 500
+    # Ttest for a sub-set of the traces
+    start_frame = 20
+    end_frame = 40
     smaller_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
     binary_smaller_traces = binary_recorder.get_traces(start_frame=start_frame, end_frame=end_frame)
 
     np.allclose(smaller_traces, binary_smaller_traces)
+
+
+@pytest.fixture(scope="module")
+def folder_with_binary_files(tmpdir_factory):
+    tmp_path = Path(tmpdir_factory.mktemp("spike_interface_test"))
+    folder = tmp_path / "test_binary_recording"
+    num_channels = 32
+    sampling_frequency = 30_000.0
+    dtype = "float32"
+    recording = NoiseGeneratorRecording(
+        durations=[1.0],
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+        dtype=dtype,
+    )
+    dtype = recording.get_dtype()
+    recording.save(folder=folder, overwrite=True)
+
+    return folder
+
+
+def test_sequential_reading_of_small_traces(folder_with_binary_files):
+    # Test that memmap is readed correctly when pointing to specific frames
+    folder = folder_with_binary_files
+    num_channels = 32
+    sampling_frequency = 30_000.0
+    dtype = "float32"
+
+    file_paths = [folder / "traces_cached_seg0.raw"]
+    recording = BinaryRecordingExtractor(
+        num_chan=num_channels,
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        dtype=dtype,
+    )
+
+    full_traces = recording.get_traces()
+
+    # Test for a sub-set of the traces
+    start_frame = 10
+    end_frame = 15
+    small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = full_traces[start_frame:end_frame, :]
+    assert np.allclose(small_traces, expected_traces)
+
+    # Test for a sub-set of the traces
+    start_frame = 1000
+    end_frame = 1100
+    small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = full_traces[start_frame:end_frame, :]
+    assert np.allclose(small_traces, expected_traces)
+
+    # Test for a sub-set of the traces
+    start_frame = 10_000
+    end_frame = 11_000
+    small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = full_traces[start_frame:end_frame, :]
+    assert np.allclose(small_traces, expected_traces)
 
 
 if __name__ == "__main__":

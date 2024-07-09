@@ -40,9 +40,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         Note that here the default is False contrary to neo.
     """
 
-    mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
-    name = "neuralynx"
 
     def __init__(
         self,
@@ -90,11 +88,9 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     """
 
-    mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
     neo_returns_frames = True
     need_t_start_from_signal_stream = True
-    name = "neuralynx"
 
     def __init__(
         self,

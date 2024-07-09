@@ -26,9 +26,7 @@ class EDFRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     """
 
-    mode = "file"
     NeoRawIOClass = "EDFRawIO"
-    name = "edf"
 
     def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = {"filename": str(file_path)}
