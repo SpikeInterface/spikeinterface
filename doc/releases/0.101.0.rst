@@ -7,7 +7,7 @@ SpikeInterface 0.101.0 release notes
 
 Main changes:
 
-* Implementation of `SortingAnalyzer`` (#2398)
+* Implementation of `SortingAnalyzer` (#2398)
 * Added framework for hybrid recording generation (#2436, #2769, #2857)
 * Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#2934, #3043, #3154)
 * Refactored motion correction with addition of DREDGE AP and LFP (#2915, #3062)
@@ -15,6 +15,7 @@ Main changes:
 
 core:
 
+* Better error message for `BaseExtractor.load()` (#3170)
 * Fix segment start/end frame None in `concatenate_recordings` (#3161)
 * Implement `apply_merges_to_sorting()` (#3154)
 * More explicit consistency checks for Channel aggregation  (#3151)
@@ -93,6 +94,7 @@ core:
 
 extractors:
 
+* Build extractor dicts automatically (#3169)
 * Remove unused legacy class name/mode from extractors (#3153)
 * Improved conditions for closing nwb when using hdf5 backend (#3150)
 * Use names as channel ids in plexon2 (#3065)
