@@ -7,7 +7,6 @@ import warnings
 import weakref
 import json
 import pickle
-import os
 import random
 import string
 from packaging.version import parse
@@ -956,13 +955,14 @@ class BaseExtractor:
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
-        provenance_file = folder / f"provenance.json"
         if self.check_serializability("json"):
+            provenance_file = folder / f"provenance.json"
+            self.dump(provenance_file)
+        elif self.check_serializability("pickle"):
+            provenance_file = folder / f"provenance.pkl"
             self.dump(provenance_file)
         else:
-            provenance_file.write_text(
-                json.dumps({"warning": "the provenace is not json serializable!!!"}), encoding="utf8"
-            )
+            warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
         self.save_metadata_to_folder(folder)
 
@@ -1029,7 +1029,6 @@ class BaseExtractor:
         cached: ZarrExtractor
             Saved copy of the extractor.
         """
-        import zarr
         from .zarrextractors import read_zarr
 
         save_kwargs.pop("format", None)

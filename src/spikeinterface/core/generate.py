@@ -1803,6 +1803,8 @@ class InjectTemplatesRecording(BaseRecording):
             )
             self.add_recording_segment(recording_segment)
 
+        # to discuss: maybe we could set json serializability to False always
+        # because templates could be large!
         if not sorting.check_serializability("json"):
             self._serializability["json"] = False
         if parent_recording is not None:
