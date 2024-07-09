@@ -7,12 +7,11 @@ import tempfile, csv
 
 @pytest.fixture
 def trainer():
-    from sklearn.preprocessing import StandardScaler
 
     target_column = "label"
     output_folder = tempfile.mkdtemp()  # Create a temporary output folder
     imputation_strategies = ["median"]
-    scaling_techniques = [("standard_scaler", StandardScaler())]
+    scaling_techniques = ["standard_scaler"]
     metrics_list = ["metric1", "metric2", "metric3"]
     return CurationModelTrainer(target_column, output_folder, imputation_strategies, scaling_techniques, metrics_list)
 
@@ -47,10 +46,9 @@ def test_load_and_preprocess_full(trainer):
 
 
 def test_apply_scaling_imputation(trainer):
-    from sklearn.preprocessing import StandardScaler
 
     imputation_strategy = "knn"
-    scaling_technique = StandardScaler()
+    scaling_technique = "standard_scaler"
     X_train = np.array([[1, 2, 3], [4, 5, 6]])
     X_val = np.array([[7, 8, 9], [10, 11, 12]])
     y_train = np.array([0, 1])
@@ -67,21 +65,18 @@ def test_apply_scaling_imputation(trainer):
 
 
 def test_get_classifier_search_space(trainer):
-    from sklearn.linear_model import LogisticRegression
 
-    classifier = LogisticRegression
+    classifier = "LogisticRegression"
     model, param_space = trainer.get_classifier_search_space(classifier)
     assert model is not None
     assert isinstance(param_space, dict)
 
 
 def test_evaluate_model_config(trainer):
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.linear_model import LogisticRegression
 
     imputation_strategies = ["median"]
-    scaling_techniques = [("standard_scaler", StandardScaler())]
-    classifiers = [LogisticRegression]
+    scaling_techniques = ["standard_scaler"]
+    classifiers = ["LogisticRegression"]
 
     trainer.X = np.ones((10, 3))
     trainer.y = np.append(np.ones(5), np.zeros(5))
@@ -93,8 +88,6 @@ def test_evaluate_model_config(trainer):
 
 
 def test_train_model():
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.linear_model import LogisticRegression
 
     metrics_path = make_temp_training_csv()
     output_folder = tempfile.mkdtemp()
@@ -106,7 +99,7 @@ def test_train_model():
         target_label,
         metrics_list,
         imputation_strategies=["median"],
-        scaling_techniques=[("standard_scaler", StandardScaler())],
-        classifiers=[LogisticRegression],
+        scaling_techniques=["standard_scaler"],
+        classifiers=["LogisticRegression"],
     )
     assert isinstance(trainer, CurationModelTrainer)
