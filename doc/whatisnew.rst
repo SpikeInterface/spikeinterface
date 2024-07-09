@@ -8,6 +8,8 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.101.0.rst
+  releases/0.100.8.rst
   releases/0.100.7.rst
   releases/0.100.6.rst
   releases/0.100.5.rst
@@ -41,10 +43,18 @@ Release notes
   releases/0.9.1.rst
 
 
-(PRE-RELEASE) Version 0.101.0rc0
-================================
 
-* Major release with `SortingAnalyzer`
+
+
+Version 0.101.0
+===============
+
+TODO
+
+Version 0.100.8
+===============
+
+* Minor release with bug fixes
 
 Version 0.100.7
 ===============
