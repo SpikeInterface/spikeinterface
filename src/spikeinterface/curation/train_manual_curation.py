@@ -141,22 +141,24 @@ class CurationModelTrainer:
         if classifier_name == "LGBMClassifier":
             try:
                 from lightgbm import LGBMClassifier
+
                 classifier_mapping["LGBMClassifier"] = LGBMClassifier(random_state=seed, verbose=-1)
             except ImportError:
                 raise ImportError("Please install lightgbm package to use LGBMClassifier")
         elif classifier_name == "CatBoostClassifier":
             try:
                 from catboost import CatBoostClassifier
+
                 classifier_mapping["CatBoostClassifier"] = CatBoostClassifier(silent=True, random_state=seed)
             except ImportError:
                 raise ImportError("Please install catboost package to use CatBoostClassifier")
         elif classifier_name == "XGBClassifier":
             try:
                 from xgboost import XGBClassifier
+
                 classifier_mapping["XGBClassifier"] = XGBClassifier(use_label_encoder=False, random_state=seed)
             except ImportError:
                 raise ImportError("Please install xgboost package to use XGBClassifier")
-
 
         if classifier_name not in classifier_mapping:
             raise ValueError(f"Unknown classifier: {classifier_name}")
