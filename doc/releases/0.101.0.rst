@@ -234,6 +234,7 @@ sortingcomponents:
 
 documentation:
 
+* Extend docs and API for generation module (#3167)
 * analyse -> analyze in Neuropixels docs (#3143)
 * Add pooch to docs extra (#3124)
 * Docstrings extractors update, fix PR01 and PR02 #3016 (#3076)
