@@ -4,7 +4,6 @@ import warnings
 import numpy as np
 from spikeinterface.qualitymetrics import get_quality_metric_list, get_quality_pca_metric_list
 from spikeinterface.postprocessing import get_template_metric_names
-from sklearn.experimental import enable_hist_gradient_boosting  # Ensures this is available
 
 seed = 42
 warnings.filterwarnings("ignore")
