@@ -374,7 +374,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
                 spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
                 wfs = np.zeros((spike_mask.size, num_samples, channel_indices.size), dtype=dtype)
-                
+
                 # inject in requested channels
                 channel_mask = np.isin(channel_indices, local_chan_inds)
                 wfs[:, :, channel_mask] = sparse_waveforms
