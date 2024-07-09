@@ -14,7 +14,6 @@ class BaseSnippets(BaseRecordingSnippets):
     Abstract class representing several multichannel snippets.
     """
 
-    _main_annotations = []
     _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
     _main_features = []
 
