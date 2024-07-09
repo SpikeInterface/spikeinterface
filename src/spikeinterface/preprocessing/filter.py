@@ -327,8 +327,6 @@ class NotchFilterRecording(BasePreprocessor):
         self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
 
 
-
-
 # functions for API
 filter = define_function_from_class(source_class=FilterRecording, name="filter")
 bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
