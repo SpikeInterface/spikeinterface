@@ -17,7 +17,7 @@ class CurationModelTrainer:
         imputation_strategies=None,
         scaling_techniques=None,
         classifiers=None,
-        seed = None
+        seed=None,
     ):
         if imputation_strategies is None:
             imputation_strategies = ["median", "most_frequent", "knn", "iterative"]
@@ -102,7 +102,9 @@ class CurationModelTrainer:
         if imputation_strategy == "knn":
             imputer = KNNImputer(n_neighbors=5)
         elif imputation_strategy == "iterative":
-            imputer = IterativeImputer(estimator=HistGradientBoostingRegressor(random_state=self.seed), random_state=self.seed)
+            imputer = IterativeImputer(
+                estimator=HistGradientBoostingRegressor(random_state=self.seed), random_state=self.seed
+            )
         else:
             imputer = SimpleImputer(strategy=imputation_strategy)
 
@@ -303,7 +305,7 @@ def train_model(
     imputation_strategies=None,
     scaling_techniques=None,
     classifiers=None,
-    seed = None
+    seed=None,
 ):
     trainer = CurationModelTrainer(
         target_label,
@@ -312,7 +314,7 @@ def train_model(
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
-        seed = seed
+        seed=seed,
     )
     trainer.load_and_preprocess_full(metrics_path)
     trainer.evaluate_model_config(imputation_strategies, scaling_techniques, classifiers)
