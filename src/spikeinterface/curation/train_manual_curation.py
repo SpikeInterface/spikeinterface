@@ -284,10 +284,9 @@ class CurationModelTrainer:
             )
         except:
             print("BayesSearchCV from scikit-optimize not available, using GridSearchCV")
-            from sklearn.experimental import enable_halving_search_cv
-            from sklearn.model_selection import HalvingGridSearchCV
+            from sklearn.model_selection import RandomizedSearchCV
 
-            model = HalvingGridSearchCV(model, param_space, cv=3, scoring="balanced_accuracy", n_jobs=-1)
+            model = RandomizedSearchCV(model, param_space, cv=3, scoring="balanced_accuracy", n_jobs=-1)
 
         model.fit(X_train_scaled, y_train)
         y_pred = model.predict(X_test_scaled)
