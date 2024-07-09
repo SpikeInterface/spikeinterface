@@ -96,10 +96,10 @@ class ComputeSpikeLocations(AnalyzerExtension):
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
 
-        if keep_mask is not None:
+        if keep_mask is None:
             new_spike_locations = self.data["spike_locations"].copy()
         else:
-            new_spike_locations = new_spike_locations[keep_mask]
+            new_spike_locations = self.data["spike_locations"][keep_mask]
 
         ### In theory here, we should recompute the locations since the peak positions
         ### in a merged could be different. Should be discussed

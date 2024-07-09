@@ -91,7 +91,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
     ):
         import pandas as pd
 
-        old_metrics = self.data["metrics"].copy()
+        old_metrics = self.data["metrics"]
 
         all_unit_ids = new_sorting_analyzer.unit_ids
         not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
