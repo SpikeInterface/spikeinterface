@@ -7,22 +7,31 @@ SpikeInterface 0.101.0 release notes
 
 Main changes:
 
-TODO
+* Implementation of `SortingAnalyzer`` (#2398)
+* Added framework for hybrid recording generation (#2436, #2769, #2857)
+* Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#2934, #3043, #3154)
+* Refactored motion correction with addition of DREDGE AP and LFP (#2915, #3062)
+* Better handling of time information (#3118, #3119, #3120)
 
 core:
 
-* Implement apply_merges_to_sorting() (#3154)
+* Fix segment start/end frame None in `concatenate_recordings` (#3161)
+* Implement `apply_merges_to_sorting()` (#3154)
 * More explicit consistency checks for Channel aggregation  (#3151)
-* Round instead of int for `time_to_sample_index`. (#3119)
+* Fix serializability in `save` function and `InjectDriftingTemplatesRecording` (#3130)
+* Fix t_starts not propagated to `save_to_memory` (#3120)
+* Round instead of int for `time_to_sample_index` (#3119)
+* Add time vector case to `get_durations` (#3118)
 * Reordering recording, sorting args (#3094)
 * extractor_dict_iterator for solving path detection in object `kwargs` (#3089)
 * Check start_frame/end_frame in `BaseRecording.get_traces()` (#3059)
 * Relax numpy (#3056)
 * Add `scale_to_uV` preprocessing (#3053)
 * Add more helpful error when a non-existent id is passed to extractors (#3052)
-* Propagate FrameSlice default behavior to frame_slice and time_slice (#3051)
+* Propagate `FrameSlice` default behavior to `frame_slice` and `time_slice` (#3051)
 * fix spike_vector_to_indices() (#3048)
 * Skip loading `info.json` into `ext.data` (#3047)
+* Proposal to implement a `sorting_analyzer.merge_units()` syntax (#3043)
 * add recording.time_slice like recording.frame_slice (#3034)
 * Numpy 2.0 cap Fix most egregorious deprecated behavior and cap version (#3032)
 * Avoid redirection to not implemented method in `BaseRecording.select_channels` (#3002)
@@ -30,18 +39,57 @@ core:
 * Add select chanel and select unit method for template objects (#2989)
 * Missed `has_scaled` (#2979)
 * Fixed `select_channels` (#2977)
-* Make _set_probes private (#2949)
+* Make `_set_probes` private (#2949)
 * Add limit for `n_jobs` with a max of `os.cpu_count()` (#2940)
 * API: switch `has_scaled` -> `has_scaleable_traces` (#2924)
 * Making `chunk_size=None` behavior for n_jobs=1 explicit (#2902)
 * Fix remaining verbose clashing (#2901)
-* remove verbose from job_kwargs (#2898)
-* Put get_extension (to trigger auto-import) before get_children_dependencies for deleting Analyzer extensions to prevent KeyError (#2888)
+* Remove `verbose` from `job_kwargs` (#2898)
+* Put get_extension (to trigger auto-import) before `get_children_dependencies` for deleting Analyzer extensions to prevent KeyError (#2888)
 * Add peak_to_peak mode to get_templates_amplitude (#2885)
 * Protect zarr properties of type object (#2884)
 * Avoid returning std when asking for only mean/average with templates extension (#2868)
 * Add binary suffixes to job tools memory specification (e.g. 1GiB vs 1GB) (#2858)
-* **Implementation of `SortingAnalyzer` (#2398)**
+* Possible fix for #2837 (#2854)
+* Load `is_scaled` in from zarr Template representation (#2852)
+* Use the `is_scaled` attribute inside of `template_tools` functions (#2848)
+* Add extra check in fix_job_kwargs (#2829)
+* Zarr: extract time vector once and for all! (#2828)
+* Add html representation for recording objects (#2803)
+* Remove SharedMemory from SortingAnalyzer and use NumpySorting instead. (#2801)
+* Channel aggregation preserves names (#2797)
+* Only assign memmap within boundaries for `write_binary` (#2796)
+* Improve verbose of  `ChunkRecordingExecutor` (#2795)
+* Add `select_channels` method to base recording (#2786)
+* Analyzer set recording (#2785)
+* Add name as an extractor attribute for `__repr__` purposes (#2784)
+* Compute quality metrics after pipeline nodes (#2773)
+* Check for SortingAnalyzer `return_scaled` in template_tools (#2752)
+* Template amplitude should not be returned as absolute value (#2750)
+* Fix performance issue for `aggregate_channels` (#2736)
+* Multiple verbose arguments fix (#2728)
+* Fix pipelining of extensions (#2715)
+* Seepd up random_spikes_selection() and put "all" method in it (#2700)
+* Extend compute for extension kwargs and pipeline nodes (#2693)
+* Add 'all' method for random_spikes (#2691)
+* Move "return_scaled" options global to SortingAnalyzer. (#2684)
+* Extend zarr compression options (#2643)
+* Fast templates: compute `std` with and extend to widgets (#2623)
+* SortingAnalyzer: `get_extension_default_params` (#2616)
+* Load pca from waveform extractor and waveform from Zarr (#2613)
+* Seeding silence periods (#2611)
+* Implement `get_parent()` function (#2610)
+* Fix analyzer sampling frequency check (#2606)
+* Proposal to inject anisotropy while creating fake templates (#2600)
+* Fix for sorting from_peaks with lexsort (handling multi segments) (#2594)
+* Save extension class info. (#2585)
+* Fix to impose sorting of the peaks in from_peaks() (#2584)
+* Extension delete on recompute (#2579)
+* Proposal for auto import extensions module. (#2571)
+* Add `check_json` to `zarr` for `SortingAnalyzer` for sorting_provenance file writing (#2559)
+* Add more backwards compatibly for MockWaveformExtractor (#2546)
+* Make binary recording memmap efficient III (Avoiding spikes by only reserving memory equal to the trace) (#1781)
+* Implementation of SortingAnalyzer (#2398)
 
 extractors:
 
@@ -72,6 +120,7 @@ extractors:
 * IBL extractors revived (#2617)
 * Add strict_gap_mode in read_neuralynx to reflect neo. (#2550)
 * Use `has_channel_location` instead of `get_property("contact_vector")` (#2475)
+* Implementing read_spikeglx_event() (#2442)
 
 sorters:
 
@@ -100,32 +149,35 @@ sorters:
 * Simple sorter better params (#2547)
 * Kilosort4 Wrapper (#2529)
 * Fix singularity issue in deleting py_user_folder (#2493)
+* Tridesclous2 update (#2267)
 
 postprocessing:
 
-* fix spike_vector_to_indices() (#3048)
+* Fix `spike_vector_to_indices()` (#3048)
 * Remove un-used argument (#3021)
 * Optimize numba cross-correlation and extend `correlograms.py` docstrings and tests (#3017)
 * Moving unit_localization into unit_locations for consistency (#2992)
 * Template similarity lags (#2941)
 * Fix isi_histograms when using numba (#2632)
-* Revert change in set_params for unit locations (#2624)
+* Revert change in `set_params` for unit locations (#2624)
 
 qualitymetrics:
 
+* Fix nn pca_metric computation and update tests (#3138)
 * Add `peak_to_peak` mode to SNR (#3009)
 * Add test to check unit structure in quality metric calculator output (#2973)
 * Fix math error in `sd_ratio` (#2964)
-* Remove "waveforms" dependency for compute_quality_metrics(). (#2707)
-* compute_synchrony_metrics update (#2605)
+* Remove "waveforms" dependency for `compute_quality_metrics()` (#2707)
+* `compute_synchrony_metrics` update (#2605)
 
 curation:
 
-* Implement apply_merges_to_sorting() (#3154)
+* Implement `apply_merges_to_sorting()` (#3154)
+* Improve and benchmark auto-merging functions (#2934)
 * Proposal of format to hold the manual curation information (#2933)
-* Provide useful message if sorting used instead of analyzer for remove_duplicate_units (#2790)
+* Provide useful message if sorting used instead of analyzer for `remove_duplicate_units` (#2790)
 * Fix split in more than 2 units and extend curation docs and tests (#2775)
-* Enhancing curation : get_potential_auto_merge() (#2753)
+* Enhancing curation : `get_potential_auto_merge()` (#2753)
 * Make sure `has_exceeding_spikes` also checks for negative spikes. (#2727)
 * Allow for `remove_excess_spikes` to remove negative spike times (#2716)
 * Add function in addition to class option for `MergeUnitsSorting`, `SplitUnitSorting`, and `CurationSorting` (#2659)
@@ -134,12 +186,13 @@ curation:
 widgets:
 
 * Since the gui now has curation we should allow users to set curation when making sorting summary (#3104)
-* Add plot_drift_map widget (#3068)
-* Fix bug in plot_potential_merges (#3044)
-* Add peaks_on_probe widget. (#3022)
+* Add `plot_drift_raster_map` widget (#3068)
+* Fix bug in `plot_potential_merges` (#3044)
+* Add `peaks_on_probe` widget. (#3022)
 * Plot potential merges (#3003)
 * Fix the new way of handling cmap in matpltolib. This fix the matplotib 3.9 problem related to this. (#2891)
 * Extend plot waveforms/templates to Templates object (#2856)
+* Fix bug in plot templates (#2850)
 * Add errors to `ensure` functions  in `Base` of widgets (#2791)
 * Add `color_channels` option in in plot_probe_map (#2740)
 * Extend capabilities of plot_traces and spikes_on_traces (#2737)
@@ -151,26 +204,35 @@ generation:
 
 * Out-of-place multiply needed when using amplitude scaling in the drifty hybrid recording (#3115)
 * Update tests against template library (#3000)
-* Add select chanel and select unit method for template objects (#2989)
+* Add select channel and select unit method for template objects (#2989)
 * Template fetching methods (#2857)
 * Load `is_scaled` in from zarr Template representation (#2852)
 * Add `is_scaled` to `Templates` object (#2842)
 * Add template `generate_recording_from_template_database` (#2769)
 * Proposal to inject anisotropy while creating fake templates (#2600)
+* Tools for Generation of Hybrid recordings (#2436)
 
 sortingcomponents:
 
 * Fix select peaks (#3132)
+* Dredge lfp and dredge ap (#3062)
 * Use "available" for memory caching (#3008)
 * get_spike_prototype can have NaN sometimes (#2980)
 * Benchmarks components: plotting utils (#2959)
+* Internal motion API, aka `Motion` object (#2915)
 * Components of SC2 (#2870)
 * Benchmark sorting components + Tridesclous2 improvement (#2811)
+* Change "idw" to "kriging" in spatial_interpolation_kernel parameters (#2708)
 * Benchmarks for sorting components (#2586)
 * Fix for template matching in circus (#2583)
 * Circus2 improvements (#2574)
+* Matched filtering to enhance peak detection (#2259)
+* Benchmark matching (#2518)
+* Initial benchmark components refactor (#2502)
+* Remove WaveformExtractor from Templates matching (#2485)
 
-docs:
+
+documentation:
 
 * analyse -> analyze in Neuropixels docs (#3143)
 * Add pooch to docs extra (#3124)
@@ -202,6 +264,19 @@ docs:
 * Fix example broken by #2684 (#2717)
 * Add a "how to" for combining recordings  (#2713)
 * Fix SortingAnalyzer tutorial (#2648)
+* Sync documentation with bug fixes (#2645)
+* WaveformExtractor -> SortingAnalyzer doc page (#2633)
+* Update get_started.rst with info for reloading saved binaries (#2622)
+* Analyzer core extension: improve docstrings (#2608)
+* Improve documentation for excess spikes error in `FrameSliceSorting`. (#2604)
+* Put SortingAnalyzer in get started (#2582)
+* Clarify status of main and Sortinganalyzer (#2580)
+* Add note about recommendation not to change batch size in Kilosort1-3 (#2564)
+* `SortingAnalyzer` core documentation (#2563)
+* Cleanup of modules gallery docs (post SorterAnalyzer) (#2552)
+* Add note to explain that Command Prompt is currently the only officially supported shell for Windows (#2494)
+* Add documentation of preprocessing and sorting split by channel group. (#2316)
+* `SortingAnalyzer` in "how to" analyze neuropixels (#2520)
 
 continuous integration:
 
@@ -213,6 +288,7 @@ continuous integration:
 * Update cron job for `installation_tips` (#3038)
 * Improve profile imports test (#2955)
 * Modify CI for new dev version criteria (#2636)
+* update all CI actions (#2460)
 
 packaging:
 
@@ -259,7 +335,7 @@ testing:
 * Speed up test_sorting_s3_nwb_zarr (#2767)
 * Fix full tests (#2665)
 * Fix typo in fast templates test (#2651)
-
+* update all CI actions (#2460)
 
 Contributors:
 

@@ -43,13 +43,15 @@ Release notes
   releases/0.9.1.rst
 
 
-
-
-
 Version 0.101.0
 ===============
 
-TODO
+* Implementation of `SortingAnalyzer`` (#2398)
+* Added framework for hybrid recording generation (#2436, #2769, #2857)
+* Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#2934, #3043, #3154)
+* Refactored motion correction with addition of DREDGE AP and LFP (#2915, #3062)
+* Better handling of time information (#3118, #3119, #3120)
+
 
 Version 0.100.8
 ===============
