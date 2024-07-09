@@ -23,7 +23,7 @@ class BaseRecording(BaseRecordingSnippets):
     Internally handle list of RecordingSegment
     """
 
-    _main_annotations = ["is_filtered"]
+    _main_annotations = BaseRecordingSnippets._main_annotations + ["is_filtered"]
     _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
     _main_features = []  # recording do not handle features
 
@@ -45,9 +45,6 @@ class BaseRecording(BaseRecordingSnippets):
         self.annotate(is_filtered=False)
 
     def __repr__(self):
-
-        class_name = self.__class__.__name__
-        name_to_display = class_name
         num_segments = self.get_num_segments()
 
         txt = self._repr_header()
@@ -57,7 +54,7 @@ class BaseRecording(BaseRecordingSnippets):
             split_index = txt.rfind("-", 0, 100)  # Find the last "-" before character 100
             if split_index != -1:
                 first_line = txt[:split_index]
-                recording_string_space = len(name_to_display) + 2  # Length of name_to_display plus ": "
+                recording_string_space = len(self.name) + 2  # Length of self.name plus ": "
                 white_space_to_align_with_first_line = " " * recording_string_space
                 second_line = white_space_to_align_with_first_line + txt[split_index + 1 :].lstrip()
                 txt = first_line + "\n" + second_line
@@ -97,21 +94,21 @@ class BaseRecording(BaseRecordingSnippets):
         return txt
 
     def _repr_header(self):
-        class_name = self.__class__.__name__
-        name_to_display = class_name
         num_segments = self.get_num_segments()
         num_channels = self.get_num_channels()
-        sf_khz = self.get_sampling_frequency() / 1000.0
+        sf_hz = self.get_sampling_frequency()
+        sf_khz = sf_hz / 1000
         dtype = self.get_dtype()
 
         total_samples = self.get_total_samples()
         total_duration = self.get_total_duration()
         total_memory_size = self.get_total_memory_size()
+        sampling_frequency_repr = f"{sf_khz:0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
 
         txt = (
-            f"{name_to_display}: "
+            f"{self.name}: "
             f"{num_channels} channels - "
-            f"{sf_khz:0.1f}kHz - "
+            f"{sampling_frequency_repr} - "
             f"{num_segments} segments - "
             f"{total_samples:,} samples - "
             f"{convert_seconds_to_str(total_duration)} - "
