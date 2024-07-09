@@ -92,10 +92,8 @@ def correct_inter_session_displacement(
                 folder=None,
                 names=None,
             )
-
-        peaks_list.append(peaks)
-        peak_locations_list.append(peak_locations)
-
+            peaks_list.append(peaks)
+            peak_locations_list.append(peak_locations)
     else:
         peaks_list = [info["peaks"] for info in existing_motion_info]
         peak_locations_list = [info["peak_locations"] for info in existing_motion_info]
@@ -112,7 +110,8 @@ def correct_inter_session_displacement(
         recordings_list,
         peaks_list,
         peak_locations_list,  # TODO: this is overwriting above variable names. Own function!
-    ):
+    ):  # TODO: do a lot of checks to make sure these bin sizes make sesnese
+        # Do some checks on temporal and spatial bin edges that they are all the same?
         if motion_histogram_dim == "2D":
             motion_histogram = make_2d_motion_histogram(
                 recording,
@@ -138,9 +137,42 @@ def correct_inter_session_displacement(
                 log_transform=True,
                 spatial_bin_edges=None,
             )
-        motion_histogram_list.append(motion_histogram)
+        motion_histogram_list.append(motion_histogram[0].squeeze())
 
-    breakpoint()
+    # Do some checks on temporal and spatial bin edges that they are all the same?
+    # TODO: do some smoothing? Try some other methds (e.g. NMI, KL divergence)
+    # Let's do a very basic optimisation to find the best midpoint, just
+    # align everything to the first session. This isn't great because
+    # introduces some bias. Maybe align to all sessions and then take some
+    # average. Certainly cannot optimise brute force over the whole space
+    # which is (2P-1)^N where P is length of motion histogram and N is number of recordings.
+    # TODO: double-check what is done in kilosort-like / DREDGE
+    # put histograms into X and do X^T X then mean(U), det or eigs of covar mat
+    num_recordings = len(recordings_list)
+
+    shifts = np.zeros(num_recordings)
+
+    # TODO: not checked any of the below properly
+    first_hist = motion_histogram_list[0] / motion_histogram_list[0].sum()
+    first_hist -= np.mean(first_hist)  # TODO: pretty sure not necessary
+
+    for i in range(1, num_recordings):
+
+        hist = motion_histogram_list[i] / motion_histogram_list[i].sum()
+        hist -= np.mean(hist)  # TODO: pretty sure not necessary
+
+        conv = np.convolve(first_hist, hist, mode="full")
+
+        if hist.size % 2 == 0:
+            midpoint = hist.size / 2
+        else:
+            midpoint = (hist.size - 1) / 2  # TODO: carefully double check!
+
+        shifts[i] = midpoint - np.argmax(conv)  # TODO: the bin spacing is super important for resoltuion
+
+    # TODO
+    import matplotlib.pyplot as plt
+
     # TODO: handle only the 2D case for now
     # TODO: do multi-session optimisation
 
