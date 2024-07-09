@@ -87,8 +87,9 @@ class ComputeRandomSpikes(AnalyzerExtension):
             new_data["random_spikes_indices"] = random_spikes_indices.copy()
         else:
             mask = keep_mask[random_spikes_indices]
-            new_data["random_spikes_indices"] = random_spikes_indices[mask]
-
+            nb_skipped = np.cumsum(~keep_mask)
+            new_data["random_spikes_indices"] = np.flatnonzero(mask)
+            new_data["random_spikes_indices"] -= nb_skipped[new_data["random_spikes_indices"]]
         return new_data
 
     def _get_data(self):
@@ -246,8 +247,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
         waveforms = self.data["waveforms"]
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-
-        if keep_mask is None:
+        if keep_mask is not None:
             spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
@@ -624,7 +624,6 @@ class ComputeTemplates(AnalyzerExtension):
             "random_spikes"
         ), "compute templates requires the random_spikes extension. You can run sorting_analyzer.get_random_spikes()"
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
-
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
             wfs = waveforms[spike_mask, :, :]
