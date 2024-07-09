@@ -16,7 +16,7 @@ def generate_noise(
     sampling_frequency : float
         The sampling frequency of the recording.
     durations : list of float
-        The duration(s) of the recording.
+        The duration(s) of the recording segment(s) in seconds.
     dtype : np.dtype
         The dtype of the recording.
     noise_levels : float | np.array | tuple, default: 15.0
