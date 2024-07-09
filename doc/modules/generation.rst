@@ -14,7 +14,7 @@ For hybrid recordings, the main challenge is to generate realistic spike templat
 We therefore built an open database of templates that we have constructed from the International
 Brain Laboratory - Brain Wide Map (available on
 `DANDI <https://dandiarchive.org/dandiset/000409?search=IBL&page=2&sortOption=0&sortDir=-1&showDrafts=true&showEmpty=false&pos=9>`_).
-You can checkout this collection of over 600 templates from this [web app](https://spikeinterface.github.io/hybrid_template_library/).
+You can check out this collection of over 600 templates from this `web app <https://spikeinterface.github.io/hybrid_template_library/>`_.
 
 The :py:mod:`spikeinterface.generation` module offers tools to interact with this database to select and download templates,
 manupulating (e.g. rescaling and relocating them), and construct hybrid recordings with them.
