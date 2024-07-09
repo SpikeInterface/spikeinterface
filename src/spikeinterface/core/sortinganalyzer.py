@@ -715,7 +715,7 @@ class SortingAnalyzer:
                     # This means that the unit is already in the previous sorting
                     index = self.sorting.id_to_index(unit_id)
                     sparsity_mask[unit_index] = self.sparsity.mask[index]
-            sparsity = ChannelSparsity(sparsity_mask, list(new_unit_ids), self.channel_ids)
+            sparsity = ChannelSparsity(sparsity_mask, list(all_unit_ids), self.channel_ids)
         else:
             sparsity = None
 
